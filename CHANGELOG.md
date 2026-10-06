@@ -95,7 +95,9 @@ The release candidate: the alpha after three days of daily use and what that use
   with a little story, in seven languages.
 - The site, [ruachstudio.igr.bible](https://ruachstudio.igr.bible): the rooms, what makes it a studio, Ruach Studio and
   SUNO honestly, what you need (about 120 GB of disk with everything), what comes next, the licences, and the little
-  story.
+  story, in seven languages.
+- **Six voice adapters** on Hugging Face (goldhub/Ruach_Studio_LoRAs `voices/`), named by the kind of voice, with
+  their samples; the LoRAs and the starter sets open, and the 💎 workspaces' bucket (*💎 Voice Types LoRA* added).
 
 ### Languages
 

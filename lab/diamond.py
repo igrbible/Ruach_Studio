@@ -34,6 +34,7 @@ SOURCES = [
     {"name": "💎 Instrumental Probe", "folder": "instrumental-probe"},
     {"name": "💎 Musical Styles", "folder": "musical-styles"},
     {"name": "💎 Voice Types", "folder": "voice-types"},
+    {"name": "💎 Voice Types LoRA", "folder": "voice-types-lora"},   # HERESY 1167: the six voice adapters sung (Viktor 06.10)
 ]
 MANIFEST = "workspace.json"
 FORMAT = "ruach-workspace 1"

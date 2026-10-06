@@ -206,6 +206,11 @@ of the studio may well need them too: a loop finder for long recordings (how muc
 and the new part cut out), a downloader of a video's audio for instrument sets, a slicer of training sets, a
 calculator of what a LoRA rank costs on YuE2. The GTSinger converter lives in the lab (`lab/gtsinger.py`).
 
+**Six voice adapters**, trained in the studio's LoRA Trainer on Russian audiobook readers and named by the kind of
+voice they carry (a bass, two baritenors, three contraltos), never by the person, are on Hugging Face with their samples:
+[goldhub/Ruach_Studio_LoRAs `voices/`](https://huggingface.co/goldhub/Ruach_Studio_LoRAs/tree/main/voices); the
+instrument adapters (shofar, duduk) beside them.
+
 **No warranty.** We use them and they work here. They are not part of the studio, nobody tests them on your
 machine, and if one eats your files, that is on you. Read before you run.
 
@@ -217,8 +222,6 @@ machine, and if one eats your files, that is on you. Read before you run.
   short), the title and the artist written on them, the painter of your choice, the versions of each take's picture.
 - **Five more languages** for the page: Chinese, French, Portuguese, German and Japanese. Right-to-left languages
   (Arabic, Hebrew, Urdu) come once the page itself runs right to left.
-- **Voice adapters** trained here on spoken voices (readings, audiobooks), named by the kind of voice (bass,
-  baritenor, contralto…), on Hugging Face.
 - **The Writer's models with their prices**, from OpenRouter's list, as you type.
 - **Every button that cannot be undone behind a dialog**, and the inline notes of every room as tips.
 - **One shape for the icon buttons** across the rooms.
