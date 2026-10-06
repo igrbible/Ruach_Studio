@@ -21,6 +21,13 @@ The release candidate: the alpha after three days of daily use and what that use
 - The default look: *Scroll & Brick*, softer corners, the hover accent and its glow, Noto Sans with Noto Sans Mono;
   the day theme on #f8f9fa. The Creator, the Writer and the Refiner say in two lines what they are, beside their
   names.
+- **Day and night follow the system** by default (☀ day · ☾ night · ◐ the system, its icon larger); a theme picked of
+  the other kind than the system shows is a choice of day or night. The veil boots always at night; the rooms' names in
+  capitals.
+- **The workspace in hand** is a button in the bar: one click opens the studio's own chooser, every workspace and
+  section with its count, a new workspace or a new section made from there. A song sent with none in hand asks first
+  where its takes go. Names: 32 characters a level (a workspace, its section, the section's own).
+- A tip no longer stays after a click; one reached by the keyboard stays while focused.
 
 ### Creator
 
@@ -30,7 +37,10 @@ The release candidate: the alpha after three days of daily use and what that use
 - The music's lengths in time beside their tokens, kept in step with *Max length*.
 - **Play new takes**: a take made here plays when it is done. The Takes column hides a take you dislike (as SUNO
   does), stars a favourite on its row, and counts the workspace's own takes (the total under All Workspaces).
-- The take card: Sliders over LoRAs, long names and values wrapped inside the card.
+- The take card: Sliders over LoRAs, long names and values wrapped inside the card; an icon beside ☆ ✎ 🗑 leads back
+  to the Librarian, the take's card found and flashed.
+- Open, Save, Example and Clear beside **New song**; the Takes column's menu pins a take into the strip of the
+  workspace it lives in (four at most).
 - **LoRAs**: the sound half's strengths together on a slider of their own beside the music's (by ear, 2.0 together
   brought a heavy bass, 0.55 sounded right); an adapter of two files, music and sound, is one card (*both*); a
   right-click **mutes** one (left out of the run, its strengths kept) or takes one trained here out of the list (its
@@ -53,11 +63,19 @@ The release candidate: the alpha after three days of daily use and what that use
 - **Artwork** by **Krea 2 Muse** (Stable Yogi; GGUF Q4 from 16 GB, Q8 for a repaint), SDXL kept for the small cards;
   one artwork a take, shown at the card's full height and downloadable from the overlay; an artwork job waits for a
   card instead of failing.
-- A workspace's name is 80 characters at most, said aloud past it.
+- The search reads the workspaces' and sections' names too, and Ctrl+F goes to it; the peek is wider, waits 1.2 s for
+  the pointer and opens downward with the whole style and lyrics; by day the cards wash from #f2edef to nothing.
+- «Sourced for Regeneration» is never the workspace in hand (new takes go to its parent) and stays frozen, except to
+  the regeneration that keeps the old takes there.
+
+### Engine
+
+- **Models auto unload**: the engine itself unloads the models idle from 15 minutes to 4 hours (60 by default), or
+  15 s after a song, whether a page is open or not.
 
 ### LoRA Trainer
 
-- No twin of the last epoch; the Runs column the window's height; the log in a frame at the page's foot.
+- The last epoch is published under its number; the Runs column the window's height; the log in a frame at the page's foot.
 - `lab/voice_kind.py`: a set's voice by measure (male or female, and the register from bass to tenor and contralto to
   soprano, by the speaking pitch; 140–175 Hz is shared, so there it asks), to name a voice adapter by its kind,
   never by a person.
@@ -66,9 +84,23 @@ The release candidate: the alpha after three days of daily use and what that use
 
 - The waveform on its own ground with its bars at 15 %, the player a little see-through.
 
+### The cheat-sheet ♪
+
+- Up to 1800 px wide, its texts 2 pt larger; its head in parts: the warning in a line, a legend of four, how the probes
+  were made folded; the pictures said to be painted by an image model.
+
+### Out of the studio
+
+- The README opens with the studio's banner, the website, GitHub, the guide and ☕ *Buy me a Coffee Machine*; it ends
+  with a little story, in seven languages.
+- The site, [ruachstudio.igr.bible](https://ruachstudio.igr.bible): the rooms, what makes it a studio, Ruach Studio and
+  SUNO honestly, what you need (about 120 GB of disk with everything), what comes next, the licences, and the little
+  story.
+
 ### Languages
 
-- Everything new in all seven languages: English, Russian, Ukrainian, Belarusian, Greek, Spanish, Italian.
+- Everything new in all seven languages: English, Russian, Ukrainian, Belarusian, Greek, Spanish, Italian; the
+  browser's own language at the first visit. The cheat-sheet's older genre names stay English for now.
 
 ## 2.0.0-alpha · 2026-10-03
 

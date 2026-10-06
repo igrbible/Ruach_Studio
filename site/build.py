@@ -165,7 +165,12 @@ FIRST_VISIT = """<script>
 if __name__ == "__main__":
     svg = (here.parent / "src/brand/ruach-logo.svg").read_text(encoding="utf-8").strip()
     template = (here / "template.html").read_text(encoding="utf-8").replace("{{LOGO}}", svg)
-    units = units_of(template)
+    # a language is built once its catalog is here; the menu and the alternates name only the languages built
+    built = [(c, n) for c, n in LANGS if c == "en" or (here / "i18n" / (c + ".json")).is_file()]
+    LANGS[:] = built
+    if len(built) == 1 and "--units" not in sys.argv:      # English alone: no menu to choose from
+        template = re.sub(r"\s*<details class=\"langs\".*?</details>", "", template, count=1, flags=re.S)
+    units = units_of(template)                            # the template final first: the units' places are its own
     if "--units" in sys.argv:
         seen, keys = set(), []
         for s, e, inner in units:
@@ -176,14 +181,13 @@ if __name__ == "__main__":
         json.dump(keys, sys.stdout, ensure_ascii=False, indent=1)
         print()
         sys.exit(0)
-    # a language is built once its catalog is here; the menu and the alternates name only the languages built
-    built = [(c, n) for c, n in LANGS if c == "en" or (here / "i18n" / (c + ".json")).is_file()]
-    LANGS[:] = built
-    if len(built) == 1:                                   # English alone: no menu to choose from
-        template = re.sub(r"\s*<details class=\"langs\".*?</details>", "", template, count=1, flags=re.S)
     for code, _ in built:
         catalog = json.load(open(here / "i18n" / (code + ".json"), encoding="utf-8")) if code != "en" else {}
         page, missing = page_for(code, template, units, catalog)
+        # the guard (the units once stood on a template changed after they were found, and the page fell apart): the
+        # English page, its head's placeholders aside, is the template itself, byte for byte
+        if code == "en" and page[page.find("<body>"):] != template[template.find("<body>"):]:
+            sys.exit("the English page drifted from its template: nothing written")
         out = here / ("index.html" if code == "en" else code + "/index.html")
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(page, encoding="utf-8")
