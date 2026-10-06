@@ -1,0 +1,897 @@
+From 767f426b276c4622a2a241144841cfd3f6fa6592 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 15:47:48 -0600
+Subject: [PATCH 1177/1177] HERESY 1167: the day of 06.10 in all seven
+ languages; day and night as the system by default, the button's icon larger;
+ the coffee machine in About
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026:
+· «SVG кнопки переключения режима день/ночь/система сделай побольше, и дефолтом поставь СИСТЕМА»: the icon 21 px (17);
+  as the system by default, the system's day or night before the first paint. A theme of the kind the system shows now
+  becomes that kind's theme; one of the other kind is a choice against the system, day or night as it is (the page test
+  caught a dark theme picked under a light system gone after a reload). Day is kept as "light" now; the old default
+  (day kept as nothing) is read as day once;
+· the words of the day in ru, uk, be, el, es, it (117 keys each: the workspace in hand and its chooser, the models' idle
+  unload, the take's way to the Librarian, pins from a room's column, the cheat-sheet's head and notes, the names of its
+  60 new styles); the older genre names of the Styles tab stay English (rc2);
+· «ссылка или кнопка на кофе… прямо на Stripe»: in About, with the website and the source: ☕ Buy me a Coffee Machine
+  (his words of 01.10).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |   2 +
+ tools/console/app.js            |  20 +++---
+ tools/console/heresy-i18n-be.js | 121 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-el.js | 121 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-es.js | 121 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-it.js | 121 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-ru.js | 121 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-uk.js | 121 ++++++++++++++++++++++++++++++++
+ tools/console/index.html        |   8 +++
+ 9 files changed, 748 insertions(+), 8 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7f9d66d..2ebf560 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4142,3 +4142,5 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .eg-unload-row input[type="range"] { flex: 1; min-width: 120px; }
+ .eg-unload-row input[type="range"].is-aside { opacity: .4; }
+ .eg-unload-row .check { white-space: nowrap; }
++/* HERESY 1167 (Viktor: «SVG кнопки переключения режима день/ночь/система сделай побольше»): 21 px, the others 17 */
++.day-night .hz-icon { width: 21px; height: 21px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 7be9aa9..fd7d015 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -471,7 +471,7 @@
+   var darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+   var applyingScheme = false, lastKept = null;
+   function themeInfo(id) { return YueThemes.list.filter(function (t) { return t.id === id; })[0] || null; }
+-  function schemeNow() { return recall(SCHEME_KEY) || "light"; }
++  function schemeNow() { return recall(SCHEME_KEY) || "auto"; }   // HERESY 1167 (Viktor: «дефолтом поставь СИСТЕМА»)
+   function wantsDark() { var s = schemeNow(); return s === "dark" || (s === "auto" && !!darkQuery && darkQuery.matches); }
+   function applyScheme() {
+     var id = wantsDark() ? (recall(NIGHT_KEY) || "igr-night") : (recall(DAY_KEY) || "igr-day");
+@@ -492,7 +492,9 @@
+     var t = themeInfo(YueThemes.current());
+     if (!t) return;
+     store(t.dark ? NIGHT_KEY : DAY_KEY, t.id);
+-    if (schemeNow() !== "auto") store(SCHEME_KEY, t.dark ? "dark" : null);
++    // HERESY 1167: as the system, a theme of the kind it shows now is that kind's theme; one of the other kind is a
++    // choice against the system: day or night as it is
++    if (schemeNow() !== "auto" || t.dark !== wantsDark()) store(SCHEME_KEY, t.dark ? "dark" : "light");
+     lastKept = t.id;
+     paintDayNight();
+   }
+@@ -6378,15 +6380,17 @@
+   })();
+   $("lookTheme").addEventListener("change", function () { YueThemes.set(this.value); });
+ 
+-  // HERESY 1015: the first run keeps a theme already chosen, as the day or night one it is
+-  if (recall(SCHEME_KEY) === null && recall("yue2.theme") !== null && themeInfo(YueThemes.current())) {
+-    var had = themeInfo(YueThemes.current());
+-    store(had.dark ? NIGHT_KEY : DAY_KEY, had.id);
+-    if (had.dark) store(SCHEME_KEY, "dark");
++  // HERESY 1015: the first run keeps a theme already chosen, as the day or night one it is. HERESY 1167: as the system by
++  // default now, and day kept as "light" (it was kept as nothing): a theme already chosen is kept as it was, once
++  var had = recall("yue2.theme") !== null ? themeInfo(YueThemes.current()) : null;
++  if (had && recall(SCHEME_KEY) === null && recall(had.dark ? NIGHT_KEY : DAY_KEY) === null) store(had.dark ? NIGHT_KEY : DAY_KEY, had.id);
++  if (recall("yue2.schemeV2") === null) {
++    if (had && recall(SCHEME_KEY) === null) { store(had.dark ? NIGHT_KEY : DAY_KEY, had.id); store(SCHEME_KEY, had.dark ? "dark" : "light"); }
++    store("yue2.schemeV2", "1");
+   }
+   $("dayNight").addEventListener("click", function () {
+     var s = schemeNow();
+-    store(SCHEME_KEY, s === "light" ? "dark" : s === "dark" ? "auto" : null);
++    store(SCHEME_KEY, s === "light" ? "dark" : s === "dark" ? "auto" : "light");
+     applyScheme();
+   });
+   if (darkQuery) {
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 1612a11..4c3a9e6 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2697,3 +2697,124 @@ RuachI18n.add("be", {
+ "VAE loaded in {0} s": "VAE загружаны за {0} с",
+ "transcriber loaded in {0} s": "транскрыбер загружаны за {0} с"
+ });
++// HERESY 1167: the words of 06.10.2026: the workspace in hand and its chooser, the models' idle unload, the take's way
++// to the Librarian, pins from a room's column, the cheat-sheet's head, its notes and its new styles' names
++RuachI18n.add("be", {
++"The workspace in hand: every new take lands in it, and the Takes column shows it. Click to choose another, or to make one.": "Прастора ў руках: у яе кладзецца кожны новы сэмпл, і калонка «Сэмплы» паказвае яе. Націсні, каб выбраць іншую або стварыць новую.",
++"Choose a workspace": "Выберы прастору",
++"The workspace in hand": "Прастора ў руках",
++"Where do the new takes land?": "Куды лягуць новыя сэмплы?",
++"Every new take lands in it, and the Takes column shows it.": "У яе кладзецца кожны новы сэмпл, і калонка «Сэмплы» паказвае яе.",
++"+ New section of “{0}”…": "+ Новы раздзел у «{0}»…",
++"Send nothing": "Нічога не адпраўляць",
++"Filter the workspaces": "Адбор прастор",
++"It is in hand at once: new takes land in it.": "Яна адразу ў руках: новыя сэмплы кладуцца ў яе.",
++"Workspace “{0}” made and in hand: new takes land in it": "Прастора «{0}» створана і ў руках: новыя сэмплы кладуцца ў яе",
++"Section “{0}” made and in hand: new takes land in it": "Раздзел «{0}» створаны і ў руках: новыя сэмплы кладуцца ў яго",
++"Nothing sent: choose a workspace for the new takes first": "Нічога не адпраўлена: спачатку выберы прастору для новых сэмплаў",
++"Models auto unload": "Аўтавыгрузка мадэляў",
++"after {#0} h idle": "пасля {0} г прастою",
++"after {#0} min idle": "пасля {0} хв прастою",
++"after {#0} h {#1} min idle": "пасля {0} г {1} хв прастою",
++"15 s after a song": "праз 15 с пасля песні",
++"Unload idle models after": "Выгружаць мадэлі, што прастойваюць, праз",
++"How long the models stay in GPU memory with nothing to do: 15 minutes to 4 hours, by 15. Then the engine unloads them, and the next song loads them again.": "Колькі мадэлі застаюцца ў памяці GPU без справы: ад 15 хвілін да 4 гадзін, крокам 15. Потым рухавік іх выгружае, і наступная песня загружае іх зноў.",
++"The models leave GPU memory 15 s after a song: time enough to send the next one while they are still loaded": "Мадэлі сыходзяць з памяці GPU праз 15 с пасля песні: хопіць часу адправіць наступную, пакуль яны яшчэ загружаныя",
++"At once (15 s)": "Адразу (15 с)",
++"Show in the Librarian": "Паказаць у Бібліятэкары",
++"Show this take in the Librarian: its card found, in sight and flashed": "Паказаць гэты сэмпл у Бібліятэкары: яго картка знойдзена, на віду і падсвечана",
++"Pin in “{0}”": "Замацаваць у «{0}»",
++"Unpin from “{0}”": "Адмацаваць з «{0}»",
++"Pinned in “{0}”": "Замацавана ў «{0}»",
++"Unpinned from “{0}”": "Адмацавана з «{0}»",
++"{#0} of {#1} free": "вольна {0} з {1}",
++"Only the disliked": "Толькі тыя, што не спадабаліся",
++"The covers are painted by an image model: some show an instrument not quite as it really is.": "Вокладкі малюе мадэль выяў: на некаторых інструмент не зусім такі, як насамрэч.",
++"⚠ A name in the style is a request, not a promise.": "⚠ Назва ў стылі — просьба, а не абяцанне.",
++"What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "▶ A і ▶ B іграюць тое, што YuE2 дае на гэтую назву, прыкладна дзевяць разоў з дзесяці: вер вуху, а не назве.",
++"Click a name": "Націсні на назву",
++"it goes into the Style prompt": "яна ідзе ў промпт стылю",
++"its two probes, their seeds under them": "дзве яго пробы, іх сіды пад імі",
++"the ear heard it and kept it;": "вуха яго пачула і пакінула;",
++"red": "чырвоным",
++": not played when named alone": ": не гучыць, калі названы адзін",
++"The pictures": "Карцінкі",
++"painted by an image model: some show an instrument not quite as it really is": "іх малюе мадэль выяў: на некаторых інструмент не зусім такі, як насамрэч",
++"How the probes were made": "Як рабіліся пробы",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Што YuE2 прасілі зайграць, па адным інструменце ці стылі за раз, пробамі па дзве хвіліны (першыя — па хвіліне), па два сіды на кожную, A і B. Бываюць пробы выдатныя, A і B сыходзяцца, а інструмент не той, што прасілі. Інструмент фармуе стыль усёй рэчы: назваўшы яго, рухаеш і аранжыроўку. Трэск або шолах паперы, як на зацёртай плытцы, — няўдалы сід: зрабі нанова на іншым.",
++"{#0} heard by ear": "на слых пачута: {0}",
++"Fails when named so: ask for it as the ancient triangular harp (the row below).": "Пад гэтай назвай не выходзіць: прасі яго як старажытную трохкутную арфу (радок ніжэй).",
++"Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Спрабавалі шмат разоў, без поспеху: YuE2 не ведае шафара. Пробы заўсёды даюць іншую дудку ці рог, ніколі не шафар, нават блізка. Яго пробы (ніжэй) пакінутыя: бяры іх як той рог ці трубу, якімі яны аказаліся. Яго адаптар шафар ведае: loras/shofar-yt-r16 на эпосе 110, вуха Віктара: «Выбух мозгу: ніводзін шафарыст такога не чуў. Цэлая медытацыя. Стопрацэнтна йеменскі шафар, рог антылопы ў два метры» (167 перанатрэнаваная, слабая і тонкая; 66 недатрэнаваная, у ёй труба).",
++"Tested, Failed. Other pipe/horn discovered. B alone comes near a Yemenite shofar, a battle cry: still not a shofar.": "Праверана, не выйшла. Выйшла іншая дудка ці рог. Толькі B набліжаецца да йеменскага шафара, баявы кліч: і ўсё ж не шафар.",
++"Tested, Failed. Other pipe/horn discovered.": "Праверана, не выйшла. Выйшла іншая дудка ці рог.",
++"Tested, Failed. Other pipe/horn discovered. Dross, kept: a spark of heavy rock in it.": "Праверана, не выйшла. Выйшла іншая дудка ці рог. Шлак, але пакінуты: у ім іскра цяжкага рока.",
++"Not like a horn either.": "І на рог не падобна.",
++"Failed (Viktor 04.10: «unfortunately, YuE2 has no oboe»): no oboe in its probes.": "Не выйшла (Віктар, 04.10: «на жаль, габоя ў YuE2 няма»): у пробах габоя няма.",
++"No such reed: YuE2 does not play the bassoon. Both probes deleted.": "Такой трысці няма: YuE2 не грае на фаготе. Абедзве пробы выдаленыя.",
++"Failed (Viktor 03.10: «the gong failed; deleting it»): no gong in its probes.": "Не выйшла (Віктар, 03.10: «гонг праваліўся, выдаляю»): у пробах гонга няма.",
++"Fails: YuE2 gives no birdsong when asked for it alone (the 60 s probes and the 2-minute ones alike).": "Не выходзіць: YuE2 не дае спеву птушак, калі яго просяць аднаго (і хвілінныя пробы, і двухвілінныя).",
++"Not an instrument: a whole style (Viktor: «not an instrument, a whole style»). Styles → Summer cicadas.": "Не інструмент, а цэлы стыль (Віктар: «не інструмент, а цэлы стыль»). Стылі → Летнія цыкады.",
++"Mixolydian → harmonic minor": "Міксалідыйскі → гарманічны мінор",
++"Dorian & Aeolian major fusion": "Ф'южн дарыйскага і эалійскага мажору",
++"Dramatic ballad, sung in Russian": "Драматычная балада, спяваецца па-руску",
++"Epic shamanic ballad, sung in Russian": "Эпічная шаманская балада, спяваецца па-руску",
++"Romantic ballad, sung in Russian": "Рамантычная балада, спяваецца па-руску",
++"Russian folk waltz, sung in Russian": "Рускі народны вальс, спяваецца па-руску",
++"Russian folk ballad, sung in Russian": "Руская народная балада, спяваецца па-руску",
++"Gothic metal, sung in Russian": "Готык-метал, спяваецца па-руску",
++"Hard rock, sung in Russian": "Хард-рок, спяваецца па-руску",
++"Symphonic orchestral, sung in Russian": "Сімфанічная аркестравая, спяваецца па-руску",
++"Cinematic epic score, sung in Russian": "Эпічная кінамузыка, спяваецца па-руску",
++"Scythian military march, sung in Ukrainian": "Скіфскі вайсковы марш, спяваецца па-ўкраінску",
++"Shamanic ritual trance, sung in Ukrainian": "Шаманскі рытуальны транс, спяваецца па-ўкраінску",
++"Pagan ceremonial rock, sung in Ukrainian": "Язычніцкі абрадавы рок, спяваецца па-ўкраінску",
++"Shamanic Scythian ballad, sung in Ukrainian": "Шаманская скіфская балада, спяваецца па-ўкраінску",
++"Mediterranean love fusion, sung in Greek": "Міжземнаморскі любоўны ф'южн, спяваецца па-грэцку",
++"Mediterranean spiritual fusion, sung in Greek": "Міжземнаморскі духоўны ф'южн, спяваецца па-грэцку",
++"Mediterranean love meditation, sung in Greek": "Міжземнаморская любоўная медытацыя, спяваецца па-грэцку",
++"Sacred meditation, sung in Hebrew": "Святая медытацыя, спяваецца на іўрыце",
++"Acoustic spiritual ballad, sung in Hebrew": "Акустычная духоўная балада, спяваецца на іўрыце",
++"Celestial meditation, sung in Hebrew": "Нябесная медытацыя, спяваецца на іўрыце",
++"Sacred dramatic fusion, sung in Hebrew": "Святы драматычны ф'южн, спяваецца на іўрыце",
++"Theatrical electro-pop": "Тэатральны электрапоп",
++"Party pop rock": "Тусовачны поп-рок",
++"Latin jazz pop": "Лацін-джаз-поп",
++"East Coast hip-hop": "Хіп-хоп Усходняга ўзбярэжжа",
++"Experimental hip-hop": "Эксперыментальны хіп-хоп",
++"Funk hip-hop": "Фанк-хіп-хоп",
++"Neo-soul hip-hop": "Неа-соўл-хіп-хоп",
++"Atmospheric alt-rock": "Атмасферны альт-рок",
++"Hard-driving rock": "Напорысты рок",
++"Emo pop-punk": "Эма-поп-панк",
++"Baroque pop-rock": "Барочны поп-рок",
++"Epic blues rock": "Эпічны блюз-рок",
++"Mellow classic rock": "Мяккі класічны рок",
++"Classic hard rock": "Класічны хард-рок",
++"Crunchy hard rock": "Храбусткі хард-рок",
++"80s hard rock": "Хард-рок 80-х",
++"60s blues-rock": "Блюз-рок 60-х",
++"Explosive hard rock": "Выбуховы хард-рок",
++"Soaring heavy metal": "Узнёслы хэві-метал",
++"Dark thrash metal": "Змрочны трэш-метал",
++"Theatrical heavy metal": "Тэатральны хэві-метал",
++"Dreamy psychedelic rock": "Летуценны псіхадэлічны рок",
++"Afro-pop indie rock": "Індзі-рок з афрапопам",
++"Baroque indie folk": "Барочны індзі-фолк",
++"Whispered indie folk": "Індзі-фолк шэптам",
++"Lo-fi indie rock": "Лоў-фай індзі-рок",
++"Piano indie rock": "Фартэпіянны індзі-рок",
++"Orchestral indie folk": "Аркестравы індзі-фолк",
++"Psychedelic alt-rock": "Псіхадэлічны альт-рок",
++"Baritone indie rock": "Індзі-рок з барытонам",
++"Dark country folk": "Змрочны кантры-фолк",
++"Cosmic country-pop": "Касмічны кантры-поп",
++"Big band swing": "Свінг біг-бэнда",
++"Modern blues rock": "Сучасны блюз-рок",
++"K-pop girl group": "K-pop, жаночы гурт",
++"Hard-hitting K-pop": "Жорсткі K-pop",
++"70s orchestral soul": "Аркестравы соўл 70-х",
++"Balkan brass band": "Балканскі духавы аркестр",
++"Mongolian throat singing": "Мангольскі горлавы спеў",
++"Classical string quartet": "Класічны струнны квартэт",
++"Film noir jazz": "Джаз у духу нуару"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index f62de8b..d2c708d 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2696,3 +2696,124 @@ RuachI18n.add("el", {
+ "VAE loaded in {0} s": "ο VAE φορτώθηκε σε {0} s",
+ "transcriber loaded in {0} s": "ο μεταγραφέας φορτώθηκε σε {0} s"
+ });
++// HERESY 1167: the words of 06.10.2026: the workspace in hand and its chooser, the models' idle unload, the take's way
++// to the Librarian, pins from a room's column, the cheat-sheet's head, its notes and its new styles' names
++RuachI18n.add("el", {
++"The workspace in hand: every new take lands in it, and the Takes column shows it. Click to choose another, or to make one.": "Ο χώρος στο χέρι: κάθε νέα λήψη μπαίνει σε αυτόν, και η στήλη «Λήψεις» τον δείχνει. Κάνε κλικ για να διαλέξεις άλλον ή να φτιάξεις καινούργιο.",
++"Choose a workspace": "Διάλεξε χώρο",
++"The workspace in hand": "Ο χώρος στο χέρι",
++"Where do the new takes land?": "Πού θα μπουν οι νέες λήψεις;",
++"Every new take lands in it, and the Takes column shows it.": "Κάθε νέα λήψη μπαίνει σε αυτόν, και η στήλη «Λήψεις» τον δείχνει.",
++"+ New section of “{0}”…": "+ Νέα ενότητα στο «{0}»…",
++"Send nothing": "Μην στείλεις τίποτα",
++"Filter the workspaces": "Φιλτράρισμα χώρων",
++"It is in hand at once: new takes land in it.": "Είναι αμέσως στο χέρι: οι νέες λήψεις μπαίνουν σε αυτόν.",
++"Workspace “{0}” made and in hand: new takes land in it": "Ο χώρος «{0}» φτιάχτηκε και είναι στο χέρι: οι νέες λήψεις μπαίνουν σε αυτόν",
++"Section “{0}” made and in hand: new takes land in it": "Η ενότητα «{0}» φτιάχτηκε και είναι στο χέρι: οι νέες λήψεις μπαίνουν σε αυτήν",
++"Nothing sent: choose a workspace for the new takes first": "Δεν στάλθηκε τίποτα: διάλεξε πρώτα χώρο για τις νέες λήψεις",
++"Models auto unload": "Αυτόματη αποφόρτωση μοντέλων",
++"after {#0} h idle": "μετά από {0} ώ. αδράνειας",
++"after {#0} min idle": "μετά από {0} λεπ. αδράνειας",
++"after {#0} h {#1} min idle": "μετά από {0} ώ. {1} λεπ. αδράνειας",
++"15 s after a song": "15 δευτ. μετά από ένα τραγούδι",
++"Unload idle models after": "Αποφόρτωση αδρανών μοντέλων μετά από",
++"How long the models stay in GPU memory with nothing to do: 15 minutes to 4 hours, by 15. Then the engine unloads them, and the next song loads them again.": "Πόσο μένουν τα μοντέλα στη μνήμη της GPU χωρίς δουλειά: από 15 λεπτά ως 4 ώρες, ανά 15. Μετά η μηχανή τα αποφορτώνει, και το επόμενο τραγούδι τα φορτώνει ξανά.",
++"The models leave GPU memory 15 s after a song: time enough to send the next one while they are still loaded": "Τα μοντέλα φεύγουν από τη μνήμη της GPU 15 δευτ. μετά από ένα τραγούδι: αρκετός χρόνος για να στείλεις το επόμενο όσο είναι ακόμα φορτωμένα",
++"At once (15 s)": "Αμέσως (15 δευτ.)",
++"Show in the Librarian": "Εμφάνιση στον Βιβλιοθηκάριο",
++"Show this take in the Librarian: its card found, in sight and flashed": "Εμφάνιση αυτής της λήψης στον Βιβλιοθηκάριο: η κάρτα της βρίσκεται, φαίνεται και αναβοσβήνει",
++"Pin in “{0}”": "Καρφίτσωμα στο «{0}»",
++"Unpin from “{0}”": "Ξεκαρφίτσωμα από το «{0}»",
++"Pinned in “{0}”": "Καρφιτσώθηκε στο «{0}»",
++"Unpinned from “{0}”": "Ξεκαρφιτσώθηκε από το «{0}»",
++"{#0} of {#1} free": "ελεύθερες {0} από {1}",
++"Only the disliked": "Μόνο όσα δεν άρεσαν",
++"The covers are painted by an image model: some show an instrument not quite as it really is.": "Τα εξώφυλλα τα ζωγραφίζει ένα μοντέλο εικόνων: σε μερικά το όργανο δεν είναι ακριβώς όπως στην πραγματικότητα.",
++"⚠ A name in the style is a request, not a promise.": "⚠ Ένα όνομα στο ύφος είναι αίτημα, όχι υπόσχεση.",
++"What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "Ό,τι παίζουν τα ▶ A και ▶ B είναι αυτό που δίνει το YuE2 γι' αυτό, περίπου εννιά φορές στις δέκα: εμπιστέψου το αυτί, όχι το όνομα.",
++"Click a name": "Κάνε κλικ σε ένα όνομα",
++"it goes into the Style prompt": "μπαίνει στο prompt ύφους",
++"its two probes, their seeds under them": "οι δύο δοκιμές του, οι σπόροι τους από κάτω",
++"the ear heard it and kept it;": "το αυτί το άκουσε και το κράτησε·",
++"red": "κόκκινο",
++": not played when named alone": ": δεν παίζει όταν ονομάζεται μόνο του",
++"The pictures": "Οι εικόνες",
++"painted by an image model: some show an instrument not quite as it really is": "τις ζωγραφίζει ένα μοντέλο εικόνων: σε μερικές το όργανο δεν είναι ακριβώς όπως στην πραγματικότητα",
++"How the probes were made": "Πώς έγιναν οι δοκιμές",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Τι ζητήθηκε από το YuE2 να παίξει, ένα όργανο ή ένα ύφος τη φορά, σε δοκιμές δύο λεπτών (ενός λεπτού οι πρώτες), με δύο σπόρους η καθεμία, A και B. Κάποιες δοκιμές είναι εξαιρετικές και τα A και B συμφωνούν, όμως το όργανο δεν είναι αυτό που ζητήθηκε. Ένα όργανο διαμορφώνει το ύφος όλου του κομματιού: όταν το ονομάζεις, κινείς και την ενορχήστρωση. Ένα τρίξιμο ή θρόισμα χαρτιού, σαν σε φθαρμένο δίσκο, είναι άτυχος σπόρος: φτιάξ' το ξανά με άλλον.",
++"{#0} heard by ear": "ακούστηκαν με το αυτί: {0}",
++"Fails when named so: ask for it as the ancient triangular harp (the row below).": "Αποτυγχάνει με αυτό το όνομα: ζήτησέ το ως αρχαία τριγωνική άρπα (η γραμμή από κάτω).",
++"Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Δοκιμάστηκε πολλές φορές, χωρίς επιτυχία: το YuE2 δεν ξέρει το σοφάρ. Οι δοκιμές δίνουν πάντα άλλον αυλό ή κέρας, ποτέ σοφάρ, ούτε καν κοντά. Οι δοκιμές του (παρακάτω) κρατήθηκαν: πάρε τες ως το κέρας ή την τρομπέτα που αποδείχτηκαν. Ο προσαρμογέας του το ξέρει: loras/shofar-yt-r16 στην εποχή 110, το αυτί του Viktor: «Συγκλονιστικό: κανείς παίκτης σοφάρ δεν έχει ακούσει κάτι τέτοιο. Ολόκληρος διαλογισμός. Εκατό τοις εκατό υεμενίτικο σοφάρ, κέρας αντιλόπης δύο μέτρων» (η 167 υπερεκπαιδευμένη, αδύναμη και λεπτή· η 66 ανεκπαίδευτη, με τρομπέτα μέσα).",
++"Tested, Failed. Other pipe/horn discovered. B alone comes near a Yemenite shofar, a battle cry: still not a shofar.": "Δοκιμάστηκε, απέτυχε. Βγήκε άλλος αυλός ή κέρας. Μόνο το B πλησιάζει ένα υεμενίτικο σοφάρ, κραυγή μάχης: πάλι όχι σοφάρ.",
++"Tested, Failed. Other pipe/horn discovered.": "Δοκιμάστηκε, απέτυχε. Βγήκε άλλος αυλός ή κέρας.",
++"Tested, Failed. Other pipe/horn discovered. Dross, kept: a spark of heavy rock in it.": "Δοκιμάστηκε, απέτυχε. Βγήκε άλλος αυλός ή κέρας. Σκουριά, αλλά κρατήθηκε: έχει μια σπίθα από heavy rock.",
++"Not like a horn either.": "Ούτε με κέρας μοιάζει.",
++"Failed (Viktor 04.10: «unfortunately, YuE2 has no oboe»): no oboe in its probes.": "Απέτυχε (Viktor, 04.10: «δυστυχώς, το YuE2 δεν έχει όμποε»): δεν υπάρχει όμποε στις δοκιμές του.",
++"No such reed: YuE2 does not play the bassoon. Both probes deleted.": "Δεν υπάρχει τέτοιο καλάμι: το YuE2 δεν παίζει φαγκότο. Διαγράφηκαν και οι δύο δοκιμές.",
++"Failed (Viktor 03.10: «the gong failed; deleting it»): no gong in its probes.": "Απέτυχε (Viktor, 03.10: «το γκονγκ απέτυχε· το διαγράφω»): δεν υπάρχει γκονγκ στις δοκιμές του.",
++"Fails: YuE2 gives no birdsong when asked for it alone (the 60 s probes and the 2-minute ones alike).": "Αποτυγχάνει: το YuE2 δεν δίνει κελάηδημα πουλιών όταν του ζητηθεί μόνο του (και οι δοκιμές των 60 δευτ. και οι δίλεπτες).",
++"Not an instrument: a whole style (Viktor: «not an instrument, a whole style»). Styles → Summer cicadas.": "Όχι όργανο: ολόκληρο ύφος (Viktor: «όχι όργανο, ολόκληρο ύφος»). Ύφη → Καλοκαιρινά τζιτζίκια.",
++"Mixolydian → harmonic minor": "Μιξολυδικός → αρμονικό ελάσσονα",
++"Dorian & Aeolian major fusion": "Σύντηξη δωρικού και αιολικού μείζονα",
++"Dramatic ballad, sung in Russian": "Δραματική μπαλάντα, στα ρωσικά",
++"Epic shamanic ballad, sung in Russian": "Επική σαμανική μπαλάντα, στα ρωσικά",
++"Romantic ballad, sung in Russian": "Ρομαντική μπαλάντα, στα ρωσικά",
++"Russian folk waltz, sung in Russian": "Ρωσικό λαϊκό βαλς, στα ρωσικά",
++"Russian folk ballad, sung in Russian": "Ρωσική λαϊκή μπαλάντα, στα ρωσικά",
++"Gothic metal, sung in Russian": "Gothic metal, στα ρωσικά",
++"Hard rock, sung in Russian": "Χαρντ ροκ, στα ρωσικά",
++"Symphonic orchestral, sung in Russian": "Συμφωνικό ορχηστρικό, στα ρωσικά",
++"Cinematic epic score, sung in Russian": "Επική κινηματογραφική μουσική, στα ρωσικά",
++"Scythian military march, sung in Ukrainian": "Σκυθικό στρατιωτικό εμβατήριο, στα ουκρανικά",
++"Shamanic ritual trance, sung in Ukrainian": "Σαμανικό τελετουργικό τρανς, στα ουκρανικά",
++"Pagan ceremonial rock, sung in Ukrainian": "Παγανιστικό τελετουργικό ροκ, στα ουκρανικά",
++"Shamanic Scythian ballad, sung in Ukrainian": "Σαμανική σκυθική μπαλάντα, στα ουκρανικά",
++"Mediterranean love fusion, sung in Greek": "Μεσογειακό ερωτικό fusion, στα ελληνικά",
++"Mediterranean spiritual fusion, sung in Greek": "Μεσογειακό πνευματικό fusion, στα ελληνικά",
++"Mediterranean love meditation, sung in Greek": "Μεσογειακός ερωτικός διαλογισμός, στα ελληνικά",
++"Sacred meditation, sung in Hebrew": "Ιερός διαλογισμός, στα εβραϊκά",
++"Acoustic spiritual ballad, sung in Hebrew": "Ακουστική πνευματική μπαλάντα, στα εβραϊκά",
++"Celestial meditation, sung in Hebrew": "Ουράνιος διαλογισμός, στα εβραϊκά",
++"Sacred dramatic fusion, sung in Hebrew": "Ιερό δραματικό fusion, στα εβραϊκά",
++"Theatrical electro-pop": "Θεατρικό electro-pop",
++"Party pop rock": "Πάρτι ποπ ροκ",
++"Latin jazz pop": "Latin jazz pop",
++"East Coast hip-hop": "Χιπ χοπ της Ανατολικής Ακτής",
++"Experimental hip-hop": "Πειραματικό χιπ χοπ",
++"Funk hip-hop": "Φανκ χιπ χοπ",
++"Neo-soul hip-hop": "Neo-soul χιπ χοπ",
++"Atmospheric alt-rock": "Ατμοσφαιρικό alt-rock",
++"Hard-driving rock": "Ορμητικό ροκ",
++"Emo pop-punk": "Emo pop-punk",
++"Baroque pop-rock": "Μπαρόκ ποπ ροκ",
++"Epic blues rock": "Επικό μπλουζ ροκ",
++"Mellow classic rock": "Απαλό κλασικό ροκ",
++"Classic hard rock": "Κλασικό χαρντ ροκ",
++"Crunchy hard rock": "Τραχύ χαρντ ροκ",
++"80s hard rock": "Χαρντ ροκ των '80s",
++"60s blues-rock": "Μπλουζ ροκ των '60s",
++"Explosive hard rock": "Εκρηκτικό χαρντ ροκ",
++"Soaring heavy metal": "Ανυψωτικό heavy metal",
++"Dark thrash metal": "Σκοτεινό thrash metal",
++"Theatrical heavy metal": "Θεατρικό heavy metal",
++"Dreamy psychedelic rock": "Ονειρικό ψυχεδελικό ροκ",
++"Afro-pop indie rock": "Indie rock με afro-pop",
++"Baroque indie folk": "Μπαρόκ indie folk",
++"Whispered indie folk": "Ψιθυριστό indie folk",
++"Lo-fi indie rock": "Lo-fi indie rock",
++"Piano indie rock": "Indie rock με πιάνο",
++"Orchestral indie folk": "Ορχηστρικό indie folk",
++"Psychedelic alt-rock": "Ψυχεδελικό alt-rock",
++"Baritone indie rock": "Indie rock με βαρύτονο",
++"Dark country folk": "Σκοτεινό country folk",
++"Cosmic country-pop": "Κοσμικό country-pop",
++"Big band swing": "Σουίνγκ μεγάλης μπάντας",
++"Modern blues rock": "Σύγχρονο μπλουζ ροκ",
++"K-pop girl group": "K-pop, γυναικείο συγκρότημα",
++"Hard-hitting K-pop": "Δυνατό K-pop",
++"70s orchestral soul": "Ορχηστρικό soul των '70s",
++"Balkan brass band": "Βαλκανική μπάντα πνευστών",
++"Mongolian throat singing": "Μογγολικό λαρυγγικό τραγούδι",
++"Classical string quartet": "Κλασικό κουαρτέτο εγχόρδων",
++"Film noir jazz": "Τζαζ φιλμ νουάρ"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 4d1f43b..94b6228 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2696,3 +2696,124 @@ RuachI18n.add("es", {
+ "VAE loaded in {0} s": "VAE cargado en {0} s",
+ "transcriber loaded in {0} s": "transcriptor cargado en {0} s"
+ });
++// HERESY 1167: the words of 06.10.2026: the workspace in hand and its chooser, the models' idle unload, the take's way
++// to the Librarian, pins from a room's column, the cheat-sheet's head, its notes and its new styles' names
++RuachI18n.add("es", {
++"The workspace in hand: every new take lands in it, and the Takes column shows it. Click to choose another, or to make one.": "El espacio en mano: cada toma nueva cae en él, y la columna Tomas lo muestra. Haz clic para elegir otro o crear uno.",
++"Choose a workspace": "Elige un espacio",
++"The workspace in hand": "El espacio en mano",
++"Where do the new takes land?": "¿Dónde caen las tomas nuevas?",
++"Every new take lands in it, and the Takes column shows it.": "Cada toma nueva cae en él, y la columna Tomas lo muestra.",
++"+ New section of “{0}”…": "+ Nueva sección de «{0}»…",
++"Send nothing": "No enviar nada",
++"Filter the workspaces": "Filtrar los espacios",
++"It is in hand at once: new takes land in it.": "Queda en mano al instante: las tomas nuevas caen en él.",
++"Workspace “{0}” made and in hand: new takes land in it": "Espacio «{0}» creado y en mano: las tomas nuevas caen en él",
++"Section “{0}” made and in hand: new takes land in it": "Sección «{0}» creada y en mano: las tomas nuevas caen en ella",
++"Nothing sent: choose a workspace for the new takes first": "No se envió nada: elige primero un espacio para las tomas nuevas",
++"Models auto unload": "Liberación automática de modelos",
++"after {#0} h idle": "tras {0} h sin uso",
++"after {#0} min idle": "tras {0} min sin uso",
++"after {#0} h {#1} min idle": "tras {0} h {1} min sin uso",
++"15 s after a song": "15 s después de una canción",
++"Unload idle models after": "Liberar los modelos sin uso tras",
++"How long the models stay in GPU memory with nothing to do: 15 minutes to 4 hours, by 15. Then the engine unloads them, and the next song loads them again.": "Cuánto se quedan los modelos en la memoria de la GPU sin nada que hacer: de 15 minutos a 4 horas, de 15 en 15. Después el motor los libera, y la siguiente canción los vuelve a cargar.",
++"The models leave GPU memory 15 s after a song: time enough to send the next one while they are still loaded": "Los modelos salen de la memoria de la GPU 15 s después de una canción: tiempo de sobra para enviar la siguiente mientras siguen cargados",
++"At once (15 s)": "Al momento (15 s)",
++"Show in the Librarian": "Mostrar en el Bibliotecario",
++"Show this take in the Librarian: its card found, in sight and flashed": "Mostrar esta toma en el Bibliotecario: su tarjeta encontrada, a la vista y resaltada",
++"Pin in “{0}”": "Fijar en «{0}»",
++"Unpin from “{0}”": "Desfijar de «{0}»",
++"Pinned in “{0}”": "Fijada en «{0}»",
++"Unpinned from “{0}”": "Desfijada de «{0}»",
++"{#0} of {#1} free": "{0} de {1} libres",
++"Only the disliked": "Solo las que no gustan",
++"The covers are painted by an image model: some show an instrument not quite as it really is.": "Las portadas las pinta un modelo de imágenes: en algunas el instrumento no es del todo como es en realidad.",
++"⚠ A name in the style is a request, not a promise.": "⚠ Un nombre en el estilo es una petición, no una promesa.",
++"What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "Lo que suenan ▶ A y ▶ B es lo que YuE2 da para ese nombre, unas nueve veces de cada diez: fíate del oído, no del nombre.",
++"Click a name": "Haz clic en un nombre",
++"it goes into the Style prompt": "va al prompt de estilo",
++"its two probes, their seeds under them": "sus dos pruebas, sus semillas debajo",
++"the ear heard it and kept it;": "el oído lo oyó y lo guardó;",
++"red": "en rojo",
++": not played when named alone": ": no suena cuando se nombra solo",
++"The pictures": "Las imágenes",
++"painted by an image model: some show an instrument not quite as it really is": "las pinta un modelo de imágenes: en algunas el instrumento no es del todo como es en realidad",
++"How the probes were made": "Cómo se hicieron las pruebas",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Lo que se pidió tocar a YuE2, un instrumento o un estilo cada vez, en pruebas de dos minutos (un minuto las primeras), con dos semillas cada una, A y B. Algunas pruebas son magníficas, y A y B coinciden, pero el instrumento no es el pedido. Un instrumento da forma al estilo de toda la pieza: al nombrarlo mueves también el arreglo. Un chasquido o un roce de papel, como en un disco gastado, es una semilla desafortunada: hazla de nuevo con otra.",
++"{#0} heard by ear": "escuchados de oído: {0}",
++"Fails when named so: ask for it as the ancient triangular harp (the row below).": "Falla con ese nombre: pídelo como el arpa triangular antigua (la fila de abajo).",
++"Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Probado muchas veces, sin éxito: YuE2 no conoce el shofar. Las pruebas siempre dan otra flauta o cuerno, nunca un shofar, ni de cerca. Sus pruebas (abajo) se conservan: tómalas como el cuerno o la trompeta que resultaron ser. Su adaptador sí lo conoce: loras/shofar-yt-r16 en la época 110, el oído de Viktor: «Alucinante: ningún intérprete de shofar ha oído algo así. Toda una meditación. Cien por cien un shofar yemení, un cuerno de antílope de dos metros» (la 167 sobreentrenada, débil y fina; la 66 poco entrenada, con una trompeta dentro).",
++"Tested, Failed. Other pipe/horn discovered. B alone comes near a Yemenite shofar, a battle cry: still not a shofar.": "Probado, fallido. Salió otra flauta o cuerno. Solo B se acerca a un shofar yemení, un grito de batalla: aun así, no es un shofar.",
++"Tested, Failed. Other pipe/horn discovered.": "Probado, fallido. Salió otra flauta o cuerno.",
++"Tested, Failed. Other pipe/horn discovered. Dross, kept: a spark of heavy rock in it.": "Probado, fallido. Salió otra flauta o cuerno. Escoria, pero se guarda: tiene una chispa de rock duro.",
++"Not like a horn either.": "Tampoco suena a cuerno.",
++"Failed (Viktor 04.10: «unfortunately, YuE2 has no oboe»): no oboe in its probes.": "Fallido (Viktor, 04.10: «por desgracia, YuE2 no tiene oboe»): no hay oboe en sus pruebas.",
++"No such reed: YuE2 does not play the bassoon. Both probes deleted.": "No hay tal lengüeta: YuE2 no toca el fagot. Ambas pruebas borradas.",
++"Failed (Viktor 03.10: «the gong failed; deleting it»): no gong in its probes.": "Fallido (Viktor, 03.10: «el gong falló; lo borro»): no hay gong en sus pruebas.",
++"Fails: YuE2 gives no birdsong when asked for it alone (the 60 s probes and the 2-minute ones alike).": "Falla: YuE2 no da canto de pájaros cuando se le pide solo (igual las pruebas de 60 s que las de 2 minutos).",
++"Not an instrument: a whole style (Viktor: «not an instrument, a whole style»). Styles → Summer cicadas.": "No es un instrumento: es todo un estilo (Viktor: «no es un instrumento, es todo un estilo»). Estilos → Cigarras de verano.",
++"Mixolydian → harmonic minor": "Mixolidio → menor armónica",
++"Dorian & Aeolian major fusion": "Fusión de dórico y mayor eólico",
++"Dramatic ballad, sung in Russian": "Balada dramática, cantada en ruso",
++"Epic shamanic ballad, sung in Russian": "Balada chamánica épica, cantada en ruso",
++"Romantic ballad, sung in Russian": "Balada romántica, cantada en ruso",
++"Russian folk waltz, sung in Russian": "Vals popular ruso, cantado en ruso",
++"Russian folk ballad, sung in Russian": "Balada popular rusa, cantada en ruso",
++"Gothic metal, sung in Russian": "Gothic metal, cantado en ruso",
++"Hard rock, sung in Russian": "Hard rock, cantado en ruso",
++"Symphonic orchestral, sung in Russian": "Sinfónico orquestal, cantado en ruso",
++"Cinematic epic score, sung in Russian": "Banda sonora épica, cantada en ruso",
++"Scythian military march, sung in Ukrainian": "Marcha militar escita, cantada en ucraniano",
++"Shamanic ritual trance, sung in Ukrainian": "Trance ritual chamánico, cantado en ucraniano",
++"Pagan ceremonial rock, sung in Ukrainian": "Rock ceremonial pagano, cantado en ucraniano",
++"Shamanic Scythian ballad, sung in Ukrainian": "Balada escita chamánica, cantada en ucraniano",
++"Mediterranean love fusion, sung in Greek": "Fusión mediterránea de amor, cantada en griego",
++"Mediterranean spiritual fusion, sung in Greek": "Fusión mediterránea espiritual, cantada en griego",
++"Mediterranean love meditation, sung in Greek": "Meditación mediterránea de amor, cantada en griego",
++"Sacred meditation, sung in Hebrew": "Meditación sagrada, cantada en hebreo",
++"Acoustic spiritual ballad, sung in Hebrew": "Balada espiritual acústica, cantada en hebreo",
++"Celestial meditation, sung in Hebrew": "Meditación celestial, cantada en hebreo",
++"Sacred dramatic fusion, sung in Hebrew": "Fusión dramática sagrada, cantada en hebreo",
++"Theatrical electro-pop": "Electropop teatral",
++"Party pop rock": "Pop rock de fiesta",
++"Latin jazz pop": "Pop de jazz latino",
++"East Coast hip-hop": "Hip-hop de la Costa Este",
++"Experimental hip-hop": "Hip-hop experimental",
++"Funk hip-hop": "Hip-hop funk",
++"Neo-soul hip-hop": "Hip-hop neo-soul",
++"Atmospheric alt-rock": "Rock alternativo atmosférico",
++"Hard-driving rock": "Rock contundente",
++"Emo pop-punk": "Pop-punk emo",
++"Baroque pop-rock": "Pop-rock barroco",
++"Epic blues rock": "Blues rock épico",
++"Mellow classic rock": "Rock clásico suave",
++"Classic hard rock": "Hard rock clásico",
++"Crunchy hard rock": "Hard rock crujiente",
++"80s hard rock": "Hard rock de los 80",
++"60s blues-rock": "Blues rock de los 60",
++"Explosive hard rock": "Hard rock explosivo",
++"Soaring heavy metal": "Heavy metal elevado",
++"Dark thrash metal": "Thrash metal oscuro",
++"Theatrical heavy metal": "Heavy metal teatral",
++"Dreamy psychedelic rock": "Rock psicodélico onírico",
++"Afro-pop indie rock": "Indie rock afropop",
++"Baroque indie folk": "Indie folk barroco",
++"Whispered indie folk": "Indie folk susurrado",
++"Lo-fi indie rock": "Indie rock lo-fi",
++"Piano indie rock": "Indie rock de piano",
++"Orchestral indie folk": "Indie folk orquestal",
++"Psychedelic alt-rock": "Rock alternativo psicodélico",
++"Baritone indie rock": "Indie rock de barítono",
++"Dark country folk": "Country folk oscuro",
++"Cosmic country-pop": "Country-pop cósmico",
++"Big band swing": "Swing de big band",
++"Modern blues rock": "Blues rock moderno",
++"K-pop girl group": "K-pop de grupo femenino",
++"Hard-hitting K-pop": "K-pop contundente",
++"70s orchestral soul": "Soul orquestal de los 70",
++"Balkan brass band": "Banda de metales balcánica",
++"Mongolian throat singing": "Canto difónico mongol",
++"Classical string quartet": "Cuarteto de cuerda clásico",
++"Film noir jazz": "Jazz de cine negro"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index b5c38ad..d0dd7f6 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2696,3 +2696,124 @@ RuachI18n.add("it", {
+ "VAE loaded in {0} s": "VAE caricato in {0} s",
+ "transcriber loaded in {0} s": "trascrittore caricato in {0} s"
+ });
++// HERESY 1167: the words of 06.10.2026: the workspace in hand and its chooser, the models' idle unload, the take's way
++// to the Librarian, pins from a room's column, the cheat-sheet's head, its notes and its new styles' names
++RuachI18n.add("it", {
++"The workspace in hand: every new take lands in it, and the Takes column shows it. Click to choose another, or to make one.": "Lo spazio in mano: ogni nuovo take finisce lì, e la colonna Take lo mostra. Fai clic per sceglierne un altro o crearne uno.",
++"Choose a workspace": "Scegli uno spazio",
++"The workspace in hand": "Lo spazio in mano",
++"Where do the new takes land?": "Dove finiscono i nuovi take?",
++"Every new take lands in it, and the Takes column shows it.": "Ogni nuovo take finisce lì, e la colonna Take lo mostra.",
++"+ New section of “{0}”…": "+ Nuova sezione di «{0}»…",
++"Send nothing": "Non inviare nulla",
++"Filter the workspaces": "Filtra gli spazi",
++"It is in hand at once: new takes land in it.": "È subito in mano: i nuovi take finiscono lì.",
++"Workspace “{0}” made and in hand: new takes land in it": "Spazio «{0}» creato e in mano: i nuovi take finiscono lì",
++"Section “{0}” made and in hand: new takes land in it": "Sezione «{0}» creata e in mano: i nuovi take finiscono lì",
++"Nothing sent: choose a workspace for the new takes first": "Non è stato inviato nulla: scegli prima uno spazio per i nuovi take",
++"Models auto unload": "Rilascio automatico dei modelli",
++"after {#0} h idle": "dopo {0} h di inattività",
++"after {#0} min idle": "dopo {0} min di inattività",
++"after {#0} h {#1} min idle": "dopo {0} h {1} min di inattività",
++"15 s after a song": "15 s dopo una canzone",
++"Unload idle models after": "Rilascia i modelli inattivi dopo",
++"How long the models stay in GPU memory with nothing to do: 15 minutes to 4 hours, by 15. Then the engine unloads them, and the next song loads them again.": "Quanto restano i modelli nella memoria della GPU senza nulla da fare: da 15 minuti a 4 ore, a passi di 15. Poi il motore li rilascia, e la canzone successiva li ricarica.",
++"The models leave GPU memory 15 s after a song: time enough to send the next one while they are still loaded": "I modelli lasciano la memoria della GPU 15 s dopo una canzone: il tempo di inviare la successiva mentre sono ancora caricati",
++"At once (15 s)": "Subito (15 s)",
++"Show in the Librarian": "Mostra nel Bibliotecario",
++"Show this take in the Librarian: its card found, in sight and flashed": "Mostra questo take nel Bibliotecario: la sua scheda trovata, in vista ed evidenziata",
++"Pin in “{0}”": "Fissa in «{0}»",
++"Unpin from “{0}”": "Sgancia da «{0}»",
++"Pinned in “{0}”": "Fissato in «{0}»",
++"Unpinned from “{0}”": "Sganciato da «{0}»",
++"{#0} of {#1} free": "{0} su {1} liberi",
++"Only the disliked": "Solo quelli che non piacciono",
++"The covers are painted by an image model: some show an instrument not quite as it really is.": "Le copertine le dipinge un modello di immagini: in alcune lo strumento non è proprio com'è davvero.",
++"⚠ A name in the style is a request, not a promise.": "⚠ Un nome nello stile è una richiesta, non una promessa.",
++"What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "Ciò che suonano ▶ A e ▶ B è quello che YuE2 dà per quel nome, circa nove volte su dieci: fidati dell'orecchio, non del nome.",
++"Click a name": "Fai clic su un nome",
++"it goes into the Style prompt": "va nel prompt di stile",
++"its two probes, their seeds under them": "le sue due prove, i loro semi sotto",
++"the ear heard it and kept it;": "l'orecchio l'ha sentito e tenuto;",
++"red": "in rosso",
++": not played when named alone": ": non suona quando è nominato da solo",
++"The pictures": "Le immagini",
++"painted by an image model: some show an instrument not quite as it really is": "le dipinge un modello di immagini: in alcune lo strumento non è proprio com'è davvero",
++"How the probes were made": "Come sono state fatte le prove",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Cosa è stato chiesto di suonare a YuE2, uno strumento o uno stile alla volta, in prove di due minuti (un minuto le prime), due semi ciascuna, A e B. Alcune prove sono superbe, e A e B concordano, eppure lo strumento non è quello chiesto. Uno strumento dà forma allo stile di tutto il brano: nominarlo sposta anche l'arrangiamento. Un crepitio o un fruscio di carta, come su un disco consumato, è un seme sfortunato: rifallo con un altro.",
++"{#0} heard by ear": "ascoltati a orecchio: {0}",
++"Fails when named so: ask for it as the ancient triangular harp (the row below).": "Non riesce con questo nome: chiedilo come l'antica arpa triangolare (la riga sotto).",
++"Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Provato molte volte, senza successo: YuE2 non conosce lo shofar. Le prove danno sempre un altro flauto o corno, mai uno shofar, nemmeno vicino. Le sue prove (sotto) sono conservate: prendile come il corno o la tromba che si sono rivelate. Il suo adattatore lo conosce: loras/shofar-yt-r16 all'epoca 110, l'orecchio di Viktor: «Da togliere il fiato: nessun suonatore di shofar ha mai sentito nulla di simile. Un'intera meditazione. Al cento per cento uno shofar yemenita, un corno di antilope lungo due metri» (la 167 sovrallenata, debole e sottile; la 66 poco allenata, con una tromba dentro).",
++"Tested, Failed. Other pipe/horn discovered. B alone comes near a Yemenite shofar, a battle cry: still not a shofar.": "Provato, fallito. È uscito un altro flauto o corno. Solo B si avvicina a uno shofar yemenita, un grido di battaglia: comunque non è uno shofar.",
++"Tested, Failed. Other pipe/horn discovered.": "Provato, fallito. È uscito un altro flauto o corno.",
++"Tested, Failed. Other pipe/horn discovered. Dross, kept: a spark of heavy rock in it.": "Provato, fallito. È uscito un altro flauto o corno. Scoria, ma conservata: c'è dentro una scintilla di rock pesante.",
++"Not like a horn either.": "Non somiglia nemmeno a un corno.",
++"Failed (Viktor 04.10: «unfortunately, YuE2 has no oboe»): no oboe in its probes.": "Fallito (Viktor, 04.10: «purtroppo YuE2 non ha l'oboe»): nelle sue prove non c'è oboe.",
++"No such reed: YuE2 does not play the bassoon. Both probes deleted.": "Nessuna ancia così: YuE2 non suona il fagotto. Entrambe le prove eliminate.",
++"Failed (Viktor 03.10: «the gong failed; deleting it»): no gong in its probes.": "Fallito (Viktor, 03.10: «il gong è fallito; lo elimino»): nelle sue prove non c'è gong.",
++"Fails: YuE2 gives no birdsong when asked for it alone (the 60 s probes and the 2-minute ones alike).": "Non riesce: YuE2 non dà canto di uccelli quando gli si chiede da solo (sia le prove da 60 s sia quelle da 2 minuti).",
++"Not an instrument: a whole style (Viktor: «not an instrument, a whole style»). Styles → Summer cicadas.": "Non è uno strumento: è un intero stile (Viktor: «non uno strumento, un intero stile»). Stili → Cicale d'estate.",
++"Mixolydian → harmonic minor": "Misolidio → minore armonica",
++"Dorian & Aeolian major fusion": "Fusione di dorico e maggiore eolio",
++"Dramatic ballad, sung in Russian": "Ballata drammatica, cantata in russo",
++"Epic shamanic ballad, sung in Russian": "Ballata sciamanica epica, cantata in russo",
++"Romantic ballad, sung in Russian": "Ballata romantica, cantata in russo",
++"Russian folk waltz, sung in Russian": "Valzer popolare russo, cantato in russo",
++"Russian folk ballad, sung in Russian": "Ballata popolare russa, cantata in russo",
++"Gothic metal, sung in Russian": "Gothic metal, cantato in russo",
++"Hard rock, sung in Russian": "Hard rock, cantato in russo",
++"Symphonic orchestral, sung in Russian": "Sinfonico orchestrale, cantato in russo",
++"Cinematic epic score, sung in Russian": "Colonna sonora epica, cantata in russo",
++"Scythian military march, sung in Ukrainian": "Marcia militare scita, cantata in ucraino",
++"Shamanic ritual trance, sung in Ukrainian": "Trance rituale sciamanica, cantata in ucraino",
++"Pagan ceremonial rock, sung in Ukrainian": "Rock cerimoniale pagano, cantato in ucraino",
++"Shamanic Scythian ballad, sung in Ukrainian": "Ballata scita sciamanica, cantata in ucraino",
++"Mediterranean love fusion, sung in Greek": "Fusion mediterranea d'amore, cantata in greco",
++"Mediterranean spiritual fusion, sung in Greek": "Fusion mediterranea spirituale, cantata in greco",
++"Mediterranean love meditation, sung in Greek": "Meditazione mediterranea d'amore, cantata in greco",
++"Sacred meditation, sung in Hebrew": "Meditazione sacra, cantata in ebraico",
++"Acoustic spiritual ballad, sung in Hebrew": "Ballata spirituale acustica, cantata in ebraico",
++"Celestial meditation, sung in Hebrew": "Meditazione celeste, cantata in ebraico",
++"Sacred dramatic fusion, sung in Hebrew": "Fusion drammatica sacra, cantata in ebraico",
++"Theatrical electro-pop": "Electropop teatrale",
++"Party pop rock": "Pop rock da festa",
++"Latin jazz pop": "Pop latin jazz",
++"East Coast hip-hop": "Hip-hop della East Coast",
++"Experimental hip-hop": "Hip-hop sperimentale",
++"Funk hip-hop": "Hip-hop funk",
++"Neo-soul hip-hop": "Hip-hop neo-soul",
++"Atmospheric alt-rock": "Alt-rock atmosferico",
++"Hard-driving rock": "Rock incalzante",
++"Emo pop-punk": "Pop-punk emo",
++"Baroque pop-rock": "Pop-rock barocco",
++"Epic blues rock": "Blues rock epico",
++"Mellow classic rock": "Rock classico morbido",
++"Classic hard rock": "Hard rock classico",
++"Crunchy hard rock": "Hard rock graffiante",
++"80s hard rock": "Hard rock anni '80",
++"60s blues-rock": "Blues rock anni '60",
++"Explosive hard rock": "Hard rock esplosivo",
++"Soaring heavy metal": "Heavy metal svettante",
++"Dark thrash metal": "Thrash metal cupo",
++"Theatrical heavy metal": "Heavy metal teatrale",
++"Dreamy psychedelic rock": "Rock psichedelico sognante",
++"Afro-pop indie rock": "Indie rock afro-pop",
++"Baroque indie folk": "Indie folk barocco",
++"Whispered indie folk": "Indie folk sussurrato",
++"Lo-fi indie rock": "Indie rock lo-fi",
++"Piano indie rock": "Indie rock pianistico",
++"Orchestral indie folk": "Indie folk orchestrale",
++"Psychedelic alt-rock": "Alt-rock psichedelico",
++"Baritone indie rock": "Indie rock baritonale",
++"Dark country folk": "Country folk cupo",
++"Cosmic country-pop": "Country-pop cosmico",
++"Big band swing": "Swing da big band",
++"Modern blues rock": "Blues rock moderno",
++"K-pop girl group": "K-pop, gruppo femminile",
++"Hard-hitting K-pop": "K-pop martellante",
++"70s orchestral soul": "Soul orchestrale anni '70",
++"Balkan brass band": "Banda di ottoni balcanica",
++"Mongolian throat singing": "Canto difonico mongolo",
++"Classical string quartet": "Quartetto d'archi classico",
++"Film noir jazz": "Jazz noir"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 0af5de3..2033eb8 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2702,3 +2702,124 @@ RuachI18n.add("ru", {
+ "VAE loaded in {0} s": "VAE загружен за {0} с",
+ "transcriber loaded in {0} s": "транскрибер загружен за {0} с"
+ });
++// HERESY 1167: the words of 06.10.2026: the workspace in hand and its chooser, the models' idle unload, the take's way
++// to the Librarian, pins from a room's column, the cheat-sheet's head, its notes and its new styles' names
++RuachI18n.add("ru", {
++"The workspace in hand: every new take lands in it, and the Takes column shows it. Click to choose another, or to make one.": "Пространство в руках: в него ложится каждый новый семпл, и колонка «Семплы» показывает его. Нажми, чтобы выбрать другое или создать новое.",
++"Choose a workspace": "Выбери пространство",
++"The workspace in hand": "Пространство в руках",
++"Where do the new takes land?": "Куда лягут новые семплы?",
++"Every new take lands in it, and the Takes column shows it.": "В него ложится каждый новый семпл, и колонка «Семплы» показывает его.",
++"+ New section of “{0}”…": "+ Новый раздел в «{0}»…",
++"Send nothing": "Ничего не отправлять",
++"Filter the workspaces": "Отбор пространств",
++"It is in hand at once: new takes land in it.": "Оно сразу в руках: новые семплы ложатся в него.",
++"Workspace “{0}” made and in hand: new takes land in it": "Пространство «{0}» создано и в руках: новые семплы ложатся в него",
++"Section “{0}” made and in hand: new takes land in it": "Раздел «{0}» создан и в руках: новые семплы ложатся в него",
++"Nothing sent: choose a workspace for the new takes first": "Ничего не отправлено: сначала выбери пространство для новых семплов",
++"Models auto unload": "Автовыгрузка моделей",
++"after {#0} h idle": "после {0} ч простоя",
++"after {#0} min idle": "после {0} мин простоя",
++"after {#0} h {#1} min idle": "после {0} ч {1} мин простоя",
++"15 s after a song": "через 15 с после песни",
++"Unload idle models after": "Выгружать простаивающие модели через",
++"How long the models stay in GPU memory with nothing to do: 15 minutes to 4 hours, by 15. Then the engine unloads them, and the next song loads them again.": "Сколько модели остаются в памяти GPU без дела: от 15 минут до 4 часов, шагом 15. Потом движок их выгружает, и следующая песня загружает их снова.",
++"The models leave GPU memory 15 s after a song: time enough to send the next one while they are still loaded": "Модели уходят из памяти GPU через 15 с после песни: хватит времени отправить следующую, пока они ещё загружены",
++"At once (15 s)": "Сразу (15 с)",
++"Show in the Librarian": "Показать в Библиотекаре",
++"Show this take in the Librarian: its card found, in sight and flashed": "Показать этот семпл в Библиотекаре: его карточка найдена, на виду и подсвечена",
++"Pin in “{0}”": "Закрепить в «{0}»",
++"Unpin from “{0}”": "Открепить из «{0}»",
++"Pinned in “{0}”": "Закреплено в «{0}»",
++"Unpinned from “{0}”": "Откреплено из «{0}»",
++"{#0} of {#1} free": "свободно {0} из {1}",
++"Only the disliked": "Только непонравившиеся",
++"The covers are painted by an image model: some show an instrument not quite as it really is.": "Обложки рисует модель изображений: на некоторых инструмент не совсем такой, как на самом деле.",
++"⚠ A name in the style is a request, not a promise.": "⚠ Название в стиле — просьба, а не обещание.",
++"What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "▶ A и ▶ B играют то, что YuE2 даёт на это название, примерно девять раз из десяти: верь уху, а не названию.",
++"Click a name": "Нажми на название",
++"it goes into the Style prompt": "оно уходит в промпт стиля",
++"its two probes, their seeds under them": "две его пробы, их сиды под ними",
++"the ear heard it and kept it;": "ухо его услышало и оставило;",
++"red": "красным",
++": not played when named alone": ": не звучит, когда назван один",
++"The pictures": "Картинки",
++"painted by an image model: some show an instrument not quite as it really is": "их рисует модель изображений: на некоторых инструмент не совсем такой, как на самом деле",
++"How the probes were made": "Как делались пробы",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Что YuE2 просили сыграть, по одному инструменту или стилю за раз, пробами по две минуты (первые — по минуте), по два сида на каждую, A и B. Бывают пробы превосходные, A и B сходятся, а инструмент не тот, что просили. Инструмент формирует стиль всей вещи: назвав его, двигаешь и аранжировку. Треск или шелест бумаги, как на заезженной пластинке, — неудачный сид: сделай заново на другом.",
++"{#0} heard by ear": "на слух услышано: {0}",
++"Fails when named so: ask for it as the ancient triangular harp (the row below).": "Под этим названием не выходит: проси его как древнюю треугольную арфу (строка ниже).",
++"Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Пробовали много раз, без успеха: YuE2 не знает шофара. Пробы всегда дают другую дудку или рог, никогда не шофар, даже близко. Его пробы (ниже) оставлены: бери их как тот рог или трубу, которыми они оказались. Его адаптер шофар знает: loras/shofar-yt-r16 на эпохе 110, ухо Виктора: «Взрыв мозга: ни один шофарист такого не слышал. Целая медитация. Стопроцентно йеменский шофар, рог антилопы в два метра» (167 перетренирована, слабая и тонкая; 66 недотренирована, в ней труба).",
++"Tested, Failed. Other pipe/horn discovered. B alone comes near a Yemenite shofar, a battle cry: still not a shofar.": "Проверено, не вышло. Вышла другая дудка или рог. Лишь B приближается к йеменскому шофару, боевой клич: и всё же не шофар.",
++"Tested, Failed. Other pipe/horn discovered.": "Проверено, не вышло. Вышла другая дудка или рог.",
++"Tested, Failed. Other pipe/horn discovered. Dross, kept: a spark of heavy rock in it.": "Проверено, не вышло. Вышла другая дудка или рог. Шлак, но оставлен: в нём искра тяжёлого рока.",
++"Not like a horn either.": "И на рог не похоже.",
++"Failed (Viktor 04.10: «unfortunately, YuE2 has no oboe»): no oboe in its probes.": "Не вышло (Виктор, 04.10: «к сожалению, гобоя у YuE2 нет»): в пробах гобоя нет.",
++"No such reed: YuE2 does not play the bassoon. Both probes deleted.": "Такой трости нет: YuE2 не играет на фаготе. Обе пробы удалены.",
++"Failed (Viktor 03.10: «the gong failed; deleting it»): no gong in its probes.": "Не вышло (Виктор, 03.10: «гонг провалился, удаляю»): в пробах гонга нет.",
++"Fails: YuE2 gives no birdsong when asked for it alone (the 60 s probes and the 2-minute ones alike).": "Не выходит: YuE2 не даёт пения птиц, когда его просят одно (и минутные пробы, и двухминутные).",
++"Not an instrument: a whole style (Viktor: «not an instrument, a whole style»). Styles → Summer cicadas.": "Не инструмент, а целый стиль (Виктор: «не инструмент, а целый стиль»). Стили → Летние цикады.",
++"Mixolydian → harmonic minor": "Миксолидийский → гармонический минор",
++"Dorian & Aeolian major fusion": "Фьюжн дорийского и эолийского мажора",
++"Dramatic ballad, sung in Russian": "Драматическая баллада, поётся по-русски",
++"Epic shamanic ballad, sung in Russian": "Эпическая шаманская баллада, поётся по-русски",
++"Romantic ballad, sung in Russian": "Романтическая баллада, поётся по-русски",
++"Russian folk waltz, sung in Russian": "Русский народный вальс, поётся по-русски",
++"Russian folk ballad, sung in Russian": "Русская народная баллада, поётся по-русски",
++"Gothic metal, sung in Russian": "Готик-метал, поётся по-русски",
++"Hard rock, sung in Russian": "Хард-рок, поётся по-русски",
++"Symphonic orchestral, sung in Russian": "Симфоническая оркестровая, поётся по-русски",
++"Cinematic epic score, sung in Russian": "Эпическая киномузыка, поётся по-русски",
++"Scythian military march, sung in Ukrainian": "Скифский военный марш, поётся по-украински",
++"Shamanic ritual trance, sung in Ukrainian": "Шаманский ритуальный транс, поётся по-украински",
++"Pagan ceremonial rock, sung in Ukrainian": "Языческий обрядовый рок, поётся по-украински",
++"Shamanic Scythian ballad, sung in Ukrainian": "Шаманская скифская баллада, поётся по-украински",
++"Mediterranean love fusion, sung in Greek": "Средиземноморский любовный фьюжн, поётся по-гречески",
++"Mediterranean spiritual fusion, sung in Greek": "Средиземноморский духовный фьюжн, поётся по-гречески",
++"Mediterranean love meditation, sung in Greek": "Средиземноморская любовная медитация, поётся по-гречески",
++"Sacred meditation, sung in Hebrew": "Священная медитация, поётся на иврите",
++"Acoustic spiritual ballad, sung in Hebrew": "Акустическая духовная баллада, поётся на иврите",
++"Celestial meditation, sung in Hebrew": "Небесная медитация, поётся на иврите",
++"Sacred dramatic fusion, sung in Hebrew": "Священный драматический фьюжн, поётся на иврите",
++"Theatrical electro-pop": "Театральный электропоп",
++"Party pop rock": "Тусовочный поп-рок",
++"Latin jazz pop": "Латин-джаз-поп",
++"East Coast hip-hop": "Хип-хоп Восточного побережья",
++"Experimental hip-hop": "Экспериментальный хип-хоп",
++"Funk hip-hop": "Фанк-хип-хоп",
++"Neo-soul hip-hop": "Нео-соул-хип-хоп",
++"Atmospheric alt-rock": "Атмосферный альт-рок",
++"Hard-driving rock": "Напористый рок",
++"Emo pop-punk": "Эмо-поп-панк",
++"Baroque pop-rock": "Барочный поп-рок",
++"Epic blues rock": "Эпический блюз-рок",
++"Mellow classic rock": "Мягкий классический рок",
++"Classic hard rock": "Классический хард-рок",
++"Crunchy hard rock": "Хрусткий хард-рок",
++"80s hard rock": "Хард-рок 80-х",
++"60s blues-rock": "Блюз-рок 60-х",
++"Explosive hard rock": "Взрывной хард-рок",
++"Soaring heavy metal": "Парящий хеви-метал",
++"Dark thrash metal": "Мрачный трэш-метал",
++"Theatrical heavy metal": "Театральный хеви-метал",
++"Dreamy psychedelic rock": "Мечтательный психоделический рок",
++"Afro-pop indie rock": "Инди-рок с афропопом",
++"Baroque indie folk": "Барочный инди-фолк",
++"Whispered indie folk": "Инди-фолк шёпотом",
++"Lo-fi indie rock": "Лоу-фай инди-рок",
++"Piano indie rock": "Фортепианный инди-рок",
++"Orchestral indie folk": "Оркестровый инди-фолк",
++"Psychedelic alt-rock": "Психоделический альт-рок",
++"Baritone indie rock": "Инди-рок с баритоном",
++"Dark country folk": "Мрачный кантри-фолк",
++"Cosmic country-pop": "Космический кантри-поп",
++"Big band swing": "Свинг биг-бенда",
++"Modern blues rock": "Современный блюз-рок",
++"K-pop girl group": "K-pop, женская группа",
++"Hard-hitting K-pop": "Жёсткий K-pop",
++"70s orchestral soul": "Оркестровый соул 70-х",
++"Balkan brass band": "Балканский духовой оркестр",
++"Mongolian throat singing": "Монгольское горловое пение",
++"Classical string quartet": "Классический струнный квартет",
++"Film noir jazz": "Джаз в духе нуара"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 8ca29bb..672e3a2 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2697,3 +2697,124 @@ RuachI18n.add("uk", {
+ "VAE loaded in {0} s": "VAE завантажено за {0} с",
+ "transcriber loaded in {0} s": "транскрибер завантажено за {0} с"
+ });
++// HERESY 1167: the words of 06.10.2026: the workspace in hand and its chooser, the models' idle unload, the take's way
++// to the Librarian, pins from a room's column, the cheat-sheet's head, its notes and its new styles' names
++RuachI18n.add("uk", {
++"The workspace in hand: every new take lands in it, and the Takes column shows it. Click to choose another, or to make one.": "Простір у руках: у нього лягає кожен новий семпл, і колонка «Семпли» показує його. Натисни, щоб вибрати інший або створити новий.",
++"Choose a workspace": "Вибери простір",
++"The workspace in hand": "Простір у руках",
++"Where do the new takes land?": "Куди ляжуть нові семпли?",
++"Every new take lands in it, and the Takes column shows it.": "У нього лягає кожен новий семпл, і колонка «Семпли» показує його.",
++"+ New section of “{0}”…": "+ Новий розділ у «{0}»…",
++"Send nothing": "Нічого не надсилати",
++"Filter the workspaces": "Відбір просторів",
++"It is in hand at once: new takes land in it.": "Він одразу в руках: нові семпли лягають у нього.",
++"Workspace “{0}” made and in hand: new takes land in it": "Простір «{0}» створено, він у руках: нові семпли лягають у нього",
++"Section “{0}” made and in hand: new takes land in it": "Розділ «{0}» створено, він у руках: нові семпли лягають у нього",
++"Nothing sent: choose a workspace for the new takes first": "Нічого не надіслано: спершу вибери простір для нових семплів",
++"Models auto unload": "Автовивантаження моделей",
++"after {#0} h idle": "після {0} год простою",
++"after {#0} min idle": "після {0} хв простою",
++"after {#0} h {#1} min idle": "після {0} год {1} хв простою",
++"15 s after a song": "через 15 с після пісні",
++"Unload idle models after": "Вивантажувати моделі, що простоюють, через",
++"How long the models stay in GPU memory with nothing to do: 15 minutes to 4 hours, by 15. Then the engine unloads them, and the next song loads them again.": "Скільки моделі лишаються в пам'яті GPU без діла: від 15 хвилин до 4 годин, кроком 15. Потім рушій їх вивантажує, і наступна пісня завантажує їх знову.",
++"The models leave GPU memory 15 s after a song: time enough to send the next one while they are still loaded": "Моделі йдуть із пам'яті GPU через 15 с після пісні: вистачить часу надіслати наступну, поки вони ще завантажені",
++"At once (15 s)": "Одразу (15 с)",
++"Show in the Librarian": "Показати в Бібліотекарі",
++"Show this take in the Librarian: its card found, in sight and flashed": "Показати цей семпл у Бібліотекарі: його картку знайдено, вона на виду й підсвічена",
++"Pin in “{0}”": "Закріпити в «{0}»",
++"Unpin from “{0}”": "Відкріпити з «{0}»",
++"Pinned in “{0}”": "Закріплено в «{0}»",
++"Unpinned from “{0}”": "Відкріплено з «{0}»",
++"{#0} of {#1} free": "вільно {0} з {1}",
++"Only the disliked": "Лише ті, що не сподобалися",
++"The covers are painted by an image model: some show an instrument not quite as it really is.": "Обкладинки малює модель зображень: на деяких інструмент не зовсім такий, як насправді.",
++"⚠ A name in the style is a request, not a promise.": "⚠ Назва в стилі — прохання, а не обіцянка.",
++"What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "▶ A і ▶ B грають те, що YuE2 дає на цю назву, приблизно дев'ять разів із десяти: вір вуху, а не назві.",
++"Click a name": "Натисни на назву",
++"it goes into the Style prompt": "вона йде в промпт стилю",
++"its two probes, their seeds under them": "дві його проби, їхні сіди під ними",
++"the ear heard it and kept it;": "вухо його почуло й залишило;",
++"red": "червоним",
++": not played when named alone": ": не звучить, коли названий сам",
++"The pictures": "Картинки",
++"painted by an image model: some show an instrument not quite as it really is": "їх малює модель зображень: на деяких інструмент не зовсім такий, як насправді",
++"How the probes were made": "Як робилися проби",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Що YuE2 просили зіграти, по одному інструменту чи стилю за раз, пробами по дві хвилини (перші — по хвилині), по два сіди на кожну, A і B. Бувають проби чудові, A і B сходяться, а інструмент не той, що просили. Інструмент формує стиль усієї речі: назвавши його, рухаєш і аранжування. Тріск або шелест паперу, як на заїждженій платівці, — невдалий сід: зроби наново на іншому.",
++"{#0} heard by ear": "на слух почуто: {0}",
++"Fails when named so: ask for it as the ancient triangular harp (the row below).": "Під цією назвою не виходить: проси його як давню трикутну арфу (рядок нижче).",
++"Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Пробували багато разів, без успіху: YuE2 не знає шофара. Проби завжди дають іншу дудку чи ріг, ніколи не шофар, навіть близько. Його проби (нижче) залишено: бери їх як той ріг чи трубу, якими вони виявилися. Його адаптер шофар знає: loras/shofar-yt-r16 на епосі 110, вухо Віктора: «Вибух мозку: жоден шофарист такого не чув. Ціла медитація. Стовідсотково єменський шофар, ріг антилопи на два метри» (167 перетренована, слабка й тонка; 66 недотренована, у ній труба).",
++"Tested, Failed. Other pipe/horn discovered. B alone comes near a Yemenite shofar, a battle cry: still not a shofar.": "Перевірено, не вийшло. Вийшла інша дудка чи ріг. Лише B наближається до єменського шофара, бойовий клич: і все ж не шофар.",
++"Tested, Failed. Other pipe/horn discovered.": "Перевірено, не вийшло. Вийшла інша дудка чи ріг.",
++"Tested, Failed. Other pipe/horn discovered. Dross, kept: a spark of heavy rock in it.": "Перевірено, не вийшло. Вийшла інша дудка чи ріг. Шлак, але залишений: у ньому іскра важкого року.",
++"Not like a horn either.": "І на ріг не схоже.",
++"Failed (Viktor 04.10: «unfortunately, YuE2 has no oboe»): no oboe in its probes.": "Не вийшло (Віктор, 04.10: «на жаль, гобоя в YuE2 немає»): у пробах гобоя немає.",
++"No such reed: YuE2 does not play the bassoon. Both probes deleted.": "Такої тростини немає: YuE2 не грає на фаготі. Обидві проби видалено.",
++"Failed (Viktor 03.10: «the gong failed; deleting it»): no gong in its probes.": "Не вийшло (Віктор, 03.10: «гонг провалився, видаляю»): у пробах гонга немає.",
++"Fails: YuE2 gives no birdsong when asked for it alone (the 60 s probes and the 2-minute ones alike).": "Не виходить: YuE2 не дає співу птахів, коли його просять самого (і хвилинні проби, і двохвилинні).",
++"Not an instrument: a whole style (Viktor: «not an instrument, a whole style»). Styles → Summer cicadas.": "Не інструмент, а цілий стиль (Віктор: «не інструмент, а цілий стиль»). Стилі → Літні цикади.",
++"Mixolydian → harmonic minor": "Міксолідійський → гармонічний мінор",
++"Dorian & Aeolian major fusion": "Ф'южн дорійського та еолійського мажору",
++"Dramatic ballad, sung in Russian": "Драматична балада, співається російською",
++"Epic shamanic ballad, sung in Russian": "Епічна шаманська балада, співається російською",
++"Romantic ballad, sung in Russian": "Романтична балада, співається російською",
++"Russian folk waltz, sung in Russian": "Російський народний вальс, співається російською",
++"Russian folk ballad, sung in Russian": "Російська народна балада, співається російською",
++"Gothic metal, sung in Russian": "Готик-метал, співається російською",
++"Hard rock, sung in Russian": "Хард-рок, співається російською",
++"Symphonic orchestral, sung in Russian": "Симфонічна оркестрова, співається російською",
++"Cinematic epic score, sung in Russian": "Епічна кіномузика, співається російською",
++"Scythian military march, sung in Ukrainian": "Скіфський військовий марш, співається українською",
++"Shamanic ritual trance, sung in Ukrainian": "Шаманський ритуальний транс, співається українською",
++"Pagan ceremonial rock, sung in Ukrainian": "Язичницький обрядовий рок, співається українською",
++"Shamanic Scythian ballad, sung in Ukrainian": "Шаманська скіфська балада, співається українською",
++"Mediterranean love fusion, sung in Greek": "Середземноморський любовний ф'южн, співається грецькою",
++"Mediterranean spiritual fusion, sung in Greek": "Середземноморський духовний ф'южн, співається грецькою",
++"Mediterranean love meditation, sung in Greek": "Середземноморська любовна медитація, співається грецькою",
++"Sacred meditation, sung in Hebrew": "Священна медитація, співається івритом",
++"Acoustic spiritual ballad, sung in Hebrew": "Акустична духовна балада, співається івритом",
++"Celestial meditation, sung in Hebrew": "Небесна медитація, співається івритом",
++"Sacred dramatic fusion, sung in Hebrew": "Священний драматичний ф'южн, співається івритом",
++"Theatrical electro-pop": "Театральний електропоп",
++"Party pop rock": "Тусовий поп-рок",
++"Latin jazz pop": "Латин-джаз-поп",
++"East Coast hip-hop": "Хіп-хоп Східного узбережжя",
++"Experimental hip-hop": "Експериментальний хіп-хоп",
++"Funk hip-hop": "Фанк-хіп-хоп",
++"Neo-soul hip-hop": "Нео-соул-хіп-хоп",
++"Atmospheric alt-rock": "Атмосферний альт-рок",
++"Hard-driving rock": "Напористий рок",
++"Emo pop-punk": "Емо-поп-панк",
++"Baroque pop-rock": "Барочний поп-рок",
++"Epic blues rock": "Епічний блюз-рок",
++"Mellow classic rock": "М'який класичний рок",
++"Classic hard rock": "Класичний хард-рок",
++"Crunchy hard rock": "Хрусткий хард-рок",
++"80s hard rock": "Хард-рок 80-х",
++"60s blues-rock": "Блюз-рок 60-х",
++"Explosive hard rock": "Вибуховий хард-рок",
++"Soaring heavy metal": "Ширяючий хеві-метал",
++"Dark thrash metal": "Похмурий треш-метал",
++"Theatrical heavy metal": "Театральний хеві-метал",
++"Dreamy psychedelic rock": "Мрійливий психоделічний рок",
++"Afro-pop indie rock": "Інді-рок з афропопом",
++"Baroque indie folk": "Барочний інді-фолк",
++"Whispered indie folk": "Інді-фолк пошепки",
++"Lo-fi indie rock": "Лоу-фай інді-рок",
++"Piano indie rock": "Фортепіанний інді-рок",
++"Orchestral indie folk": "Оркестровий інді-фолк",
++"Psychedelic alt-rock": "Психоделічний альт-рок",
++"Baritone indie rock": "Інді-рок із баритоном",
++"Dark country folk": "Похмурий кантрі-фолк",
++"Cosmic country-pop": "Космічний кантрі-поп",
++"Big band swing": "Свінг біг-бенду",
++"Modern blues rock": "Сучасний блюз-рок",
++"K-pop girl group": "K-pop, жіночий гурт",
++"Hard-hitting K-pop": "Жорсткий K-pop",
++"70s orchestral soul": "Оркестровий соул 70-х",
++"Balkan brass band": "Балканський духовий оркестр",
++"Mongolian throat singing": "Монгольський горловий спів",
++"Classical string quartet": "Класичний струнний квартет",
++"Film noir jazz": "Джаз у дусі нуару"
++});
+diff --git a/tools/console/index.html b/tools/console/index.html
+index d2cc505..c70b794 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -11,6 +11,10 @@
+ <!-- the fonts never hold up the first paint: loaded as a print sheet, switched on when they arrive -->
+ <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Michroma&family=Space+Grotesk:wght@400;500;600&family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+ <script>try { var t = localStorage.getItem("yue2.theme"); if (t) document.documentElement.dataset.theme = t;
++  // HERESY 1167 (Viktor: «дефолтом поставь СИСТЕМА»): as the system, the system's day or night before the first paint
++  var sc = localStorage.getItem("yue2.scheme");
++  if ((!sc || sc === "auto") && window.matchMedia) document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches
++    ? localStorage.getItem("yue2.theme.night") || "igr-night" : localStorage.getItem("yue2.theme.day") || "igr-day";
+   var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: "sans-serif", heading: "sans-serif", mono: "monospace" };
+   for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, JSON.stringify(f[k]) + ", " + g[k]);
+   var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners"];
+@@ -663,6 +667,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <li><a href="https://huggingface.co/goldhub/Ruach_Studio_Models" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Models</span></li>
+             <li><a href="https://huggingface.co/goldhub/Ruach_Studio_LoRAs" target="_blank" rel="noopener noreferrer">LoRAs</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_LoRAs</span></li>
+             <li><a href="https://huggingface.co/datasets/goldhub/Ruach_Studio_Starter_Sets" target="_blank" rel="noopener noreferrer">Starter sets</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Starter_Sets</span></li>
++            <!-- HERESY 1167 (Viktor: «ссылка или кнопка на кофе… прямо на Stripe»; his words, 01.10: «Buy me a Coffee Machine») -->
++            <li><a href="https://ruachstudio.igr.bible" target="_blank" rel="noopener noreferrer">The website</a><span class="about-where" translate="no">ruachstudio.igr.bible</span></li>
++            <li><a href="https://github.com/igrbible/Ruach_Studio" target="_blank" rel="noopener noreferrer">The source</a><span class="about-where" translate="no">github · igrbible/Ruach_Studio</span></li>
++            <li><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02" target="_blank" rel="noopener noreferrer">☕ Buy me a Coffee Machine</a><span class="about-where" translate="no">stripe</span></li>
+             <li><a href="https://huggingface.co/buckets/goldhub/Ruach_Studio_Instruments_Probe_WS" target="_blank" rel="noopener noreferrer">Probes, styles and voices</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Instruments_Probe_WS</span></li>
+           </ul></section>
+           <section class="about-project"><h4>YuE2_WebUI</h4><p class="about-what">HTML layout inspired by Ladypoly/YuE2_WebUI</p><ul class="about-links">
+-- 
+2.43.0
+

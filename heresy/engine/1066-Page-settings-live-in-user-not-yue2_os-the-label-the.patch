@@ -1,0 +1,82 @@
+From 4e28b495c36da137099d71bda4cba1debd1b1cdc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 00:25:21 -0600
+Subject: [PATCH 1066/1177] Page settings live in user/, not yue2_os: the
+ label, the reset tip, the comments
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js               | 2 +-
+ tools/console/heresy-collection.js | 2 +-
+ tools/console/heresy-presets.js    | 2 +-
+ tools/console/heresy-settings.js   | 4 ++--
+ tools/console/index.html           | 2 +-
+ 5 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index d43d076..2e81e04 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2370,7 +2370,7 @@
+       ["Songs per pass", String(STATE.maxBatch), ""],
+       ["Transcriber", STATE.transcriber ? "loaded" : "not started with one", STATE.transcriber ? "ok" : "no"],
+       ["Library", STATE.library ? "saved on disk" : "off (no --outputs)", STATE.library ? "ok" : "no"],
+-      ["Page settings", window.HeresySettings && window.HeresySettings.reachable() ? "on disk · yue2_os/settings.json" : "this browser only (lab is down)",   // HERESY 1027
++      ["Page settings", window.HeresySettings && window.HeresySettings.reachable() ? "on disk · user/settings.json" : "this browser only (lab is down)",   // HERESY 1027
+        window.HeresySettings && window.HeresySettings.reachable() ? "ok" : "no"]
+     ];
+     $("serverCard").innerHTML = rows.map(function (row) {
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 18e54a8..9c1e255 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -4,7 +4,7 @@
+ // favourite, add to or take from a workspace, hide from the list (not deleted), export as a ZIP,
+ // move to the trash. The trash lists what went there and gives it back, or empties it when asked;
+ // an automatic empty after 7, 14 or 28 days runs only once chosen. The lab keeps the marks
+-// (yue2_os/collection.json) and the trash (trash/DATE/TAKE); the takes stay the server's.
++// (user/collection.json) and the trash (trash/DATE/TAKE); the takes stay the server's.
+ (function () {
+   "use strict";
+ 
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+index a390ed1..6050abc 100644
+--- a/tools/console/heresy-presets.js
++++ b/tools/console/heresy-presets.js
+@@ -1,5 +1,5 @@
+ // HERESY 1032: a library of styles and profiles, kept by the lab on Forge in the user config folder
+-// (yue2_os/presets.json): every browser and device sees the same, and a cleared browser loses none.
++// (user/presets.json): every browser and device sees the same, and a cleared browser loses none.
+ // A style is a text. A profile is every knob but the texts and seeds (app.js captures and applies it).
+ // Two profiles are built in: Music, as the engine's defaults, and Speech, for long spoken word.
+ (function () {
+diff --git a/tools/console/heresy-settings.js b/tools/console/heresy-settings.js
+index e4bc3e9..2059610 100644
+--- a/tools/console/heresy-settings.js
++++ b/tools/console/heresy-settings.js
+@@ -1,6 +1,6 @@
+ // HERESY 1027: the page's settings (its yue2.* keys in the browser's storage) mirrored to disk on
+-// Forge through the lab: ~/.config/yue2_os/settings.json (%APPDATA% on Windows, Application Support
+-// on a Mac). A cleared browser, a private window or another device gets them back.
++// Forge through the lab: the studio's user/settings.json (since 02.10.2026; before, ~/.config/yue2_os, which the lab
++// copies once). A cleared browser, a private window or another device gets them back.
+ //
+ // Load: before app.js reads anything, the file is read at once (a synchronous request for one
+ // small local file). Keys this browser lacks come from the file. Where both hold a key, the
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 53100c0..b872107 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -92,7 +92,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <dl class="kv" id="serverCard"></dl>
+       <!-- HERESY 1027: every page setting back to its default, in this browser and on disk -->
+       <div class="server-reset"><button type="button" class="btn ghost small" id="resetPageSettings"
+-        data-tip="Theme, columns, folds, the form's draft, the player, the writing room: all back to defaults, here and in yue2_os/settings.json. The library and the engine settings stay.">Reset page settings</button></div>
++        data-tip="Theme, columns, folds, the form's draft, the player, the writing room: all back to defaults, here and in user/settings.json. The library and the engine settings stay.">Reset page settings</button></div>
+     </div>
+ 
+     <div class="card compute-card" id="computeCard">
+-- 
+2.43.0
+

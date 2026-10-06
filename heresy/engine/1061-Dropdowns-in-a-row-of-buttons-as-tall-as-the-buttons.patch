@@ -1,0 +1,30 @@
+From 6624e3284d633d8ff729fee365473d3fb241d46c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 23:28:33 -0600
+Subject: [PATCH 1061/1177] Dropdowns in a row of buttons as tall as the
+ buttons
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   3 +++
+ tools/public/index.html.gz | Bin 354188 -> 354289 bytes
+ 2 files changed, 3 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a22bf6a..66b25e0 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2424,6 +2424,9 @@ select:focus { background-color: var(--field); background-image: linear-gradient
+ /* HERESY 1065 (Viktor): the open list is the browser's own, drawn by the theme's color-scheme (our colours on the
+    options painted its top over in the night theme); the closed box 6 px lower */
+ select { padding-top: 6px; padding-bottom: 6px; }
++/* 1065b (Viktor, 02.10): a dropdown in a row of buttons is as tall as they are (measured 35.7 against 30.6):
++   their type size and padding */
++.coll-bar select, .coll-bulk select, .ws-current select { font-size: 12px; padding-top: 5px; padding-bottom: 5px; }
+ .coll-inline { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+ .coll-inline select { width: auto; padding-top: 4px; padding-bottom: 4px; }
+ 
+-- 
+2.43.0
+

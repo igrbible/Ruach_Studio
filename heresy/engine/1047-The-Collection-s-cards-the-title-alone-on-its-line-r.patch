@@ -1,0 +1,169 @@
+From 7b0777289a06b4b8069dac596a1519074759bc9c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 12:52:12 -0600
+Subject: [PATCH 1047/1177] The Collection's cards: the title alone on its
+ line; rename in place
+
+1049: like, dislike and the star leave the title line (the card's lower row
+carries them). A pencil by the title, and a click on the sheet's title, edit
+it where it stands: Enter or leaving the field keeps it, Esc does not; the
+same guard against hidden characters, 80 at most. The menu's Rename uses it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  13 ++++++++--
+ tools/console/app.js               |  17 +++++++++----
+ tools/console/heresy-collection.js |  37 +++++++++++++++++++++++++++--
+ tools/public/index.html.gz         | Bin 334716 -> 335458 bytes
+ 4 files changed, 58 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 893165a..0449723 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2145,8 +2145,9 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-check { flex: none; padding-top: 2px; }
+ .coll-play { flex: none; width: 28px; height: 28px; border-radius: var(--r-pill); border: 1px solid var(--line); background: none; color: var(--amber); cursor: pointer; }
+ .coll-body { min-width: 0; flex: 1; }
+-.coll-title { font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+-.coll-title:hover { color: var(--amber); }
++.coll-title { display: flex; align-items: center; gap: 4px; min-width: 0; font-weight: 600; }
++.coll-title-text { min-width: 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.coll-title-text:hover { color: var(--amber); }
+ .coll-meta { font-size: 12px; color: var(--muted); }
+ .coll-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+ .coll-grid.list .coll-badges { margin-top: 0; }
+@@ -2313,3 +2314,11 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .hm-more { color: var(--muted); }
+ .hm-sep { height: 1px; margin: 4px 6px; background: var(--line); }
+ .hm-head { padding: 4px 10px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
++
++/* HERESY 1049: rename in place */
++.coll-ren { flex: none; padding: 0 4px; border: 0; background: none; color: var(--dim); font: inherit; font-size: 12px; cursor: pointer; opacity: 0; }
++.coll-card:hover .coll-ren, .coll-ren:focus { opacity: 1; }
++.coll-ren:hover { color: var(--amber); }
++.coll-title-edit { flex: 1; min-width: 0; padding: 1px 6px; font: inherit; font-weight: 600; }
++.sheet-title .coll-title-text { cursor: text; }
++.sheet-title .coll-title-text:hover { text-decoration: underline dotted var(--muted); color: inherit; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f246910..cd95d17 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3402,6 +3402,15 @@
+     }).catch(function (error) { toast(error.message, "bad"); });
+   }
+ 
++  // HERESY 1049: a rename from anywhere (the Collection's cards and sheet, the menu); true when it changed
++  function renameTake(name, text) {
++    var take = findTake(name), c = cleanTitle(text);
++    if (!take || !c.text || c.text === displayTitle(take)) return Promise.resolve(false);
++    return updateTake(take, { title: c.text }).then(function () {
++      toast("Renamed to " + c.text + (c.removed ? " (hidden characters taken out)" : ""));
++      return true;
++    });
++  }
+   function startRename() {
+     var take = STATE.take;
+     if (!take || $("renameInput")) return;
+@@ -5195,10 +5204,7 @@
+       { icon: "Aa", label: "Rename…", action: function () {
+         var t = prompt("A new title (up to " + TITLE_MAX + " characters):", displayTitle(take));
+         if (t === null) return;
+-        var c = cleanTitle(t);
+-        if (!c.text) return;
+-        updateTake(take, { title: c.text }).then(function () { paintLibrary(); if (HC) HC.reload(); toast("Renamed" + (c.removed ? " (hidden characters taken out)" : "")); })
+-          .catch(function (e) { toast(e.message, "bad"); });
++        renameTake(name, t).then(function (ok) { if (ok && HC) HC.reload(); }).catch(function (e) { toast(e.message, "bad"); });
+       } },
+       { sep: true },
+       HC ? { icon: "▦", label: "Workspaces", items: ws.map(function (w) {
+@@ -5268,7 +5274,8 @@
+     openTake: function (name, where) { openTake(name); setTab(where === "post" ? "post" : "create"); },
+     playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, togglePlay: togglePlay,
+     playing: function () { return { name: STATE.playerTake ? STATE.playerTake.name : "", playing: isPlaying() }; }, libraryChanged: function () { paintLibrary(); paintRate(); paintNote(); },
+-    menu: function (name, x, y) { takeMenu(name, x, y); }
++    menu: function (name, x, y) { takeMenu(name, x, y); },
++    rename: renameTake
+   });
+   if ($("libSearch")) $("libSearch").addEventListener("input", function () { paintLibrary(); });
+ 
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index b4397ba..2ad601f 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -104,7 +104,8 @@
+       return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + (mine ? " is-current" : "") + '" data-name="' + esc(r.name) + '">' +
+         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+         '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + (mine && now.playing ? "❚❚" : "▶") + "</button>" +
+-        '<div class="coll-body"><div class="coll-title" data-open="' + esc(r.name) + '">' + (r.favorite ? "★ " : "") + (r.rating > 0 ? "👍 " : r.rating < 0 ? "👎 " : "") + esc(r.title) + "</div>" +
++        '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
++        '<button type="button" class="coll-ren" data-ren="' + esc(r.name) + '" title="Rename" aria-label="Rename">✎</button></div>' +
+         '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
+         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+         r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" +
+@@ -247,6 +248,9 @@
+         if (now.name === play.dataset.play) { hooks.togglePlay(); return; }
+         var t = hooks.findTake(play.dataset.play); if (t) hooks.playNow(t); return;
+       }
++      var ren = e.target.closest("[data-ren]");               // HERESY 1049: rename in place
++      if (ren) { renameIn(ren.closest(".coll-title").querySelector(".coll-title-text"), ren.dataset.ren); return; }
++      if (e.target.closest(".coll-title-edit")) return;
+       if (open) { openSheet(open.dataset.open); return; }   // HERESY 1046: a sheet here; Create only by choice
+       var card = e.target.closest(".coll-card[data-name]"), cname = card && card.dataset.name;   // HERESY 1048
+       var crate = e.target.closest("[data-crate]");
+@@ -284,6 +288,9 @@
+       if (e.target === $("collSheet") || e.target.closest("[data-sheet-close]")) return closeSheet();
+       var name = sheetName, r = rowOf(name);
+       if (!r) return;
++      var sren = e.target.closest("[data-sheet-ren]");
++      if (sren) { renameIn(sren, name, function () { openSheet(name); }); return; }
++      if (e.target.closest(".coll-title-edit")) return;
+       if (e.target.closest("[data-sheet-play]")) {
+         var now = hooks.playing();
+         if (now.name === name) hooks.togglePlay(); else { var t = hooks.findTake(name); if (t) hooks.playNow(t); }
+@@ -430,7 +437,7 @@
+     var now = state.hooks.playing(), mine = now.name === r.name && now.playing;
+     $("collSheetBody").innerHTML =
+       '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + (mine ? "\u275a\u275a" : "\u25b6") + "</button>" +
+-      '<div><div class="sheet-title">' + esc(r.title) + '</div><div class="coll-meta">' + esc(state.hooks.ago(r.created)) +
++      '<div><div class="sheet-title"><span class="coll-title-text" data-sheet-ren="1" title="Click to rename">' + esc(r.title) + '</span></div><div class="coll-meta">' + esc(state.hooks.ago(r.created)) +
+       (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + (req.cot ? " \u00b7 " + esc(req.cot) : "") + " \u00b7 " + esc(KINDS[r.kind] || r.kind) +
+       (r.derived.length ? " \u00b7 made from it: " + esc(r.derived.join(", ")) : "") + "</div></div>" +
+       '<span class="pb-rate"><button type="button" class="pb-btn" data-sheet-rate="1" aria-pressed="' + (r.rating > 0) + '">\ud83d\udc4d</button>' +
+@@ -463,6 +470,32 @@
+     });
+   }
+ 
++  // HERESY 1049: the title edited where it stands (Enter or leaving the field keeps it, Esc does not)
++  function renameIn(span, name, after) {
++    if (!span || !state.hooks.rename || span.parentNode.querySelector(".coll-title-edit")) return;
++    hidePeek();
++    var input = document.createElement("input"), old = span.textContent, done = false;
++    input.type = "text"; input.className = "coll-title-edit"; input.value = old; input.maxLength = 80;
++    input.setAttribute("aria-label", "New title");
++    span.hidden = true;
++    span.parentNode.insertBefore(input, span);
++    input.focus(); input.select();
++    function finish(save) {
++      if (done) return;
++      done = true;
++      var text = input.value;
++      input.remove(); span.hidden = false;
++      if (!save || text.trim() === old) return;
++      state.hooks.rename(name, text).then(function (ok) { if (ok) return load().then(function () { if (after) after(); }); })
++        .catch(function (e) { toast(e.message, true); });
++    }
++    input.addEventListener("keydown", function (e) {
++      if (e.key === "Enter") { e.preventDefault(); finish(true); }
++      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); }
++    });
++    input.addEventListener("blur", function () { finish(true); });
++  }
++
+   // HERESY 1044: a note on a take (the take card edits it)
+   function note(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.note || "" : ""; }
+   function setNote(name, text) {
+-- 
+2.43.0
+

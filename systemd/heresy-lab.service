@@ -1,0 +1,24 @@
+# heresy-lab, the studio's Python neighbour (lab/lab.py, port 41870), a systemd user unit. A template:
+# systemd/install-units.sh writes it with @ROOT@ replaced by where the studio is.
+# The page reaches it through the studio's server at /lab/.
+#   systemctl --user enable --now heresy-lab
+#   journalctl --user -u heresy-lab -f
+[Unit]
+# HERESY 1112 (Viktor): up again after any fall, as many times as it takes
+StartLimitIntervalSec=0
+Description=heresy-lab (Whisper and the studio's other Python jobs)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@/lab
+Environment=PYTHONUNBUFFERED=1
+ExecStart=@ROOT@/.venv/bin/python @ROOT@/lab/lab.py
+Restart=always
+RestartSec=5
+# HERESY 1167 (Viktor: «Может и reload для сисюнитов докрутишь?»): systemctl --user reload restarts it when it is
+# empty (a restart under a running take drops the engine's queue); the waiting is a unit of its own
+ExecReload=@ROOT@/systemd/reload-when-idle.sh lab
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,1947 @@
+From 4902a997f52bceb8d2024820063cab5190ebb418 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 11:50:42 -0600
+Subject: [PATCH 1081/1177] The studio's own guide behind ? (1096), five rooms
+ with names: Creator, Writer, Refiner, Librarian, LoRA Trainer (1097), the
+ Librarian says what it holds (1098), 22 themes to work in (1099)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               |   46 ++
+ tools/console/app.js                |   26 +-
+ tools/console/heresy-collection.js  |   39 +-
+ tools/console/heresy-derived.js     |    4 +-
+ tools/console/heresy-guide.js       |  139 ++++
+ tools/console/heresy-instruments.js |   10 +-
+ tools/console/heresy-train.js       |   16 +-
+ tools/console/heresy-writer.js      |   26 +-
+ tools/console/index.html            |   39 +-
+ tools/console/loras.js              |    2 +-
+ tools/console/themes.css            | 1021 ---------------------------
+ tools/console/themes.js             |   35 +-
+ tools/public/index.html.gz          |  Bin 399604 -> 398078 bytes
+ 13 files changed, 279 insertions(+), 1124 deletions(-)
+ create mode 100644 tools/console/heresy-guide.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3766a59..1c54200 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2836,3 +2836,49 @@ body[data-tab="train"] .log-dock { bottom: 18px; }
+ .log-dock.is-folded { width: min(420px, calc(100vw - 32px)); }
+ .log-dock.is-folded .log-dock-body, .log-dock.is-folded .log-dock-acts { display: none; }
+ @media (max-width: 1150px) { .log-dock { bottom: 10px; } }
++
++/* HERESY 1096: the guide */
++.guide-btn { min-width: 34px; height: 30px; padding: 0 9px; font: 600 15px/1 var(--sans); }
++.head-more-items .hm-text { gap: 10px; font-size: 13px; }
++.hm-glyph { display: inline-grid; place-items: center; width: 16px; font-weight: 700; }
++.hg-back { position: fixed; inset: 0; z-index: 150; display: flex; align-items: center; justify-content: center; padding: 3vh 3vw;
++  background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(3px); opacity: 0; transition: opacity .16s ease; }
++.hg-back.is-on { opacity: 1; }
++.hg-back[hidden] { display: none; }
++.hg-box { width: min(1180px, 100%); height: min(88vh, 980px); display: grid; grid-template-rows: auto auto minmax(0, 1fr); border: 1px solid var(--line);
++  border-radius: var(--r-md); background: var(--panel); box-shadow: 0 30px 80px -30px var(--shadow-lg, rgba(0,0,0,.45)); overflow: hidden; }
++.hg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 10px; }
++.hg-title { font: 500 20px/1.3 var(--heading); margin-right: 12px; }
++.hg-lead { font-size: 12.5px; color: var(--muted); }
++.hg-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 16px 10px; border-bottom: 1px solid var(--line); }
++.hg-tabs button { padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--panel); color: var(--ink); font: 500 13px var(--sans); cursor: pointer; }
++.hg-tabs button:hover { border-color: var(--line-strong); }
++.hg-tabs button.is-on { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); color: var(--amber); }
++.hg-main { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 0; }
++.hg-stops { display: flex; flex-direction: column; gap: 2px; padding: 12px 8px; border-right: 1px solid var(--line-soft, var(--line)); overflow-y: auto; }
++.hg-stops button { text-align: left; padding: 5px 8px; border: 0; border-radius: var(--r-sm); background: none; color: var(--muted); font: 12.5px/1.35 var(--sans); cursor: pointer; }
++.hg-stops button:hover { background: var(--hover); color: var(--ink); }
++.hg-body { overflow-y: auto; padding: 8px 28px 40px; font-size: 14.5px; line-height: 1.6; color: var(--ink); }
++.hg-body h3 { margin: 26px 0 8px; font: 500 18px/1.35 var(--heading); scroll-margin-top: 10px; }
++.hg-body h4 { margin: 18px 0 6px; font-size: 14.5px; }
++.hg-body p { margin: 0 0 10px; max-width: 78ch; }
++.hg-body ul, .hg-body ol { margin: 0 0 12px; padding-left: 22px; max-width: 80ch; }
++.hg-body li { margin: 3px 0; }
++.hg-body code { font: 12.5px var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--sunk); }
++.hg-body pre { padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); overflow-x: auto; }
++.hg-body pre code { padding: 0; background: none; }
++.hg-body a { color: var(--amber); }
++.hg-note { margin: 10px 0 14px; padding: 10px 14px; border-left: 3px solid var(--amber); background: color-mix(in srgb, var(--amber) 7%, transparent); border-radius: 0 var(--r-sm) var(--r-sm) 0; max-width: 78ch; }
++.hg-table { border-collapse: collapse; margin: 6px 0 14px; font-size: 13.5px; }
++.hg-table th, .hg-table td { padding: 5px 14px 5px 0; border-bottom: 1px solid var(--line-soft, var(--line)); text-align: left; vertical-align: top; }
++.hg-table th { color: var(--dim); font-weight: 500; }
++.hg-fig { margin: 10px 0 18px; }
++.hg-fig img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--r-sm); cursor: zoom-in; box-shadow: 0 8px 24px -16px var(--shadow-lg, rgba(0,0,0,.35)); }
++.hg-fig figcaption { margin-top: 5px; font-size: 12px; color: var(--dim); }
++.hg-zoom { position: fixed; inset: 0; z-index: 160; display: flex; align-items: center; justify-content: center; padding: 2vh 2vw; background: rgba(0,0,0,.72); cursor: zoom-out; }
++.hg-zoom[hidden] { display: none; }
++.hg-zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
++@media (max-width: 900px) { .hg-main { grid-template-columns: minmax(0, 1fr); } .hg-stops { display: none; } }
++/* HERESY 1098: the Librarian's heading names the collection open */
++.coll-where { font-weight: 600; color: var(--amber); margin-left: 2px; }
++.coll-col .col-head h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index c45c925..e113b7b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3552,7 +3552,7 @@
+     }).catch(function (error) { toast(error.message, "bad"); });
+   }
+ 
+-  // HERESY 1049: a rename from anywhere (the Collection's cards and sheet, the menu); true when it changed
++  // HERESY 1049: a rename from anywhere (the Librarian's cards and sheet, the menu); true when it changed
+   function renameTake(name, text) {
+     var take = findTake(name), c = cleanTitle(text);
+     if (!take || !c.text || c.text === displayTitle(take)) return Promise.resolve(false);
+@@ -3781,7 +3781,7 @@
+   }
+ 
+   $("playBtn").addEventListener("click", togglePlay);
+-  ["play", "pause", "ended", "emptied"].forEach(function (ev) {   // HERESY 1042: the Collection's buttons follow the player
++  ["play", "pause", "ended", "emptied"].forEach(function (ev) {   // HERESY 1042: the Librarian's buttons follow the player
+     audio.addEventListener(ev, function () { if (window.HeresyCollection) window.HeresyCollection.paintPlaying(); });
+   });
+ 
+@@ -3823,7 +3823,7 @@
+ 
+   // HERESY 1009: the takes in the order the list shows them, newest on top: "next"
+   // goes down, into the history. A card that shows the playing take follows it.
+-  // HERESY 1052 (Viktor): play-on and ⏮⏭ stay in the zone the playing started from: the Collection
++  // HERESY 1052 (Viktor): play-on and ⏮⏭ stay in the zone the playing started from: the Librarian
+   // as its search and filters show it now, or the takes column as its search shows it
+   function listOrder() {
+     var HC = window.HeresyCollection;
+@@ -4044,7 +4044,7 @@
+   function paintLibrary() {
+     var list = $("libList");
+     var shown = STATE.favOnly ? STATE.takes.filter(function (t) { return t.favorite; }) : STATE.takes;
+-    // HERESY 1041: the quick search, and the takes hidden in the Collection stay out of the column
++    // HERESY 1041: the quick search, and the takes hidden in the Librarian stay out of the column
+     var HC = window.HeresyCollection, q = $("libSearch") ? $("libSearch").value : "";
+     if (HC) {
+       var m = HC.matcher(q);
+@@ -4084,7 +4084,7 @@
+         '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
+         '" title="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>" +
+         '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>' +
+-        (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '" title="Load into Post">Post</button>') +
++        (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '" title="Load into the Refiner">Refine</button>') +
+         '<a class="take-dl" data-dl="1" href="' + escape(downloadUrl(take)) + '" download="' + escape(audioFileName(take)) +
+         '" title="Download ' + formatExt(take.format).toUpperCase() + '" aria-label="Download">⤓</a>' +
+         (!convertible(take) ? "" : '<a class="take-mp3" data-dl="1" href="' + escape(mp3Url(take)) + '" download="' + escape(fileTitle(take)) +
+@@ -4099,7 +4099,7 @@
+ 
+   $("libList").addEventListener("click", function (event) {
+     if (event.target.closest("[data-dl]")) { event.stopPropagation(); return; }   // download, do not open
+-    var lrate = event.target.closest("[data-lrate]");   // HERESY 1082: like and dislike from the column, as in the Collection
++    var lrate = event.target.closest("[data-lrate]");   // HERESY 1082: like and dislike from the column, as in the Librarian
+     if (lrate && window.HeresyCollection) {
+       event.stopPropagation();
+       var HCr = window.HeresyCollection, v = Number(lrate.dataset.lrate);
+@@ -5406,9 +5406,9 @@
+         playNow(take);
+       } },
+       // HERESY 1059 (Viktor): the other rooms only, never the one you are in
+-      here !== "create" ? { icon: "✎", label: "Open in Create", action: go("create") } : null,
+-      here !== "post" ? { icon: "⚗", label: "Open in Post", action: go("post") } : null,
+-      HC && HC.reveal && here !== "collection" ? { icon: "▦", label: "Open in Collection", action: function () { setTab("collection"); HC.reveal(name); } } : null,
++      here !== "create" ? { icon: "✎", label: "Open in the Creator", action: go("create") } : null,
++      here !== "post" ? { icon: "⚗", label: "Open in the Refiner", action: go("post") } : null,
++      HC && HC.reveal && here !== "collection" ? { icon: "▦", label: "Open in the Librarian", action: function () { setTab("collection"); HC.reveal(name); } } : null,
+       HC && HC.openSheet && here === "collection" ? { icon: "▤", label: "Open the sheet", action: function () { HC.openSheet(name); } } : null,
+       HC && HC.datasheet ? { icon: "☰", label: "Open the datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
+       { sep: true },
+@@ -5469,7 +5469,7 @@
+       ].filter(Boolean) },
+       HC && HC.trash ? { sep: true } : null,
+       HC && HC.trash ? { icon: "🗑", label: "Move to the trash…", danger: true, action: function () {
+-        window.HeresyDialog.confirm("Move “" + displayTitle(take) + "” to the trash?\n\nNothing is deleted: the trash in the Collection gives it back until it is emptied.", { ok: "To the trash", danger: true })
++        window.HeresyDialog.confirm("Move “" + displayTitle(take) + "” to the trash?\n\nNothing is deleted: the trash in the Librarian gives it back until it is emptied.", { ok: "To the trash", danger: true })
+           .then(function (ok) { if (ok) return HC.trash([name]).then(function () { toast("Moved to the trash"); return refreshLibrary(); }); })
+           .catch(function (e) { toast(e.message, "bad"); });
+       } } : null
+@@ -5497,7 +5497,7 @@
+     }, 900);
+   });
+ 
+-  /* ---------------------------------------------- HERESY 1041: the Collection */
++  /* ---------------------------------------------- HERESY 1041: the Librarian */
+   if (window.HeresyCollection) window.HeresyCollection.init({
+     toast: toast, clock: clock, ago: ago, findTake: findTake, getRequest: getRequest,
+     openTake: function (name, where) { openTake(name); setTab(where === "post" ? "post" : "create"); },
+@@ -5653,7 +5653,7 @@
+   }
+   function paintPost() {
+     var take = STATE.take;
+-    $("postTitle").textContent = take ? displayTitle(take) : "Post";
++    $("postTitle").textContent = take ? displayTitle(take) : "Refiner";
+     $("postNote").textContent = take ? takeLabel(take).replace(displayTitle(take), "").replace(/^ · /, "") || take.name : "pick a take on the right";
+   }
+   function setTab(tab) {
+@@ -5678,7 +5678,7 @@
+ 
+   // HERESY 1023: import a track from elsewhere. The body goes up as it is, with a progress line
+   // (XMLHttpRequest: fetch reports no upload progress); then the lyrics, if any; then the new
+-  // take opens here in Post.
++  // take opens here in the Refiner.
+   $("impRun").addEventListener("click", function () {
+     var file = $("impFile").files[0], button = this;
+     if (!file) return toast("Pick a file first", "bad");
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index fbb4591..44159d9 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -1,4 +1,4 @@
+-// HERESY 1041: the Collection, a fourth tab (Viktor, 01.10.2026): every take as a card or a row,
++// HERESY 1041: the Librarian, a fourth tab (Viktor, 01.10.2026): every take as a card or a row,
+ // searched (wildcards * and ?), filtered (what it is, what is made from it, favourites, hidden),
+ // sorted, grouped in workspaces (as SUNO has them), selected many at once and acted on together:
+ // favourite, add to or take from a workspace, hide from the list (not deleted), export as a ZIP,
+@@ -46,7 +46,7 @@
+       paint();
+       paintCurrent();
+       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+-    }).catch(function (e) { $("collGrid").innerHTML = '<p class="row-hint">The Collection lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
++    }).catch(function (e) { $("collGrid").innerHTML = '<p class="row-hint">The Librarian lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
+   }
+ 
+   function shown() {
+@@ -100,7 +100,7 @@
+   function ico(name) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(name) : ""; }   // HERESY 1051
+   function badge(text, cls) { return '<span class="coll-badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
+ 
+-  // HERESY 1082: the Collection's marks for a take in Create's column: derived, workspaces, like, dislike, note
++  // HERESY 1082: the Librarian's marks for a take in the Creator's column: derived, workspaces, like, dislike, note
+   function cardExtras(name) {
+     var r = rowOf(name);
+     if (!r) return "";
+@@ -136,13 +136,31 @@
+         '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + '</button>' +
+         '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + '</button>' +
+         '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" title="Favourite">' + ico("star") + "</button>" +
+-        '<button type="button" class="coll-act post" data-cgo="post" title="Load into Post">Post</button>' +
++        '<button type="button" class="coll-act post" data-cgo="post" title="Load into the Refiner">Refine</button>' +
+         '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' +
+         // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height
+         (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" title="' + esc(r.note) + '" aria-label="Has a note">' + ico("note") + "</button>"
+                 : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
+     }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+-    $("collNote").textContent = rows.length + " shown · " + state.rows.length + " in the library";
++    // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
++    var placeName = { "": "All Workspaces", __fav: "Favourites", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
++    $("collWhere").textContent = " \u203a " + (placeName || state.place);
++    var inPlace = state.rows.filter(function (r) {
++      if (state.place === "__fav") return r.favorite && !r.hidden;
++      if (state.place === "__none") return !r.workspaces.length && !r.hidden;
++      if (state.place === "__hidden") return r.hidden;
++      if (state.place) return !r.hidden && r.workspaces.indexOf(state.place) >= 0;
++      return !r.hidden;
++    });
++    var secs = inPlace.reduce(function (s, r) { return s + (r.seconds || 0); }, 0), hm = function (t) { var h = Math.floor(t / 3600), m = Math.round(t % 3600 / 60); return h ? h + " h " + m + " min" : m + " min"; };
++    var count = function (f) { return inPlace.filter(f).length; }, kinds = {};
++    inPlace.forEach(function (r) { kinds[r.kind] = (kinds[r.kind] || 0) + 1; });
++    var parts = [inPlace.length + " take" + (inPlace.length === 1 ? "" : "s") + (rows.length !== inPlace.length ? " (" + rows.length + " shown)" : ""), hm(secs)];
++    var liked = count(function (r) { return r.rating > 0; }), disliked = count(function (r) { return r.rating < 0; }), fav = count(function (r) { return r.favorite; }), notes = count(function (r) { return r.note; });
++    if (liked) parts.push(liked + " liked"); if (disliked) parts.push(disliked + " disliked"); if (fav) parts.push(fav + " \u2605"); if (notes) parts.push(notes + " with a note");
++    parts.push(Object.keys(kinds).sort(function (a, b) { return kinds[b] - kinds[a]; }).map(function (k) { return kinds[k] + " " + (KINDS[k] || k); }).join(", "));
++    parts.push(state.rows.length + " in the library");
++    $("collNote").textContent = parts.filter(Boolean).join(" \u00b7 ");
+     paintBulk(rows);
+   }
+ 
+@@ -161,6 +179,7 @@
+   function paintTrash() {
+     var clock = state.hooks.clock;
+     $("collTrashDays").value = String(state.trashDays || 0);
++    $("collWhere").textContent = " \u203a Trash";
+     $("collNote").textContent = state.trash.length + " in the trash · " + (state.trash.reduce(function (s, i) { return s + i.bytes; }, 0) / 1e9).toFixed(2) + " GB";
+     $("collGrid").className = "coll-grid list";
+     var nsel = Object.keys(state.tsel).length;             // HERESY 1058: the button says what it will do
+@@ -454,7 +473,7 @@
+     });
+   }
+ 
+-  // ---- HERESY 1046: the take without leaving the Collection: a hover peek (400 ms) and a sheet on click
++  // ---- HERESY 1046: the take without leaving the Librarian: a hover peek (400 ms) and a sheet on click
+   var reqCache = {}, peekTimer = 0, peekFor = "";
+   function requestOf(name) {
+     if (reqCache[name]) return Promise.resolve(reqCache[name]);
+@@ -510,8 +529,8 @@
+       '<div class="sheet-cols"><div><div class="peek-cap">Style</div><pre class="sheet-text">' + esc(req.style || "") + "</pre></div>" +
+       '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
+       '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="4000">' + esc(r.note || "") + "</textarea></label>" +
+-      '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in Create</button>' +
+-      '<button type="button" class="btn ghost small" data-sheet-go="post">Open in Post</button><span class="spacer"></span>' +
++      '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in the Creator</button>' +
++      '<button type="button" class="btn ghost small" data-sheet-go="post">Open in the Refiner</button><span class="spacer"></span>' +
+       '<button type="button" class="btn ghost small" data-sheet-close="1">Close</button></div>';
+     $("collSheet").hidden = false;
+   }
+@@ -643,7 +662,7 @@
+         '<div class="coll-meta">' + esc(h.ago(t.created)) + (t.seconds ? " \u00b7 " + h.clock(t.seconds) : "") + (t.render_seconds ? " \u00b7 made in " + h.clock(t.render_seconds) : "") +
+         (t.model ? " \u00b7 " + esc(t.model) : "") + (t.truncated ? " \u00b7 hit the token cap" : "") + (q.parent ? " \u00b7 from " + esc(q.parent) : "") + "</div></div>" +
+         '<span class="spacer"></span><button type="button" class="btn ghost small" data-ds="json">Copy request JSON</button>' +
+-        '<button type="button" class="btn ghost small" data-ds="create">Open in Create</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
++        '<button type="button" class="btn ghost small" data-ds="create">Open in the Creator</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
+         '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
+         '<div class="peek-cap">Lyrics</div><pre class="sheet-text ds-lyrics">' + esc(q.lyrics || "") + "</pre>" +
+         (q.abc ? '<div class="peek-cap">Score (ABC)</div><pre class="sheet-text mono ds-abc">' + esc(q.abc) + "</pre>" : "") + "</div>" +
+@@ -674,7 +693,7 @@
+     }).catch(function (e) { close(); toast(e.message, true); });
+   }
+ 
+-  // ---- HERESY 1059: "Open in Collection": the Collection with the take in sight, flashed
++  // ---- HERESY 1059: "Open in Collection": the Librarian with the take in sight, flashed
+   function reveal(name) {
+     if (!shown().some(function (r) { return r.name === name; })) {   // out of the current view: the whole library, no search
+       state.place = ""; state.q = ""; state.kinds = {}; state.derived = {};
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index fdbe37a..5797b3f 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -1,5 +1,5 @@
+ // HERESY 1021: what is made from a take — stems now, remasters and upscales next — as a tree
+-// under it, in Post. heresy-lab keeps each derived thing in outputs/TAKE/derived/ID/ with a
++// under it, in the Refiner. heresy-lab keeps each derived thing in outputs/TAKE/derived/ID/ with a
+ // manifest.json (kind, models, files, when), so deleting the take deletes its children.
+ // Every file in the tree can be played, laid over the take in the spectrum, and given to
+ // the lyrics check (a vocal stem is what Whisper hears best).
+@@ -99,7 +99,7 @@
+     var est = Math.max(5, len * rate), pct = Math.min(95, Math.round(100 * el / est));
+     return { pct: pct, say: clockS(el) + (el < est ? " \u00b7 about " + clockS(Math.round(est - el)) + " left" : " \u00b7 longer than usual") };
+   }
+-  // a floating card in Post while Forge works on the take in hand: what runs, how long, about how much is left
++  // a floating card in the Refiner while Forge works on the take in hand: what runs, how long, about how much is left
+   function paintJobs() {
+     var card = document.getElementById("postJobs");
+     if (!card) {
+diff --git a/tools/console/heresy-guide.js b/tools/console/heresy-guide.js
+new file mode 100644
+index 0000000..07e33fd
+--- /dev/null
++++ b/tools/console/heresy-guide.js
+@@ -0,0 +1,139 @@
++// HERESY 1096 (Viktor, 02.10.2026): the studio's own guide, room by room, in the studio itself. The ? in the bar
++// (and Guide in the ☰) opens it on the room you are in; a browser that has never seen the studio gets it by
++// itself a minute after the first start ("so the user sees that somebody took care of them, not just a hard tool").
++// One source: docs/GUIDE.md (the repository's guide too), served by the lab at /lab/guide/; every "## " is a
++// tab, every "### " a stop in the tab's own contents; pictures from docs/guide/, a click shows one large.
++(function () {
++  "use strict";
++
++  var SEEN = "yue2.guideSeen", LAST = "yue2.guideTab";
++  var ROOM_TAB = { create: "creator", write: "writer", post: "refiner", collection: "librarian", train: "lora" };
++  var state = { tabs: null, title: "", lead: "", el: null, loading: null };
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
++  function keep(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* a private window */ } }
++  function slug(s) { return String(s).toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, ""); }
++  function src(u) { return /^(https?:|data:|\/)/.test(u) ? u : "/lab/guide/" + u.replace(/^\.?\//, ""); }
++
++  // ---- a small Markdown: headings, paragraphs, lists, tables, quotes, code, pictures, links, bold, italic
++  function inline(t) {
++    var code = [];
++    t = esc(t).replace(/`([^`]+)`/g, function (_, c) { code.push(c); return "\u0000" + (code.length - 1) + "\u0000"; });
++    t = t.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, function (_, alt, u, cap) {
++      return '<figure class="hg-fig"><img src="' + esc(src(u)) + '" alt="' + alt + '" loading="lazy" />' + (cap || alt ? "<figcaption>" + (cap || alt) + "</figcaption>" : "") + "</figure>";
++    });
++    t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, x, u) { return '<a href="' + esc(/^(https?:|#)/.test(u) ? u : src(u)) + '" target="_blank" rel="noopener">' + x + "</a>"; });
++    t = t.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>");
++    return t.replace(/\u0000(\d+)\u0000/g, function (_, i) { return "<code>" + code[+i] + "</code>"; });
++  }
++  function render(md) {
++    var out = [], lines = md.split("\n"), i = 0;
++    while (i < lines.length) {
++      var l = lines[i];
++      if (/^```/.test(l)) { var buf = []; i++; while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]); i++; out.push("<pre><code>" + esc(buf.join("\n")) + "</code></pre>"); continue; }
++      var h = l.match(/^(#{3,4})\s+(.*)$/);
++      if (h) { out.push("<h" + h[1].length + ' id="hg-' + slug(h[2]) + '">' + inline(h[2]) + "</h" + h[1].length + ">"); i++; continue; }
++      if (/^---+\s*$/.test(l)) { out.push("<hr />"); i++; continue; }
++      if (/^\|/.test(l)) {
++        var rows = []; while (i < lines.length && /^\|/.test(lines[i])) rows.push(lines[i++]);
++        var cells = function (r) { return r.replace(/^\||\|\s*$/g, "").split("|").map(function (c) { return c.trim(); }); };
++        var head = cells(rows[0]), body = rows.slice(/^\|[\s:|-]+\|?\s*$/.test(rows[1] || "") ? 2 : 1);
++        out.push('<table class="hg-table"><tr>' + head.map(function (c) { return "<th>" + inline(c) + "</th>"; }).join("") + "</tr>" +
++          body.map(function (r) { return "<tr>" + cells(r).map(function (c) { return "<td>" + inline(c) + "</td>"; }).join("") + "</tr>"; }).join("") + "</table>");
++        continue;
++      }
++      if (/^\s*([-*]|\d+\.)\s+/.test(l)) {
++        var ordered = /^\s*\d+\./.test(l), items = [];
++        while (i < lines.length && /^\s*([-*]|\d+\.)\s+/.test(lines[i])) {
++          var item = lines[i++].replace(/^\s*([-*]|\d+\.)\s+/, "");
++          while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !/^\s*([-*]|\d+\.)\s+/.test(lines[i])) item += " " + lines[i++].trim();
++          items.push("<li>" + inline(item) + "</li>");
++        }
++        out.push((ordered ? "<ol>" : "<ul>") + items.join("") + (ordered ? "</ol>" : "</ul>"));
++        continue;
++      }
++      if (/^>\s?/.test(l)) { var q = []; while (i < lines.length && /^>\s?/.test(lines[i])) q.push(lines[i++].replace(/^>\s?/, "")); out.push('<blockquote class="hg-note">' + inline(q.join(" ")) + "</blockquote>"); continue; }
++      if (!l.trim()) { i++; continue; }
++      var p = [l]; i++;
++      while (i < lines.length && lines[i].trim() && !/^(#{3,4}\s|```|\||>|---|\s*([-*]|\d+\.)\s)/.test(lines[i])) p.push(lines[i++]);
++      var joined = p.join(" ");
++      out.push(/^!\[[^\]]*\]\([^)]+\)$/.test(joined.trim()) ? inline(joined) : "<p>" + inline(joined) + "</p>");
++    }
++    return out.join("\n");
++  }
++  function parse(md) {
++    var parts = md.split(/\n(?=## )/), head = parts.shift();
++    state.title = ((head.match(/^#\s+(.*)$/m) || [])[1] || "The guide").trim();
++    state.lead = head.replace(/^#\s+.*$/m, "").trim();
++    state.tabs = parts.map(function (p) {
++      var name = p.match(/^##\s+(.*)$/m)[1].trim(), body = p.replace(/^##\s+.*$/m, "");
++      var stops = (body.match(/^###\s+.*$/gm) || []).map(function (h) { return h.replace(/^###\s+/, "").trim(); });
++      return { id: slug(name.replace(/^[^\w]+/, "")).split("-")[0] || slug(name), name: name, html: render(body), stops: stops };
++    });
++  }
++  function load() {
++    if (state.tabs) return Promise.resolve();
++    if (!state.loading) state.loading = fetch("/lab/guide/GUIDE.md").then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(parse);
++    return state.loading;
++  }
++
++  // ---- the overlay
++  function build() {
++    var el = document.createElement("div");
++    el.className = "hg-back";
++    el.innerHTML = '<div class="hg-box" role="dialog" aria-modal="true" aria-label="The guide">' +
++      '<header class="hg-head"><div><b class="hg-title"></b><span class="hg-lead"></span></div><button type="button" class="btn ghost small hg-close" aria-label="Close the guide">✕</button></header>' +
++      '<nav class="hg-tabs" role="tablist"></nav><div class="hg-main"><nav class="hg-stops" aria-label="In this part"></nav><article class="hg-body"></article></div></div>' +
++      '<div class="hg-zoom" hidden><img alt="" /></div>';
++    document.body.appendChild(el);
++    el.addEventListener("click", function (e) {
++      var t = e.target, b;
++      if (t === el || t.closest(".hg-close")) return close();
++      if ((b = t.closest("[data-hg-tab]"))) return show(b.dataset.hgTab);
++      if ((b = t.closest("[data-hg-stop]"))) { var h = el.querySelector("#hg-" + b.dataset.hgStop); if (h) h.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
++      if (t.matches(".hg-fig img")) { var z = el.querySelector(".hg-zoom"); z.querySelector("img").src = t.src; z.hidden = false; return; }
++      if (t.closest(".hg-zoom")) { el.querySelector(".hg-zoom").hidden = true; return; }
++    });
++    document.addEventListener("keydown", function (e) {
++      if (!state.el || state.el.hidden || e.key !== "Escape") return;
++      var z = state.el.querySelector(".hg-zoom");
++      if (!z.hidden) z.hidden = true; else close();
++    });
++    state.el = el;
++  }
++  function show(id) {
++    var tab = state.tabs.filter(function (t) { return t.id === id; })[0] || state.tabs[0];
++    keep(LAST, tab.id);
++    var el = state.el;
++    el.querySelector(".hg-title").textContent = state.title;
++    el.querySelector(".hg-lead").textContent = state.lead.replace(/[*_`]/g, "").split("\n")[0];
++    el.querySelector(".hg-tabs").innerHTML = state.tabs.map(function (t) {
++      return '<button type="button" role="tab" data-hg-tab="' + esc(t.id) + '" class="' + (t === tab ? "is-on" : "") + '" aria-selected="' + (t === tab) + '">' + inline(t.name) + "</button>";
++    }).join("");
++    el.querySelector(".hg-stops").innerHTML = tab.stops.map(function (s) { return '<button type="button" data-hg-stop="' + esc(slug(s)) + '">' + inline(s) + "</button>"; }).join("");
++    var body = el.querySelector(".hg-body");
++    body.innerHTML = tab.html;
++    body.scrollTop = 0;
++  }
++  function open(id) {
++    keep(SEEN, "1");
++    return load().then(function () {
++      if (!state.el) build();
++      state.el.hidden = false;
++      requestAnimationFrame(function () { state.el.classList.add("is-on"); });
++      show(id || ROOM_TAB[document.body.dataset.tab] || recall(LAST) || "start");
++    }).catch(function (e) { console.warn("the guide could not be read:", e.message); });
++  }
++  function close() { if (!state.el) return; state.el.classList.remove("is-on"); state.el.hidden = true; }
++
++  function init() {
++    var b = $("guideOpen"), m = $("guideOpenMenu");
++    if (b) b.addEventListener("click", function () { open(); });
++    if (m) m.addEventListener("click", function () { open(); });
++    // a browser that has never seen the studio: the guide comes by itself, once, a minute after the start
++    if (!recall(SEEN)) setTimeout(function () { if (!recall(SEEN)) open("start"); }, 60000);
++  }
++  window.HeresyGuide = { open: open, close: close };
++  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
++})();
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 083e4c2..0cf2604 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -1,7 +1,7 @@
+ // HERESY 1069: the instruments, a cheat-sheet (Viktor, 02.10.2026). Every instrument the probes asked
+ // YuE2 for: its family, its home, how it sounds, and the words that name it in a style. The ♪ beside
+ // the Style prompt opens it; a tag clicked goes into the style; ▶ A and ▶ B play the 60 s probes
+-// (probe60-SLUG-a/b, two seeds) when the Collection holds them. What Viktor's ear kept (the takes in
++// (probe60-SLUG-a/b, two seeds) when the Librarian holds them. What Viktor's ear kept (the takes in
+ // the workspace "Instrumental Probe") is marked heard, and the Writer's assistant is told those names.
+ (function () {
+   "use strict";
+@@ -18,7 +18,7 @@
+       state.rows = d.takes || []; state.ws = d.workspaces || []; state.loaded = true;
+     }).catch(function () { state.loaded = false; });
+   }
+-  // the probes of one instrument as the Collection has them now: a and b, rating, note, kept
++  // the probes of one instrument as the Librarian has them now: a and b, rating, note, kept
+   function probes(slug) {
+     var out = {};
+     state.rows.forEach(function (r) {
+@@ -30,7 +30,7 @@
+   function kept(p) { return ["a", "b"].some(function (k) { return p[k] && p[k].workspaces.indexOf(KEPT) >= 0; }); }
+ 
+   // HERESY 1069b (Viktor 02.10): the ear's verdict. Kept in "Instrumental Probe": heard. A verdict of his
+-  // own (the flag): shown as he said it. Both probes gone from the Collection, or both disliked: not
++  // own (the flag): shown as he said it. Both probes gone from the Librarian, or both disliked: not
+   // identified, red. Otherwise the probes wait for his ear.
+   var NOT_ID = "NOT IDENTIFIED IN YUE2 \u00b7 FOR EXPERIMENTS WITH SOPHISTICATED PROMPTING";
+   function status(i) {
+@@ -61,7 +61,7 @@
+     var p = probes(i.slug), st = status(i), his = hisNote(p);
+     var play = ["a", "b"].map(function (v) {
+       var t = p[v];
+-      if (!t) return '<span class="hi-noplay" data-tip="no 60 s probe ' + v.toUpperCase() + ' in the Collection">' + v.toUpperCase() + "</span>";
++      if (!t) return '<span class="hi-noplay" data-tip="no 60 s probe ' + v.toUpperCase() + ' in the Librarian">' + v.toUpperCase() + "</span>";
+       var mark = t.rating > 0 ? " 👍" : t.rating < 0 ? " 👎" : "";
+       return '<button type="button" class="btn ghost small hi-play" data-hi-play="' + esc(t.name) + '" data-tip="' + esc(t.title) + (t.note ? " · " + esc(t.note) : "") + '">▶ ' + v.toUpperCase() + mark + "</button>";
+     }).join("");
+@@ -88,7 +88,7 @@
+     var n = { heard: 0, flag: 0, no: 0, wait: 0 };
+     DATA.instruments.forEach(function (i) { n[status(i).key]++; });
+     $("hiCount").textContent = DATA.instruments.length + " instruments \u00b7 " + n.heard + " heard \u00b7 " + n.flag + " questioned \u00b7 " + n.no + " not identified \u00b7 " + n.wait + " not judged yet" +
+-      (state.loaded ? "" : " \u00b7 the Collection does not answer: no probes to play");
++      (state.loaded ? "" : " \u00b7 the Librarian does not answer: no probes to play");
+   }
+ 
+   function build() {
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 92cd7f6..3c79439 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -1,4 +1,4 @@
+-// HERESY 1063 / 1090: the Train room, LoRAs for YuE2 from your own songs (lab/training.py does the work: the
++// HERESY 1063 / 1090: the LoRA Trainer, LoRAs for YuE2 from your own songs (lab/training.py does the work: the
+ // studio's own trainer, lab/trainer, or Ostris' AI-Toolkit as the reference). Viktor, 02.10.2026: on par with the
+ // other rooms. So:
+ //   on top     the runs that are training, each a line with its progress, time left and loss
+@@ -6,7 +6,7 @@
+ //              step summed up in its pill, the next one opened when a step is done
+ //   Telemetry  one run: progress, the numbers, the curves of both halves (what they mean said under them),
+ //              its epochs: one picked, into loras/ or out of it, or downloaded
+-//   the column every run a card, as the takes are in Create: Active · All · Archived · Trash, searched; a
++//   the column every run a card, as the takes are in the Creator: Active · All · Archived · Trash, searched; a
+ //              running one lit as a playing take; archive, delete (to the trash, its adapters asked about),
+ //              restore, delete for good. Folds to a strip on the right.
+ (function () {
+@@ -193,7 +193,7 @@
+       (live || (r.status !== "done" && pct > 0) ? '<div class="tr-rbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' : "") +
+       '<div class="take-foot"><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
+         '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach" : "AITK") + "</span>" +
+-        "<span>" + ep + "</span>" + (r.loras && r.loras.length ? '<span data-tip="In loras/, ready in Create">' + r.loras.length + " in loras/</span>" : "") +
++        "<span>" + ep + "</span>" + (r.loras && r.loras.length ? '<span data-tip="In loras/, ready in the Creator">' + r.loras.length + " in loras/</span>" : "") +
+         "<span>" + esc(ago(r.started)) + "</span></div>" +
+       '<button type="button" class="tr-rmenu" data-menu="' + esc(r.name) + '" aria-label="Run actions">⋯</button></article>';
+   }
+@@ -238,7 +238,7 @@
+       .then(function (ok) {
+         if (!ok) return;
+         if (!own.length) return false;
+-        return confirmBox("And its " + own.length + " adapter" + (own.length > 1 ? "s" : "") + " in loras/?\n\n" + own.join(", ") + "\n\nThey are in Create’s LoRAs now. Take them out with the run (into the trash beside it), or keep them usable in Create.",
++        return confirmBox("And its " + own.length + " adapter" + (own.length > 1 ? "s" : "") + " in loras/?\n\n" + own.join(", ") + "\n\nThey are in the Creator’s LoRAs now. Take them out with the run (into the trash beside it), or keep them usable in the Creator.",
+           { ok: "Take them out", cancel: "Keep them" }).then(function (takeOut) {
+           return api("/train/delete", { name: name, loras: !!takeOut }).then(function (d) { return d; });
+         });
+@@ -368,18 +368,18 @@
+           "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.") +
+       "</div>" +
+       (cks.length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
+-          '<span class="row-hint">pick one: into Create’s LoRAs, out of them, or as a file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
++          '<span class="row-hint">pick one: into the Creator’s LoRAs, out of them, or as a file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
+         '<div class="tr-echips">' + cks.map(function (c) {
+           var why = cand[c.file];
+           return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="step ' + c.step + " · " + esc(when(c.saved)) +
+             (c.lora ? " · in loras/" : "") + (why ? " · worth hearing first: " + esc(why) : "") + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
+         }).join("") + "</div>" +
+         (pick ? '<div class="tr-eact"><span><b>' + (pick.epoch != null ? "Epoch " + Math.round(pick.epoch) : "The final file") + "</b> · step " + pick.step + " · " + esc(when(pick.saved)) + " · " + gb(pick.bytes) +
+-            (pick.lora ? ' · in Create as <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") +
++            (pick.lora ? ' · in the Creator as <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") +
+             (cand[pick.file] ? ' · <span class="tr-candsay">worth hearing first: ' + esc(cand[pick.file]) + "</span>" : "") + "</span>" +
+             '<span class="spacer"></span>' +
+             (pick.lora ? '<button type="button" class="btn ghost small" data-unpub="' + esc(pick.lora.split("/").pop()) + '">Out of loras/</button>'
+-                       : (pick.epoch != null ? '<button type="button" class="btn small primary" data-pub="' + esc(pick.file) + '">Into loras/ → Create</button>' : "")) +
++                       : (pick.epoch != null ? '<button type="button" class="btn small primary" data-pub="' + esc(pick.file) + '">Into loras/ → the Creator</button>' : "")) +
+             '<a class="btn ghost small" download href="/lab/train/file?name=' + encodeURIComponent(r.name) + "&file=" + encodeURIComponent(pick.file) + '">Download</a></div>' : "") +
+         "</div>" : "") +
+       '<details class="tr-facts"><summary>What it was given</summary><div class="tr-fgrid">' +
+@@ -414,7 +414,7 @@
+   }
+   function publish(file) {
+     var r = runOf(state.sel);
+-    api("/train/publish", { name: r.name, file: file }).then(function (d) { toast("In loras/: " + d.lora + " — ready in Create"); load(); }).catch(function (e) { toast(e.message, true); });
++    api("/train/publish", { name: r.name, file: file }).then(function (d) { toast("In loras/: " + d.lora + " — ready in the Creator"); load(); }).catch(function (e) { toast(e.message, true); });
+   }
+   function unpublish(lora) {
+     var r = runOf(state.sel);
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index 7c4077b..85d8a45 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -1,7 +1,7 @@
+ // HERESY 1047: the Writer's notebook (Viktor, 01.10.2026): a song or a reading in the making, as a
+ // document with four parts: STYLE, LYRICS, NOTES (Markdown) and PARAMS (every knob of the Create
+ // form). Both ways with Create: "Save to Writer" there keeps the song as it is tuned; "Load into
+-// Create" here puts it back. The document loaded into Create is "in hand": the takes made while it
++// Create" here puts it back. The document loaded into the Creator is "in hand": the takes made while it
+ // is in hand are linked to it. Every save keeps the version before; typing autosaves, and a sitting
+ // of typing is one version (the lab keeps one only after ten quiet minutes); "Keep this version"
+ // keeps one under a label. The lab keeps the documents (KIT/writer/ID.json); a deleted one goes to
+@@ -73,7 +73,7 @@
+ 
+   // ---- PARAMS in a line of chips
+   function paramChips(p) {
+-    if (!p || !Object.keys(p).length) return '<span class="row-hint">none yet — “From Create” takes them as the form has them now</span>';
++    if (!p || !Object.keys(p).length) return '<span class="row-hint">none yet — “From the Creator” takes them as the form has them now</span>';
+     var chips = [];
+     function chip(k, v) { chips.push('<span class="wr-chip"><b>' + esc(k) + "</b> " + esc(v) + "</span>"); }
+     if (p.cot) chip("mode", p.cot);
+@@ -103,11 +103,11 @@
+     $("wrList").innerHTML = rows.length ? rows.map(function (d) {
+       var on = state.doc && state.doc.id === d.id;
+       return '<button type="button" class="wr-item' + (on ? " is-on" : "") + '" data-doc="' + esc(d.id) + '">' +
+-        '<span class="wr-item-title">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in Create">✎</span> ' : "") + esc(d.title) + "</span>" +
++        '<span class="wr-item-title">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in the Creator">✎</span> ' : "") + esc(d.title) + "</span>" +
+         '<span class="wr-item-ex">' + esc(d.excerpt || d.style || "") + "</span>" +
+         '<span class="wr-item-meta">' + esc(when(d.updated)) + (d.takes ? " · " + d.takes + " take" + (d.takes > 1 ? "s" : "") : "") +
+         (d.versions ? " · " + d.versions + " v" : "") + "</span></button>";
+-    }).join("") : '<p class="row-hint wr-empty">' + (state.docs.length ? "Nothing for “" + esc(state.q) + "”." : "No documents yet. ＋ New, or “Save to Writer” in Create.") + "</p>";
++    }).join("") : '<p class="row-hint wr-empty">' + (state.docs.length ? "Nothing for “" + esc(state.q) + "”." : "No documents yet. ＋ New, or “Save to Writer” in the Creator.") + "</p>";
+   }
+ 
+   // ---- one document
+@@ -131,7 +131,7 @@
+     if (v) $("wrVersionSay").textContent = "Version of " + when(v.at) + (v.label ? " — " + v.label : "") + ". Read only.";
+     $("wrParams").innerHTML = paramChips(src.params);
+     paintNotes(); paintSizes(); paintTakes(); paintVersions(); paintState();
+-    $("wrHandBtn").textContent = recall(HAND_KEY) === doc.id ? "In hand in Create ✎" : "Load into Create";
++    $("wrHandBtn").textContent = recall(HAND_KEY) === doc.id ? "In hand in the Creator ✎" : "Load into the Creator";
+   }
+   function paintSizes() {
+     var lyr = $("wrLyrics").value, sty = $("wrStyle").value;
+@@ -151,8 +151,8 @@
+       return '<div class="wr-take' + (k ? "" : " is-gone") + '" data-take="' + esc(t.name) + '">' +
+         (k ? '<button type="button" class="coll-play" data-wr-play="' + esc(t.name) + '" aria-label="Play">' + (window.HeresyIcons ? window.HeresyIcons.ui("play") : "▶") + '</button>' : '<span class="coll-play is-off">·</span>') +
+         '<span class="wr-take-title">' + esc(k ? h.title(k) : t.name) + '</span><span class="dim">' + (k ? esc(h.clock(k.seconds) + " · " + h.ago(k.created)) : "not in the library") + "</span>" +
+-        (k ? '<button type="button" class="btn ghost small" data-wr-go="create">Create</button><button type="button" class="btn ghost small" data-wr-go="post">Post</button>' : "") + "</div>";
+-    }).join("") : '<p class="row-hint">None yet. Load this document into Create: whatever is made while it is in hand lands here.</p>';
++        (k ? '<button type="button" class="btn ghost small" data-wr-go="create">Creator</button><button type="button" class="btn ghost small" data-wr-go="post">Refiner</button>' : "") + "</div>";
++    }).join("") : '<p class="row-hint">None yet. Load this document into the Creator: whatever is made while it is in hand lands here.</p>';
+   }
+   function paintVersions() {
+     var vs = state.doc.versions || [];
+@@ -222,14 +222,14 @@
+   function intoCreate(doc) {
+     var f = state.hooks.form(), hand = recall(HAND_KEY);
+     var busy = (f.lyrics || "").trim() && f.lyrics !== doc.lyrics && hand !== doc.id;
+-    (busy ? window.HeresyDialog.confirm("Put “" + doc.title + "” into Create?\n\nThe title, style and lyrics there now are replaced" +
+-        (hand ? " (they belong to another document in the Writer, which keeps them)." : ". They are in no document: “Save to Writer” first, if they matter."), { ok: "Put it in Create" }) : Promise.resolve(true)).then(function (ok) {
++    (busy ? window.HeresyDialog.confirm("Put “" + doc.title + "” into the Creator?\n\nThe title, style and lyrics there now are replaced" +
++        (hand ? " (they belong to another document in the Writer, which keeps them)." : ". They are in no document: “Save to Writer” first, if they matter."), { ok: "Put it in the Creator" }) : Promise.resolve(true)).then(function (ok) {
+       if (!ok) return;
+       state.hooks.load(doc);
+       store(HAND_KEY, doc.id);
+       paintList(); paintHand();
+-      if (state.doc && state.doc.id === doc.id) $("wrHandBtn").textContent = "In hand in Create ✎";
+-      toast("“" + doc.title + "” is in Create; what is made from it is linked to it");
++      if (state.doc && state.doc.id === doc.id) $("wrHandBtn").textContent = "In hand in the Creator ✎";
++      toast("“" + doc.title + "” is in the Creator; what is made from it is linked to it");
+     });
+   }
+   function paintHand() {
+@@ -275,7 +275,7 @@
+       if (!state.doc) return;
+       var p = state.hooks.form().params;
+       flush().then(function () { return api({ op: "put", id: state.doc.id, params: p }); })
+-        .then(function (doc) { state.doc = doc; paintDoc(); toast("PARAMS taken from Create (the version before is kept)"); }).catch(function (e) { toast(e.message, true); });
++        .then(function (doc) { state.doc = doc; paintDoc(); toast("PARAMS taken from the Creator (the version before is kept)"); }).catch(function (e) { toast(e.message, true); });
+     });
+     $("wrParamsShow").addEventListener("click", function () {
+       var pre = $("wrParamsJson");
+@@ -330,7 +330,7 @@
+       var go = e.target.closest("[data-wr-go]");
+       if (go) h.openTake(name, go.dataset.wrGo);
+     });
+-    // in Create: the document in hand
++    // in the Creator: the document in hand
+     $("wrHandSave").addEventListener("click", function () { fromCreate(false); });
+     $("wrHandOpen").addEventListener("click", function () { var id = recall(HAND_KEY); if (id) open(id); });
+     $("wrHandDrop").addEventListener("click", function () { store(HAND_KEY, null); paintHand(); paintList(); if (state.doc) paintDoc(); toast("Nothing in hand: new takes link to no document"); });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index faf94aa..1b7830c 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -39,11 +39,11 @@
+ 
+   <!-- HERESY 1014: the three workspaces -->
+   <nav class="tabs" id="tabs" aria-label="Workspace">
+-    <button type="button" data-tab="create" class="is-active">Create</button>
++    <button type="button" data-tab="create" class="is-active">Creator</button>
+     <button type="button" data-tab="write">Writer</button>
+-    <button type="button" data-tab="post">Post</button>
+-    <button type="button" data-tab="collection">Collection</button>
+-    <button type="button" data-tab="train">Train</button>
++    <button type="button" data-tab="post">Refiner</button>
++    <button type="button" data-tab="collection">Librarian</button>
++    <button type="button" data-tab="train">LoRA Trainer</button>
+   </nav>
+ 
+   <div class="spacer"></div>
+@@ -66,6 +66,7 @@
+     <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
+     <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="openDAW: the DAW beside the studio, in a new tab (a take goes there as Download → DAWproject; there File → Import → DAWproject…). Shift-click: its address">DAW</button>
+     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
++    <button type="button" class="btn ghost small guide-btn" id="guideOpen" aria-label="The guide" data-tip="The guide: every room, what each thing does (opens on the room you are in)">?</button>
+     <div class="menu-wrap head-more">
+       <button type="button" class="btn ghost small head-more-btn" id="headMore" aria-haspopup="true" aria-expanded="false" aria-label="More" data-tip="More: the card and its memory, the model, themes, prompts, examples, the engine">&#9776;</button>
+       <div class="head-more-pop is-hidden" id="headMorePop" role="menu" aria-label="More">
+@@ -83,6 +84,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     </div>
+           <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now" disabled>Unload model</button>
+           <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
++          <button type="button" class="btn ghost small hm-text" id="guideOpenMenu"><span class="hm-glyph">?</span> The guide</button>
+         </div>
+       </div>
+     </div>
+@@ -704,9 +706,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <button type="button" class="btn ghost small" id="transcribeTake" data-tip="SheetSage2 writes this take's own sound down as a score (the server reads the take itself; nothing is uploaded), into the form for a cover: with chords, or the melody only, as chosen under Cover a recording. Good for a reading made in Direct mode, which has no score.">Transcribe this take</button>
+           <button type="button" class="btn ghost small" id="trimToText" data-tip="For readings and songs that go on past their text: Whisper finds where the text ends, and the same take is rendered again from its own music codes cut there (+1.5 s). The same performance, without the returns and babble after the last line; only the sound stage runs.">Trim to the text</button>
+         </div></div>
+-        <div class="tool-group"><span class="tool-cap">Post</span><div class="tool-row">
+-          <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in Post: its spectrum">Spectrum</button>
+-          <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in Post: Whisper against the lyrics">Lyrics check</button>
++        <div class="tool-group"><span class="tool-cap">Refiner</span><div class="tool-row">
++          <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum">Spectrum</button>
++          <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in the Refiner: Whisper against the lyrics">Lyrics check</button>
+         </div></div>
+         <div class="tool-group"><span class="tool-cap">Files</span><div class="tool-row">
+           <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds">Request</button>
+@@ -774,13 +776,13 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+   <!-- HERESY 1014: the Write tab — the writing room with the song in the form beside it -->
+   <section class="col write-col is-hidden" id="view-write">
+-    <div class="col-head"><h2>Writer</h2><span class="col-note">the notebook keeps songs and readings in the making; the writing room below works on the song in Create</span></div>
++    <div class="col-head"><h2>Writer</h2><span class="col-note">the notebook keeps songs and readings in the making; the writing room below works on the song in the Creator</span></div>
+     <!-- HERESY 1047: the notebook -->
+     <div class="wr-book">
+       <aside class="wr-side">
+         <div class="wr-side-bar">
+           <button type="button" class="btn primary small" id="wrNew">＋ New</button>
+-          <button type="button" class="btn ghost small" id="wrFromCreate" title="A new document from the song in Create, with every knob">＋ From Create</button>
++          <button type="button" class="btn ghost small" id="wrFromCreate" title="A new document from the song in the Creator, with every knob">＋ From the Creator</button>
+           <span class="coll-n" id="wrCount"></span>
+         </div>
+         <input type="search" id="wrSearch" placeholder="Search all four parts · * and ?" autocomplete="off" />
+@@ -792,7 +794,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <div class="wr-head">
+             <input type="text" id="wrTitle" class="wr-title" maxlength="120" placeholder="Untitled" aria-label="Title" />
+             <span class="wr-state" id="wrState"></span>
+-            <button type="button" class="btn primary small" id="wrHandBtn">Load into Create</button>
++            <button type="button" class="btn primary small" id="wrHandBtn">Load into the Creator</button>
+             <button type="button" class="btn ghost small" id="wrKeep" title="Keep the document as it stands, under a label">Keep this version</button>
+             <button type="button" class="btn ghost small danger" id="wrDelete">Delete</button>
+           </div>
+@@ -809,7 +811,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+               <textarea id="wrNotes" rows="8" placeholder="What the song is for, what to try next, what the last take got wrong…"></textarea>
+               <div class="wr-md" id="wrNotesView" hidden></div></div>
+             <div class="field wr-part"><span class="label">PARAMS <em>every knob of the Create form</em>
+-                <button type="button" class="btn ghost small" id="wrParamsTake">From Create</button>
++                <button type="button" class="btn ghost small" id="wrParamsTake">From the Creator</button>
+                 <button type="button" class="btn ghost small" id="wrParamsShow">All</button></span>
+               <div class="wr-params" id="wrParams"></div><pre class="mono wr-params-json" id="wrParamsJson" hidden></pre></div>
+           </div>
+@@ -823,7 +825,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     <div class="write-grid">
+       <section class="panel write-current">
+         <div class="panel-head"><h3>The song now</h3><div class="spacer"></div>
+-          <button type="button" class="btn ghost small" data-goto-tab="create">Edit in Create</button></div>
++          <button type="button" class="btn ghost small" data-goto-tab="create">Edit in the Creator</button></div>
+         <div class="write-cur"><span class="label">Title</span><p id="curTitle"></p></div>
+         <div class="write-cur"><span class="label">Style <em id="curStyleSize"></em></span><pre id="curStyle"></pre></div>
+         <div class="write-cur"><span class="label">Score <em>the key, meter and tempo the style must agree with</em></span><p class="mono" id="curScore"></p></div>
+@@ -918,7 +920,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+   <!-- HERESY 1014: the Post tab — what is done to a finished take, on Forge -->
+   <section class="col post-col is-hidden" id="view-post">
+-    <div class="col-head"><h2 id="postTitle">Post</h2><span class="col-note" id="postNote">pick a take on the right</span></div>
++    <div class="col-head"><h2 id="postTitle">Refiner</h2><span class="col-note" id="postNote">pick a take on the right</span></div>
+     <!-- HERESY 1023: a track from elsewhere (a SUNO track…) becomes a take, and every tool here works on it -->
+     <details class="drawer" id="importPanel">
+       <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Import a track</span><span class="sum-say">WAV, FLAC, MP3… from anywhere: it becomes a take in the library (48 kHz 24-bit), marked imported, ready for stems, remaster and the rest.</span></span></summary>
+@@ -937,7 +939,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     </details>
+ 
+     <!-- HERESY 1029: the tools as numbered steps; the one chosen shows, done ones are ticked (heresy-post.js) -->
+-    <nav class="post-steps" id="postSteps" role="tablist" aria-label="Post steps"></nav>
++    <nav class="post-steps" id="postSteps" role="tablist" aria-label="Refiner steps"></nav>
+       <!-- HERESY 1021: what is made from this take, as a tree (heresy-derived.js) -->
+       <details class="drawer" id="derivedPanel" open>
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Stems</span><span class="sum-say">Split on Forge: BS-Roformer for the voice, htdemucs_ft for drums, bass and the rest. Each file plays, goes into the spectrum and the lyrics check.</span></span></summary>
+@@ -1112,10 +1114,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+ 
+   <!-- HERESY 1063 / 1090: Train — a LoRA for YuE2 from your own songs (heresy-train.js, lab/training.py). Viktor,
+-       02.10.2026: the runs that are training stand on top with their progress; the steps sit in a row as in Post,
++       02.10.2026: the runs that are training stand on top with their progress; the steps sit in a row as in the Refiner,
+        one open at a time; the telemetry of a run right under them; every run a card in the column on the right -->
+   <section class="col train-col is-hidden" id="view-train">
+-    <div class="col-head"><h2>Train</h2><span class="col-note">a LoRA for YuE2 from your own songs · the guide: LORA-TRAINING.md</span>
++    <div class="col-head"><h2>LoRA Trainer</h2><span class="col-note">a LoRA for YuE2 from your own songs · the guide: LORA-TRAINING.md</span>
+       <span class="spacer"></span><button type="button" class="btn ghost small" id="trReload">Reload</button></div>
+     <div class="tr-layout" id="trLayout">
+       <div class="tr-main" id="trBody">
+@@ -1193,9 +1195,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     </div>
+   </section>
+ 
+-  <!-- HERESY 1041: the Collection — every take, searched, filtered, grouped, acted on many at once -->
++  <!-- HERESY 1041: the Librarian — every take, searched, filtered, grouped, acted on many at once -->
+   <section class="col coll-col is-hidden" id="view-collection">
+-    <div class="col-head"><h2>Collection</h2><span class="col-note" id="collNote"></span></div>
++    <div class="col-head"><h2>Librarian<span class="coll-where" id="collWhere"></span></h2><span class="col-note" id="collNote"></span></div>
+     <div class="coll-layout">
+       <aside class="coll-side" id="collSide"></aside>
+       <div class="coll-main">
+@@ -1480,6 +1482,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ <script src="heresy-writer.js"></script>
+ <script src="heresy-train.js"></script>
+ <script src="heresy-gpus.js"></script>
++<script src="heresy-guide.js"></script>
+ <script src="heresy-instruments.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index bccdf4a..3c081a0 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -101,7 +101,7 @@
+   // HERESY 1081/1084 (Viktor 02.10.2026): measured limits, drawn on the slider as a road from green to red.
+   // The music half above 0.75 breaks the score (70-200 tokens, then it fails) with every adapter he tried,
+   // 0.5 gave a whole score; the sound half had no such trouble. A score adapter (trained with a score, like
+-  // the ABC one) takes more on the music half; our own adapters (loras/RUN/…, from the Train room) are kept
++  // the ABC one) takes more on the music half; our own adapters (loras/RUN/…, from the LoRA Trainer) are kept
+   // tighter there. sources.json may set an adapter's own: "limits": {"ar": [safe, limit, max], "nar": [...]}.
+   //   green up to safe · amber up to limit · red beyond it (allowed, warned)
+   function scoreAdapter(e) { return !!e && ((e.mode && e.mode !== "direct") || /abc/i.test(e.id)); }
+diff --git a/tools/console/themes.css b/tools/console/themes.css
+index ca93b8a..f485f99 100644
+--- a/tools/console/themes.css
++++ b/tools/console/themes.css
+@@ -1,822 +1,6 @@
+ /* Extra themes. The generator that first wrote these from compact palettes is gone, so edit them here,
+    keeping every text colour at 4.5:1 or better on every surface of its theme. */
+ 
+-[data-theme="bold-crimson"] {
+-  --ground: #A03C3C;
+-  --panel: #933737;
+-  --raise: #994342;
+-  --sunk: #833131;
+-  --field: #7d2f2f;
+-  --take-bg: #903636;
+-  --hover: #9c4646;
+-  --focus-bg: #933737;
+-  --line: #b15e5c;
+-  --line-soft: #a84d4c;
+-  --line-strong: #c88c88;
+-  --ink: #fff7f0;
+-  --muted: #efd9d4;
+-  --dim: #f1dbd5;
+-  --placeholder: #d7aaa7;
+-  --amber: #fff7f0;
+-  --amber-dim: #cb908d;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #A03C3C;
+-  --patina: #fff7f0;
+-  --patina-dim: #cb908d;
+-  --good: #cbe4c6;
+-  --good-line: #b17f73;
+-  --bad: #f9d6cf;
+-  --bad-line: #c47a77;
+-  --bad-ink: #fbe0d9;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-tangerine"] {
+-  --ground: #C85F3C;
+-  --panel: #cc6c4c;
+-  --raise: #c16749;
+-  --sunk: #bf5b3a;
+-  --field: #e9bfb1;
+-  --take-bg: #d88f76;
+-  --hover: #bd6548;
+-  --focus-bg: #e9bfb1;
+-  --line: #a85337;
+-  --line-soft: #b8593a;
+-  --line-strong: #7a402d;
+-  --ink: #070a0b;
+-  --muted: #0d0807;
+-  --dim: #0c0908;
+-  --placeholder: #47271c;
+-  --amber: #070a0b;
+-  --amber-dim: #8e462d;
+-  --amber-hi: #252728;
+-  --amber-hi2: #3e4041;
+-  --amber-edge: #060809;
+-  --on-amber: #C85F3C;
+-  --patina: #070a0b;
+-  --patina-dim: #8e462d;
+-  --good: #060b06;
+-  --good-line: #7a3d26;
+-  --bad: #150606;
+-  --bad-line: #803b26;
+-  --bad-ink: #100708;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="bold-sunflower"] {
+-  --ground: #FFDE30;
+-  --panel: #ffe141;
+-  --raise: #f1d53e;
+-  --sunk: #f3d42f;
+-  --field: #fff2ac;
+-  --take-bg: #ffe86e;
+-  --hover: #ecd13e;
+-  --focus-bg: #fff2ac;
+-  --line: #d5bb2d;
+-  --line-soft: #eacc2e;
+-  --line-strong: #9a8926;
+-  --ink: #101416;
+-  --muted: #403c1b;
+-  --dim: #3a3a24;
+-  --placeholder: #7c6f22;
+-  --amber: #101416;
+-  --amber-dim: #b7a128;
+-  --amber-hi: #2d3032;
+-  --amber-hi2: #454849;
+-  --amber-edge: #0d1012;
+-  --on-amber: #FFDE30;
+-  --patina: #101416;
+-  --patina-dim: #b7a128;
+-  --good: #226226;
+-  --good-line: #a7ac2c;
+-  --bad: #a62016;
+-  --bad-line: #db9226;
+-  --bad-ink: #791c16;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="bold-emerald"] {
+-  --ground: #388E70;
+-  --panel: #48977b;
+-  --raise: #458f75;
+-  --sunk: #36886b;
+-  --field: #afd2c6;
+-  --take-bg: #74b09b;
+-  --hover: #448d73;
+-  --focus-bg: #afd2c6;
+-  --line: #327a62;
+-  --line-soft: #358469;
+-  --line-strong: #285b4b;
+-  --ink: #0b0e0f;
+-  --muted: #080f0e;
+-  --dim: #090f0f;
+-  --placeholder: #19352c;
+-  --amber: #0b0e0f;
+-  --amber-dim: #2a6853;
+-  --amber-hi: #282b2c;
+-  --amber-hi2: #414344;
+-  --amber-edge: #090b0c;
+-  --on-amber: #388E70;
+-  --patina: #0b0e0f;
+-  --patina-dim: #2a6853;
+-  --good: #061006;
+-  --good-line: #245c46;
+-  --bad: #1d0606;
+-  --bad-line: #2d5846;
+-  --bad-ink: #17090a;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="bold-turquoise"] {
+-  --ground: #58C9B9;
+-  --panel: #65cdbf;
+-  --raise: #60c2b5;
+-  --sunk: #54c0b1;
+-  --field: #bce9e3;
+-  --take-bg: #8ad9ce;
+-  --hover: #5ebeb1;
+-  --focus-bg: #bce9e3;
+-  --line: #4caa9e;
+-  --line-soft: #52baac;
+-  --line-strong: #3a7d75;
+-  --ink: #101416;
+-  --muted: #1e3837;
+-  --dim: #213739;
+-  --placeholder: #30655f;
+-  --amber: #101416;
+-  --amber-dim: #429388;
+-  --amber-hi: #2d3032;
+-  --amber-hi2: #454849;
+-  --amber-edge: #0d1012;
+-  --on-amber: #58C9B9;
+-  --patina: #101416;
+-  --patina-dim: #429388;
+-  --good: #1b4c1d;
+-  --good-line: #40977b;
+-  --bad: #821911;
+-  --bad-line: #698376;
+-  --bad-ink: #601812;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="bold-cobalt"] {
+-  --ground: #1E3F66;
+-  --panel: #1c3a5e;
+-  --raise: #2a4567;
+-  --sunk: #193454;
+-  --field: #173150;
+-  --take-bg: #1b395c;
+-  --hover: #2e496a;
+-  --focus-bg: #1c3a5e;
+-  --line: #46607f;
+-  --line-soft: #325072;
+-  --line-strong: #7e8da1;
+-  --ink: #fff7f0;
+-  --muted: #d2d2d4;
+-  --dim: #dddbdb;
+-  --placeholder: #9aa4b2;
+-  --amber: #fff7f0;
+-  --amber-dim: #8392a4;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #1E3F66;
+-  --patina: #fff7f0;
+-  --patina-dim: #8392a4;
+-  --good: #90c587;
+-  --good-line: #4c7573;
+-  --bad: #f3a89b;
+-  --bad-line: #73697b;
+-  --bad-ink: #f7c0b4;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-violet"] {
+-  --ground: #8C5D91;
+-  --panel: #815685;
+-  --raise: #89608b;
+-  --sunk: #734c77;
+-  --field: #6d4971;
+-  --take-bg: #7e5482;
+-  --hover: #8b638e;
+-  --focus-bg: #815685;
+-  --line: #a179a2;
+-  --line-soft: #966b9a;
+-  --line-strong: #bd9fb9;
+-  --ink: #fff7f0;
+-  --muted: #f9f4f6;
+-  --dim: #f9f4f5;
+-  --placeholder: #dac8d6;
+-  --amber: #fff7f0;
+-  --amber-dim: #c0a2bc;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #8C5D91;
+-  --patina: #fff7f0;
+-  --patina-dim: #c0a2bc;
+-  --good: #f0f8ef;
+-  --good-line: #b49bb7;
+-  --bad: #f9f4f2;
+-  --bad-line: #b899b8;
+-  --bad-ink: #fbf5f1;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-pink"] {
+-  --ground: #E4707C;
+-  --panel: #e67b86;
+-  --raise: #d9757f;
+-  --sunk: #d96b77;
+-  --field: #f4c6cb;
+-  --take-bg: #ec9ba3;
+-  --hover: #d5737d;
+-  --focus-bg: #f4c6cb;
+-  --line: #bf616c;
+-  --line-soft: #d26874;
+-  --line-strong: #8a4a52;
+-  --ink: #101416;
+-  --muted: #312024;
+-  --dim: #2e2328;
+-  --placeholder: #5e343a;
+-  --amber: #101416;
+-  --amber-dim: #a4545d;
+-  --amber-hi: #2d3032;
+-  --amber-hi2: #454849;
+-  --amber-edge: #0d1012;
+-  --on-amber: #E4707C;
+-  --patina: #101416;
+-  --patina-dim: #a4545d;
+-  --good: #0f2a10;
+-  --good-line: #8f5451;
+-  --bad: #490e0a;
+-  --bad-line: #a6494e;
+-  --bad-ink: #38100e;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="bold-burgundy"] {
+-  --ground: #4A1C1C;
+-  --panel: #441a1a;
+-  --raise: #4f2727;
+-  --sunk: #3d1717;
+-  --field: #3a1616;
+-  --take-bg: #431919;
+-  --hover: #532c2b;
+-  --focus-bg: #441a1a;
+-  --line: #6b4342;
+-  --line-soft: #5a302f;
+-  --line-strong: #977976;
+-  --ink: #fff7f0;
+-  --muted: #dbcbc6;
+-  --dim: #e4d6d0;
+-  --placeholder: #ae9491;
+-  --amber: #fff7f0;
+-  --amber-dim: #9b7f7b;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #4A1C1C;
+-  --patina: #fff7f0;
+-  --patina-dim: #9b7f7b;
+-  --good: #86c07d;
+-  --good-line: #625e43;
+-  --bad: #ef8574;
+-  --bad-line: #8c463f;
+-  --bad-ink: #f4a799;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-mulberry"] {
+-  --ground: #8C4356;
+-  --panel: #813e4f;
+-  --raise: #894959;
+-  --sunk: #733747;
+-  --field: #6d3443;
+-  --take-bg: #7e3c4d;
+-  --hover: #8b4d5c;
+-  --focus-bg: #813e4f;
+-  --line: #a16372;
+-  --line-soft: #965364;
+-  --line-strong: #bd8f98;
+-  --ink: #fff7f0;
+-  --muted: #ead7d5;
+-  --dim: #eedcd9;
+-  --placeholder: #cfadb2;
+-  --amber: #fff7f0;
+-  --amber-dim: #c0949b;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #8C4356;
+-  --patina: #fff7f0;
+-  --patina-dim: #c0949b;
+-  --good: #c6e2c1;
+-  --good-line: #a38381;
+-  --bad: #f9d2cb;
+-  --bad-line: #b87c85;
+-  --bad-ink: #fbddd6;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-plum"] {
+-  --ground: #5B445F;
+-  --panel: #543f57;
+-  --raise: #5e4a60;
+-  --sunk: #4b384e;
+-  --field: #47354a;
+-  --take-bg: #523d56;
+-  --hover: #624e63;
+-  --focus-bg: #543f57;
+-  --line: #796479;
+-  --line-soft: #6a546c;
+-  --line-strong: #a1909d;
+-  --ink: #fff7f0;
+-  --muted: #ded3d3;
+-  --dim: #e6dcda;
+-  --placeholder: #b5a6af;
+-  --amber: #fff7f0;
+-  --amber-dim: #a595a0;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #5B445F;
+-  --patina: #fff7f0;
+-  --patina-dim: #a595a0;
+-  --good: #b0d6a9;
+-  --good-line: #7d7e7d;
+-  --bad: #f6bbb1;
+-  --bad-line: #997480;
+-  --bad-ink: #f9cdc4;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-forest"] {
+-  --ground: #163229;
+-  --panel: #142e26;
+-  --raise: #223a32;
+-  --sunk: #122922;
+-  --field: #112720;
+-  --take-bg: #142d25;
+-  --hover: #273e36;
+-  --focus-bg: #142e26;
+-  --line: #40554d;
+-  --line-soft: #2b443b;
+-  --line-strong: #79867e;
+-  --ink: #fff7f0;
+-  --muted: #d0d0c8;
+-  --dim: #dcd9d2;
+-  --placeholder: #969e96;
+-  --amber: #fff7f0;
+-  --amber-dim: #7f8b83;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #163229;
+-  --patina: #fff7f0;
+-  --patina-dim: #7f8b83;
+-  --good: #86c07d;
+-  --good-line: #436b4b;
+-  --bad: #ef8574;
+-  --bad-line: #6d5347;
+-  --bad-ink: #f4a799;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-deep-teal"] {
+-  --ground: #2A5254;
+-  --panel: #274b4d;
+-  --raise: #345557;
+-  --sunk: #224345;
+-  --field: #214042;
+-  --take-bg: #264a4c;
+-  --hover: #38595a;
+-  --focus-bg: #274b4d;
+-  --line: #507070;
+-  --line-soft: #3d6162;
+-  --line-strong: #849896;
+-  --ink: #fff7f0;
+-  --muted: #d4d6d1;
+-  --dim: #dfded9;
+-  --placeholder: #9fadaa;
+-  --amber: #fff7f0;
+-  --amber-dim: #8a9c9a;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #2A5254;
+-  --patina: #fff7f0;
+-  --patina-dim: #8a9c9a;
+-  --good: #a9d2a2;
+-  --good-line: #5d8573;
+-  --bad: #f6bbb1;
+-  --bad-line: #7c7c79;
+-  --bad-ink: #f9cdc4;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-amber"] {
+-  --ground: #A3682C;
+-  --panel: #966028;
+-  --raise: #8d5a26;
+-  --sunk: #865524;
+-  --field: #7f5122;
+-  --take-bg: #935e28;
+-  --hover: #8a5825;
+-  --focus-bg: #966028;
+-  --line: #b48352;
+-  --line-soft: #ac763f;
+-  --line-strong: #caa886;
+-  --ink: #ffffff;
+-  --muted: #ffffff;
+-  --dim: #ffffff;
+-  --placeholder: #e2cebb;
+-  --amber: #ffffff;
+-  --amber-dim: #ccac8b;
+-  --amber-hi: #ffffff;
+-  --amber-hi2: #ffffff;
+-  --amber-edge: #cccccc;
+-  --on-amber: #A3682C;
+-  --patina: #ffffff;
+-  --patina-dim: #ccac8b;
+-  --good: #ffffff;
+-  --good-line: #c8a480;
+-  --bad: #ffffff;
+-  --bad-line: #c8a480;
+-  --bad-ink: #ffffff;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-chestnut"] {
+-  --ground: #5D4037;
+-  --panel: #563b33;
+-  --raise: #60463e;
+-  --sunk: #4c342d;
+-  --field: #49322b;
+-  --take-bg: #543a32;
+-  --hover: #644a42;
+-  --focus-bg: #563b33;
+-  --line: #7a6158;
+-  --line-soft: #6c5048;
+-  --line-strong: #a28e86;
+-  --ink: #fff7f0;
+-  --muted: #dfd2cb;
+-  --dim: #e7dcd4;
+-  --placeholder: #b6a59d;
+-  --amber: #fff7f0;
+-  --amber-dim: #a6928a;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #5D4037;
+-  --patina: #fff7f0;
+-  --patina-dim: #a6928a;
+-  --good: #a1ce9a;
+-  --good-line: #78795f;
+-  --bad: #f5b5aa;
+-  --bad-line: #9a6f65;
+-  --bad-ink: #f8c9bf;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-copper"] {
+-  --ground: #7D4C3D;
+-  --panel: #734638;
+-  --raise: #7b5143;
+-  --sunk: #673e32;
+-  --field: #623b30;
+-  --take-bg: #704437;
+-  --hover: #7e5447;
+-  --focus-bg: #734638;
+-  --line: #946b5d;
+-  --line-soft: #885c4d;
+-  --line-strong: #b49589;
+-  --ink: #fff7f0;
+-  --muted: #e5d5cc;
+-  --dim: #ecddd5;
+-  --placeholder: #c9b1a7;
+-  --amber: #fff7f0;
+-  --amber-dim: #b8998e;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #7D4C3D;
+-  --patina: #fff7f0;
+-  --patina-dim: #b8998e;
+-  --good: #c6e2c1;
+-  --good-line: #9a8872;
+-  --bad: #f9cec7;
+-  --bad-line: #af8074;
+-  --bad-ink: #fbdad3;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-midnight-blue"] {
+-  --ground: #102349;
+-  --panel: #0f2043;
+-  --raise: #1d2d4d;
+-  --sunk: #0d1d3c;
+-  --field: #0c1b39;
+-  --take-bg: #0e2042;
+-  --hover: #223151;
+-  --focus-bg: #0f2043;
+-  --line: #3b4967;
+-  --line-soft: #263658;
+-  --line-strong: #767d90;
+-  --ink: #fff7f0;
+-  --muted: #cfcdcf;
+-  --dim: #dbd7d7;
+-  --placeholder: #9398a5;
+-  --amber: #fff7f0;
+-  --amber-dim: #7c8294;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #102349;
+-  --patina: #fff7f0;
+-  --patina-dim: #7c8294;
+-  --good: #86c07d;
+-  --good-line: #3f625e;
+-  --bad: #ee7a68;
+-  --bad-line: #694655;
+-  --bad-ink: #f3a091;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-azure"] {
+-  --ground: #3D7BAD;
+-  --panel: #4d86b4;
+-  --raise: #588db8;
+-  --sunk: #4782b1;
+-  --field: #b1cade;
+-  --take-bg: #77a3c6;
+-  --hover: #5b90ba;
+-  --focus-bg: #b1cade;
+-  --line: #32658e;
+-  --line-soft: #38709e;
+-  --line-strong: #234763;
+-  --ink: #000000;
+-  --muted: #000000;
+-  --dim: #000000;
+-  --placeholder: #172f42;
+-  --amber: #000000;
+-  --amber-dim: #2b5679;
+-  --amber-hi: #1f1f1f;
+-  --amber-hi2: #383838;
+-  --amber-edge: #000000;
+-  --on-amber: #3D7BAD;
+-  --patina: #000000;
+-  --patina-dim: #2b5679;
+-  --good: #000000;
+-  --good-line: #254a68;
+-  --bad: #000000;
+-  --bad-line: #254a68;
+-  --bad-ink: #000000;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="bold-sky-blue"] {
+-  --ground: #689AAF;
+-  --panel: #74a2b5;
+-  --raise: #6e99ab;
+-  --sunk: #6493a7;
+-  --field: #c3d7df;
+-  --take-bg: #95b8c7;
+-  --hover: #6c97a8;
+-  --focus-bg: #c3d7df;
+-  --line: #588293;
+-  --line-soft: #608ea1;
+-  --line-strong: #42616d;
+-  --ink: #101416;
+-  --muted: #1d282d;
+-  --dim: #1d282d;
+-  --placeholder: #30444d;
+-  --amber: #101416;
+-  --amber-dim: #4e7281;
+-  --amber-hi: #2d3032;
+-  --amber-hi2: #454849;
+-  --amber-edge: #0d1012;
+-  --on-amber: #689AAF;
+-  --patina: #101416;
+-  --patina-dim: #4e7281;
+-  --good: #0f2a10;
+-  --good-line: #446d6f;
+-  --bad: #490e0a;
+-  --bad-line: #5c626d;
+-  --bad-ink: #38100e;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="bold-denim"] {
+-  --ground: #4c6486;
+-  --panel: #465c7b;
+-  --raise: #516582;
+-  --sunk: #3e526e;
+-  --field: #3b4e69;
+-  --take-bg: #445a79;
+-  --hover: #556884;
+-  --focus-bg: #465c7b;
+-  --line: #6c7e99;
+-  --line-soft: #5c7190;
+-  --line-strong: #98a2b3;
+-  --ink: #fff7f0;
+-  --muted: #e7e6e7;
+-  --dim: #e8e5e4;
+-  --placeholder: #bac0ca;
+-  --amber: #fff7f0;
+-  --amber-dim: #9da6b6;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #4c6486;
+-  --patina: #fff7f0;
+-  --patina-dim: #9da6b6;
+-  --good: #daecd7;
+-  --good-line: #859aa6;
+-  --bad: #f9e2dd;
+-  --bad-line: #9196a9;
+-  --bad-ink: #fbe8e3;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-olive"] {
+-  --ground: #615020;
+-  --panel: #594a1d;
+-  --raise: #63542a;
+-  --sunk: #50421a;
+-  --field: #4c3e19;
+-  --take-bg: #57481d;
+-  --hover: #66582e;
+-  --focus-bg: #594a1d;
+-  --line: #7d6e45;
+-  --line-soft: #6f5f32;
+-  --line-strong: #a49778;
+-  --ink: #fff7f0;
+-  --muted: #dfd6c6;
+-  --dim: #e7ded1;
+-  --placeholder: #b8ac92;
+-  --amber: #fff7f0;
+-  --amber-dim: #a89b7e;
+-  --amber-hi: #fff8f2;
+-  --amber-hi2: #fff9f3;
+-  --amber-edge: #ccc6c0;
+-  --on-amber: #615020;
+-  --patina: #fff7f0;
+-  --patina-dim: #a89b7e;
+-  --good: #b6d9b0;
+-  --good-line: #83875a;
+-  --bad: #f8c5bd;
+-  --bad-line: #9d7f5f;
+-  --bad-ink: #fad4cc;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="bold-gold"] {
+-  --ground: #C6A75C;
+-  --panel: #cbae69;
+-  --raise: #c0a564;
+-  --sunk: #bda058;
+-  --field: #e8dcbe;
+-  --take-bg: #d7c18d;
+-  --hover: #bca262;
+-  --focus-bg: #e8dcbe;
+-  --line: #a58d4f;
+-  --line-soft: #b69a56;
+-  --line-strong: #78693e;
+-  --ink: #101416;
+-  --muted: #343124;
+-  --dim: #2b2a20;
+-  --placeholder: #5a4f32;
+-  --amber: #101416;
+-  --amber-dim: #8f7b47;
+-  --amber-hi: #2d3032;
+-  --amber-hi2: #454849;
+-  --amber-edge: #0d1012;
+-  --on-amber: #C6A75C;
+-  --patina: #101416;
+-  --patina-dim: #8f7b47;
+-  --good: #174019;
+-  --good-line: #807e41;
+-  --bad: #6e150f;
+-  --bad-line: #a36d3d;
+-  --bad-ink: #521511;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="bold-black"] {
+-  --ground: #000000;
+-  --panel: #080808;
+-  --raise: #151515;
+-  --sunk: #000000;
+-  --field: #000000;
+-  --take-bg: #000000;
+-  --hover: #191919;
+-  --focus-bg: #000000;
+-  --line: #242424;
+-  --line-soft: #121212;
+-  --line-strong: #5b5b5b;
+-  --ink: #dcdcdc;
+-  --muted: #b0b0b0;
+-  --dim: #a0a0a0;
+-  --placeholder: #797979;
+-  --amber: #dcdcdc;
+-  --amber-dim: #636363;
+-  --amber-hi: #e0e0e0;
+-  --amber-hi2: #e4e4e4;
+-  --amber-edge: #b0b0b0;
+-  --on-amber: #000000;
+-  --patina: #ededed;
+-  --patina-dim: #6b6b6b;
+-  --good: #86c07d;
+-  --good-line: #364d32;
+-  --bad: #ee7a68;
+-  --bad-line: #5f312a;
+-  --bad-ink: #e9978b;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-[data-theme="rose-stone"] {
+-  --ground: #FFF7F7;
+-  --panel: #FFE4E4;
+-  --raise: #f4d8d8;
+-  --sunk: #f6ecec;
+-  --field: #fffcfc;
+-  --take-bg: #fff9f9;
+-  --hover: #f1d4d4;
+-  --focus-bg: #fffcfc;
+-  --line: #FFD4D4;
+-  --line-soft: #ffe6e6;
+-  --line-strong: #c99d9d;
+-  --ink: #4A1C1C;
+-  --muted: #6e4848;
+-  --dim: #4A1C1C;
+-  --placeholder: #8f7575;
+-  --amber: #A03C3C;
+-  --amber-dim: #e2bfbf;
+-  --amber-hi: #ab5353;
+-  --amber-hi2: #b56767;
+-  --amber-edge: #803030;
+-  --on-amber: #FFF7F7;
+-  --patina: #A03C3C;
+-  --patina-dim: #e2bfbf;
+-  --good: #256a29;
+-  --good-line: #a8bfa5;
+-  --bad: #b42318;
+-  --bad-line: #e1a29e;
+-  --bad-ink: #942119;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+ [data-theme="warm-clay"] {
+   --ground: #F8E3C4;
+   --panel: #E6C89B;
+@@ -1021,74 +205,6 @@
+   color-scheme: light;
+ }
+ 
+-[data-theme="lavender-clay"] {
+-  --ground: #F4EEF5;
+-  --panel: #E8DCEA;
+-  --raise: #ded1e0;
+-  --sunk: #ebe4ec;
+-  --field: #fbf8fb;
+-  --take-bg: #f7f3f8;
+-  --hover: #dbcedd;
+-  --focus-bg: #fbf8fb;
+-  --line: #DBCBDE;
+-  --line-soft: #e8dcea;
+-  --line-strong: #ae9bb1;
+-  --ink: #442A47;
+-  --muted: #67516a;
+-  --dim: #442A47;
+-  --placeholder: #7c6e7e;
+-  --amber: #6d4970;
+-  --amber-dim: #ccbccd;
+-  --amber-hi: #7f5f81;
+-  --amber-hi2: #8d718f;
+-  --amber-edge: #573a5a;
+-  --on-amber: #F4EEF5;
+-  --patina: #6d4970;
+-  --patina-dim: #ccbccd;
+-  --good: #226226;
+-  --good-line: #a0b6a2;
+-  --bad: #a62016;
+-  --bad-line: #d59c9c;
+-  --bad-ink: #892325;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="blossom"] {
+-  --ground: #FFEEF2;
+-  --panel: #FFE6EC;
+-  --raise: #f8dce3;
+-  --sunk: #f9e5ea;
+-  --field: #fff8fa;
+-  --take-bg: #fff3f6;
+-  --hover: #f6d9e0;
+-  --focus-bg: #fff8fa;
+-  --line: #FFDEE6;
+-  --line-soft: #ffe6ec;
+-  --line-strong: #dcafbb;
+-  --ink: #8C4356;
+-  --muted: #7f4f5b;
+-  --dim: #8C4356;
+-  --placeholder: #966f79;
+-  --amber: #974a52;
+-  --amber-dim: #e0bdc2;
+-  --amber-hi: #a36067;
+-  --amber-hi2: #ae7278;
+-  --amber-edge: #793b42;
+-  --on-amber: #FFEEF2;
+-  --patina: #974a52;
+-  --patina-dim: #e0bdc2;
+-  --good: #256a29;
+-  --good-line: #a8b9a2;
+-  --bad: #b42318;
+-  --bad-line: #e19d9b;
+-  --bad-ink: #a82d2b;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+ [data-theme="pewter"] {
+   --ground: #F3F4F6;
+   --panel: #E5E7EB;
+@@ -1225,108 +341,6 @@
+   color-scheme: light;
+ }
+ 
+-[data-theme="mist"] {
+-  --ground: #c8cfd7;
+-  --panel: #b9c3ce;
+-  --raise: #b0bac6;
+-  --sunk: #c0c7d0;
+-  --field: #e9ecef;
+-  --take-bg: #d8dde3;
+-  --hover: #adb8c3;
+-  --focus-bg: #e9ecef;
+-  --line: #8c9aaa;
+-  --line-soft: #aab4c0;
+-  --line-strong: #6e7c8a;
+-  --ink: #283541;
+-  --muted: #3d4750;
+-  --dim: #364554;
+-  --placeholder: #575f66;
+-  --amber: #1c496a;
+-  --amber-dim: #94a7b6;
+-  --amber-hi: #375f7c;
+-  --amber-hi2: #4e718b;
+-  --amber-edge: #163a55;
+-  --on-amber: #c8cfd7;
+-  --patina: #1c486d;
+-  --patina-dim: #94a6b7;
+-  --good: #1d5320;
+-  --good-line: #849d8e;
+-  --bad: #8d1b12;
+-  --bad-line: #b08788;
+-  --bad-ink: #6f2320;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="sage"] {
+-  --ground: #becbc3;
+-  --panel: #afc0b5;
+-  --raise: #a7b8ad;
+-  --sunk: #b7c4bc;
+-  --field: #e5eae7;
+-  --take-bg: #d2dbd5;
+-  --hover: #a4b5ab;
+-  --focus-bg: #e5eae7;
+-  --line: #869d8f;
+-  --line-soft: #a2b4a9;
+-  --line-strong: #6a8073;
+-  --ink: #293b33;
+-  --muted: #37453f;
+-  --dim: #314739;
+-  --placeholder: #54615a;
+-  --amber: #1d4735;
+-  --amber-dim: #8ea398;
+-  --amber-hi: #385d4d;
+-  --amber-hi2: #4f6f61;
+-  --amber-edge: #17392a;
+-  --on-amber: #becbc3;
+-  --patina: #1f4936;
+-  --patina-dim: #8ea499;
+-  --good: #1b4c1d;
+-  --good-line: #7d9881;
+-  --bad: #821911;
+-  --bad-line: #a6847c;
+-  --bad-ink: #67231b;
+-  --shadow-md: rgba(20, 30, 45, .16);
+-  --shadow-lg: rgba(20, 30, 45, .28);
+-  color-scheme: light;
+-}
+-
+-[data-theme="slate"] {
+-  --ground: #536273;
+-  --panel: #475768;
+-  --raise: #516071;
+-  --sunk: #44505e;
+-  --field: #414c5a;
+-  --take-bg: #4b5868;
+-  --hover: #556474;
+-  --focus-bg: #4c5a6a;
+-  --line: #748699;
+-  --line-soft: #647486;
+-  --line-strong: #9aa7b6;
+-  --ink: #f2f5f8;
+-  --muted: #dce1e4;
+-  --dim: #d8e2eb;
+-  --placeholder: #b1b9c1;
+-  --amber: #bfe4ff;
+-  --amber-dim: #849cb2;
+-  --amber-hi: #c7e7ff;
+-  --amber-hi2: #cdeaff;
+-  --amber-edge: #99b6cc;
+-  --on-amber: #536273;
+-  --patina: #c0e5ff;
+-  --patina-dim: #849db2;
+-  --good: #cfe6cb;
+-  --good-line: #859796;
+-  --bad: #f9d9d3;
+-  --bad-line: #959299;
+-  --bad-ink: #f7e1de;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+ [data-theme="dark"] {
+   --ground: #1f1f1f;
+   --panel: #181818;
+@@ -1361,41 +375,6 @@
+   color-scheme: dark;
+ }
+ 
+-[data-theme="monokai"] {
+-  --ground: #272822;
+-  --panel: #2f302a;
+-  --raise: #3b3c36;
+-  --sunk: #20211c;
+-  --field: #1e1f1b;
+-  --take-bg: #23241f;
+-  --hover: #3f403a;
+-  --focus-bg: #24251f;
+-  --line: #49483e;
+-  --line-soft: #383830;
+-  --line-strong: #7d7d74;
+-  --ink: #f8f8f2;
+-  --muted: #cecec8;
+-  --dim: #b2b0a5;
+-  --placeholder: #9a9a94;
+-  --amber: #a6e22e;
+-  --amber-dim: #607c27;
+-  --amber-hi: #b1e547;
+-  --amber-hi2: #bae85c;
+-  --amber-edge: #85b525;
+-  --on-amber: #272822;
+-  --patina: #66d9ef;
+-  --patina-dim: #43787e;
+-  --good: #86c07d;
+-  --good-line: #4d6546;
+-  --bad: #f19889;
+-  --bad-line: #78554b;
+-  --bad-ink: #f3b5a8;
+-  --shadow-md: rgba(0, 0, 0, .5);
+-  --shadow-lg: rgba(0, 0, 0, .9);
+-  color-scheme: dark;
+-}
+-
+-/* HERESY 1015: Scroll & Brick — igr.bible by day, from YuE2 Studio (Viktor, 26.09.2026). */
+ [data-theme="igr-day"] {
+   --ground: #fcfcfb;
+   --panel: #f3f3f2;
+diff --git a/tools/console/themes.js b/tools/console/themes.js
+index c59ca36..d348fdd 100644
+--- a/tools/console/themes.js
++++ b/tools/console/themes.js
+@@ -15,7 +15,6 @@
+   /* THEMES:BEGIN (the theme list; its generator is gone, so edit it here, with themes.css) */
+   var THEMES = [{"id": "igr-day", "name": "Scroll & Brick", "family": "classic", "dark": false, "bg": "#fcfcfb", "fg": "#191919", "accent": "#8e1a2e", "rule": "#d4d4d3"},
+     {"id": "igr-night", "name": "Scroll by Lamplight", "family": "classic", "dark": true, "bg": "#1e1e1e", "fg": "#f4f4f4", "accent": "#f07171", "rule": "#3e3e3e"},
+-    {"id": "dmm", "name": "DMM", "family": "bold", "dark": true, "bg": "#09090b", "fg": "#e4e4e7", "accent": "#bf00ff", "rule": "#27272a"},
+     {"id": "studio", "name": "Studio (warm)", "family": "classic", "dark": true, "bg": "#14110e", "fg": "#f2eadc", "accent": "#e8a33d", "rule": "#3a3129"},
+     {"id": "graphite", "name": "Graphite", "family": "classic", "dark": true, "bg": "#131518", "fg": "#eef1f5", "accent": "#f0b44c", "rule": "#373d45"},
+     {"id": "nord", "name": "Nord", "family": "classic", "dark": true, "bg": "#2e3440", "fg": "#eceff4", "accent": "#ebcb8b", "rule": "#4c566a"},
+@@ -25,50 +24,20 @@
+     {"id": "solarized-light", "name": "Solarized light", "family": "classic", "dark": false, "bg": "#eee8d5", "fg": "#073642", "accent": "#7d5500", "rule": "#cfc6ad"},
+     {"id": "daylight", "name": "Daylight", "family": "classic", "dark": false, "bg": "#eef0f3", "fg": "#161a1f", "accent": "#9c4708", "rule": "#cfd5dd"},
+     {"id": "contrast", "name": "High contrast", "family": "classic", "dark": true, "bg": "#000000", "fg": "#ffffff", "accent": "#ffcc40", "rule": "#8a8a8a"},
+-    {"id": "bold-crimson", "name": "Crimson", "family": "bold", "dark": true, "bg": "#A03C3C", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#b15e5c"},
+-    {"id": "bold-tangerine", "name": "Tangerine", "family": "bold", "dark": false, "bg": "#C85F3C", "fg": "#070a0b", "accent": "#070a0b", "rule": "#a85337"},
+-    {"id": "bold-sunflower", "name": "Sunflower", "family": "bold", "dark": false, "bg": "#FFDE30", "fg": "#101416", "accent": "#101416", "rule": "#d5bb2d"},
+-    {"id": "bold-emerald", "name": "Emerald", "family": "bold", "dark": false, "bg": "#388E70", "fg": "#0b0e0f", "accent": "#0b0e0f", "rule": "#327a62"},
+-    {"id": "bold-turquoise", "name": "Turquoise", "family": "bold", "dark": false, "bg": "#58C9B9", "fg": "#101416", "accent": "#101416", "rule": "#4caa9e"},
+-    {"id": "bold-cobalt", "name": "Cobalt", "family": "bold", "dark": true, "bg": "#1E3F66", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#46607f"},
+-    {"id": "bold-violet", "name": "Violet", "family": "bold", "dark": true, "bg": "#8C5D91", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#a179a2"},
+-    {"id": "bold-pink", "name": "Pink", "family": "bold", "dark": false, "bg": "#E4707C", "fg": "#101416", "accent": "#101416", "rule": "#bf616c"},
+-    {"id": "bold-burgundy", "name": "Burgundy", "family": "bold", "dark": true, "bg": "#4A1C1C", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#6b4342"},
+-    {"id": "bold-mulberry", "name": "Mulberry", "family": "bold", "dark": true, "bg": "#8C4356", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#a16372"},
+-    {"id": "bold-plum", "name": "Plum", "family": "bold", "dark": true, "bg": "#5B445F", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#796479"},
+-    {"id": "bold-forest", "name": "Forest", "family": "bold", "dark": true, "bg": "#163229", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#40554d"},
+-    {"id": "bold-deep-teal", "name": "Deep Teal", "family": "bold", "dark": true, "bg": "#2A5254", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#507070"},
+-    {"id": "bold-amber", "name": "Amber", "family": "bold", "dark": true, "bg": "#A3682C", "fg": "#ffffff", "accent": "#ffffff", "rule": "#b48352"},
+-    {"id": "bold-chestnut", "name": "Chestnut", "family": "bold", "dark": true, "bg": "#5D4037", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#7a6158"},
+-    {"id": "bold-copper", "name": "Copper", "family": "bold", "dark": true, "bg": "#7D4C3D", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#946b5d"},
+-    {"id": "bold-midnight-blue", "name": "Midnight Blue", "family": "bold", "dark": true, "bg": "#102349", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#3b4967"},
+-    {"id": "bold-azure", "name": "Azure", "family": "bold", "dark": false, "bg": "#3D7BAD", "fg": "#000000", "accent": "#000000", "rule": "#32658e"},
+-    {"id": "bold-sky-blue", "name": "Sky Blue", "family": "bold", "dark": false, "bg": "#689AAF", "fg": "#101416", "accent": "#101416", "rule": "#588293"},
+-    {"id": "bold-denim", "name": "Denim", "family": "bold", "dark": true, "bg": "#4c6486", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#6c7e99"},
+-    {"id": "bold-olive", "name": "Olive", "family": "bold", "dark": true, "bg": "#615020", "fg": "#fff7f0", "accent": "#fff7f0", "rule": "#7d6e45"},
+-    {"id": "bold-gold", "name": "Gold", "family": "bold", "dark": false, "bg": "#C6A75C", "fg": "#101416", "accent": "#101416", "rule": "#a58d4f"},
+-    {"id": "bold-black", "name": "Black", "family": "bold", "dark": true, "bg": "#000000", "fg": "#dcdcdc", "accent": "#dcdcdc", "rule": "#242424"},
+-    {"id": "rose-stone", "name": "Rose Stone", "family": "soft", "dark": false, "bg": "#FFF7F7", "fg": "#4A1C1C", "accent": "#A03C3C", "rule": "#FFD4D4"},
+     {"id": "warm-clay", "name": "Warm Clay", "family": "soft", "dark": false, "bg": "#F8E3C4", "fg": "#2C1810", "accent": "#793a25", "rule": "#D4B176"},
+     {"id": "cocoa", "name": "Cocoa", "family": "soft", "dark": false, "bg": "#EFEBE9", "fg": "#5D4037", "accent": "#66483d", "rule": "#BCAAA4"},
+     {"id": "parchment", "name": "Parchment", "family": "soft", "dark": false, "bg": "#F4E4BE", "fg": "#5F4B32", "accent": "#754b1f", "rule": "#E2CCA0"},
+     {"id": "jade", "name": "Jade", "family": "soft", "dark": false, "bg": "#E8F4EE", "fg": "#1D4A3C", "accent": "#286650", "rule": "#D5EAE0"},
+     {"id": "lagoon", "name": "Lagoon", "family": "soft", "dark": false, "bg": "#E6F3F4", "fg": "#2A5254", "accent": "#376770", "rule": "#C2E3E4"},
+     {"id": "porcelain", "name": "Porcelain", "family": "soft", "dark": false, "bg": "#F2F7FF", "fg": "#102349", "accent": "#1E3F66", "rule": "#B9D7FF"},
+-    {"id": "lavender-clay", "name": "Lavender Clay", "family": "soft", "dark": false, "bg": "#F4EEF5", "fg": "#442A47", "accent": "#6d4970", "rule": "#DBCBDE"},
+-    {"id": "blossom", "name": "Blossom", "family": "soft", "dark": false, "bg": "#FFEEF2", "fg": "#8C4356", "accent": "#974a52", "rule": "#FFDEE6"},
+     {"id": "pewter", "name": "Pewter", "family": "soft", "dark": false, "bg": "#F3F4F6", "fg": "#1F2937", "accent": "#4B5563", "rule": "#D1D5DB"},
+     {"id": "ink", "name": "Ink", "family": "soft", "dark": true, "bg": "#1F2937", "fg": "#E5E7EB", "accent": "#dadde0", "rule": "#374151"},
+     {"id": "marble", "name": "Marble", "family": "soft", "dark": false, "bg": "#F7F6F2", "fg": "#2B2926", "accent": "#66625e", "rule": "#EAE8E3"},
+     {"id": "light", "name": "Light", "family": "classic", "dark": false, "bg": "#ffffff", "fg": "#24292f", "accent": "#0861c9", "rule": "#d0d7de"},
+-    {"id": "mist", "name": "Mist", "family": "classic", "dark": false, "bg": "#c8cfd7", "fg": "#283541", "accent": "#1c496a", "rule": "#8c9aaa"},
+-    {"id": "sage", "name": "Sage", "family": "classic", "dark": false, "bg": "#becbc3", "fg": "#293b33", "accent": "#1d4735", "rule": "#869d8f"},
+-    {"id": "slate", "name": "Slate", "family": "classic", "dark": true, "bg": "#536273", "fg": "#f2f5f8", "accent": "#bfe4ff", "rule": "#748699"},
+-    {"id": "dark", "name": "Dark", "family": "classic", "dark": true, "bg": "#1f1f1f", "fg": "#d7d7d7", "accent": "#3794ff", "rule": "#343434"},
+-    {"id": "monokai", "name": "Monokai", "family": "classic", "dark": true, "bg": "#272822", "fg": "#f8f8f2", "accent": "#a6e22e", "rule": "#49483e"}];
++    {"id": "dark", "name": "Dark", "family": "classic", "dark": true, "bg": "#1f1f1f", "fg": "#d7d7d7", "accent": "#3794ff", "rule": "#343434"}];
+   /* THEMES:END */
+ 
+-  var FAMILIES = [["all", "All"], ["favorites", "Favorites"], ["bold", "Bold"], ["soft", "Soft"], ["classic", "Classic"]];
++  var FAMILIES = [["all", "All"], ["favorites", "Favorites"], ["classic", "Classic"], ["soft", "Soft"]];   // HERESY 1099: "bold" went to the archive
+   var S = { button: null, popup: null, onChange: null, kept: "igr-day", shown: null, family: "all", favorites: [] };
+ 
+   function load(key, fallback) {
+-- 
+2.43.0
+

@@ -1,0 +1,7 @@
+# The Hugging Face downloader that tools/download-checkpoints.sh, tools/download-loras.sh and
+# download-models.sh install into the studio's .venv (tools/hf-env.sh reads this file).
+#
+# Pinned to the version the downloads were verified with. huggingface_hub 2.0.0 reads
+# "--include a b c" differently: it took b and c as file names, printed "Ignoring --include since
+# filenames have been explicitly set", exited 0, and left the slider folder with metadata only.
+huggingface_hub[hf_xet]==0.36.2

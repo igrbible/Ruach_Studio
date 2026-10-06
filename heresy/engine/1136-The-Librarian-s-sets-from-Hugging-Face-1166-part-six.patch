@@ -1,0 +1,385 @@
+From 6c39659ea5a64da11d64b5e9c3c4020329f4be39 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 03:09:32 -0600
+Subject: [PATCH 1136/1177] =?UTF-8?q?The=20Librarian's=20=F0=9F=92=8E=20se?=
+ =?UTF-8?q?ts=20from=20Hugging=20Face=20(1166,=20part=20sixteen)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «…и если такой существует, спрашивать о восстановлении оригинальной копией, и
+краткий быстрый гайд в попап оверлее… хотите сохранить это — сначала переименуйте воркспейс, а
+затем мы воссоздадим запрошенное пространство из HF репозитория».
+
+Under «+ New workspace», «💎 From Hugging Face…»: one row a published set (its takes, size and
+date; here or not; or the hub's own words when it is not published), one button: Get, Restore the
+original…, Try again. A set whose name is here is asked about first (the lab's 409): restoring
+and what it does, then the way to keep yours (rename it with ⋯ → Rename…, then Get: the original
+comes in beside it); Cancel sends nothing. The download's progress in the row; a toast and the
+Librarian refreshed when it is in. The words in the seven languages (23 keys; «20 takes here»
+with each language's plural forms).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 15 +++++
+ tools/console/heresy-collection.js | 93 ++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-be.js    | 25 +++++++-
+ tools/console/heresy-i18n-el.js    | 25 +++++++-
+ tools/console/heresy-i18n-es.js    | 25 +++++++-
+ tools/console/heresy-i18n-it.js    | 25 +++++++-
+ tools/console/heresy-i18n-ru.js    | 25 +++++++-
+ tools/console/heresy-i18n-uk.js    | 25 +++++++-
+ 8 files changed, 252 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a41bbb5..77fd13a 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2554,6 +2554,21 @@ body.coll-dragging .coll-peek { display: none; }
+ .hd-body { white-space: pre-line; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+ .hd-input { width: 100%; }
+ .hd-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
++/* HERESY 1166: the published 💎 sets, one row each: its name and link, what it holds, here or not, one button */
++.hub-box { width: min(640px, 100%); }
++.hub-list { display: flex; flex-direction: column; gap: 8px; max-height: min(60vh, 520px); overflow: auto; }
++.hub-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 14px; padding: 10px 12px;
++  background: var(--sunk); border: 1px solid var(--line-soft); border-radius: var(--r-md); }
++.hub-row > .btn { grid-column: 2; grid-row: 1 / span 3; white-space: nowrap; }
++.hub-head, .hub-facts, .hub-line { grid-column: 1; }
++.hub-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
++.hub-name { font: 500 14px/1.3 var(--heading); color: var(--ink); }
++.hub-link { color: var(--dim); text-decoration: none; }
++.hub-link:hover, .hub-link:focus-visible { color: var(--amber); }
++.hub-facts, .hub-line { font-size: 12px; color: var(--dim); min-width: 0; overflow-wrap: anywhere; }
++.hub-state.is-here { color: var(--good); }
++.hub-state.is-bad { color: var(--bad); }
++.coll-place.coll-hub { color: var(--muted); }
+ 
+ /* HERESY 1058: every dropdown in the studio's own dress: no native arrow, a drawn chevron, room for it */
+ select { appearance: none; -webkit-appearance: none; background-color: var(--field);
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index e88f448..b7c9efd 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -121,6 +121,7 @@
+           .replace('<span class="coll-n">', lock + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">');
+       }).join("") +
+       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
++      '<button type="button" class="coll-place coll-new coll-hub" data-ws-hub="1">\ud83d\udc8e From Hugging Face\u2026</button>' +   // HERESY 1166
+       '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined);
+     fitSide();
+   }
+@@ -495,6 +496,97 @@
+     }).catch(function (e) { toast(e.message, true); return false; });   // true when the lab took it
+   }
+ 
++  // HERESY 1166 (Viktor 04.10.2026: «Воркспейсы с 💎 — именно эти идут в соответствующие репозитории. И допиши код
++  // подтягивания этих воркспейсов из репо, по запросу пользователя, и если такой существует, спрашивать о восстановлении
++  // оригинальной копией, и краткий быстрый гайд в попап оверлее… Вдруг чел туда своего напишет, а мы перезатрём всё»): the
++  // published 💎 sets (lab/diamond.py), each fetched on a click into a workspace of its own, locked; one of that name here
++  // is asked about first, with the way to keep it (rename it, then Get: the original comes in beside it)
++  var hub = null;
++  function hubSize(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(1, Math.round(b / 1e6)) + " MB"; }
++  function hubOpen() {
++    if (hub) return;
++    var back = document.createElement("div");
++    back.className = "hd-back hub-back";
++    back.innerHTML = '<div class="hd-box hub-box" role="dialog" aria-modal="true" aria-label="💎 Sets from Hugging Face">' +
++      '<div class="hd-title">💎 Sets from Hugging Face</div>' +
++      '<div class="hd-body">The studio\'s approved sets, as their author published them. Each comes in as a workspace of its own, ' +
++      "locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded.</div>" +
++      '<div class="hub-list"><p class="row-hint">Asking Hugging Face…</p></div>' +
++      '<div class="hd-acts"><button type="button" class="btn ghost small hub-close">Close</button></div></div>';
++    document.body.appendChild(back);
++    requestAnimationFrame(function () { back.classList.add("is-on"); });
++    hub = { back: back, timer: 0, was: {} };
++    function key(e) {
++      if (e.key !== "Escape" || document.querySelector(".hd-back:not(.hub-back)")) return;   // a question on top answers first
++      e.preventDefault(); e.stopPropagation(); hubClose();
++    }
++    hub.key = key;
++    document.addEventListener("keydown", key, true);
++    back.addEventListener("mousedown", function (e) { if (e.target === back) hubClose(); });
++    back.querySelector(".hub-close").addEventListener("click", hubClose);
++    back.querySelector(".hub-list").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-hub-get]");
++      if (b && !b.disabled) { b.disabled = true; hubGet(b.dataset.hubGet, false); }
++    });
++    hubLoad();
++  }
++  function hubClose() {
++    if (!hub) return;
++    clearTimeout(hub.timer);
++    document.removeEventListener("keydown", hub.key, true);
++    var back = hub.back;
++    back.classList.add("is-leaving");
++    setTimeout(function () { back.remove(); }, 120);
++    hub = null;
++  }
++  function hubLoad() {
++    if (!hub) return;
++    api("/collection/diamonds").then(function (d) { if (hub) hubPaint(d.sets || []); })
++      .catch(function (e) { if (hub) hub.back.querySelector(".hub-list").innerHTML = '<p class="row-hint">The lab does not answer: ' + esc(e.message) + "</p>"; });
++  }
++  function hubPaint(sets) {
++    var running = false, came = [];
++    hub.back.querySelector(".hub-list").innerHTML = sets.map(function (s) {
++      var j = s.job || {}, run = j.status === "running";
++      running = running || run;
++      if (hub.was[s.name] === "running" && j.status === "done") came.push(s);
++      hub.was[s.name] = j.status || "";
++      var facts = s.published ? "<span>" + s.takes + " takes</span> · " + '<span translate="no">' + hubSize(s.bytes) + "</span>" +
++        (s.date ? " · <span>published " + esc(s.date) + "</span>" : "") : "";
++      var state = run ? '<span class="hub-state">files: ' + (j.done || 0) + " of " + (j.total || 0) + '</span> · <span translate="no">' + hubSize(j.got || 0) + "</span>"
++        : j.status === "failed" ? '<span class="hub-state is-bad">failed: ' + esc(j.error || "") + "</span>"
++        : !s.published ? '<span class="hub-state is-bad">' + esc(s.error || "Not on Hugging Face yet") + "</span>"
++        : s.here ? '<span class="hub-state is-here">' + s.here_takes + " takes here</span>"
++        : '<span class="hub-state">Not here yet</span>';
++      var btn = !s.published ? "" : run ? '<button type="button" class="btn small" disabled>Getting…</button>'
++        : '<button type="button" class="btn small ' + (s.here ? "ghost" : "primary") + '" data-hub-get="' + esc(s.name) + '">' +
++          (j.status === "failed" ? "Try again" : s.here ? "Restore the original…" : "Get") + "</button>";
++      return '<div class="hub-row"><div class="hub-head"><span class="hub-name" translate="no">' + esc(s.name) + "</span>" +
++        '<a class="hub-link" href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer" data-tip="Open it on Hugging Face (new tab)">↗</a></div>' +
++        (facts ? '<div class="hub-facts">' + facts + "</div>" : "") + '<div class="hub-line">' + state + "</div>" + btn + "</div>";
++    }).join("");
++    came.forEach(function (s) { toast("“" + s.name + "” " + ((s.job || {}).restore ? "restored from Hugging Face" : "came from Hugging Face")); });
++    if (came.length) load();
++    clearTimeout(hub.timer);
++    if (running) hub.timer = setTimeout(hubLoad, 1500);
++  }
++  function hubGet(name, restore) {
++    fetch("/lab/collection/diamonds", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, restore: restore }) })
++      .then(function (r) { return r.json().then(function (b) { return { status: r.status, body: b }; }); })
++      .then(function (x) {
++        if (x.status === 409) {
++          return ask("“" + name + "” is here already\n\n" +
++            "Restoring brings back the copy published on Hugging Face: the takes it lacks come again, titles and notes return to the " +
++            "published ones, and what was added to it leaves the workspace (those takes stay in the library; its own sections stay).\n\n" +
++            "To keep yours as it is: Cancel, rename your workspace (the ⋯ beside its name, then Rename…), and Get again: the original " +
++            "comes in beside it under its own name.", { ok: "Restore the original", danger: true })
++            .then(function (yes) { if (yes) return hubGet(name, true); if (hub) hubLoad(); });
++        }
++        if (x.status >= 400) throw new Error(x.body.error || String(x.status));
++        if (hub) hubPaint(x.body.sets || []);
++      }).catch(function (e) { toast(e.message, true); if (hub) hubLoad(); });
++  }
++
+   function exportZip() {
+     var n = names(); if (!n.length) return;
+     var fmt = $("collExportFmt").value, derived = $("collExportDer").checked;
+@@ -536,6 +628,7 @@
+     $("collSide").addEventListener("click", function (e) {
+       var more = e.target.closest("[data-ws-menu]");          // HERESY 1050
+       if (more) { e.stopPropagation(); var rc = more.getBoundingClientRect(); wsMenu(more.dataset.wsMenu, rc.left, rc.bottom + 2); return; }
++      if (e.target.closest("[data-ws-hub]")) return void hubOpen();   // HERESY 1166: the published 💎 sets
+       var nw = e.target.closest("[data-ws-new]");
+       if (nw) {
+         askName("A new workspace", "", { ok: "Make it", placeholder: "its name" }).then(function (name) {
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index eda4d15..7633a29 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2439,5 +2439,28 @@ RuachI18n.add("be", {
+ "The GPU roles changed and are not saved": "Ролі відэакарт зменены і не захаваны",
+ "Save them, or leave the cards as they were.": "Захавай іх або пакінь карты як былі.",
+ "Ignore": "Ігнараваць",
+-"Drag it to move them all at once, each in proportion.": "Пацягні яго, і ўсе зрушацца разам, кожная ў сваёй прапорцыі."
++"Drag it to move them all at once, each in proportion.": "Пацягні яго, і ўсе зрушацца разам, кожная ў сваёй прапорцыі.",
++"💎 From Hugging Face…": "💎 З Hugging Face…",
++"💎 Sets from Hugging Face": "💎 Наборы з Hugging Face",
++"The studio's approved sets, as their author published them. Each comes in as a workspace of its own, locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded.": "Ухваленыя наборы студыі такімі, якімі іх апублікаваў аўтар. Кожны прыходзіць асобнай прасторай, абароненай ад выдалення: сэмплы ў MP3 з вокладкамі, назвамі і нататкамі. Спампоўваецца толькі тое, што ты папросіш.",
++"Asking Hugging Face…": "Пытаюся ў Hugging Face…",
++"published {0}": "апублікаваны {0}",
++"{#0} takes here": {"one": "{0} сэмпл тут", "few": "{0} сэмплы тут", "many": "{0} сэмплаў тут", "other": "{0} сэмпла тут"},
++"Not here yet": "Тут яшчэ няма",
++"Getting…": "Бяру…",
++"Try again": "Яшчэ раз",
++"Restore the original…": "Вярнуць арыгінал…",
++"Get": "Узяць",
++"files: {#0} of {#1}": "файлы: {0} з {1}",
++"Open it on Hugging Face (new tab)": "Адкрыць на Hugging Face (новая ўкладка)",
++"“{0}” is here already": "«{0}» ужо тут",
++"Restoring brings back the copy published on Hugging Face: the takes it lacks come again, titles and notes return to the published ones, and what was added to it leaves the workspace (those takes stay in the library; its own sections stay). To keep yours as it is: Cancel, rename your workspace (the ⋯ beside its name, then Rename…), and Get again: the original comes in beside it under its own name.": "Аднаўленне вяртае копію, апублікаваную на Hugging Face: сэмплы, якіх не стае, прыходзяць зноў, назвы і нататкі вяртаюцца да апублікаваных, а дададзенае выходзіць з прасторы (гэтыя сэмплы застаюцца ў бібліятэцы; яе ўласныя падраздзелы застаюцца).\n\nКаб захаваць сваё як ёсць: «Скасаваць», перайменуй сваю прастору (⋯ побач з яе назвай, потым «Перайменаваць…») і зноў «Узяць»: арыгінал прыйдзе побач, пад уласнай назвай.",
++"Restore the original": "Вярнуць арыгінал",
++"“{0}” came from Hugging Face": "«{0}» прыйшоў з Hugging Face",
++"“{0}” restored from Hugging Face": "«{0}» адноўлены з Hugging Face",
++"not on Hugging Face yet (or not open to this studio)": "на Hugging Face яшчэ няма (або ён закрыты для гэтай студыі)",
++"its repository has no workspace.json yet": "у яго рэпазіторыі яшчэ няма workspace.json",
++"the repository asks for access first": "рэпазіторый спачатку просіць доступ",
++"Hugging Face does not answer: {0}": "Hugging Face не адказвае: {0}",
++"Not on Hugging Face yet": "На Hugging Face яшчэ няма"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index a35d074..e5e2b43 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2438,5 +2438,28 @@ RuachI18n.add("el", {
+ "The GPU roles changed and are not saved": "Οι ρόλοι των GPU άλλαξαν και δεν αποθηκεύτηκαν",
+ "Save them, or leave the cards as they were.": "Αποθήκευσέ τους ή άφησε τις κάρτες όπως ήταν.",
+ "Ignore": "Αγνόηση",
+-"Drag it to move them all at once, each in proportion.": "Σύρε το για να μετακινηθούν όλες μαζί, η καθεμία αναλογικά."
++"Drag it to move them all at once, each in proportion.": "Σύρε το για να μετακινηθούν όλες μαζί, η καθεμία αναλογικά.",
++"💎 From Hugging Face…": "💎 Από το Hugging Face…",
++"💎 Sets from Hugging Face": "💎 Σύνολα από το Hugging Face",
++"The studio's approved sets, as their author published them. Each comes in as a workspace of its own, locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded.": "Τα εγκεκριμένα σύνολα του στούντιο, όπως τα δημοσίευσε ο δημιουργός τους. Το καθένα έρχεται ως δικός του χώρος, κλειδωμένος για διαγραφή: οι λήψεις του σε MP3 με τα εξώφυλλα, τους τίτλους και τις σημειώσεις τους. Κατεβαίνει μόνο ό,τι ζητήσεις.",
++"Asking Hugging Face…": "Ρωτάω το Hugging Face…",
++"published {0}": "δημοσιεύτηκε {0}",
++"{#0} takes here": {"one": "{0} λήψη εδώ", "other": "{0} λήψεις εδώ"},
++"Not here yet": "Δεν είναι ακόμη εδώ",
++"Getting…": "Κατεβαίνει…",
++"Try again": "Ξανά",
++"Restore the original…": "Επαναφορά του πρωτοτύπου…",
++"Get": "Φέρ' το",
++"files: {#0} of {#1}": "αρχεία: {0} από {1}",
++"Open it on Hugging Face (new tab)": "Άνοιγμα στο Hugging Face (νέα καρτέλα)",
++"“{0}” is here already": "Το «{0}» είναι ήδη εδώ",
++"Restoring brings back the copy published on Hugging Face: the takes it lacks come again, titles and notes return to the published ones, and what was added to it leaves the workspace (those takes stay in the library; its own sections stay). To keep yours as it is: Cancel, rename your workspace (the ⋯ beside its name, then Rename…), and Get again: the original comes in beside it under its own name.": "Η επαναφορά φέρνει πίσω το αντίγραφο που δημοσιεύτηκε στο Hugging Face: οι λήψεις που λείπουν έρχονται ξανά, οι τίτλοι και οι σημειώσεις επιστρέφουν στους δημοσιευμένους, και ό,τι προστέθηκε φεύγει από τον χώρο (αυτές οι λήψεις μένουν στη βιβλιοθήκη· οι δικές του ενότητες μένουν).\n\nΓια να κρατήσεις το δικό σου όπως είναι: «Άκυρο», μετονόμασε τον χώρο σου (⋯ δίπλα στο όνομά του, μετά «Μετονομασία…») και ξανά «Φέρ' το»: το πρωτότυπο έρχεται δίπλα του με το δικό του όνομα.",
++"Restore the original": "Επαναφορά του πρωτοτύπου",
++"“{0}” came from Hugging Face": "Το «{0}» ήρθε από το Hugging Face",
++"“{0}” restored from Hugging Face": "Το «{0}» επαναφέρθηκε από το Hugging Face",
++"not on Hugging Face yet (or not open to this studio)": "δεν είναι ακόμη στο Hugging Face (ή δεν είναι ανοιχτό σε αυτό το στούντιο)",
++"its repository has no workspace.json yet": "το αποθετήριό του δεν έχει ακόμη workspace.json",
++"the repository asks for access first": "το αποθετήριο ζητά πρώτα πρόσβαση",
++"Hugging Face does not answer: {0}": "Το Hugging Face δεν απαντά: {0}",
++"Not on Hugging Face yet": "Δεν είναι ακόμη στο Hugging Face"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 0047a43..7c921e4 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2438,5 +2438,28 @@ RuachI18n.add("es", {
+ "The GPU roles changed and are not saved": "Los papeles de las GPU cambiaron y no se han guardado",
+ "Save them, or leave the cards as they were.": "Guárdalos o deja las tarjetas como estaban.",
+ "Ignore": "Ignorar",
+-"Drag it to move them all at once, each in proportion.": "Arrástralo para moverlas todas a la vez, cada una en proporción."
++"Drag it to move them all at once, each in proportion.": "Arrástralo para moverlas todas a la vez, cada una en proporción.",
++"💎 From Hugging Face…": "💎 Desde Hugging Face…",
++"💎 Sets from Hugging Face": "💎 Conjuntos de Hugging Face",
++"The studio's approved sets, as their author published them. Each comes in as a workspace of its own, locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded.": "Los conjuntos aprobados del estudio, tal como los publicó su autor. Cada uno llega como un espacio propio, bloqueado contra el borrado: sus tomas en MP3 con sus portadas, títulos y notas. Solo se descarga lo que pidas.",
++"Asking Hugging Face…": "Preguntando a Hugging Face…",
++"published {0}": "publicado {0}",
++"{#0} takes here": {"one": "{0} toma aquí", "many": "{0} tomas aquí", "other": "{0} tomas aquí"},
++"Not here yet": "Aún no está aquí",
++"Getting…": "Trayendo…",
++"Try again": "Reintentar",
++"Restore the original…": "Restaurar el original…",
++"Get": "Traer",
++"files: {#0} of {#1}": "archivos: {0} de {1}",
++"Open it on Hugging Face (new tab)": "Abrirlo en Hugging Face (pestaña nueva)",
++"“{0}” is here already": "«{0}» ya está aquí",
++"Restoring brings back the copy published on Hugging Face: the takes it lacks come again, titles and notes return to the published ones, and what was added to it leaves the workspace (those takes stay in the library; its own sections stay). To keep yours as it is: Cancel, rename your workspace (the ⋯ beside its name, then Rename…), and Get again: the original comes in beside it under its own name.": "Restaurar trae de vuelta la copia publicada en Hugging Face: las tomas que le faltan vuelven, los títulos y las notas regresan a los publicados, y lo que se le añadió sale del espacio (esas tomas se quedan en la biblioteca; sus propias secciones se quedan).\n\nPara conservar el tuyo tal como está: «Cancelar», renombra tu espacio (⋯ junto a su nombre, luego «Renombrar…») y «Traer» de nuevo: el original llega a su lado con su propio nombre.",
++"Restore the original": "Restaurar el original",
++"“{0}” came from Hugging Face": "«{0}» llegó de Hugging Face",
++"“{0}” restored from Hugging Face": "«{0}» restaurado desde Hugging Face",
++"not on Hugging Face yet (or not open to this studio)": "aún no está en Hugging Face (o no está abierto para este estudio)",
++"its repository has no workspace.json yet": "su repositorio aún no tiene workspace.json",
++"the repository asks for access first": "el repositorio pide acceso primero",
++"Hugging Face does not answer: {0}": "Hugging Face no responde: {0}",
++"Not on Hugging Face yet": "Aún no está en Hugging Face"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 0a33e24..7ba51e1 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2438,5 +2438,28 @@ RuachI18n.add("it", {
+ "The GPU roles changed and are not saved": "I ruoli delle GPU sono cambiati e non sono salvati",
+ "Save them, or leave the cards as they were.": "Salvali, oppure lascia le schede come erano.",
+ "Ignore": "Ignora",
+-"Drag it to move them all at once, each in proportion.": "Trascinalo per spostarle tutte insieme, ciascuna in proporzione."
++"Drag it to move them all at once, each in proportion.": "Trascinalo per spostarle tutte insieme, ciascuna in proporzione.",
++"💎 From Hugging Face…": "💎 Da Hugging Face…",
++"💎 Sets from Hugging Face": "💎 Raccolte da Hugging Face",
++"The studio's approved sets, as their author published them. Each comes in as a workspace of its own, locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded.": "Le raccolte approvate dello studio, così come le ha pubblicate il loro autore. Ognuna arriva come uno spazio a sé, bloccato contro l'eliminazione: i suoi take in MP3 con copertine, titoli e note. Si scarica solo ciò che chiedi.",
++"Asking Hugging Face…": "Chiedo a Hugging Face…",
++"published {0}": "pubblicato {0}",
++"{#0} takes here": {"one": "{0} take qui", "many": "{0} take qui", "other": "{0} take qui"},
++"Not here yet": "Non ancora qui",
++"Getting…": "Prendo…",
++"Try again": "Riprova",
++"Restore the original…": "Ripristina l'originale…",
++"Get": "Prendi",
++"files: {#0} of {#1}": "file: {0} di {1}",
++"Open it on Hugging Face (new tab)": "Aprilo su Hugging Face (nuova scheda)",
++"“{0}” is here already": "«{0}» è già qui",
++"Restoring brings back the copy published on Hugging Face: the takes it lacks come again, titles and notes return to the published ones, and what was added to it leaves the workspace (those takes stay in the library; its own sections stay). To keep yours as it is: Cancel, rename your workspace (the ⋯ beside its name, then Rename…), and Get again: the original comes in beside it under its own name.": "Il ripristino riporta la copia pubblicata su Hugging Face: i take che mancano tornano, titoli e note tornano a quelli pubblicati, e ciò che vi è stato aggiunto esce dallo spazio (quei take restano nella libreria; le sue sezioni restano).\n\nPer tenere il tuo così com'è: «Annulla», rinomina il tuo spazio (⋯ accanto al nome, poi «Rinomina…») e di nuovo «Prendi»: l'originale arriva accanto, con il suo nome.",
++"Restore the original": "Ripristina l'originale",
++"“{0}” came from Hugging Face": "«{0}» è arrivato da Hugging Face",
++"“{0}” restored from Hugging Face": "«{0}» ripristinato da Hugging Face",
++"not on Hugging Face yet (or not open to this studio)": "non ancora su Hugging Face (o non aperto a questo studio)",
++"its repository has no workspace.json yet": "il suo repository non ha ancora workspace.json",
++"the repository asks for access first": "il repository chiede prima l'accesso",
++"Hugging Face does not answer: {0}": "Hugging Face non risponde: {0}",
++"Not on Hugging Face yet": "Non ancora su Hugging Face"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index ad6c5b5..eb4ac51 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2444,5 +2444,28 @@ RuachI18n.add("ru", {
+ "The GPU roles changed and are not saved": "Роли видеокарт изменены и не сохранены",
+ "Save them, or leave the cards as they were.": "Сохрани их или оставь карты как были.",
+ "Ignore": "Игнорировать",
+-"Drag it to move them all at once, each in proportion.": "Потяни его, и все сдвинутся разом, каждая в своей пропорции."
++"Drag it to move them all at once, each in proportion.": "Потяни его, и все сдвинутся разом, каждая в своей пропорции.",
++"💎 From Hugging Face…": "💎 С Hugging Face…",
++"💎 Sets from Hugging Face": "💎 Наборы с Hugging Face",
++"The studio's approved sets, as their author published them. Each comes in as a workspace of its own, locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded.": "Одобренные наборы студии в том виде, в каком их опубликовал автор. Каждый приходит отдельным пространством, защищённым от удаления: семплы в MP3 с обложками, названиями и заметками. Скачивается только то, что ты попросишь.",
++"Asking Hugging Face…": "Спрашиваю Hugging Face…",
++"published {0}": "опубликован {0}",
++"{#0} takes here": { "one": "{0} семпл здесь", "few": "{0} семпла здесь", "many": "{0} семплов здесь", "other": "{0} семпла здесь" },
++"Not here yet": "Здесь ещё нет",
++"Getting…": "Беру…",
++"Try again": "Ещё раз",
++"Restore the original…": "Вернуть оригинал…",
++"Get": "Взять",
++"files: {#0} of {#1}": "файлы: {0} из {1}",
++"Open it on Hugging Face (new tab)": "Открыть на Hugging Face (новая вкладка)",
++"“{0}” is here already": "«{0}» уже здесь",
++"Restoring brings back the copy published on Hugging Face: the takes it lacks come again, titles and notes return to the published ones, and what was added to it leaves the workspace (those takes stay in the library; its own sections stay). To keep yours as it is: Cancel, rename your workspace (the ⋯ beside its name, then Rename…), and Get again: the original comes in beside it under its own name.": "Восстановление возвращает копию, опубликованную на Hugging Face: недостающие семплы приходят снова, названия и заметки возвращаются к опубликованным, а добавленное уходит из пространства (эти семплы остаются в библиотеке; его собственные подразделы остаются).\n\nЧтобы сохранить своё как есть: «Отмена», переименуй своё пространство (⋯ рядом с его именем, затем «Переименовать…») и снова «Взять»: оригинал придёт рядом, под своим именем.",
++"Restore the original": "Вернуть оригинал",
++"“{0}” came from Hugging Face": "«{0}» пришёл с Hugging Face",
++"“{0}” restored from Hugging Face": "«{0}» восстановлен с Hugging Face",
++"not on Hugging Face yet (or not open to this studio)": "на Hugging Face ещё нет (или он закрыт для этой студии)",
++"its repository has no workspace.json yet": "в его репозитории ещё нет workspace.json",
++"the repository asks for access first": "репозиторий сперва просит доступ",
++"Hugging Face does not answer: {0}": "Hugging Face не отвечает: {0}",
++"Not on Hugging Face yet": "На Hugging Face ещё нет"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 7b049d3..1bcea9d 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2439,5 +2439,28 @@ RuachI18n.add("uk", {
+ "The GPU roles changed and are not saved": "Ролі відеокарт змінено й не збережено",
+ "Save them, or leave the cards as they were.": "Збережи їх або лиши карти як були.",
+ "Ignore": "Ігнорувати",
+-"Drag it to move them all at once, each in proportion.": "Потягни його, і всі зсунуться разом, кожна у своїй пропорції."
++"Drag it to move them all at once, each in proportion.": "Потягни його, і всі зсунуться разом, кожна у своїй пропорції.",
++"💎 From Hugging Face…": "💎 З Hugging Face…",
++"💎 Sets from Hugging Face": "💎 Набори з Hugging Face",
++"The studio's approved sets, as their author published them. Each comes in as a workspace of its own, locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded.": "Схвалені набори студії такими, якими їх опублікував автор. Кожен приходить окремим простором, захищеним від видалення: семпли в MP3 з обкладинками, назвами й нотатками. Завантажується лише те, що ти попросиш.",
++"Asking Hugging Face…": "Питаю Hugging Face…",
++"published {0}": "опубліковано {0}",
++"{#0} takes here": {"one": "{0} семпл тут", "few": "{0} семпли тут", "many": "{0} семплів тут", "other": "{0} семпла тут"},
++"Not here yet": "Тут ще немає",
++"Getting…": "Беру…",
++"Try again": "Ще раз",
++"Restore the original…": "Повернути оригінал…",
++"Get": "Взяти",
++"files: {#0} of {#1}": "файли: {0} з {1}",
++"Open it on Hugging Face (new tab)": "Відкрити на Hugging Face (нова вкладка)",
++"“{0}” is here already": "«{0}» уже тут",
++"Restoring brings back the copy published on Hugging Face: the takes it lacks come again, titles and notes return to the published ones, and what was added to it leaves the workspace (those takes stay in the library; its own sections stay). To keep yours as it is: Cancel, rename your workspace (the ⋯ beside its name, then Rename…), and Get again: the original comes in beside it under its own name.": "Відновлення повертає копію, опубліковану на Hugging Face: семпли, яких бракує, приходять знову, назви й нотатки повертаються до опублікованих, а додане виходить із простору (ці семпли лишаються в бібліотеці; його власні підрозділи лишаються).\n\nЩоб зберегти своє як є: «Скасувати», перейменуй свій простір (⋯ біля його назви, потім «Перейменувати…») і знову «Взяти»: оригінал прийде поруч, під власною назвою.",
++"Restore the original": "Повернути оригінал",
++"“{0}” came from Hugging Face": "«{0}» прийшов із Hugging Face",
++"“{0}” restored from Hugging Face": "«{0}» відновлено з Hugging Face",
++"not on Hugging Face yet (or not open to this studio)": "на Hugging Face ще немає (або він закритий для цієї студії)",
++"its repository has no workspace.json yet": "у його репозиторії ще немає workspace.json",
++"the repository asks for access first": "репозиторій спершу просить доступ",
++"Hugging Face does not answer: {0}": "Hugging Face не відповідає: {0}",
++"Not on Hugging Face yet": "На Hugging Face ще немає"
+ });
+-- 
+2.43.0
+

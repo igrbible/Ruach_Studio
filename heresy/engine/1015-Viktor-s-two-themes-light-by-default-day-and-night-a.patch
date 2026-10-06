@@ -1,0 +1,245 @@
+From 5c8f41fd8e2c92100fbe83cf104b30643f35ca24 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 18:03:10 -0600
+Subject: [PATCH 1015/1177] Viktor's two themes, light by default, day and
+ night as is customary
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1015.
+- Scroll & Brick and Scroll by Lamplight (igr.bible by day and by night) from
+  YuE2 Studio: background and accent as Studio defines them, the rest derived
+  with Studio's own mixes and mapped onto the Kit's variables; every text
+  colour then pushed until it clears 4.5:1 on every surface, the Kit's rule
+  (the night accent moved by a hair, #ef6b6b to #f07171). First in the list.
+- Scroll & Brick is the default theme.
+- A day / night / as-the-system button (☀ ☾ ◐) beside the theme picker. Day
+  and night keep their own themes: a light one kept in the list becomes the
+  day theme, a dark one the night theme. A theme already chosen in a browser
+  is kept on the first run, as the day or night one it is.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   3 ++
+ tools/console/app.js       |  50 ++++++++++++++++++++++++++
+ tools/console/index.html   |   3 +-
+ tools/console/themes.css   |  70 +++++++++++++++++++++++++++++++++++++
+ tools/console/themes.js    |   8 +++--
+ tools/public/index.html.gz | Bin 249632 -> 251009 bytes
+ 6 files changed, 130 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 5b7b323..4d6d37e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1947,3 +1947,6 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .write-cur pre { white-space: pre-wrap; max-height: 36vh; overflow: auto; font: 12.5px/1.55 var(--mono); }
+ #curStyle { max-height: 22vh; }
+ .post-tools { display: flex; gap: 8px; flex-wrap: wrap; }
++
++/* ------------------------------------------------ HERESY 1015: day and night */
++.day-night { min-width: 34px; font-size: 15px; line-height: 1; padding-left: 8px; padding-right: 8px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 955be4a..25a479f 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -319,8 +319,41 @@
+ 
+   // The theme picker (themes.js, shared with the other console): a preview or a change redraws
+   // what the page paints itself from the theme's colours
++  // HERESY 1015: day and night, as is customary — ☀ day, ☾ night, ◐ as the system says.
++  // Day and night each keep their own theme: a light one picked in the list becomes the
++  // day theme, a dark one the night theme. Defaults: Scroll & Brick and Scroll by Lamplight.
++  var SCHEME_KEY = "yue2.scheme", DAY_KEY = "yue2.theme.day", NIGHT_KEY = "yue2.theme.night";
++  var darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
++  var applyingScheme = false, lastKept = null;
++  function themeInfo(id) { return YueThemes.list.filter(function (t) { return t.id === id; })[0] || null; }
++  function schemeNow() { return recall(SCHEME_KEY) || "light"; }
++  function wantsDark() { var s = schemeNow(); return s === "dark" || (s === "auto" && !!darkQuery && darkQuery.matches); }
++  function applyScheme() {
++    var id = wantsDark() ? (recall(NIGHT_KEY) || "igr-night") : (recall(DAY_KEY) || "igr-day");
++    if (!themeInfo(id)) id = wantsDark() ? "igr-night" : "igr-day";
++    if (YueThemes.current() !== id) { applyingScheme = true; YueThemes.set(id); applyingScheme = false; }
++    lastKept = YueThemes.current();
++    paintDayNight();
++  }
++  function paintDayNight() {
++    var s = schemeNow(), b = $("dayNight");
++    b.textContent = s === "dark" ? "\u263e" : s === "auto" ? "\u25d0" : "\u2600";
++    b.dataset.tip = (s === "dark" ? "Night" : s === "auto" ? "As the system: " + (wantsDark() ? "night now" : "day now") : "Day") +
++      ". Click: day \u2192 night \u2192 as the system. Day " + ((themeInfo(recall(DAY_KEY) || "igr-day") || {}).name || "") +
++      ", night " + ((themeInfo(recall(NIGHT_KEY) || "igr-night") || {}).name || "") + ": pick another in the list to change either.";
++  }
++  function rememberPicked() {
++    var t = themeInfo(YueThemes.current());
++    if (!t) return;
++    store(t.dark ? NIGHT_KEY : DAY_KEY, t.id);
++    if (schemeNow() !== "auto") store(SCHEME_KEY, t.dark ? "dark" : null);
++    lastKept = t.id;
++    paintDayNight();
++  }
++
+   YueThemes.mount($("themeButton"), {
+     onChange: function () {
++      if (!applyingScheme && YueThemes.current() !== lastKept && lastKept !== null) rememberPicked();   // a kept pick, not a hover preview
+       if ($("lookTheme").value !== YueThemes.current()) $("lookTheme").value = YueThemes.current();   // the Appearance card follows
+       themeCache = {};
+       drawWave();
+@@ -4455,6 +4488,23 @@
+     ["classic", "bold", "soft"].forEach(function (family) { if (groups[family]) $("lookTheme").appendChild(groups[family]); });
+   })();
+   $("lookTheme").addEventListener("change", function () { YueThemes.set(this.value); });
++
++  // HERESY 1015: the first run keeps a theme already chosen, as the day or night one it is
++  if (recall(SCHEME_KEY) === null && recall("yue2.theme") !== null && themeInfo(YueThemes.current())) {
++    var had = themeInfo(YueThemes.current());
++    store(had.dark ? NIGHT_KEY : DAY_KEY, had.id);
++    if (had.dark) store(SCHEME_KEY, "dark");
++  }
++  $("dayNight").addEventListener("click", function () {
++    var s = schemeNow();
++    store(SCHEME_KEY, s === "light" ? "dark" : s === "dark" ? "auto" : null);
++    applyScheme();
++  });
++  if (darkQuery) {
++    var onSystem = function () { if (schemeNow() === "auto") applyScheme(); };
++    if (darkQuery.addEventListener) darkQuery.addEventListener("change", onSystem); else if (darkQuery.addListener) darkQuery.addListener(onSystem);
++  }
++  applyScheme();
+   $("lookCorners").addEventListener("change", function () { saveLook("corners", this.value || null); });
+   Object.keys(LOOK_CHECKS).forEach(function (key) {
+     $(LOOK_CHECKS[key][0]).addEventListener("change", function () { saveLook(key, this.checked ? LOOK_CHECKS[key][1] : null); });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 0418170..3604785 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1,5 +1,5 @@
+ <!doctype html>
+-<html lang="en" data-theme="studio">
++<html lang="en" data-theme="igr-day">
+ <head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+@@ -60,6 +60,7 @@
+ BF16 · 7.2 GB · the full release
+ Q8_0 · 3.8 GB · near lossless
+ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
++    <button type="button" class="btn ghost small day-night" id="dayNight" aria-label="Day, night or as the system">☀</button>
+     <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
+     <button class="btn ghost small" id="openPrompt" title="Open a prompt saved as JSON or YAML">Open</button>
+     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
+diff --git a/tools/console/themes.css b/tools/console/themes.css
+index ce994ef..ca93b8a 100644
+--- a/tools/console/themes.css
++++ b/tools/console/themes.css
+@@ -1394,3 +1394,73 @@
+   --shadow-lg: rgba(0, 0, 0, .9);
+   color-scheme: dark;
+ }
++
++/* HERESY 1015: Scroll & Brick — igr.bible by day, from YuE2 Studio (Viktor, 26.09.2026). */
++[data-theme="igr-day"] {
++  --ground: #fcfcfb;
++  --panel: #f3f3f2;
++  --raise: #eaeae9;
++  --sunk: #f7f7f6;
++  --field: #ffffff;
++  --take-bg: #f9f9f8;
++  --hover: #f1e5e6;
++  --line: #d4d4d3;
++  --line-soft: #e3e3e2;
++  --line-strong: #ababab;
++  --ink: #191919;
++  --muted: #515150;
++  --dim: #686867;
++  --placeholder: #666666;
++  --amber: #8e1a2e;
++  --amber-dim: #d6adb3;
++  --amber-hi: #791627;
++  --amber-hi2: #661321;
++  --amber-edge: #6f1424;
++  --patina: #591a25;
++  --patina-dim: #c3adb0;
++  --good: #2b6e35;
++  --good-line: #9dc3a2;
++  --bad: #a62016;
++  --bad-line: #d5967b;
++  --bad-ink: #912d1e;
++  --shadow-md: rgba(40, 20, 20, .14);
++  --shadow-lg: rgba(40, 20, 20, .26);
++  --focus-bg: #ffffff;
++  --on-amber: #ffffff;
++  color-scheme: light;
++}
++
++/* HERESY 1015: Scroll by Lamplight — igr.bible by night, from YuE2 Studio (Viktor, 26.09.2026). */
++[data-theme="igr-night"] {
++  --ground: #1e1e1e;
++  --panel: #282828;
++  --raise: #313131;
++  --sunk: #242424;
++  --field: #2c2c2c;
++  --take-bg: #222222;
++  --hover: #372727;
++  --line: #3e3e3e;
++  --line-soft: #323232;
++  --line-strong: #626262;
++  --ink: #f4f4f4;
++  --muted: #c4c4c4;
++  --dim: #a5a5a5;
++  --placeholder: #999999;
++  --amber: #f07171;
++  --amber-dim: #673939;
++  --amber-hi: #f18181;
++  --amber-hi2: #f39494;
++  --amber-edge: #ba5353;
++  --patina: #eca3a3;
++  --patina-dim: #664d4d;
++  --good: #6cc27a;
++  --good-line: #3d6b44;
++  --bad: #f07171;
++  --bad-line: #b35454;
++  --bad-ink: #ffb0a8;
++  --shadow-md: rgba(0, 0, 0, .40);
++  --shadow-lg: rgba(0, 0, 0, .60);
++  --focus-bg: #2c2c2c;
++  --on-amber: #111111;
++  color-scheme: dark;
++}
+diff --git a/tools/console/themes.js b/tools/console/themes.js
+index f947ae5..0511917 100644
+--- a/tools/console/themes.js
++++ b/tools/console/themes.js
+@@ -13,7 +13,9 @@
+   "use strict";
+ 
+   /* THEMES:BEGIN (the theme list; its generator is gone, so edit it here, with themes.css) */
+-  var THEMES = [{"id": "dmm", "name": "DMM", "family": "bold", "dark": true, "bg": "#09090b", "fg": "#e4e4e7", "accent": "#bf00ff", "rule": "#27272a"},
++  var THEMES = [{"id": "igr-day", "name": "Scroll & Brick", "family": "classic", "dark": false, "bg": "#fcfcfb", "fg": "#191919", "accent": "#8e1a2e", "rule": "#d4d4d3"},
++    {"id": "igr-night", "name": "Scroll by Lamplight", "family": "classic", "dark": true, "bg": "#1e1e1e", "fg": "#f4f4f4", "accent": "#f07171", "rule": "#3e3e3e"},
++    {"id": "dmm", "name": "DMM", "family": "bold", "dark": true, "bg": "#09090b", "fg": "#e4e4e7", "accent": "#bf00ff", "rule": "#27272a"},
+     {"id": "studio", "name": "Studio (warm)", "family": "classic", "dark": true, "bg": "#14110e", "fg": "#f2eadc", "accent": "#e8a33d", "rule": "#3a3129"},
+     {"id": "graphite", "name": "Graphite", "family": "classic", "dark": true, "bg": "#131518", "fg": "#eef1f5", "accent": "#f0b44c", "rule": "#373d45"},
+     {"id": "nord", "name": "Nord", "family": "classic", "dark": true, "bg": "#2e3440", "fg": "#eceff4", "accent": "#ebcb8b", "rule": "#4c566a"},
+@@ -67,7 +69,7 @@
+   /* THEMES:END */
+ 
+   var FAMILIES = [["all", "All"], ["favorites", "Favorites"], ["bold", "Bold"], ["soft", "Soft"], ["classic", "Classic"]];
+-  var S = { button: null, popup: null, onChange: null, kept: "studio", shown: null, family: "all", favorites: [] };
++  var S = { button: null, popup: null, onChange: null, kept: "igr-day", shown: null, family: "all", favorites: [] };
+ 
+   function load(key, fallback) {
+     try { var v = localStorage.getItem(key); return v === null ? fallback : v; } catch (error) { return fallback; }
+@@ -223,7 +225,7 @@
+   function mount(button, opts) {
+     S.button = button;
+     S.onChange = (opts || {}).onChange || null;
+-    S.kept = find(load("yue2.theme", "studio")) ? load("yue2.theme", "studio") : "studio";
++    S.kept = find(load("yue2.theme", "igr-day")) ? load("yue2.theme", "igr-day") : "igr-day";   // HERESY 1015: light by default
+     S.shown = document.documentElement.dataset.theme || null;
+     S.family = load("yue2.themeFamily", "all");
+     try { S.favorites = JSON.parse(load("yue2.themeFavorites", "[]")) || []; } catch (error) { S.favorites = []; }
+-- 
+2.43.0
+

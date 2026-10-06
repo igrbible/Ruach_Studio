@@ -1,0 +1,125 @@
+From bd1f7de9eeb9cfa3d935d656fd405aa7c9588d6f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 09:00:58 -0600
+Subject: [PATCH 1105/1177] The bar's logo loses only its words (1147): the
+ compact logo cut from the main one (1.4 : 1, her height kept, the cloud
+ fading at the sides) in the square's place; the square is the favicon only
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css    | 11 ++++++-----
+ tools/console/index.html | 39 +++++++++++++++++++++------------------
+ 2 files changed, 27 insertions(+), 23 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 277cccd..29ba622 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3106,15 +3106,16 @@ input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+ /* ---------------------------------------------------------------- HERESY 1119: the logo in the dead centre of the bar
+    Out of the flow, so the bar's own things keep their places; it takes no clicks. She descends below the bar's edge:
+    in a browser tab nothing may rise above the window (an installed app with Window Controls Overlay could). The
+-   workspace picker moves beside the buttons, clear of her. Too narrow for the words: the woman alone, on her square;
+-   narrower still: the square back at the start of the bar. */
++   workspace picker moves beside the buttons, clear of her. Too narrow for the words: the logo without them, the same
++   woman and cloud at the same height (1147, Viktor 03.10: «лого при скейле страницы будет терять только свой текст»);
++   narrower still: that, at the start of the bar. The square is the favicon only. */
+ .topbar .brand { position: absolute; left: 50%; top: 0; transform: translateX(-50%); height: 52px; z-index: 2; pointer-events: none; display: block; }
+ .topbar .brand .brand-logo { display: block; height: 100%; }
+ .brand-full { display: block; height: 62px; width: auto; overflow: visible; }
+-.brand-icon { display: none; width: 44px; height: 44px; margin-top: 4px; border-radius: 9px; }   /* the square, its corners softened in the bar only */
++.brand-compact { display: none; height: 62px; width: auto; overflow: visible; }   /* 1.4 : 1, cut from the bar's copy */
+ .topbar .ws-current + .spacer { display: none; }
+-@media (max-width: 1659px) { .brand-full { display: none; } .brand-icon { display: block; } }
+-@media (max-width: 1359px) { .topbar .brand { position: static; transform: none; height: auto; order: -1; } .brand-icon { margin-top: 0; } }
++@media (max-width: 1659px) { .brand-full { display: none; } .brand-compact { display: block; } }
++@media (max-width: 1359px) { .topbar .brand { position: static; transform: none; height: 52px; order: -1; } }   /* she hangs below, as above */
+ 
+ /* HERESY 1121: the engine's lamp alone, after the workspace (its words in the tip, and kept for screen readers) */
+ .topbar .engine-chip { order: 0; padding: 8px 4px; cursor: default; }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index e0c8eb1..ad6be0f 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -180,27 +180,27 @@
+       <path transform="translate(534.0 1360.0)" d="M0 0 C0.33 0.99 0.66 1.98 1 3 C0.34 3.66 -0.32 4.32 -1 5 C-0.67 3.35 -0.34 1.7 0 0 Z " vector-effect="non-scaling-stroke"/>
+     </g>
+   </g>
+-</svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="570.5 -142.5 141.9 141.9" class="ruach-logo brand-icon" aria-hidden="true" focusable="false" overflow="hidden">
++</svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="445.9 -188.0 453.6 324.0" class="ruach-logo brand-compact" aria-hidden="true" focusable="false">
+   <defs>
+-    <radialGradient id="riPuff">
++    <radialGradient id="rcPuff">
+       <stop offset="0" stop-color="var(--logo-cloud, color-mix(in oklab, var(--amber, #8e1a2e) 75%, #000))" stop-opacity="1"/>
+       <stop offset="0.5" stop-color="var(--logo-cloud, color-mix(in oklab, var(--amber, #8e1a2e) 75%, #000))" stop-opacity="0.7"/>
+       <stop offset="1" stop-color="var(--logo-cloud, color-mix(in oklab, var(--amber, #8e1a2e) 75%, #000))" stop-opacity="0"/>
+     </radialGradient>
+     <!-- the cloud: puffs broken into billows; it drifts -->
+-    <filter id="riCloud" x="-20%" y="-20%" width="140%" height="140%">
++    <filter id="rcCloud" x="-20%" y="-20%" width="140%" height="140%">
+       <feTurbulence type="fractalNoise" baseFrequency="0.011 0.017" numOctaves="3" seed="11" result="n">
+       </feTurbulence>
+       <feDisplacementMap in="SourceGraphic" in2="n" scale="44" xChannelSelector="R" yChannelSelector="G" result="b"/>
+       <feGaussianBlur in="b" stdDeviation="2.2"/>
+     </filter>
+     <!-- her white: pearl, the light sliding over it -->
+-    <linearGradient id="riPearl" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
++    <linearGradient id="rcPearl" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+       <stop offset="0" stop-color="var(--logo-fig, #ffffff)"/><stop offset="0.42" stop-color="var(--logo-fig-shade, #f1ebe3)"/>
+       <stop offset="0.52" stop-color="var(--logo-fig, #ffffff)"/><stop offset="0.62" stop-color="var(--logo-fig-shade, #f1ebe3)"/><stop offset="1" stop-color="var(--logo-fig, #ffffff)"/>
+     </linearGradient>
+     <!-- the wind in her hair, wings and hem; and the light she gives off -->
+-    <filter id="riWind" x="-15%" y="-15%" width="130%" height="130%">
++    <filter id="rcWind" x="-15%" y="-15%" width="130%" height="130%">
+       <feTurbulence type="fractalNoise" baseFrequency="0.006 0.016" numOctaves="2" seed="7" result="n">
+       </feTurbulence>
+       <feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G" result="w"/>
+@@ -210,21 +210,23 @@
+       <feComposite in2="soft" operator="in" result="halo"/>
+       <feMerge><feMergeNode in="halo"/><feMergeNode in="w"/></feMerge>
+     </filter>
++    <!-- the sides fade: where the words were, the cloud thins out -->
++    <linearGradient id="rcFadeG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.12" stop-color="#fff"/><stop offset="0.88" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
++    <mask id="rcFade" maskUnits="userSpaceOnUse" x="445.9" y="-188.0" width="453.6" height="324.0"><rect x="445.9" y="-188.0" width="453.6" height="324.0" fill="url(#rcFadeG)"/></mask>
+   </defs>
+-  <defs><radialGradient id="riBg" cx="0.5" cy="0.42" r="0.75"><stop offset="0" stop-color="var(--logo-cloud, color-mix(in oklab, var(--amber, #8e1a2e) 75%, #000))" stop-opacity="0.82"/><stop offset="1" stop-color="var(--logo-cloud, color-mix(in oklab, var(--amber, #8e1a2e) 75%, #000))"/></radialGradient></defs>
+-  <rect x="570.5" y="-142.5" width="141.9" height="141.9" fill="url(#riBg)"/>
+-  <g class="rl-cloud" filter="url(#riCloud)" opacity="0.88">
+-    <ellipse cx="641.4" cy="-50.0" rx="123.2" ry="90.3" fill="url(#riPuff)" opacity="0.92"/>
+-    <ellipse cx="597.2" cy="-103.8" rx="69.5" ry="43.0" fill="url(#riPuff)" opacity="0.78"/>
+-    <ellipse cx="685.7" cy="-103.8" rx="69.5" ry="43.0" fill="url(#riPuff)" opacity="0.78"/>
+-    <ellipse cx="641.4" cy="10.2" rx="158.0" ry="32.2" fill="url(#riPuff)" opacity="0.85"/>
+-    <ellipse cx="537.2" cy="-46.0" rx="91.6" ry="58.1" fill="url(#riPuff)" opacity="0.72"/>
+-    <ellipse cx="745.7" cy="-46.0" rx="91.6" ry="58.1" fill="url(#riPuff)" opacity="0.72"/>
+-    <ellipse cx="467.6" cy="-34.0" rx="69.5" ry="30.1" fill="url(#riPuff)" opacity="0.4"/>
+-    <ellipse cx="815.2" cy="-34.0" rx="69.5" ry="30.1" fill="url(#riPuff)" opacity="0.4"/>
++  <g mask="url(#rcFade)">
++  <g class="rl-cloud" filter="url(#rcCloud)" opacity="0.88">
++    <ellipse cx="672.6" cy="-20.0" rx="171.9" ry="126.0" fill="url(#rcPuff)" opacity="0.92"/>
++    <ellipse cx="610.9" cy="-95.0" rx="97.0" ry="60.0" fill="url(#rcPuff)" opacity="0.78"/>
++    <ellipse cx="734.4" cy="-95.0" rx="97.0" ry="60.0" fill="url(#rcPuff)" opacity="0.78"/>
++    <ellipse cx="672.6" cy="64.0" rx="220.4" ry="45.0" fill="url(#rcPuff)" opacity="0.85"/>
++    <ellipse cx="585.4" cy="-46.0" rx="76.7" ry="81.0" fill="url(#rcPuff)" opacity="0.72"/>
++    <ellipse cx="759.9" cy="-46.0" rx="76.7" ry="81.0" fill="url(#rcPuff)" opacity="0.72"/>
++    <ellipse cx="527.2" cy="-34.0" rx="58.2" ry="42.0" fill="url(#rcPuff)" opacity="0.4"/>
++    <ellipse cx="818.1" cy="-34.0" rx="58.2" ry="42.0" fill="url(#rcPuff)" opacity="0.4"/>
+   </g>
+-  <g class="rl-fig" transform="translate(562.43 -161.80) scale(0.17932) translate(-94 -168)">
+-    <g filter="url(#riWind)" fill="url(#riPearl)" stroke="var(--logo-edge, var(--amber, #8e1a2e))" stroke-width="0.8" stroke-opacity=".45" vector-effect="non-scaling-stroke" paint-order="stroke">
++  <g class="rl-fig" transform="translate(562.43 -176.00) scale(0.25021) translate(-94 -168)">
++    <g filter="url(#rcWind)" fill="url(#rcPearl)" stroke="var(--logo-edge, var(--amber, #8e1a2e))" stroke-width="0.8" stroke-opacity="0" vector-effect="non-scaling-stroke" paint-order="stroke">
+       <path transform="translate(161.0 170.0)" d="M0 0 C1.14 3.43 0.82 4.41 -0.14 7.8 C-0.41 8.77 -0.67 9.73 -0.94 10.73 C-1.23 11.77 -1.52 12.8 -1.81 13.88 C-9.25 42.52 -9.25 73.93 -4 103 C-3.92 103.46 -3.92 103.46 -3.51 105.8 C0.89 130.42 9.58 155.71 22.88 177.02 C23.25 177.67 23.62 178.33 24 179 C23.67 179.66 23.34 180.32 23 181 C19.31 175.35 15.65 169.68 12 164 C11.38 163.03 10.75 162.06 10.11 161.07 C-10.33 128.31 -12.97 83.36 -9 46 C-15.96 98.64 -9.34 156.88 23.9 200.38 C24.59 201.24 25.29 202.11 26 203 C26.8 204 27.59 205 28.41 206.03 C39.77 219.98 52.45 231.94 66.98 242.52 C68.82 243.87 70.65 245.24 72.46 246.62 C81.73 253.62 91.4 260 101.11 266.37 C125.84 282.63 149.96 302.26 168.2 325.77 C170.03 328.03 171.79 330.1 174 332 C174.95 331.83 175.9 331.67 176.88 331.5 C180 331 180 331 183.38 332.62 C186 335 186 335 186.38 337.75 C186.25 338.49 186.13 339.24 186 340 C184.68 340.33 183.36 340.66 182 341 C182.33 341.39 182.33 341.39 184 343.38 C186 346 186 346 186 348 C186.57 347.99 186.57 347.99 189.44 347.94 C193 348 193 348 194 349 C194.12 350.2 194.24 351.39 194.37 352.62 C194.86 356.86 196.18 360.16 198.06 364 C198.37 364.63 198.67 365.26 198.98 365.91 C200.7 369.45 202.48 372.95 204.28 376.46 C204.65 377.18 205.02 377.91 205.4 378.66 C206.12 380.08 206.86 381.49 207.6 382.9 C208.46 384.57 209.24 386.28 210 388 C209.67 388.66 209.34 389.32 209 390 C208.68 389.4 208.36 388.8 208.03 388.19 C197.34 368.34 186.5 349.99 171.17 333.36 C169.71 331.77 168.28 330.17 166.86 328.55 C144.91 303.45 116 285.81 87 270 C42.03 245.47 -1.17 219.08 -17.26 167.41 C-33.04 113.61 -19.73 50.86 0 0 Z " vector-effect="non-scaling-stroke"/>
+       <path transform="translate(926.0 178.0)" d="M0 0 C10.23 10.23 12.47 36.91 15 51 C15.16 51.89 15.33 52.78 15.5 53.7 C20.26 80.89 20.01 110.87 15 138 C14.84 138.9 14.68 139.81 14.51 140.74 C7.34 179.66 -12.34 214.86 -38.98 243.79 C-40.74 245.72 -42.44 247.69 -44.12 249.69 C-52.4 259.16 -61.44 268.04 -71.31 275.82 C-75.46 279.18 -79.32 282.82 -83.23 286.45 C-85.44 288.48 -87.67 290.48 -89.94 292.44 C-99.32 300.59 -108.28 309.15 -117 318 C-118.67 319.67 -120.33 321.33 -122 323 C-120.31 319.1 -117.75 315.93 -115.12 312.62 C-114.64 312.01 -114.15 311.4 -113.65 310.77 C-105.05 299.98 -95.92 289.69 -86.5 279.61 C-84.99 277.99 -83.49 276.36 -82 274.72 C-77.01 269.25 -71.95 263.89 -66.69 258.69 C-62.24 254.29 -58.03 249.78 -54 245 C-53.17 244.04 -52.34 243.07 -51.48 242.08 C-33.35 220.96 -17.93 198.19 -6 173 C-5.49 171.94 -4.98 170.88 -4.45 169.79 C5.83 147.33 12.34 121.74 13 97 C13.03 96.23 13.05 95.46 13.08 94.66 C13.56 78.59 12.08 62.93 10 47 C10.01 47.48 10.01 47.48 10.05 49.88 C10.59 86.09 10.59 86.09 7 103 C6.91 103.41 6.91 103.41 6.48 105.48 C-1.49 142.32 -18.91 173.15 -40 204 C-40.33 203.34 -40.66 202.68 -41 202 C-39.55 199.45 -38.03 197.02 -36.44 194.56 C-18.08 165.3 -4.74 133.89 2.75 100.19 C2.95 99.29 3.15 98.4 3.35 97.48 C6.33 83.44 7.41 69.74 7.38 55.44 C7.38 54.61 7.38 53.78 7.38 52.92 C7.36 39.6 6.37 26.94 3 14 C2.69 12.79 2.38 11.59 2.07 10.34 C1.58 8.53 1.07 6.72 0.52 4.93 C0 3 0 3 0 0 Z " vector-effect="non-scaling-stroke"/>
+       <path transform="translate(170.0 265.0)" d="M0 0 C0.66 0 1.32 0 2 0 C2 0.66 2 1.32 2 2 C1.34 2 0.68 2 0 2 C0 1.34 0 0.68 0 0 Z " vector-effect="non-scaling-stroke"/>
+@@ -328,6 +330,7 @@
+       <path transform="translate(534.0 1360.0)" d="M0 0 C0.33 0.99 0.66 1.98 1 3 C0.34 3.66 -0.32 4.32 -1 5 C-0.67 3.35 -0.34 1.7 0 0 Z " vector-effect="non-scaling-stroke"/>
+     </g>
+   </g>
++  </g>
+ </svg></span>
+   </div>
+ 
+-- 
+2.43.0
+

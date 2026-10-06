@@ -1,0 +1,141 @@
+From 6de933b72efd49d4df1e0ff414422d4311e796c4 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 19:45:30 -0600
+Subject: [PATCH 1024/1177] Upscale: UniverSR redraws the top of a take or of a
+ file made from it
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1024. Post has Upscale. heresy-lab runs UniverSR (ICASSP 2026, MIT,
+vendored in vendor/UniverSR, weights in hf_cache/ inside the Kit) in four
+modes — Subtle, Normal, High, Extreme: everything above 12, 8, 6 or 4 kHz is
+drawn anew — on the take or any file of its tree (a stem, a remaster), in one
+or two variants (two noise seeds). By default the original is kept sample for
+sample below the cutoff and only the new top is taken, through a smooth
+crossover. The model takes mono and about 15 GB for 30 s, so channels go one
+by one in 20 s pieces joined by 1 s equal-power crossfades; measured on a
+30 s excerpt, the joined render differs from a one-piece render at the join
+exactly as much as away from it (1.74 dB against 1.78 dB in 12–24 kHz).
+Each run is a branch of the tree.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-derived.js |  27 ++++++++++++++++++++++++++-
+ tools/console/index.html        |  26 +++++++++++++++++++++++++-
+ tools/public/index.html.gz      | Bin 273339 -> 274062 bytes
+ 3 files changed, 51 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 3806b0c..9a53b1b 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -11,7 +11,7 @@
+   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
+   function fileUrl(name, path) { return "/lab/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
+-  var KIND = { stems: "Stems", remaster: "Remaster" };
++  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale" };
+   var MODE = { vocals: "vocals + instrumental", four: "four stems" };
+ 
+   function say(text, bad) {
+@@ -54,6 +54,7 @@
+     state.list.forEach(function (m) {
+       html += '<div class="dv-group"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
+         (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
++        (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
+         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
+       (m.files || []).forEach(function (f) {
+         var url = fileUrl(take.name, f.path);
+@@ -86,6 +87,7 @@
+         state.running = d.running || [];
+         paint();
+         paintSources();
++        paintUpSources();
+         // while Forge works on this take, look again every three seconds
+         clearTimeout(state.watch);
+         if (state.running.some(function (j) { return j.status !== "failed"; })) state.watch = setTimeout(refresh, 3000);
+@@ -147,6 +149,28 @@
+       return '<label class="field rm-num"><span class="label">' + esc(n) + '</span><input type="number" step="0.5" min="-24" max="12" data-rm-level="' + esc(n) + '" placeholder="preset" /></label>';
+     }).join("") + "</div>";
+   }
++  // ---- upscale (HERESY 1024): any file of the tree, or the take
++  function paintUpSources() {
++    var sel = $("upSource");
++    if (!sel) return;
++    var keep = sel.value;
++    sel.innerHTML = '<option value="">the take</option>' + files().filter(function (f) { return f.kind !== "upscale"; }).map(function (f) {
++      return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
++    }).join("");
++    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
++  }
++  function upscale() {
++    if (!state.take) return;
++    var q = "name=" + encodeURIComponent(state.take.name) + "&mode=" + $("upMode").value + "&variants=" + $("upVariants").value +
++      "&keep=" + ($("upKeep").checked ? "1" : "0") + ($("upSource").value ? "&source=" + encodeURIComponent($("upSource").value) : "");
++    $("upRun").disabled = true;
++    $("upState").textContent = "sending to Forge…";
++    fetch("/lab/upscale?" + q).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
++      .then(function () { $("upState").textContent = "running on Forge: it appears in the tree when done"; refresh(); })
++      .catch(function (e) { $("upState").textContent = "Could not: " + (e.message || e); })
++      .then(function () { $("upRun").disabled = false; });
++  }
++
+   function remaster() {
+     if (!state.take) return;
+     var levels = {};
+@@ -171,6 +195,7 @@
+   function init(hooks) {
+     if (!$("derivedPanel")) return;
+     state.hooks = hooks || {};
++    if ($("upRun")) $("upRun").addEventListener("click", upscale);
+     if ($("rmRun")) {
+       $("rmRun").addEventListener("click", remaster);
+       $("rmSource").addEventListener("change", paintLevels);
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f6fe489..07a69b4 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -780,7 +780,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <button type="button" class="btn ghost small" data-post-open="glossPanel">Lyrics check</button>
+       <button type="button" class="btn ghost small" data-post-open="derivedPanel">Stems</button>
+       <button type="button" class="btn ghost small" data-post-open="remasterPanel">Remaster</button>
+-      <button type="button" class="btn ghost small" disabled data-tip="Coming: UniverSR upscaling (Subtle, Normal, High, Extreme), before or after the stems">Upscale</button>
++      <button type="button" class="btn ghost small" data-post-open="upscalePanel">Upscale</button>
+     </div>
+       <!-- HERESY 1021: what is made from this take, as a tree (heresy-derived.js) -->
+       <details class="drawer" id="derivedPanel" open>
+@@ -836,6 +836,30 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+       </details>
+ 
++      <!-- HERESY 1024: UniverSR redraws the top of the take or of a file made from it -->
++      <details class="drawer" id="upscalePanel">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Upscale</span><span class="sum-say">UniverSR on Forge draws the top of the spectrum anew. Each run is a branch of the tree; its variants differ by the noise.</span></span></summary>
++        <div class="drawer-body rm-body">
++          <div class="rm-grid">
++            <label class="field"><span class="label">Source</span><select id="upSource"><option value="">the take</option></select></label>
++            <label class="field"><span class="label">Mode <em>how deep it redraws</em></span>
++              <select id="upMode">
++                <option value="subtle">Subtle — above 12 kHz</option>
++                <option value="normal">Normal — above 8 kHz</option>
++                <option value="high">High — above 6 kHz</option>
++                <option value="extreme">Extreme — above 4 kHz</option>
++              </select></label>
++            <label class="field rm-num"><span class="label">Variants</span><select id="upVariants"><option value="2">2</option><option value="1">1</option></select></label>
++          </div>
++          <label class="check" data-tip="The original stays sample for sample below the cutoff; only the new top is taken, joined by a smooth crossover. Off: the model's whole output."><input type="checkbox" id="upKeep" checked /> <span>Keep the original below the cutoff</span></label>
++          <div class="dv-actions">
++            <button type="button" class="btn primary small" id="upRun">Upscale</button>
++            <span class="row-hint mono" id="upState"></span>
++          </div>
++          <p class="row-hint">About 1.6 times the length of the audio per variant on a 3090, in 20 s pieces joined by 1 s crossfades (measured: no step at a join beyond the difference between two renders).</p>
++        </div>
++      </details>
++
+       <!-- HERESY 1007: the spectrum of this take, measured in the page (heresy-spectrum.js) -->
+       <details class="drawer" id="spectrumPanel" open>
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Spectrum</span><span class="sum-say">Where the sound sits: spectrogram, average spectrum, band energy. Lay another take over it to compare.</span></span></summary>
+-- 
+2.43.0
+

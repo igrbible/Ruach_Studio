@@ -1,0 +1,97 @@
+From 06b279257c39aa12a1d3407f1128ab12794e2093 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 04:40:55 -0600
+Subject: [PATCH 1078/1177] Telemetry: compare with another run, its averaged
+ curves dashed on the same steps (1090)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |   7 +++++++
+ tools/console/heresy-train.js |  19 ++++++++++++++-----
+ tools/public/index.html.gz    | Bin 393676 -> 393462 bytes
+ 3 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index de1b0e8..9af01e0 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2773,3 +2773,10 @@ body[data-tab="train"] .playbar:hover, body[data-tab="train"] .playbar:focus-wit
+ body[data-tab="train"] .playbar::before { content: ""; position: absolute; top: 2px; left: 50%; width: 48px; height: 3px; margin-left: -24px; border-radius: 2px; background: var(--line-strong); }
+ body[data-tab="train"] .playbar:has(.play.is-playing)::before { background: var(--amber); width: 120px; margin-left: -60px; }
+ body[data-tab="train"] .workspace { height: calc(100vh - 52px - 8px); }
++/* HERESY 1090: another run's curve beside this one's */
++.tr-plot path.cmp { fill: none; stroke: #4fa3c7; stroke-width: 1.8; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
++.tr-cmpkey { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
++.tr-cmpkey span { display: inline-block; width: 18px; height: 0; margin-left: 8px; border-top: 2px solid var(--ink); }
++.tr-chart[data-key="ar_ce"] .tr-cmpkey .k-this { border-top-color: var(--amber); }
++.tr-cmpkey .k-cmp { border-top: 2px dashed #4fa3c7; }
++.tr-cmp { width: auto; max-width: 260px; padding: 4px 26px 4px 8px; font-size: 12px; }
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index d799c22..06d6137 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -21,7 +21,7 @@
+   var PANES = ["raw", "set", "train", "run"];
+   var state = {
+     hooks: null, data: null, trash: [], raw: null, rows: [], kind: "style",
+-    set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "",
++    set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "", cmp: "",
+     filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true
+   };
+   function $(id) { return document.getElementById(id); }
+@@ -261,6 +261,7 @@
+       .then(function (ok) { if (ok) return api("/train/purge", { id: id }).then(function (d) { toast(name + " is gone: " + gb(d.freed) + " freed"); load(); }); }).catch(function (e) { toast(e.message, true); });
+   }
+   function openRun(name) {
++    if (state.sel !== name) state.cmp = "";
+     state.sel = name; state.epoch = ""; keep("yue2.trRun", name);
+     paintList(); paintLive(); showPane("run");
+   }
+@@ -276,8 +277,9 @@
+   function chart(key, ser, r, title, say) {
+     var s = ser[key];
+     if (!s || !s.curve || s.curve.length < 2) return "";
+-    var c = s.curve, W = 600, H = 150, L = 0, lo = Infinity, hi = -Infinity, last = Math.max(r.steps || 0, c[c.length - 1][0]) || 1;
+-    c.forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
++    var other = runOf(state.cmp), oc = other && other !== r ? (((other.series || {})[key] || {}).curve || []) : [];
++    var c = s.curve, W = 600, H = 150, L = 0, lo = Infinity, hi = -Infinity, last = Math.max(r.steps || 0, c[c.length - 1][0], other ? other.steps || 0 : 0) || 1;
++    c.concat(oc.length > 1 ? ema(oc, 0.08) : []).forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
+     var pad = (hi - lo) * 0.06 || 0.05; lo -= pad; hi += pad;
+     var x = function (st) { return L + (W - L) * st / last; }, y = function (v) { return H - 6 - (H - 14) * (v - lo) / (hi - lo); };
+     var path = function (pts) { return pts.map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" "); };
+@@ -291,7 +293,9 @@
+       '<figcaption><b>' + title + '</b><span class="mono">' + s.first.toFixed(3) + " → " + s.last.toFixed(3) + " · min " + s.min.toFixed(3) + '</span><span class="tr-read mono"></span></figcaption>' +
+       '<div class="tr-plot"><div class="tr-ylab mono">' + labels + "</div>" +
+       '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + ticks +
+-        '<path class="raw" d="' + path(c) + '"/><path class="avg" d="' + path(ema(c, 0.08)) + '"/><line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg></div>' +
++        '<path class="raw" d="' + path(c) + '"/>' + (oc.length > 1 ? '<path class="cmp" d="' + path(ema(oc, 0.08)) + '"/>' : "") +
++        '<path class="avg" d="' + path(ema(c, 0.08)) + '"/><line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg></div>' +
++      (oc.length > 1 ? '<div class="tr-cmpkey"><span class="k-this"></span>' + esc(r.name) + '<span class="k-cmp"></span>' + esc(other.name) + " (its average, dashed)</div>" : "") +
+       '<p class="tr-say">' + say + "</p></figure>";
+   }
+   function paintRun() {
+@@ -310,7 +314,11 @@
+       '<div class="tr-rhead"><div class="tr-rname"><b>' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
+         (r.kind ? '<span class="tag">' + esc(r.kind) + "</span>" : "") + '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach trainer" : "AI-Toolkit") + "</span>" +
+         (r.archived ? '<span class="tag">archived</span>' : "") + "</div>" +
+-        '<div class="tr-racts">' + (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
++        '<div class="tr-racts"><select class="tr-cmp" id="trCmp" aria-label="Compare with another run" data-tip="Another run\u2019s curves, dashed, on the same steps">' +
++          '<option value="">Compare with\u2026</option>' + runs().filter(function (x) { return x.name !== r.name && x.series && x.series.flow; })
++            .sort(function (x, y) { return (y.dataset === r.dataset) - (x.dataset === r.dataset); })
++            .map(function (x) { return '<option value="' + esc(x.name) + '"' + (x.name === state.cmp ? " selected" : "") + ">" + esc(x.name) + (x.dataset === r.dataset ? " \u00b7 same set" : "") + "</option>"; }).join("") + "</select>" +
++          (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
+           '<a class="btn ghost small" href="/lab/train/log?name=' + encodeURIComponent(r.name) + '" target="_blank" rel="noopener">The log</a>' +
+           '<button type="button" class="btn ghost small" data-menu="' + esc(r.name) + '" aria-label="More">⋯</button></div></div>' +
+       (r.note ? '<p class="row-hint tr-note">' + esc(r.note) + "</p>" : "") +
+@@ -557,6 +565,7 @@
+     });
+     $("trRunList").addEventListener("keydown", function (e) { var c = e.target.closest(".tr-rcard[data-open]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openRun(c.dataset.open); } });
+     $("trRunPane").addEventListener("mousemove", function (e) { if (e.target.closest(".tr-plot")) readout(e); });
++    $("trRunPane").addEventListener("change", function (e) { if (e.target.id === "trCmp") { state.cmp = e.target.value; paintRun(); } });
+     $("trFilters").addEventListener("click", function (e) { var b = e.target.closest("[data-filter]"); if (b) { state.filter = b.dataset.filter; keep("yue2.trFilter", state.filter); paintList(); } });
+     $("trSearch").addEventListener("input", function () { state.search = this.value; paintList(); });
+     $("trFold").addEventListener("click", function () { state.folded = true; keep("yue2.trFolded", "1"); paintList(); });
+-- 
+2.43.0
+

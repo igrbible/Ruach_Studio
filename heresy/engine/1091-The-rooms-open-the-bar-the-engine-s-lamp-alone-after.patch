@@ -1,0 +1,78 @@
+From e1f9636b50edaed1fbccf22ac318400a4b5fc943 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 18:40:08 -0600
+Subject: [PATCH 1091/1177] The rooms open the bar; the engine's lamp alone
+ after the workspace (1121); the waveform's waiting part at ~13 % by day
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   6 ++++++
+ tools/console/app.js       |   2 +-
+ tools/console/index.html   |  15 ++++++++-------
+ tools/public/index.html.gz | Bin 466315 -> 466527 bytes
+ 4 files changed, 15 insertions(+), 8 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 69b519c..e22456f 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3115,3 +3115,9 @@ input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+ .topbar .ws-current + .spacer { display: none; }
+ @media (max-width: 1659px) { .brand-full { display: none; } .brand-icon { display: block; } }
+ @media (max-width: 1359px) { .topbar .brand { position: static; transform: none; height: auto; order: -1; } .brand-icon { margin-top: 0; } }
++
++/* HERESY 1121: the engine's lamp alone, after the workspace (its words in the tip, and kept for screen readers) */
++.topbar .engine-chip { order: 0; padding: 8px 4px; cursor: default; }
++.topbar .engine-chip + .spacer { display: none; }   /* the workspace and its lamp stay by the buttons, clear of the logo */
++.topbar .engine-chip strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
++.topbar .engine-chip .lamp { width: 10px; height: 10px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e5c5640..8eb6cfb 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4107,7 +4107,7 @@
+         }),
+         rest: cloudSprite(env, w, h, dpr, function () {             // the waiting part: a light grey by day (Viktor: "much lighter,
+           var g = themeRGB("ground");                                 // it looks dirty"), as it was by night
+-          return themeRGBA("ink", (0.2126 * g[0] + 0.7152 * g[1] + 0.0722 * g[2]) / 255 > 0.5 ? 0.21 : 0.36);
++          return themeRGBA("ink", (0.2126 * g[0] + 0.7152 * g[1] + 0.0722 * g[2]) / 255 > 0.5 ? 0.085 : 0.36);   // by day ~13 % at the core (three layers), ~3 % at the haze
+         }) };
+     }
+     return cloud;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 8077419..e574da9 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -331,13 +331,6 @@
+ </svg></span>
+   </div>
+ 
+-  <div class="engine-chip">
+-    <span class="lamp" id="engineLamp"></span>
+-    <div>
+-      <strong id="engineState">Checking</strong>
+-      <small id="engineDetail">asking the server</small>
+-    </div>
+-  </div>
+ 
+   <!-- HERESY 1014: the three workspaces -->
+   <nav class="tabs" id="tabs" aria-label="Workspace">
+@@ -352,6 +345,14 @@
+   <!-- HERESY 1041: the workspace in hand: the takes list shows it, new takes land in it -->
+   <label class="ws-current" data-tip="The workspace in hand: the takes list shows only it, and every new take lands in it. All takes: no workspace.">
+     <span class="ws-cap">Workspace</span><select id="wsCurrent" aria-label="Workspace"></select></label>
++  <!-- HERESY 1121 (Viktor, 02.10): the engine's lamp, without its word, after the workspace; the rooms open the bar -->
++  <div class="engine-chip">
++    <span class="lamp" id="engineLamp"></span>
++    <div>
++      <strong id="engineState">Checking</strong>
++      <small id="engineDetail">asking the server</small>
++    </div>
++  </div>
+   <div class="spacer"></div>
+ 
+   <div class="head-actions">
+-- 
+2.43.0
+

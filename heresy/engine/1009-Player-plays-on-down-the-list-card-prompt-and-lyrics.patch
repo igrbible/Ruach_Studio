@@ -1,0 +1,273 @@
+From 4fb1761cd8fa5af6af081faa49797422c809d5a9 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 14:48:51 -0600
+Subject: [PATCH 1009/1177] Player plays on down the list; card prompt and
+ lyrics fold; style warnings
+
+HERESY 1009.
+- Player: previous and next take buttons, and "Play on" (on by default, kept
+  per browser): when a take ends, the next one down the list starts, into the
+  history. A take card that shows the playing take follows it.
+- Take card: Prompt and Lyrics fold on a click on their heading and start
+  folded; folded, the heading shows the size and the first line.
+- The style counter flags what the 110 official example styles never hold:
+  more than 999 characters, arrows, dynamics marks, three or more "Label:"
+  fields; and note lines in (brackets) inside the lyrics, which the official
+  skill keeps out ("Keep implementation notes out of lyrics").
+- Style and lyrics help rewritten on those numbers; the old text counted a
+  4,096 score and a 9,000 song and invited 40,000 characters of style.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |  17 +++++++-
+ tools/console/app.js       |  77 ++++++++++++++++++++++++++++++++++++-
+ tools/console/help.js      |  38 ++++++++++++++----
+ tools/console/index.html   |  10 ++++-
+ tools/public/index.html.gz | Bin 233080 -> 235161 bytes
+ 5 files changed, 131 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index db40254..cd8437b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1806,7 +1806,7 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+ 
+ /* the style box grows with its text; the meter under it counts the prompt against the context */
+ #style { field-sizing: content; min-height: 76px; max-height: 50vh; }
+-.size-meter { display: block; margin: 4px 0 0; }
++.size-meter { display: block; margin: 4px 0 0; white-space: pre-line; }   /* HERESY 1009: the warnings go on their own line */
+ .size-meter.is-warn { color: var(--amber); }
+ .size-meter.is-over { color: var(--bad); }
+ 
+@@ -1866,3 +1866,18 @@ html.hz-open { overflow: hidden; }
+ .hz-stage > * { display: block; position: static !important; }
+ .hz-paper { background: var(--paper); padding: 0; }
+ @media (max-width: 720px) { .hz-hint { display: none; } }
++
++/* ------------------------------------------ HERESY 1009: player order, card folds */
++.skip-btn { font-size: 15px; color: var(--muted); }
++.skip-btn:hover, .skip-btn:focus-visible { color: var(--amber); }
++.autoplay-btn { flex: none; opacity: .7; }
++.autoplay-btn.is-on { opacity: 1; color: var(--amber); border-color: var(--amber); }
++[data-card-fold] .panel-head h3 { cursor: pointer; user-select: none; }
++[data-card-fold] .panel-head h3 .fold-chev { display: inline-block; margin-right: 8px; vertical-align: 2px; transform: rotate(90deg); }
++[data-card-fold].is-folded .panel-head h3 .fold-chev { transform: none; }
++[data-card-fold].is-folded > :not(.panel-head) { display: none; }
++[data-card-fold] .fold-peek { display: none; }
++[data-card-fold].is-folded .fold-peek {
++  display: inline; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
++  font-size: 12px; color: var(--dim);
++}
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 6f67844..05891f7 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2696,6 +2696,7 @@
+ 
+     paintTakeMeta();
+     if (window.HeresySpectrum) window.HeresySpectrum.setTake(spectrumTake(take));   // HERESY 1007
++    setTimeout(paintCardFolds, 0);   // HERESY 1009: the peeks read the texts filled below
+     $("metaStyle").textContent = take.style;
+     var parent = take.parent ? findTake(take.parent) : null;
+     $("metaCover").textContent = take.parent ? "Re-rendered from \u201c" + (parent ? displayTitle(parent) : take.parent) + "\u201d" : "";
+@@ -3405,7 +3406,37 @@
+   }
+   audio.addEventListener("play", function () { paintPlayButton(true); markPlaying(); });
+   audio.addEventListener("pause", function () { paintPlayButton(false); markPlaying(); });
+-  audio.addEventListener("ended", function () { paintPlayButton(false); markPlaying(); });
++  audio.addEventListener("ended", function () { paintPlayButton(false); markPlaying(); if (playOn()) stepTake(1); });
++
++  // HERESY 1009: the takes in the order the list shows them, newest on top: "next"
++  // goes down, into the history. A card that shows the playing take follows it.
++  function listOrder() {
++    var seen = {}, names = [];
++    all("#libList .take[data-name]").forEach(function (card) {
++      if (!seen[card.dataset.name]) { seen[card.dataset.name] = true; names.push(card.dataset.name); }
++    });
++    return names;
++  }
++  function stepTake(dir) {
++    var names = listOrder(), from = STATE.playerTake ? names.indexOf(STATE.playerTake.name) : -1;
++    var name = from < 0 ? (dir > 0 ? names[0] : null) : names[from + dir];
++    var take = name ? findTake(name) : null;
++    if (!take) { if (dir > 0 && from >= 0) toast("The end of the list"); return; }
++    var follow = STATE.take && STATE.playerTake && STATE.take.name === STATE.playerTake.name;
++    loadPlayer(take, false);
++    audio.play().catch(function () {});
++    if (follow) openTake(take.name);
++  }
++  function playOn() { return recall("yue2.playOn") !== "off"; }
++  function paintPlayOn() {
++    var on = playOn();
++    $("autoplay").setAttribute("aria-pressed", on ? "true" : "false");
++    $("autoplay").classList.toggle("is-on", on);
++  }
++  $("autoplay").addEventListener("click", function () { store("yue2.playOn", playOn() ? "off" : null); paintPlayOn(); });
++  $("prevTake").addEventListener("click", function () { stepTake(-1); });
++  $("nextTake").addEventListener("click", function () { stepTake(1); });
++  paintPlayOn();
+   audio.addEventListener("emptied", markPlaying);
+ 
+   // The card of the song that is playing says so (the list redraws often, so this runs after it too)
+@@ -4716,6 +4747,50 @@
+     });
+   }
+ 
++  /* ------------------------------------ HERESY 1009: folding prompt and lyrics */
++  // The take card's Prompt and Lyrics start folded: a click on the heading opens
++  // them, and the choice is kept per browser. Folded, the heading shows a peek.
++  var CARD_FOLD_KEY = "yue2.cardFold", cardFolds = { prompt: true, lyrics: true };
++  try { Object.assign(cardFolds, JSON.parse(recall(CARD_FOLD_KEY) || "{}")); } catch (error) { /* the defaults */ }
++  function cardPeek(which) {
++    var text = (which === "prompt" ? $("metaStyle").textContent : $("metaLyrics").textContent).trim();
++    if (!text) return "";
++    var first = text.split("\n").filter(function (l) { return l.trim() && l.trim().charAt(0) !== "["; })[0] || "";
++    first = first.replace(/\s+/g, " ");
++    if (first.length > 70) first = first.slice(0, 70) + "…";
++    return which === "lyrics" ? text.split("\n").filter(function (l) { return l.trim(); }).length + " lines · " + first
++                              : text.length + " characters · " + first;
++  }
++  function paintCardFolds() {
++    all("[data-card-fold]").forEach(function (panel) {
++      var which = panel.dataset.cardFold, on = !!cardFolds[which];
++      panel.classList.toggle("is-folded", on);
++      panel.querySelector("h3").setAttribute("aria-expanded", on ? "false" : "true");
++      panel.querySelector(".fold-peek").textContent = on ? cardPeek(which) : "";
++    });
++  }
++  all("[data-card-fold]").forEach(function (panel) {
++    var h3 = panel.querySelector("h3");
++    var chev = document.createElement("span");
++    chev.className = "chev fold-chev";
++    chev.setAttribute("aria-hidden", "true");
++    h3.insertBefore(chev, h3.firstChild);
++    h3.setAttribute("role", "button");
++    h3.tabIndex = 0;
++    var peek = document.createElement("span");
++    peek.className = "fold-peek";
++    h3.parentNode.insertBefore(peek, h3.nextSibling);
++    function flip(event) {
++      event.preventDefault();
++      cardFolds[panel.dataset.cardFold] = !cardFolds[panel.dataset.cardFold];
++      store(CARD_FOLD_KEY, JSON.stringify(cardFolds));
++      paintCardFolds();
++    }
++    h3.addEventListener("click", flip);
++    h3.addEventListener("keydown", function (event) { if (event.key === "Enter" || event.key === " ") flip(event); });
++  });
++  paintCardFolds();
++
+   /* ------------------------------ HERESY 1007: spectrum and full-screen views */
+   // Takes of one song share a title, so the label carries the take's day and time.
+   function takeLabel(take) {
+diff --git a/tools/console/help.js b/tools/console/help.js
+index ed792c1..82140bd 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -28,13 +28,17 @@
+       "Blank means random each run; the dice puts one in, and pressing it again clears it. Change it, or use Re-render sound on a take, " +
+       "to get another rendering in seconds.",
+     style: "What the song should sound like, as short comma-separated phrases: language, genre, singer (e.g. female alto, raspy male), " +
+-      "instruments, mood, tempo (e.g. 92 BPM). Both the score planner and the music read it; it goes in as the prompt's tag list.\n" +
+-      "Size: no fixed limit. Style and lyrics share the model's 24,576-token window with the score (up to 4,096) and the song " +
+-      "(up to 9,000, six minutes), so together they can take about 11,400 tokens, roughly 40,000 characters of English, " +
+-      "before a full-length song no longer fits; the counter under the box keeps count. The box grows with the text.",
++      "instruments, mood, tempo (e.g. 92 BPM). Both the score planner and the music read it; it goes in as the prompt's tag list, verbatim.\n" +
++      "✓ Write it the way the model learned it (HERESY 1009, measured on the 110 official example styles): a tag line, " +
++      "4 to 999 characters, half of them 69–399, median 124. Tempo and key belong to the score; if named here, they must agree with it.\n" +
++      "⚠ No arrows, no dynamics marks (p, f, ff), no \"Mood:\" or \"Arc:\" fields, no section plan: none of the official styles has them, " +
++      "and a line the model does not read as tags can come out sung, even whispered. The counter under the box flags them.\n" +
++      "Size: no fixed limit in the engine. Style and lyrics share the 24,576-token window with the score and the song; the counter keeps count.",
+     lyrics: "The words, with section tags such as [Verse], [Pre-Chorus], [Chorus], [Bridge], [Outro] on their own lines. " +
+       "The sections set the song's form, and together with the words its length: more sections, a longer song. " +
+-      "Leave a blank line between sections. Lyrics count against the same budget as the style (see the counter under the style box).",
++      "Leave a blank line between sections. Lyrics count against the same budget as the style (see the counter under the style box).\n" +
++      "⚠ Section tags and the sung words only. The official YuE2 skill: \"Keep implementation notes out of lyrics.\" " +
++      "A note like (Music: swells, f) or (Emotional rise) can be sung; put the sound in the style and the dynamics in the score.",
+     modes: "Full plan: the model first writes a score (melody and chords) and the song follows it. Best for new songs; the score can be edited.\n" +
+       "Melody only: the score has the melody but no chords, so the accompaniment is free. Recommended for covers.\n" +
+       "Direct: no score; the music is written straight from style and lyrics. Some add-ons (the sliders, some LoRAs) were trained this way.\n" +
+@@ -314,14 +318,34 @@
+     return Math.ceil(ascii / 3.6 + other);
+   }
+ 
++  // HERESY 1009: what the style holds that YuE2 never saw under [Tags]. Measured on the
++  // 110 official example styles: 4 to 999 characters (half within 69..399), no arrows,
++  // no dynamics marks, "Label:" fields in 5. The engine passes the style verbatim; past
++  // what the model learned, a line of it can come out sung. The official skill also
++  // keeps notes out of the lyrics: section tags and the sung words only.
++  function styleWarnings(style, lyrics) {
++    var w = [];
++    if (style.length > 1000) w.push("longer than any official example (999 characters)");
++    if (/[\u2192\u2190\u21d2]|->|=>/.test(style)) w.push("arrows (none of 110 official styles has one)");
++    // p f ff mp \u2026 standing alone or chained by arrows and dashes: "p\u2192f\u2192ff", "mp\u2013f", "(ff)"
++    if (/(^|[\s(;,\u2192\u2013>-])(ppp|pp|p|mp|mf|f|ff|fff)(?=[\s),;.\u2192\u2013>]|$)/.test(style)) w.push("dynamics marks (never in the official styles)");
++    var labels = style.match(/\b[A-Z][A-Za-z ]{1,20}:/g) || [];
++    if (labels.length >= 3) w.push(labels.length + " \"Label:\" fields (5 of 110 official styles use any)");
++    var notes = (lyrics || "").split(/\r?\n/).filter(function (l) { return /^\s*\([^)]*[A-Za-z]{3}[^)]*\)\s*$/.test(l); }).length;
++    if (notes) w.push(notes + " note line" + (notes > 1 ? "s" : "") + " in (brackets) in the lyrics: the model may sing them");
++    return w;
++  }
++
+   function paintMeter() {
+     var style = document.getElementById("style"), lyrics = document.getElementById("lyrics"), out = document.getElementById("styleMeter");
+     if (!style || !out) return;
+     var s = estimateTokens(style.value), both = s + (lyrics ? estimateTokens(lyrics.value) : 0), budget = promptBudget();
++    var warn = styleWarnings(style.value, lyrics ? lyrics.value : "");
+     out.textContent = style.value.length.toLocaleString() + " characters, about " + s.toLocaleString() + " tokens. " +
+       "Style and lyrics together: about " + both.toLocaleString() + " of " + budget.toLocaleString() + " tokens" +
+-      (both > budget ? " \u2014 too long for a full-length song and score." : ".");
+-    out.classList.toggle("is-warn", both > budget * 0.75 && both <= budget);
++      (both > budget ? " \u2014 too long for a full-length song and score." : ".") +
++      (warn.length ? "\n\u26a0 Unlike the model's training styles: " + warn.join("; ") + "." : "");
++    out.classList.toggle("is-warn", (both > budget * 0.75 && both <= budget) || warn.length > 0);
+     out.classList.toggle("is-over", both > budget);
+   }
+ 
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 9911e76..6380e62 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -624,7 +624,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ 
+       <!-- what the song actually is: prompt first, words under it -->
+       <div class="word-row">
+-        <section class="panel">
++        <section class="panel" data-card-fold="prompt">
+           <div class="panel-head"><h3>Prompt</h3><div class="spacer"></div>
+             <button type="button" class="icon-btn copy-icon" id="copyPrompt" aria-label="Copy the prompt" data-tip="Copy the prompt">
+               <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 4.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v7.5A1.5 1.5 0 0 0 4 13h.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+@@ -633,7 +633,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <p class="prompt-text dim" id="metaCover"></p>
+         </section>
+ 
+-        <section class="panel">
++        <section class="panel" data-card-fold="lyrics">
+           <div class="panel-head">
+             <h3>Lyrics</h3>
+             <div class="spacer"></div>
+@@ -702,15 +702,21 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     <strong id="playbarTitle" data-tip="Pick a take on the right">Nothing loaded</strong>
+   </div>
+ 
++  <!-- HERESY 1009: previous and next take in the list, and play-on down the list -->
++  <button type="button" class="icon-btn skip-btn" id="prevTake" aria-label="Previous take" data-tip="The take above in the list">⏮</button>
+   <button class="play" id="playBtn" aria-label="Play"><span id="playGlyph">▶</span>
+     <!-- drawn play and pause icons, shown by the DMM theme -->
+     <svg class="play-icon play-icon-play" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" /></svg>
+     <svg class="play-icon play-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1" /><rect x="6" y="4" width="4" height="16" rx="1" /></svg></button>
+ 
++  <button type="button" class="icon-btn skip-btn" id="nextTake" aria-label="Next take" data-tip="The take below in the list">⏭</button>
+   <span class="mono time" id="timeNow">0:00</span>
+   <canvas id="wave" height="40"></canvas>
+   <span class="mono time dim" id="timeTotal">0:00</span>
+ 
++  <button type="button" class="btn ghost small autoplay-btn" id="autoplay" aria-pressed="true"
++    data-tip="Play on: when a take ends, the next one down the list starts, into the history. Click to stop after each take.">↓ Play on</button>
++
+   <div class="volume">
+     <button class="icon-btn" id="muteBtn" aria-label="Mute"><span id="muteGlyph">🔊</span></button>
+     <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
+-- 
+2.43.0
+

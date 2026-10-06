@@ -1,0 +1,205 @@
+From b79646f71e47111139acbbfd7f5b13323b721882 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 14:13:11 -0600
+Subject: [PATCH 1117/1177] =?UTF-8?q?Sections=20in=20a=20workspace=20(1161?=
+ =?UTF-8?q?):=20a=20section=20is=20a=20workspace=20named=20by=20its=20path?=
+ =?UTF-8?q?=20(Parent=20/=20Section,=20two=20levels=20below=20at=20most);?=
+ =?UTF-8?q?=20on=20the=20left=20under=20its=20workspace,=20indented,=20by?=
+ =?UTF-8?q?=20its=20own=20name;=20a=20workspace=20shows=20and=20counts=20i?=
+ =?UTF-8?q?ts=20sections'=20takes=20(each=20once),=20and=20so=20does=20the?=
+ =?UTF-8?q?=20workspace=20in=20hand;=20New=20section=E2=80=A6=20in=20the?=
+ =?UTF-8?q?=20=E2=8B=AF=20menu;=20a=20section=20renamed=20keeps=20its=20pa?=
+ =?UTF-8?q?rent;=20deleting=20a=20workspace=20names=20its=20sections;=20ap?=
+ =?UTF-8?q?proval=20by=20the=20root=20(=F0=9F=92=8E)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               |  7 ++++
+ tools/console/heresy-collection.js  | 56 ++++++++++++++++++++++-------
+ tools/console/heresy-instruments.js |  4 +--
+ 3 files changed, 53 insertions(+), 14 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index fc75bf7..f5a050d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2245,6 +2245,13 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-card.is-current { border-color: var(--amber); }
+ .coll-play.is-playing { color: var(--amber-hi); }
+ 
++/* HERESY 1161: a section under its workspace, indented, its own name only */
++.coll-place.is-sub > span:first-child { font-size: .94em; color: var(--muted); }
++.coll-place.is-sub.d2 > span:first-child { padding-left: 14px; }
++.coll-place.is-sub.d3 > span:first-child { padding-left: 28px; }
++.coll-place.is-sub > span:first-child::before { content: "\21b3\00a0"; color: var(--dim); }
++.coll-place.is-sub.is-on > span:first-child { color: var(--ink); }
++
+ /* HERESY 1159: a card dragged onto a workspace on the left (asked first) */
+ .coll-card[draggable="true"] { -webkit-user-drag: element; }
+ .coll-place.is-drop { outline: 2px dashed var(--amber); outline-offset: -2px; background: color-mix(in srgb, var(--amber) 14%, transparent); }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 02bcc5a..8b80941 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -49,6 +49,19 @@
+     }).catch(function (e) { $("collGrid").innerHTML = '<p class="row-hint">The Librarian lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
+   }
+ 
++  // HERESY 1161 (Viktor: «В воркспейсы можно один уровень подразделов? Максимум два»): a section is a workspace named by its
++  // path, "Parent / Section"; a place shows its own takes and its sections' (the lab keeps the names; the page the tree)
++  var SEP = " / ", DEPTH = 3;
++  function wsParts(w) { return String(w).split(SEP); }
++  function wsLeaf(w) { var p = wsParts(w); return p[p.length - 1]; }
++  function inTree(r, place) { return r.workspaces.some(function (w) { return w === place || w.indexOf(place + SEP) === 0; }); }
++  function treeOrder(list) {                     // a parent, then its sections, whatever names stand between them
++    return list.slice().sort(function (a, b) {
++      var A = wsParts(a), B = wsParts(b);
++      for (var i = 0; i < Math.min(A.length, B.length); i++) if (A[i] !== B[i]) return A[i] < B[i] ? -1 : 1;
++      return A.length - B.length;
++    });
++  }
+   function shown() {
+     var m = matcher(state.q), anyDer = Object.keys(state.derived).length;
+     var rows = state.rows.filter(function (r) {
+@@ -57,7 +70,7 @@
+       if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
+       if (state.place === "__hidden") { if (!r.hidden) return false; }
+       else if (r.hidden) return false;
+-      if (state.place && state.place.charAt(0) !== "_" && r.workspaces.indexOf(state.place) < 0) return false;
++      if (state.place && state.place.charAt(0) !== "_" && !inTree(r, state.place)) return false;   // its sections too (1161)
+       if (state.kinds.__liked && !(r.rating > 0)) return false;
+       if (state.kinds.__disliked && !(r.rating < 0)) return false;
+       var realKinds = Object.keys(state.kinds).filter(function (k) { return k.charAt(0) !== "_"; });
+@@ -81,7 +94,11 @@
+       if (r.hidden) { counts.__hidden++; return; }
+       counts[""]++; if (r.favorite) counts.__fav++;
+       if (!r.workspaces.length) counts.__none++;
+-      r.workspaces.forEach(function (w) { perWs[w] = (perWs[w] || 0) + 1; });
++      var once = {};                                 // HERESY 1161: a take counted once in a parent, from any of its sections
++      r.workspaces.forEach(function (w) {
++        var parts = wsParts(w);
++        for (var i = 1; i <= parts.length; i++) { var a = parts.slice(0, i).join(SEP); if (!once[a]) { once[a] = 1; perWs[a] = (perWs[a] || 0) + 1; } }
++      });
+     });
+     var item = function (key, label, n) {
+       return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + '" data-place="' + esc(key) + '"><span>' + esc(label) +
+@@ -91,10 +108,12 @@
+     $("collSide").innerHTML = item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
+       item("__pinned", "\ud83d\udccc Pinned", pinN) +
+       item("__none", "Not in a workspace", counts.__none) +
+-      '<div class="coll-cap">Workspaces</div>' + state.ws.map(function (w) {
++      '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws).map(function (w) {
+         var lk = (state.locks || {})[w] || {}, lock = lk.workspace || lk.tracks ?   // HERESY 1070
+           '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "";
+-        return item(w, w, perWs[w] || 0).replace('<span class="coll-n">', lock + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock…" role="button">\u22ef</span><span class="coll-n">');
++        var depth = wsParts(w).length;               // a section: its own name, indented under its parent (1161)
++        return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : ""))
++          .replace('<span class="coll-n">', lock + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">');
+       }).join("") +
+       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
+       '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined);
+@@ -181,7 +200,7 @@
+       if (state.place === "__pinned") return !!pinnedAll()[r.name] && !r.hidden;
+       if (state.place === "__none") return !r.workspaces.length && !r.hidden;
+       if (state.place === "__hidden") return r.hidden;
+-      if (state.place) return !r.hidden && r.workspaces.indexOf(state.place) >= 0;
++      if (state.place) return !r.hidden && inTree(r, state.place);     // HERESY 1161: with its sections
+       return !r.hidden;
+     });
+     var secs = inPlace.reduce(function (s, r) { return s + (r.seconds || 0); }, 0), hm = function (t) { var h = Math.floor(t / 3600), m = Math.round(t % 3600 / 60); return h ? h + " h " + m + " min" : m + " min"; };
+@@ -375,7 +394,7 @@
+   function inCurrent(name) {
+     var cur = current();
+     if (!cur) return true;
+-    return state.rows.some(function (r) { return r.name === name && r.workspaces.indexOf(cur) >= 0; });
++    return state.rows.some(function (r) { return r.name === name && inTree(r, cur); });   // HERESY 1161: with its sections
+   }
+   // ---- HERESY 1135: undo, as a file manager has it. The last move, pin, hide, adding or taking out, marking or
+   // trashing in the Librarian goes back: the pill's Undo, or Ctrl+Z, for ten seconds after.
+@@ -946,19 +965,26 @@
+   // ---- HERESY 1050: a workspace renamed or deleted (three ways)
+   function wsMenu(w, x, y) {
+     if (!window.HeresyMenu) return;
+-    var n = state.rows.filter(function (r) { return r.workspaces.indexOf(w) >= 0; }).length;
++    var n = state.rows.filter(function (r) { return inTree(r, w); }).length;
+     window.HeresyMenu.open(x, y, [
+       { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
+       { icon: "\u25a6", label: "Open", action: function () { state.place = w; state.sel = {}; paint(); } },
+       { icon: "\u2193", label: "New takes land here", checked: current() === w, action: function () { store(WS_KEY, current() === w ? "" : w); paintCurrent(); state.hooks.libraryChanged && state.hooks.libraryChanged(); } },
+       { sep: true },
++      // HERESY 1161: a section inside it, two levels below a workspace at most
++      wsParts(w).length < DEPTH ? { icon: "+", label: "New section\u2026", hint: "inside \u201c" + wsLeaf(w) + "\u201d", action: function () {
++        askName("A new section of \u201c" + w + "\u201d", "", { ok: "Make it", placeholder: "its name" }).then(function (name) {
++          name = String(name || "").replace(/\s*\/\s*/g, " ").trim();
++          if (name) act({ op: "ws-create", workspace: w + SEP + name }, "Section \u201c" + name + "\u201d made in \u201c" + w + "\u201d");
++        });
++      } } : null,
+       { icon: "Aa", label: "Rename\u2026", action: function () { renameWs(w); } },
+       { sep: true },                                   // HERESY 1070: the safety catches
+       lockItem(w, "workspace", "Workspace Deletion"),
+       lockItem(w, "tracks", "Tracks Deletion"),
+       { sep: true },
+       { icon: "\ud83d\uddd1", label: "Delete\u2026", danger: true, disabled: isLocked(w, "workspace"), hint: isLocked(w, "workspace") ? "locked" : "", action: function () { deleteWs(w); } }
+-    ]);
++    ].filter(Boolean));
+   }
+   function isLocked(w, what) { return !!((state.locks || {})[w] || {})[what]; }
+   function lockItem(w, what, label) {
+@@ -977,7 +1003,10 @@
+     if (recall(WS_KEY) === from) store(WS_KEY, to);
+   }
+   function renameWs(w) {
+-    askName("Rename the workspace \u201c" + w + "\u201d", w, { ok: "Rename" }).then(function (to) {
++    var parent = wsParts(w).slice(0, -1).join(SEP);                       // HERESY 1161: a section keeps its parent
++    askName((parent ? "Rename the section \u201c" + wsLeaf(w) + "\u201d of \u201c" + parent + "\u201d" : "Rename the workspace \u201c" + w + "\u201d"),
++            parent ? wsLeaf(w) : w, { ok: "Rename" }).then(function (to) {
++      if (to && parent) to = parent + SEP + String(to).replace(/\s*\/\s*/g, " ").trim();
+       if (!to || to === w) return;
+       if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
+       act({ op: "ws-rename", workspace: w, to: to }, "Workspace renamed").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
+@@ -985,10 +1014,13 @@
+   }
+   function closeDialog() { $("collDialog").hidden = true; $("collDialogBody").innerHTML = ""; }
+   function deleteWs(w) {
+-    var takes = state.rows.filter(function (r) { return r.workspaces.indexOf(w) >= 0; });
+-    var shared = takes.filter(function (r) { return r.workspaces.length > 1; }), others = state.ws.filter(function (x) { return x !== w; });
++    var takes = state.rows.filter(function (r) { return inTree(r, w); });               // HERESY 1161: its sections go with it
++    var shared = takes.filter(function (r) { return r.workspaces.length > 1; }), others = state.ws.filter(function (x) { return x !== w && x.indexOf(w + SEP) !== 0; });
+     $("collDialogBody").innerHTML =
+-      '<div class="sheet-title">Delete the workspace \u201c' + esc(w) + '\u201d</div>' +
++      '<div class="sheet-title">Delete the workspace \u201c' + esc(w) + '\u201d' + (function () {      // HERESY 1161
++        var subs = state.ws.filter(function (x) { return x.indexOf(w + SEP) === 0; }).length;
++        return subs ? " and its " + subs + " section" + (subs === 1 ? "" : "s") : "";
++      })() + "</div>" +
+       '<p class="row-hint">' + takes.length + " take" + (takes.length === 1 ? "" : "s") + " in it. What becomes of them?</p>" +
+       '<label class="coll-opt"><input type="radio" name="wsDel" value="only" checked /><span><b>Only the workspace goes.</b> Its takes stay in the library, unsorted: in All Workspaces, and in any other workspace they belong to.</span></label>' +
+       '<label class="coll-opt"><input type="radio" name="wsDel" value="move" /><span><b>Its takes move into</b> <select id="wsDelTo">' +
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 42ad6ae..d05b500 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -50,7 +50,7 @@
+   }
+   // HERESY 1152 (Viktor, 03.10.2026): an approved workspace that goes to the repository and into a fresh studio is named
+   // with 💎 first («чтобы нам не путаться»): the name counts with or without it
+-  function isKept(w) { return KEPT_NAMES.indexOf(String(w || "").replace(/^\s*\uD83D\uDC8E\s*/, "")) >= 0; }
++  function isKept(w) { return KEPT_NAMES.indexOf(String(w || "").replace(/^\s*\uD83D\uDC8E\s*/, "").split(" / ")[0]) >= 0; }   // a section of it too (1161)
+   function kept(p) { return ["a", "b"].some(function (k) { return p[k] && p[k].workspaces.some(isKept); }); }
+ 
+   // HERESY 1069b (Viktor 02.10): the ear's verdict. Kept in "Instrumental Probe": heard. A verdict of his
+@@ -122,7 +122,7 @@
+   // HERESY 1156 (Viktor: «Их в шпаргалку можно в новую вкладку стилей. Это оркестр»): what a probe gave instead of its
+   // instrument, kept as a style of its own: the word that brings it, how it sounds, its probes
+   // a style is heard once one of its probes stands in his approved styles ("Musical Styles", with or without its 💎)
+-  function styleKept(p) { return ["a", "b"].some(function (k) { return p[k] && p[k].workspaces.some(function (w) { return String(w).replace(/^\s*\uD83D\uDC8E\s*/, "") === "Musical Styles"; }); }); }
++  function styleKept(p) { return ["a", "b"].some(function (k) { return p[k] && p[k].workspaces.some(function (w) { return String(w).replace(/^\s*\uD83D\uDC8E\s*/, "").split(" / ")[0] === "Musical Styles"; }); }); }
+   function styleRow(s) {
+     var p = probes(s.slug), his = hisNote(p), kept = styleKept(p), have = p.a || p.b;
+     var st = kept ? "\u2713 heard" : have ? "not judged yet" : "no probe yet";
+-- 
+2.43.0
+

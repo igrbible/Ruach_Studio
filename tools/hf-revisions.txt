@@ -1,0 +1,17 @@
+# owner/repo commit: the exact Hugging Face revisions the kit's owner has (the download scripts read this)
+m-a-p/YuE2-3B 29b3558dd46954a0cd9021dc76d5c91864a0f1c7
+m-a-p/YuE2-Vae 9a94e1d0ea9f8087e98f77fa88df4a4068104d2a
+m-a-p/YuE2-Vae-legacy 5ddd12f79acb90d24b3a672dcd2ebf88da7c92a9
+m-a-p/SheetSage2 488abe28ef4db3dbb056da19cb49d80f4b14bc61
+m-a-p/MERT-v2-FullSong d8ba1c745e733b3908ce6ad16ebeb17ac7600a42
+Mothersuperior/YuE2-Vae-merge-0.666 b00bdfc08f6bb251ebe0fa097020eb63daf930c7
+ntc-ai/yue2-particle-sliders 33cf42fb0a54f60d8264d64cf6c20f038c4d172b
+Mothersuperior/YuE2-instrumental-cot-full-loras 947f2f4b28978b2b6c3e316e6a87925c76bf3c4b
+pduncan/YuE2_Deathmetalv1_lora 84ff5f6fe5ad1d9db10b05cc258fe881f590b1e2
+HaileyStorm/sv-billie-yue2-lora 94fe9fbf5dfd3e97eefeb3ef54e2801eb3b69077
+atomtanstudio/lora-library b5727622224c267030be0054464d953188edba49
+monsterovich/yue2-industrial-rock-lora a71706d59e2874f1e6db9aa10e8da5cc19e6c924
+storagejuju/yue2-jpop-t4-lora 16c181c15cf7d06b1b570a149624b1e78724baa6
+Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4 e2e63d859f3af879baf1b4d4e9f22d1eeda6fde5
+monsterovich/yue2-steps-from-hell bc84ad1867158e1112ab9601c74b338847d9dff2
+Serveurperso/YuE2-GGUF 64b030e3deb6e8150d2b7c0db641ef5a17eca8a3

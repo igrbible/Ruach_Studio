@@ -1,0 +1,149 @@
+From 1625b278deadb700c93cc52e3eb96564efc9a53e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 23:40:54 -0600
+Subject: [PATCH 1062/1177] Train: run history as cards (curves, time, memory,
+ epochs to loras/), save every N epochs
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  1 +
+ tools/console/heresy-train.js | 74 ++++++++++++++++++++++++++++++-----
+ tools/console/index.html      |  5 ++-
+ 3 files changed, 68 insertions(+), 12 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 66b25e0..710e109 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2532,3 +2532,4 @@ body[data-tab="train"] .library, body[data-tab="train"] .col-grip { display: non
+ .tr-st.is-running { color: var(--amber); } .tr-st.is-done { color: var(--good); } .tr-st.is-failed { color: var(--bad); }
+ .tr-err, .tr-warn { color: var(--bad); }
+ .tr-warn { padding: 8px 10px; border: 1px solid var(--bad); border-radius: var(--r-md); }
++/* HERESY 1067: the Train rooms history, a card a run backups/ fonts/ HERETICAL_FIRE_SONGS/ IGRB_SMITHERY/ internal-workplan/ leisure/ LEXICON_MATRIX/ LEXICON_TEX/ pdf/ sty/ subprojects/ svg-inkscape/ tex-back/ tex-book-GCF/ tex-front/ tex-igrbible/ tex-igrbible-exported/ tex-lexicon-gr/ tex-misc/ tmpfs.gen/ tmpfs.out/ tmpfs.tmp/ utils/ WEBSITES/
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 287d907..db410e8 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -44,12 +44,59 @@
+       return '<label class="tr-set"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + ($("trRunName").dataset.set === p.name ? " checked" : "") + " /> <b>" + esc(p.name) + "</b> <span>" +
+         p.tracks + " tracks · " + clock(p.seconds) + " · from " + esc(p.from) + " · " + esc(p.made) + "</span></label>";
+     }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
+-    $("trRuns").innerHTML = d.runs.length ? d.runs.map(function (r) {
+-      return '<div class="tr-run"><b>' + esc(r.name) + "</b> <span class=\"tr-st is-" + esc(r.status) + '">' + esc(r.status) + "</span> <span>" + esc(r.dataset) + " · " +
+-        (r.step || 0) + " / " + (r.steps || "?") + (r.ar_ce != null ? " · ar_ce " + Number(r.ar_ce).toFixed(3) : "") + "</span>" +
+-        (r.lora ? ' <code>loras/' + esc(r.lora) + "</code>" : "") + (r.error ? ' <span class="tr-err">' + esc(r.error) + "</span>" : "") +
+-        ' <button type="button" class="btn ghost small" data-watch="' + esc(r.name) + '">Watch</button></div>';
+-    }).join("") : '<p class="row-hint">No runs yet.</p>';
++    $("trRuns").innerHTML = d.runs.length ? d.runs.map(card).join("") : '<p class="row-hint">No runs yet.</p>';
++  }
++
++  // ---- HERESY 1067: the history, a card a run (as the Collection's cards are for takes): what it was
++  // given, what it did (the curves, the time, the memory), and its epochs, each one a LoRA on a click
++  function when(t) { var d = new Date((t || 0) * 1000); return t ? d.toLocaleDateString() + " " + d.toTimeString().slice(0, 5) : ""; }
++  function span(sec) { sec = Math.round(sec || 0); var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? h + " h " + m + " min" : m + " min"; }
++  function chart(ser) {
++    var lines = [["loss", "var(--amber)", "flow loss (NAR)"], ["ar_ce", "var(--accent, #6aa9ff)", "ar_ce (AR)"]].filter(function (l) { return ser[l[0]] && ser[l[0]].curve.length > 1; });
++    if (!lines.length) return "";
++    var W = 320, H = 70, last = 0;
++    lines.forEach(function (l) { var c = ser[l[0]].curve; last = Math.max(last, c[c.length - 1][0]); });
++    var paths = lines.map(function (l) {
++      var c = ser[l[0]].curve, lo = Infinity, hi = -Infinity;
++      c.forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
++      if (hi === lo) hi = lo + 1;
++      var dd = c.map(function (p, i) { return (i ? "L" : "M") + (W * p[0] / last).toFixed(1) + " " + (H - 4 - (H - 8) * (p[1] - lo) / (hi - lo)).toFixed(1); }).join(" ");
++      return '<path d="' + dd + '" fill="none" stroke="' + l[1] + '" stroke-width="1.4" vector-effect="non-scaling-stroke"><title>' + l[2] + ": " + lo.toFixed(3) + " … " + hi.toFixed(3) + "</title></path>";
++    }).join("");
++    return '<svg class="tr-chart" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + paths + "</svg>" +
++      '<div class="tr-legend">' + lines.map(function (l) { var x = ser[l[0]]; return '<span><i style="background:' + l[1] + '"></i>' + l[2] + " " + x.first.toFixed(3) + " → " + x.last.toFixed(3) + " (min " + x.min.toFixed(3) + ")</span>"; }).join("") + "</div>";
++  }
++  function card(r) {
++    var o = r.options || {}, ser = r.series || {}, cks = r.checkpoints || [];
++    var took = (r.ended || (r.status === "running" ? Date.now() / 1000 : r.started)) - r.started;
++    var ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce, memo = ar != null && ar < 0.3;
++    var bytes = cks.reduce(function (s, c) { return s + (c.bytes || 0); }, 0);
++    return '<article class="tr-card is-' + esc(r.status) + '">' +
++      '<div class="tr-chead"><b>' + esc(r.name) + '</b><span class="tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" + (r.kind ? '<span class="tr-tag">' + esc(r.kind) + "</span>" : "") +
++        '<span class="spacer"></span><span class="tr-when">' + esc(when(r.started)) + " · " + span(took) + "</span></div>" +
++      '<div class="tr-facts">' +
++        "<span><em>set</em> " + esc(r.dataset) + (r.tracks ? " · " + r.tracks + " tracks" : "") + "</span>" +
++        "<span><em>steps</em> " + (r.step || 0) + " / " + (r.steps || "?") + (r.tracks ? " · epoch " + ((r.step || 0) / r.tracks).toFixed(1) + " / " + (r.steps / r.tracks).toFixed(0) : "") + "</span>" +
++        "<span><em>rank</em> " + esc(o.rank) + " · lr " + esc(o.lr) + "</span>" +
++        "<span><em>AR</em> " + esc(o.ar_loss_weight) + " · KL " + esc(o.ar_kl_weight) + " · ×" + esc(o.ar_lr_multiplier) + "</span>" +
++        "<span><em>mode</em> " + esc(o.cot) + " · " + esc(o.quant) + (o.do_separation ? " · separated" : "") + "</span>" +
++        (ser.sec_per_step ? "<span><em>speed</em> " + ser.sec_per_step + " s/step</span>" : "") +
++        (r.vram_peak_mb ? "<span><em>VRAM</em> " + (r.vram_peak_mb / 1024).toFixed(1) + " GB peak · GPU" + esc(r.gpu) + "</span>" : r.gpu != null ? "<span><em>GPU</em> " + esc(r.gpu) + "</span>" : "") +
++      "</div>" +
++      (memo ? '<p class="tr-err">ar_ce ' + ar.toFixed(3) + ": the AR is learning the songs by heart; an earlier epoch may be the better adapter</p>" : "") +
++      (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + chart(ser) +
++      (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
++      (cks.length ? '<div class="tr-epochs"><span class="label">epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" + cks.map(function (c) {
++        return '<button type="button" class="coll-chip' + (c.lora ? " is-on" : "") + '" data-pub="' + esc(r.name) + '" data-file="' + esc(c.file) + '" data-tip="step ' + c.step + " · " + when(c.saved) +
++          (c.lora ? " · in loras/ as " + esc(c.lora) : " · click: into loras/, ready in Create") + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
++      }).join("") + "</div>" : "") +
++      '<div class="tr-cacts">' + (r.lora ? "<code>loras/" + esc(r.lora) + "</code>" : "") + '<span class="spacer"></span>' +
++        '<a class="btn ghost small" href="/lab/train/log?name=' + encodeURIComponent(r.name) + '" target="_blank" rel="noopener">Log</a>' +
++        '<button type="button" class="btn ghost small" data-watch="' + esc(r.name) + '">Watch</button></div>' +
++      "</article>";
++  }
++  function publish(name, file) {
++    api("/train/publish", { name: name, file: file }).then(function (d) { toast("In loras/: " + d.lora); load(); }).catch(function (e) { toast(e.message, true); });
+   }
+ 
+   // ---- step 1: the raw tracks
+@@ -114,10 +161,13 @@
+     var set = (document.querySelector('input[name="trSet"]:checked') || {}).value;
+     if (!set) return toast("Pick a set (step 2)", true);
+     var spec = { dataset: set, name: slug($("trRunName").value || set + "-" + state.kind) };
+-    ["steps", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier"].forEach(function (k) { spec[k] = parseFloat($("tr_" + k).value); });
++    spec.kind = state.kind;
++    ["steps", "save_epochs", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier"].forEach(function (k) { spec[k] = parseFloat($("tr_" + k).value); });
+     spec.cot = $("tr_cot").value; spec.quant = $("tr_quant").value; spec.do_separation = $("tr_sep").checked;
+-    window.HeresyDialog.confirm("Train " + spec.name + "?\n\n" + spec.steps + " steps on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight +
+-      ". It takes a GPU of its own for hours; the first run also fetches Comfy-Org's YuE2 weights.", { ok: "Train" }).then(function (ok) {
++    var tracks = ((state.data.prepared || []).filter(function (p) { return p.name === set; })[0] || {}).tracks || 1;
++    var epochs = Math.ceil(spec.steps / tracks);
++    window.HeresyDialog.confirm("Train " + spec.name + "?\n\n" + epochs * tracks + " steps (" + epochs + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight +
++      "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept. It takes a GPU of its own for hours; the first run also fetches Comfy-Org's YuE2 weights.", { ok: "Train" }).then(function (ok) {
+       if (!ok) return;
+       return api("/train/run", spec).then(function () { toast("Training " + spec.name); watch(spec.name); load(); });
+     }).catch(function (e) { toast(e.message, true); });
+@@ -167,7 +217,11 @@
+       window.HeresyDialog.confirm("Stop " + state.run + "?\n\nAI-Toolkit saves what it has on the way out; the last checkpoint goes to loras/.", { ok: "Stop", danger: true })
+         .then(function (ok) { if (ok) return api("/train/stop", { name: state.run }).then(function () { toast("Stopping " + state.run); }); }).catch(function (e) { toast(e.message, true); });
+     });
+-    $("trRuns").addEventListener("click", function (e) { var b = e.target.closest("[data-watch]"); if (b) watch(b.dataset.watch); });
++    $("trRuns").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-watch]"), p = e.target.closest("[data-pub]");
++      if (b) watch(b.dataset.watch);
++      if (p && !p.classList.contains("is-on")) publish(p.dataset.pub, p.dataset.file);
++    });
+     setKind("style");
+   }
+ 
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 4df9e7a..dff1274 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1119,6 +1119,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <div class="field-row wrap tr-knobs">
+           <label class="field"><span class="label">Run name</span><input type="text" id="trRunName" placeholder="fosforida-style-v1" /></label>
+           <label class="field"><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="20000" step="50" /></label>
++          <label class="field"><span class="label">Save every <em>epochs</em></span><input type="number" id="tr_save_epochs" min="1" max="100" step="1" value="1" /></label>
+           <label class="field"><span class="label">Rank</span><input type="number" id="tr_rank" min="4" max="128" step="4" /></label>
+           <label class="field"><span class="label">Learning rate</span><input type="number" id="tr_lr" value="0.0001" step="0.00001" /></label>
+           <label class="field"><span class="label">AR weight <em>0 = sound only</em></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
+@@ -1132,8 +1133,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <button type="button" class="btn ghost small danger" id="trStop" hidden>Stop</button></div>
+         <div class="tr-watch" id="trWatch" hidden><div id="trWatchHead"></div><div class="pc-bar"><i id="trBar"></i></div><pre class="mono tr-tail" id="trTail"></pre></div>
+       </section>
+-      <section class="tr-step"><h3><span class="ps-mark">4</span> Runs <em>a finished LoRA is in loras/RUN/, ready in Create</em></h3>
+-        <div id="trRuns"></div>
++      <section class="tr-step"><h3><span class="ps-mark">4</span> Runs <em>the history: every run, its curves and its epochs; an epoch to loras/ is ready in Create</em></h3>
++        <div class="tr-cards" id="trRuns"></div>
+       </section>
+     </div>
+   </section>
+-- 
+2.43.0
+

@@ -1,0 +1,366 @@
+From c1e43018d6070739c28cb86aeef552ce6601f737 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 18:27:17 -0600
+Subject: [PATCH 1161/1177] HERESY 1167: Engine's Artwork card (the painter: by
+ the cards, Krea 2 Muse Q4 or Q8, SDXL), the painters credited, the jazz
+ chords gone
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026: «Переключатель квантов Q8 / Q4 оформишь в Engine? Изначальным выставь Q4»; «Кредит не забудь автору»;
+«К хуям убери "джазовые аккорды" из "моей партитуры" в Творце. Это никому не нужно».
+· Engine → Artwork, under the Writer (Appearance beside both): who paints a take's artwork: by the cards (Krea 2 Muse Q4
+  from 16 GB, else SDXL: the lab decides), Krea 2 Muse Q4, Q8, or SDXL, each with its room and its time; this browser's
+  choice (yue2.artPainter, mirrored to the settings file, where the lab and the API read it); every draw asks for it.
+  Krea 2 Muse by Stable Yogi and Krea 2 credited there and in About (with CyberRealistic XL by Cyberdelia).
+· the draw's toast and the menu's hint: «a minute or two» (Krea with its prompter and its critic), not half a minute.
+· the score's examples: the jazz chords chip and example gone.
+The console test: Engine's rows with the Artwork card, the examples without the jazz. 19 keys in the six catalogs.
+cdp-console 334/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 18 ++++++++++--------
+ tools/console/app.js            | 23 +++++++++++++++++------
+ tools/console/heresy-i18n-be.js | 21 ++++++++++++++++++++-
+ tools/console/heresy-i18n-el.js | 21 ++++++++++++++++++++-
+ tools/console/heresy-i18n-es.js | 21 ++++++++++++++++++++-
+ tools/console/heresy-i18n-it.js | 21 ++++++++++++++++++++-
+ tools/console/heresy-i18n-ru.js | 21 ++++++++++++++++++++-
+ tools/console/heresy-i18n-uk.js | 21 ++++++++++++++++++++-
+ tools/console/index.html        | 23 ++++++++++++++++++++++-
+ 9 files changed, 169 insertions(+), 21 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 8e69be5..3204db9 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -547,9 +547,10 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+ .engine-grid > .eg-loras { order: 6; }
+ .engine-grid > .eg-sliders { order: 7; }
+ .engine-grid > .eg-writer { order: 8; }
+-.engine-grid > .eg-look { order: 9; }
+-.engine-grid > .eg-log { order: 10; }
+-.engine-grid > .eg-about { order: 11; }
++.engine-grid > .eg-art { order: 9; }       /* HERESY 1167: the Artwork card under the Writer's */
++.engine-grid > .eg-look { order: 10; }
++.engine-grid > .eg-log { order: 11; }
++.engine-grid > .eg-about { order: 12; }
+ @media (min-width: 1400px) {
+   .engine-grid { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); }
+   .engine-grid > .eg-server   { grid-area: 1 / 1 / 2 / 11; }    /* Server over Hardware | the log    1/3 · 2/3 */
+@@ -557,12 +558,13 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+   .engine-grid > .eg-log      { grid-area: 1 / 11 / 3 / 31; }
+   .engine-grid > .eg-compute  { grid-area: 3 / 1 / 4 / 13; }    /* Compute | GPUs                    2/5 · 3/5 */
+   .engine-grid > .eg-gpus     { grid-area: 3 / 13 / 4 / 31; }
+-  .engine-grid > .eg-look     { grid-area: 4 / 1 / 5 / 21; }    /* Appearance | Writer               4/6 · 2/6 */
++  .engine-grid > .eg-look     { grid-area: 4 / 1 / 6 / 21; }    /* Appearance | Writer over Artwork  4/6 · 2/6 */
+   .engine-grid > .eg-writer   { grid-area: 4 / 21 / 5 / 31; }
+-  .engine-grid > .eg-vae      { grid-area: 5 / 1 / 6 / 6; }     /* VAEs | LoRAs                      1/6 · 5/6 */
+-  .engine-grid > .eg-loras    { grid-area: 5 / 6 / 6 / 31; }
+-  .engine-grid > .eg-sliders  { grid-area: 6 / 1 / 7 / 31; }
+-  .engine-grid > .eg-about    { grid-area: 7 / 1 / 8 / 31; }
++  .engine-grid > .eg-art      { grid-area: 5 / 21 / 6 / 31; }   /* HERESY 1167 */
++  .engine-grid > .eg-vae      { grid-area: 6 / 1 / 7 / 6; }     /* VAEs | LoRAs                      1/6 · 5/6 */
++  .engine-grid > .eg-loras    { grid-area: 6 / 6 / 7 / 31; }
++  .engine-grid > .eg-sliders  { grid-area: 7 / 1 / 8 / 31; }
++  .engine-grid > .eg-about    { grid-area: 8 / 1 / 9 / 31; }
+   /* the log fills its column beside Server and Hardware, 260px at least */
+   .eg-log .log-body { flex: 1 1 0; height: auto; min-height: 260px; }
+   /* a sixth is narrower than two tiles: the decoders one under another */
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 69cc602..2fdc368 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -104,7 +104,7 @@
+   var MODES = { full: "Full plan", melody: "Melody only", off: "Direct" };
+ 
+   // Short original examples for "Supply your own score": an eight-bar melody
+-  // for the City Lights words, the same with chords, and a jazz reharmonization.
++  // for the City Lights words, and the same with chords (HERESY 1167: the jazz one gone, Viktor: «Это никому не нужно»).
+   var ABC_HEAD = 'X:1\nT:\nM:4/4\nL:1/16\nQ:1/4=88\nV: Vocal clef=treble name="Vocal Melody" snm="Vocal"\n' +
+                  'V: Ins clef=treble name="Ins Melody" snm="Inst."\nK:C\n';
+   function exampleScore(v1, v2, v3, v4, c1, c2, c3, c4) {
+@@ -115,8 +115,7 @@
+   }
+   var EXAMPLE_ABC = {
+     melody: exampleScore("", "", "", "", "", "", "", ""),
+-    score: exampleScore('"C"', '"G"', '"Am"', '"F"', '"C"', '"F"', '"G"', '"C"'),
+-    jazz: exampleScore('"Cmaj7"', '"G7"', '"Am7"', '"Fmaj7"', '"Cmaj7"', '"Fmaj7"', '"G7"', '"Cmaj7"')
++    score: exampleScore('"C"', '"G"', '"Am"', '"F"', '"C"', '"F"', '"G"', '"C"')
+   };
+ 
+   /* ------------------------------------------------------------ helpers */
+@@ -4452,6 +4451,16 @@
+   // (the lab keeps one job a take anyway; the page started a second poller and a second pair of toasts). The lab now holds
+   // a job that finds no card with room in its queue: the wait is said once.
+   var ARTING = {};
++  // HERESY 1167: Engine → Artwork: the painter this browser asks for (empty: the lab decides by the cards)
++  (function () {
++    var sel = $("artPainter");
++    if (!sel) return;
++    sel.value = recall("yue2.artPainter") || "";
++    sel.addEventListener("change", function () {
++      store("yue2.artPainter", this.value || null);
++      toast(this.value ? "Artwork from now on: " + this.options[this.selectedIndex].textContent : "Artwork: the painter by the cards");
++    });
++  })();
+   function drawArt(name, again) {
+     var take = findTake(name), title = take ? displayTitle(take) : name;
+     if (ARTING[name]) {
+@@ -4460,9 +4469,11 @@
+       return Promise.resolve();
+     }
+     ARTING[name] = "draw";
+-    toast("Drawing artwork for “" + title + "”: a prompt from its style and words, then the picture (about half a minute)");
++    toast("Drawing artwork for “" + title + "”: a prompt from its style and words, then the picture (a minute or two)");
++    var painter = recall("yue2.artPainter") || "";      // HERESY 1167: Engine → Artwork; empty: by the cards
+     var ask = function (first) {
+-      return api("/lab/art/draw?name=" + encodeURIComponent(name) + (first && again ? "&again=1" : "")).then(function (d) {
++      return api("/lab/art/draw?name=" + encodeURIComponent(name) + (first && again ? "&again=1" : "") +
++                 (first && painter ? "&painter=" + encodeURIComponent(painter) : "")).then(function (d) {
+         if (d && (d.status === "queued" || d.status === "running")) {
+           if (d.status === "queued" && d.waiting && ARTING[name] !== "wait") {
+             ARTING[name] = "wait";
+@@ -6669,7 +6680,7 @@
+         ? { icon: "▣", label: ARTING[name] === "wait" ? "Artwork waits for a card…" : "Drawing artwork…", disabled: true, action: function () {} }
+         : artUrl(name)
+         ? { icon: "↻", label: "Redraw artwork", hint: "a new prompt, a new picture", action: function () { drawArt(name, true); } }
+-        : { icon: "▣", label: "Draw artwork", hint: "half a minute on a GPU", action: function () { drawArt(name, false); } },
++        : { icon: "▣", label: "Draw artwork", hint: "a minute or two on a GPU", action: function () { drawArt(name, false); } },
+       // HERESY 1156 (Viktor: «В меню мыши Remove current Artwork»): taken off the take, kept beside it
+       take.session || !artUrl(name) ? null : { icon: "✕", label: "Remove current artwork", hint: "kept beside the take", action: function () { removeArt(name); } },
+       { sep: true },
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index e8c8a14..a5abcfd 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2585,5 +2585,24 @@ RuachI18n.add("be", {
+ "The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджэты токенаў партытуры і песні самі займаюць усё акно ў 24 576 токенаў: стылю і тэксту нічога не застаецца. Зменшы max tokens у «Сэмплінг партытуры» ці «Сэмплінг музыкі», або «Макс. даўжыня».",
+ "Only the liked": "Толькі ўпадабаныя",
+ "Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Толькі неўпадабаныя: «Не падабаецца» хавае сэмпл са спісаў, як у SUNO (нічога не выдаляецца); гэтая кнопка паказвае іх",
+-"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не падабаецца: сэмпл сыходзіць са спісаў, нічога не выдалена (фільтр 👎 пакажа яго)"
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не падабаецца: сэмпл сыходзіць са спісаў, нічога не выдалена (фільтр 👎 пакажа яго)",
++"Artwork": "Вокладка",
++"artwork": "вокладка",
++"Painter": "Мастак",
++"Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.": "Хто малюе вокладку сэмпла: для плэера, картак і MP3. Малюнак чакае ў чарзе відэакарту з месцам.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL (the studio's A/B on twelve instruments, 05.10.2026); SDXL is for cards it does not fit": "Krea 2 Muse малюе інструменты і сцэны куды больш верна за SDXL (A/B студыі на дванаццаці інструментах, 05.10.2026); SDXL — для карт, куды Krea не змяшчаецца",
++"By the cards: Krea 2 Muse Q4 from 16 GB, else SDXL": "Па відэакартах: Krea 2 Muse Q4 ад 16 ГБ, інакш SDXL",
++"Krea 2 Muse · Q4 · about 12 GB · about 25 s a picture": "Krea 2 Muse · Q4 · каля 12 ГБ · каля 25 с на малюнак",
++"Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture": "Krea 2 Muse · Q8 · каля 18 ГБ · каля 22 с на малюнак",
++"SDXL CyberRealistic · about 15 GB · about 10 s a picture": "SDXL CyberRealistic · каля 15 ГБ · каля 10 с на малюнак",
++"Krea 2 Muse by": "Krea 2 Muse ад",
++", a fine-tune of": ", данавучанне",
++"(Krea 2 Community License: its pictures pass a content filter); SDXL: CyberRealistic XL by Cyberdelia. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: яго малюнкі праходзяць фільтр змесціва); SDXL: CyberRealistic XL ад Cyberdelia. Час на RTX 3090, без промпта і прагляду крытыкам.",
++"Artwork: Krea 2 Muse by Stable Yogi": "Вокладкі: Krea 2 Muse ад Stable Yogi",
++"Artwork: Krea 2, by Krea": "Вокладкі: Krea 2 ад Krea",
++"Artwork on smaller cards: CyberRealistic XL by Cyberdelia": "Вокладкі на меншых картах: CyberRealistic XL ад Cyberdelia",
++"Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Малюецца вокладка для «{0}»: промпт са стылю і слоў, потым малюнак (хвіліна-другая)",
++"a minute or two on a GPU": "хвіліна-другая на відэакарце",
++"Artwork from now on: {0}": "Вокладкі цяпер: {0}",
++"Artwork: the painter by the cards": "Вокладкі: мастак па відэакартах"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 48b5ae7..b32d2ab 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2584,5 +2584,24 @@ RuachI18n.add("el", {
+ "The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Οι προϋπολογισμοί tokens της παρτιτούρας και του τραγουδιού γεμίζουν μόνοι τους το παράθυρο των 24.576 tokens: δεν μένει τίποτα για το ύφος και τους στίχους. Μείωσε το max tokens στη «Δειγματοληψία παρτιτούρας» ή στη «Δειγματοληψία μουσικής», ή τη «Μέγιστη διάρκεια».",
+ "Only the liked": "Μόνο όσα μου αρέσουν",
+ "Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Μόνο όσα δεν μου αρέσουν: το «Δεν μου αρέσει» κρύβει μια λήψη από τις λίστες, όπως στο SUNO (τίποτα δεν διαγράφεται)· αυτό το κουμπί τις δείχνει",
+-"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "Το «{0}» δεν μου αρέσει: φεύγει από τις λίστες, τίποτα δεν διαγράφεται (το φίλτρο 👎 το δείχνει)"
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "Το «{0}» δεν μου αρέσει: φεύγει από τις λίστες, τίποτα δεν διαγράφεται (το φίλτρο 👎 το δείχνει)",
++"Artwork": "Εξώφυλλο",
++"artwork": "εξώφυλλο",
++"Painter": "Ζωγράφος",
++"Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.": "Ποιος ζωγραφίζει το εξώφυλλο μιας λήψης: για το πρόγραμμα αναπαραγωγής, τις κάρτες, το MP3. Η ζωγραφιά περιμένει στην ουρά κάρτα με χώρο.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL (the studio's A/B on twelve instruments, 05.10.2026); SDXL is for cards it does not fit": "Το Krea 2 Muse ζωγραφίζει όργανα και σκηνές πολύ πιο πιστά από το SDXL (το A/B του στούντιο σε δώδεκα όργανα, 05.10.2026)· το SDXL είναι για κάρτες όπου δεν χωρά",
++"By the cards: Krea 2 Muse Q4 from 16 GB, else SDXL": "Κατά τις κάρτες: Krea 2 Muse Q4 από 16 GB, αλλιώς SDXL",
++"Krea 2 Muse · Q4 · about 12 GB · about 25 s a picture": "Krea 2 Muse · Q4 · περίπου 12 GB · περίπου 25 δ ανά εικόνα",
++"Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture": "Krea 2 Muse · Q8 · περίπου 18 GB · περίπου 22 δ ανά εικόνα",
++"SDXL CyberRealistic · about 15 GB · about 10 s a picture": "SDXL CyberRealistic · περίπου 15 GB · περίπου 10 δ ανά εικόνα",
++"Krea 2 Muse by": "Krea 2 Muse από",
++", a fine-tune of": ", εκλεπτυσμένο από το",
++"(Krea 2 Community License: its pictures pass a content filter); SDXL: CyberRealistic XL by Cyberdelia. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: οι εικόνες του περνούν φίλτρο περιεχομένου)· SDXL: CyberRealistic XL από τον Cyberdelia. Χρόνοι σε RTX 3090, χωρίς το prompt και τον έλεγχο.",
++"Artwork: Krea 2 Muse by Stable Yogi": "Εξώφυλλα: Krea 2 Muse από τον Stable Yogi",
++"Artwork: Krea 2, by Krea": "Εξώφυλλα: Krea 2, από την Krea",
++"Artwork on smaller cards: CyberRealistic XL by Cyberdelia": "Εξώφυλλα σε μικρότερες κάρτες: CyberRealistic XL από τον Cyberdelia",
++"Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Ζωγραφίζεται εξώφυλλο για το «{0}»: ένα prompt από το ύφος και τις λέξεις, μετά η εικόνα (ένα-δυο λεπτά)",
++"a minute or two on a GPU": "ένα-δυο λεπτά σε GPU",
++"Artwork from now on: {0}": "Εξώφυλλα από εδώ και πέρα: {0}",
++"Artwork: the painter by the cards": "Εξώφυλλα: ο ζωγράφος κατά τις κάρτες"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index f4bca34..acc487f 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2584,5 +2584,24 @@ RuachI18n.add("es", {
+ "The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Los presupuestos de tokens de la partitura y de la canción llenan solos la ventana de 24 576 tokens: no queda nada para el estilo y la letra. Baja max tokens en «Muestreo de la partitura» o «Muestreo de la música», o la «Duración máxima».",
+ "Only the liked": "Solo las que me gustan",
+ "Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Solo las que no me gustan: «No me gusta» oculta una toma de las listas, como en SUNO (no se borra nada); este botón las muestra",
+-"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» no me gusta: sale de las listas, no se borra nada (el filtro 👎 la muestra)"
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» no me gusta: sale de las listas, no se borra nada (el filtro 👎 la muestra)",
++"Artwork": "Portada",
++"artwork": "portada",
++"Painter": "Pintor",
++"Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.": "Quién pinta la portada de una toma: la del reproductor, las tarjetas, el MP3. Un dibujo espera en la cola una GPU con sitio.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL (the studio's A/B on twelve instruments, 05.10.2026); SDXL is for cards it does not fit": "Krea 2 Muse pinta instrumentos y escenas mucho más fieles que SDXL (el A/B del estudio con doce instrumentos, 05.10.2026); SDXL es para las tarjetas donde no cabe",
++"By the cards: Krea 2 Muse Q4 from 16 GB, else SDXL": "Según las GPU: Krea 2 Muse Q4 desde 16 GB, si no SDXL",
++"Krea 2 Muse · Q4 · about 12 GB · about 25 s a picture": "Krea 2 Muse · Q4 · unos 12 GB · unos 25 s por imagen",
++"Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture": "Krea 2 Muse · Q8 · unos 18 GB · unos 22 s por imagen",
++"SDXL CyberRealistic · about 15 GB · about 10 s a picture": "SDXL CyberRealistic · unos 15 GB · unos 10 s por imagen",
++"Krea 2 Muse by": "Krea 2 Muse de",
++", a fine-tune of": ", un ajuste fino de",
++"(Krea 2 Community License: its pictures pass a content filter); SDXL: CyberRealistic XL by Cyberdelia. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: sus imágenes pasan un filtro de contenido); SDXL: CyberRealistic XL de Cyberdelia. Tiempos en una RTX 3090, sin contar el prompt ni la revisión.",
++"Artwork: Krea 2 Muse by Stable Yogi": "Portadas: Krea 2 Muse de Stable Yogi",
++"Artwork: Krea 2, by Krea": "Portadas: Krea 2, de Krea",
++"Artwork on smaller cards: CyberRealistic XL by Cyberdelia": "Portadas en tarjetas más pequeñas: CyberRealistic XL de Cyberdelia",
++"Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Dibujando la portada de «{0}»: un prompt a partir de su estilo y sus palabras, luego la imagen (un minuto o dos)",
++"a minute or two on a GPU": "un minuto o dos en una GPU",
++"Artwork from now on: {0}": "Portadas a partir de ahora: {0}",
++"Artwork: the painter by the cards": "Portadas: el pintor según las GPU"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 91af520..2d604ae 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2584,5 +2584,24 @@ RuachI18n.add("it", {
+ "The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "I budget di token della partitura e della canzone riempiono da soli la finestra di 24.576 token: non resta nulla per lo stile e il testo. Abbassa max tokens in «Campionamento della partitura» o «Campionamento della musica», o la «Durata massima».",
+ "Only the liked": "Solo i Mi piace",
+ "Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Solo i Non mi piace: «Non mi piace» nasconde un take dalle liste, come in SUNO (non si cancella nulla); questo pulsante li mostra",
+-"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» non mi piace: esce dalle liste, non si cancella nulla (il filtro 👎 lo mostra)"
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» non mi piace: esce dalle liste, non si cancella nulla (il filtro 👎 lo mostra)",
++"Artwork": "Copertina",
++"artwork": "copertina",
++"Painter": "Pittore",
++"Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.": "Chi dipinge la copertina di un take: per il lettore, le schede, l'MP3. Un disegno aspetta in coda una GPU con spazio.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL (the studio's A/B on twelve instruments, 05.10.2026); SDXL is for cards it does not fit": "Krea 2 Muse dipinge strumenti e scene molto più fedeli di SDXL (l'A/B dello studio su dodici strumenti, 05.10.2026); SDXL è per le schede in cui non entra",
++"By the cards: Krea 2 Muse Q4 from 16 GB, else SDXL": "In base alle GPU: Krea 2 Muse Q4 da 16 GB, altrimenti SDXL",
++"Krea 2 Muse · Q4 · about 12 GB · about 25 s a picture": "Krea 2 Muse · Q4 · circa 12 GB · circa 25 s a immagine",
++"Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture": "Krea 2 Muse · Q8 · circa 18 GB · circa 22 s a immagine",
++"SDXL CyberRealistic · about 15 GB · about 10 s a picture": "SDXL CyberRealistic · circa 15 GB · circa 10 s a immagine",
++"Krea 2 Muse by": "Krea 2 Muse di",
++", a fine-tune of": ", un fine-tune di",
++"(Krea 2 Community License: its pictures pass a content filter); SDXL: CyberRealistic XL by Cyberdelia. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: le sue immagini passano un filtro dei contenuti); SDXL: CyberRealistic XL di Cyberdelia. Tempi su una RTX 3090, senza il prompt e la revisione.",
++"Artwork: Krea 2 Muse by Stable Yogi": "Copertine: Krea 2 Muse di Stable Yogi",
++"Artwork: Krea 2, by Krea": "Copertine: Krea 2, di Krea",
++"Artwork on smaller cards: CyberRealistic XL by Cyberdelia": "Copertine su schede più piccole: CyberRealistic XL di Cyberdelia",
++"Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Si disegna la copertina di «{0}»: un prompt dal suo stile e dalle sue parole, poi l'immagine (un minuto o due)",
++"a minute or two on a GPU": "un minuto o due su una GPU",
++"Artwork from now on: {0}": "Copertine d'ora in poi: {0}",
++"Artwork: the painter by the cards": "Copertine: il pittore in base alle GPU"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 847f43a..86aef81 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2590,5 +2590,24 @@ RuachI18n.add("ru", {
+ "The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджеты токенов партитуры и песни сами по себе занимают всё окно в 24 576 токенов: стилю и тексту ничего не остаётся. Уменьши max tokens в «Сэмплинг партитуры» или «Сэмплинг музыки», либо «Макс. длина».",
+ "Only the liked": "Только понравившиеся",
+ "Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Только непонравившиеся: «Не нравится» прячет семпл из списков, как в SUNO (ничего не удаляется); эта кнопка показывает их",
+-"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не нравится: семпл уходит из списков, ничего не удалено (фильтр 👎 покажет его)"
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не нравится: семпл уходит из списков, ничего не удалено (фильтр 👎 покажет его)",
++"Artwork": "Обложка",
++"artwork": "обложка",
++"Painter": "Художник",
++"Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.": "Кто рисует обложку семпла: для плеера, карточек и MP3. Рисунок ждёт в очереди видеокарту с местом.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL (the studio's A/B on twelve instruments, 05.10.2026); SDXL is for cards it does not fit": "Krea 2 Muse рисует инструменты и сцены куда вернее SDXL (A/B студии на двенадцати инструментах, 05.10.2026); SDXL — для карт, куда Krea не помещается",
++"By the cards: Krea 2 Muse Q4 from 16 GB, else SDXL": "По видеокартам: Krea 2 Muse Q4 от 16 ГБ, иначе SDXL",
++"Krea 2 Muse · Q4 · about 12 GB · about 25 s a picture": "Krea 2 Muse · Q4 · около 12 ГБ · около 25 с на картинку",
++"Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture": "Krea 2 Muse · Q8 · около 18 ГБ · около 22 с на картинку",
++"SDXL CyberRealistic · about 15 GB · about 10 s a picture": "SDXL CyberRealistic · около 15 ГБ · около 10 с на картинку",
++"Krea 2 Muse by": "Krea 2 Muse от",
++", a fine-tune of": ", дообучение",
++"(Krea 2 Community License: its pictures pass a content filter); SDXL: CyberRealistic XL by Cyberdelia. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: его картинки проходят фильтр содержимого); SDXL: CyberRealistic XL от Cyberdelia. Время на RTX 3090, без промпта и просмотра критиком.",
++"Artwork: Krea 2 Muse by Stable Yogi": "Обложки: Krea 2 Muse от Stable Yogi",
++"Artwork: Krea 2, by Krea": "Обложки: Krea 2 от Krea",
++"Artwork on smaller cards: CyberRealistic XL by Cyberdelia": "Обложки на картах поменьше: CyberRealistic XL от Cyberdelia",
++"Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Рисуется обложка для «{0}»: промпт из стиля и слов, потом картинка (минута-другая)",
++"a minute or two on a GPU": "минута-другая на видеокарте",
++"Artwork from now on: {0}": "Обложки отныне: {0}",
++"Artwork: the painter by the cards": "Обложки: художник по видеокартам"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 8b47065..aa143d8 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2585,5 +2585,24 @@ RuachI18n.add("uk", {
+ "The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджети токенів партитури й пісні самі займають усе вікно в 24 576 токенів: стилю й тексту нічого не лишається. Зменш max tokens у «Семплінг партитури» чи «Семплінг музики», або «Макс. довжина».",
+ "Only the liked": "Лише вподобані",
+ "Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Лише невподобані: «Не подобається» ховає семпл зі списків, як у SUNO (нічого не видаляється); ця кнопка показує їх",
+-"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не подобається: семпл іде зі списків, нічого не видалено (фільтр 👎 покаже його)"
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не подобається: семпл іде зі списків, нічого не видалено (фільтр 👎 покаже його)",
++"Artwork": "Обкладинка",
++"artwork": "обкладинка",
++"Painter": "Художник",
++"Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.": "Хто малює обкладинку семпла: для плеєра, карток і MP3. Малюнок чекає в черзі на відеокарту з місцем.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL (the studio's A/B on twelve instruments, 05.10.2026); SDXL is for cards it does not fit": "Krea 2 Muse малює інструменти й сцени набагато вірніше за SDXL (A/B студії на дванадцяти інструментах, 05.10.2026); SDXL — для карт, куди Krea не вміщається",
++"By the cards: Krea 2 Muse Q4 from 16 GB, else SDXL": "За відеокартами: Krea 2 Muse Q4 від 16 ГБ, інакше SDXL",
++"Krea 2 Muse · Q4 · about 12 GB · about 25 s a picture": "Krea 2 Muse · Q4 · близько 12 ГБ · близько 25 с на картинку",
++"Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture": "Krea 2 Muse · Q8 · близько 18 ГБ · близько 22 с на картинку",
++"SDXL CyberRealistic · about 15 GB · about 10 s a picture": "SDXL CyberRealistic · близько 15 ГБ · близько 10 с на картинку",
++"Krea 2 Muse by": "Krea 2 Muse від",
++", a fine-tune of": ", донавчання",
++"(Krea 2 Community License: its pictures pass a content filter); SDXL: CyberRealistic XL by Cyberdelia. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: його картинки проходять фільтр вмісту); SDXL: CyberRealistic XL від Cyberdelia. Час на RTX 3090, без промпта й перегляду критиком.",
++"Artwork: Krea 2 Muse by Stable Yogi": "Обкладинки: Krea 2 Muse від Stable Yogi",
++"Artwork: Krea 2, by Krea": "Обкладинки: Krea 2 від Krea",
++"Artwork on smaller cards: CyberRealistic XL by Cyberdelia": "Обкладинки на менших картах: CyberRealistic XL від Cyberdelia",
++"Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Малюється обкладинка для «{0}»: промпт зі стилю й слів, потім картинка (хвилина-друга)",
++"a minute or two on a GPU": "хвилина-друга на відеокарті",
++"Artwork from now on: {0}": "Обкладинки відтепер: {0}",
++"Artwork: the painter by the cards": "Обкладинки: художник за відеокартами"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 2d3bf48..5f0946e 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -588,6 +588,23 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       </div>
+     </div>
+ 
++    <!-- HERESY 1167 (Viktor: «Muse - отличный файнтюн… Для карт ниже 24GB VRAM… оставим SDXL»; «Переключатель квантов Q8 / Q4
++         оформишь в Engine? Изначальным выставь Q4»): who paints a take's artwork; this browser's choice, every draw asks for it -->
++    <div class="card art-card eg-art" id="artCard">
++      <h3>Artwork</h3>
++      <p class="hint">Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.</p>
++      <label class="field"><span class="label">Painter</span>
++        <select id="artPainter" data-tip="Krea 2 Muse paints instruments and scenes far truer than SDXL (the studio's A/B on twelve instruments, 05.10.2026); SDXL is for cards it does not fit">
++          <option value="">By the cards: Krea 2 Muse Q4 from 16 GB, else SDXL</option>
++          <option value="krea2-q4">Krea 2 Muse · Q4 · about 12 GB · about 25 s a picture</option>
++          <option value="krea2-q8">Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture</option>
++          <option value="sdxl">SDXL CyberRealistic · about 15 GB · about 10 s a picture</option>
++        </select></label>
++      <p class="row-hint">Krea 2 Muse by <a href="https://civitai.com/models/2741166" target="_blank" rel="noopener noreferrer">Stable Yogi</a>, a fine-tune of
++        <a href="https://krea.ai/krea-2-licensing" target="_blank" rel="noopener noreferrer">Krea 2</a> (Krea 2 Community License: its pictures pass a content filter);
++        SDXL: CyberRealistic XL by Cyberdelia. Times on an RTX 3090, the prompt and the look-over not counted.</p>
++    </div>
++
+     <div class="card wide lora-card eg-vae">
+       <div class="lora-card-head"><h3>VAEs</h3>
+         <span class="lora-card-note" id="vaeCardNote"></span></div>
+@@ -633,6 +650,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <li><a href="https://github.com/nomadkaraoke/python-audio-separator" target="_blank" rel="noopener noreferrer">Stems: audio-separator (BS-Roformer, htdemucs_ft)</a><span class="about-where" translate="no">github · nomadkaraoke/python-audio-separator</span></li>
+             <li><a href="https://github.com/SYSTRAN/faster-whisper" target="_blank" rel="noopener noreferrer">Lyrics check: faster-whisper</a><span class="about-where" translate="no">github · SYSTRAN/faster-whisper</span></li>
+             <li><a href="https://fontawesome.com/license/free" target="_blank" rel="noopener noreferrer">Icons: Font Awesome Free</a><span class="about-where" translate="no">CC BY 4.0</span></li>
++            <!-- HERESY 1167 (Viktor: «Кредит не забудь автору»): the artwork's painters -->
++            <li><a href="https://civitai.com/models/2741166" target="_blank" rel="noopener noreferrer">Artwork: Krea 2 Muse by Stable Yogi</a><span class="about-where" translate="no">civitai · Krea 2 Community License</span></li>
++            <li><a href="https://krea.ai/krea-2-licensing" target="_blank" rel="noopener noreferrer">Artwork: Krea 2, by Krea</a><span class="about-where" translate="no">Krea 2 is licensed under the Krea 2 Community License Agreement</span></li>
++            <li><a href="https://civitai.com/models/312530" target="_blank" rel="noopener noreferrer">Artwork on smaller cards: CyberRealistic XL by Cyberdelia</a><span class="about-where" translate="no">civitai · CreativeML Open RAIL++-M</span></li>
+           </ul>
+           <!-- HERESY 1166 (Viktor: «Все наши восходящие HF репозитории добавь в колонку Ruach Studio, через пустую строку»):
+                ours on Hugging Face, after a line's space; private until the release, the 💎 sets' bucket too -->
+@@ -956,7 +977,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+                 <div class="chiprow">
+                   <button type="button" class="chip" data-abc="melody">Melody only</button>
+                   <button type="button" class="chip" data-abc="score">Melody and chords</button>
+-                  <button type="button" class="chip" data-abc="jazz">Jazz chords</button>
++                  <!-- HERESY 1167 (Viktor: «убери "джазовые аккорды" из "моей партитуры" в Творце. Это никому не нужно») -->
+                 </div>
+               </div>
+               <div class="drawer-act">
+-- 
+2.43.0
+

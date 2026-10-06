@@ -1,0 +1,48 @@
+From 91a0168ac4fe0048504654a7def8dc98967fd200 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 17:47:45 -0600
+Subject: [PATCH 1160/1177] HERESY 1167: Daylight on Viktor's #f8f9fa
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026: «моя дневная тема, вот эта сЕрь в бекграунде... она очень грязная. Возьми мой #f8f9fa как основной
+бекграунда дневной моей темы». The theme's ground #eef0f3 → #f8f9fa (and its swatch in the theme list); the bar's and the
+heads' washes are mixed from the ground, so they follow it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css   | 2 +-
+ tools/console/themes.js | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7329cea..8e69be5 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -314,7 +314,7 @@
+ 
+ /* neutral light, for bright rooms */
+ [data-theme="daylight"] {
+-  --ground: #eef0f3;
++  --ground: #f8f9fa;   /* HERESY 1167 (Viktor: «эта сЕрь в бекграунде... она очень грязная. Возьми мой #f8f9fa»); it was #eef0f3 */
+   --panel: #ffffff;
+   --raise: #f6f7f9;
+   --sunk: #e5e8ec;
+diff --git a/tools/console/themes.js b/tools/console/themes.js
+index d348fdd..accf912 100644
+--- a/tools/console/themes.js
++++ b/tools/console/themes.js
+@@ -22,7 +22,7 @@
+     {"id": "gruvbox", "name": "Gruvbox", "family": "classic", "dark": true, "bg": "#1d2021", "fg": "#fbf1c7", "accent": "#fabd2f", "rule": "#504945"},
+     {"id": "solarized-dark", "name": "Solarized dark", "family": "classic", "dark": true, "bg": "#002b36", "fg": "#eee8d5", "accent": "#e0b020", "rule": "#1f5461"},
+     {"id": "solarized-light", "name": "Solarized light", "family": "classic", "dark": false, "bg": "#eee8d5", "fg": "#073642", "accent": "#7d5500", "rule": "#cfc6ad"},
+-    {"id": "daylight", "name": "Daylight", "family": "classic", "dark": false, "bg": "#eef0f3", "fg": "#161a1f", "accent": "#9c4708", "rule": "#cfd5dd"},
++    {"id": "daylight", "name": "Daylight", "family": "classic", "dark": false, "bg": "#f8f9fa", "fg": "#161a1f", "accent": "#9c4708", "rule": "#cfd5dd"},
+     {"id": "contrast", "name": "High contrast", "family": "classic", "dark": true, "bg": "#000000", "fg": "#ffffff", "accent": "#ffcc40", "rule": "#8a8a8a"},
+     {"id": "warm-clay", "name": "Warm Clay", "family": "soft", "dark": false, "bg": "#F8E3C4", "fg": "#2C1810", "accent": "#793a25", "rule": "#D4B176"},
+     {"id": "cocoa", "name": "Cocoa", "family": "soft", "dark": false, "bg": "#EFEBE9", "fg": "#5D4037", "accent": "#66483d", "rule": "#BCAAA4"},
+-- 
+2.43.0
+

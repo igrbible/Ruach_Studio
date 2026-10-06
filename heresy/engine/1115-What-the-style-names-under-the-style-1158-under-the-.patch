@@ -1,0 +1,226 @@
+From 2449c476b2bd8cbee25d099405a889ce6f074d4e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 13:46:40 -0600
+Subject: [PATCH 1115/1177] =?UTF-8?q?What=20the=20style=20names,=20under?=
+ =?UTF-8?q?=20the=20style=20(1158):=20under=20the=20Style=20prompt=20a=20c?=
+ =?UTF-8?q?hip=20for=20each=20instrument=20and=20style=20of=20the=20cheat-?=
+ =?UTF-8?q?sheet=20the=20prompt=20names=20(the=20longest=20name=20first;?=
+ =?UTF-8?q?=20a=20name=20in=20brackets=20only=20when=20it=20is=20one;=20an?=
+ =?UTF-8?q?=20instrument=20by=20its=20own=20name=20too),=20coloured=20by?=
+ =?UTF-8?q?=20the=20sheet's=20verdict=20and=20wearing=20its=20picture;=20t?=
+ =?UTF-8?q?he=20pointer=20on=20one=20shows=20its=20card=20(the=20picture,?=
+ =?UTF-8?q?=20home,=20verdict,=20sound,=20=E2=96=B6=20A=20and=20=E2=96=B6?=
+ =?UTF-8?q?=20B=20with=20their=20seeds),=20a=20click=20the=20picture=20who?=
+ =?UTF-8?q?le=20or=20the=20sheet=20at=20that=20name;=20Alt+I=20opens=20the?=
+ =?UTF-8?q?=20sheet=20from=20anywhere?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               |  22 +++++
+ tools/console/heresy-instruments.js | 138 ++++++++++++++++++++++++++--
+ 2 files changed, 154 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index eed72ba..a81a2c7 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2639,6 +2639,28 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .hi-tabb.is-on { background: var(--amber); color: var(--panel); }
+ .hi-tools [hidden] { display: none !important; }
+ .hi-sname { font-weight: 600; }
++/* HERESY 1158: under the Style prompt, the instruments and styles it names; the pointer on one, its card */
++.hi-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
++.hi-chips:empty { display: none; }
++.hi-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border: 1px solid var(--line-a); border-radius: var(--r-pill);
++  background: var(--field); color: var(--ink); font: inherit; font-size: 12px; line-height: 18px; cursor: pointer; }
++.hi-chip:has(i) { padding-left: 3px; }
++.hi-chip i { width: 18px; height: 18px; border-radius: 50%; background: center / cover no-repeat; }
++.hi-chip:hover { border-color: var(--hover-line, var(--line-strong)); }
++.hi-chip.is-heard { border-color: color-mix(in srgb, var(--good) 55%, transparent); }
++.hi-chip.is-flag { border-color: color-mix(in srgb, var(--amber) 65%, transparent); }
++.hi-chip.is-no { border-color: color-mix(in srgb, var(--bad) 60%, transparent); color: var(--bad); }
++.hi-card { position: fixed; z-index: 75; width: min(470px, calc(100vw - 16px)); display: flex; gap: 12px; padding: 12px; border: 1px solid var(--line-strong-a);
++  border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 16px 40px var(--shadow-lg); font-size: 12.5px; line-height: 1.45; }
++.hi-card[hidden] { display: none; }
++.hc-pic { position: relative; flex: none; width: 150px; height: 150px; border: 0; padding: 0; border-radius: var(--r-md); background: var(--line-a) center / cover no-repeat; cursor: zoom-in; }
++.hc-pic i { position: absolute; right: -4px; bottom: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--amber); color: var(--panel); font: 700 13px/18px var(--sans); font-style: normal; text-align: center; }
++.hc-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
++.hc-body b { font-size: 14px; }
++.hc-st { font-size: 10.5px; letter-spacing: .04em; color: var(--dim); }
++.hc-st.is-heard { color: var(--good); } .hc-st.is-flag { color: var(--amber); font-weight: 600; } .hc-st.is-no { color: var(--bad); font-weight: 600; }
++.hc-plays { margin-top: 6px; }
++.hc-plays .hi-ab { justify-content: flex-start; }
+ .hi-plays { width: 196px; }
+ .hi-ab { display: flex; align-items: flex-start; justify-content: flex-end; gap: 6px; }
+ .hi-ab + .hi-ab { margin-top: 4px; }
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index c0f2afb..04bdccf 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -201,11 +201,13 @@
+     st.dispatchEvent(new Event("input", { bubbles: true }));
+     state.hooks.toast("Into the style: " + tag);
+   }
+-  function open() {
++  function open(q, tab) {
+     if (!$("hiBack")) build();
+     $("hiBack").hidden = false;
++    if (typeof q === "string") { state.q = q; $("hiSearch").value = q; }
++    if (tab) state.tab = tab;
+     paint();
+-    load().then(paint);
++    load().then(function () { paint(); paintChips(); });
+     setTimeout(function () { $("hiSearch").focus(); }, 30);
+   }
+   function close() { $("hiBack").hidden = true; }
+@@ -217,15 +219,139 @@
+     if (label && !$("hiOpen")) {
+       var b = document.createElement("button");
+       b.type = "button"; b.id = "hiOpen"; b.className = "hi-open"; b.textContent = "♪";
+-      b.setAttribute("data-tip", "Instruments: the cheat-sheet, with the probes to hear");
++      b.setAttribute("data-tip", "Instruments and styles: the cheat-sheet, with the probes to hear (Alt+I)");
+       b.setAttribute("aria-label", "Instruments cheat-sheet");
+       label.appendChild(b);
+       b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); open(); });
+     }
+-    load();                                     // the assistant's list is ready before the first draft
++    initChips();                                // HERESY 1158
++    load().then(paintChips);                    // the assistant's list is ready before the first draft
+   }
+ 
+-  // HERESY 1156: pictures drawn meanwhile reach the open sheet
+-  function paintArts() { if ($("hiBack") && !$("hiBack").hidden) paint(); }
++  // HERESY 1158 (Viktor: «В Творце/Creator подумай, как удобнее шпаргалку вызывать и попапить картинки нами одобренных
++  // инструментов»): under the Style prompt, the instruments and styles it names, each with its picture and the sheet's
++  // verdict in its colour; the pointer on one shows its card (the picture, its home, how it sounds, ▶ A and ▶ B with their
++  // seeds); a click shows the picture whole; Alt+I opens the sheet from anywhere
++  var KEYS = null, chipList = [], cardTimer = 0, cardFor = -1;
++  function keys() {
++    if (KEYS) return KEYS;
++    var out = [];
++    function add(k, item, kind) {
++      k = fold(k).replace(/[^\p{L}\p{N}\u266d#]+/gu, " ").trim();
++      if (k.length >= 3) out.push({ k: k, item: item, kind: kind });
++    }
++    DATA.instruments.forEach(function (i) {
++      if (!i.tag) return;
++      add(i.tag, i, "i"); add(i.tag.replace(/\s*\(.*?\)\s*/g, " "), i, "i");
++      if (!/-v\d+$/.test(i.slug)) add(i.slug.replace(/-/g, " "), i, "i");    // its own name too (sambuca, its tag a phrase)
++      var paren = /\(([^)]+)\)/.exec(i.tag);
++      if (paren && paren[1].length >= 5) add(paren[1], i, "i");     // a name in brackets (jaw harp), not a word (low)
++    });
++    (DATA.styles || []).forEach(function (st) {
++      add(st.tag, st, "s"); add(st.name.replace(/\s*\(.*?\)\s*/g, " "), st, "s");
++      var paren = /\(([^)]+)\)/.exec(st.name);
++      if (paren && paren[1].length >= 5) add(paren[1], st, "s");
++      if (st.group === "mode") add(st.tag.replace(/^[A-G][\u266d#b]?\s+/, "").replace(/\s*\(.*?\)\s*/g, " "), st, "s");
++    });
++    var seen = {};
++    KEYS = out.filter(function (o) { if (seen[o.k]) return false; seen[o.k] = 1; return true; })
++      .sort(function (a, b) { return b.k.length - a.k.length; });          // the longest name first: celtic harp before harp
++    return KEYS;
++  }
++  function named(text) {
++    var t = " " + fold(text).replace(/[^\p{L}\p{N}\u266d#]+/gu, " ") + " ", found = [], used = [];
++    keys().forEach(function (o) {
++      var at = t.indexOf(" " + o.k + " "), len = o.k.length;
++      if (at < 0) { at = t.indexOf(" " + o.k + "s "); len += 1; }        // violins, drums
++      if (at < 0 || found.some(function (f) { return f.item === o.item; })) return;
++      var end = at + len + 1;
++      if (used.some(function (u) { return at < u[1] && end > u[0]; })) return;   // inside a longer name found already
++      used.push([at, end]);
++      found.push({ item: o.item, kind: o.kind, at: at });
++    });
++    return found.sort(function (a, b) { return a.at - b.at; }).slice(0, 16);
++  }
++  function chipName(f) { return f.kind === "i" ? (f.item.tag.replace(/\s*\(.*?\)\s*/g, " ").trim() || f.item.slug) : f.item.name; }
++  function chipState(f) {
++    var p = probes(f.item.slug);
++    if (f.kind === "i") return status(f.item);
++    return styleKept(p) ? { cls: "is-heard", text: "\u2713 heard" } : { cls: "is-wait", text: (p.a || p.b) ? "not judged yet" : "no probe yet" };
++  }
++  function paintChips() {
++    var box = $("hiChips"), st = $("style");
++    if (!box || !st) return;
++    chipList = named(st.value || "");
++    var A = window.HeresyArt;
++    box.innerHTML = chipList.map(function (f, n) {
++      var art = artOf(probes(f.item.slug)), c = chipState(f);
++      return '<button type="button" class="hi-chip ' + c.cls + '" data-chip="' + n + '" aria-label="' + esc(chipName(f) + ": " + c.text) + '">' +
++        (art ? '<i style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)"></i>' : "") + esc(chipName(f)) + "</button>";
++    }).join("");
++  }
++  var chipsSoon = (function () { var t = 0; return function () { clearTimeout(t); t = setTimeout(paintChips, 250); }; })();
++  function cardHtml(f) {
++    var it = f.item, p = probes(it.slug), art = artOf(p), A = window.HeresyArt, c = chipState(f), guess = art && A.unseen && A.unseen(art);
++    return (art ? '<button type="button" class="hc-pic" data-hi-art="' + esc(art) + '" style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)" aria-label="See it whole">' +
++             (guess ? '<i data-tip="A guess: the painter does not know it">\u2248</i>' : "") + "</button>" : "") +
++      '<div class="hc-body"><b>' + esc(chipName(f)) + "</b>" + (it.home && it.home !== "everywhere" ? '<span class="hi-home">' + esc(it.home) + "</span>" : "") +
++      '<span class="hc-st ' + c.cls + '">' + esc(c.text) + "</span><span>" + esc(it.en) + '</span><span class="hi-ru">' + esc(it.ru) + "</span>" +
++      '<div class="hc-plays">' + playsHtml(p) + "</div></div>";
++  }
++  function showCard(n, anchor) {
++    var f = chipList[n], card = $("hiCard");
++    if (!f || !card) return;
++    cardFor = n;
++    card.innerHTML = cardHtml(f);
++    card.hidden = false;
++    var r = anchor.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight;
++    var left = Math.max(8, Math.min(r.left, innerWidth - w - 8)), top = r.bottom + 6;
++    if (top + h > innerHeight - 70) top = Math.max(8, r.top - h - 6);
++    card.style.left = left + "px"; card.style.top = top + "px";
++  }
++  function hideCard() { clearTimeout(cardTimer); cardFor = -1; if ($("hiCard")) $("hiCard").hidden = true; }
++  function initChips() {
++    var st = $("style");
++    if (!st || $("hiChips")) return;
++    var box = document.createElement("div");
++    box.className = "hi-chips"; box.id = "hiChips";
++    var after = $("styleMeter") || st;
++    after.parentNode.insertBefore(box, after.nextSibling);
++    var card = document.createElement("div");
++    card.className = "hi-card"; card.id = "hiCard"; card.hidden = true;
++    document.body.appendChild(card);
++    st.addEventListener("input", chipsSoon);
++    box.addEventListener("mouseover", function (e) {
++      var b = e.target.closest("[data-chip]");
++      if (!b || +b.dataset.chip === cardFor) return;
++      clearTimeout(cardTimer);
++      cardTimer = setTimeout(function () { showCard(+b.dataset.chip, b); }, 220);
++    });
++    [box, card].forEach(function (el) {
++      el.addEventListener("mouseleave", function () { clearTimeout(cardTimer); cardTimer = setTimeout(hideCard, 320); });
++      el.addEventListener("mouseenter", function () { if (cardFor >= 0) clearTimeout(cardTimer); });
++    });
++    box.addEventListener("click", function (e) {
++      var b = e.target.closest("[data-chip]");
++      if (!b) return;
++      e.preventDefault(); e.stopPropagation();                   // inside the Style label: no focus jump into the field
++      var f = chipList[+b.dataset.chip], art = f && artOf(probes(f.item.slug));
++      if (art && window.HeresyArt) {
++        hideCard();
++        window.HeresyArt.show(art, chipList.map(function (g) { return artOf(probes(g.item.slug)); }).filter(Boolean));
++      } else if (f) { hideCard(); open(chipName(f), f.kind === "s" ? "styles" : "instruments"); }
++    });
++    card.addEventListener("click", function (e) {
++      var a = e.target.closest("[data-hi-art]"), pl = e.target.closest("[data-hi-play]");
++      if (a && window.HeresyArt) { hideCard(); window.HeresyArt.show(a.dataset.hiArt); }
++      if (pl) { var take = state.hooks.findTake(pl.dataset.hiPlay); if (take) state.hooks.playNow(take); else state.hooks.toast("The probe is not in the library now", "bad"); }
++    });
++    document.addEventListener("keydown", function (e) {               // Alt+I, whatever the keyboard's language
++      if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "KeyI") { e.preventDefault(); open(); }
++    });
++    setTimeout(paintChips, 1200);                                   // the style the page restored
++  }
++
++  // HERESY 1156: pictures drawn meanwhile reach the open sheet; 1158: and the chips under the style
++  function paintArts() { if ($("hiBack") && !$("hiBack").hidden) paint(); paintChips(); }
+   window.HeresyInstruments = { init: init, open: open, heardTags: heardTags, notHeardTags: notHeardTags, paintArts: paintArts, data: function () { return DATA; } };
+ })();
+-- 
+2.43.0
+

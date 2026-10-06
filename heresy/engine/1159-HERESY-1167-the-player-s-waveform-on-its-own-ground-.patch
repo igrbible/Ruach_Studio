@@ -1,0 +1,153 @@
+From 4b0dc791f4d0b7456c5587b6d50db4582a37afa6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 17:19:42 -0600
+Subject: [PATCH 1159/1177] HERESY 1167: the player's waveform on its own
+ ground with its bars back at 15 %, the player 15 % see-through, the
+ passport's score on white, workspace names 80 characters at most
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026:
+· «В обеих версиях плеера убери бекграунд из-под soundwave, пусть общий бекграунд плеера будет»: the waveform stands on the
+  player's ground in either layout (no sunk box; its frame kept transparent so nothing moves);
+· «ты убрал рисочки, как я просил. Попробуй 15% непрозрачности в них добавить»: the bars the cloud replaced (1118: one every
+  3 px, the played ones in the accent) drawn again over it at 15 % (HeresyWave.set({bars: …}) tunes it, 0 takes them away);
+· «Самому плееру… дай ему 15% прозрачности»: 15 % see-through (it was 20, 1105): the gradient that paints it (both stops)
+  and the base rule, the blur under it kept;
+· «В паспорте трека сделай бекграунд отрендеренной партитуры белым как и в Творце»: the datasheet's staff on the Creator's
+  white sheet, abcjs inking it with the Creator's ink (read from the staff's own box, not the page's parchment);
+· «В именах воркспейсов… не более 80 знаков»: the page's name boxes stop at 80, a section's at 80 less its parents (the lab
+  refuses past it: the lab's own commit).
+cdp-console 334/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 14 +++++++++++---
+ tools/console/app.js               | 19 +++++++++++++++++--
+ tools/console/heresy-collection.js | 13 +++++++++----
+ 3 files changed, 37 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 68bf87d..7329cea 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1502,8 +1502,9 @@ textarea:hover::-webkit-scrollbar-thumb,
+   align-items: center;
+   gap: 14px;
+   padding: 0 18px;
+-  /* HERESY 1105 (Viktor): 20 % see-through, the page blurred under it as it scrolls by */
+-  background: color-mix(in srgb, var(--panel) 80%, transparent);
++  /* HERESY 1105 (Viktor): see-through, the page blurred under it as it scrolls by; HERESY 1167 (Viktor: «дай ему 15%
++     прозрачности»): 15 % */
++  background: color-mix(in srgb, var(--panel) 85%, transparent);
+   -webkit-backdrop-filter: blur(10px) saturate(1.15); backdrop-filter: blur(10px) saturate(1.15);
+   border-top: 1px solid var(--line-a);
+   box-shadow: 0 -14px 30px -24px var(--shadow-lg);
+@@ -3296,7 +3297,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--check, var(--a
+ .topbar { background-image: linear-gradient(180deg, var(--wash-2), var(--ground)); }
+ .col-head { background-image: linear-gradient(90deg, var(--wash-2), transparent 55%); }
+ /* the player: a tone from the top, the glass kept */
+-#playbar { background: linear-gradient(180deg, color-mix(in oklab, var(--tone-2) 80%, transparent), color-mix(in oklab, var(--panel) 80%, transparent)); }
++#playbar { background: linear-gradient(180deg, color-mix(in oklab, var(--tone-2) 85%, transparent), color-mix(in oklab, var(--panel) 85%, transparent)); }   /* HERESY 1167: 15 % see-through (it was 20) */
+ /* the Librarian's cards: a breath of the accent at the top; deeper when hovered, checked, playing */
+ .coll-card { background: linear-gradient(180deg, var(--tone-1), var(--panel) 70%); }
+ .coll-card:hover { background: linear-gradient(180deg, var(--tone-2), var(--tone-1)); }
+@@ -3921,3 +3922,10 @@ html.i18n-wait .boot-veil > * { visibility: hidden; }
+ .coll-chip-ico { display: inline-grid; place-items: center; padding-top: 2px; padding-bottom: 2px; }
+ .coll-chip-ico svg { width: 15px; height: 15px; display: block; }
+ .coll-more { height: 1px; }
++
++/* HERESY 1167 (Viktor: «убери бекграунд из-под soundwave, пусть общий бекграунд плеера будет»): the waveform on the player's
++   own ground, in either layout; the frame kept transparent so nothing moves */
++#playbar #wave { background: none; border-color: transparent; }
++/* (Viktor: «В паспорте трека сделай бекграунд отрендеренной партитуры белым как и в Творце»): the datasheet's staff on the
++   Creator's white sheet (#scoreStaff.paper), its ink the Creator's */
++.ds-staff { --paper: #ffffff; --paper-ink: #111111; --paper-line: #d0d0d0; background: #fff; box-shadow: inset 0 0 0 1px #e4e4e4; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 14c1b3d..69cc602 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4757,9 +4757,11 @@
+   // played: 0.6}); rest is the waiting part by day (×3 layers: 0.05 is ~8 % at the core), restNight the same by night,
+   // played the part that has sounded (1 = the accent at full). HeresyWave.get() says what is in force.
+   var WAVE = { rest: 0.05, restNight: 0.36, played: 0.6, epoch: 0 };
++  // HERESY 1167 (Viktor: «рисочки… Попробуй 15% непрозрачности в них добавить»): the bars, over the cloud
++  if (!isFinite(WAVE.bars)) WAVE.bars = 0.15;
+   window.HeresyWave = {
+-    get: function () { return { rest: WAVE.rest, restNight: WAVE.restNight, played: WAVE.played }; },
+-    set: function (o) { ["rest", "restNight", "played"].forEach(function (k) { if (o && isFinite(o[k])) WAVE[k] = Math.max(0, Math.min(1, +o[k])); });
++    get: function () { return { rest: WAVE.rest, restNight: WAVE.restNight, played: WAVE.played, bars: WAVE.bars }; },
++    set: function (o) { ["rest", "restNight", "played", "bars"].forEach(function (k) { if (o && isFinite(o[k])) WAVE[k] = Math.max(0, Math.min(1, +o[k])); });
+       WAVE.epoch++; drawWave(); return this.get(); }
+   };
+   function cloudEnvelope(peaks, n) {
+@@ -4852,6 +4854,19 @@
+       if (cut > 0) ctx.drawImage(sprites.played, 0, 0, cut, ch, 0, 0, cut, ch);
+       if (cut < canvas.width) ctx.drawImage(sprites.rest, cut, 0, canvas.width - cut, ch, cut, 0, canvas.width - cut, ch);
+       ctx.restore();
++      // HERESY 1167 (Viktor: «рисочки… 15% непрозрачности»): the bars the cloud replaced (1118), faint, over it: one every
++      // 3 px, the played ones in the accent
++      if (WAVE.bars > 0) {
++        var peaks = STATE.peaks, bars = Math.min(peaks.length, Math.floor(width / 3)), step = peaks.length / bars;
++        var accent = ctx.createLinearGradient(0, 0, 0, height);
++        accent.addColorStop(0, themeRGBA("amber-hi", WAVE.bars)); accent.addColorStop(0.5, themeRGBA("amber", WAVE.bars)); accent.addColorStop(1, themeRGBA("amber-hi", WAVE.bars));
++        var grey = themeRGBA("ink", WAVE.bars);
++        for (var bi = 0; bi < bars; bi++) {
++          var bh = Math.max(1.5, peaks[Math.floor(bi * step)] * (height - 10)), bx = bi * (width / bars);
++          ctx.fillStyle = (bi / bars) <= progress ? accent : grey;
++          ctx.fillRect(bx, middle - bh / 2, Math.max(1, width / bars - 1), bh);
++        }
++      }
+     }
+ 
+     if (progress > 0) {
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 7572a26..7147a92 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -20,7 +20,12 @@
+   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private */ } }
+   // HERESY 1057: the studio's own dialogs (heresy-dialog.js)
+   function ask(text, opts) { return window.HeresyDialog.confirm(text, opts); }
+-  function askName(text, value, opts) { return window.HeresyDialog.prompt(text, value, opts).then(function (v) { return (v || "").trim(); }); }
++  // HERESY 1167 (Viktor: «не более 80 знаков»): a workspace's whole name, its sections with it (the lab says the same)
++  var WS_MAX = 80;
++  function askName(text, value, opts) {
++    opts = Object.assign({ max: WS_MAX }, opts || {});
++    return window.HeresyDialog.prompt(text, value, opts).then(function (v) { return (v || "").trim(); });
++  }
+   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
+   function api(path, body) {
+     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+@@ -1249,7 +1254,7 @@
+       { sep: true },
+       // HERESY 1161: a section inside it, two levels below a workspace at most
+       wsParts(w).length < DEPTH ? { icon: "+", label: "New section\u2026", hint: "inside \u201c" + wsLeaf(w) + "\u201d", action: function () {
+-        askName("A new section of \u201c" + w + "\u201d", "", { ok: "Make it", placeholder: "its name" }).then(function (name) {
++        askName("A new section of \u201c" + w + "\u201d", "", { ok: "Make it", placeholder: "its name", max: Math.max(1, WS_MAX - (w + SEP).length) }).then(function (name) {
+           name = String(name || "").replace(/\s*\/\s*/g, " ").trim();
+           if (name) act({ op: "ws-create", workspace: w + SEP + name }, "Section \u201c" + name + "\u201d made in \u201c" + w + "\u201d");
+         });
+@@ -1291,7 +1296,7 @@
+   function renameWs(w) {
+     var parent = wsParts(w).slice(0, -1).join(SEP);                       // HERESY 1161: a section keeps its parent
+     askName((parent ? "Rename the section \u201c" + wsLeaf(w) + "\u201d of \u201c" + parent + "\u201d" : "Rename the workspace \u201c" + w + "\u201d"),
+-            parent ? wsLeaf(w) : w, { ok: "Rename" }).then(function (to) {
++            parent ? wsLeaf(w) : w, { ok: "Rename", max: Math.max(1, WS_MAX - (parent ? (parent + SEP).length : 0)) }).then(function (to) {
+       if (to && parent) to = parent + SEP + String(to).replace(/\s*\/\s*/g, " ").trim();
+       if (!to || to === w) return;
+       if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
+@@ -1414,7 +1419,7 @@
+         }
+         try {
+           window.ABCJS.renderAbc(staffBox, abc, { responsive: "resize", staffwidth: 900, paddingtop: 4, paddingbottom: 8,
+-            foregroundColor: getComputedStyle(document.documentElement).getPropertyValue("--paper-ink").trim() || "#2a2318" });
++            foregroundColor: getComputedStyle(staffBox).getPropertyValue("--paper-ink").trim() || "#111111" });   // HERESY 1167: the Creator's ink
+         } catch (err) { staffBox.textContent = "This score could not be engraved; read it as ABC below."; }
+       }
+       function showScore(abc, note) {
+-- 
+2.43.0
+

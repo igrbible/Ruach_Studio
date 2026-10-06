@@ -1,0 +1,453 @@
+From 88ce135f22b7b63a368c8c70d0eca728e0b3e9da Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 13:11:11 -0600
+Subject: [PATCH 1048/1177] Workspaces renamed and deleted three ways; selected
+ takes moved; drawn player icons
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+1050: a workspace on the left has its menu (the ⋯ or a right-click): open, new
+takes land here, rename, delete. Delete asks what becomes of the takes: they
+stay unsorted, or move into another workspace, or go to the trash with it
+(sparing those that also belong to another workspace, when so ticked). The
+place on the left and the workspace in hand follow a rename. "Move to
+workspace…" for the selected takes: into that one and out of this one (out of
+every other from All Workspaces). Lab ops ws-move and ws-merge.
+
+1051: the player's own drawn icons (after Lucide, ISC): play, pause, previous,
+next, like, dislike, star; no ring or plate behind them (Viktor), the icon
+itself larger; the same on the Collection's cards, its sheet, the Writer.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  65 +++++++++++++---
+ tools/console/app.js               |   1 -
+ tools/console/heresy-collection.js | 119 ++++++++++++++++++++++++-----
+ tools/console/heresy-icons.js      |  18 ++++-
+ tools/console/heresy-writer.js     |   2 +-
+ tools/console/index.html           |  12 +--
+ tools/public/index.html.gz         | Bin 335458 -> 338249 bytes
+ 7 files changed, 181 insertions(+), 36 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 0449723..c6b6f1e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1501,7 +1501,11 @@ textarea:hover::-webkit-scrollbar-thumb,
+   cursor: pointer;
+ }
+ .play:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--amber) 32%, transparent); }
+-.play-icon { display: none; }
++.play-icon { display: none; width: 16px; height: 16px; fill: currentColor; }
++/* HERESY 1051: drawn icons in every theme, not the text glyph */
++#playGlyph { display: none; }
++.play:not(.is-playing) .play-icon-play { display: block; margin-left: 2px; }
++.play.is-playing .play-icon-pause { display: block; }
+ 
+ /* the DMM theme's play button: a purple ring on a 10% purple tint, drawn play and pause icons, stronger
+    on hover, pressed in on click */
+@@ -2143,7 +2147,9 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-card.is-sel { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+ .coll-card.is-hidden { opacity: .65; }
+ .coll-check { flex: none; padding-top: 2px; }
+-.coll-play { flex: none; width: 28px; height: 28px; border-radius: var(--r-pill); border: 1px solid var(--line); background: none; color: var(--amber); cursor: pointer; }
++.coll-play { flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; background: none;
++  color: var(--amber); cursor: pointer; transition: color .12s, transform .12s; }
++.coll-play:hover { color: var(--amber-hi); transform: scale(1.12); }
+ .coll-body { min-width: 0; flex: 1; }
+ .coll-title { display: flex; align-items: center; gap: 4px; min-width: 0; font-weight: 600; }
+ .coll-title-text { min-width: 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@@ -2172,9 +2178,10 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ /* HERESY 1042: likes in the player */
+ .playbar-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
+ .pb-rate { display: inline-flex; gap: 2px; flex: none; }
+-.pb-btn { border: 0; background: none; padding: 2px 4px; font-size: 15px; line-height: 1; cursor: pointer; opacity: .45; filter: grayscale(1); border-radius: var(--r-sm); }
+-.pb-btn:hover { opacity: .8; }
+-.pb-btn[aria-pressed="true"] { opacity: 1; filter: none; }
++.pb-btn { display: inline-grid; place-items: center; border: 0; background: none; padding: 4px; line-height: 1; cursor: pointer; color: var(--dim); border-radius: var(--r-sm); }
++.pb-btn:hover { color: var(--ink); background: var(--hover); }
++.pb-btn[aria-pressed="true"] { color: var(--amber); }
++#pbFav[aria-pressed="true"], #sheetFav[aria-pressed="true"] { color: var(--amber-hi); }
+ #pbFav { color: var(--amber); filter: none; font-size: 16px; }
+ 
+ /* HERESY 1043: text profiles */
+@@ -2204,7 +2211,7 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .about-name small { font: 400 12px/1.4 var(--sans); color: var(--muted); margin-top: 2px; }
+ 
+ .coll-card.is-current { border-color: var(--amber); }
+-.coll-play.is-playing { background: var(--amber); color: var(--on-amber); border-color: var(--amber); font-size: 10px; letter-spacing: -1px; }
++.coll-play.is-playing { color: var(--amber-hi); }
+ 
+ /* HERESY 1046: peek and sheet in the Collection */
+ .coll-peek { position: fixed; z-index: 50; width: 380px; max-height: 420px; overflow: hidden; padding: 12px 14px; border: 1px solid var(--line-strong);
+@@ -2296,10 +2303,10 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-acts { display: flex; gap: 4px; align-items: center; width: 100%; padding-left: 64px; margin-top: 2px; }
+ .coll-grid.list .coll-card { flex-wrap: nowrap; }
+ .coll-grid.list .coll-acts { width: auto; padding-left: 0; margin: 0 0 0 auto; flex: none; }
+-.coll-act { padding: 2px 7px; border: 1px solid transparent; border-radius: var(--r-sm); background: none; color: var(--dim); font: inherit; font-size: 12px; line-height: 1.3; cursor: pointer; filter: grayscale(1); opacity: .6; }
+-.coll-act:hover { opacity: 1; border-color: var(--line); color: var(--ink); filter: none; }
+-.coll-act[aria-pressed="true"] { opacity: 1; filter: none; border-color: var(--amber-dim); }
+-.coll-act.fav { color: var(--amber); filter: none; }
++.coll-act { display: inline-grid; place-items: center; padding: 3px 6px; border: 0; border-radius: var(--r-sm); background: none; color: var(--dim); font: inherit; font-size: 12px; line-height: 1.3; cursor: pointer; opacity: .75; }
++.coll-act:hover { opacity: 1; color: var(--ink); background: var(--hover); }
++.coll-act[aria-pressed="true"] { opacity: 1; color: var(--amber); }
++.coll-act.fav[aria-pressed="true"] { color: var(--amber-hi); }
+ .coll-act.post { margin-left: auto; }
+ .coll-card:hover .coll-act { opacity: .9; }
+ .hm-menu { position: fixed; z-index: 90; min-width: 210px; max-width: 320px; padding: 4px; border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--panel); box-shadow: 0 12px 34px var(--shadow-lg); font-size: 13px; }
+@@ -2322,3 +2329,41 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-title-edit { flex: 1; min-width: 0; padding: 1px 6px; font: inherit; font-weight: 600; }
+ .sheet-title .coll-title-text { cursor: text; }
+ .sheet-title .coll-title-text:hover { text-decoration: underline dotted var(--muted); color: inherit; }
++
++/* HERESY 1050: workspaces renamed and deleted */
++.coll-place { align-items: center; }
++.coll-place > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.coll-ws-more { flex: none; padding: 0 5px; border-radius: var(--r-sm); color: var(--dim); opacity: 0; }
++.coll-place:hover .coll-ws-more, .coll-place.is-on .coll-ws-more { opacity: 1; }
++.coll-ws-more:hover { color: var(--amber); background: var(--sunk); }
++.coll-dialog { width: min(560px, 100%); }
++.coll-opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; line-height: 1.45; }
++.coll-opt:has(input:checked) { border-color: var(--amber); }
++.coll-opt.is-danger:has(input:checked) { border-color: var(--bad); }
++.coll-opt.is-danger b { color: var(--bad); }
++.coll-opt input { margin-top: 3px; }
++.coll-opt select { width: auto; max-width: 220px; display: inline-block; padding: 1px 6px; }
++.coll-opt-sub { margin-left: 30px; }
++.btn.danger-fill { background: var(--bad); border-color: var(--bad); color: var(--on-amber, #111); }
++
++/* HERESY 1051: the player's drawn icons */
++.ui-ico { width: 16px; height: 16px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
++.ui-ico .f { fill: currentColor; stroke: none; }
++.ui-play { margin-left: 2px; }
++.coll-play .ui-ico { width: 26px; height: 26px; }
++.coll-play .ui-play { margin-left: 3px; }
++.coll-act .ui-ico { width: 15px; height: 15px; }
++[aria-pressed="true"] > .ui-like, [aria-pressed="true"] > .ui-dislike, [aria-pressed="true"] > .ui-star { fill: currentColor; fill-opacity: .25; }
++#pbFav[aria-pressed="true"] > .ui-star, #sheetFav[aria-pressed="true"] > .ui-star, .coll-act.fav[aria-pressed="true"] > .ui-star { fill-opacity: 1; }
++.skip-btn .ui-ico { width: 15px; height: 15px; }
++
++/* HERESY 1051 (Viktor): no ring or plate behind the player's icons; the icon itself, larger */
++.play, .play:hover { width: 44px; height: 44px; border: 0; background: none; box-shadow: none; color: var(--amber); transition: color .12s, transform .12s; }
++.play:hover { color: var(--amber-hi); transform: scale(1.08); }
++.play .play-icon { width: 34px; height: 34px; }
++.play:not(.is-playing) .play-icon-play { margin-left: 4px; }
++[data-theme="dmm"] .play, [data-theme="dmm"] .play:hover { border: 0; background: none; color: rgb(var(--accent-rgb)); }
++[data-theme="dmm"] .play .play-icon { width: 34px; height: 34px; stroke-width: 1; }
++.skip-btn .ui-ico { width: 20px; height: 20px; }
++.pb-btn .ui-ico { width: 18px; height: 18px; }
++.coll-act .ui-ico { width: 17px; height: 17px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index cd95d17..7bbdfb6 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5128,7 +5128,6 @@
+     $("pbLike").setAttribute("aria-pressed", r > 0 ? "true" : "false");
+     $("pbDislike").setAttribute("aria-pressed", r < 0 ? "true" : "false");
+     $("pbFav").setAttribute("aria-pressed", take.favorite ? "true" : "false");
+-    $("pbFav").textContent = take.favorite ? "★" : "☆";
+   }
+   function rateNow(value) {
+     var take = STATE.playerTake, HC = window.HeresyCollection;
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 2ad601f..de57401 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -82,11 +82,14 @@
+         '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
+     };
+     $("collSide").innerHTML = item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
+-      '<div class="coll-cap">Workspaces</div>' + state.ws.map(function (w) { return item(w, w, perWs[w] || 0); }).join("") +
++      '<div class="coll-cap">Workspaces</div>' + state.ws.map(function (w) {
++        return item(w, w, perWs[w] || 0).replace('<span class="coll-n">', '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete…" role="button">\u22ef</span><span class="coll-n">');
++      }).join("") +
+       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
+       '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined);
+   }
+ 
++  function ico(name) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(name) : ""; }   // HERESY 1051
+   function badge(text, cls) { return '<span class="coll-badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
+ 
+   function paint() {
+@@ -103,7 +106,7 @@
+       var mine = now.name === r.name;
+       return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + (mine ? " is-current" : "") + '" data-name="' + esc(r.name) + '">' +
+         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+-        '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + (mine && now.playing ? "❚❚" : "▶") + "</button>" +
++        '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
+         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
+         '<button type="button" class="coll-ren" data-ren="' + esc(r.name) + '" title="Rename" aria-label="Rename">✎</button></div>' +
+         '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
+@@ -111,9 +114,9 @@
+         r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" +
+         (r.note ? '<div class="coll-note" title="' + esc(r.note) + '">' + esc(r.note.length > 140 ? r.note.slice(0, 140) + "\u2026" : r.note) + "</div>" : "") + "</div>" +
+         // HERESY 1048: like, dislike, favourite, Post and the menu, on the card itself
+-        '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" title="Like">\ud83d\udc4d</button>' +
+-        '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" title="Dislike">\ud83d\udc4e</button>' +
+-        '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" title="Favourite">' + (r.favorite ? "\u2605" : "\u2606") + "</button>" +
++        '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + '</button>' +
++        '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + '</button>' +
++        '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" title="Favourite">' + ico("star") + "</button>" +
+         '<button type="button" class="coll-act post" data-cgo="post" title="Load into Post">Post</button>' +
+         '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button></div></article>';
+     }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+@@ -125,6 +128,8 @@
+     var n = Object.keys(state.sel).length;
+     $("collBulk").hidden = !n;
+     $("collSelCount").textContent = n + " selected";
++    $("collWsMove").innerHTML = '<option value="">Move to workspace…</option>' + state.ws.filter(function (w) { return w !== state.place; }).map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
++      '<option value="__new">+ a new one…</option>';
+     $("collWsPick").innerHTML = '<option value="">Add to workspace…</option>' + state.ws.map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
+       '<option value="__new">+ a new one…</option>';
+     $("collHide").textContent = state.place === "__hidden" ? "Show again" : "Hide";
+@@ -180,7 +185,8 @@
+       paint();
+       paintCurrent();
+       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+-    }).catch(function (e) { toast(e.message, true); });
++      return true;
++    }).catch(function (e) { toast(e.message, true); return false; });   // true when the lab took it
+   }
+ 
+   function exportZip() {
+@@ -221,6 +227,8 @@
+       paint();
+     });
+     $("collSide").addEventListener("click", function (e) {
++      var more = e.target.closest("[data-ws-menu]");          // HERESY 1050
++      if (more) { e.stopPropagation(); var rc = more.getBoundingClientRect(); wsMenu(more.dataset.wsMenu, rc.left, rc.bottom + 2); return; }
+       var nw = e.target.closest("[data-ws-new]");
+       if (nw) {
+         var name = prompt("A name for the new workspace:");
+@@ -234,11 +242,24 @@
+     });
+     $("collSide").addEventListener("dblclick", function (e) {
+       var p = e.target.closest("[data-place]");
+-      if (!p || !p.dataset.place || p.dataset.place.charAt(0) === "_") return;
+-      var w = p.dataset.place, to = prompt("Rename the workspace “" + w + "” (empty to delete it; its takes stay):", w);
+-      if (to === null) return;
+-      if (!to.trim()) { if (confirm("Delete the workspace “" + w + "”? Its takes stay in the library.")) { state.place = ""; act({ op: "ws-delete", workspace: w }, "Workspace deleted"); } }
+-      else if (to.trim() !== w) { state.place = to.trim(); act({ op: "ws-rename", workspace: w, to: to.trim() }, "Workspace renamed"); }
++      if (p && p.dataset.place && p.dataset.place.charAt(0) !== "_") renameWs(p.dataset.place);
++    });
++    $("collSide").addEventListener("contextmenu", function (e) {
++      var p = e.target.closest("[data-place]");
++      if (!p || !p.dataset.place || p.dataset.place.charAt(0) === "_" || !window.HeresyMenu) return;
++      e.preventDefault();
++      wsMenu(p.dataset.place, e.clientX, e.clientY);
++    });
++    $("collDialog").addEventListener("click", function (e) {
++      if (e.target === $("collDialog") || e.target.closest("[data-dlg-close]")) closeDialog();
++    });
++    $("collWsMove").addEventListener("change", function () {   // HERESY 1050: into one workspace, out of this one
++      var w = this.value; this.value = "";
++      if (!w) return;
++      if (w === "__new") { w = (prompt("A name for the new workspace:") || "").trim(); if (!w) return; }
++      var from = state.place && state.place.charAt(0) !== "_" ? state.place : "", n = names().length;
++      act({ op: "ws-move", workspace: w, from: from, names: names() }, n + " moved to \u201c" + w + "\u201d" + (from ? " (out of \u201c" + from + "\u201d)" : " (out of every other workspace)"));
++      state.sel = {};
+     });
+     $("collGrid").addEventListener("click", function (e) {
+       var play = e.target.closest("[data-play]"), open = e.target.closest("[data-open]"), cb = e.target.closest("[data-sel]"), tcb = e.target.closest("[data-tsel]");
+@@ -309,7 +330,10 @@
+       clearTimeout(sheetNoteTimer);
+       sheetNoteTimer = setTimeout(function () { setNote(name, text).then(function () { if ($("sheetNoteState")) $("sheetNoteState").textContent = "saved"; }); }, 900);
+     });
+-    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("collSheet").hidden) closeSheet(); });
++    document.addEventListener("keydown", function (e) {
++      if (e.key !== "Escape") return;
++      if (!$("collDialog").hidden) closeDialog(); else if (!$("collSheet").hidden) closeSheet();
++    });
+ 
+     $("collSelAll").addEventListener("click", function () { shown().forEach(function (r) { state.sel[r.name] = 1; }); paint(); });
+     $("collSelNone").addEventListener("click", function () { state.sel = {}; paint(); });
+@@ -436,13 +460,13 @@
+   function paintSheet(r, req) {
+     var now = state.hooks.playing(), mine = now.name === r.name && now.playing;
+     $("collSheetBody").innerHTML =
+-      '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + (mine ? "\u275a\u275a" : "\u25b6") + "</button>" +
++      '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + ico(mine ? "pause" : "play") + "</button>" +
+       '<div><div class="sheet-title"><span class="coll-title-text" data-sheet-ren="1" title="Click to rename">' + esc(r.title) + '</span></div><div class="coll-meta">' + esc(state.hooks.ago(r.created)) +
+       (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + (req.cot ? " \u00b7 " + esc(req.cot) : "") + " \u00b7 " + esc(KINDS[r.kind] || r.kind) +
+       (r.derived.length ? " \u00b7 made from it: " + esc(r.derived.join(", ")) : "") + "</div></div>" +
+-      '<span class="pb-rate"><button type="button" class="pb-btn" data-sheet-rate="1" aria-pressed="' + (r.rating > 0) + '">\ud83d\udc4d</button>' +
+-      '<button type="button" class="pb-btn" data-sheet-rate="-1" aria-pressed="' + (r.rating < 0) + '">\ud83d\udc4e</button>' +
+-      '<button type="button" class="pb-btn" id="sheetFav" aria-pressed="' + r.favorite + '" style="color:var(--amber);filter:none">' + (r.favorite ? "\u2605" : "\u2606") + "</button></span></div>" +
++      '<span class="pb-rate"><button type="button" class="pb-btn" data-sheet-rate="1" aria-pressed="' + (r.rating > 0) + '">' + ico("like") + '</button>' +
++      '<button type="button" class="pb-btn" data-sheet-rate="-1" aria-pressed="' + (r.rating < 0) + '">' + ico("dislike") + '</button>' +
++      '<button type="button" class="pb-btn" id="sheetFav" aria-pressed="' + r.favorite + '" >' + ico("star") + "</button></span></div>" +
+       (r.workspaces.length ? '<div class="coll-badges">' + r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" : "") +
+       '<div class="sheet-cols"><div><div class="peek-cap">Style</div><pre class="sheet-text">' + esc(req.style || "") + "</pre></div>" +
+       '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
+@@ -458,18 +482,77 @@
+   function paintPlaying() {
+     var now = state.hooks && state.hooks.playing ? state.hooks.playing() : {};
+     var sp = document.querySelector("[data-sheet-play]");
+-    if (sp && sheetName) { var on0 = now.name === sheetName && now.playing; sp.textContent = on0 ? "\u275a\u275a" : "\u25b6"; sp.classList.toggle("is-playing", on0); }
++    if (sp && sheetName) { var on0 = now.name === sheetName && now.playing; sp.innerHTML = ico(on0 ? "pause" : "play"); sp.classList.toggle("is-playing", on0); }
+     Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (card) {
+       var mine = card.dataset.name === now.name, b = card.querySelector(".coll-play");
+       card.classList.toggle("is-current", mine);
+       if (!b) return;
+       var on = mine && now.playing;
+       b.classList.toggle("is-playing", on);
+-      b.textContent = on ? "❚❚" : "▶";
++      b.innerHTML = ico(on ? "pause" : "play");
+       b.setAttribute("aria-label", on ? "Pause" : "Play");
+     });
+   }
+ 
++  // ---- HERESY 1050: a workspace renamed or deleted (three ways)
++  function wsMenu(w, x, y) {
++    if (!window.HeresyMenu) return;
++    var n = state.rows.filter(function (r) { return r.workspaces.indexOf(w) >= 0; }).length;
++    window.HeresyMenu.open(x, y, [
++      { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
++      { icon: "\u25a6", label: "Open", action: function () { state.place = w; state.sel = {}; paint(); } },
++      { icon: "\u2193", label: "New takes land here", checked: current() === w, action: function () { store(WS_KEY, current() === w ? "" : w); paintCurrent(); state.hooks.libraryChanged && state.hooks.libraryChanged(); } },
++      { sep: true },
++      { icon: "Aa", label: "Rename\u2026", action: function () { renameWs(w); } },
++      { icon: "\ud83d\uddd1", label: "Delete\u2026", danger: true, action: function () { deleteWs(w); } }
++    ]);
++  }
++  function followRename(from, to) {           // the place on the left and the workspace in hand follow it
++    if (state.place === from) state.place = to;
++    if (recall(WS_KEY) === from) store(WS_KEY, to);
++  }
++  function renameWs(w) {
++    var to = (prompt("Rename the workspace \u201c" + w + "\u201d:", w) || "").trim();
++    if (!to || to === w) return;
++    if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
++    act({ op: "ws-rename", workspace: w, to: to }, "Workspace renamed").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
++  }
++  function closeDialog() { $("collDialog").hidden = true; $("collDialogBody").innerHTML = ""; }
++  function deleteWs(w) {
++    var takes = state.rows.filter(function (r) { return r.workspaces.indexOf(w) >= 0; });
++    var shared = takes.filter(function (r) { return r.workspaces.length > 1; }), others = state.ws.filter(function (x) { return x !== w; });
++    $("collDialogBody").innerHTML =
++      '<div class="sheet-title">Delete the workspace \u201c' + esc(w) + '\u201d</div>' +
++      '<p class="row-hint">' + takes.length + " take" + (takes.length === 1 ? "" : "s") + " in it. What becomes of them?</p>" +
++      '<label class="coll-opt"><input type="radio" name="wsDel" value="only" checked /><span><b>Only the workspace goes.</b> Its takes stay in the library, unsorted: in All Workspaces, and in any other workspace they belong to.</span></label>' +
++      '<label class="coll-opt"><input type="radio" name="wsDel" value="move" /><span><b>Its takes move into</b> <select id="wsDelTo">' +
++        others.map(function (x) { return "<option>" + esc(x) + "</option>"; }).join("") + '<option value="__new">+ a new workspace\u2026</option></select>, then the workspace goes.</span></label>' +
++      '<label class="coll-opt is-danger"><input type="radio" name="wsDel" value="trash" /><span><b>The workspace goes with its takes.</b> The takes go to the trash, which gives them back until it is emptied.</span></label>' +
++      (shared.length ? '<label class="check coll-opt-sub"><input type="checkbox" id="wsDelSpare" checked /> <span>Spare the ' + shared.length + " take" + (shared.length === 1 ? "" : "s") + " that also belong to another workspace</span></label>" : "") +
++      '<div class="dv-actions sheet-acts"><span class="spacer"></span><button type="button" class="btn ghost small" data-dlg-close="1">Cancel</button>' +
++      '<button type="button" class="btn small danger-fill" id="wsDelGo">Delete the workspace</button></div>';
++    $("collDialog").hidden = false;
++    $("wsDelTo").addEventListener("focus", function () { $("collDialogBody").querySelector('[value="move"]').checked = true; });
++    $("wsDelGo").addEventListener("click", function () {
++      var how = $("collDialogBody").querySelector('input[name="wsDel"]:checked').value, done;
++      if (how === "only") {
++        done = act({ op: "ws-delete", workspace: w }, "Workspace \u201c" + w + "\u201d deleted; its takes stay unsorted").then(function (ok) { if (ok) followRename(w, ""); });
++      } else if (how === "move") {
++        var to = $("wsDelTo").value;
++        if (to === "__new" || !to) { to = (prompt("A name for the new workspace:") || "").trim(); if (!to) return; }
++        done = act({ op: "ws-merge", workspace: w, to: to }, takes.length + " moved into \u201c" + to + "\u201d; \u201c" + w + "\u201d deleted").then(function (ok) { if (ok) followRename(w, to); });
++      } else {
++        var spare = $("wsDelSpare") && $("wsDelSpare").checked;
++        var gone = takes.filter(function (r) { return !(spare && r.workspaces.length > 1); }).map(function (r) { return r.name; });
++        done = api("/trash", { op: "move", names: gone }).then(function (d) {
++          return act({ op: "ws-delete", workspace: w }, d.moved.length + " take" + (d.moved.length === 1 ? "" : "s") + " to the trash; \u201c" + w + "\u201d deleted");
++        }).then(function (ok) { if (ok) followRename(w, ""); if (state.hooks.refreshLibrary) state.hooks.refreshLibrary(); return load(); });
++      }
++      closeDialog();
++      Promise.resolve(done).then(function () { paint(); paintCurrent(); });
++    });
++  }
++
+   // HERESY 1049: the title edited where it stands (Enter or leaving the field keeps it, Esc does not)
+   function renameIn(span, name, after) {
+     if (!span || !state.hooks.rename || span.parentNode.querySelector(".coll-title-edit")) return;
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 8a8602c..4ebf4d7 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -44,6 +44,22 @@
+       el.classList.add("icon-only");
+     });
+   }
+-  window.HeresyIcons = { svg: svg, dress: dress, names: Object.keys(ICONS) };
++  // HERESY 1051: the player's own set, drawn on a 24 grid after Lucide (ISC licence, https://lucide.dev):
++  // play, pause, previous, next filled; thumbs and star as outlines that fill when pressed (.on in CSS)
++  var UI = {
++    play: '<path class="f" d="M7 4.9v14.2a1.2 1.2 0 0 0 1.8 1l11.3-7.1a1.2 1.2 0 0 0 0-2L8.8 3.9A1.2 1.2 0 0 0 7 4.9z"/>',
++    pause: '<rect class="f" x="6" y="4.5" width="4.2" height="15" rx="1.3"/><rect class="f" x="13.8" y="4.5" width="4.2" height="15" rx="1.3"/>',
++    prev: '<rect class="f" x="4.5" y="5" width="2.6" height="14" rx="1"/><path class="f" d="M19.5 6.1v11.8a1 1 0 0 1-1.55.83L9.6 13a1.2 1.2 0 0 1 0-2l8.35-5.73a1 1 0 0 1 1.55.83z"/>',
++    next: '<rect class="f" x="16.9" y="5" width="2.6" height="14" rx="1"/><path class="f" d="M4.5 6.1v11.8a1 1 0 0 0 1.55.83L14.4 13a1.2 1.2 0 0 0 0-2L6.05 5.27A1 1 0 0 0 4.5 6.1z"/>',
++    like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
++    dislike: '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
++    star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'
++  };
++  function ui(name, cls) {
++    return UI[name] ? '<svg class="ui-ico ui-' + name + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + UI[name] + "</svg>" : "";
++  }
++  window.HeresyIcons = { svg: svg, dress: dress, ui: ui, names: Object.keys(ICONS) };
++  // anything marked data-ui="name" gets the drawing (the player's buttons in index.html)
++  Array.prototype.forEach.call(document.querySelectorAll("[data-ui]"), function (el) { el.innerHTML = ui(el.dataset.ui); });
+   dress();
+ })();
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index bdd8ef4..0a94902 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -149,7 +149,7 @@
+     $("wrTakes").innerHTML = takes.length ? takes.slice().reverse().map(function (t) {
+       var k = t.take;
+       return '<div class="wr-take' + (k ? "" : " is-gone") + '" data-take="' + esc(t.name) + '">' +
+-        (k ? '<button type="button" class="coll-play" data-wr-play="' + esc(t.name) + '" aria-label="Play">▶</button>' : '<span class="coll-play is-off">·</span>') +
++        (k ? '<button type="button" class="coll-play" data-wr-play="' + esc(t.name) + '" aria-label="Play">' + (window.HeresyIcons ? window.HeresyIcons.ui("play") : "▶") + '</button>' : '<span class="coll-play is-off">·</span>') +
+         '<span class="wr-take-title">' + esc(k ? h.title(k) : t.name) + '</span><span class="dim">' + (k ? esc(h.clock(k.seconds) + " · " + h.ago(k.created)) : "not in the library") + "</span>" +
+         (k ? '<button type="button" class="btn ghost small" data-wr-go="create">Create</button><button type="button" class="btn ghost small" data-wr-go="post">Post</button>' : "") + "</div>";
+     }).join("") : '<p class="row-hint">None yet. Load this document into Create: whatever is made while it is in hand lands here.</p>';
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 6c47cb6..3f5c1b2 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1120,6 +1120,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <span class="coll-sep"></span>
+           <button type="button" class="btn ghost small" id="collFav">★</button>
+           <select id="collWsPick" aria-label="Add to workspace"></select>
++          <select id="collWsMove" aria-label="Move to workspace" title="Into that workspace and out of this one (out of every other when you are in All Workspaces)"></select>
+           <button type="button" class="btn ghost small" id="collWsOut">Take out of this workspace</button>
+           <button type="button" class="btn ghost small" id="collHide" data-tip="Out of the lists, not deleted: Hidden on the left shows them again">Hide</button>
+           <span class="coll-sep"></span>
+@@ -1132,6 +1133,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <div id="collGrid" class="coll-grid tiles"></div>
+         <!-- HERESY 1046: a peek on hover, a sheet on click; Create only by choice -->
+         <div class="coll-peek" id="collPeek" hidden></div>
++        <div class="coll-sheet" id="collDialog" hidden><div class="coll-sheet-body coll-dialog" id="collDialogBody" role="dialog" aria-modal="true"></div></div>
+         <div class="coll-sheet" id="collSheet" hidden><div class="coll-sheet-body" id="collSheetBody" role="dialog" aria-modal="true"></div></div>
+       </div>
+     </div>
+@@ -1177,20 +1179,20 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     <strong id="playbarTitle" data-tip="Pick a take on the right">Nothing loaded</strong>
+     <!-- HERESY 1042: like, dislike and favourite for what plays, as SUNO has them -->
+     <span class="pb-rate" id="pbRate" hidden>
+-      <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-tip="Like">👍</button>
+-      <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-tip="Dislike">👎</button>
+-      <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-tip="Keep as a favourite">☆</button>
++      <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-tip="Like" data-ui="like">👍</button>
++      <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-tip="Dislike" data-ui="dislike">👎</button>
++      <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-tip="Keep as a favourite" data-ui="star">☆</button>
+     </span>
+   </div>
+ 
+   <!-- HERESY 1009: previous and next take in the list, and play-on down the list -->
+-  <button type="button" class="icon-btn skip-btn" id="prevTake" aria-label="Previous take" data-tip="The take above in the list">⏮</button>
++  <button type="button" class="icon-btn skip-btn" id="prevTake" aria-label="Previous take" data-tip="The take above in the list" data-ui="prev">⏮</button>
+   <button class="play" id="playBtn" aria-label="Play"><span id="playGlyph">▶</span>
+     <!-- drawn play and pause icons, shown by the DMM theme -->
+     <svg class="play-icon play-icon-play" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" /></svg>
+     <svg class="play-icon play-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1" /><rect x="6" y="4" width="4" height="16" rx="1" /></svg></button>
+ 
+-  <button type="button" class="icon-btn skip-btn" id="nextTake" aria-label="Next take" data-tip="The take below in the list">⏭</button>
++  <button type="button" class="icon-btn skip-btn" id="nextTake" aria-label="Next take" data-tip="The take below in the list" data-ui="next">⏭</button>
+   <span class="mono time" id="timeNow">0:00</span>
+   <canvas id="wave" height="40"></canvas>
+   <span class="mono time dim" id="timeTotal">0:00</span>
+-- 
+2.43.0
+

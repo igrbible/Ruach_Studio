@@ -1,0 +1,66 @@
+From c3522a8a8a399d25b6decfba74895c9583770fa2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 23:55:58 -0600
+Subject: [PATCH 1127/1177] Librarian past 2K: more tiles instead of wider
+ ones, the List in two columns (1166, part six)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, at 4K: «давай сделаем богаче замощение канваса с карточками. 6 карточек
+в 4K разрешении. Pinned оставляем 4 макс.» and «Делай две колонки выше 2K
+разрешения».
+
+- Tiles: 5 columns from 2880 px, 6 from 3360 px (3840: 6, a card 584 px, about
+  as wide as at 2K); folded workspaces column one more (6, 7). Up to 2560 the
+  columns stay as they were (1920: 4, 2560: 4).
+- The pinned strip takes the grid's columns there, so its four at most stand
+  over the cards, one column each.
+- List: two columns from 2880 px, read row by row as the tiles are; the trash
+  too; an empty list's note keeps the whole width. 2560 and below: one column,
+  as before (two would fit at 2560 too: 1131 px a row, nothing cut).
+
+Measured in the page at 1920, 2560, 2880, 3000, 3440 and 3840; no row
+overflows. cdp-console 316/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index b1923fe..8fe87ff 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2172,7 +2172,18 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ @media (max-width: 1400px) { .coll-grid.tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+ @media (max-width: 1050px) { .coll-grid.tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+ @media (max-width: 640px) { .coll-grid.tiles { grid-template-columns: minmax(0, 1fr); } }
++/* HERESY 1166 (Viktor, 4K: «давай сделаем богаче замощение канваса с карточками. 6 карточек в 4K… Pinned оставляем 4 макс»):
++   past 2K the tiles take more columns instead of wider cards, a card about as wide as at 2K: 5 from 2880 px, 6 from 3360 px
++   (3840: 6). The pinned strip keeps its four at most, one column of the grid each, so they stand over the cards. */
++@media (min-width: 2880px) { .coll-grid.tiles, .coll-pins { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
++@media (min-width: 3360px) { .coll-grid.tiles, .coll-pins { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+ .coll-grid.list { display: flex; flex-direction: column; gap: 4px; }
++/* HERESY 1166 (Viktor: «Формат списков наверное на 2K+ нужно в две колонки… Делай две колонки выше 2K разрешения»):
++   the List past 2K in two columns (from 2880 px, where the tiles take their fifth; at 2560 one, as it was),
++   read row by row as the tiles are (a long list read down one column, then the other, would hide its second half);
++   the trash is a list too. A note of an empty list keeps the whole width. */
++@media (min-width: 2880px) { .coll-grid.list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; align-content: start; }
++  .coll-grid.list .coll-empty { grid-column: 1 / -1; } }
+ .coll-card { position: relative; display: flex; gap: 8px; align-items: flex-start; padding: 10px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); }
+ .coll-grid.list .coll-card { padding: 6px 10px; align-items: center; }
+ .coll-card.is-sel { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+@@ -2219,6 +2230,8 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+ @media (max-width: 1400px) { .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+ @media (max-width: 1050px) { .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
++@media (min-width: 2880px) { .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
++@media (min-width: 3360px) { .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+ @media (max-width: 900px) { .coll-layout, .coll-layout.is-folded { grid-template-columns: 1fr; } .coll-resizer { display: none; }
+   .coll-layout.is-folded .coll-side { visibility: visible; } }
+ .coll-bar[hidden], .coll-bulk[hidden] { display: none; }
+-- 
+2.43.0
+

@@ -1,0 +1,101 @@
+From 3b412ce240495ef209a923afba3f020770b83f3d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 01:15:53 -0600
+Subject: [PATCH 1035/1177] Examples as a menu: a random official demo, or one
+ of ours by name (Readings)
+
+build-page.sh also inlines heresy/examples/*.json with their "group"; "random" stays within the
+110 official prompts. Loading an example tells the page what changed (draft, meters, score check).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   5 +++++
+ tools/console/app.js       |  32 ++++++++++++++++++++++++++------
+ tools/console/index.html   |   5 ++++-
+ tools/public/index.html.gz | Bin 299699 -> 305880 bytes
+ 4 files changed, 35 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 1782a20..6933b4e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2103,3 +2103,8 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .lib-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 10px; }
+ .lib-row select { max-width: 340px; }
+ .lib-row .label { margin: 0; }
++
++/* HERESY 1035: the examples menu */
++#exampleMenu { max-height: 70vh; overflow-y: auto; min-width: 300px; }
++.menu-cap { padding: 8px 12px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
++.menu-note { color: var(--dim); font-size: 11px; margin-left: 6px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 755c86b..badb6fd 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -886,10 +886,8 @@
+   $("newSong").addEventListener("click", newSong);
+   $("clearForm").addEventListener("click", newSong);
+ 
+-  $("loadExample").addEventListener("click", function () {
+-    var examples = window.YUE2_EXAMPLES || [];
+-    if (!examples.length) return toast("No examples were built into this page", "bad");
+-    var ex = examples[Math.floor(Math.random() * examples.length)];
++  // HERESY 1035: a menu: a random official demo, or one of ours by name, grouped (Readings…)
++  function loadExample(ex) {
+     $("title").value = ex.title || "";
+     $("style").value = String(ex.style || "").trim();
+     $("lyrics").value = ex.lyrics || "";
+@@ -900,9 +898,31 @@
+     setCodes(null);
+     setCot(ex.cot || "full");
+     if (ex.abc) $("scoreDrawer").open = true;
++    ["style", "lyrics", "abc"].forEach(function (id) { $(id).dispatchEvent(new Event("input", { bubbles: true })); });
+     growLyrics();
+-    toast("Example loaded: " + (ex.title || "untitled") + (ex.abc ? " (with its score)" : ""));
+-  });
++    toast("Example loaded: " + (ex.title || "untitled") + (ex.abc ? " (with its score)" : "") + (ex.cot === "off" ? " · Direct mode" : ""));
++  }
++  (function () {
++    var examples = window.YUE2_EXAMPLES || [], official = examples.filter(function (e) { return !e.group; }), groups = {};
++    examples.forEach(function (e, i) { if (e.group) (groups[e.group] = groups[e.group] || []).push(i); });
++    $("exampleMenu").innerHTML = '<button type="button" role="menuitem" data-example="random">A random official demo <span class="menu-note">' + official.length + "</span></button>" +
++      Object.keys(groups).map(function (g) {
++        return '<div class="menu-cap">' + escape(g) + "</div>" + groups[g].map(function (i) {
++          return '<button type="button" role="menuitem" data-example="' + i + '">' + escape(examples[i].title || "untitled") + "</button>";
++        }).join("");
++      }).join("");
++    menuToggle("loadExample", "exampleMenu");
++    $("exampleMenu").addEventListener("click", function (event) {
++      var b = event.target.closest("[data-example]");
++      if (!b) return;
++      closeMenus();
++      if (b.dataset.example === "random") {
++        if (!official.length) return toast("No examples were built into this page", "bad");
++        return loadExample(official[Math.floor(Math.random() * official.length)]);
++      }
++      loadExample(examples[+b.dataset.example]);
++    });
++  })();
+ 
+   all("[data-abc]").forEach(function (btn) {
+     btn.addEventListener("click", function () {
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 159d9a6..656dd17 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -63,7 +63,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <button type="button" role="menuitem" data-save="yaml">Prompt as YAML</button>
+       </div>
+     </div>
+-    <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load example: a random official demo prompt">Load example</button>
++    <div class="menu-wrap">
++      <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
++      <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
++    </div>
+     <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
+     <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now" disabled>Unload model</button>
+     <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
+-- 
+2.43.0
+

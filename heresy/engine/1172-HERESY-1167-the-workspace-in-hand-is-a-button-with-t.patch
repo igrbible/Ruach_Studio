@@ -1,0 +1,380 @@
+From 2fc7ecd86c2cd2603412a9bfa043c393ee74f467 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 11:43:53 -0600
+Subject: [PATCH 1172/1177] =?UTF-8?q?HERESY=201167:=20the=20workspace=20in?=
+ =?UTF-8?q?=20hand=20is=20a=20button=20with=20the=20studio's=20chooser;=20?=
+ =?UTF-8?q?a=20run=20asks=20where=20its=20takes=20land;=2032=20characters?=
+ =?UTF-8?q?=20a=20level;=20=C2=ABSourced=20for=20Regeneration=C2=BB=20neve?=
+ =?UTF-8?q?r=20in=20hand;=20the=20Librarian's=20list=20in=20its=20own=20fr?=
+ =?UTF-8?q?ame;=20OSEM=20in=20three=20lines?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026:
+· «в баре такой же кнопочкой, но немного прозрачнее… писать текущий воркспейс, и при нажатии… выводить диалоговое окно с
+  воркспейсами, кликаешь на него... и вуаля. И предупреждение, что все новые семплы идут в него»: the select gave way to
+  a button, a little lighter than its neighbours.
+  – Its dialog (HeresyDialog.choose, new) lists every workspace with its sections set in and their counts; one click
+    picks, and a filter appears when the list is long.
+  – A new workspace, or a section of the one in hand, is made from there.
+  – It says that every new take lands in the one chosen.
+· «для каждой комнаты поставить сторожа — никаких `All workspaces`»: with the library at hand and no workspace in hand, a run
+  asks where its takes land before anything is sent («Send nothing» sends nothing).
+· «Укорачиваю до… 32 символа макс. Исправь лимиты везде»: 32 characters on each level of the path in the name dialogs (new,
+  section, rename); the lab says the same.
+· «`Sourced for Regeneration` исключай из выбора как рабочий воркспейс. Даже если в Библиотеке выбрал, генерация у Творца идёт
+  в родительский»: such a section is never offered and never in hand; opened in the Librarian, its parent is in hand.
+  Frozen workspaces are not offered either.
+· «колонка со списком воркспейсов… ограничивалась по высоте видимого view выше плеера, и прокручивалась в своём ФРЕЙМЕ»: the
+  Librarian's list of workspaces in a frame of its own, above the player.
+· «O S E M / Simply awesome / Open Source, Engaged & Musical»: the veil's slogan in three lines.
+
+The guide's pictures pick the workspace through the collection's own setter (guide-shots.mjs, heresy).
+cdp-console 344/0/7 (the button and the chooser checked), check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 30 ++++++++++
+ tools/console/app.js               | 12 +++-
+ tools/console/heresy-collection.js | 90 ++++++++++++++++++++----------
+ tools/console/heresy-dialog.js     | 67 +++++++++++++++++++++-
+ tools/console/index.html           |  9 ++-
+ 5 files changed, 171 insertions(+), 37 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 527fb35..85909ab 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4047,3 +4047,33 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .coll-head #collNote { flex: 0 1 680px; white-space: normal; line-height: 1.35; align-self: center; }
+ .coll-headtools { flex: 0 1 auto; }
+ .coll-headtools input[type="search"] { flex: 0 1 466px; width: 466px; min-width: 200px; }
++/* HERESY 1167 (Viktor: «в баре такой же кнопочкой, но немного прозрачнее»): the workspace in hand, a button a little lighter
++   than its neighbours; its dialog a list (one click picks), sections under their workspace */
++.ws-btn { display: inline-flex; align-items: center; gap: 7px; max-width: 240px; padding: 5px 10px; font-size: 14px;
++  background: color-mix(in oklab, var(--panel) 55%, transparent); border: 1px solid var(--line-a); color: var(--ink); }
++.ws-btn:hover { border-color: var(--amber); }
++.ws-btn.is-set { border-color: color-mix(in oklab, var(--amber) 70%, transparent); color: var(--amber); }
++.ws-btn.is-none { border-style: dashed; border-color: var(--amber); color: var(--amber); }
++.ws-btn-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.ws-btn-caret { font-size: 11px; opacity: .7; }
++.topbar.ws-tighter .ws-btn { max-width: 150px; }
++.hd-box.hd-choose { width: min(560px, 100%); }
++.hd-list { display: flex; flex-direction: column; gap: 2px; max-height: min(58vh, 520px); overflow: auto; margin: 0 -6px; padding: 2px 6px; }
++.hd-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px 7px calc(10px + var(--depth, 0) * 18px);
++  border: 1px solid transparent; border-radius: var(--r-sm, 6px); background: none; color: var(--ink); font: 400 14px/1.35 var(--sans);
++  text-align: left; cursor: pointer; }
++.hd-item:hover, .hd-item:focus-visible { background: var(--hover); outline: none; }
++.hd-item.is-current { border-color: color-mix(in oklab, var(--amber) 55%, transparent); }
++.hd-item[hidden] { display: none; }
++.hd-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.hd-item-note { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
++.hd-item-tick { color: var(--amber); }
++.hd-acts .hd-spacer { flex: 1; }
++/* HERESY 1167 (Viktor: «колонка со списком воркспейсов… ограничивалась по высоте видимого view выше плеера, и прокручивалась
++   в своём ФРЕЙМЕ»): the Librarian's list of workspaces, a frame of its own that never reaches under the player */
++.coll-side { max-height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 96px); }
++/* HERESY 1167 (Viktor: «O S E M / Simply awesome / Open Source, Engaged & Musical»): the veil's slogan in three lines */
++.boot-osem { display: flex; flex-direction: column; align-items: center; gap: 3px; margin: -6px 0 0; text-align: center;
++  font: 400 clamp(12px, .95vw, 16px)/1.45 var(--sans); color: var(--dim); animation: boot-in 1.1s .15s ease both; }
++.boot-osem b { font-weight: 600; color: var(--ink); font-size: 1.12em; letter-spacing: .6em; margin-right: -.6em; }
++.boot-osem .boot-osem-say { font-style: italic; color: var(--muted); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index bf604f8..22901b5 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -297,7 +297,7 @@
+   window.addEventListener("resize", fitBarSoon);
+   window.addEventListener("ruach-lang", fitBarSoon);                  // a language's words are wider or narrower
+   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitBarSoon);
+-  if ($("wsCurrent")) new MutationObserver(fitBarSoon).observe($("wsCurrent"), { childList: true });   // workspaces come and go
++  if ($("wsCurrent")) new MutationObserver(fitBarSoon).observe($("wsCurrent"), { childList: true, subtree: true, characterData: true });   // HERESY 1167: the name in the button
+   fitBarSoon();
+   document.addEventListener("click", function (event) {
+     if (!event.target.closest(".menu-pop")) closeMenus();
+@@ -1994,6 +1994,16 @@
+   }
+ 
+   function submitJob(body, meta) {
++    // HERESY 1167 (Viktor: «для каждой комнаты поставить сторожа — никаких `All workspaces`. Либо выбрать активный воркспейс,
++    // либо создать поддиректорию или новый воркспейс»): with the library at hand and no workspace in hand, a run asks where its
++    // takes land before anything is sent
++    var HC = window.HeresyCollection;
++    if (HC && HC.loaded && HC.loaded() && HC.chooseCurrent && !HC.current()) {
++      return HC.chooseCurrent("Where do the new takes land?").then(function (w) {
++        if (!w) throw new Error("Nothing sent: choose a workspace for the new takes first");
++        return submitJob(body, meta);
++      });
++    }
+     // HERESY 1091: no synthesis on the studio's card while a run trains on it (the lab knows; it says why)
+     var free = window.HeresyGpus ? window.HeresyGpus.guard() : Promise.resolve(true);
+     return free.then(function (ok) {
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 9ea34c9..5d219d6 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -11,7 +11,10 @@
+   var KINDS = { generated: "generated", imported: "imported", regenerated: "regenerated", rerendered: "re-rendered" };
+   var DERIVED = { stems: "stems", debuzz: "debuzz", remaster: "remaster", upscale: "upscale" };
+   var VIEW_KEY = "yue2.collView", SORT_KEY = "yue2.collSort", WS_KEY = "yue2.workspace";
+-  function current() { var w = recall(WS_KEY) || ""; return state.ws.indexOf(w) >= 0 ? w : ""; }
++  // HERESY 1167 (Viktor: «`Sourced for Regeneration` исключай из выбора как рабочий воркспейс. Даже если в Библиотеке
++  // выбрал, генерация у Творца идёт в родительский»): such a section is never the workspace in hand; its parent is
++  function workable(w) { var p = String(w || "").split(" / "); return p.length > 1 && p[p.length - 1] === "Sourced for Regeneration" ? p.slice(0, -1).join(" / ") : String(w || ""); }
++  function current() { var w = workable(recall(WS_KEY) || ""); return state.ws.indexOf(w) >= 0 ? w : ""; }
+   var state = { rows: [], ws: [], trashDays: 0, place: "", q: "", kinds: {}, derived: {}, sel: {}, last: null,
+                 trash: [], tsel: {}, hooks: null, loaded: false };
+   function $(id) { return document.getElementById(id); }
+@@ -20,10 +23,11 @@
+   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private */ } }
+   // HERESY 1057: the studio's own dialogs (heresy-dialog.js)
+   function ask(text, opts) { return window.HeresyDialog.confirm(text, opts); }
+-  // HERESY 1167 (Viktor: «не более 80 знаков»): a workspace's whole name, its sections with it (the lab says the same)
+-  var WS_MAX = 80;
++  // HERESY 1167 (Viktor: «Укорачиваю до… 32 символа макс. Исправь лимиты везде»): 32 characters on each level of a
++  // workspace's path (the lab says the same, and takes a name already there as it is)
++  var WS_PART = 32;
+   function askName(text, value, opts) {
+-    opts = Object.assign({ max: WS_MAX }, opts || {});
++    opts = Object.assign({ max: WS_PART }, opts || {});
+     return window.HeresyDialog.prompt(text, value, opts).then(function (v) { return (v || "").trim(); });
+   }
+   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
+@@ -509,13 +513,53 @@
+ 
+   // the workspace in hand (the header): the list shows it, new takes land in it
+   function paintCurrent() {
+-    var sel = $("wsCurrent");
+-    if (!sel) return;
++    var btn = $("wsCurrent");
++    if (!btn) return;
++    var cur = current(), name = btn.querySelector(".ws-btn-name");
++    name.textContent = cur || "Choose a workspace";
++    name.setAttribute("translate", cur ? "no" : "yes");                    // a name is the user's; the call is the page's
++    btn.classList.toggle("is-set", !!cur);
++    btn.classList.toggle("is-none", !cur && state.loaded);
++    btn.closest(".ws-current").classList.toggle("is-set", !!cur);
++  }
++  // HERESY 1167 (Viktor: «кликаешь на него... и вуаля. И предупреждение, что все новые семплы идут в него»): every workspace
++  // and its sections in the studio's own dialog, one click picks; a new workspace, or a section of the one in hand, made from
++  // there. The frozen and the «Sourced for Regeneration» sections are not offered: nothing new lands in them. why: the
++  // question, when a run asks first.
++  function chooseCurrent(why) {
+     var cur = current();
+-    sel.innerHTML = '<option value="">All Workspaces</option>' + state.ws.map(function (w) { return '<option translate="no">' + esc(w) + "</option>"; }).join("") +
+-      '<option value="__new">+ New workspace\u2026</option>';
+-    sel.value = cur;
+-    sel.closest(".ws-current").classList.toggle("is-set", !!cur);
++    var items = state.ws.filter(function (w) { return !frozenWs(w) && wsLeaf(w) !== SOURCED; }).map(function (w) {
++      var n = state.rows.filter(function (r) { return inTree(r, w); }).length;
++      return { value: w, label: wsParts(w).length > 1 ? wsLeaf(w) : w, depth: wsParts(w).length - 1, current: w === cur, note: String(n) };
++    });
++    var more = [{ label: "+ New workspace\u2026", value: "__new" }];
++    if (cur && wsParts(cur).length < DEPTH) more.push({ label: "+ New section of \u201c" + wsLeaf(cur) + "\u201d\u2026", value: "__section" });
++    var text = (why || "The workspace in hand") + "\n\nEvery new take lands in it, and the Takes column shows it.";
++    return window.HeresyDialog.choose(text, items, { more: more, cancel: why ? "Send nothing" : "Cancel", filter: "Filter the workspaces" }).then(function (v) {
++      if (v === "__new" || v === "__section") {
++        var parent = v === "__section" ? cur : "";
++        return askName(parent ? "A new section of \u201c" + parent + "\u201d\n\nIt is in hand at once: new takes land in it."
++                              : "A new workspace\n\nIt is in hand at once: new takes land in it.", "", { ok: "Make it", placeholder: "its name" }).then(function (name) {
++          name = String(name || "").replace(/\s*\/\s*/g, " ").trim();
++          if (!name) return why ? chooseCurrent(why) : "";
++          var w = parent ? parent + SEP + name : name;
++          return act({ op: "ws-create", workspace: w }, (parent ? "Section" : "Workspace") + " \u201c" + name + "\u201d made and in hand: new takes land in it").then(function (ok) {
++            if (!ok) return why ? chooseCurrent(why) : "";
++            setCurrent(w, true);
++            return w;
++          });
++        });
++      }
++      if (v) setCurrent(v);
++      return v || "";
++    });
++  }
++  function setCurrent(w, quiet) {
++    store(WS_KEY, w || "");
++    if (!quiet && w) toast("Workspace \u201c" + w + "\u201d in hand: the list shows it, new takes land in it");
++    state.place = w || ""; state.sel = {};
++    paint(); paintCurrent();
++    if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+   }
+   function landed(takeNames) {
+     var cur = current();
+@@ -1069,24 +1113,8 @@
+         act({ op: "trash-days", days: days }, days ? "The trash empties itself after " + days + " days" : "The trash keeps everything until you empty it");
+       });
+     });
+-    $("wsCurrent").addEventListener("change", function () {
+-      var w = this.value;
+-      var made = w === "__new" ? askName("A new workspace\n\nIt is in hand at once: the list shows it, new takes land in it.", "", { ok: "Make it", placeholder: "its name" }) : Promise.resolve(null);
+-      made.then(function (name) {
+-        if (w === "__new") {
+-          if (!name) { paintCurrent(); return; }
+-          w = name;
+-          store(WS_KEY, w);
+-          act({ op: "ws-create", workspace: w }, "Workspace \u201c" + w + "\u201d made and in hand: new takes land in it");
+-        } else {
+-          store(WS_KEY, w);
+-          toast(w ? "Workspace \u201c" + w + "\u201d in hand: the list shows it, new takes land in it" : "All Workspaces in the list; new takes in no workspace");
+-        }
+-        state.place = w; state.sel = {};
+-        paint(); paintCurrent();
+-        if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+-      });
+-    });
++    $("wsCurrent").addEventListener("click", function () { chooseCurrent(); });   // HERESY 1167: the workspace in hand, chosen in a dialog
++    paintCurrent();
+     state.place = recall(WS_KEY) || "";
+     load();
+     api("/trash").then(function (d) { state.trash = d.items || []; paintSide(); }).catch(function () {});
+@@ -1271,7 +1299,7 @@
+       { sep: true },
+       // HERESY 1161: a section inside it, two levels below a workspace at most
+       wsParts(w).length < DEPTH ? { icon: "+", label: "New section\u2026", hint: "inside \u201c" + wsLeaf(w) + "\u201d", action: function () {
+-        askName("A new section of \u201c" + w + "\u201d", "", { ok: "Make it", placeholder: "its name", max: Math.max(1, WS_MAX - (w + SEP).length) }).then(function (name) {
++        askName("A new section of \u201c" + w + "\u201d", "", { ok: "Make it", placeholder: "its name", max: WS_PART }).then(function (name) {
+           name = String(name || "").replace(/\s*\/\s*/g, " ").trim();
+           if (name) act({ op: "ws-create", workspace: w + SEP + name }, "Section \u201c" + name + "\u201d made in \u201c" + w + "\u201d");
+         });
+@@ -1313,7 +1341,7 @@
+   function renameWs(w) {
+     var parent = wsParts(w).slice(0, -1).join(SEP);                       // HERESY 1161: a section keeps its parent
+     askName((parent ? "Rename the section \u201c" + wsLeaf(w) + "\u201d of \u201c" + parent + "\u201d" : "Rename the workspace \u201c" + w + "\u201d"),
+-            parent ? wsLeaf(w) : w, { ok: "Rename", max: Math.max(1, WS_MAX - (parent ? (parent + SEP).length : 0)) }).then(function (to) {
++            parent ? wsLeaf(w) : w, { ok: "Rename", max: WS_PART }).then(function (to) {
+       if (to && parent) to = parent + SEP + String(to).replace(/\s*\/\s*/g, " ").trim();
+       if (!to || to === w) return;
+       if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
+@@ -1556,7 +1584,7 @@
+   }
+ 
+   window.HeresyCollection = { init: init, reload: load, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
+-                              current: current, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
++                              current: current, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
+diff --git a/tools/console/heresy-dialog.js b/tools/console/heresy-dialog.js
+index deeb2c1..3631a40 100644
+--- a/tools/console/heresy-dialog.js
++++ b/tools/console/heresy-dialog.js
+@@ -2,6 +2,9 @@
+ // HeresyDialog.confirm(text, {ok, cancel, danger, must}) -> Promise<boolean>; must: one of the two buttons and nothing else
+ // answers (Esc and a click beside the box do not), for a choice the page cannot make for you (HERESY 1166)
+ // HeresyDialog.prompt(text, value, {ok, placeholder, max}) -> Promise<string|null>
++// HeresyDialog.choose(text, items, {cancel, more, filter}) -> Promise<value|null> (HERESY 1167): a list to pick from, one
++// click picks; items [{value, label, depth, current, note}]; more [{label, value}]: buttons under the list; a filter
++// field above the list when it is long
+ // The first paragraph of the text is the title, the rest the explanation. Enter answers yes (or
+ // gives the field), Esc answers no; a click beside the box is no as well. One dialog at a time.
+ (function () {
+@@ -43,8 +46,67 @@
+       requestAnimationFrame(function () { back.classList.add("is-on"); (input || back.querySelector(".hd-yes")).focus(); if (input) input.select(); });
+     });
+   }
++  // HERESY 1167 (Viktor: «кликаешь на него... и вуаля»): a list in the studio's dialog; a click on a row is the answer
++  function showChoose(text, items, opts) {
++    opts = opts || {};
++    var parts = String(text || "").split(/\n\s*\n/), title = parts.shift(), body = parts.join("\n\n");
++    return new Promise(function (resolve) {
++      var back = document.createElement("div"), before = document.activeElement, long = items.length > 8;
++      back.className = "hd-back";
++      back.innerHTML = '<div class="hd-box hd-choose" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
++        '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
++        (long ? '<input type="search" class="hd-input hd-filter" placeholder="' + esc(opts.filter || "Filter") + '" />' : "") +
++        '<div class="hd-list" role="listbox">' + items.map(function (it, i) {
++          return '<button type="button" role="option" class="hd-item' + (it.current ? " is-current" : "") + '" data-i="' + i +
++            '" style="--depth:' + (it.depth || 0) + '"' + (it.current ? ' aria-selected="true"' : "") + '><span class="hd-item-label" translate="no">' +
++            esc(it.label) + "</span>" + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") +
++            (it.current ? '<span class="hd-item-tick" aria-hidden="true">\u2713</span>' : "") + "</button>";
++        }).join("") + "</div>" +
++        '<div class="hd-acts">' + (opts.more || []).map(function (m, i) {
++          return '<button type="button" class="btn ghost small hd-more" data-m="' + i + '">' + esc(m.label) + "</button>";
++        }).join("") + '<span class="hd-spacer"></span><button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button></div></div>";
++      document.body.appendChild(back);
++      var filter = back.querySelector(".hd-filter"), rows = Array.prototype.slice.call(back.querySelectorAll(".hd-item"));
++      function shown() { return rows.filter(function (r) { return !r.hidden; }); }
++      function done(v) {
++        document.removeEventListener("keydown", key, true);
++        back.classList.add("is-leaving");
++        setTimeout(function () { back.remove(); }, 120);
++        if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
++        resolve(v);
++      }
++      function key(e) {
++        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(null); return; }
++        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
++          e.preventDefault();
++          var list = shown(), at = list.indexOf(document.activeElement);
++          var next = list[Math.max(0, Math.min(list.length - 1, at + (e.key === "ArrowDown" ? 1 : -1)))] || list[0];
++          if (next) next.focus();
++        } else if (e.key === "Enter" && document.activeElement === filter) {
++          e.preventDefault();
++          var first = shown()[0];
++          if (first) done(items[+first.dataset.i].value);
++        }
++      }
++      document.addEventListener("keydown", key, true);
++      back.addEventListener("mousedown", function (e) { if (e.target === back) done(null); });
++      rows.forEach(function (r) { r.addEventListener("click", function () { done(items[+r.dataset.i].value); }); });
++      Array.prototype.forEach.call(back.querySelectorAll(".hd-more"), function (b) { b.addEventListener("click", function () { done(opts.more[+b.dataset.m].value); }); });
++      back.querySelector(".hd-no").addEventListener("click", function () { done(null); });
++      if (filter) filter.addEventListener("input", function () {
++        var q = filter.value.trim().toLowerCase();
++        rows.forEach(function (r) { r.hidden = !!q && r.textContent.toLowerCase().indexOf(q) < 0; });
++      });
++      requestAnimationFrame(function () {
++        back.classList.add("is-on");
++        var cur = back.querySelector(".hd-item.is-current");
++        (filter || cur || rows[0] || back.querySelector(".hd-no")).focus();
++        if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest" });
++      });
++    });
++  }
+   function queued(kind, text, value, opts) {
+-    var p = chain.then(function () { return show(kind, text, value, opts); });
++    var p = chain.then(function () { return kind === "choose" ? showChoose(text, value, opts) : show(kind, text, value, opts); });
+     chain = p.then(function () {}, function () {});
+     return p;
+   }
+@@ -52,6 +114,7 @@
+   window.HeresyDialog = {
+     confirm: function (text, opts) { return queued("confirm", text, null, opts); },
+     prompt: function (text, value, opts) { return queued("prompt", text, value, opts); },
+-    alert: function (text, opts) { return queued("alert", text, null, opts); }
++    alert: function (text, opts) { return queued("alert", text, null, opts); },
++    choose: function (text, items, opts) { return queued("choose", text, items || [], opts); }   // HERESY 1167
+   };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index e816bb1..74ca9f2 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -35,7 +35,7 @@
+ <!-- HERESY 1167 (Viktor: «давай LOADING только в ночной моей всегда»): the veil wears the night theme whatever the page's -->
+ <div class="boot-veil" id="bootVeil" role="status" data-theme="igr-night">
+   <div class="boot-logo" id="bootLogo"></div>
+-  <p class="boot-osem" translate="no"><b>OSEM</b> <i>(say it: awesome)</i> · Open Source, Engaged &amp; Musical</p>
++  <div class="boot-osem" translate="no"><b>OSEM</b><span class="boot-osem-say">Simply awesome</span><span>Open Source, Engaged &amp; Musical</span></div>
+   <p class="boot-words">Loading the Sound Heresy</p>
+   <div class="boot-line" aria-hidden="true"><i></i></div>
+ </div>
+@@ -368,8 +368,11 @@
+ 
+   <div class="spacer"></div>
+   <!-- HERESY 1041: the workspace in hand: the takes list shows it, new takes land in it -->
+-  <label class="ws-current" data-tip="The workspace in hand: the takes list shows only it, and every new take lands in it. All takes: no workspace.">
+-    <span class="ws-cap">Workspace</span><select id="wsCurrent" aria-label="Workspace" data-tip="The workspace in hand: the takes list shows only its takes, and every new take lands in it. All Workspaces shows every take."></select></label>
++  <!-- HERESY 1167 (Viktor: «в баре такой же кнопочкой, но немного прозрачнее… писать текущий воркспейс, и при нажатии…
++       выводить диалоговое окно с воркспейсами»): the workspace in hand, a button; its dialog lists them all -->
++  <div class="ws-current">
++    <button type="button" id="wsCurrent" class="btn ghost ws-btn" aria-haspopup="dialog" data-tip="The workspace in hand: every new take lands in it, and the Takes column shows it. Click to choose another, or to make one."><span class="ws-btn-name"></span><span class="ws-btn-caret" aria-hidden="true">▾</span></button>
++  </div>
+   <!-- HERESY 1121 (Viktor, 02.10): the engine's lamp, without its word, after the workspace; the rooms open the bar -->
+   <div class="engine-chip">
+     <span class="lamp" id="engineLamp"></span>
+-- 
+2.43.0
+

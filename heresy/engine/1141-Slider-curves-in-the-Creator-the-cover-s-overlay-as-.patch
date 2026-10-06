@@ -1,0 +1,471 @@
+From 2e129e70252c45561b5c1a73c51a19ff426bf0b2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 22:38:00 -0600
+Subject: [PATCH 1141/1177] Slider curves in the Creator; the cover's overlay
+ as large as its picture; the fold's gap (1166, part twenty)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «…кривую в виде арки/параболы, либо амплитуду вручную мышкой двигая вспышки и
+затухания по слайдеру»; «Slider curves делай и тестируй. В гайды также добавь концепт».
+
+A slider's row shows its curve small; a click opens its editor under the row: Flat, Arch, Draw.
+In Draw a point dragged up is a flare, down a fade, along the song a move; a double-click adds a
+point, on a point takes it out. The curve eases between points as the engine does (half a
+cosine). The request carries it only where it is not flat (a flat slider's request as before);
+a take's settings bring it back; its info says «curved». YueSliders.body() for the page test (two
+checks: the editor, Arch sent, flat as before; Draw's point added and dragged to a fade). The
+engine side: the commit before.
+
+Also: the cover's overlay takes its picture's own size (Viktor: «при 1024 обложке попап
+растягивался до 1024x1024»), 1024 for the painter's new pictures, 768 for the earlier, within
+the window; the workspaces' « on an edge as wide as itself with a gap beside it (Viktor:
+«Сделай отступ от кнопочки сворачивания, чтобы не наслаивалось впритык MADE»: it was 0 px, now
+11; the other rooms' fold buttons 10 px and more). The words in the seven languages (9 keys).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  41 ++++++--
+ tools/console/app.js            | 162 +++++++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-be.js |  11 ++-
+ tools/console/heresy-i18n-el.js |  11 ++-
+ tools/console/heresy-i18n-es.js |  11 ++-
+ tools/console/heresy-i18n-it.js |  11 ++-
+ tools/console/heresy-i18n-ru.js |  11 ++-
+ tools/console/heresy-i18n-uk.js |  11 ++-
+ 8 files changed, 251 insertions(+), 18 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index e643b2b..52daaec 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1746,12 +1746,35 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+ .slider-active { display: grid; gap: 6px; }
+ .slider-active:empty { display: none; }
+ .slider-row {
+-  display: grid; grid-template-columns: minmax(84px, 130px) minmax(0, 1fr) 44px 30px; align-items: center; gap: 10px;
++  display: grid; grid-template-columns: minmax(84px, 130px) minmax(0, 1fr) 44px 54px 30px; align-items: center; gap: 10px;
+   padding: 6px 8px 6px 12px; border: 1px solid var(--amber-dim); border-radius: var(--r-md); background: var(--field);
+ }
+ .slider-name { font-size: 13px; color: var(--ink); }
+ .slider-row input[type="range"] { width: 100%; accent-color: var(--amber); }
+ .slider-row output { font: 12px var(--mono); color: var(--muted); text-align: right; }
++/* HERESY 1166: a slider's curve through the song: its small picture on the row, its editor under it */
++.slider-curve { width: 54px; height: 26px; padding: 3px 4px; border: 1px solid var(--line-soft); border-radius: var(--r-sm);
++  background: var(--sunk); cursor: pointer; }
++.slider-curve svg { display: block; width: 100%; height: 100%; }
++.slider-curve path { fill: none; stroke: var(--dim); stroke-width: 1.6; stroke-linejoin: round; }
++.slider-curve.is-curved path { stroke: var(--amber); stroke-width: 2; }
++.slider-curve:hover, .slider-curve:focus-visible, .slider-curve.is-open { border-color: var(--amber); outline: none; }
++.curve-edit { display: flex; flex-direction: column; gap: 6px; margin: -2px 0 4px; padding: 8px 10px 6px;
++  border: 1px dashed var(--amber-dim); border-radius: var(--r-md); background: var(--field); }
++.curve-modes { display: flex; gap: 4px; }
++.curve-mode { padding: 3px 12px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--sunk); color: var(--muted);
++  font: 12px/1.4 var(--sans); cursor: pointer; }
++.curve-mode:hover { color: var(--ink); border-color: var(--line-strong); }
++.curve-mode.is-on { color: var(--on-amber); background: var(--amber); border-color: var(--amber); }
++.curve-graph { display: block; width: 100%; height: auto; background: var(--sunk); border-radius: var(--r-sm); touch-action: none;
++  cursor: crosshair; user-select: none; }
++.curve-graph .curve-grid { stroke: var(--line-soft); stroke-width: 1; }
++.curve-graph .curve-area { fill: color-mix(in srgb, var(--amber) 14%, transparent); }
++.curve-graph .curve-line { fill: none; stroke: var(--amber); stroke-width: 2.2; stroke-linejoin: round; }
++.curve-graph .curve-pt { fill: var(--panel); stroke: var(--amber); stroke-width: 2; cursor: grab; }
++.curve-graph .curve-pt:active { cursor: grabbing; }
++.curve-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); }
++.curve-edit .row-hint { margin: 0; }
+ .decode-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+ .decode-switch:empty { display: none; }
+ .decode-switch .label { margin: 0 4px 0 0; min-width: 44px; }
+@@ -2250,7 +2273,9 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .lib-search input { width: 100%; }
+ @media (max-width: 900px) { .coll-layout { grid-template-columns: 1fr; } .coll-side { position: static; flex-direction: row; flex-wrap: wrap; } }
+ /* HERESY 1162: the workspaces column, its width by its edge, folded away by «; the tiles one column more while it is folded */
+-.coll-layout { grid-template-columns: var(--coll-side-w, 210px) 12px minmax(0, 1fr); gap: 4px; }
++/* HERESY 1166 (Viktor: «Сделай отступ от кнопочки сворачивания, чтобы не наслаивалось впритык MADE»): the edge as wide as its
++   « (20 px; it was 12, so the button sat on the filters) and a gap beside it */
++.coll-layout { grid-template-columns: var(--coll-side-w, 210px) 22px minmax(0, 1fr); gap: 4px 10px; }
+ .coll-resizer { position: sticky; top: 8px; align-self: start; height: calc(100vh - var(--playbar-h, 60px) - 190px); min-height: 160px;
+   display: flex; justify-content: center; cursor: col-resize; touch-action: none; outline: none; }
+ .coll-resizer::before { content: ""; width: 2px; height: 100%; border-radius: 1px; background: transparent; transition: background .12s; }
+@@ -2258,7 +2283,7 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-fold { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 20px; height: 26px; padding: 0; border: 1px solid var(--line-a);
+   border-radius: var(--r-sm, 4px); background: var(--panel); color: var(--muted); font: 600 14px/1 var(--sans); cursor: pointer; }
+ .coll-fold:hover { color: var(--ink); border-color: var(--hover-line, var(--line-strong)); }
+-.coll-layout.is-folded { grid-template-columns: 0 22px minmax(0, 1fr); }
++.coll-layout.is-folded { grid-template-columns: 0 22px minmax(0, 1fr); column-gap: 6px; }
+ .coll-layout.is-folded .coll-side { visibility: hidden; overflow: hidden; }
+ .coll-layout.is-folded .coll-resizer { cursor: default; }
+ .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@@ -3365,10 +3390,12 @@ button.coll-art { border: 0; padding: 0; background-color: var(--line-a); backgr
+    the player left free below it; ‹ › at the sides when there are more to walk */
+ .hd-back.art-back { bottom: var(--playbar-h, 60px); z-index: 110; background: rgba(8, 7, 6, .78); backdrop-filter: blur(5px); }
+ .art-fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; outline: none; }
+-.art-img { display: block; width: min(768px, calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px)); aspect-ratio: 1;
++/* HERESY 1166 (Viktor: «при 1024 обложке попап растягивался до 1024x1024»): as large as its picture (--art-n, set when it
++   loads: 1024 for the painter's pictures from 04.10, 768 for the earlier), within the window */
++.art-img { display: block; width: min(var(--art-n, 768px), calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px)); aspect-ratio: 1;
+   height: auto; object-fit: cover; border-radius: var(--r-lg); background: #1b1916; box-shadow: 0 24px 70px rgba(0, 0, 0, .6);
+   user-select: none; }
+-.art-cap { display: flex; align-items: center; gap: 10px; width: min(768px, calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px));
++.art-cap { display: flex; align-items: center; gap: 10px; width: min(var(--art-n, 768px), calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px));
+   color: #f1ece4; font-size: 14px; }
+ .art-title { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .art-count { flex: none; color: rgba(241, 236, 228, .6); font-size: 12px; font-variant-numeric: tabular-nums; }
+@@ -3378,12 +3405,12 @@ button.coll-art { border: 0; padding: 0; background-color: var(--line-a); backgr
+   background: rgba(255, 255, 255, .07); color: #f1ece4; font: 300 40px/1 var(--sans); cursor: pointer; }
+ .art-step:hover { background: rgba(255, 255, 255, .18); }
+ .art-step[hidden] { display: none; }
+-.art-guess { margin: 0; width: min(768px, calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px)); color: #e8c37a; font-size: 12.5px; }
++.art-guess { margin: 0; width: min(var(--art-n, 768px), calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px)); color: #e8c37a; font-size: 12.5px; }
+ .art-guess[hidden] { display: none; }
+ .art-prev { left: 18px; }
+ .art-next { right: 18px; }
+ @media (max-width: 600px) {
+-  .art-img, .art-cap { width: min(768px, calc(100vw - 32px), calc(100vh - var(--playbar-h, 60px) - 96px)); }
++  .art-img, .art-cap { width: min(var(--art-n, 768px), calc(100vw - 32px), calc(100vh - var(--playbar-h, 60px) - 96px)); }
+   .art-step { top: auto; bottom: 10px; transform: none; width: 40px; height: 44px; font-size: 30px; }
+ }
+ 
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 876dbca..d865996 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -850,6 +850,92 @@
+       : NO_SLIDERS;
+   }
+ 
++  // HERESY 1166 (Viktor 04.10.2026: «по кривым… чтобы либо было flat, как сейчас (как базовое состояние), и кривую в виде
++  // арки/параболы, либо амплитуду вручную мышкой двигая вспышки и затухания по слайдеру»): a slider's strength through the
++  // song, points [t, k] (t the music from its first frame to the end of its length, k the share of the strength), eased
++  // between two as the engine eases them (half a cosine); none is flat. The small picture on a row opens its editor
++  var CURVE_ARCH = [[0, 0.15], [0.5, 1], [1, 0.15]], curveOpen = {}, curveDrag = null;
++  var GW = 300, GH = 90, GP = 8;                   // the editor's graph: its size and its margin
++  function curveAt(c, t) {
++    if (!c || !c.length) return 1;
++    if (t <= c[0][0]) return c[0][1];
++    for (var i = 1; i < c.length; i++) {
++      if (t <= c[i][0]) {
++        var t0 = c[i - 1][0], t1 = c[i][0], u = t1 > t0 ? (t - t0) / (t1 - t0) : 1, e = 0.5 - 0.5 * Math.cos(Math.PI * u);
++        return c[i - 1][1] + (c[i][1] - c[i - 1][1]) * e;
++      }
++    }
++    return c[c.length - 1][1];
++  }
++  // as the request carries it: points in order, t and k 0..1, 64 at most; a flat one (or none) is no curve at all
++  function curveClean(c) {
++    if (!Array.isArray(c)) return null;
++    var pts = c.filter(function (p) { return Array.isArray(p) && isFinite(p[0]) && isFinite(p[1]); })
++      .map(function (p) { return [round(Math.min(1, Math.max(0, +p[0])), 3), round(Math.min(1, Math.max(0, +p[1])), 3)]; })
++      .sort(function (a, b) { return a[0] - b[0]; }).slice(0, 64);
++    if (pts.length < 2 || pts.every(function (p) { return p[1] === 1; })) return null;
++    return pts;
++  }
++  function curveMode(choice) {
++    if (!choice.curve) return "flat";
++    return choice.curveMode || (JSON.stringify(choice.curve) === JSON.stringify(CURVE_ARCH) ? "arch" : "draw");
++  }
++  function curvePath(c, w, h, pad) {
++    var d = "";
++    for (var i = 0; i <= 48; i++) {
++      var t = i / 48, k = Math.min(1, Math.max(0, curveAt(c, t)));
++      d += (i ? " L" : "M") + (pad + t * (w - 2 * pad)).toFixed(1) + "," + (pad + (1 - k) * (h - 2 * pad)).toFixed(1);
++    }
++    return d;
++  }
++  // the form's sliders as the request carries them: a curve only where it is not flat
++  function slidersBody() {
++    return STATE.sliderChoice.map(function (c) {
++      var curve = curveClean(c.curve);
++      return curve ? { id: c.id, strength: c.strength, curve: curve } : { id: c.id, strength: c.strength };
++    });
++  }
++  function choiceOf(id) { return STATE.sliderChoice.filter(function (c) { return c.id === id; })[0]; }
++  function curveEditor(choice, name) {
++    var mode = curveMode(choice), pts = choice.curve || [];
++    var grid = [0.25, 0.5, 0.75].map(function (x) {
++      var X = (GP + x * (GW - 2 * GP)).toFixed(1);
++      return '<line class="curve-grid" x1="' + X + '" y1="' + GP + '" x2="' + X + '" y2="' + (GH - GP) + '"/>';
++    }).join("") + '<line class="curve-grid" x1="' + GP + '" y1="' + GH / 2 + '" x2="' + (GW - GP) + '" y2="' + GH / 2 + '"/>';
++    var line = curvePath(choice.curve, GW, GH, GP);
++    return '<div class="curve-edit" data-curve-edit="' + escape(choice.id) + '">' +
++      '<div class="curve-modes" role="group" aria-label="' + escape(tr(name + ": its curve through the song")) + '">' +
++      [["flat", "Flat"], ["arch", "Arch"], ["draw", "Draw"]].map(function (m) {
++        return '<button type="button" class="curve-mode' + (mode === m[0] ? " is-on" : "") + '" data-curve-mode="' + m[0] + '" aria-pressed="' + (mode === m[0]) + '">' + m[1] + "</button>";
++      }).join("") + "</div>" +
++      '<svg class="curve-graph" viewBox="0 0 ' + GW + " " + GH + '" data-curve-graph="' + escape(choice.id) + '">' + grid +
++      '<path class="curve-area" d="' + line + " L" + (GW - GP) + "," + (GH - GP) + " L" + GP + "," + (GH - GP) + ' Z"/><path class="curve-line" d="' + line + '"/>' +
++      pts.map(function (p, i) {
++        return '<circle class="curve-pt" data-pt="' + i + '" r="5" cx="' + (GP + p[0] * (GW - 2 * GP)).toFixed(1) + '" cy="' + (GP + (1 - p[1]) * (GH - 2 * GP)).toFixed(1) + '"/>';
++      }).join("") + "</svg>" +
++      '<div class="curve-axis"><span>start</span><span>end</span></div>' +
++      '<p class="row-hint">Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, ' +
++      "double-click a point to take it out. The strength above is the top of the curve.</p></div>";
++  }
++  // a dragged point moves its curve where it is drawn; the form is painted again once it is let go
++  function curveRedraw(svg, choice) {
++    var line = curvePath(choice.curve, GW, GH, GP);
++    svg.querySelector(".curve-line").setAttribute("d", line);
++    svg.querySelector(".curve-area").setAttribute("d", line + " L" + (GW - GP) + "," + (GH - GP) + " L" + GP + "," + (GH - GP) + " Z");
++    Array.prototype.forEach.call(svg.querySelectorAll(".curve-pt"), function (el, i) {
++      var p = choice.curve[i];
++      if (!p) return;
++      el.setAttribute("cx", (GP + p[0] * (GW - 2 * GP)).toFixed(1));
++      el.setAttribute("cy", (GP + (1 - p[1]) * (GH - 2 * GP)).toFixed(1));
++    });
++  }
++  function curveAtPointer(svg, event) {
++    var r = svg.getBoundingClientRect();
++    return { t: ((event.clientX - r.left) / r.width * GW - GP) / (GW - 2 * GP), k: 1 - ((event.clientY - r.top) / r.height * GH - GP) / (GH - 2 * GP) };
++  }
++  function curveSaved() { $("sliderActive").dispatchEvent(new Event("change", { bubbles: true })); }   // the draft keeps it
++  window.YueSliders = { body: slidersBody, curveAt: curveAt, arch: CURVE_ARCH };
++
+   function paintSliders() {
+     paintSliderCard();
+     var catalog = STATE.sliderCatalog || [], labels = sliderLabels(), on = {};
+@@ -861,11 +947,17 @@
+         escape(entry.label || entry.id) + "</button>";
+     }).join("") : '<span class="row-hint">No sliders on this server (start it with --sliders).</span>';
+     $("sliderActive").innerHTML = STATE.sliderChoice.map(function (choice) {
+-      var name = labels[choice.id] || choice.id;
++      var name = labels[choice.id] || choice.id, open = !!curveOpen[choice.id];
+       return '<div class="slider-row"><span class="slider-name">' + escape(name) + "</span>" +
+         '<input type="range" min="0" max="1" step="0.05" value="' + choice.strength + '" data-strength="' + escape(choice.id) +
+         '" aria-label="' + escape(tr(name + " strength")) + '" /><output>' + choice.strength.toFixed(2) + "</output>" +
+-        '<button type="button" class="icon-btn" data-remove="' + escape(choice.id) + '" aria-label="' + escape(tr("Remove " + name)) + '">✕</button></div>';
++        // HERESY 1166: its curve through the song, drawn small; a click opens its editor under the row
++        '<button type="button" class="slider-curve' + (curveClean(choice.curve) ? " is-curved" : "") + (open ? " is-open" : "") + '" data-curve-toggle="' +
++        escape(choice.id) + '" aria-expanded="' + open + '" aria-label="' + escape(tr(name + ": its curve through the song")) +
++        '" data-tip="How its strength runs through the song: flat, an arch, or drawn by hand"><svg viewBox="0 0 48 18" aria-hidden="true"><path d="' +
++        curvePath(choice.curve, 48, 18, 2) + '"/></svg></button>' +
++        '<button type="button" class="icon-btn" data-remove="' + escape(choice.id) + '" aria-label="' + escape(tr("Remove " + name)) + '">✕</button></div>' +
++        (open ? curveEditor(choice, name) : "");
+     }).join("");
+     var notes = [];
+     if (!STATE.sliderChoice.length) {
+@@ -890,6 +982,62 @@
+   });
+ 
+   $("sliderActive").addEventListener("change", paintSliderCard);
++  // HERESY 1166: the curve's picture opens its editor; Flat, Arch and Draw; its points dragged, added and taken out
++  $("sliderActive").addEventListener("click", function (event) {
++    var toggle = event.target.closest("[data-curve-toggle]"), mode = event.target.closest("[data-curve-mode]");
++    if (toggle) {
++      curveOpen[toggle.dataset.curveToggle] = !curveOpen[toggle.dataset.curveToggle];
++      return paintSliders();
++    }
++    if (!mode) return;
++    var choice = choiceOf(mode.closest("[data-curve-edit]").dataset.curveEdit);
++    if (!choice) return;
++    if (mode.dataset.curveMode === "flat") { delete choice.curve; delete choice.curveMode; }
++    else if (mode.dataset.curveMode === "arch") { choice.curve = CURVE_ARCH.map(function (p) { return p.slice(); }); choice.curveMode = "arch"; }
++    else { if (!choice.curve) choice.curve = [[0, 1], [0.5, 1], [1, 1]]; choice.curveMode = "draw"; }
++    paintSliders();
++    curveSaved();
++  });
++  $("sliderActive").addEventListener("pointerdown", function (event) {
++    var pt = event.target.closest(".curve-pt"), svg = pt && pt.ownerSVGElement, choice = svg && choiceOf(svg.dataset.curveGraph);
++    if (!choice || !choice.curve) return;
++    curveDrag = { svg: svg, choice: choice, i: +pt.dataset.pt };
++    try { pt.setPointerCapture(event.pointerId); } catch (e) { /* the move still comes through the row */ }
++    event.preventDefault();
++  });
++  $("sliderActive").addEventListener("pointermove", function (event) {
++    if (!curveDrag) return;
++    var pts = curveDrag.choice.curve, i = curveDrag.i, last = pts.length - 1, at = curveAtPointer(curveDrag.svg, event);
++    var t = i === 0 ? 0 : i === last ? 1 : Math.min(pts[i + 1][0] - 0.02, Math.max(pts[i - 1][0] + 0.02, at.t));
++    pts[i] = [round(t, 3), round(Math.min(1, Math.max(0, at.k)), 3)];
++    curveDrag.choice.curveMode = "draw";
++    curveRedraw(curveDrag.svg, curveDrag.choice);
++  });
++  ["pointerup", "pointercancel"].forEach(function (type) {
++    $("sliderActive").addEventListener(type, function () {
++      if (!curveDrag) return;
++      curveDrag = null;
++      paintSliders();
++      curveSaved();
++    });
++  });
++  $("sliderActive").addEventListener("dblclick", function (event) {
++    var svg = event.target.closest("[data-curve-graph]"), choice = svg && choiceOf(svg.dataset.curveGraph);
++    if (!choice) return;
++    if (!choice.curve) choice.curve = [[0, 1], [1, 1]];
++    var pt = event.target.closest(".curve-pt");
++    if (pt) {
++      var i = +pt.dataset.pt;
++      if (i > 0 && i < choice.curve.length - 1) choice.curve.splice(i, 1);
++    } else if (choice.curve.length < 64) {
++      var at = curveAtPointer(svg, event);
++      choice.curve.push([round(Math.min(0.99, Math.max(0.01, at.t)), 3), round(Math.min(1, Math.max(0, at.k)), 3)]);
++      choice.curve.sort(function (a, b) { return a[0] - b[0]; });
++    }
++    choice.curveMode = "draw";
++    paintSliders();
++    curveSaved();
++  });
+   $("sliderActive").addEventListener("input", function (event) {
+     var id = event.target.dataset.strength;
+     if (!id) return;
+@@ -1153,7 +1301,7 @@
+     body.vae = selectedVae();
+     if ($("odeSolver").value !== "midpoint") body.solver = $("odeSolver").value;  // HERESY 1004
+     if (STATE.sliderChoice.length) {
+-      body.sliders = STATE.sliderChoice.map(function (c) { return { id: c.id, strength: c.strength }; });
++      body.sliders = slidersBody();             // HERESY 1166: with each one's curve, where it is not flat
+     }
+     var loras = YueLoras.value();
+     if (loras.length) {
+@@ -1359,7 +1507,9 @@
+       return c && known[c.id] !== undefined;
+     }).map(function (c) {
+       var strength = typeof c.strength === "number" ? c.strength : 1;
+-      return { id: String(c.id), strength: round(Math.min(1, Math.max(0, strength)), 2) };
++      var out = { id: String(c.id), strength: round(Math.min(1, Math.max(0, strength)), 2) }, curve = curveClean(c.curve);
++      if (curve) out.curve = curve;            // HERESY 1166: its curve, as the take ran it
++      return out;
+     });
+     YueLoras.set(Array.isArray(req.loras) ? req.loras : []);
+     if (typeof req.steps === "number") $("odeSteps").value = req.steps;
+@@ -3364,7 +3514,7 @@
+                 scale("Style", "Style influence", styleInfo(take));
+ 
+     var sliders = take.sliders || [];
+-    var slidersText = sliders.length ? sliders.map(function (c) { return (labels[c.id] || c.id) + " " + round(c.strength, 2); }).join(", ") : "none";
++    var slidersText = sliders.length ? sliders.map(function (c) { return (labels[c.id] || c.id) + " " + round(c.strength, 2) + (curveClean(c.curve) ? " \u00b7 " + tr("curved") : ""); }).join(", ") : "none";   // HERESY 1166
+     var sliderItems = sliders.map(function (c) {
+       var strength = Math.max(0, Math.min(1, Number(c.strength) || 0));
+       return [labels[c.id] || c.id, '<span class="bar"><b style="width:' + Math.round(strength * 100) + '%"></b></span>' + (Number(c.strength) || 0).toFixed(2)];
+@@ -4123,6 +4273,8 @@
+       '<button type="button" class="art-step art-next" aria-label="Next" data-tip="Next (→)">›</button>';
+     document.body.appendChild(back);
+     var img = back.querySelector(".art-img");
++    // HERESY 1166 (Viktor: «при 1024 обложке попап растягивался до 1024x1024»): the overlay takes the picture's own size
++    img.addEventListener("load", function () { back.style.setProperty("--art-n", Math.max(320, Math.min(1024, img.naturalWidth || 768)) + "px"); });
+     function shown() { return list[at]; }
+     function paintPlay() {
+       var mine = STATE.playerTake && STATE.playerTake.name === shown() && !audio.paused;
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index dea84e4..38ea1f3 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2480,5 +2480,14 @@ RuachI18n.add("be", {
+ "“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» замарожана: спачатку размарозь яе (⋯ побач з назвай)",
+ "frozen with its workspace: unfreeze it first": "замарожаны разам з прасторай: спачатку размарозь яе",
+ "With the studio's LoRA": "З LoRA студыі",
+-"no adapter": "без адаптара"
++"no adapter": "без адаптара",
++"{0}: its curve through the song": "{0}: яго крывая праз песню",
++"How its strength runs through the song: flat, an arch, or drawn by hand": "Як яго сіла ідзе праз песню: роўна, аркай або намаляваная ад рукі",
++"Flat": "Роўна",
++"Arch": "Арка",
++"Draw": "Маляваць",
++"start": "пачатак",
++"end": "канец",
++"Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Цягні кропку ўгару — успышка, уніз — згасанне, уздоўж песні — зрух; двайная пстрычка дадае кропку, двайная пстрычка па кропцы прыбірае яе. Сіла ўверсе — гэта верх крывой.",
++"curved": "па крывой"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 80da0a7..8bba898 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2479,5 +2479,14 @@ RuachI18n.add("el", {
+ "“{0}” is frozen: unfreeze it first (⋯ beside its name)": "Το «{0}» είναι παγωμένο: ξεπάγωσέ το πρώτα (⋯ δίπλα στο όνομά του)",
+ "frozen with its workspace: unfreeze it first": "παγωμένη μαζί με τον χώρο της: ξεπάγωσέ τον πρώτα",
+ "With the studio's LoRA": "Με το LoRA του στούντιο",
+-"no adapter": "χωρίς προσαρμογέα"
++"no adapter": "χωρίς προσαρμογέα",
++"{0}: its curve through the song": "{0}: η καμπύλη του μέσα στο τραγούδι",
++"How its strength runs through the song: flat, an arch, or drawn by hand": "Πώς τρέχει η έντασή του μέσα στο τραγούδι: επίπεδη, σε τόξο ή σχεδιασμένη με το χέρι",
++"Flat": "Επίπεδη",
++"Arch": "Τόξο",
++"Draw": "Σχεδίαση",
++"start": "αρχή",
++"end": "τέλος",
++"Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Σύρε ένα σημείο πάνω για έκλαμψη, κάτω για σβήσιμο, κατά μήκος του τραγουδιού για μετακίνηση· διπλό κλικ προσθέτει σημείο, διπλό κλικ σε σημείο το αφαιρεί. Η ένταση από πάνω είναι η κορυφή της καμπύλης.",
++"curved": "με καμπύλη"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 5e27fd5..f61c51e 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2479,5 +2479,14 @@ RuachI18n.add("es", {
+ "“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» está congelado: descongélalo primero (⋯ junto a su nombre)",
+ "frozen with its workspace: unfreeze it first": "congelada con su espacio: descongélalo primero",
+ "With the studio's LoRA": "Con la LoRA del estudio",
+-"no adapter": "sin adaptador"
++"no adapter": "sin adaptador",
++"{0}: its curve through the song": "{0}: su curva a lo largo de la canción",
++"How its strength runs through the song: flat, an arch, or drawn by hand": "Cómo recorre su fuerza la canción: plana, en arco o dibujada a mano",
++"Flat": "Plana",
++"Arch": "Arco",
++"Draw": "Dibujar",
++"start": "inicio",
++"end": "final",
++"Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Arrastra un punto hacia arriba para un destello, hacia abajo para un desvanecimiento, a lo largo de la canción para moverlo; doble clic añade un punto, doble clic en un punto lo quita. La fuerza de arriba es la cima de la curva.",
++"curved": "con curva"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index a8e454e..91e1a0f 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2479,5 +2479,14 @@ RuachI18n.add("it", {
+ "“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» è congelato: prima scongelalo (⋯ accanto al nome)",
+ "frozen with its workspace: unfreeze it first": "congelato con il suo spazio: prima scongelalo",
+ "With the studio's LoRA": "Con la LoRA dello studio",
+-"no adapter": "senza adattatore"
++"no adapter": "senza adattatore",
++"{0}: its curve through the song": "{0}: la sua curva lungo la canzone",
++"How its strength runs through the song: flat, an arch, or drawn by hand": "Come la sua forza attraversa la canzone: piatta, ad arco o disegnata a mano",
++"Flat": "Piatta",
++"Arch": "Arco",
++"Draw": "Disegna",
++"start": "inizio",
++"end": "fine",
++"Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Trascina un punto in alto per un lampo, in basso per una dissolvenza, lungo la canzone per spostarlo; doppio clic aggiunge un punto, doppio clic su un punto lo toglie. La forza sopra è la cima della curva.",
++"curved": "con curva"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 9a0bd13..5fba89c 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2485,5 +2485,14 @@ RuachI18n.add("ru", {
+ "“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» заморожено: сперва разморозь его (⋯ рядом с именем)",
+ "frozen with its workspace: unfreeze it first": "заморожен вместе с пространством: сперва разморозь его",
+ "With the studio's LoRA": "С LoRA студии",
+-"no adapter": "без адаптера"
++"no adapter": "без адаптера",
++"{0}: its curve through the song": "{0}: его кривая через песню",
++"How its strength runs through the song: flat, an arch, or drawn by hand": "Как его сила идёт через песню: ровно, аркой или нарисованной от руки",
++"Flat": "Ровно",
++"Arch": "Арка",
++"Draw": "Рисовать",
++"start": "начало",
++"end": "конец",
++"Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Тяни точку вверх — вспышка, вниз — затухание, вдоль песни — сдвиг; двойной щелчок добавляет точку, двойной щелчок по точке убирает её. Сила наверху — это верх кривой.",
++"curved": "по кривой"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 3cac497..5d98946 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2480,5 +2480,14 @@ RuachI18n.add("uk", {
+ "“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» заморожено: спершу розморозь його (⋯ біля назви)",
+ "frozen with its workspace: unfreeze it first": "заморожено разом із простором: спершу розморозь його",
+ "With the studio's LoRA": "З LoRA студії",
+-"no adapter": "без адаптера"
++"no adapter": "без адаптера",
++"{0}: its curve through the song": "{0}: його крива крізь пісню",
++"How its strength runs through the song: flat, an arch, or drawn by hand": "Як його сила йде крізь пісню: рівно, аркою або намальована від руки",
++"Flat": "Рівно",
++"Arch": "Арка",
++"Draw": "Малювати",
++"start": "початок",
++"end": "кінець",
++"Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Тягни точку вгору — спалах, униз — згасання, уздовж пісні — зсув; подвійне клацання додає точку, подвійне клацання по точці прибирає її. Сила вгорі — це верх кривої.",
++"curved": "за кривою"
+ });
+-- 
+2.43.0
+

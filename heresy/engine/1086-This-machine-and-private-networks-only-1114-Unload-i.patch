@@ -1,0 +1,159 @@
+From e974fb767712327b4811b506c7518db422f6f6c7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 17:05:09 -0600
+Subject: [PATCH 1086/1177] This machine and private networks only (1114);
+ Unload in the bar, tinted while loaded (1113); tones and washes from every
+ theme's own colours (1115)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |  32 ++++++++++++++++++++++++++++++++
+ tools/console/app.js       |   8 +++++++-
+ tools/console/index.html   |   2 +-
+ tools/public/index.html.gz | Bin 412757 -> 413657 bytes
+ tools/yue-server.cpp       |  30 ++++++++++++++++++++++++++++++
+ 5 files changed, 70 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index e751def..60c6169 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3030,3 +3030,35 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--check, var(--a
+ #playbar .pb-rate:hover .pb-btn, #playbar .pb-side .time:hover, #playbar:focus-within .pb-tog:focus-visible { opacity: 1; }
+ #playbar #timeTotal { cursor: pointer; }
+ #playbar .speed-pick { font-variant-numeric: tabular-nums; }
++
++/* HERESY 1113: Unload in the bar, tinted while a model is loaded */
++#unloadModel.is-loaded { background: color-mix(in srgb, var(--bad) 20%, transparent); border-color: color-mix(in srgb, var(--bad) 35%, var(--line)); color: var(--bad-ink, var(--bad)); }
++#unloadModel:disabled:not(.is-loaded) { opacity: .45; }
++
++/* ---------------------------------------------------------------- HERESY 1115: tones and washes
++   Every theme gave flat colours only. Now each theme's own accent and ground give a ramp of tones, mixed in OKLab so
++   the steps look even to the eye, and the surfaces carry them faintly: one base colour, many shades, in every theme
++   without a line added to any theme. Faint on purpose: a working tool, not a salon. */
++:root {
++  --tone-1: color-mix(in oklab, var(--amber) 4%, var(--panel));
++  --tone-2: color-mix(in oklab, var(--amber) 8%, var(--panel));
++  --tone-3: color-mix(in oklab, var(--amber) 14%, var(--panel));
++  --tone-4: color-mix(in oklab, var(--amber) 22%, var(--panel));
++  --wash-1: color-mix(in oklab, var(--amber) 2.5%, var(--ground));
++  --wash-2: color-mix(in oklab, var(--amber) 5%, var(--ground));
++  --shade-1: color-mix(in oklab, var(--ink) 3%, var(--panel));
++}
++/* the bar and the heads of the rooms: a wash that fades */
++.topbar { background-image: linear-gradient(180deg, var(--wash-2), var(--ground)); }
++.col-head { background-image: linear-gradient(90deg, var(--wash-2), transparent 55%); }
++/* the player: a tone from the top, the glass kept */
++#playbar { background: linear-gradient(180deg, color-mix(in oklab, var(--tone-2) 80%, transparent), color-mix(in oklab, var(--panel) 80%, transparent)); }
++/* the Librarian's cards: a breath of the accent at the top; deeper when hovered, checked, playing */
++.coll-card { background: linear-gradient(180deg, var(--tone-1), var(--panel) 70%); }
++.coll-card:hover { background: linear-gradient(180deg, var(--tone-2), var(--tone-1)); }
++.coll-card.is-sel { background: linear-gradient(180deg, var(--tone-3), var(--tone-1)); }
++.coll-card.is-current { background: linear-gradient(180deg, var(--tone-2), var(--panel) 80%); }
++#playbar .pb-cover { box-shadow: 0 4px 12px -6px var(--shadow-lg, rgba(0,0,0,.35)), inset 0 0 0 1px color-mix(in oklab, var(--ink) 8%, transparent); }
++.coll-pin { background: linear-gradient(135deg, var(--tone-3), var(--tone-1)); }
++/* drawers: the summary a shade above the body */
++.drawer > summary { background: linear-gradient(180deg, var(--shade-1), var(--panel)); border-radius: var(--r-md) var(--r-md) 0 0; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f2dbea2..4adf802 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2795,6 +2795,9 @@
+     var canUnload = !STATE.noHardware && loaded > 0 && !hw.busy;
+     $("unloadModel").disabled = !canUnload;
+     $("unloadNow").disabled = !canUnload;
++    $("unloadModel").classList.toggle("is-loaded", loaded > 0);   // HERESY 1113: a loaded model, seen in the bar
++    $("unloadModel").dataset.tip = loaded > 0 ? "Unload model: " + gib(hw.loaded_bytes || 0) + " GB in the card\u2019s memory now" + (hw.busy ? " (busy: it waits)" : "; drop it now")
++      : "Unload model: nothing is loaded";
+     paintStrip();
+     paintEngine();
+     paintSubmitNote();
+@@ -4077,12 +4080,15 @@
+       ctx.fillText(STATE.peaks === "none" ? "no waveform for this file" : "reading waveform…", 12, middle + 4);
+     } else {
+       var peaks = STATE.peaks, bars = Math.min(peaks.length, Math.floor(width / 3));
++      // HERESY 1115: what has played, the accent from its brighter tone at the peaks to its own at the middle
++      var played = ctx.createLinearGradient(0, 0, 0, height);
++      played.addColorStop(0, themeRGBA("amber-hi", 1)); played.addColorStop(0.5, themeRGBA("amber", 1)); played.addColorStop(1, themeRGBA("amber-hi", 1));
+       var step = peaks.length / bars;
+       for (var i = 0; i < bars; i++) {
+         var value = peaks[Math.floor(i * step)];
+         var barHeight = Math.max(1.5, value * (height - 10));
+         var x = i * (width / bars);
+-        ctx.fillStyle = (i / bars) <= progress ? themeRGBA("amber", 1) : themeRGBA("ink", 0.24);
++        ctx.fillStyle = (i / bars) <= progress ? played : themeRGBA("ink", 0.24);
+         ctx.fillRect(x, middle - barHeight / 2, Math.max(1, width / bars - 1), barHeight);
+       }
+     }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 469b718..4d462fa 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -67,6 +67,7 @@
+     <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform)">DAW</button>
+     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
+     <button type="button" class="btn ghost small" id="guideOpen" data-icon="question" aria-label="The guide" data-tip="The guide: every room, what each thing does (opens on the room you are in)">The guide</button>
++    <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now (tinted red while a model is loaded)" disabled>Unload model</button>
+     <div class="menu-wrap head-more">
+       <button type="button" class="btn ghost small head-more-btn" id="headMore" aria-haspopup="true" aria-expanded="false" aria-label="More" data-tip="More: the card and its memory, the model, themes, prompts, examples, the engine">&#9776;</button>
+       <div class="head-more-pop is-hidden" id="headMorePop" role="menu" aria-label="More">
+@@ -82,7 +83,6 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
+       <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
+     </div>
+-          <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now" disabled>Unload model</button>
+           <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
+           <button type="button" class="btn ghost small" id="guideOpenMenu" data-icon="question" data-tip="The guide: every room, what each thing does">The guide</button>
+         </div>
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index b9e82da..675126b 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -272,6 +272,27 @@ static std::shared_ptr<Job> job_find(const std::string & id) {
+     return it != g_jobs.end() ? it->second : nullptr;
+ }
+ 
++// HERESY 1114 (Viktor, 02.10.2026): most machines stand open to the internet on every port, so the studio answers
++// this machine and private networks only: 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16 (link-local), 100.64/10
++// (carrier-grade NAT, where Tailscale lives: a laptop reaching its home server), ::1, fc00::/7,
++// fe80::/10, and IPv4 in IPv6 dress. RUACH_ALLOW_PUBLIC=1 opens it to anyone (behind one's own proxy and guard).
++static bool is_private_addr(const std::string & addr) {
++    std::string a = addr;
++    if (a.rfind("::ffff:", 0) == 0) a = a.substr(7);
++    if (a == "::1") return true;
++    if (a.find(':') != std::string::npos) {
++        std::string l = a;
++        for (auto & c : l) c = (char) tolower((unsigned char) c);
++        return l.rfind("fc", 0) == 0 || l.rfind("fd", 0) == 0 || l.rfind("fe8", 0) == 0 || l.rfind("fe9", 0) == 0 ||
++               l.rfind("fea", 0) == 0 || l.rfind("feb", 0) == 0;
++    }
++    unsigned b[4];
++    char     rest;
++    if (sscanf(a.c_str(), "%u.%u.%u.%u%c", &b[0], &b[1], &b[2], &b[3], &rest) != 4) return false;
++    return b[0] == 127 || b[0] == 10 || (b[0] == 192 && b[1] == 168) || (b[0] == 172 && b[1] >= 16 && b[1] <= 31) ||
++           (b[0] == 169 && b[1] == 254) || (b[0] == 100 && b[1] >= 64 && b[1] <= 127);
++}
++
+ static const char * job_status_str(JobStatus s) {
+     switch (s) {
+         case JobStatus::RUNNING:
+@@ -1696,6 +1717,15 @@ int main(int argc, char ** argv) {
+     svr.set_read_timeout(120, 0);
+     svr.set_payload_max_length((size_t) 1024 * 1024 * 1024);
+     g_svr = &svr;
++    // HERESY 1114: this machine and private networks only, unless RUACH_ALLOW_PUBLIC=1
++    static const bool allow_public = [] { const char * e = getenv("RUACH_ALLOW_PUBLIC"); return e && *e && strcmp(e, "0") != 0; }();
++    svr.set_pre_routing_handler([](const httplib::Request & req, httplib::Response & res) {
++        if (allow_public || is_private_addr(req.remote_addr)) return httplib::Server::HandlerResponse::Unhandled;
++        res.status = 403;
++        res.set_content(json_string("error", "Ruach Studio answers this machine and private networks only (RUACH_ALLOW_PUBLIC=1 opens it)"),
++                        "application/json");
++        return httplib::Server::HandlerResponse::Handled;
++    });
+ 
+     // SO_REUSEADDR lets us rebind a port still in TIME_WAIT after a restart.
+     // SO_REUSEPORT is deliberately not set: a second instance on the same port
+-- 
+2.43.0
+

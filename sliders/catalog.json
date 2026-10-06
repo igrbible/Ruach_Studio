@@ -1,0 +1,123 @@
+{
+  "source": "ntc-ai/yue2-particle-sliders",
+  "release": "particle-gmix-1600-v2",
+  "experimental": true,
+  "recommended_range": [
+    0,
+    1
+  ],
+  "sliders": [
+    {
+      "id": "female",
+      "label": "Female",
+      "description": "One adult female lead with clear melodic phrasing",
+      "file": "female.gguf",
+      "source_sha256": "1daba0682dcaf15d05d08637d5ccca7a1f157d298f8f491dbc6ad712ff0d0ead"
+    },
+    {
+      "id": "male",
+      "label": "Male",
+      "description": "One adult male lead with clear melodic phrasing",
+      "file": "male.gguf",
+      "source_sha256": "c916db3511d8c0f436900785b722dd65b9f5a4195649d0f06ef3c807dd4527ad"
+    },
+    {
+      "id": "pop",
+      "label": "Pop",
+      "description": "Clear hooks, crisp drums and a polished chorus",
+      "file": "pop.gguf",
+      "source_sha256": "36ece86ff462cc879d12b55dc0ee7ffdc8776e2fed1c9136e0772648aee7bf02"
+    },
+    {
+      "id": "hiphop",
+      "label": "Hip-Hop",
+      "description": "Rapped verses, deep sub bass and nimble hats",
+      "file": "hiphop.gguf",
+      "source_sha256": "fc1104e34eb86fe86b918246358b8cb5e05e3a6e1a6d589e6e3bffff845392f0"
+    },
+    {
+      "id": "rnb",
+      "label": "R&B",
+      "description": "Warm keys, deep pocket and fluid vocal phrasing",
+      "file": "rnb.gguf",
+      "source_sha256": "b68802ad79352e3c66f3ce13ae5b7eaaca2e24f4bb307276589250db25acbdda"
+    },
+    {
+      "id": "indie-rock",
+      "label": "Indie Rock",
+      "description": "Chiming guitars, moving bass and a human drum kit",
+      "file": "indie-rock.gguf",
+      "source_sha256": "d3dabcf0b20f32c680394b72af565058099d5fb9c0aab969b96bb224a5cf5067"
+    },
+    {
+      "id": "pop-punk",
+      "label": "Pop Punk",
+      "description": "Palm-muted power chords and driving chorus drums",
+      "file": "pop-punk.gguf",
+      "source_sha256": "c7a1978d5a1d896a74645ba1296f664877090e9b796faf359e1e95a675c1bab5"
+    },
+    {
+      "id": "metal",
+      "label": "Metal",
+      "description": "Heavy guitar riffs, tight kicks and big melodic choruses",
+      "file": "metal.gguf",
+      "source_sha256": "d7b9907b46d573f20bc5919f49164648356458b219df4b81f248d0399f492aac"
+    },
+    {
+      "id": "country",
+      "label": "Country",
+      "description": "Acoustic strum, twangy fills and an easy backbeat",
+      "file": "country.gguf",
+      "source_sha256": "aa9cd5a4d7c5978d24d6260e0e2dc84027eb55884b6ce7126704d278cdb574d4"
+    },
+    {
+      "id": "acoustic-folk",
+      "label": "Acoustic Folk",
+      "description": "Fingerpicked strings and a warm small-room performance",
+      "file": "acoustic-folk.gguf",
+      "source_sha256": "12967b7681f44d2aa7a3f4e2539d4a1e8615b38c2025292165dbd6c8c5407dbc"
+    },
+    {
+      "id": "house",
+      "label": "House",
+      "description": "Steady club kick, offbeat hats and a rolling bass line",
+      "file": "house.gguf",
+      "source_sha256": "aa010f666d8f097fc9a1567f285b5a9ca96504e588e59c351f35c13f78b6d9d8"
+    },
+    {
+      "id": "disco-funk",
+      "label": "Disco Funk",
+      "description": "Elastic bass, clipped guitar and bright dance-floor strings",
+      "file": "disco-funk.gguf",
+      "source_sha256": "5141cdf3d4697f829eacc7ffab535228aa94f3d2ca9804def17abc931fc8f932"
+    },
+    {
+      "id": "kpop",
+      "label": "K-pop",
+      "description": "Sharp synth hooks, tight edits and a big chorus lift",
+      "file": "kpop.gguf",
+      "source_sha256": "aa798a14da2d49670c18e6cc45a0edcf0a6c56895b7e7126adb03218778c8aa9"
+    },
+    {
+      "id": "reggaeton",
+      "label": "Reggaeton",
+      "description": "Dembow drums, rounded sub bass and clipped melodic hooks",
+      "file": "reggaeton.gguf",
+      "source_sha256": "4fe2e1d879d824ea980fe4340dd6bcf8d3e64bca5474b80833f818ffd6152381"
+    },
+    {
+      "id": "afrobeats",
+      "label": "Afrobeats",
+      "description": "Interlocking percussion, melodic bass and buoyant guitar",
+      "file": "afrobeats.gguf",
+      "source_sha256": "aff7892d6cb7f6302f8d043f6611c1db97c4dea54c30ad32815a8f46fbc45a27"
+    },
+    {
+      "id": "lofi",
+      "label": "Lo-fi",
+      "description": "Soft swung drums, mellow keys and gentle tape warmth",
+      "file": "lofi.gguf",
+      "source_sha256": "664fa47cede00f63e63ef8fe1ef56bfdbda9d34a61a8d1cdffb863d551af5bdf"
+    }
+  ]
+}

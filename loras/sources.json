@@ -1,0 +1,105 @@
+{
+  "vaes": {
+    "standard": {
+      "official": true,
+      "url": "https://huggingface.co/m-a-p/YuE2-Vae",
+      "about": "The current official decoder, and the default. The cleanest, best-sounding one: start here."
+    },
+    "legacy": {
+      "official": true,
+      "url": "https://huggingface.co/m-a-p/YuE2-Vae-legacy",
+      "about": "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs."
+    },
+    "blend": {
+      "official": false,
+      "url": "https://huggingface.co/Mothersuperior/YuE2-Vae-merge-0.666",
+      "about": "A community weight mix of the two official decoders: 2/3 Standard + 1/3 Legacy. Not newly trained. It sits between the clean Standard and the more musical Legacy; the real-audio LoRA's authors suggest it."
+    }
+  },
+  "sliders": {
+    "official": false,
+    "repo": "ntc-ai/yue2-particle-sliders",
+    "url": "https://huggingface.co/ntc-ai/yue2-particle-sliders",
+    "about": "16 voice and genre sliders (Female, Male, Pop, Metal, Country and more): an add-on by a third party, not the model's publisher. None ship with the model. Each is a small trained adapter on the music half, a cousin of a LoRA: instead of one fixed weight change it routes the model's signal through a tiny learned network, so its push adapts to the music. That is why it runs live while the music is written instead of being merged in, and why each one slows that stage a little. 0 is off, 1 is the trained sound; negative is not supported. Its makers mark the set experimental."
+  },
+  "loras": {
+    "sv-billie-yue2-lora/": {
+      "title": "sv-billie",
+      "tag": "hushed bedroom pop",
+      "repo": "HaileyStorm/sv-billie-yue2-lora",
+      "url": "https://huggingface.co/HaileyStorm/sv-billie-yue2-lora",
+      "about": "Artist-style LoRA for close, hushed vocals, heavy low end and off-kilter bedroom pop. Both halves; start at 1.0. Its card says to begin the style with \"sv_billie, in the style of sv_billie.\" and give full section-tagged lyrics; it used 100 sound steps."
+    },
+    "sv-dreampop/": {
+      "title": "DreamPop v2",
+      "tag": "hazy dream pop",
+      "repo": "atomtanstudio/lora-library",
+      "url": "https://huggingface.co/atomtanstudio/lora-library/tree/main/yue2/dreampop",
+      "about": "DreamPop v2: a style LoRA toward dream pop (hazy, washed guitars, soft vocals). Both halves. Put its trigger sv_dreampop in the style. Its settings file asks for Direct mode (no score), guidance 1 and 32 sound steps."
+    },
+    "yue2-industrial-rock-lora/adapter-ar-179/": {
+      "title": "Industrial rock",
+      "tag": "riffs, structure, drive",
+      "repo": "monsterovich/yue2-industrial-rock-lora",
+      "url": "https://huggingface.co/monsterovich/yue2-industrial-rock-lora",
+      "about": "Industrial rock, music half: steers structure, melody and genre toward heavy distorted guitars, mechanical textures and aggressive rhythms (trained on 179 tracks). Pair it with adapter-nar-179-v2 for the sound. Card: music about 1.0."
+    },
+    "yue2-industrial-rock-lora/adapter-nar-179-v2/": {
+      "title": "Industrial rock",
+      "tag": "distorted, mechanical tone",
+      "repo": "monsterovich/yue2-industrial-rock-lora",
+      "url": "https://huggingface.co/monsterovich/yue2-industrial-rock-lora",
+      "about": "Industrial rock, sound half: the timbre (dense, distorted, mechanical). v2 is the retrain with the training bug fixed, the recommended one. Card: keep sound at 0.3 to 0.7; well above 1.0 it turns into noise."
+    },
+    "yue2-jpop-t4-lora/": {
+      "title": "J-pop",
+      "tag": "bright modern J-pop sound",
+      "repo": "storagejuju/yue2-jpop-t4-lora",
+      "url": "https://huggingface.co/storagejuju/yue2-jpop-t4-lora",
+      "about": "Modern J-pop timbre, sound half only: bright guitars, warm bass, shimmering synths, polished production. Put its trigger jpstyle26 first in the style. Small training run (2000 steps on 6-second clips)."
+    },
+    "yue2-mothersuperior-realaudio-tokenizer-v4/nar_lora_joint_v4": {
+      "title": "Real audio v4",
+      "tag": "real-audio sound, older",
+      "repo": "Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4",
+      "url": "https://huggingface.co/Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4",
+      "about": "Real-production sound, sound half: makes the decoder render like real recorded music instead of the model's own polish. Also swaps two small bridge layers. v4 is the earlier round, the one the instrumental LoRA's renders used. Use at sound 1.0; no trigger."
+    },
+    "yue2-mothersuperior-realaudio-tokenizer-v4/nar_lora_joint_v9": {
+      "title": "Real audio v9",
+      "tag": "real-audio sound, newest",
+      "repo": "Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4",
+      "url": "https://huggingface.co/Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4",
+      "about": "Real-production sound, sound half, newest round (v9): trained against the actual audio of real recordings, not just a proxy, and preferred overall in its authors' listening tests over v4 to v8. Use at sound 1.0; no trigger. Pick v4 or v9, not both."
+    },
+    "yue2-steps-from-hell/adapter-ar-195/": {
+      "title": "Epic trailer",
+      "tag": "orchestral structure, drama",
+      "repo": "monsterovich/yue2-steps-from-hell",
+      "url": "https://huggingface.co/monsterovich/yue2-steps-from-hell",
+      "about": "Epic trailer orchestra, music half: soaring strings, taiko and orchestral percussion, brass fanfares, big choir (trained on 195 tracks). Pair it with adapter-nar-194. The card's sample used music about 0.5."
+    },
+    "yue2-steps-from-hell/adapter-nar-194/": {
+      "title": "Epic trailer",
+      "tag": "big orchestra and choir tone",
+      "repo": "monsterovich/yue2-steps-from-hell",
+      "url": "https://huggingface.co/monsterovich/yue2-steps-from-hell",
+      "about": "Epic trailer orchestra, sound half: the big symphonic timbre. The card's sample used sound about 0.375; keep it at 0.3 to 0.7, higher turns harsh or hollow."
+    },
+    "YuE2-instrumental-cot-full-loras/": {
+      "title": "Instrumental",
+      "tag": "no vocals, planned sections",
+      "repo": "Mothersuperior/YuE2-instrumental-cot-full-loras",
+      "url": "https://huggingface.co/Mothersuperior/YuE2-instrumental-cot-full-loras",
+      "about": "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound."
+    },
+    "YuE2_Deathmetalv1_lora/": {
+      "title": "Death metal",
+      "tag": "melodic death metal",
+      "repo": "pduncan/YuE2_Deathmetalv1_lora",
+      "url": "https://huggingface.co/pduncan/YuE2_Deathmetalv1_lora",
+      "trigger": "deathmetal",
+      "about": "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart."
+    }
+  }
+}

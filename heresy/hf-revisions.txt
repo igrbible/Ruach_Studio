@@ -1,0 +1,12 @@
+# owner/repo commit: the Hugging Face revisions Ruach Studio fetches beyond the Kit's tools/hf-revisions.txt
+# (heresy/fetch-heresy.sh reads this first, then the Kit's file). Pinned 01.10.2026.
+Systran/faster-whisper-large-v3 edaa852ec7e145841d8ffdb056a99866b5f0a478
+woongzip1/universr-audio 1c3294844285af851b6ffa56cbde4e43cd41fc2b
+ggml-org/Qwen2.5-Omni-7B-GGUF 89b785438c8901d4635e42f50480ba5985a1bbf1
+Qwen/Qwen2.5-Omni-7B ae9e1690543ffd5c0221dc27f79834d0294cba00
+unsloth/Qwen2.5-Omni-7B-GGUF de13a229d14d23c7149d6550e99ed3fe7778b733
+mradermacher/Qwen2.5-Omni-7B-GGUF 658a1c70e91733330bcad348eead24bb4d15d9eb
+Comfy-Org/YuE2 2f76ca75e6ee094169de899cc7fc99d6887e2196
+GTSinger/GTSinger 4426c862beed558b7e1cb8a4dce7e8c0c83bb208
+Qwen/Qwen3-4B-Instruct-2507 cdbee75f17c01a7cc42f958dc650907174af0554   # HERESY 1120: the artwork prompt writer (pinned 02.10.2026)
+Falconsai/nsfw_image_detection 96cb0d0342c7afb80cab76ecc58b265fa44da256   # HERESY 1167: the artwork's content filter (Krea 2 Community License 4.2; pinned 05.10.2026)

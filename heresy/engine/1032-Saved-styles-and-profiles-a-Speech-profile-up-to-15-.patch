@@ -1,0 +1,361 @@
+From 47269688e4b2b28b28ac960cf21a051654b250a2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 00:15:28 -0600
+Subject: [PATCH 1032/1177] Saved styles and profiles, a Speech profile up to
+ 15:00, and the 1.6 guidance that really goes out
+
+- Library on Forge (lab: yue2_os/presets.json): styles by name under the Style field; profiles
+  (every knob but the texts and seeds, written out in full) beside the planning mode. Built in:
+  Music up to 8:00 (the defaults) and Speech up to 15:00 (Direct, 900 s, a music budget of
+  22500 tokens).
+- Engine: a budget that does not fit beside the prefix is cut to what does, with a line in the
+  log, instead of a FATAL; only a prefix that leaves no room fails. A long reading gets what the
+  24576 context holds and is marked truncated if it runs into the cut.
+- 1031 left the guidance field filling itself with 1.0 / 1.01, so an untouched field went out
+  as an explicit 1.0 and the new default never ran. It fills with the engine default now.
+- ?scope=NAME in the page address keeps settings and presets in separate files: a test page
+  never writes into the ones a working browser keeps.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/generate.h                   |  22 ++++--
+ tools/console/app.css            |   5 ++
+ tools/console/app.js             |  54 ++++++++++++--
+ tools/console/heresy-presets.js  | 118 +++++++++++++++++++++++++++++++
+ tools/console/heresy-settings.js |   4 +-
+ tools/console/index.html         |  16 +++++
+ tools/public/index.html.gz       | Bin 295996 -> 299028 bytes
+ 7 files changed, 207 insertions(+), 12 deletions(-)
+ create mode 100644 tools/console/heresy-presets.js
+
+diff --git a/src/generate.h b/src/generate.h
+index 120b9e1..aea3b63 100644
+--- a/src/generate.h
++++ b/src/generate.h
+@@ -61,7 +61,7 @@ static bool yue2_generate(Qwen3LM *                             lm,
+                           const std::vector<std::vector<int>> & prefixes,
+                           const std::vector<std::vector<int>> & negatives,
+                           float                                 cfg_scale,
+-                          const Yue2Sampling &                  s,
++                          const Yue2Sampling &                  s_in,
+                           int64_t                               seed,
+                           Yue2Phase                             phase,
+                           std::vector<Yue2Generation> *         out,
+@@ -74,14 +74,26 @@ static bool yue2_generate(Qwen3LM *                             lm,
+         fprintf(stderr, "[AR] FATAL: guidance %.3f needs an unconditional prefix per sequence\n", (double) cfg_scale);
+         return false;
+     }
+-    // Every set holds its prefix, the budget and the end token
++    // Every set holds its prefix, the budget and the end token.
++    // HERESY 1032: a budget that does not fit beside the prefix is cut to what does, instead of a
++    // FATAL: a long speech asks for 15 minutes and gets what the context holds (a song that runs
++    // into the cut is marked truncated, as at any budget). Only a prefix with no room left fails.
++    Yue2Sampling s = s_in;
+     for (int i = 0; i < B; i++) {
+         size_t longest = guided && negatives[i].size() > prefixes[i].size() ? negatives[i].size() : prefixes[i].size();
+-        if ((int) longest + s.max_tokens + 1 > context) {
+-            fprintf(stderr, "[AR] FATAL: prefix %zu + budget %d + end exceeds context %d\n", longest, s.max_tokens,
+-                    context);
++        int    room    = context - (int) longest - 1;
++        if (room < 1) {
++            fprintf(stderr, "[AR] FATAL: prefix %zu leaves no room in context %d\n", longest, context);
+             return false;
+         }
++        if (s.max_tokens > room) {
++            fprintf(stderr, "[AR] Budget %d cut to %d: prefix %zu + end fill the rest of context %d\n", s.max_tokens, room,
++                    longest, context);
++            s.max_tokens = room;
++            if (s.min_tokens > s.max_tokens) {
++                s.min_tokens = s.max_tokens;
++            }
++        }
+     }
+ 
+     const int N = guided ? 2 * B : B;
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 4fbc138..6056951 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2097,3 +2097,8 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ /* HERESY 1030: the tree under every step */
+ .dv-tree-box { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-md, 8px); background: var(--panel); }
+ .dv-tree-title { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
++
++/* HERESY 1032: saved styles and profiles */
++.lib-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 10px; }
++.lib-row select { max-width: 340px; }
++.lib-row .label { margin: 0; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 8b1fb13..94e352c 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -437,7 +437,7 @@
+   }
+ 
+   // Guidance shows the value the engine actually uses for the chosen planning
+-  // mode (1.0 for full and melody, 1.01 for direct) until you type your own.
++  // mode (HERESY 1031: 1.6 in every mode; the release had 1.0, and 1.01 in Direct) until you type your own.
+   function defaultCfg(cot) { return 1.6; }   // HERESY 1031: the engine's default in every mode (the release: 1.01 off, 1.0 else)
+   function currentCot() {
+     var checked = document.querySelector('input[name="cot"]:checked');
+@@ -452,8 +452,10 @@
+   }
+   function fillCfg() {
+     if ($("cfg").dataset.touched) return;
+-    var def = currentCot() === "off" ? "1.01" : "1.0";
+-    $("cfg").setAttribute("value", def);   // step base: arrows go 1.0 -> 1.01 / 0.99
++    // HERESY 1032: the engine's default (1031 moved it to 1.6 and left this at 1.0 / 1.01, so the
++    // untouched field went out as an explicit 1.0 and the new default never ran)
++    var def = String(defaultCfg(currentCot()));
++    $("cfg").setAttribute("value", def);   // step base: arrows go 1.6 -> 1.61 / 1.59
+     $("cfg").value = def;
+   }
+   $("cfg").addEventListener("input", function () { this.dataset.touched = this.value.trim() ? "1" : ""; if (!this.value.trim()) fillCfg(); });
+@@ -932,13 +934,14 @@
+ 
+   // One request for a full render or a score-only plan, in the server's own
+   // field names. Blank seeds stay out, and the server rolls them.
+-  function buildRequest(plan, instrumental) {
++  function buildRequest(plan, instrumental, loose) {
+     var cot = currentCot();
+     var abc = $("abc").value.trim();
+     // an instrumental picks its own mode from the score
+-    if (abc && cot === "off" && !instrumental) throw new Error("Direct mode ignores a supplied score — pick full or melody");
++    // (loose, HERESY 1032: the form read as it stands, for a saved profile, with no checks on the texts)
++    if (abc && cot === "off" && !instrumental && !loose) throw new Error("Direct mode ignores a supplied score — pick full or melody");
+     var style = $("style").value.trim(), lyrics = $("lyrics").value;
+-    if (!style && !lyrics.trim() && !STATE.codes) throw new Error("Write a style prompt or lyrics first");
++    if (!style && !lyrics.trim() && !STATE.codes && !loose) throw new Error("Write a style prompt or lyrics first");
+     var body = { title: songTitle(), style: style, lyrics: lyrics, cot: cot };
+     if (abc) body.abc = abc;
+     var lm = readSeed("lmSeed", "Music seed"), sound = readSeed("soundSeed", "Sound seed");
+@@ -4902,6 +4905,45 @@
+     });
+   }
+ 
++  /* ---------------------------------------------- HERESY 1032: saved styles and profiles */
++  // A profile is every knob but the texts and seeds, written out in full (defaults too), so it
++  // means the same on a server whose defaults moved. Applying one keeps the texts, seeds and codes.
++  var SETUP_KEYS = ["cot", "duration", "cfg_scale", "steps", "solver", "vae", "sliders", "loras", "output_format",
++                    "mp3_bitrate", "peak_clip", "synth_batch_size", "lm_batch_size"];
++  function captureSetup() {
++    var b = buildRequest(false, false, true), out = {};
++    SETUP_KEYS.forEach(function (k) { if (b[k] !== undefined) out[k] = b[k]; });
++    ["abc", "semantic"].forEach(function (g) {
++      var full = {};
++      all('input[data-group="' + g + '"]').forEach(function (input) {
++        var v = parseFloat(input.value);
++        full[input.dataset.key] = isFinite(v) ? (/_(k|window|tokens)$/.test(input.dataset.key) ? Math.round(v) : v) : samplingDefault(g, input.dataset.key);
++      });
++      out[g + "_sampling"] = full;
++    });
++    if (out.cfg_scale === undefined) out.cfg_scale = defaultCfg(out.cot);
++    if (out.duration === undefined) out.duration = outDefault("duration");
++    if (out.steps === undefined) out.steps = outDefault("steps");
++    if (out.solver === undefined) out.solver = "midpoint";
++    if (out.synth_batch_size === undefined) out.synth_batch_size = 1;
++    if (out.peak_clip === undefined) out.peak_clip = outDefault("peak_clip");
++    out.sliders = out.sliders || [];
++    out.loras = out.loras || [];
++    return out;
++  }
++  function applySetup(setup) {
++    var cur = buildRequest(false, false, true), req = Object.assign({}, cur, setup);
++    if (STATE.codes) req.semantic_tokens = STATE.codes.tokens;
++    loadRequestIntoForm(req, { title: $("title").value, fromTake: STATE.codes ? STATE.codes.from : null,
++                               codesTitle: STATE.codes ? STATE.codes.title : undefined });
++    if (typeof markChanged === "function") markChanged();
++  }
++  if (window.HeresyPresets) window.HeresyPresets.init({
++    toast: toast, capture: captureSetup, apply: applySetup,
++    style: function () { return $("style").value; },
++    setStyle: function (text) { $("style").value = text; $("style").dispatchEvent(new Event("input", { bubbles: true })); }
++  });
++
+   /* ---------------------------------------------- HERESY 1028: the score's check, MIDI, voices */
+   if (window.HeresyScore) window.HeresyScore.init({
+     toast: toast,
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+new file mode 100644
+index 0000000..01d7c46
+--- /dev/null
++++ b/tools/console/heresy-presets.js
+@@ -0,0 +1,118 @@
++// HERESY 1032: a library of styles and profiles, kept by the lab on Forge in the user config folder
++// (yue2_os/presets.json): every browser and device sees the same, and a cleared browser loses none.
++// A style is a text. A profile is every knob but the texts and seeds (app.js captures and applies it).
++// Two profiles are built in: Music, as the engine's defaults, and Speech, for long spoken word.
++(function () {
++  "use strict";
++
++  var SEM = { temperature: 0.9, top_p: 0.95, top_k: 100, repetition_penalty: 1.3, penalty_window: 100, min_tokens: 200 };
++  var ABC = { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 32, max_tokens: 6144 };
++  var BUILT_IN = [
++    { name: "Music · up to 8:00", builtin: true, request: { cot: "full", duration: 480, cfg_scale: 1.6, abc_sampling: ABC,
++      semantic_sampling: Object.assign({ max_tokens: 12000 }, SEM) } },
++    // Direct mode: no score in the context, so the music stage gets nearly all of it. 22500 tokens
++    // is 15:00 at 25 a second; the engine cuts the budget to what fits beside the style and the
++    // text (HERESY 1032), and a reading that runs into that cut is marked truncated.
++    { name: "Speech · up to 15:00", builtin: true, request: { cot: "off", duration: 900, cfg_scale: 1.6, abc_sampling: ABC,
++      semantic_sampling: Object.assign({ max_tokens: 22500 }, SEM) } }
++  ];
++  var state = { styles: [], setups: [], hooks: null };
++  var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
++  var URL = "/lab/presets" + (SCOPE ? "?scope=" + encodeURIComponent(SCOPE) : "");
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function toast(t, bad) { if (state.hooks) state.hooks.toast(t, bad ? "bad" : ""); }
++
++  function send(payload) {
++    return fetch(URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
++      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); });
++  }
++  function load() {
++    return fetch(URL).then(function (r) { return r.ok ? r.json() : { styles: [], setups: [] }; })
++      .then(take, function () { take({ styles: [], setups: [] }); toast("The library is on Forge's lab, which does not answer: only the built-in profiles for now", true); });
++  }
++  function take(d) {
++    state.styles = d.styles || [];
++    state.setups = d.setups || [];
++    paint();
++  }
++
++  function paint() {
++    var keepS = $("styleLib").value, keepP = $("setupLib").value;
++    $("styleLib").innerHTML = '<option value="">' + (state.styles.length ? "Saved styles…" : "No saved styles yet") + "</option>" +
++      state.styles.map(function (s) { return '<option value="' + esc(s.name) + '" title="' + esc(s.text.slice(0, 300)) + '">' + esc(s.name) + "</option>"; }).join("");
++    $("styleLib").value = state.styles.some(function (s) { return s.name === keepS; }) ? keepS : "";
++    $("styleDel").disabled = !$("styleLib").value;
++    $("setupLib").innerHTML = '<optgroup label="built in">' + BUILT_IN.map(function (p, i) { return '<option value="b' + i + '">' + esc(p.name) + "</option>"; }).join("") +
++      "</optgroup>" + (state.setups.length ? '<optgroup label="saved">' + state.setups.map(function (p) {
++        return '<option value="s:' + esc(p.name) + '">' + esc(p.name) + "</option>"; }).join("") + "</optgroup>" : "");
++    if (Array.prototype.some.call($("setupLib").options, function (o) { return o.value === keepP; })) $("setupLib").value = keepP;
++    $("setupDel").disabled = $("setupLib").value.indexOf("s:") !== 0;
++  }
++
++  function chosenSetup() {
++    var v = $("setupLib").value;
++    if (v.charAt(0) === "b") return BUILT_IN[+v.slice(1)];
++    var name = v.slice(2);
++    return state.setups.filter(function (p) { return p.name === name; })[0];
++  }
++
++  function init(hooks) {
++    if (!$("styleLib")) return;
++    state.hooks = hooks;
++    $("styleLib").addEventListener("change", function () {
++      var s = state.styles.filter(function (x) { return x.name === this.value; }, this)[0];
++      $("styleDel").disabled = !s;
++      if (!s) return;
++      var now = hooks.style().trim();
++      if (now && now !== s.text.trim() && !confirm("Replace the style in the form with “" + s.name + "”?")) { this.value = ""; $("styleDel").disabled = true; return; }
++      hooks.setStyle(s.text);
++      toast("Style “" + s.name + "” in the form");
++    });
++    $("styleSave").addEventListener("click", function () {
++      var text = hooks.style().trim();
++      if (!text) return toast("The style field is empty", true);
++      var name = prompt("A name for this style:", $("styleLib").value || "");
++      if (!name || !name.trim()) return;
++      name = name.trim();
++      if (state.styles.some(function (s) { return s.name === name; }) && !confirm("“" + name + "” exists. Replace it?")) return;
++      send({ op: "put", kind: "style", name: name, data: text }).then(function (d) { take(d); $("styleLib").value = name; $("styleDel").disabled = false; toast("Style “" + name + "” saved on Forge"); })
++        .catch(function (e) { toast("Not saved: " + e.message, true); });
++    });
++    $("styleDel").addEventListener("click", function () {
++      var name = $("styleLib").value;
++      if (!name || !confirm("Delete the saved style “" + name + "”?")) return;
++      send({ op: "delete", kind: "style", name: name }).then(function (d) { take(d); toast("Style “" + name + "” deleted"); })
++        .catch(function (e) { toast("Not deleted: " + e.message, true); });
++    });
++    $("setupLib").addEventListener("change", function () { $("setupDel").disabled = this.value.indexOf("s:") !== 0; });
++    $("setupApply").addEventListener("click", function () {
++      var p = chosenSetup();
++      if (!p) return;
++      try { hooks.apply(JSON.parse(JSON.stringify(p.request))); toast("Profile “" + p.name + "” applied; the texts and seeds stay"); }
++      catch (e) { toast("Not applied: " + e.message, true); }
++    });
++    $("setupSave").addEventListener("click", function () {
++      var data;
++      try { data = hooks.capture(); } catch (e) { return toast("The form does not read: " + e.message, true); }
++      var name = prompt("A name for this profile (every knob but the texts and seeds):", "");
++      if (!name || !name.trim()) return;
++      name = name.trim();
++      if (state.setups.some(function (s) { return s.name === name; }) && !confirm("“" + name + "” exists. Replace it?")) return;
++      send({ op: "put", kind: "setup", name: name, data: data }).then(function (d) { take(d); $("setupLib").value = "s:" + name; $("setupDel").disabled = false; toast("Profile “" + name + "” saved on Forge"); })
++        .catch(function (e) { toast("Not saved: " + e.message, true); });
++    });
++    $("setupDel").addEventListener("click", function () {
++      var v = $("setupLib").value;
++      if (v.indexOf("s:") !== 0) return;
++      var name = v.slice(2);
++      if (!confirm("Delete the saved profile “" + name + "”?")) return;
++      send({ op: "delete", kind: "setup", name: name }).then(function (d) { take(d); toast("Profile “" + name + "” deleted"); })
++        .catch(function (e) { toast("Not deleted: " + e.message, true); });
++    });
++    paint();
++    load();
++  }
++
++  window.HeresyPresets = { init: init, reload: load };
++})();
+diff --git a/tools/console/heresy-settings.js b/tools/console/heresy-settings.js
+index 26e987a..e4bc3e9 100644
+--- a/tools/console/heresy-settings.js
++++ b/tools/console/heresy-settings.js
+@@ -17,7 +17,9 @@
+ 
+   var PREFIX = "yue2.", STAMP = "yue2.savedAt";
+   var KEEP_LOCAL = { "yue2.orKey": 1, "yue2.jobs": 1, "yue2.savedAt": 1 };
+-  var URL = "/lab/settings";
++  // ?scope=NAME in the page address keeps a separate file (a test page must not write into yours)
++  var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
++  var URL = "/lab/settings" + (SCOPE ? "?scope=" + encodeURIComponent(SCOPE) : "");
+   var known = {};           // what the file holds as far as this page knows: key -> value
+   var ok = true, met = false;
+ 
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 7c7ac72..041597c 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -348,6 +348,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <button type="button" class="btn ghost small" id="keyToScore"></button>
+           <button type="button" class="btn ghost small" id="keyToStyle"></button></span>
+       </label>
++      <!-- HERESY 1032: saved styles, kept on Forge (heresy-presets.js) -->
++      <div class="lib-row" id="styleLibRow">
++        <select id="styleLib" aria-label="Saved styles"><option value="">Saved styles…</option></select>
++        <button type="button" class="btn ghost small" id="styleSave" data-tip="Keep this style under a name, on Forge: every browser sees it">Save style…</button>
++        <button type="button" class="btn ghost small" id="styleDel" disabled>Delete</button>
++      </div>
+ 
+       <label class="field" data-fold="lyrics">
+         <span class="label">Lyrics <em>section tags on their own line</em></span>
+@@ -371,6 +377,15 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <div id="loraPicker"></div>
+       </fieldset>
+ 
++      <!-- HERESY 1032: profiles: every knob but the texts. Music 8:00 and Speech 15:00 are built in -->
++      <div class="lib-row" id="setupLibRow">
++        <span class="label">Profile</span>
++        <select id="setupLib" aria-label="Profiles" data-tip="A profile sets the mode, length, sampling, guidance, steps, VAE, sliders, LoRAs and output; the texts and seeds stay"></select>
++        <button type="button" class="btn ghost small" id="setupApply">Apply</button>
++        <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save profile…</button>
++        <button type="button" class="btn ghost small" id="setupDel" disabled>Delete</button>
++      </div>
++
+       <fieldset class="field">
+         <span class="label">Planning mode</span>
+         <div class="modes" id="modes">
+@@ -1155,6 +1170,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="heresy-transpose.js"></script>
+ <script src="heresy-abc.js"></script>
+ <script src="heresy-score.js"></script>
++<script src="heresy-presets.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+ <script src="heresy-inspect.js"></script>
+-- 
+2.43.0
+

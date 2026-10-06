@@ -1,0 +1,97 @@
+From 53e1b4e8e07e3f0261c761d7bdaac820316241cd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 17:20:13 -0600
+Subject: [PATCH 1087/1177] /api/ to the lab (1116); the page files only the
+ runs it started
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js       |   7 +++--
+ tools/public/index.html.gz | Bin 413657 -> 413765 bytes
+ tools/yue-server.cpp       |  51 +++++++++++++++++++++++++++++++++++++
+ 3 files changed, 56 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 4adf802..3709ed3 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1769,8 +1769,11 @@
+     land.then(function (takes) {
+       job.takes = takes;
+       settle(job, "done");
+-      if (window.HeresyCollection && !job.restored) window.HeresyCollection.landed(takes);   // HERESY 1041: into the workspace in hand
+-      if (window.HeresyWriter && !job.restored) window.HeresyWriter.landed(takes);           // HERESY 1047: to the document in hand
++      // HERESY 1116: only a run this page started is filed by it; a run from elsewhere (the API, another browser) is
++      // filed by whoever started it (the API's own workspace field), never into this page's workspace in hand
++      var mine = !job.restored && job.kind !== "external";
++      if (window.HeresyCollection && mine) window.HeresyCollection.landed(takes);   // HERESY 1041: into the workspace in hand
++      if (window.HeresyWriter && mine) window.HeresyWriter.landed(takes);           // HERESY 1047: to the document in hand
+       return refreshLibrary().catch(function () {}).then(function () { return nameVersions(job); });
+     }).then(function () {
+       paintAllRuns();
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 675126b..044dc0d 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1811,6 +1811,57 @@ int main(int argc, char ** argv) {
+         res.set_content(r->body, r->get_header_value("Content-Type", "application/json").c_str());
+     });
+ 
++    // HERESY 1116: the studio's API (lab/api.py): /api/… goes to the lab's /api/… as it is, GET and POST, so a script, a
++    // DAW or an agent on this machine or this network talks to one address, the page's own
++    {
++        auto lab_client = [] {
++            const char *    env  = getenv("LAB_PORT");
++            httplib::Client c("127.0.0.1", env && *env ? atoi(env) : 41870);
++            c.set_connection_timeout(3, 0);
++            c.set_read_timeout(1800, 0);
++            c.set_write_timeout(120, 0);
++            c.set_payload_max_length((size_t) 2048 * 1024 * 1024);
++            return c;
++        };
++        auto query_of = [](const httplib::Request & req) {
++            std::string q;
++            for (const auto & p : req.params) {
++                q += (q.empty() ? "?" : "&") + httplib::encode_uri_component(p.first) + "=" + httplib::encode_uri_component(p.second);
++            }
++            return q;
++        };
++        auto answer = [](httplib::Result & r, httplib::Response & res) {
++            if (!r) {
++                res.status = 502;
++                res.set_content(json_string("error", "heresy-lab is not running on this machine"), "application/json");
++                return;
++            }
++            res.status = r->status;
++            for (const char * h : { "Content-Range", "Accept-Ranges", "Content-Disposition", "Location" }) {
++                if (r->has_header(h)) res.set_header(h, r->get_header_value(h));
++            }
++            res.set_content(r->body, r->get_header_value("Content-Type", "application/json").c_str());
++        };
++        svr.Get(R"(/api/(.*))", [lab_client, query_of, answer](const httplib::Request & req, httplib::Response & res) {
++            auto            c = lab_client();
++            httplib::Headers fwd;
++            if (req.has_header("Range")) fwd.emplace("Range", req.get_header_value("Range"));
++            if (req.has_header("Authorization")) fwd.emplace("Authorization", req.get_header_value("Authorization"));
++            fwd.emplace("X-Remote-Addr", req.remote_addr);
++            auto r = c.Get("/api/" + std::string(req.matches[1]) + query_of(req), fwd);
++            answer(r, res);
++        });
++        svr.Post(R"(/api/(.*))", [lab_client, query_of, answer](const httplib::Request & req, httplib::Response & res) {
++            auto             c = lab_client();
++            httplib::Headers fwd;
++            if (req.has_header("Authorization")) fwd.emplace("Authorization", req.get_header_value("Authorization"));
++            fwd.emplace("X-Remote-Addr", req.remote_addr);
++            auto r = c.Post("/api/" + std::string(req.matches[1]) + query_of(req), fwd, req.body,
++                            req.get_header_value("Content-Type", "application/json").c_str());
++            answer(r, res);
++        });
++    }
++
+     svr.Get("/logs", handle_logs);
+ 
+     svr.Post("/synth", [](const httplib::Request & req, httplib::Response & res) {
+-- 
+2.43.0
+

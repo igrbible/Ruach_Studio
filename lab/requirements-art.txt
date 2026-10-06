@@ -1,0 +1,31 @@
+# heresy-lab · the artist's own environment, Ruach_Studio/.venv-art (HERESY 1167)
+#
+#   lab/install-venv.sh --art     builds it from this list (Python 3.12, CUDA 12.8 wheels)
+#   requirements-art-lock.txt     the exact versions running now (pip freeze)
+#
+# Viktor 05.10.2026: «отдельный venv для художника с transformers 5 - это стоит того». lab/art_job.py paints here:
+# Krea 2 Muse by Stable Yogi (a Krea 2 fine-tune, GGUF) through diffusers' Krea2Pipeline, whose text encoder (Qwen3-VL-4B)
+# and tokenizer were written by transformers 5; the studio's own .venv keeps transformers 4 (CLAP, audio-separator's
+# neighbours), so the artist has its own. Measured on an RTX 3090, 1024 px, 8 steps: 21.5 s a picture at Q8 (17.4 GB at
+# the peak), 23 s at Q4 (11.6 GB); in the studio's environment the same took 41–43 s.
+# The fused GGUF kernels (DIFFUSERS_GGUF_CUDA_KERNELS) stay off: they come from a Hub repository diffusers itself calls
+# untrusted (remote code).
+
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+transformers>=5.2,<6          # Krea 2's text encoder and tokenizer (Qwen3-VL), the prompter (Qwen3-4B), the content filter
+diffusers>=0.40               # Krea2Pipeline, the GGUF loader; SDXL as before
+accelerate
+gguf>=0.10                    # the fine-tune's GGUF
+safetensors
+pillow
+numpy
+kernels                       # diffusers imports it; its remote kernels are not switched on
+
+# Weights (not pip), inside the studio (artwork/):
+#   Krea-2-Muse/museByStableYogi_v35Q4Extended.gguf · …Q8Extended.gguf   Krea 2 Muse by Stable Yogi (Krea 2 Community License)
+#   Krea-2-Turbo/   text_encoder, vae, tokenizer, scheduler, configs    from krea/Krea-2-Turbo (Krea 2 Community License)
+#   nsfw-filter/    Falconsai/nsfw_image_detection                      the content filter the licence asks for (Apache-2.0)
+#   Qwen3-4B-Instruct-2507/                                             the prompter (Apache-2.0)
+#   CyberRealistic-XL-v10/                                              SDXL, for cards Krea 2 does not fit

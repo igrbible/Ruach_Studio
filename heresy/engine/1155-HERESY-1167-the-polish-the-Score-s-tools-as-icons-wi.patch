@@ -1,0 +1,595 @@
+From c83dc93bfdacc53075bf89956a69073f241f4962 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 13:45:37 -0600
+Subject: [PATCH 1155/1177] HERESY 1167: the polish: the Score's tools as icons
+ with A4 and the sheet's side, a Direct take's score from its sound, the
+ Creator's two frames by width, the tall bar
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026, «микро моменты по шлифовке интерфейса»:
+· the cheat-sheet's lead paragraph runs the sheet's width («убери ручные переносы строк»);
+· the Score's tools are icons where the icon says it (print, portrait, landscape, markers, edit and re-render, full screen;
+  «Full Screen надпись убрать, но иконку чётче»), MIDI keeps its word; the paper is US Letter or A4, the sheet upright or on
+  its side, both remembered (yue2.paper, yue2.paperSide) and given to print as @page;
+· a Direct take has no score of its own: the Score panel writes it from the take's sound in place (the lab's /score,
+  SheetSage2), no Cover detour («генерации ABC из самого трека, чтобы не прогонять его через Cover»);
+· from 1400 px the line between the form and the take is dragged: the form 55 to 70 % of the width; below 55 it snaps to
+  40, the takes take 60 % and the form stands in one column; double-click or Home for the default, arrows move it
+  (yue2.kWidth);
+· the bar is 40 pt taller (105 px, from 1660 px) while the page stands at its top, the logo with it, and its usual 52 px
+  once a room scrolls 60 px. The height itself is the animated value (@property --bar-h), so the rooms under the bar, the
+  sticky bands and the logo move with it: animated alone, for 0.22 s the page overflowed (a scrollbar came and went and
+  the columns lost 9 px). 60 px is more than the 53 the bar loses, so where the whole page scrolls (Engine) the browser's
+  scroll anchoring cannot land under 4 px and grow it again.
+The console test measures the bar instead of 52 px and waits for it to settle; 18 new keys in the six catalogs.
+cdp-console 330/0/7, check-i18n 14/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  60 +++++++++++---
+ tools/console/app.js            | 141 ++++++++++++++++++++++++++++++--
+ tools/console/heresy-i18n-be.js |  20 ++++-
+ tools/console/heresy-i18n-el.js |  20 ++++-
+ tools/console/heresy-i18n-es.js |  20 ++++-
+ tools/console/heresy-i18n-it.js |  20 ++++-
+ tools/console/heresy-i18n-ru.js |  20 ++++-
+ tools/console/heresy-i18n-uk.js |  20 ++++-
+ tools/console/heresy-icons.js   |   7 ++
+ tools/console/index.html        |  26 ++++--
+ 10 files changed, 325 insertions(+), 29 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 13288fe..d0b1e9e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -424,7 +424,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
+   align-items: center;
+   gap: 20px;
+   padding: 0 20px;
+-  height: 52px;
++  height: var(--bar-h);
+   background: var(--panel);
+   border-bottom: 1px solid var(--line-a);
+ }
+@@ -509,7 +509,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
+ body:has(#view-engine:not(.is-hidden)) .workspace { display: none; }
+ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber); border-color: var(--amber); color: var(--on-amber); }
+ .engine-panel {
+-  min-height: calc(100vh - 52px - var(--playbar-h));
++  min-height: calc(100vh - var(--bar-h) - var(--playbar-h));
+   padding: 0 20px 24px;
+   background-color: var(--sunk);
+   background-image: radial-gradient(color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1.3px);
+@@ -517,7 +517,7 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+   border-bottom: 0;
+ }
+ .engine-head {
+-  position: sticky; top: 52px; z-index: 6;
++  position: sticky; top: var(--bar-h); z-index: 6;
+   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+   margin: 0 -20px 16px; padding: 10px 20px;
+   background: var(--panel); border-bottom: 1px solid var(--line-a); box-shadow: inset 0 3px 0 var(--amber);
+@@ -611,7 +611,7 @@ html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-
+     var(--col-right, clamp(280px, 20vw, 560px));
+   gap: 1px;
+   background: var(--line);
+-  height: calc(100vh - 52px - var(--playbar-h));
++  height: calc(100vh - var(--bar-h) - var(--playbar-h));
+   position: relative;
+ }
+ 
+@@ -2906,7 +2906,7 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .tr-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 22vw, 380px); gap: 18px; align-items: start; }
+ .tr-layout.is-folded { grid-template-columns: minmax(0, 1fr) 40px; }
+ .tr-main { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+-.tr-side { position: sticky; top: 62px; display: flex; flex-direction: column; max-height: calc(100vh - 52px - var(--playbar-h, 60px) - 80px);
++.tr-side { position: sticky; top: calc(var(--bar-h) + 10px); display: flex; flex-direction: column; max-height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 80px);
+   min-height: 320px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); overflow: hidden; }
+ .tr-side .lib-head { padding: 12px 12px 10px 16px; }
+ .tr-filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 12px 0; }
+@@ -3033,7 +3033,7 @@ body[data-tab="train"] .playbar { transform: translateY(calc(100% - 8px)); trans
+ body[data-tab="train"] .playbar:hover, body[data-tab="train"] .playbar:focus-within { transform: none; transition-delay: 0s; }
+ body[data-tab="train"] .playbar::before { content: ""; position: absolute; top: 2px; left: 50%; width: 48px; height: 3px; margin-left: -24px; border-radius: 2px; background: var(--line-strong); }
+ body[data-tab="train"] .playbar:has(.play.is-playing)::before { background: var(--amber); width: 120px; margin-left: -60px; }
+-body[data-tab="train"] .workspace { height: calc(100vh - 52px - 8px); }
++body[data-tab="train"] .workspace { height: calc(100vh - var(--bar-h) - 8px); }
+ /* HERESY 1090: another run's curve beside this one's */
+ .tr-plot path.cmp { fill: none; stroke: #4fa3c7; stroke-width: 1.8; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+ .tr-cmpkey { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+@@ -3095,8 +3095,8 @@ body[data-tab="train"] .log-dock { bottom: 18px; }
+ /* HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, from under the
+    bar down to the player, a little wider */
+ .log-dock.is-tall { width: min(860px, calc(100vw - 32px)); }
+-.log-dock.is-tall .log-dock-body { height: calc(100vh - 52px - var(--playbar-h, 60px) - 74px); }
+-body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - 52px - 92px); }
++.log-dock.is-tall .log-dock-body { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 74px); }
++body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - var(--bar-h) - 92px); }
+ .log-dock.is-folded .log-dock-tall { display: none; }
+ .log-dock-tall { min-width: 30px; font-size: 14px; }
+ .log-dock.is-folded .log-dock-body, .log-dock.is-folded .log-dock-acts { display: none; }
+@@ -3354,9 +3354,9 @@ input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+    woman and cloud (1147, Viktor 03.10: «лого при скейле страницы будет терять только свой текст»), inside the bar, as
+    without the words her hang below it looked misplaced (1148: «без текста логотипа не красиво смотрится»); narrower
+    still: that, at the start of the bar. The square is the favicon only. */
+-.topbar .brand { position: absolute; left: 50%; top: 0; transform: translateX(-50%); height: 52px; z-index: 2; pointer-events: none; display: block; }
++.topbar .brand { position: absolute; left: 50%; top: 0; transform: translateX(-50%); height: var(--bar-h); z-index: 2; pointer-events: none; display: block; }
+ .topbar .brand .brand-logo { display: block; height: 100%; }
+-.brand-full { display: block; height: 62px; width: auto; overflow: visible; }
++.brand-full { display: block; height: calc(var(--bar-h) + 10px); width: auto; overflow: visible; }
+ /* HERESY 1148 (Viktor, 03.10.2026): no stray selection when a click or a drag misses a button: the page's own words do not
+    select; the fields one types into, the log, the guide, notes, the take's id and anything marked .selectable do */
+ body { -webkit-user-select: none; user-select: none; }
+@@ -3822,3 +3822,43 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ @media (prefers-reduced-motion: reduce) { .coll-card.is-regenerating, .take.is-regenerating { animation: none; } }
+ /* HERESY 1167: what a reading needs, under a voice's spoken probes */
+ .hc-vnote { font-size: 11.5px; line-height: 1.4; color: var(--muted); }
++
++/* HERESY 1167 (Viktor 05.10.2026): the interface's fine polish
++   · the bar's height as one value; tall (40 pt more, the logo with it) while the page stands at its top, where the logo shows
++     whole; its usual height once a room's column scrolls (app.js).
++     The height is the animated value itself, so the bar, the rooms under it, the sticky bands and the logo move as one: with
++     the bar animated alone, for its 0.22 s the page was taller than the window (a scrollbar came and went) or a gap opened.
++     A calmer page (html[data-motion="reduced"]) cuts it to nothing with every other transition. */
++@property --bar-h { syntax: "<length>"; inherits: true; initial-value: 52px; }
++:root { --bar-h: 52px; }
++@media (min-width: 1660px) { body.bar-tall { --bar-h: 105px; } }
++body { transition: --bar-h .22s ease; }
++@media (prefers-reduced-motion: reduce) { body { transition: none; } }
++/* · the cheat-sheet's lead paragraph across the sheet («убери ручные переносы строк. Пусть всё автоврепом идёт») */
++.hi-box > .row-hint { max-width: none; }
++/* · the Score's tools: icons where the icon says it, the paper and its side together */
++.score-head .icon-btn { display: inline-grid; place-items: center; padding: 4px 7px; }
++.score-head .icon-btn .ui-ico { width: 17px; height: 17px; }
++.score-print { display: inline-flex; align-items: center; gap: 2px; }
++.score-print select { width: auto; padding: 3px 6px; font-size: 12px; }
++.sheet-side[aria-pressed="true"] { color: var(--amber); border-color: var(--amber-dim); background: color-mix(in srgb, var(--amber) 9%, transparent); }
++#staffFull .ui-ico { width: 19px; height: 19px; stroke-width: 2.3; }
++.score-from-sound { margin: 0 0 8px; max-width: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
++.score-from-sound .mono { color: var(--muted); }
++/* · the line between the Creator's two frames (from 1400 px); the takes wide (40 / 60): the form in one column */
++.k-vsplit { display: none; }
++@media (min-width: 1400px) {
++  body[data-tab="create"] .workspace { grid-template-columns: minmax(0, var(--k-l, 2fr)) minmax(0, var(--k-r, 1fr)); }
++  body[data-tab="create"] .workspace.lib-folded { grid-template-columns: minmax(0, var(--k-l, 2fr)) minmax(0, var(--k-r, 1fr)) 40px !important; }
++  body[data-tab="create"] .k-vsplit {
++    display: block; grid-column: 2; grid-row: 1 / 3; justify-self: start; align-self: stretch; position: relative;
++    width: 12px; margin-left: -6px; z-index: 8; cursor: col-resize; touch-action: none; outline: none;
++  }
++  body[data-tab="create"] .workspace.lib-folded .k-vsplit { grid-row: 1; }
++  body[data-tab="create"] .k-vsplit::after {
++    content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 3px; border-radius: 2px; background: transparent; transition: background .15s;
++  }
++  body[data-tab="create"] .k-vsplit:hover::after, body[data-tab="create"] .k-vsplit:focus-visible::after,
++  body[data-tab="create"] .k-vsplit.is-dragging::after { background: var(--amber); }
++  body[data-tab="create"] .workspace.k-wide .compose { grid-template-columns: minmax(0, 1fr); }
++}
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 6358262..690099a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3438,11 +3438,12 @@
+       return line.trim().charAt(0) === "[" ? "<b>" + escape(line) + "</b>" : escape(line);
+     }).join("\n");
+ 
+-    $("scorePanel").classList.toggle("is-hidden", !take.has_score);
++    $("scorePanel").classList.toggle("is-hidden", !take.has_score && !!take.session);   // HERESY 1167: a Direct take's too
+     $("dlScore").disabled = !take.has_score;
+     $("scoreAbc").textContent = "";
+     $("scoreStaff").textContent = "";
+     STATE.abcRendered = "";
++    paintFromSound(take);
+     if (take.has_score) {
+       getRequest(take).then(function (req) {
+         if (STATE.take === take) renderScore(req.abc || "");
+@@ -3616,6 +3617,52 @@
+       .catch(function () { toast("The browser refused clipboard access", "bad"); });
+   });
+ 
++  // HERESY 1167 (Viktor 05.10.2026: «для карт с Direct режимом добавить возможность генерации ABC из самого трека, чтобы не
++  // прогонять его через Cover ради этого»): a Direct take's Score shows the one written from its sound when the lab keeps one,
++  // else the button that writes it: the engine's transcriber on the take's own audio, watched here, kept by the lab (as the
++  // Librarian's sheet has done since 1131); the cover form is not touched
++  function paintFromSound(take) {
++    var box = $("scoreFromSound"), run = $("scoreFromSoundRun"), btn = $("scoreFromSoundBtn");
++    box.hidden = !!take.has_score || !!take.session;
++    if (box.hidden) return;
++    run.textContent = ""; btn.disabled = false; btn.hidden = false;
++    fetch("/lab/score?name=" + encodeURIComponent(take.name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
++      if (STATE.take !== take || !d || !d.abc) return;
++      btn.hidden = true;
++      run.textContent = "written from its sound by " + (d.by || "the transcriber") + (d.made ? ", " + d.made : "");
++      renderScore(d.abc);
++    }).catch(function () {});
++  }
++  $("scoreFromSoundBtn").addEventListener("click", function () {
++    var take = STATE.take, btn = this, run = $("scoreFromSoundRun"), t0 = Date.now(), tick = 0;
++    if (!take) return;
++    btn.disabled = true;
++    fetch("/transcribe?take=" + encodeURIComponent(take.name), { method: "POST" })
++      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
++      .then(function (job) {
++        tick = setInterval(function () { run.textContent = "the transcriber is writing it… " + Math.round((Date.now() - t0) / 1000) + " s"; }, 1000);
++        var ask = function () {
++          return fetch("/job?id=" + encodeURIComponent(job.id)).then(function (r) { return r.json(); }).then(function (st) {
++            if (st.status === "done") return fetch("/job?id=" + encodeURIComponent(job.id) + "&result=1").then(function (r) { return r.json(); });
++            if (st.status === "failed" || st.status === "cancelled") throw new Error(st.error || st.status);
++            return new Promise(function (ok) { setTimeout(ok, 2000); }).then(ask);
++          });
++        };
++        return ask();
++      }).then(function (res) {
++        var abc = res && res.abc;
++        if (!abc) throw new Error("the transcriber wrote nothing");
++        return fetch("/lab/score?name=" + encodeURIComponent(take.name), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ abc: abc }) })
++          .then(function () {
++            if (STATE.take !== take) return;
++            btn.hidden = true;
++            run.textContent = "written from its sound by the transcriber (SheetSage2), now";
++            renderScore(abc);
++          });
++      }).catch(function (e) { run.textContent = "not written: " + (e.message || e); btn.disabled = false; })
++      .then(function () { clearInterval(tick); });
++  });
++
+   function renderScore(abc) {
+     if (window.HeresyScore) window.HeresyScore.take(abc || "", STATE.take ? displayTitle(STATE.take) : "");   // HERESY 1028
+     $("scoreAbc").textContent = abc || "";
+@@ -5883,6 +5930,72 @@
+   });
+   applySplit();
+ 
++  // HERESY 1167 (Viktor 05.10.2026: «К Творцу можно добавить регулирование ширины наших двух фреймов, но нужны ограничители:
++  // 55/45 - 70/30. Расхлопывание фрейма Takes до 40/60 и выстраивание фрейма генератива в одну колонку в таком режиме»): the
++  // line between the form and the take, dragged: the form 55 to 70 % of the width; below 55 it snaps to 40, the takes take
++  // 60 % and the form stands in one column. Double-click or Home: the default (two thirds); arrows move it. This browser's.
++  var kVSplit = $("kVSplit");
++  function kShare(raw) { return raw < 55 ? 40 : Math.max(55, Math.min(70, raw)); }
++  function setWidths(raw) {
++    var on = raw !== null && isFinite(raw);
++    workspace.classList.toggle("k-wide", on && raw < 55);
++    if (!on) { workspace.style.removeProperty("--k-l"); workspace.style.removeProperty("--k-r"); kVSplit.setAttribute("aria-valuenow", "67"); return; }
++    var s = kShare(raw);
++    workspace.style.setProperty("--k-l", s + "fr");
++    workspace.style.setProperty("--k-r", (100 - s) + "fr");
++    kVSplit.setAttribute("aria-valuenow", String(Math.round(s)));
++  }
++  function saveWidths(raw) { store("yue2.kWidth", raw === null ? null : String(kShare(raw))); window.dispatchEvent(new Event("resize")); }
++  setWidths(parseFloat(recall("yue2.kWidth") || "NaN") || null);
++  kVSplit.addEventListener("pointerdown", function (event) {
++    if (event.button !== 0) return;
++    var box = workspace.getBoundingClientRect(), last = null;
++    kVSplit.setPointerCapture(event.pointerId);
++    kVSplit.classList.add("is-dragging");
++    document.body.classList.add("is-resizing");
++    function move(e) { last = (e.clientX - box.left) / box.width * 100; setWidths(last); }
++    function done() {
++      kVSplit.removeEventListener("pointermove", move);
++      kVSplit.removeEventListener("pointerup", done);
++      kVSplit.removeEventListener("pointercancel", done);
++      kVSplit.classList.remove("is-dragging");
++      document.body.classList.remove("is-resizing");
++      if (last !== null) saveWidths(last);
++    }
++    kVSplit.addEventListener("pointermove", move);
++    kVSplit.addEventListener("pointerup", done);
++    kVSplit.addEventListener("pointercancel", done);
++  });
++  kVSplit.addEventListener("dblclick", function () { setWidths(null); saveWidths(null); });
++  kVSplit.addEventListener("keydown", function (event) {
++    var now = parseFloat(kVSplit.getAttribute("aria-valuenow")) || 67, next;
++    if (event.key === "ArrowLeft") next = now <= 55 ? 40 : now - 1;
++    else if (event.key === "ArrowRight") next = now < 55 ? 55 : Math.min(70, now + 1);
++    else if (event.key === "Home") { event.preventDefault(); setWidths(null); saveWidths(null); return; }
++    else return;
++    event.preventDefault();
++    setWidths(next);
++    saveWidths(next);
++  });
++
++  // HERESY 1167 (Viktor: «в верху страницы bar высокий, на 40pt выше, чем сейчас, с прокруткой страницы уменьшаем до текущего
++  // дефолта. Так логотип сможем по высоте увеличить, абы только не сбивал лево/право»): the bar tall while the page stands at
++  // its top, its usual height once a room's own column scrolls (lists and text boxes inside it do not count); the logo grows
++  // and shrinks with it, the bar's left and right stay where they are. It shrinks after 60 px, more than the 53 px it loses:
++  // where the whole page scrolls (the Engine page) the browser keeps the content in place by taking those 53 px off the
++  // scroll, and from 25 px that would land under 4 px and grow it again, round and round
++  (function () {
++    var PAGES = "#view-compose, #view-take, #view-write, #view-post, #view-collection, #view-train, #view-engine";
++    document.body.classList.add("bar-tall");
++    document.addEventListener("scroll", function (event) {
++      var el = event.target === document ? document.scrollingElement : event.target;
++      if (!el || (el !== document.scrollingElement && !(el.matches && el.matches(PAGES)))) return;
++      var top = el.scrollTop || 0;
++      if (top > 60) document.body.classList.remove("bar-tall");
++      else if (top < 4) document.body.classList.add("bar-tall");
++    }, true);
++  })();
++
+   // ------------------------------------------------------------- appearance
+   // The Engine page's Appearance card: the theme (the same choice as the top bar's swatches), options that
+   // work with any theme, and the fonts below. The options are this browser's ("yue2.look"); the <head>
+@@ -7162,9 +7275,13 @@
+   // The staff paged for print on US Letter, portrait or landscape: each system is its
+   // own SVG (abcjs oneSvgPerLine), and a page never breaks inside a system. The
+   // browser's print dialog saves it as PDF.
+-  var LETTER = { portrait: { width: 720, size: "letter portrait" }, landscape: { width: 960, size: "letter landscape" } };
+-  function printStaff(orientation) {
+-    var abc = STATE.abcRendered, page = LETTER[orientation] || LETTER.portrait;
++  // HERESY 1167: US Letter or A4, upright or on its side (their widths in CSS pixels inside 0.5 in margins)
++  var PAPER = {
++    letter: { portrait: { width: 720, size: "letter portrait" }, landscape: { width: 960, size: "letter landscape" } },
++    a4: { portrait: { width: 698, size: "A4 portrait" }, landscape: { width: 1027, size: "A4 landscape" } }
++  };
++  function printStaff(paper, orientation) {
++    var sheet = PAPER[paper] || PAPER.letter, abc = STATE.abcRendered, page = sheet[orientation] || sheet.portrait;
+     if (!abc || !window.ABCJS) { toast("No score to print"); return; }
+     var host = document.createElement("div");
+     host.style.cssText = "position:absolute;left:-10000px;top:0;width:" + page.width + "px";
+@@ -7198,7 +7315,21 @@
+       '<script>window.onload = function () { setTimeout(function () { window.print(); }, 250); };<\/script></body></html>');
+     win.document.close();
+   }
+-  $("staffPrint").addEventListener("click", function () { printStaff($("staffPrintOrient").value); });
++  // HERESY 1167: the Score's tools as icons (their words in the tips); the paper and its side remembered by this browser
++  if (window.HeresyIcons) [["staffPrint", "printer"], ["staffPortrait", "sheet-portrait"], ["staffLandscape", "sheet-landscape"],
++    ["takeMarkers", "flag"], ["reuseScore", "pencil"], ["staffFull", "maximize"]].forEach(function (p) { $(p[0]).innerHTML = window.HeresyIcons.ui(p[1]); });
++  $("staffPaper").value = recall("yue2.paper") === "a4" ? "a4" : "letter";
++  function paintSide(side) {
++    $("staffPortrait").setAttribute("aria-pressed", side !== "landscape" ? "true" : "false");
++    $("staffLandscape").setAttribute("aria-pressed", side === "landscape" ? "true" : "false");
++  }
++  paintSide(recall("yue2.paperSide"));
++  $("staffPaper").addEventListener("change", function () { store("yue2.paper", this.value === "a4" ? "a4" : null); });
++  $("staffPortrait").addEventListener("click", function () { store("yue2.paperSide", null); paintSide("portrait"); });
++  $("staffLandscape").addEventListener("click", function () { store("yue2.paperSide", "landscape"); paintSide("landscape"); });
++  $("staffPrint").addEventListener("click", function () {
++    printStaff($("staffPaper").value, $("staffLandscape").getAttribute("aria-pressed") === "true" ? "landscape" : "portrait");
++  });
+   $("scoreStaff").addEventListener("dblclick", openStaff);
+ 
+   buildKnobs();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 70245b0..6e61f9c 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2549,5 +2549,23 @@ RuachI18n.add("be", {
+ "sacred chant and hymns": "духоўныя спевы і гімны",
+ "classical and film scores": "класіка і музыка кіно",
+ "electronic and ambient": "электроніка і эмбіент",
+-"rock and metal, more": "рок і метал, яшчэ"
++"rock and metal, more": "рок і метал, яшчэ",
++"Paper size": "Фармат аркуша",
++"The paper: US Letter or A4": "Папера: US Letter або A4",
++"Portrait": "Кніжная",
++"Portrait: the sheet upright": "Кніжная: аркуш стаіць",
++"Landscape": "Альбомная",
++"Landscape: the sheet on its side": "Альбомная: аркуш на баку",
++"Print the staff, a page never breaking inside a system; in the print dialog choose Save as PDF": "Друк нотнага стана, старонка не рвецца ўнутры сістэмы; у дыялогу друку абяры «Захаваць як PDF»",
++"Edit and re-render: the score into the form, to change it and render it again": "Правіць і перамаляваць: партытура ў форму, каб змяніць яе і адмаляваць нанова",
++"Full screen": "На ўвесь экран",
++"Width of the form and the take": "Шырыня формы і сэмпла",
++"Drag: the form takes 55 to 70 % of the width; below 55 the takes take 60 % and the form one column · double-click: the default": "Цягні: форма бярэ ад 55 да 70 % шырыні; ніжэй за 55 сэмплы бяруць 60 %, а форма становіцца ў адну калонку · падвойны пстрык — па змаўчанні",
++"the transcriber": "транскрыбер",
++"written from its sound by {0}": "запісана па гуку — {0}",
++"written from its sound by {0}, {1}": "запісана па гуку — {0}, {1}",
++"written from its sound by the transcriber (SheetSage2), now": "запісана па гуку — транскрыбер (SheetSage2), толькі што",
++"the transcriber is writing it… {#0} s": "транскрыбер запісвае яе… {0} с",
++"not written: {0}": "не запісана: {0}",
++"the transcriber (SheetSage2)": "транскрыбер (SheetSage2)"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index aef93b8..6a3a1f7 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2548,5 +2548,23 @@ RuachI18n.add("el", {
+ "sacred chant and hymns": "ιεροί ψαλμοί και ύμνοι",
+ "classical and film scores": "κλασική και μουσική ταινιών",
+ "electronic and ambient": "ηλεκτρονική και ambient",
+-"rock and metal, more": "ροκ και μέταλ, περισσότερα"
++"rock and metal, more": "ροκ και μέταλ, περισσότερα",
++"Paper size": "Μέγεθος χαρτιού",
++"The paper: US Letter or A4": "Χαρτί: US Letter ή A4",
++"Portrait": "Κατακόρυφα",
++"Portrait: the sheet upright": "Κατακόρυφα: το φύλλο όρθιο",
++"Landscape": "Οριζόντια",
++"Landscape: the sheet on its side": "Οριζόντια: το φύλλο πλαγιαστό",
++"Print the staff, a page never breaking inside a system; in the print dialog choose Save as PDF": "Εκτύπωση του πενταγράμμου, χωρίς ποτέ να σπάει σύστημα ανάμεσα σε σελίδες· στον διάλογο εκτύπωσης διάλεξε «Αποθήκευση ως PDF»",
++"Edit and re-render: the score into the form, to change it and render it again": "Επεξεργασία και νέα απόδοση: η παρτιτούρα στη φόρμα, για να την αλλάξεις και να την αποδώσεις ξανά",
++"Full screen": "Πλήρης οθόνη",
++"Width of the form and the take": "Πλάτος της φόρμας και της λήψης",
++"Drag: the form takes 55 to 70 % of the width; below 55 the takes take 60 % and the form one column · double-click: the default": "Σύρε: η φόρμα παίρνει από 55 έως 70 % του πλάτους· κάτω από 55 οι λήψεις παίρνουν 60 % και η φόρμα μία στήλη · διπλό κλικ: η προεπιλογή",
++"the transcriber": "ο μεταγραφέας",
++"written from its sound by {0}": "γράφτηκε από τον ήχο της — {0}",
++"written from its sound by {0}, {1}": "γράφτηκε από τον ήχο της — {0}, {1}",
++"written from its sound by the transcriber (SheetSage2), now": "γράφτηκε από τον ήχο της — ο μεταγραφέας (SheetSage2), μόλις τώρα",
++"the transcriber is writing it… {#0} s": "ο μεταγραφέας τη γράφει… {0} δ",
++"not written: {0}": "δεν γράφτηκε: {0}",
++"the transcriber (SheetSage2)": "ο μεταγραφέας (SheetSage2)"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 452ea01..2ac8653 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2548,5 +2548,23 @@ RuachI18n.add("es", {
+ "sacred chant and hymns": "cantos sacros e himnos",
+ "classical and film scores": "clásica y bandas sonoras",
+ "electronic and ambient": "electrónica y ambient",
+-"rock and metal, more": "rock y metal, más"
++"rock and metal, more": "rock y metal, más",
++"Paper size": "Tamaño del papel",
++"The paper: US Letter or A4": "El papel: US Letter o A4",
++"Portrait": "Vertical",
++"Portrait: the sheet upright": "Vertical: la hoja de pie",
++"Landscape": "Horizontal",
++"Landscape: the sheet on its side": "Horizontal: la hoja apaisada",
++"Print the staff, a page never breaking inside a system; in the print dialog choose Save as PDF": "Imprimir el pentagrama, sin cortar nunca un sistema entre páginas; en el diálogo de impresión elige «Guardar como PDF»",
++"Edit and re-render: the score into the form, to change it and render it again": "Editar y volver a renderizar: la partitura al formulario, para cambiarla y renderizarla de nuevo",
++"Full screen": "Pantalla completa",
++"Width of the form and the take": "Ancho del formulario y de la toma",
++"Drag: the form takes 55 to 70 % of the width; below 55 the takes take 60 % and the form one column · double-click: the default": "Arrastra: el formulario ocupa del 55 al 70 % del ancho; por debajo de 55 las tomas ocupan el 60 % y el formulario una columna · doble clic: el valor por defecto",
++"the transcriber": "el transcriptor",
++"written from its sound by {0}": "escrita a partir de su sonido — {0}",
++"written from its sound by {0}, {1}": "escrita a partir de su sonido — {0}, {1}",
++"written from its sound by the transcriber (SheetSage2), now": "escrita a partir de su sonido — el transcriptor (SheetSage2), ahora mismo",
++"the transcriber is writing it… {#0} s": "el transcriptor la está escribiendo… {0} s",
++"not written: {0}": "no escrita: {0}",
++"the transcriber (SheetSage2)": "el transcriptor (SheetSage2)"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index f416b33..c835a73 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2548,5 +2548,23 @@ RuachI18n.add("it", {
+ "sacred chant and hymns": "canti sacri e inni",
+ "classical and film scores": "classica e colonne sonore",
+ "electronic and ambient": "elettronica e ambient",
+-"rock and metal, more": "rock e metal, altro"
++"rock and metal, more": "rock e metal, altro",
++"Paper size": "Formato della carta",
++"The paper: US Letter or A4": "La carta: US Letter o A4",
++"Portrait": "Verticale",
++"Portrait: the sheet upright": "Verticale: il foglio in piedi",
++"Landscape": "Orizzontale",
++"Landscape: the sheet on its side": "Orizzontale: il foglio coricato",
++"Print the staff, a page never breaking inside a system; in the print dialog choose Save as PDF": "Stampa il pentagramma, senza mai spezzare un sistema tra le pagine; nella finestra di stampa scegli «Salva come PDF»",
++"Edit and re-render: the score into the form, to change it and render it again": "Modifica e rifai: la partitura nel modulo, per cambiarla e renderla di nuovo",
++"Full screen": "Schermo intero",
++"Width of the form and the take": "Larghezza del modulo e del take",
++"Drag: the form takes 55 to 70 % of the width; below 55 the takes take 60 % and the form one column · double-click: the default": "Trascina: il modulo occupa dal 55 al 70 % della larghezza; sotto 55 i take occupano il 60 % e il modulo una colonna · doppio clic: il predefinito",
++"the transcriber": "il trascrittore",
++"written from its sound by {0}": "scritta dal suo suono — {0}",
++"written from its sound by {0}, {1}": "scritta dal suo suono — {0}, {1}",
++"written from its sound by the transcriber (SheetSage2), now": "scritta dal suo suono — il trascrittore (SheetSage2), proprio ora",
++"the transcriber is writing it… {#0} s": "il trascrittore la sta scrivendo… {0} s",
++"not written: {0}": "non scritta: {0}",
++"the transcriber (SheetSage2)": "il trascrittore (SheetSage2)"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index a199293..65209c9 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2554,5 +2554,23 @@ RuachI18n.add("ru", {
+ "sacred chant and hymns": "духовные распевы и гимны",
+ "classical and film scores": "классика и музыка кино",
+ "electronic and ambient": "электроника и эмбиент",
+-"rock and metal, more": "рок и метал, ещё"
++"rock and metal, more": "рок и метал, ещё",
++"Paper size": "Формат листа",
++"The paper: US Letter or A4": "Бумага: US Letter или A4",
++"Portrait": "Книжная",
++"Portrait: the sheet upright": "Книжная: лист стоймя",
++"Landscape": "Альбомная",
++"Landscape: the sheet on its side": "Альбомная: лист на боку",
++"Print the staff, a page never breaking inside a system; in the print dialog choose Save as PDF": "Печать нотного стана, страница не рвётся внутри системы; в диалоге печати выбери «Сохранить как PDF»",
++"Edit and re-render: the score into the form, to change it and render it again": "Править и перерисовать: партитура в форму, чтобы изменить её и отрисовать заново",
++"Full screen": "Во весь экран",
++"Width of the form and the take": "Ширина формы и семпла",
++"Drag: the form takes 55 to 70 % of the width; below 55 the takes take 60 % and the form one column · double-click: the default": "Тяни: форма берёт от 55 до 70 % ширины; ниже 55 семплы берут 60 %, а форма встаёт в одну колонку · двойной щелчок — по умолчанию",
++"the transcriber": "транскрибер",
++"written from its sound by {0}": "записана по звуку — {0}",
++"written from its sound by {0}, {1}": "записана по звуку — {0}, {1}",
++"written from its sound by the transcriber (SheetSage2), now": "записана по звуку — транскрибер (SheetSage2), только что",
++"the transcriber is writing it… {#0} s": "транскрибер записывает её… {0} с",
++"not written: {0}": "не записана: {0}",
++"the transcriber (SheetSage2)": "транскрибер (SheetSage2)"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 155dce5..a723292 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2549,5 +2549,23 @@ RuachI18n.add("uk", {
+ "sacred chant and hymns": "духовні співи та гімни",
+ "classical and film scores": "класика та музика кіно",
+ "electronic and ambient": "електроніка та ембієнт",
+-"rock and metal, more": "рок і метал, ще"
++"rock and metal, more": "рок і метал, ще",
++"Paper size": "Формат аркуша",
++"The paper: US Letter or A4": "Папір: US Letter або A4",
++"Portrait": "Книжкова",
++"Portrait: the sheet upright": "Книжкова: аркуш стоїть",
++"Landscape": "Альбомна",
++"Landscape: the sheet on its side": "Альбомна: аркуш на боці",
++"Print the staff, a page never breaking inside a system; in the print dialog choose Save as PDF": "Друк нотного стану, сторінка не рветься всередині системи; у діалозі друку обери «Зберегти як PDF»",
++"Edit and re-render: the score into the form, to change it and render it again": "Правити й перемалювати: партитура у форму, щоб змінити її та відмалювати знову",
++"Full screen": "На весь екран",
++"Width of the form and the take": "Ширина форми та семпла",
++"Drag: the form takes 55 to 70 % of the width; below 55 the takes take 60 % and the form one column · double-click: the default": "Тягни: форма бере від 55 до 70 % ширини; нижче 55 семпли беруть 60 %, а форма стає в одну колонку · подвійне клацання — типово",
++"the transcriber": "транскрибер",
++"written from its sound by {0}": "записана за звуком — {0}",
++"written from its sound by {0}, {1}": "записана за звуком — {0}, {1}",
++"written from its sound by the transcriber (SheetSage2), now": "записана за звуком — транскрибер (SheetSage2), щойно",
++"the transcriber is writing it… {#0} s": "транскрибер записує її… {0} с",
++"not written: {0}": "не записана: {0}",
++"the transcriber (SheetSage2)": "транскрибер (SheetSage2)"
+ });
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index dce5591..eab0cd1 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -62,6 +62,13 @@
+     "vol-hi": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/>',
+     "vol-lo": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/>',
+     "vol-off": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>',
++    // HERESY 1167: the Score's tools
++    printer: '<path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
++    "sheet-portrait": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/>',
++    "sheet-landscape": '<path d="M2 18V6a2 2 0 0 1 2-2h12l6 6v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/><path d="M16 4v6h6"/><path d="M6 14h12M6 17h12"/>',
++    flag: '<path d="M4 22V4"/><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1"/>',
++    pencil: '<path d="M21.2 6.8a2.8 2.8 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8l-1.3 4.4a.5.5 0 0 0 .6.6l4.4-1.3a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/>',
++    maximize: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+     play: '<polygon points="7 4 19 12 7 20 7 4"/>',
+     pause: '<rect x="7" y="5" width="3.2" height="14" rx="1"/><rect x="13.8" y="5" width="3.2" height="14" rx="1"/>',
+     prev: '<polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>',
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 1479838..0f6c547 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1100,15 +1100,22 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+               <button class="stab" data-score="abc">ABC</button>
+             </div>
+             <div class="spacer"></div>
+-            <span class="split-btn"><button type="button" class="btn ghost small" id="staffPrint" data-tip="Print the staff on US Letter, a page never breaking inside a system; in the print dialog choose Save as PDF">Print / PDF</button>
+-              <select class="mp3-rate" id="staffPrintOrient" aria-label="Letter orientation" data-tip="US Letter: portrait or landscape">
+-                <option value="portrait">Letter ▯</option><option value="landscape">Letter ▭</option>
+-              </select></span>
++            <!-- HERESY 1167 (Viktor: «Кнопки в Score нужно ужать. Может иконками, где понятно?… альтернативно A4… SVG иконки для
++                 видимости расположения листа… Full Screen надпись убрать, но иконку чётче»): icons, their words in the tips -->
++            <span class="score-print">
++              <button type="button" class="btn ghost small icon-btn" id="staffPrint" aria-label="Print / PDF" data-tip="Print the staff, a page never breaking inside a system; in the print dialog choose Save as PDF"></button>
++              <select class="mp3-rate" id="staffPaper" aria-label="Paper size" data-tip="The paper: US Letter or A4"><option value="letter">Letter</option><option value="a4">A4</option></select>
++              <button type="button" class="btn ghost small icon-btn sheet-side" id="staffPortrait" aria-pressed="true" aria-label="Portrait" data-tip="Portrait: the sheet upright"></button>
++              <button type="button" class="btn ghost small icon-btn sheet-side" id="staffLandscape" aria-pressed="false" aria-label="Landscape" data-tip="Landscape: the sheet on its side"></button>
++            </span>
+             <button type="button" class="btn ghost small" id="takeMidi" data-tip="The score as a MIDI file: tempo, meter, key, a track per voice and the sections as markers, for a DAW">MIDI</button>
+-            <button type="button" class="btn ghost small" id="takeMarkers" data-tip="The sections (% verse …) as a marker list in seconds (CSV, as Reaper imports it)">Markers</button>
+-            <button class="btn ghost small" id="reuseScore">Edit and re-render</button>
+-            <button type="button" class="btn ghost small" id="staffFull" data-tip="The staff over the whole screen: zoom and scroll (or double-click the staff)">⤢ Full screen</button>
++            <button type="button" class="btn ghost small icon-btn" id="takeMarkers" aria-label="Markers" data-tip="The sections (% verse …) as a marker list in seconds (CSV, as Reaper imports it)"></button>
++            <button class="btn ghost small icon-btn" id="reuseScore" aria-label="Edit and re-render" data-tip="Edit and re-render: the score into the form, to change it and render it again"></button>
++            <button type="button" class="btn ghost small icon-btn" id="staffFull" aria-label="Full screen" data-tip="The staff over the whole screen: zoom and scroll (or double-click the staff)"></button>
+           </div>
++          <!-- HERESY 1167 (Viktor: «для карт с Direct режимом добавить возможность генерации ABC из самого трека, чтобы не прогонять
++               его через Cover ради этого»): a Direct take's score, written from its sound and kept by the lab -->
++          <div class="score-from-sound row-hint" id="scoreFromSound" hidden>A Direct take writes no score. <button type="button" class="btn ghost small" id="scoreFromSoundBtn">Write it from the sound</button> <span class="mono" id="scoreFromSoundRun"></span></div>
+           <!-- HERESY 1028: the score checked as YuE2's own dialect, with its numbers (heresy-score.js) -->
+           <div class="score-check" id="takeScoreCheck" hidden></div>
+           <div class="paper" id="scoreStaff"></div>
+@@ -1664,9 +1671,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+        aria-label="Compose column width" title="Drag to resize · double-click for the default width"></div>
+   <div class="col-grip right" id="gripRight" role="separator" aria-orientation="vertical" aria-controls="library" tabindex="0"
+        aria-label="Takes list width" title="Drag to resize · double-click for the default width"></div>
+-  <!-- HERESY 1167: from 1600 px the Creator's last third is the take over its takes; this line between them -->
++  <!-- HERESY 1167: from 1400 px the Creator's last third is the take over its takes; this line between them -->
+   <div class="k-split" id="kSplit" role="separator" aria-orientation="horizontal" aria-controls="library" tabindex="0"
+        aria-label="Takes list height" title="Drag to resize · double-click for the default height"></div>
++  <!-- HERESY 1167 (Viktor: «регулирование ширины наших двух фреймов… 55/45 - 70/30. Расхлопывание фрейма Takes до 40/60») -->
++  <div class="k-vsplit" id="kVSplit" role="separator" aria-orientation="vertical" tabindex="0" aria-valuemin="40" aria-valuemax="70"
++       aria-label="Width of the form and the take" title="Drag: the form takes 55 to 70 % of the width; below 55 the takes take 60 % and the form one column · double-click: the default"></div>
+ </div>
+ 
+ 
+-- 
+2.43.0
+

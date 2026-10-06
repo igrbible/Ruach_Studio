@@ -1,0 +1,131 @@
+From 8ff4f36b2e8100dee547b11e6f118da1424c08d4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 10:59:26 -0600
+Subject: [PATCH 1040/1177] Titles of 80 characters, clean of invisible
+ controls; play on click, with a switch
+
+- The title (and a rename) holds at most 80 characters and never the invisible characters that
+  reorder or hide text: bidi overrides and isolates, zero-width marks, C0/C1 controls. Plain
+  right-to-left text (Hebrew) is untouched; a toast says when something was taken out.
+- A click on a take in the list plays it at once (Viktor: the first click did not play). A new
+  "on click" switch in the player turns that off: then a click only opens the take.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js       |  43 +++++++++++++++++++++++++++++++------
+ tools/console/index.html   |   5 ++++-
+ tools/public/index.html.gz | Bin 306904 -> 307604 bytes
+ 3 files changed, 41 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 310c363..1a27485 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -941,9 +941,30 @@
+     return BigInt(raw).toString();
+   }
+ 
++  // HERESY 1040: a title is at most 80 characters, and never carries the invisible characters that
++  // reorder or hide text (bidi overrides and isolates, zero-width marks, controls): they can make a
++  // file name or a list read other than it is. Plain right-to-left text (Hebrew) is untouched.
++  var TITLE_MAX = 80;
++  var TITLE_BAD = /[\u0000-\u001f\u007f-\u009f\u200b-\u200d\u2060-\u2064\u202a-\u202e\u2066-\u2069\ufeff\ufff9-\ufffb]/g;
++  function cleanTitle(text) {
++    var raw = String(text || ""), clean = raw.replace(TITLE_BAD, "").replace(/\s+/g, " ").trim();
++    var chars = Array.from(clean);
++    if (chars.length > TITLE_MAX) clean = chars.slice(0, TITLE_MAX).join("").trim();
++    return { text: clean, removed: raw.replace(/\s+/g, " ").trim().replace(TITLE_BAD, "") !== raw.replace(/\s+/g, " ").trim() };
++  }
++  $("title").addEventListener("input", function () {
++    var c = cleanTitle(this.value);
++    if (c.removed) {
++      var at = this.selectionStart;
++      this.value = c.text;
++      try { this.setSelectionRange(at - 1, at - 1); } catch (e) { /* not a text field now */ }
++      toast("Invisible control characters were taken out of the title (they can reorder or hide text)", "bad");
++    }
++  });
++
+   // What the take is called when no title was typed: the hook line, or the style.
+   function songTitle() {
+-    var title = $("title").value.trim();
++    var title = cleanTitle($("title").value).text;
+     if (title) return title;
+     var sung = $("lyrics").value.split(/\r?\n/).map(function (l) { return l.trim(); })
+       .filter(function (l) { return l && l.charAt(0) !== "[" && l.charAt(0) !== "("; })[0];
+@@ -3386,6 +3407,7 @@
+     input.id = "renameInput";
+     input.className = "title-edit";
+     input.value = displayTitle(take);
++    input.maxLength = 80;   // HERESY 1040
+     input.setAttribute("aria-label", "New title");
+     heading.classList.add("is-hidden");
+     heading.parentNode.insertBefore(input, heading.nextSibling);
+@@ -3395,7 +3417,7 @@
+     function finish(save) {
+       if (finished) return;
+       finished = true;
+-      var value = input.value.trim();
++      var value = cleanTitle(input.value).text;   // HERESY 1040
+       input.remove();
+       heading.classList.remove("is-hidden");
+       if (!save || !value || value === displayTitle(take)) return;
+@@ -3631,6 +3653,15 @@
+     if (follow) openTake(take.name);
+   }
+   function playOn() { return recall("yue2.playOn") !== "off"; }
++  // HERESY 1040: play on click
++  function clickPlay() { return recall("yue2.clickPlay") !== "off"; }
++  function paintClickPlay() {
++    var on = clickPlay();
++    $("clickPlay").setAttribute("aria-pressed", on ? "true" : "false");
++    $("clickPlay").classList.toggle("is-on", on);
++  }
++  $("clickPlay").addEventListener("click", function () { store("yue2.clickPlay", clickPlay() ? "off" : null); paintClickPlay(); });
++  paintClickPlay();
+   function paintPlayOn() {
+     var on = playOn();
+     $("autoplay").setAttribute("aria-pressed", on ? "true" : "false");
+@@ -3876,11 +3907,11 @@
+     var card = event.target.closest(".take");
+     if (!card) return;
+     if (card.dataset.run) return openRunRow(card.dataset.run);
+-    // HERESY 1026 (Viktor): a click on another take while one plays switches the player to it,
+-    // from the start, and plays on. Idle, the player follows the page as before.
+-    var playing = isPlaying() && !(STATE.playerTake && STATE.playerTake.name === card.dataset.name);
++    // HERESY 1026/1040 (Viktor): with "play on click" on, a click on a take plays it at once, from
++    // the start (the take already playing keeps playing). Off: a click only opens it.
++    var already = STATE.playerTake && STATE.playerTake.name === card.dataset.name && isPlaying();
+     openTake(card.dataset.name);
+-    if (playing && event.detail !== 2) playNow(findTake(card.dataset.name));
++    if (clickPlay() && !already && event.detail !== 2) playNow(findTake(card.dataset.name));
+     // A double-click plays the song (renaming is the song page's Rename button). It is read from the
+     // second click itself: the first click redraws the list, and the browser then sends no dblclick.
+     if (event.detail === 2) playNow(findTake(card.dataset.name));
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f00939e..af4f4a2 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -313,7 +313,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <div class="field-row title-row">
+         <label class="field titlefield grow">
+           <span class="label">Title</span>
+-          <input type="text" id="title" placeholder="Song title" autocomplete="off" />
++          <input type="text" id="title" placeholder="Song title" autocomplete="off" maxlength="80" />
+         </label>
+         <label class="field keyfield">
+           <span class="label">Key</span>
+@@ -1037,6 +1037,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+   <canvas id="wave" height="40"></canvas>
+   <span class="mono time dim" id="timeTotal">0:00</span>
+ 
++  <!-- HERESY 1040: a click in the list plays the take at once (on by default), or only opens it -->
++  <button type="button" class="btn ghost small autoplay-btn" id="clickPlay" aria-pressed="true"
++    data-tip="Play on click: a click on a take in the list plays it at once. Off: a click only opens it, and what plays keeps playing.">▶ on click</button>
+   <button type="button" class="btn ghost small autoplay-btn" id="autoplay" aria-pressed="true"
+     data-tip="Play on: when a take ends, the next one down the list starts, into the history. Click to stop after each take.">↓ Play on</button>
+ 
+-- 
+2.43.0
+

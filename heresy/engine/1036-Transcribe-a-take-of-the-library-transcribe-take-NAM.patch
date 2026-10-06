@@ -1,0 +1,58 @@
+From 29ebf16fdd78fafe99f23c3331e29680d728618f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 01:27:15 -0600
+Subject: [PATCH 1036/1177] Transcribe a take of the library:
+ /transcribe?take=NAME
+
+The server reads outputs/NAME/audio.wav itself (the name checked), so the page need not send a
+song the server already holds; melody_only also as a query parameter. A "Transcribe this take"
+button in the take card puts the score into the form for a cover (Cover a recording task).
+Tested: a four-language reading made in Direct mode came back as a score in F minor, 110 BPM.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/yue-server.cpp | 23 ++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 85da28e..2a42a5a 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1766,13 +1766,30 @@ int main(int argc, char ** argv) {
+     // route is served when a transcriber is given.
+     if (!g_transcriber_path.empty()) {
+         svr.Post("/transcribe", [](const httplib::Request & req, httplib::Response & res) {
+-            if (!req.is_multipart_form_data() || !req.form.has_file("audio")) {
++            // HERESY 1036: ?take=NAME transcribes a take of the library from its own audio.wav, so
++            // the page need not send a song the server already holds (120 MB for seven minutes)
++            std::string from_take;
++            if (req.has_param("take")) {
++                std::string name = req.get_param_value("take");
++                if (g_outputs_dir.empty() || name.empty() || name.find('/') != std::string::npos || name.find("..") != std::string::npos) {
++                    res.status = 400;
++                    res.set_content(json_string("error", "bad take name"), "application/json");
++                    return;
++                }
++                std::ifstream in(g_outputs_dir + "/" + name + "/audio.wav", std::ios::binary);
++                if (!in) {
++                    res.status = 404;
++                    res.set_content(json_string("error", "this take has no audio.wav"), "application/json");
++                    return;
++                }
++                from_take.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
++            } else if (!req.is_multipart_form_data() || !req.form.has_file("audio")) {
+                 res.status = 400;
+                 res.set_content(json_string("error", "multipart audio part required"), "application/json");
+                 return;
+             }
+-            bool                melody_only = req.form.has_field("melody_only");
+-            const std::string & file        = req.form.get_file("audio").content;
++            bool                melody_only = req.has_param("melody_only") || (req.is_multipart_form_data() && req.form.has_field("melody_only"));
++            const std::string & file        = from_take.empty() ? req.form.get_file("audio").content : from_take;
+             int                 T = 0, sr = 0;
+             float *             planar = audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr);
+             std::vector<float>  audio;
+-- 
+2.43.0
+

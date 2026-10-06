@@ -1,0 +1,573 @@
+From 533e08d849fe7126e94d47a01a4f47af10f5e7fa Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 11:28:37 -0600
+Subject: [PATCH 1041/1177] The Collection: a fourth tab, workspaces, many
+ takes at once, the trash in the page
+
+- Collection (heresy-collection.js): every take as a tile or a row; search with * and ?;
+  filters by how it was made (generated, imported, regenerated, re-rendered) and by what is made
+  from it (stems, debuzz, remaster, upscale); sort; favourites; workspaces as in SUNO (made,
+  renamed, deleted with a double click; takes stay); hidden takes (out of every list, not
+  deleted). Ticks with Shift for a range and "select all shown"; together: favourite, add to or
+  take out of a workspace, hide or show, export a ZIP (FLAC or WAV, with or without what is made
+  from them; built on Forge, saved by the browser), move to the trash.
+- The trash: what went there, since when, how big; give back; delete for good (asks first); an
+  automatic empty after 7, 14 or 28 days, off until chosen.
+- The header holds the workspace in hand: the takes list shows only it and new takes land in it.
+- The takes list has a quick search (the same wildcards) and leaves hidden takes out.
+The lab keeps the marks in yue2_os/collection.json and the trash in trash/DATE/TAKE.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  53 +++++
+ tools/console/app.js               |  18 +-
+ tools/console/heresy-collection.js | 322 +++++++++++++++++++++++++++++
+ tools/console/index.html           |  61 ++++++
+ tools/public/index.html.gz         | Bin 307604 -> 315139 bytes
+ 5 files changed, 453 insertions(+), 1 deletion(-)
+ create mode 100644 tools/console/heresy-collection.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6933b4e..6e85080 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2108,3 +2108,56 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ #exampleMenu { max-height: 70vh; overflow-y: auto; min-width: 300px; }
+ .menu-cap { padding: 8px 12px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+ .menu-note { color: var(--dim); font-size: 11px; margin-left: 6px; }
++
++/* HERESY 1041: the Collection */
++.coll-col { grid-column: 1 / -1; }
++body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { display: none; }
++.coll-layout { display: grid; grid-template-columns: 210px 1fr; gap: 16px; align-items: start; }
++.coll-side { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 8px; }
++.coll-place { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 0; border-radius: var(--r-sm); background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
++.coll-place:hover { background: var(--hover); }
++.coll-place.is-on { background: var(--panel); box-shadow: inset 2px 0 0 var(--amber); font-weight: 600; }
++.coll-new { color: var(--muted); }
++.coll-n { color: var(--dim); font-size: 12px; }
++.coll-cap { margin: 10px 10px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
++.coll-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
++.coll-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
++#collSearch { flex: 1 1 260px; min-width: 200px; }
++.coll-views .is-on { border-color: var(--amber); color: var(--amber); }
++.coll-filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; }
++.coll-cap-inline { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
++.coll-chip { padding: 3px 10px; border: 1px solid var(--line); border-radius: var(--r-pill); background: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
++.coll-chip.is-on { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
++.coll-bulk { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--amber); border-radius: var(--r-md); background: var(--panel); }
++.coll-sep { width: 1px; height: 20px; background: var(--line); }
++.coll-grid.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
++.coll-grid.list { display: flex; flex-direction: column; gap: 4px; }
++.coll-card { position: relative; display: flex; gap: 8px; align-items: flex-start; padding: 10px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
++.coll-grid.list .coll-card { padding: 6px 10px; align-items: center; }
++.coll-card.is-sel { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
++.coll-card.is-hidden { opacity: .65; }
++.coll-check { flex: none; padding-top: 2px; }
++.coll-play { flex: none; width: 28px; height: 28px; border-radius: var(--r-pill); border: 1px solid var(--line); background: none; color: var(--amber); cursor: pointer; }
++.coll-body { min-width: 0; flex: 1; }
++.coll-title { font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.coll-title:hover { color: var(--amber); }
++.coll-meta { font-size: 12px; color: var(--muted); }
++.coll-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
++.coll-grid.list .coll-badges { margin-top: 0; }
++.coll-grid.list .coll-body { display: flex; gap: 12px; align-items: baseline; }
++.coll-badge { font-size: 11px; padding: 1px 7px; border-radius: var(--r-pill); background: var(--sunk); color: var(--muted); }
++.coll-badge.d { color: var(--good); }
++.coll-badge.w { color: var(--amber); }
++.coll-badge.k-imported { color: var(--patina); }
++.coll-empty { padding: 20px; }
++.lib-search { padding: 0 12px 8px; }
++.lib-search input { width: 100%; }
++@media (max-width: 900px) { .coll-layout { grid-template-columns: 1fr; } .coll-side { position: static; flex-direction: row; flex-wrap: wrap; } }
++.coll-bar[hidden], .coll-bulk[hidden] { display: none; }
++.coll-bar select, .coll-bulk select, .coll-bar .field select { width: auto; flex: none; }
++.coll-bar .field { flex-direction: row; align-items: center; gap: 6px; margin: 0; }
++
++.ws-current { display: inline-flex; align-items: center; gap: 6px; flex: none; }
++.ws-cap { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
++.ws-current select { width: auto; max-width: 220px; }
++.ws-current.is-set select { border-color: var(--amber); color: var(--amber); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 1a27485..e26071c 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1632,6 +1632,7 @@
+     land.then(function (takes) {
+       job.takes = takes;
+       settle(job, "done");
++      if (window.HeresyCollection && !job.restored) window.HeresyCollection.landed(takes);   // HERESY 1041: into the workspace in hand
+       return refreshLibrary().catch(function () {}).then(function () { return nameVersions(job); });
+     }).then(function () {
+       paintAllRuns();
+@@ -3843,6 +3844,12 @@
+   function paintLibrary() {
+     var list = $("libList");
+     var shown = STATE.favOnly ? STATE.takes.filter(function (t) { return t.favorite; }) : STATE.takes;
++    // HERESY 1041: the quick search, and the takes hidden in the Collection stay out of the column
++    var HC = window.HeresyCollection, q = $("libSearch") ? $("libSearch").value : "";
++    if (HC) {
++      var m = HC.matcher(q);
++      shown = shown.filter(function (t) { return !HC.isHidden(t.name) && HC.inCurrent(t.name) && (m(displayTitle(t)) || m(t.name)); });
++    }
+     $("libCount").textContent = STATE.favOnly ? shown.length + " / " + STATE.takes.length : String(STATE.takes.length);
+     $("favFilter").setAttribute("aria-pressed", STATE.favOnly ? "true" : "false");
+ 
+@@ -5088,6 +5095,13 @@
+     setStyle: function (text) { $("style").value = text; $("style").dispatchEvent(new Event("input", { bubbles: true })); }
+   });
+ 
++  /* ---------------------------------------------- HERESY 1041: the Collection */
++  if (window.HeresyCollection) window.HeresyCollection.init({
++    toast: toast, clock: clock, ago: ago, findTake: findTake, openTake: function (name) { openTake(name); setTab("create"); },
++    playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, libraryChanged: function () { paintLibrary(); }
++  });
++  if ($("libSearch")) $("libSearch").addEventListener("input", function () { paintLibrary(); });
++
+   /* ---------------------------------------------- HERESY 1028: the score's check, MIDI, voices */
+   if (window.HeresyScore) window.HeresyScore.init({
+     toast: toast,
+@@ -5237,12 +5251,14 @@
+     $("postNote").textContent = take ? takeLabel(take).replace(displayTitle(take), "").replace(/^ · /, "") || take.name : "pick a take on the right";
+   }
+   function setTab(tab) {
+-    if (["create", "write", "post"].indexOf(tab) < 0) tab = "create";
++    if (["create", "write", "post", "collection"].indexOf(tab) < 0) tab = "create";
+     document.body.dataset.tab = tab;
+     $("view-compose").classList.toggle("is-hidden", tab !== "create");
+     $("view-take").classList.toggle("is-hidden", tab !== "create");
+     $("view-write").classList.toggle("is-hidden", tab !== "write");
+     $("view-post").classList.toggle("is-hidden", tab !== "post");
++    $("view-collection").classList.toggle("is-hidden", tab !== "collection");   // HERESY 1041
++    if (tab === "collection" && window.HeresyCollection) window.HeresyCollection.reload();
+     all("#tabs [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+     store(TAB_KEY, tab === "create" ? null : tab);
+     if (tab === "write") paintCurrentSong();
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+new file mode 100644
+index 0000000..8c44273
+--- /dev/null
++++ b/tools/console/heresy-collection.js
+@@ -0,0 +1,322 @@
++// HERESY 1041: the Collection, a fourth tab (Viktor, 01.10.2026): every take as a card or a row,
++// searched (wildcards * and ?), filtered (what it is, what is made from it, favourites, hidden),
++// sorted, grouped in workspaces (as SUNO has them), selected many at once and acted on together:
++// favourite, add to or take from a workspace, hide from the list (not deleted), export as a ZIP,
++// move to the trash. The trash lists what went there and gives it back, or empties it when asked;
++// an automatic empty after 7, 14 or 28 days runs only once chosen. The lab keeps the marks
++// (yue2_os/collection.json) and the trash (trash/DATE/TAKE); the takes stay the server's.
++(function () {
++  "use strict";
++
++  var KINDS = { generated: "generated", imported: "imported", regenerated: "regenerated", rerendered: "re-rendered" };
++  var DERIVED = { stems: "stems", debuzz: "debuzz", remaster: "remaster", upscale: "upscale" };
++  var VIEW_KEY = "yue2.collView", SORT_KEY = "yue2.collSort", WS_KEY = "yue2.workspace";
++  function current() { var w = recall(WS_KEY) || ""; return state.ws.indexOf(w) >= 0 ? w : ""; }
++  var state = { rows: [], ws: [], trashDays: 0, place: "", q: "", kinds: {}, derived: {}, sel: {}, last: null,
++                trash: [], tsel: {}, hooks: null, loaded: false };
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
++  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private */ } }
++  function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
++  function api(path, body) {
++    var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
++    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
++  }
++
++  // "*" any run, "?" one character; without either, a plain substring. Case and accents ignored.
++  function fold(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
++  function matcher(q) {
++    q = fold(q.trim());
++    if (!q) return function () { return true; };
++    if (!/[*?]/.test(q)) return function (s) { return fold(s).indexOf(q) >= 0; };
++    var re = new RegExp("^" + q.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
++    return function (s) { return re.test(fold(s)); };
++  }
++
++  function load() {
++    return api("/catalog").then(function (d) {
++      state.rows = d.takes || []; state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true;
++      var names = {};
++      state.rows.forEach(function (r) { names[r.name] = 1; });
++      Object.keys(state.sel).forEach(function (n) { if (!names[n]) delete state.sel[n]; });
++      paint();
++      paintCurrent();
++      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
++    }).catch(function (e) { $("collGrid").innerHTML = '<p class="row-hint">The Collection lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
++  }
++
++  function shown() {
++    var m = matcher(state.q), anyKind = Object.keys(state.kinds).length, anyDer = Object.keys(state.derived).length;
++    var rows = state.rows.filter(function (r) {
++      if (state.place === "__fav" && !r.favorite) return false;
++      if (state.place === "__hidden") { if (!r.hidden) return false; }
++      else if (r.hidden) return false;
++      if (state.place && state.place.charAt(0) !== "_" && r.workspaces.indexOf(state.place) < 0) return false;
++      if (anyKind && !state.kinds[r.kind]) return false;
++      if (anyDer && !r.derived.some(function (k) { return state.derived[k]; })) return false;
++      return m(r.title) || m(r.name);
++    });
++    var sort = recall(SORT_KEY) || "new";
++    rows.sort(function (a, b) {
++      if (sort === "old") return (a.created || 0) - (b.created || 0);
++      if (sort === "title") return fold(a.title).localeCompare(fold(b.title));
++      if (sort === "long") return (b.seconds || 0) - (a.seconds || 0);
++      return (b.created || 0) - (a.created || 0);
++    });
++    return rows;
++  }
++
++  function paintSide() {
++    var counts = { "": 0, __fav: 0, __hidden: 0 }, perWs = {};
++    state.rows.forEach(function (r) {
++      if (r.hidden) { counts.__hidden++; return; }
++      counts[""]++; if (r.favorite) counts.__fav++;
++      r.workspaces.forEach(function (w) { perWs[w] = (perWs[w] || 0) + 1; });
++    });
++    var item = function (key, label, n) {
++      return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + '" data-place="' + esc(key) + '"><span>' + esc(label) +
++        '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
++    };
++    $("collSide").innerHTML = item("", "All takes", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
++      '<div class="coll-cap">Workspaces</div>' + state.ws.map(function (w) { return item(w, w, perWs[w] || 0); }).join("") +
++      '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
++      '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined);
++  }
++
++  function badge(text, cls) { return '<span class="coll-badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
++
++  function paint() {
++    paintSide();
++    var trash = state.place === "__trash";
++    $("collBar").hidden = trash; $("collTrashBar").hidden = !trash;
++    if (trash) return paintTrash();
++    var rows = shown(), view = recall(VIEW_KEY) || "tiles";
++    $("collGrid").className = "coll-grid " + view;
++    Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) { b.classList.toggle("is-on", b.dataset.collView === view); });
++    var clock = state.hooks.clock, ago = state.hooks.ago;
++    $("collGrid").innerHTML = rows.length ? rows.map(function (r) {
++      var sel = !!state.sel[r.name];
++      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + '" data-name="' + esc(r.name) + '">' +
++        '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
++        '<button type="button" class="coll-play" data-play="' + esc(r.name) + '" aria-label="Play">▶</button>' +
++        '<div class="coll-body"><div class="coll-title" data-open="' + esc(r.name) + '">' + (r.favorite ? "★ " : "") + esc(r.title) + "</div>" +
++        '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
++        '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
++        r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div></div></article>";
++    }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
++    $("collNote").textContent = rows.length + " shown · " + state.rows.length + " in the library";
++    paintBulk(rows);
++  }
++
++  function paintBulk(rows) {
++    var n = Object.keys(state.sel).length;
++    $("collBulk").hidden = !n;
++    $("collSelCount").textContent = n + " selected";
++    $("collWsPick").innerHTML = '<option value="">Add to workspace…</option>' + state.ws.map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
++      '<option value="__new">+ a new one…</option>';
++    $("collHide").textContent = state.place === "__hidden" ? "Show again" : "Hide";
++    $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
++  }
++
++  function paintTrash() {
++    var clock = state.hooks.clock;
++    $("collTrashDays").value = String(state.trashDays || 0);
++    $("collNote").textContent = state.trash.length + " in the trash · " + (state.trash.reduce(function (s, i) { return s + i.bytes; }, 0) / 1e9).toFixed(2) + " GB";
++    $("collGrid").className = "coll-grid list";
++    $("collGrid").innerHTML = state.trash.length ? state.trash.map(function (it) {
++      var key = it.day + "/" + it.name, sel = !!state.tsel[key];
++      return '<article class="coll-card' + (sel ? " is-sel" : "") + '"><label class="coll-check"><input type="checkbox" data-tsel="' + esc(key) + '"' + (sel ? " checked" : "") + " /></label>" +
++        '<div class="coll-body"><div class="coll-title">' + esc(it.title) + '</div><div class="coll-meta">in the trash since ' + esc(it.day) +
++        (it.seconds ? " · " + clock(it.seconds) : "") + " · " + (it.bytes / 1e6).toFixed(0) + " MB</div></div></article>";
++    }).join("") : '<p class="row-hint coll-empty">The trash is empty.</p>';
++  }
++
++  function loadTrash() {
++    return api("/trash").then(function (d) { state.trash = d.items || []; state.tsel = {}; paint(); });
++  }
++
++  function names() { return Object.keys(state.sel); }
++
++  // the workspace in hand (the header): the list shows it, new takes land in it
++  function paintCurrent() {
++    var sel = $("wsCurrent");
++    if (!sel) return;
++    var cur = current();
++    sel.innerHTML = '<option value="">All takes</option>' + state.ws.map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
++      '<option value="__new">+ New workspace\u2026</option>';
++    sel.value = cur;
++    sel.closest(".ws-current").classList.toggle("is-set", !!cur);
++  }
++  function landed(takeNames) {
++    var cur = current();
++    if (!cur || !takeNames || !takeNames.length) return;
++    api("/collection", { op: "ws-add", workspace: cur, names: takeNames }).then(function (d) {
++      state.rows = d.takes || state.rows;
++      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
++    }).catch(function () { /* the take is in the library anyway */ });
++  }
++  function inCurrent(name) {
++    var cur = current();
++    if (!cur) return true;
++    return state.rows.some(function (r) { return r.name === name && r.workspaces.indexOf(cur) >= 0; });
++  }
++  function act(body, done) {
++    return api("/collection", body).then(function (d) {
++      state.rows = d.takes || state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0;
++      if (done) toast(done);
++      paint();
++      paintCurrent();
++      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
++    }).catch(function (e) { toast(e.message, true); });
++  }
++
++  function exportZip() {
++    var n = names(); if (!n.length) return;
++    var fmt = $("collExportFmt").value, derived = $("collExportDer").checked;
++    toast("Packing " + n.length + " take" + (n.length > 1 ? "s" : "") + " as " + fmt.toUpperCase() + (derived ? " with what is made from them" : "") + "…");
++    api("/export", { names: n, format: fmt, derived: derived }).then(function (j) {
++      var id = j.id, poll = function () {
++        return api("/export?id=" + id).then(function (s) {
++          if (s.status === "running") { $("collSelCount").textContent = "packing " + s.done + " / " + s.total + "…"; return new Promise(function (r) { setTimeout(r, 1500); }).then(poll); }
++          if (s.status !== "done") throw new Error(s.error || "the export failed");
++          var a = document.createElement("a");
++          a.href = "/lab/exportfile?id=" + id; a.download = s.file;
++          document.body.appendChild(a); a.click(); a.remove();
++          toast("ZIP ready: " + s.file + " (" + (s.bytes / 1e6).toFixed(0) + " MB). The browser saves it where you tell it.");
++          paintBulk(shown());
++        });
++      };
++      return poll();
++    }).catch(function (e) { toast(e.message, true); });
++  }
++
++  function init(hooks) {
++    if (!$("view-collection")) return;
++    state.hooks = hooks;
++    $("collSearch").addEventListener("input", function () { state.q = this.value; paint(); });
++    $("collSort").value = recall(SORT_KEY) || "new";
++    $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
++    Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) {
++      b.addEventListener("click", function () { store(VIEW_KEY, b.dataset.collView); paint(); });
++    });
++    $("collFilters").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-kind],[data-der]");
++      if (!b) return;
++      var bag = b.dataset.kind ? state.kinds : state.derived, k = b.dataset.kind || b.dataset.der;
++      if (bag[k]) delete bag[k]; else bag[k] = 1;
++      b.classList.toggle("is-on", !!bag[k]);
++      paint();
++    });
++    $("collSide").addEventListener("click", function (e) {
++      var nw = e.target.closest("[data-ws-new]");
++      if (nw) {
++        var name = prompt("A name for the new workspace:");
++        if (name && name.trim()) act({ op: "ws-create", workspace: name.trim() }, "Workspace “" + name.trim() + "” made");
++        return;
++      }
++      var p = e.target.closest("[data-place]");
++      if (!p) return;
++      state.place = p.dataset.place; state.sel = {};
++      if (state.place === "__trash") loadTrash(); else paint();
++    });
++    $("collSide").addEventListener("dblclick", function (e) {
++      var p = e.target.closest("[data-place]");
++      if (!p || !p.dataset.place || p.dataset.place.charAt(0) === "_") return;
++      var w = p.dataset.place, to = prompt("Rename the workspace “" + w + "” (empty to delete it; its takes stay):", w);
++      if (to === null) return;
++      if (!to.trim()) { if (confirm("Delete the workspace “" + w + "”? Its takes stay in the library.")) { state.place = ""; act({ op: "ws-delete", workspace: w }, "Workspace deleted"); } }
++      else if (to.trim() !== w) { state.place = to.trim(); act({ op: "ws-rename", workspace: w, to: to.trim() }, "Workspace renamed"); }
++    });
++    $("collGrid").addEventListener("click", function (e) {
++      var play = e.target.closest("[data-play]"), open = e.target.closest("[data-open]"), cb = e.target.closest("[data-sel]"), tcb = e.target.closest("[data-tsel]");
++      if (tcb) { if (tcb.checked) state.tsel[tcb.dataset.tsel] = 1; else delete state.tsel[tcb.dataset.tsel]; return paint(); }
++      if (play) { var t = hooks.findTake(play.dataset.play); if (t) hooks.playNow(t); return; }
++      if (open) { hooks.openTake(open.dataset.open); return; }
++      if (cb) {
++        var rows = shown(), i = rows.findIndex(function (r) { return r.name === cb.dataset.sel; });
++        if (e.shiftKey && state.last !== null) {            // a range, from the last one clicked
++          var a = Math.min(state.last, i), b = Math.max(state.last, i);
++          for (var k = a; k <= b; k++) if (cb.checked) state.sel[rows[k].name] = 1; else delete state.sel[rows[k].name];
++        } else if (cb.checked) state.sel[cb.dataset.sel] = 1; else delete state.sel[cb.dataset.sel];
++        state.last = i;
++        paint();
++      }
++    });
++    $("collSelAll").addEventListener("click", function () { shown().forEach(function (r) { state.sel[r.name] = 1; }); paint(); });
++    $("collSelNone").addEventListener("click", function () { state.sel = {}; paint(); });
++    $("collFav").addEventListener("click", function () {
++      var list = names().map(hooks.findTake).filter(Boolean);
++      var on = list.some(function (t) { return !t.favorite; });
++      Promise.all(list.map(function (t) { return hooks.updateTake(t, { favorite: on }); }))
++        .then(function () { toast((on ? "Favourites: " : "Not favourites: ") + list.length); return load(); })
++        .catch(function (e) { toast(e.message, true); });
++    });
++    $("collWsPick").addEventListener("change", function () {
++      var w = this.value; this.value = "";
++      if (!w) return;
++      if (w === "__new") { w = (prompt("A name for the new workspace:") || "").trim(); if (!w) return; }
++      act({ op: "ws-add", workspace: w, names: names() }, names().length + " added to “" + w + "”");
++    });
++    $("collWsOut").addEventListener("click", function () { act({ op: "ws-remove", workspace: state.place, names: names() }, "Taken out of “" + state.place + "”"); state.sel = {}; });
++    $("collHide").addEventListener("click", function () {
++      var show = state.place === "__hidden", n = names().length;
++      act({ op: show ? "show" : "hide", names: names() }, (show ? "Shown again: " : "Hidden from the lists (not deleted): ") + n);
++      state.sel = {};
++    });
++    $("collExport").addEventListener("click", exportZip);
++    $("collTrash").addEventListener("click", function () {
++      var n = names(); if (!n.length) return;
++      if (!confirm("Move " + n.length + " take" + (n.length > 1 ? "s" : "") + " to the trash?\n\nNothing is deleted: the trash gives them back until it is emptied.")) return;
++      api("/trash", { op: "move", names: n }).then(function (d) {
++        toast(d.moved.length + " moved to the trash"); state.sel = {};
++        if (hooks.refreshLibrary) hooks.refreshLibrary();
++        return load();
++      }).catch(function (e) { toast(e.message, true); });
++    });
++    // the trash
++    var chosen = function () { return Object.keys(state.tsel).map(function (k) { var p = k.split("/"); return { day: p[0], name: p[1] }; }); };
++    $("collRestore").addEventListener("click", function () {
++      var items = chosen(); if (!items.length) return toast("Tick what to give back", true);
++      api("/trash", { op: "restore", items: items }).then(function (d) { toast(d.restored.length + " back in the library"); if (hooks.refreshLibrary) hooks.refreshLibrary(); return load().then(loadTrash); })
++        .catch(function (e) { toast(e.message, true); });
++    });
++    $("collEmpty").addEventListener("click", function () {
++      var items = chosen(), all = !items.length;
++      var n = all ? state.trash.length : items.length;
++      if (!n) return;
++      if (!confirm((all ? "Empty the whole trash: " : "Delete for good: ") + n + " take" + (n > 1 ? "s" : "") + ", with everything made from them.\n\nThis cannot be undone.")) return;
++      api("/trash", { op: "empty", items: all ? null : items }).then(function (d) { toast(d.emptied.length + " deleted for good"); return loadTrash(); })
++        .catch(function (e) { toast(e.message, true); });
++    });
++    $("collTrashDays").addEventListener("change", function () {
++      var days = parseInt(this.value, 10) || 0;
++      if (days && !confirm("Empty the trash by itself: whatever has lain there more than " + days + " days is deleted for good, every hour from now on.")) { this.value = String(state.trashDays || 0); return; }
++      act({ op: "trash-days", days: days }, days ? "The trash empties itself after " + days + " days" : "The trash keeps everything until you empty it");
++    });
++    $("wsCurrent").addEventListener("change", function () {
++      var w = this.value;
++      if (w === "__new") {
++        w = (prompt("A name for the new workspace:") || "").trim();
++        if (!w) { paintCurrent(); return; }
++        store(WS_KEY, w);
++        act({ op: "ws-create", workspace: w }, "Workspace \u201c" + w + "\u201d made and in hand: new takes land in it");
++      } else {
++        store(WS_KEY, w);
++        toast(w ? "Workspace \u201c" + w + "\u201d in hand: the list shows it, new takes land in it" : "All takes in the list; new takes in no workspace");
++      }
++      state.place = w; state.sel = {};
++      paint(); paintCurrent();
++      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
++    });
++    state.place = recall(WS_KEY) || "";
++    load();
++    api("/trash").then(function (d) { state.trash = d.items || []; paintSide(); }).catch(function () {});
++  }
++
++  // for the takes column: hidden ones stay out of it
++  function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
++
++  window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, matcher: matcher, landed: landed, inCurrent: inCurrent,
++                              current: current, loaded: function () { return state.loaded; } };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index af4f4a2..2699408 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -42,9 +42,14 @@
+     <button type="button" data-tab="create" class="is-active">Create</button>
+     <button type="button" data-tab="write">Write</button>
+     <button type="button" data-tab="post">Post</button>
++    <button type="button" data-tab="collection">Collection</button>
+   </nav>
+ 
+   <div class="spacer"></div>
++  <!-- HERESY 1041: the workspace in hand: the takes list shows it, new takes land in it -->
++  <label class="ws-current" data-tip="The workspace in hand: the takes list shows only it, and every new take lands in it. All takes: no workspace.">
++    <span class="ws-cap">Workspace</span><select id="wsCurrent" aria-label="Workspace"></select></label>
++  <div class="spacer"></div>
+ 
+   <div class="head-actions">
+     <dl class="hw-strip" id="hwStats"></dl>
+@@ -987,6 +992,59 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ 
+   </section>
+ 
++
++  <!-- HERESY 1041: the Collection — every take, searched, filtered, grouped, acted on many at once -->
++  <section class="col coll-col is-hidden" id="view-collection">
++    <div class="col-head"><h2>Collection</h2><span class="col-note" id="collNote"></span></div>
++    <div class="coll-layout">
++      <aside class="coll-side" id="collSide"></aside>
++      <div class="coll-main">
++        <div class="coll-bar" id="collBar">
++          <input type="search" id="collSearch" placeholder="Search: words, or * and ? as wildcards" autocomplete="off" />
++          <select id="collSort" aria-label="Sort"><option value="new">newest first</option><option value="old">oldest first</option>
++            <option value="title">by title</option><option value="long">longest first</option></select>
++          <span class="coll-views"><button type="button" class="btn ghost small" data-coll-view="tiles">Tiles</button>
++            <button type="button" class="btn ghost small" data-coll-view="list">List</button></span>
++          <div class="coll-filters" id="collFilters">
++            <span class="coll-cap-inline">made</span>
++            <button type="button" class="coll-chip" data-kind="generated">generated</button>
++            <button type="button" class="coll-chip" data-kind="imported">imported</button>
++            <button type="button" class="coll-chip" data-kind="regenerated">regenerated</button>
++            <button type="button" class="coll-chip" data-kind="rerendered">re-rendered</button>
++            <span class="coll-cap-inline">has</span>
++            <button type="button" class="coll-chip" data-der="stems">stems</button>
++            <button type="button" class="coll-chip" data-der="debuzz">debuzz</button>
++            <button type="button" class="coll-chip" data-der="remaster">remaster</button>
++            <button type="button" class="coll-chip" data-der="upscale">upscale</button>
++          </div>
++        </div>
++        <div class="coll-bar" id="collTrashBar" hidden>
++          <button type="button" class="btn ghost small" id="collRestore">Give back</button>
++          <button type="button" class="btn ghost small danger" id="collEmpty" data-tip="The ticked ones, or with none ticked the whole trash: deleted for good, with everything made from them. Asks first.">Delete for good</button>
++          <label class="field rm-num"><span class="label">Empty by itself</span>
++            <select id="collTrashDays"><option value="0">never</option><option value="7">after 7 days</option><option value="14">after 14 days</option><option value="28">after 28 days</option></select></label>
++        </div>
++        <div class="coll-bulk" id="collBulk" hidden>
++          <strong id="collSelCount"></strong>
++          <button type="button" class="btn ghost small" id="collSelAll">Select all shown</button>
++          <button type="button" class="btn ghost small" id="collSelNone">Clear</button>
++          <span class="coll-sep"></span>
++          <button type="button" class="btn ghost small" id="collFav">★</button>
++          <select id="collWsPick" aria-label="Add to workspace"></select>
++          <button type="button" class="btn ghost small" id="collWsOut">Take out of this workspace</button>
++          <button type="button" class="btn ghost small" id="collHide" data-tip="Out of the lists, not deleted: Hidden on the left shows them again">Hide</button>
++          <span class="coll-sep"></span>
++          <select id="collExportFmt" aria-label="Export format"><option value="flac">FLAC</option><option value="wav">WAV</option></select>
++          <label class="check"><input type="checkbox" id="collExportDer" /> <span>with what is made from them</span></label>
++          <button type="button" class="btn ghost small" id="collExport" data-tip="A ZIP made on Forge, then saved by the browser where you tell it">Export ZIP</button>
++          <span class="coll-sep"></span>
++          <button type="button" class="btn ghost small danger" id="collTrash">To the trash</button>
++        </div>
++        <div id="collGrid" class="coll-grid tiles"></div>
++      </div>
++    </div>
++  </section>
++
+   <!-- takes -------------------------------------------------------------- -->
+   <aside class="library" id="library">
+     <!-- HERESY 1017: the takes list folds to a strip on the right; this strip unfolds it -->
+@@ -1008,6 +1066,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+       </div>
+     </header>
++    <!-- HERESY 1041: quick search in the column; hidden takes stay out of it -->
++    <div class="lib-search"><input type="search" id="libSearch" placeholder="Search · * and ? work" autocomplete="off" /></div>
+     <div class="lib-list" id="libList"></div>
+   </aside>
+ 
+@@ -1180,6 +1240,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="heresy-abc.js"></script>
+ <script src="heresy-score.js"></script>
+ <script src="heresy-presets.js"></script>
++<script src="heresy-collection.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+ <script src="heresy-inspect.js"></script>
+-- 
+2.43.0
+

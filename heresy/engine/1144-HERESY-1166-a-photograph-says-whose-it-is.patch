@@ -1,0 +1,180 @@
+From 140fb6634176a0d5cb786dce10c9d97a480c41be Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 23:10:03 -0600
+Subject: [PATCH 1144/1177] HERESY 1166: a photograph says whose it is
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «Instrument pictures одобряю. Тримай и апскейли их до
+нашего стандартного 1024x1024». A picture someone made (a photograph from
+Wikimedia Commons) carries its credit: the overlay shows it under the
+picture, «Picture: author · licence · Wikimedia Commons», its page one click
+away (the credit kept as data, the tip translated). Two keys in the six
+catalogs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  8 +++++++-
+ tools/console/app.js            | 14 ++++++++++++--
+ tools/console/heresy-i18n-be.js |  4 +++-
+ tools/console/heresy-i18n-el.js |  4 +++-
+ tools/console/heresy-i18n-es.js |  4 +++-
+ tools/console/heresy-i18n-it.js |  4 +++-
+ tools/console/heresy-i18n-ru.js |  4 +++-
+ tools/console/heresy-i18n-uk.js |  4 +++-
+ 8 files changed, 37 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 9466666..053fc1f 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3414,10 +3414,16 @@ button.coll-art { border: 0; padding: 0; background-color: var(--line-a); backgr
+ .art-step[hidden] { display: none; }
+ .art-guess { margin: 0; width: min(var(--art-n, 768px), calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px)); color: #e8c37a; font-size: 12.5px; }
+ .art-guess[hidden] { display: none; }
++/* HERESY 1166: whose picture it is, when someone made it (a photograph from Commons) */
++.art-credit { margin: 0; width: min(var(--art-n, 768px), calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px));
++  color: rgba(241, 236, 228, .62); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.art-credit[hidden] { display: none; }
++.art-credit a { color: rgba(241, 236, 228, .85); text-decoration: none; }
++.art-credit a[href]:hover { color: #fff; text-decoration: underline; }
+ .art-prev { left: 18px; }
+ .art-next { right: 18px; }
+ @media (max-width: 600px) {
+-  .art-img, .art-cap { width: min(var(--art-n, 768px), calc(100vw - 32px), calc(100vh - var(--playbar-h, 60px) - 96px)); }
++  .art-img, .art-cap, .art-credit { width: min(var(--art-n, 768px), calc(100vw - 32px), calc(100vh - var(--playbar-h, 60px) - 96px)); }
+   .art-step { top: auto; bottom: 10px; transform: none; width: 40px; height: 44px; font-size: 30px; }
+ }
+ 
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 08be720..3935806 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4262,6 +4262,7 @@
+   // prompt from the take's style and words (Qwen3-4B), the picture (an SDXL finetune). Asked for, never on its own.
+   STATE.arts = {};
+   STATE.artsUnseen = {};            // HERESY 1156: pictures whose named subject the critic did not find: guesses
++  STATE.artsCredit = {};            // HERESY 1166: pictures someone made (a photograph from Commons): name -> {text, url}
+   function artUnseen(name) { return !!(name && STATE.artsUnseen[name]); }
+   function artUrl(name) { var v = name && STATE.arts[name]; return v ? "/lab/art?name=" + encodeURIComponent(name) + "&v=" + v : ""; }
+   // HERESY 1155: asked again every 20 s while the page is in sight, so pictures drawn meanwhile (a batch, the API,
+@@ -4269,10 +4270,12 @@
+   var artsSeen = "";
+   function refreshArts() {
+     return api("/lab/arts").then(function (d) {
+-      var arts = (d && d.arts) || {}, unseen = (d && d.unseen) || [], seen = JSON.stringify([arts, unseen]);
++      var arts = (d && d.arts) || {}, unseen = (d && d.unseen) || [], credits = (d && d.credits) || {};
++      var seen = JSON.stringify([arts, unseen, credits]);
+       if (seen === artsSeen) return;
+       artsSeen = seen;
+       STATE.arts = arts;
++      STATE.artsCredit = credits;
+       STATE.artsUnseen = {};
+       unseen.forEach(function (n) { STATE.artsUnseen[n] = 1; });
+       paintCover(STATE.playerTake);
+@@ -4301,7 +4304,9 @@
+       '<figcaption class="art-cap"><button type="button" class="coll-play art-play" aria-label="Play"></button>' +
+       '<span class="art-title"></span><span class="art-count"></span>' +
+       '<button type="button" class="pb-btn art-close" aria-label="Close" data-tip="Close (Esc)">✕</button></figcaption>' +
+-      '<p class="art-guess" hidden>≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.</p></figure>' +
++      '<p class="art-guess" hidden>≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.</p>' +
++      '<p class="art-credit" hidden><span>Picture:</span> <a target="_blank" rel="noopener noreferrer" ' +
++      'data-tip="The picture\'s page: its author and licence"><span translate="no"></span></a></p></figure>' +
+       '<button type="button" class="art-step art-prev" aria-label="Previous" data-tip="Previous (←)">‹</button>' +
+       '<button type="button" class="art-step art-next" aria-label="Next" data-tip="Next (→)">›</button>';
+     document.body.appendChild(back);
+@@ -4325,6 +4330,11 @@
+       back.querySelector(".art-count").textContent = list.length > 1 ? (at + 1) + " / " + list.length : "";
+       back.querySelector(".art-play").hidden = !take;
+       back.querySelector(".art-guess").hidden = !artUnseen(n);
++      // HERESY 1166: a picture someone made says whose it is, and under which licence (its page one click away)
++      var credit = STATE.artsCredit[n], line = back.querySelector(".art-credit"), link = line.querySelector("a");
++      line.hidden = !credit;
++      link.firstChild.textContent = credit ? credit.text : "";     // the credit is data, the tip is the page's own words
++      if (credit && credit.url) link.href = credit.url; else link.removeAttribute("href");
+       Array.prototype.forEach.call(back.querySelectorAll(".art-step"), function (b) { b.hidden = list.length < 2; });
+       [at - 1, at + 1].forEach(function (i) { var u = artUrl(list[(i + list.length) % list.length]); if (u) new Image().src = u; });
+       paintPlay();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 92fafb7..ffce41e 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2491,5 +2491,7 @@ RuachI18n.add("be", {
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Цягні кропку ўгару — успышка, уніз — згасанне, уздоўж песні — зрух; двайная пстрычка дадае кропку, двайная пстрычка па кропцы прыбірае яе. Сіла ўверсе — гэта верх крывой.",
+ "curved": "па крывой",
+ "Full height": "На ўсю вышыню",
+-"The log the window's full height, or back": "Журнал на ўсю вышыню акна, або назад"
++"The log the window's full height, or back": "Журнал на ўсю вышыню акна, або назад",
++"Picture:": "Выява:",
++"The picture's page: its author and licence": "Старонка выявы: аўтар і ліцэнзія"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index c739ef4..548e757 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2490,5 +2490,7 @@ RuachI18n.add("el", {
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Σύρε ένα σημείο πάνω για έκλαμψη, κάτω για σβήσιμο, κατά μήκος του τραγουδιού για μετακίνηση· διπλό κλικ προσθέτει σημείο, διπλό κλικ σε σημείο το αφαιρεί. Η ένταση από πάνω είναι η κορυφή της καμπύλης.",
+ "curved": "με καμπύλη",
+ "Full height": "Σε όλο το ύψος",
+-"The log the window's full height, or back": "Το αρχείο σε όλο το ύψος του παραθύρου, ή πίσω"
++"The log the window's full height, or back": "Το αρχείο σε όλο το ύψος του παραθύρου, ή πίσω",
++"Picture:": "Εικόνα:",
++"The picture's page: its author and licence": "Η σελίδα της εικόνας: ο δημιουργός και η άδεια"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 87b4bdc..02c39e5 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2490,5 +2490,7 @@ RuachI18n.add("es", {
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Arrastra un punto hacia arriba para un destello, hacia abajo para un desvanecimiento, a lo largo de la canción para moverlo; doble clic añade un punto, doble clic en un punto lo quita. La fuerza de arriba es la cima de la curva.",
+ "curved": "con curva",
+ "Full height": "Altura completa",
+-"The log the window's full height, or back": "El registro a toda la altura de la ventana, o de vuelta"
++"The log the window's full height, or back": "El registro a toda la altura de la ventana, o de vuelta",
++"Picture:": "Imagen:",
++"The picture's page: its author and licence": "La página de la imagen: su autor y su licencia"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 695cd77..3b0576c 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2490,5 +2490,7 @@ RuachI18n.add("it", {
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Trascina un punto in alto per un lampo, in basso per una dissolvenza, lungo la canzone per spostarlo; doppio clic aggiunge un punto, doppio clic su un punto lo toglie. La forza sopra è la cima della curva.",
+ "curved": "con curva",
+ "Full height": "Altezza piena",
+-"The log the window's full height, or back": "Il registro a tutta l'altezza della finestra, o indietro"
++"The log the window's full height, or back": "Il registro a tutta l'altezza della finestra, o indietro",
++"Picture:": "Immagine:",
++"The picture's page: its author and licence": "La pagina dell'immagine: l'autore e la licenza"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index dcfa83d..ba68f6f 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2496,5 +2496,7 @@ RuachI18n.add("ru", {
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Тяни точку вверх — вспышка, вниз — затухание, вдоль песни — сдвиг; двойной щелчок добавляет точку, двойной щелчок по точке убирает её. Сила наверху — это верх кривой.",
+ "curved": "по кривой",
+ "Full height": "Во всю высоту",
+-"The log the window's full height, or back": "Журнал во всю высоту окна, или обратно"
++"The log the window's full height, or back": "Журнал во всю высоту окна, или обратно",
++"Picture:": "Изображение:",
++"The picture's page: its author and licence": "Страница изображения: автор и лицензия"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index e94a083..85fb414 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2491,5 +2491,7 @@ RuachI18n.add("uk", {
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Тягни точку вгору — спалах, униз — згасання, уздовж пісні — зсув; подвійне клацання додає точку, подвійне клацання по точці прибирає її. Сила вгорі — це верх кривої.",
+ "curved": "за кривою",
+ "Full height": "На всю висоту",
+-"The log the window's full height, or back": "Журнал на всю висоту вікна, або назад"
++"The log the window's full height, or back": "Журнал на всю висоту вікна, або назад",
++"Picture:": "Зображення:",
++"The picture's page: its author and licence": "Сторінка зображення: автор і ліцензія"
+ });
+-- 
+2.43.0
+

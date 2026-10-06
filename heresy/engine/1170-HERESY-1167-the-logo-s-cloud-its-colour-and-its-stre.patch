@@ -1,0 +1,77 @@
+From 316da78f9c6ee03d807933af0c9fc282d9d53b5a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 10:40:08 -0600
+Subject: [PATCH 1170/1177] HERESY 1167: the logo's cloud: its colour and its
+ strength under two names; by day a breath of dark wine at 10 %
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, the morning of 06.10.2026: «Ночное лого просто супер. А вот в дневном ты тень/облако зря сделал грейскейлом.
+Добавь песчинку красного и ещё больше осветли облако, едва заметно (7-10% непрозрачности), чтобы был виден силуэт».
+
+The night before, one name carried two things: --logo-cloud was the cloud's colour in the logo's gradient and, from
+app.css, its strength (.45). A colour of «.45» is no colour, so the gradient fell back to black: a black cloud at 45 %.
+By night that was a soft shadow (the look he likes); by day it was grey smoke.
+
+Now:
+· the strength is --logo-cloud-alpha, a name of its own;
+· the theme says day or night on the page (data-tone, set with the theme at load and on every change);
+· by night: black at 0.45, as he saw it;
+· by day: black with a grain of the accent's red, at 10 %, barely there, enough for the white silhouette.
+
+cdp-console 340/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css   | 12 ++++++++----
+ tools/console/themes.js |  2 ++
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index dd7be38..9031542 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3998,10 +3998,14 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .tr-logdock-head .spacer { flex: 1; }
+ .tr-logdock-name { font-size: 12px; }
+ .tr-logdock-body { flex: 1; margin: 0; padding: 8px 14px 10px; overflow: auto; font-size: 12px; line-height: 1.45; white-space: pre; color: var(--muted); }
+-/* HERESY 1167 (Viktor, the night of 05.10.2026: «Доделываем наш логотип… дым/туман нужно более прозрачным»): the cloud under
+-   the Maiden at 0.6 (it was 0.88): lighter, and still enough behind her white by day */
+-:root { --logo-cloud: .45; }   /* 0.45 or 0.6: Viktor decides in the bar (the brand keeps both sets) */
+-.ruach-logo .rl-cloud { opacity: var(--logo-cloud); }
++/* HERESY 1167 (Viktor, the night of 05.10.2026: «Доделываем наш логотип… дым/туман нужно более прозрачным»; the morning of
++   06.10: «Ночное лого просто супер. А вот в дневном… Добавь песчинку красного и ещё больше осветли облако, едва заметно
++   (7-10% непрозрачности), чтобы был виден силуэт»): the cloud under the Maiden, its colour (--logo-cloud, read by the logo's
++   gradient) and its strength (--logo-cloud-alpha) under two names. By night black at 0.45, the soft shadow he likes; by
++   day a dark wine, black with a grain of the accent’s red, at 10 % */
++:root { --logo-cloud: #000; --logo-cloud-alpha: .45; }
++:root[data-tone="light"] { --logo-cloud: color-mix(in oklab, #000 82%, var(--amber) 18%); --logo-cloud-alpha: .1; }
++.ruach-logo .rl-cloud { opacity: var(--logo-cloud-alpha); }
+ /* HERESY 1167: a muted adapter: in the form, out of the run */
+ .lora-row.is-muted { opacity: .5; }
+ .lora-row.is-muted:hover { opacity: .75; }
+diff --git a/tools/console/themes.js b/tools/console/themes.js
+index accf912..5bac04b 100644
+--- a/tools/console/themes.js
++++ b/tools/console/themes.js
+@@ -58,6 +58,7 @@
+     if (S.shown === id) return;
+     S.shown = id;
+     document.documentElement.dataset.theme = id;
++    document.documentElement.dataset.tone = (find(id) || {}).dark ? "dark" : "light";   // HERESY 1167: day or night for CSS (the logo's cloud)
+     if (S.onChange) S.onChange(id);
+   }
+ 
+@@ -215,6 +216,7 @@
+     document.body.appendChild(popup);
+     S.popup = popup;
+     document.documentElement.dataset.theme = S.kept;   // at load: no redraw, the page is not painted yet
++    document.documentElement.dataset.tone = (find(S.kept) || {}).dark ? "dark" : "light";   // HERESY 1167
+     S.shown = S.kept;
+     paintButton();
+ 
+-- 
+2.43.0
+

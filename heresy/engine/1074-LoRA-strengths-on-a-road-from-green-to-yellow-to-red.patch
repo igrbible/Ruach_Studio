@@ -1,0 +1,127 @@
+From c85848c441a7620f5ae2bdf53e12629966c04423 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 02:34:44 -0600
+Subject: [PATCH 1074/1177] LoRA strengths on a road from green to yellow to
+ red: measured limits per adapter, warned past them
+
+HERESY 1084 (Viktor 02.10.2026). Music half: 0.5 safe, 0.75 the limit (the score fails past it), 1 the end;
+a score adapter (the ABC one) 1.0 / 1.25 / 2; our own adapters from the Train room 0.5 / 0.6 / 1. Sound half
+1.0 / 1.5 / 2. sources.json may set an adapter's own limits. Colours of its own, not the theme accent.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css  | 19 +++++++++++++++++++
+ tools/console/loras.js | 41 ++++++++++++++++++++++++++++++-----------
+ 2 files changed, 49 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index c7f15d5..2f508db 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2587,3 +2587,22 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .take-extra .coll-badges { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px; }
+ .take-rate { display: flex; gap: 2px; flex: none; }
+ .take-rate .coll-act { padding: 2px 5px; }
++/* HERESY 1084: the LoRA strength road, green (safe) to yellow (the limit) to red (past it); colours of its own, not the theme accent (which is red in some themes) */
++.lora-half input[type="range"].zoned { -webkit-appearance: none; appearance: none; height: 18px; background: transparent; accent-color: auto; }
++.lora-half input[type="range"].zoned::-webkit-slider-runnable-track {
++  height: 6px; border-radius: 3px;
++  background: linear-gradient(to right, #3f9a4a 0, #3f9a4a var(--z1), #e0b030 var(--z2), #c8372d var(--z2), #c8372d 100%);
++}
++.lora-half input[type="range"].zoned::-moz-range-track {
++  height: 6px; border-radius: 3px;
++  background: linear-gradient(to right, #3f9a4a 0, #3f9a4a var(--z1), #e0b030 var(--z2), #c8372d var(--z2), #c8372d 100%);
++}
++.lora-half input[type="range"].zoned::-webkit-slider-thumb {
++  -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -4px; border-radius: 50%;
++  background: var(--ink); border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-strong); cursor: pointer;
++}
++.lora-half input[type="range"].zoned::-moz-range-thumb {
++  width: 12px; height: 12px; border-radius: 50%; background: var(--ink); border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-strong); cursor: pointer;
++}
++.lora-half input[type="range"].zoned:disabled { opacity: .4; }
++.lora-half.is-over output { color: var(--bad); font-weight: 600; }
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 1957a34..5774a79 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -98,22 +98,39 @@
+     return s;
+   }
+ 
+-  // HERESY 1081 (Viktor 02.10.2026): a music half above 0.75 breaks the score (70-200 tokens, then it
+-  // fails), with every adapter he tried; the sound half has no such limit. A score adapter (trained with
+-  // a score: full or melody mode, like the ABC one) is the exception and keeps the whole range.
+-  var AR_CAP = 0.75;
++  // HERESY 1081/1084 (Viktor 02.10.2026): measured limits, drawn on the slider as a road from green to red.
++  // The music half above 0.75 breaks the score (70-200 tokens, then it fails) with every adapter he tried,
++  // 0.5 gave a whole score; the sound half had no such trouble. A score adapter (trained with a score, like
++  // the ABC one) takes more on the music half; our own adapters (loras/RUN/…, from the Train room) are kept
++  // tighter there. sources.json may set an adapter's own: "limits": {"ar": [safe, limit, max], "nar": [...]}.
++  //   green up to safe · amber up to limit · red beyond it (allowed, warned)
+   function scoreAdapter(e) { return !!e && ((e.mode && e.mode !== "direct") || /abc/i.test(e.id)); }
+-  function capOf(e, half) { return half === "ar" && !scoreAdapter(e) ? AR_CAP : 2; }
++  function ownAdapter(e) {
++    var parts = String(e && e.id || "").split("/"), src = e ? source(e.id) : null;
++    return !!(src && src.own) || (parts.length === 2 && (parts[1].indexOf(parts[0] + ".") === 0 || parts[1].indexOf(parts[0] + "-e") === 0));
++  }
++  function zones(e, half) {
++    var src = e ? source(e.id) : null, own = src && src.limits && src.limits[half];
++    if (own && own.length >= 2) return { safe: own[0], limit: own[1], max: own[2] || Math.max(own[1] * 1.5, own[1] + 0.25) };
++    if (half === "nar") return { safe: 1.0, limit: 1.5, max: 2 };
++    if (scoreAdapter(e)) return { safe: 1.0, limit: 1.25, max: 2 };
++    if (ownAdapter(e)) return { safe: 0.5, limit: 0.6, max: 1 };
++    return { safe: 0.5, limit: 0.75, max: 1 };
++  }
++  function capOf(e, half) { return zones(e, half).max; }
++  function overLimit(e, half, v) { return v > zones(e, half).limit + 1e-9; }
+ 
+   function halfControl(choice, e, half) {
+     var label = half === "ar" ? "Music" : "Sound", on = has(e, half) || !e;
+     if (!on) return "";   // HERESY 1016: a file without this half shows no slider for it
+-    var value = on ? choice[half] : 0;
+-    return '<label class="lora-half' + (on ? "" : " is-off") + '" data-tip="' + escape(on
++    var value = on ? choice[half] : 0, z = zones(e, half);
++    var road = "--z1:" + (100 * z.safe / z.max).toFixed(1) + "%;--z2:" + (100 * z.limit / z.max).toFixed(1) + "%";
++    return '<label class="lora-half' + (on ? "" : " is-off") + (on && overLimit(e, half, value) ? " is-over" : "") + '" data-tip="' + escape(on
+       ? (half === "ar" ? "Strength on the music half: the score and the music tokens (0 off, 1 as trained)"
+-                       : "Strength on the sound half: the acoustic stage that turns music tokens into sound (0 off, 1 as trained)")
++                       : "Strength on the sound half: the acoustic stage that turns music tokens into sound (0 off, 1 as trained)") +
++        " · green to " + z.safe + ", amber to " + z.limit + ", red beyond"
+       : "This file has no " + label.toLowerCase() + " half") + '"><span>' + label + "</span>" +
+-      '<input type="range" min="0" max="' + capOf(e, half) + '" step="0.025" value="' + value + '"' + (on ? "" : " disabled") +
++      '<input type="range" class="zoned" style="' + road + '" min="0" max="' + z.max + '" step="0.025" value="' + value + '"' + (on ? "" : " disabled") +
+       ' data-lora="' + escape(choice.id) + '" data-half="' + half + '" aria-label="' + escape(nameOf(choice.id)) + " " + label + ' strength" />' +
+       '<output data-tip="Double-click to type it">' + (on ? fmt(value, 2) : "—") + "</output></label>";
+   }
+@@ -130,7 +147,8 @@
+       if (triggerOf(e)) notes.push(name + ": put its trigger word “" + triggerOf(e) + "” in the style.");
+       if (e.mode === "direct" && cot && cot !== "off") notes.push(name + " was trained in Direct mode.");
+       if (e.mode && e.mode !== "direct" && cot === "off") notes.push(name + " was trained with a score (" + e.mode + " mode).");
+-      if (c.ar > capOf(e, "ar")) notes.push(name + ": " + fmt(c.ar, 2) + " on the music half is above " + AR_CAP + ": the score tends to fail after 70-200 tokens.");
++      if (has(e, "ar") && overLimit(e, "ar", c.ar)) notes.push("\u26a0 " + name + ": " + fmt(c.ar, 2) + " on the music half is past its limit " + zones(e, "ar").limit + ": the score tends to fail after 70-200 tokens.");
++      if (has(e, "nar") && overLimit(e, "nar", c.nar)) notes.push("\u26a0 " + name + ": " + fmt(c.nar, 2) + " on the sound half is past its limit " + zones(e, "nar").limit + ".");
+     });
+     if (S.choice.length > 1) notes.push(S.choice.length + " stacked: their changes add up.");
+     return notes;
+@@ -174,7 +192,7 @@
+     } else {
+       var e = entry(id);
+       if (!e || e.error) return;
+-      S.choice.push({ id: id, ar: has(e, "ar") ? Math.min(1, capOf(e, "ar")) : 0, nar: has(e, "nar") ? 1 : 0 });
++      S.choice.push({ id: id, ar: has(e, "ar") ? Math.min(1, zones(e, "ar").limit) : 0, nar: has(e, "nar") ? Math.min(1, zones(e, "nar").limit) : 0 });
+     }
+     changed();
+   }
+@@ -263,6 +281,7 @@
+       if (!id || !half) return;
+       S.choice.forEach(function (c) { if (c.id === id) c[half] = parseFloat(event.target.value); });
+       event.target.nextElementSibling.textContent = fmt(event.target.value, 2);
++      event.target.parentNode.classList.toggle("is-over", overLimit(entry(id), half, parseFloat(event.target.value)));   // 1084
+       S.host.querySelector(".lora-hint").textContent = hints().join(" ");
+     });
+     paint();
+-- 
+2.43.0
+

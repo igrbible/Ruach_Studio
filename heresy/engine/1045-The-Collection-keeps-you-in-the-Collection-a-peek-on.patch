@@ -1,0 +1,209 @@
+From d484f12f6aa0ec29ce704e3bb08d27280cf58387 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 12:10:32 -0600
+Subject: [PATCH 1045/1177] The Collection keeps you in the Collection: a peek
+ on hover, a sheet on click
+
+A pointer resting 400 ms on a card shows a peek: title, age, length, mode, 200 characters of the
+style, the first 20 lines of the lyrics, the note. A click on a title opens the take's sheet over
+the Collection: play/pause (following the player), like, dislike, favourite, the whole style and
+lyrics, the note (edited in place), workspaces, what is made from it; Open in Create and Open in
+Post are the only ways out to another tab (Viktor: Create by a deliberate choice). Esc or a click
+outside closes it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  19 ++++++
+ tools/console/app.js               |   3 +-
+ tools/console/heresy-collection.js | 100 ++++++++++++++++++++++++++++-
+ tools/console/index.html           |   3 +
+ tools/public/index.html.gz         | Bin 320433 -> 322766 bytes
+ 5 files changed, 123 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index b1a8e1d..fb4f829 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2198,3 +2198,22 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ 
+ .coll-card.is-current { border-color: var(--amber); }
+ .coll-play.is-playing { background: var(--amber); color: var(--on-amber); border-color: var(--amber); font-size: 10px; letter-spacing: -1px; }
++
++/* HERESY 1046: peek and sheet in the Collection */
++.coll-peek { position: fixed; z-index: 50; width: 380px; max-height: 420px; overflow: hidden; padding: 12px 14px; border: 1px solid var(--line-strong);
++  border-radius: var(--r-md); background: var(--panel); box-shadow: 0 10px 30px var(--shadow-lg); pointer-events: none; font-size: 12.5px; }
++.peek-title { font-weight: 600; font-size: 14px; }
++.peek-cap { margin-top: 8px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
++.peek-style { color: var(--ink); }
++.peek-lyrics { margin: 2px 0 0; white-space: pre-wrap; font: inherit; color: var(--ink); line-height: 1.35; }
++.peek-note { font-style: italic; color: var(--muted); }
++.coll-sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(2px); padding: 16px; }
++.coll-sheet[hidden], .coll-peek[hidden] { display: none; }
++.coll-sheet-body { width: min(980px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 18px 20px; border: 1px solid var(--line-strong); border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 20px 60px var(--shadow-lg); display: flex; flex-direction: column; gap: 10px; }
++.sheet-head { display: flex; gap: 12px; align-items: center; }
++.sheet-head > div { flex: 1; min-width: 0; }
++.sheet-title { font: 600 18px/1.3 var(--sans); }
++.sheet-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
++.sheet-text { margin: 2px 0 0; white-space: pre-wrap; font: 13px/1.45 var(--sans); max-height: 46vh; overflow: auto; padding: 8px 10px; background: var(--sunk); border-radius: var(--r-sm); }
++.sheet-acts .spacer { flex: 1; }
++@media (max-width: 760px) { .sheet-cols { grid-template-columns: 1fr; } }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 3dab080..a2274c8 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5152,7 +5152,8 @@
+ 
+   /* ---------------------------------------------- HERESY 1041: the Collection */
+   if (window.HeresyCollection) window.HeresyCollection.init({
+-    toast: toast, clock: clock, ago: ago, findTake: findTake, openTake: function (name) { openTake(name); setTab("create"); },
++    toast: toast, clock: clock, ago: ago, findTake: findTake, getRequest: getRequest,
++    openTake: function (name, where) { openTake(name); setTab(where === "post" ? "post" : "create"); },
+     playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, togglePlay: togglePlay,
+     playing: function () { return { name: STATE.playerTake ? STATE.playerTake.name : "", playing: isPlaying() }; }, libraryChanged: function () { paintLibrary(); paintRate(); paintNote(); }
+   });
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 340efe6..803d4ce 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -241,7 +241,7 @@
+         if (now.name === play.dataset.play) { hooks.togglePlay(); return; }
+         var t = hooks.findTake(play.dataset.play); if (t) hooks.playNow(t); return;
+       }
+-      if (open) { hooks.openTake(open.dataset.open); return; }
++      if (open) { openSheet(open.dataset.open); return; }   // HERESY 1046: a sheet here; Create only by choice
+       if (cb) {
+         var rows = shown(), i = rows.findIndex(function (r) { return r.name === cb.dataset.sel; });
+         if (e.shiftKey && state.last !== null) {            // a range, from the last one clicked
+@@ -252,6 +252,39 @@
+         paint();
+       }
+     });
++    // HERESY 1046: peek on hover, sheet on click
++    $("collGrid").addEventListener("mouseover", function (e) {
++      var card = e.target.closest(".coll-card[data-name]");
++      if (!card || card.dataset.name === peekFor) return;
++      clearTimeout(peekTimer); hidePeek();
++      peekTimer = setTimeout(function () { showPeek(card); }, 400);
++    });
++    $("collGrid").addEventListener("mouseleave", hidePeek);
++    $("collGrid").addEventListener("mousedown", hidePeek);
++    $("collSheet").addEventListener("click", function (e) {
++      if (e.target === $("collSheet") || e.target.closest("[data-sheet-close]")) return closeSheet();
++      var name = sheetName, r = rowOf(name);
++      if (!r) return;
++      if (e.target.closest("[data-sheet-play]")) {
++        var now = hooks.playing();
++        if (now.name === name) hooks.togglePlay(); else { var t = hooks.findTake(name); if (t) hooks.playNow(t); }
++        return;
++      }
++      var rt = e.target.closest("[data-sheet-rate]");
++      if (rt) { var v = +rt.dataset.sheetRate; rate(name, r.rating === v ? 0 : v).then(function () { openSheet(name); }); return; }
++      if (e.target.closest("#sheetFav")) { var tk = hooks.findTake(name); if (tk) hooks.updateTake(tk, { favorite: !tk.favorite }).then(load).then(function () { openSheet(name); }); return; }
++      var go = e.target.closest("[data-sheet-go]");
++      if (go) { closeSheet(); hooks.openTake(name, go.dataset.sheetGo); }
++    });
++    $("collSheet").addEventListener("input", function (e) {
++      if (e.target.id !== "sheetNote") return;
++      var name = sheetName, text = e.target.value;
++      $("sheetNoteState").textContent = "\u2026";
++      clearTimeout(sheetNoteTimer);
++      sheetNoteTimer = setTimeout(function () { setNote(name, text).then(function () { if ($("sheetNoteState")) $("sheetNoteState").textContent = "saved"; }); }, 900);
++    });
++    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("collSheet").hidden) closeSheet(); });
++
+     $("collSelAll").addEventListener("click", function () { shown().forEach(function (r) { state.sel[r.name] = 1; }); paint(); });
+     $("collSelNone").addEventListener("click", function () { state.sel = {}; paint(); });
+     $("collFav").addEventListener("click", function () {
+@@ -332,9 +365,74 @@
+     });
+   }
+ 
++  // ---- HERESY 1046: the take without leaving the Collection: a hover peek (400 ms) and a sheet on click
++  var reqCache = {}, peekTimer = 0, peekFor = "";
++  function requestOf(name) {
++    if (reqCache[name]) return Promise.resolve(reqCache[name]);
++    var t = state.hooks.findTake(name);
++    if (!t) return Promise.reject(new Error("not in the library"));
++    return state.hooks.getRequest(t).then(function (r) { reqCache[name] = r; return r; });
++  }
++  function rowOf(name) { return state.rows.filter(function (r) { return r.name === name; })[0]; }
++  function lyricsHead(text, lines) {
++    var all = String(text || "").split("\n"), head = all.slice(0, lines).join("\n");
++    return all.length > lines ? head + "\n\u2026" : head;
++  }
++  function showPeek(card) {
++    var name = card.dataset.name, r = rowOf(name);
++    if (!r) return;
++    peekFor = name;
++    requestOf(name).then(function (req) {
++      if (peekFor !== name) return;
++      var box = $("collPeek"), style = String(req.style || "");
++      box.innerHTML = '<div class="peek-title">' + esc(r.title) + '</div><div class="coll-meta">' + esc(state.hooks.ago(r.created)) +
++        (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + (req.cot ? " \u00b7 " + esc(req.cot) : "") + "</div>" +
++        (style ? '<div class="peek-cap">Style</div><div class="peek-style">' + esc(style.length > 200 ? style.slice(0, 200) + "\u2026" : style) + "</div>" : "") +
++        (req.lyrics ? '<div class="peek-cap">Lyrics</div><pre class="peek-lyrics">' + esc(lyricsHead(req.lyrics, 20)) + "</pre>" : "") +
++        (r.note ? '<div class="peek-cap">Note</div><div class="peek-note">' + esc(r.note) + "</div>" : "");
++      var rc = card.getBoundingClientRect(), w = 380;
++      var left = rc.right + 10 + w < window.innerWidth ? rc.right + 10 : Math.max(8, rc.left - w - 10);
++      box.style.left = left + "px";
++      box.style.top = Math.max(8, Math.min(rc.top, window.innerHeight - 420)) + "px";
++      box.hidden = false;
++    }).catch(function () {});
++  }
++  function hidePeek() { clearTimeout(peekTimer); peekFor = ""; if ($("collPeek")) $("collPeek").hidden = true; }
++
++  var sheetName = "", sheetNoteTimer = 0;
++  function openSheet(name) {
++    hidePeek();
++    var r = rowOf(name);
++    if (!r) return;
++    sheetName = name;
++    requestOf(name).then(function (req) { paintSheet(r, req); }).catch(function (e) { paintSheet(r, {}); toast(e.message, true); });
++  }
++  function paintSheet(r, req) {
++    var now = state.hooks.playing(), mine = now.name === r.name && now.playing;
++    $("collSheetBody").innerHTML =
++      '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + (mine ? "\u275a\u275a" : "\u25b6") + "</button>" +
++      '<div><div class="sheet-title">' + esc(r.title) + '</div><div class="coll-meta">' + esc(state.hooks.ago(r.created)) +
++      (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + (req.cot ? " \u00b7 " + esc(req.cot) : "") + " \u00b7 " + esc(KINDS[r.kind] || r.kind) +
++      (r.derived.length ? " \u00b7 made from it: " + esc(r.derived.join(", ")) : "") + "</div></div>" +
++      '<span class="pb-rate"><button type="button" class="pb-btn" data-sheet-rate="1" aria-pressed="' + (r.rating > 0) + '">\ud83d\udc4d</button>' +
++      '<button type="button" class="pb-btn" data-sheet-rate="-1" aria-pressed="' + (r.rating < 0) + '">\ud83d\udc4e</button>' +
++      '<button type="button" class="pb-btn" id="sheetFav" aria-pressed="' + r.favorite + '" style="color:var(--amber);filter:none">' + (r.favorite ? "\u2605" : "\u2606") + "</button></span></div>" +
++      (r.workspaces.length ? '<div class="coll-badges">' + r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" : "") +
++      '<div class="sheet-cols"><div><div class="peek-cap">Style</div><pre class="sheet-text">' + esc(req.style || "") + "</pre></div>" +
++      '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
++      '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="4000">' + esc(r.note || "") + "</textarea></label>" +
++      '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in Create</button>' +
++      '<button type="button" class="btn ghost small" data-sheet-go="post">Open in Post</button><span class="spacer"></span>' +
++      '<button type="button" class="btn ghost small" data-sheet-close="1">Close</button></div>';
++    $("collSheet").hidden = false;
++  }
++  function closeSheet() { if ($("collSheet")) $("collSheet").hidden = true; sheetName = ""; }
++
+   // the play buttons follow the player (called on play, pause, end, a new take)
+   function paintPlaying() {
+     var now = state.hooks && state.hooks.playing ? state.hooks.playing() : {};
++    var sp = document.querySelector("[data-sheet-play]");
++    if (sp && sheetName) { var on0 = now.name === sheetName && now.playing; sp.textContent = on0 ? "\u275a\u275a" : "\u25b6"; sp.classList.toggle("is-playing", on0); }
+     Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (card) {
+       var mine = card.dataset.name === now.name, b = card.querySelector(".coll-play");
+       card.classList.toggle("is-current", mine);
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 372ee82..c241300 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1076,6 +1076,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <button type="button" class="btn ghost small danger" id="collTrash">To the trash</button>
+         </div>
+         <div id="collGrid" class="coll-grid tiles"></div>
++        <!-- HERESY 1046: a peek on hover, a sheet on click; Create only by choice -->
++        <div class="coll-peek" id="collPeek" hidden></div>
++        <div class="coll-sheet" id="collSheet" hidden><div class="coll-sheet-body" id="collSheetBody" role="dialog" aria-modal="true"></div></div>
+       </div>
+     </div>
+   </section>
+-- 
+2.43.0
+

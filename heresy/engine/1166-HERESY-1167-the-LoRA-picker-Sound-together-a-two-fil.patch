@@ -1,0 +1,449 @@
+From 2f87ccaadec67977ed3bd0f77f3975726ea5545a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 00:24:08 -0600
+Subject: [PATCH 1166/1177] HERESY 1167: the LoRA picker: Sound, together; a
+ two-file adapter as one; mute by a right-click; out of the list to its
+ Trainer run; the trigger words by themselves; the logo's cloud lighter
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, the night of 05.10.2026, over his four Buratino tests with the Chonishvili reading voice:
+· «Там, где у тебя ползунок music, together, нужно добавить также ползунок sound, together»: the sound half's together
+  beside the music's (by ear: two adapters at sound 1.0 each, 2.0 together, gave the heavy bass; 0.55 together sounded
+  right; green to 1, amber to 1.5), dragged to move all the sound strengths at once.
+· «Epic Trailer… предлагается как два разных адаптера… объедини их… MUSIC+SOUND=BOTH»: a music-only file and a sound-only
+  file of one name are one card (BOTH), one row with its two strengths and one ✕; the hints count them once.
+· «по правому клику мыши Mute/Пропустить… Unmute/Вернуть в строй»: a muted adapter stays in the form with its strengths and
+  is left out of the run and of both totals; the form keeps it muted across a reload.
+· «адаптер из локального тренинга… Убрать из списка (адаптер в своей сессии Тренера)»: on an adapter trained here, by a
+  right-click: out of loras/, its checkpoint still in its run (the Trainer puts it back).
+· «суффиксом приклинивай все триггеры в системный промпт… кнопка не нужна… веса накладываются не триггером»: the adapters'
+  trigger words go at the style's end in the request by themselves (the field stays as written, a word in it is not
+  doubled, a muted adapter adds none); the row says the word instead of «+ word».
+· «По Деве сделай 0.45… но и 0.6 тоже заверши»: the cloud under the Maiden at 0.45 (a page variable, --logo-cloud).
+
+cdp-console 335/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css  |  11 +++
+ tools/console/app.js   |  20 +++-
+ tools/console/loras.js | 220 +++++++++++++++++++++++++++++------------
+ 3 files changed, 188 insertions(+), 63 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 8c917c9..69be9e8 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3998,3 +3998,14 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .tr-logdock-head .spacer { flex: 1; }
+ .tr-logdock-name { font-size: 12px; }
+ .tr-logdock-body { flex: 1; margin: 0; padding: 8px 14px 10px; overflow: auto; font-size: 12px; line-height: 1.45; white-space: pre; color: var(--muted); }
++/* HERESY 1167 (Viktor, the night of 05.10.2026: «Доделываем наш логотип… дым/туман нужно более прозрачным»): the cloud under
++   the Maiden at 0.6 (it was 0.88): lighter, and still enough behind her white by day */
++:root { --logo-cloud: .45; }   /* 0.45 or 0.6: Viktor decides in the bar (the brand keeps both sets) */
++.ruach-logo .rl-cloud { opacity: var(--logo-cloud); }
++/* HERESY 1167: a muted adapter: in the form, out of the run */
++.lora-row.is-muted { opacity: .5; }
++.lora-row.is-muted:hover { opacity: .75; }
++.lora-muted-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border: 1px solid var(--line-a); border-radius: var(--r-pill, 999px);
++  font: 500 10.5px/1.6 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
++/* HERESY 1167: a trigger word the run adds by itself, said quietly */
++.lora-trigger.is-auto { opacity: .7; cursor: default; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f15b281..b625620 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1229,7 +1229,19 @@
+       YueLoras.repaint();
+     },
+     styleText: function () { return $("style").value; },   // HERESY 1018: the row says when the trigger word is in
+-    lyricsText: function () { return $("lyrics").value; }  // HERESY 1095: an instrumental score adapter with words to sing
++    lyricsText: function () { return $("lyrics").value; }, // HERESY 1095: an instrumental score adapter with words to sing
++    // HERESY 1167 (Viktor: «адаптер из локального тренинга… Убрать из списка (адаптер в своей сессии Тренера)»): out of loras/,
++    // its checkpoint still in its run; the Trainer puts it back
++    unpublish: function (ids) {
++      Promise.all(ids.map(function (id) {
++        var parts = id.split("/");
++        return api("/lab/train/unpublish", { method: "POST", headers: { "Content-Type": "application/json" },
++                                             body: JSON.stringify({ name: parts[0], lora: parts[parts.length - 1] }) });
++      })).then(function () {
++        toast("Out of the list; its checkpoint stays in the Trainer's run " + ids[0].split("/")[0] + " (the Trainer puts it back)");
++        pollProps();
++      }, function (error) { toast(error.message, "bad"); pollProps(); });
++    }
+   });
+   $("lyrics").addEventListener("change", function () { YueLoras.repaint(); });
+   $("style").addEventListener("change", function () { YueLoras.repaint(); });
+@@ -1472,6 +1484,10 @@
+     var loras = YueLoras.value();
+     if (loras.length) {
+       body.loras = loras;
++      // HERESY 1167 (Viktor: «суффиксом приклинивай все триггеры в системный промпт»): the adapters' words at the style's end,
++      // in the request only (the field stays as written; a word already in it is not doubled)
++      var trig = YueLoras.triggersFor ? YueLoras.triggersFor(body.style) : [];
++      if (trig.length) body.style = (body.style ? body.style.replace(/[\s,.;]+$/, "") + ", " : "") + trig.join(", ");
+     }
+     var out = readOutput();
+     Object.keys(out).forEach(function (key) { body[key] = out[key]; });
+@@ -6485,7 +6501,7 @@
+       synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
+       output_format: $("outFormat").value, mp3_bitrate: parseInt($("mp3Bitrate").value, 10),
+       peak_clip: parseInt($("peakClip").value, 10),
+-      vae: selectedVae(), sliders: STATE.sliderChoice || [], loras: YueLoras.value()
++      vae: selectedVae(), sliders: STATE.sliderChoice || [], loras: YueLoras.kept ? YueLoras.kept() : YueLoras.value()   // HERESY 1167: the muted kept
+     };
+     ["abc", "semantic"].forEach(function (group) {
+       var preset = {};
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index fbe7699..558cf4c 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -53,6 +53,18 @@
+   }
+ 
+   function halfShort(e) { return has(e, "ar") && has(e, "nar") ? "both" : has(e, "ar") ? "music" : "sound"; }
++  // HERESY 1167 (Viktor: «Epic Trailer… предлагается как два разных адаптера… объедини их… MUSIC+SOUND=BOTH»): a file with
++  // only the music half and a file with only the sound half, of one name, are one adapter here
++  function pairOf(e) {
++    if (!e || e.error || has(e, "ar") === has(e, "nar")) return null;
++    var name = nameOf(e.id), want = has(e, "ar") ? "nar" : "ar";
++    for (var i = 0; i < S.catalog.length; i++) {
++      var o = S.catalog[i];
++      if (o !== e && !o.error && nameOf(o.id) === name && has(o, want) && !has(o, want === "ar" ? "nar" : "ar")) return o;
++    }
++    return null;
++  }
++  function idsOf(id) { var p = pairOf(entry(id)); return p ? [id, p.id] : [id]; }
+ 
+   // The sources.json entry for a file: its exact id, else the longest folder prefix of it
+   function source(id) {
+@@ -128,48 +140,65 @@
+   // adapters on the music half and a written score): whole at 1.55, 1.75 and 2.25 together, broken at 2.5, 2.5
+   // and 3.1 — every time. Green to 1.75, amber to 2.25, red past it; a sources.json "ar_total" may move it.
+   var AR_TOTAL = { safe: 1.75, limit: 2.25, max: 3.5 };
+-  function arTotal() {
+-    return S.choice.reduce(function (s, c) { var e = entry(c.id); return s + (e && has(e, "ar") ? c.ar || 0 : 0); }, 0);
+-  }
+-  function arStacked() { return S.choice.filter(function (c) { var e = entry(c.id); return e && has(e, "ar") && c.ar > 0; }).length; }
++  // HERESY 1167 (Viktor: «нужно добавить также ползунок sound, together»): the sound half's together, by ear (05.10.2026:
++  // two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right): green to 1, amber
++  // to 1.5 (a single adapter's own red), red past it
++  var TOTAL = { ar: AR_TOTAL, nar: { safe: 1.0, limit: 1.5, max: 3 } };
++  function halfTotal(half) {
++    return S.choice.reduce(function (s, c) { var e = entry(c.id); return s + (e && !c.muted && has(e, half) ? c[half] || 0 : 0); }, 0);
++  }
++  function arTotal() { return halfTotal("ar"); }
++  function arStacked() { return S.choice.filter(function (c) { var e = entry(c.id); return e && !c.muted && has(e, "ar") && c.ar > 0; }).length; }
+   // HERESY 1166 (Viktor 04.10.2026: «В Креаторе ползунок Music Together не работает. Подсчёт общей силы не работает. Сам по
+   // скрину посчитай»): the bar was counted only when the form was painted, never while a strength was dragged (his screen:
+   // 3.55, the five adapters' first strengths, over 1.55 on the sliders), and it only looked like a slider. Now it follows
+   // every strength, and it is one: dragged, it moves all the music strengths at once (scaleMusic). Shown from two adapters
+   // with a music half, at nought or not, so it stays under the hand that drags them down to nought.
+-  function arCapable() { return S.choice.filter(function (c) { var e = entry(c.id); return e && has(e, "ar"); }).length; }
+-  function totalClass(t) { return t > AR_TOTAL.limit + 1e-9 ? "is-red" : t > AR_TOTAL.safe + 1e-9 ? "is-amber" : "is-green"; }
+-  function totalBar() {
+-    if (arCapable() < 2) return "";
+-    var t = arTotal(), z = AR_TOTAL;
++  function capable(half) { return S.choice.filter(function (c) { var e = entry(c.id); return e && !c.muted && has(e, half); }).length; }
++  function arCapable() { return capable("ar"); }
++  function totalClass(t, half) { var z = TOTAL[half || "ar"]; return t > z.limit + 1e-9 ? "is-red" : t > z.safe + 1e-9 ? "is-amber" : "is-green"; }
++  function totalBar() { return halfBar("ar") + halfBar("nar"); }
++  function halfBar(half) {
++    if (capable(half) < 2) return "";
++    var t = halfTotal(half), z = TOTAL[half], music = half === "ar";
+     var road = "--z1:" + (100 * z.safe / z.max).toFixed(1) + "%;--z2:" + (100 * z.limit / z.max).toFixed(1) + "%";
+-    return '<label class="lora-total ' + totalClass(t) + '" data-tip="' + escape(tr("All the music strengths together. Measured on this studio's takes: the score came out whole up to " +
+-        z.limit + " in every run, broken from 2.5 in every run. Green to " + z.safe + ", amber to " + z.limit + ", red past it.") + " " +
++    var tip = music ? tr("All the music strengths together. Measured on this studio's takes: the score came out whole up to " +
++        z.limit + " in every run, broken from 2.5 in every run. Green to " + z.safe + ", amber to " + z.limit + ", red past it.")
++      : tr("All the sound strengths together. By ear (05.10.2026): two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right. Green to " +
++        z.safe + ", amber to " + z.limit + ", red past it.");
++    return '<label class="lora-total ' + totalClass(t, half) + '" data-half="' + half + '" data-tip="' + escape(tip + " " +
+         tr("Drag it to move them all at once, each in proportion.")) + '">' +
+-      "<span>Music, together</span>" +
+-      '<input type="range" class="zoned lora-total-range" style="' + road + '" min="0" max="' + z.max + '" step="0.005" value="' + t +
+-      '" aria-label="' + escape(tr("Music, together")) + '" />' +
++      "<span>" + (music ? "Music, together" : "Sound, together") + "</span>" +
++      '<input type="range" class="zoned lora-total-range" data-half="' + half + '" style="' + road + '" min="0" max="' + z.max + '" step="0.005" value="' + t +
++      '" aria-label="' + escape(tr(music ? "Music, together" : "Sound, together")) + '" />' +
+       "<output>" + fmt(t, 2) + "</output></label>";
+   }
+   // the bar brought up to date where it stands; while its own slider is dragged, the slider is left under the hand
+   function syncTotal(dragging) {
+-    var bar = S.host && S.host.querySelector(".lora-total"), html = totalBar();
+-    if (!bar || !html) {
+-      if (bar) bar.remove();
+-      if (html && S.host) S.host.querySelector(".lora-active").insertAdjacentHTML("beforeend", html);
+-      return;
+-    }
+-    var t = arTotal(), range = bar.querySelector("input");
+-    bar.className = "lora-total " + totalClass(t);
+-    bar.querySelector("output").textContent = fmt(t, 2);
+-    if (range && !dragging) range.value = t;
++    if (!S.host) return;
++    ["ar", "nar"].forEach(function (half) {
++      var bar = S.host.querySelector('.lora-total[data-half="' + half + '"]'), html = halfBar(half);
++      if (!bar || !html) {
++        if (bar) bar.remove();
++        if (html) S.host.querySelector(".lora-active").insertAdjacentHTML("beforeend", html);
++        return;
++      }
++      var t = halfTotal(half), range = bar.querySelector("input");
++      bar.className = "lora-total " + totalClass(t, half);
++      bar.querySelector("output").textContent = fmt(t, 2);
++      if (range && dragging !== half) range.value = t;
++    });
+   }
+   // every music strength moved at once, each in proportion to where it stood when the drag began (all alike when all
+   // stood at nought), none past its own max, on the 0.005 grid the run keeps; the grid's remainders go to the largest
+   // fractions, so the sum lands where the slider is let go (each rounded on its own, 1 came out 0.995)
+-  function scaleMusic(target) {
+-    if (!S.base) S.base = S.choice.filter(function (c) { var e = entry(c.id); return e && has(e, "ar"); })
+-      .map(function (c) { return { c: c, ar: c.ar || 0, cap: capOf(entry(c.id), "ar") }; });
++  function scaleMusic(target) { scaleHalf("ar", target); }
++  function scaleHalf(half, target) {   // HERESY 1167: either half; a muted adapter is left as it is
++    if (!S.base || S.baseHalf !== half) {
++      S.baseHalf = half;
++      S.base = S.choice.filter(function (c) { var e = entry(c.id); return e && !c.muted && has(e, half); })
++        .map(function (c) { return { c: c, ar: c[half] || 0, cap: capOf(entry(c.id), half) }; });
++    }
+     var sum = S.base.reduce(function (s, b) { return s + b.ar; }, 0), n = S.base.length;
+     var u = S.base.map(function (b) { return Math.min(b.cap * 200, Math.max(0, (sum > 1e-9 ? b.ar * target / sum : target / n) * 200)); });
+     var got = u.map(function (x) { return Math.floor(x + 1e-9); });
+@@ -177,15 +206,15 @@
+     u.map(function (x, i) { return i; }).sort(function (a, b) { return (u[b] - got[b]) - (u[a] - got[a]); }).forEach(function (i) {
+       if (left > 0 && got[i] + 1 <= Math.round(S.base[i].cap * 200) && u[i] - got[i] > 1e-9) { got[i]++; left--; }
+     });
+-    S.base.forEach(function (b, i) { b.c.ar = got[i] / 200; });
+-    S.host.querySelectorAll('.lora-half input[data-half="ar"]').forEach(function (r) {
++    S.base.forEach(function (b, i) { b.c[half] = got[i] / 200; });
++    S.host.querySelectorAll('.lora-half input[data-half="' + half + '"]').forEach(function (r) {
+       var c = S.choice.filter(function (x) { return x.id === r.dataset.lora; })[0];
+-      if (!c) return;
+-      r.value = c.ar;
+-      if (r.nextElementSibling) r.nextElementSibling.textContent = fmt(c.ar, 2);
+-      r.parentNode.classList.toggle("is-over", overLimit(entry(c.id), "ar", c.ar));
++      if (!c || c.muted) return;
++      r.value = c[half];
++      if (r.nextElementSibling) r.nextElementSibling.textContent = fmt(c[half], 2);
++      r.parentNode.classList.toggle("is-over", overLimit(entry(c.id), half, c[half]));
+     });
+-    syncTotal(true);
++    syncTotal(half);
+     S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+   }
+   function overLimit(e, half, v) { return v > zones(e, half).limit + 1e-9; }
+@@ -218,7 +247,10 @@
+       var e = entry(c.id);
+       if (!e) { notes.push(fallbackName(c.id) + " is no longer in loras/ and will be left out."); return; }
+       var name = nameOf(c.id);
+-      if (triggerOf(e)) notes.push(name + ": put its trigger word “" + triggerOf(e) + "” in the style.");
++      if (c.muted) { notes.push(name + " is muted: left out of the run (right-click: back in it)."); return; }   // HERESY 1167
++      // HERESY 1167: the run adds the word itself; said only so its effect is not a surprise
++      if (triggerOf(e) && !(S.opts.styleText && S.opts.styleText().toLowerCase().indexOf(triggerOf(e).toLowerCase()) >= 0))
++        notes.push(name + ": its trigger word “" + triggerOf(e) + "” goes at the style's end when the song is made.");
+       if (e.mode === "direct" && cot && cot !== "off") notes.push(name + " was trained in Direct mode.");
+       if (e.mode && e.mode !== "direct" && cot === "off") notes.push(name + " was trained with a score (" + e.mode + " mode).");
+       if (has(e, "ar") && overLimit(e, "ar", c.ar)) notes.push("\u26a0 " + name + ": " + fmt(c.ar, 2) + " on the music half is past its limit " + zones(e, "ar").limit + ": the score tends to fail after 70-200 tokens.");
+@@ -228,10 +260,19 @@
+       if (has(e, "ar") && /instrumental/i.test(c.id) && c.ar > 0.5 && cot !== "off" && sungLyrics())
+         notes.push("\u26a0 " + name + " plans instrumental scores: at " + fmt(c.ar, 2) + " with words to sing, the score loses its vocal line (measured at 1.00: 1 note in 127 vocal bars, the music looping). Keep it low, 0.3\u20130.5, for a sung song.");
+     });
+-    if (S.choice.length > 1) notes.push(S.choice.length + " stacked: their changes add up.");
++    var seenPair = {}, live = 0;                      // HERESY 1167: a pair is one adapter; a muted one is out of the stack
++    S.choice.forEach(function (c) {
++      if (seenPair[c.id]) return;
++      var pp = pairOf(entry(c.id));
++      if (pp) seenPair[pp.id] = true;
++      if (!c.muted) live++;
++    });
++    if (live > 1) notes.push(live + " stacked: their changes add up.");
++    if (capable("nar") > 1 && halfTotal("nar") > TOTAL.nar.limit + 1e-9) notes.push("\u26a0 The sound half carries " + fmt(halfTotal("nar"), 2) +
++      " together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.");   // HERESY 1167
+     if (arStacked() > 1 && arTotal() > AR_TOTAL.limit + 1e-9) notes.push("\u26a0 The music half carries " + fmt(arTotal(), 2) + " together, past the shared ceiling " +
+       AR_TOTAL.limit + ": runs this heavy wrote broken scores every time (measured). Lower some, or take one off the music half.");
+-    return notes;
++    return notes.filter(function (n, i) { return notes.indexOf(n) === i; });   // HERESY 1167: a pair's note once
+   }
+ 
+   // The Engine panel's list: one tile per file in loras/ (name, source, details), the ones in the song form
+@@ -279,14 +320,15 @@
+   }
+ 
+   function toggle(id) {
+-    var at = -1;
+-    S.choice.forEach(function (c, i) { if (c.id === id) at = i; });
+-    if (at >= 0) {
+-      S.choice.splice(at, 1);
++    var ids = idsOf(id), on = S.choice.some(function (c) { return ids.indexOf(c.id) >= 0; });   // HERESY 1167: a pair as one
++    if (on) {
++      S.choice = S.choice.filter(function (c) { return ids.indexOf(c.id) < 0; });
+     } else {
+-      var e = entry(id);
+-      if (!e || e.error) return;
+-      S.choice.push({ id: id, ar: has(e, "ar") ? Math.min(1, zones(e, "ar").limit) : 0, nar: has(e, "nar") ? Math.min(1, zones(e, "nar").limit) : 0 });
++      ids.forEach(function (x) {
++        var e = entry(x);
++        if (!e || e.error) return;
++        S.choice.push({ id: x, ar: has(e, "ar") ? Math.min(1, zones(e, "ar").limit) : 0, nar: has(e, "nar") ? Math.min(1, zones(e, "nar").limit) : 0 });
++      });
+     }
+     changed();
+   }
+@@ -305,26 +347,36 @@
+     var on = {};
+     S.choice.forEach(function (c) { on[c.id] = true; });
+     var active = S.host.querySelector(".lora-active"), chips = S.host.querySelector(".lora-chips");
++    var drawn = {};
+     active.innerHTML = S.choice.map(function (c) {
+-      var e = entry(c.id);
++      if (drawn[c.id]) return "";
++      var e = entry(c.id), p = pairOf(e), pc = p ? S.choice.filter(function (x) { return x.id === p.id; })[0] : null;
++      if (pc) drawn[pc.id] = true;
++      var ids = pc ? [c.id, pc.id] : [c.id], muted = c.muted && (!pc || pc.muted);
++      var arPart = pc && has(p, "ar") ? halfControl(pc, p, "ar") : halfControl(c, e, "ar");
++      var narPart = pc && has(p, "nar") ? halfControl(pc, p, "nar") : halfControl(c, e, "nar");
+       // HERESY 1018: three columns the same in every row — the name (its trigger word under it,
+       // small), the sliders of the halves it has, the remove button — so the rows line up
+       var trig = triggerOf(e), inStyle = trig && S.opts.styleText && S.opts.styleText().toLowerCase().indexOf(trig.toLowerCase()) >= 0;
+-      return '<div class="lora-row' + (e ? "" : " is-missing") + '"><span class="lora-who"><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) : tr("Not in loras/ any more")) + '">' +
+-        escape(nameOf(c.id)) + "</span>" +
++      return '<div class="lora-row' + (e ? "" : " is-missing") + (muted ? " is-muted" : "") + '" data-ids="' + escape(ids.join("|")) +
++        '"><span class="lora-who"><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "") : tr("Not in loras/ any more")) + '">' +
++        escape(nameOf(c.id)) + "</span>" + (muted ? '<span class="lora-muted-tag" data-tip="Right-click: back in the run">muted</span>' : "") +
++        // HERESY 1167 (Viktor: «суффиксом приклинивай все триггеры… кнопка не нужна»): the run puts the word at the style's end
+         (trig ? (inStyle ? '<span class="lora-trigger is-in" data-tip="Its trigger word is in the style">\u2713 ' + escape(trig) + "</span>"
+-                         : '<button type="button" class="lora-trigger" data-trigger="' + escape(trig) +
+-                           '" data-tip="Add the trigger word to the style prompt">+ ' + escape(trig) + "</button>") : "") +
+-        '</span><span class="lora-halves">' + halfControl(c, e, "ar") + halfControl(c, e, "nar") + "</span>" +
+-        '<button type="button" class="icon-btn" data-remove-lora="' + escape(c.id) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '">✕</button></div>';
++                         : '<span class="lora-trigger is-auto" data-tip="Its trigger word goes at the style\u2019s end by itself when the song is made">' + escape(trig) + "</span>") : "") +
++        '</span><span class="lora-halves">' + arPart + narPart + "</span>" +
++        '<button type="button" class="icon-btn" data-remove-lora="' + escape(ids.join("|")) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '">✕</button></div>';
+     }).join("") + totalBar();
+     // one even grid of buttons: the name, which half it steers, and a few words on what it does
+     chips.innerHTML = S.catalog.map(function (e) {
+-      var tag = e.error ? "cannot load" : tagOf(e) || halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half");
+-      return '<button type="button" class="lora-pick' + (on[e.id] ? " is-on" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
+-        (e.error ? " disabled" : "") + ' aria-pressed="' + (on[e.id] ? "true" : "false") + '" data-tip="' + escape(aboutTip(e)) + '">' +
++      var p = pairOf(e);
++      if (p && has(e, "nar")) return "";                // HERESY 1167: a pair drawn once, from its music file
++      var isOn = on[e.id] || (p && on[p.id]);
++      var tag = e.error ? "cannot load" : p ? (tagOf(e) || "music + sound halves") : tagOf(e) || halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half");
++      return '<button type="button" class="lora-pick' + (isOn ? " is-on" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
++        (e.error ? " disabled" : "") + ' aria-pressed="' + (isOn ? "true" : "false") + '" data-tip="' + escape(aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "")) + '">' +
+         '<span class="lora-pick-name" translate="no">' + escape(nameOf(e.id)) + "</span>" +
+-        (e.error ? "" : '<span class="lora-pick-half">' + halfShort(e) + "</span>") +
++        (e.error ? "" : '<span class="lora-pick-half">' + (p ? "both" : halfShort(e)) + "</span>") +
+         '<span class="lora-pick-tag">' + escape(tag) + "</span></button>";
+     }).join("");
+     S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+@@ -354,12 +406,38 @@
+       if (chip && !chip.disabled) {
+         toggle(chip.dataset.loraChip);
+       } else if (remove) {
+-        S.choice = S.choice.filter(function (c) { return c.id !== remove.dataset.removeLora; });
++        var gone = remove.dataset.removeLora.split("|");   // HERESY 1167: a pair's ✕ takes both
++        S.choice = S.choice.filter(function (c) { return gone.indexOf(c.id) < 0; });
+         changed();
+       } else if (trigger && S.opts.addToStyle) {
+         S.opts.addToStyle(trigger.dataset.trigger);
+       }
+     });
++    // HERESY 1167 (Viktor: «по правому клику мыши Mute/Пропустить и наоборот Unmute/Вернуть в строй»; «Если у нас адаптер из
++    // локального тренинга… Убрать из списка (адаптер в своей сессии Тренера)»): the studio's own right-click menus
++    host.addEventListener("contextmenu", function (event) {
++      var row = event.target.closest(".lora-row[data-ids]"), chip = event.target.closest("[data-lora-chip]");
++      if (!root.HeresyMenu || (!row && !chip) || event.target.closest("input")) return;
++      event.preventDefault();
++      if (row) {
++        var ids = row.dataset.ids.split("|"), mine = S.choice.filter(function (c) { return ids.indexOf(c.id) >= 0; });
++        var isMuted = mine.length > 0 && mine.every(function (c) { return c.muted; });
++        root.HeresyMenu.open(event.clientX, event.clientY, [
++          { label: isMuted ? "Unmute: back in the run" : "Mute: left out of the run, its strengths kept", icon: isMuted ? "\u25b6" : "\u23f8",
++            action: function () { mine.forEach(function (c) { if (isMuted) delete c.muted; else c.muted = true; }); changed(); } },
++          { sep: true },
++          { label: "Remove from the song", icon: "\u2715", action: function () { S.choice = S.choice.filter(function (c) { return ids.indexOf(c.id) < 0; }); changed(); } }
++        ]);
++        return;
++      }
++      var e = entry(chip.dataset.loraChip);
++      if (!e) return;
++      var inSong = S.choice.some(function (c) { return idsOf(e.id).indexOf(c.id) >= 0; });
++      var items = [{ label: inSong ? "Take it out of the song" : "Add it to the song", action: function () { toggle(e.id); } }];
++      if (ownAdapter(e) && S.opts.unpublish) items.push({ sep: true }, { label: "Remove from the list (the adapter stays in its Trainer session)", icon: "\u21a9",
++        action: function () { S.opts.unpublish(idsOf(e.id)); } });
++      root.HeresyMenu.open(event.clientX, event.clientY, items);
++    });
+     // HERESY 1081: a double-click on a strength opens a field for it; Enter or leaving it sets, Esc leaves it be
+     host.addEventListener("dblclick", function (event) {
+       var out = event.target.closest(".lora-half output");
+@@ -382,13 +460,13 @@
+       field.addEventListener("blur", function () { finish(true); });
+     });
+     host.addEventListener("input", function (event) {
+-      if (event.target.classList.contains("lora-total-range")) return void scaleMusic(parseFloat(event.target.value));   // 1166
++      if (event.target.classList.contains("lora-total-range")) return void scaleHalf(event.target.dataset.half || "ar", parseFloat(event.target.value));   // 1166, 1167
+       var id = event.target.dataset.lora, half = event.target.dataset.half;
+       if (!id || !half) return;
+       S.choice.forEach(function (c) { if (c.id === id) c[half] = parseFloat(event.target.value); });
+       event.target.nextElementSibling.textContent = fmt(event.target.value, 2);
+       event.target.parentNode.classList.toggle("is-over", overLimit(entry(id), half, parseFloat(event.target.value)));   // 1084
+-      if (half === "ar") syncTotal();     // HERESY 1166: the music half together follows a strength as it moves
++      syncTotal();                        // HERESY 1166, 1167: each half's together follows a strength as it moves
+       S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+     });
+     // HERESY 1166: the together-slider let go: the next drag starts from where the strengths stand, the slider at their sum
+@@ -415,15 +493,35 @@
+ 
+   function set(list) {
+     S.choice = (list || []).map(function (c) {
+-      return { id: String(c.id), ar: Number(c.ar) || 0, nar: Number(c.nar) || 0 };
++      var o = { id: String(c.id), ar: Number(c.ar) || 0, nar: Number(c.nar) || 0 };
++      if (c.muted) o.muted = true;                    // HERESY 1167: a muted one comes back muted
++      return o;
+     }).filter(function (c) { return c.id && (c.ar || c.nar); });
+     changed();
+   }
+ 
++  // HERESY 1167 (Viktor: «суффиксом приклинивай все триггеры в системный промпт»): the trigger words of the adapters in the run
++  // that the style does not hold yet, in the order of the form, once each
++  function triggersFor(style) {
++    var low = String(style || "").toLowerCase(), out = [];
++    value().forEach(function (v) {
++      var w = triggerOf(entry(v.id));
++      if (w && low.indexOf(w.toLowerCase()) < 0 && out.indexOf(w) < 0) out.push(w);
++    });
++    return out;
++  }
++  // HERESY 1167: what the form keeps, the muted too (value() is what the run gets)
++  function kept() {
++    return S.choice.filter(function (c) { return c.ar || c.nar; }).map(function (c) {
++      var o = { id: c.id, ar: c.ar || 0, nar: c.nar || 0 };
++      if (c.muted) o.muted = true;
++      return o;
++    });
++  }
+   function value() {
+     return S.choice.filter(function (c) {
+       var e = entry(c.id);
+-      return e && !e.error && ((has(e, "ar") && c.ar > 0) || (has(e, "nar") && c.nar > 0));
++      return e && !e.error && !c.muted && ((has(e, "ar") && c.ar > 0) || (has(e, "nar") && c.nar > 0));
+     }).map(function (c) {
+       var e = entry(c.id);
+       return { id: c.id, ar: has(e, "ar") ? Math.round(c.ar * 1000) / 1000 : 0, nar: has(e, "nar") ? Math.round(c.nar * 1000) / 1000 : 0 };
+@@ -464,7 +562,7 @@
+     if (n) changed();
+     return n;
+   }
+-  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, describe: describe, lines: lines, repaint: paint,
++  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, triggersFor: triggersFor, describe: describe, lines: lines, repaint: paint,
+     listInto: listInto, setSources: setSources, zone: function (id, half) { return zones(entry(id), half); }, name: nameOf, toGreen: toGreen,
+     total: function () { return { value: arTotal(), stacked: arStacked(), safe: AR_TOTAL.safe, limit: AR_TOTAL.limit }; } };
+ })(window);
+-- 
+2.43.0
+

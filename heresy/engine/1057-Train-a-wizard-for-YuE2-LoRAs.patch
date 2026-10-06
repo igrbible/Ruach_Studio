@@ -1,0 +1,355 @@
+From f2851a3f7f3ae172c43082a274c3d4d0ad7a935a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 21:03:44 -0600
+Subject: [PATCH 1057/1177] Train: a wizard for YuE2 LoRAs
+
+1063 (Viktor): a fifth tab walks a LoRA from raw songs to loras/: a folder of
+datasets/raw/ and its tracks (in or out, a style of their own, the lyrics
+matched by version name and cleaned), the shared style line and a trigger
+word, a set made by the lab, a kind of adapter (style, voice, language,
+artist) with its defaults, the run with its progress and the AR loss (a
+warning near 0: memorizing), stop, and the runs with their LoRAs. The work
+is the lab's (training.py), AI-Toolkit underneath for now.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  36 +++++++
+ tools/console/app.js          |   6 +-
+ tools/console/heresy-train.js | 175 ++++++++++++++++++++++++++++++++++
+ tools/console/index.html      |  48 ++++++++++
+ tools/public/index.html.gz    | Bin 348562 -> 353701 bytes
+ 5 files changed, 264 insertions(+), 1 deletion(-)
+ create mode 100644 tools/console/heresy-train.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index fb8f9da..3320c3d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2487,3 +2487,39 @@ select option, select optgroup { background: var(--panel); color: var(--ink); }
+ 
+ /* HERESY 1062 (Viktor): the staff on white pages, as printed, in every theme and full screen */
+ #scoreStaff.paper, .hz-paper { --paper: #ffffff; --paper-ink: #111111; --paper-line: #d0d0d0; background: #fff; box-shadow: inset 0 0 0 1px #e4e4e4; }
++
++/* HERESY 1063: Train */
++.train-col { grid-column: 1 / -1; }
++body[data-tab="train"] .library, body[data-tab="train"] .col-grip { display: none; }
++.tr-steps { display: flex; flex-direction: column; gap: 14px; }
++.tr-step { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); display: flex; flex-direction: column; gap: 10px; }
++.tr-step h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; }
++.tr-step h3 em { font-style: normal; font-weight: 400; font-size: 12px; color: var(--muted); }
++.tr-step .ps-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--sunk); font-size: 12px; }
++.tr-picks { display: flex; flex-wrap: wrap; gap: 8px; }
++.tr-pick { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: none; color: var(--ink); font: inherit; cursor: pointer; }
++.tr-pick span { font-size: 12px; color: var(--muted); }
++.tr-pick.is-on { border-color: var(--amber); box-shadow: inset 2px 0 0 var(--amber); }
++.tr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
++.tr-tracks { display: flex; flex-direction: column; gap: 3px; max-height: 460px; overflow: auto; }
++.tr-track { display: flex; gap: 8px; padding: 4px 6px; border-bottom: 1px solid var(--line-soft); }
++.tr-track.is-out { opacity: .5; }
++.tr-tbody { flex: 1; min-width: 0; }
++.tr-thead { display: flex; align-items: center; gap: 10px; font-size: 13px; }
++.tr-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.tr-sec { font-family: var(--mono); font-size: 12px; color: var(--muted); }
++.tr-sec.is-bad { color: var(--bad); }
++.tr-edit { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
++.tr-edit[hidden] { display: none; }
++.tr-sets { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
++.tr-sets span, .tr-run span { color: var(--muted); font-size: 12px; }
++.tr-knobs .field { width: auto; }
++.tr-knobs input[type="number"] { width: 110px; }
++.tr-watch { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: var(--r-md); }
++.tr-watch[hidden] { display: none; }
++.tr-tail { max-height: 180px; overflow: auto; font-size: 11.5px; margin: 0; padding: 6px; background: var(--sunk); border-radius: var(--r-sm); white-space: pre-wrap; }
++.tr-run { padding: 4px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
++.tr-st { padding: 0 6px; border-radius: var(--r-pill); background: var(--sunk); font-size: 11.5px; }
++.tr-st.is-running { color: var(--amber); } .tr-st.is-done { color: var(--good); } .tr-st.is-failed { color: var(--bad); }
++.tr-err, .tr-warn { color: var(--bad); }
++.tr-warn { padding: 8px 10px; border: 1px solid var(--bad); border-radius: var(--r-md); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 7bf5ffa..ac6577b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5199,6 +5199,8 @@
+     showWriter: function () { if (document.body.dataset.tab !== "write") setTab("write"); }
+   });
+ 
++  if (window.HeresyTrain) window.HeresyTrain.init({ toast: toast });   // HERESY 1063
++
+   /* ---------------------------------------------- HERESY 1048: the right-click menu on a take */
+   function takeMenu(name, x, y) {
+     var take = findTake(name), HC = window.HeresyCollection, HW = window.HeresyWriter;
+@@ -5468,13 +5470,15 @@
+     $("postNote").textContent = take ? takeLabel(take).replace(displayTitle(take), "").replace(/^ · /, "") || take.name : "pick a take on the right";
+   }
+   function setTab(tab) {
+-    if (["create", "write", "post", "collection"].indexOf(tab) < 0) tab = "create";
++    if (["create", "write", "post", "collection", "train"].indexOf(tab) < 0) tab = "create";
+     document.body.dataset.tab = tab;
+     $("view-compose").classList.toggle("is-hidden", tab !== "create");
+     $("view-take").classList.toggle("is-hidden", tab !== "create");
+     $("view-write").classList.toggle("is-hidden", tab !== "write");
+     $("view-post").classList.toggle("is-hidden", tab !== "post");
+     $("view-collection").classList.toggle("is-hidden", tab !== "collection");   // HERESY 1041
++    $("view-train").classList.toggle("is-hidden", tab !== "train");             // HERESY 1063
++    if (tab === "train" && window.HeresyTrain) window.HeresyTrain.reload();
+     if (tab === "collection" && window.HeresyCollection) window.HeresyCollection.reload();
+     all("#tabs [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+     store(TAB_KEY, tab === "create" ? null : tab);
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+new file mode 100644
+index 0000000..287d907
+--- /dev/null
++++ b/tools/console/heresy-train.js
+@@ -0,0 +1,175 @@
++// HERESY 1063: the Train tab, a wizard for YuE2 LoRAs (Viktor, 01.10.2026). The lab does the work
++// (lab/training.py: AI-Toolkit underneath for now); this page walks the four steps:
++//   1 Raw      a folder of datasets/raw/, its tracks: which go in, their lyrics, a style of their own
++//   2 Set      the shared style line (and trigger word); made into datasets/prepared/NAME/
++//   3 Train    a kind of adapter (its defaults), the knobs, the run, its progress and the AR loss
++//   4 Result   the LoRA in loras/RUN/, ready in Create
++(function () {
++  "use strict";
++
++  var KINDS = {
++    style:    { label: "Style", say: "genre, production, a band's sound", o: { rank: 32, steps: 1500, ar_loss_weight: 0.5, ar_kl_weight: 0.2, ar_lr_multiplier: 0.5 } },
++    voice:    { label: "Voice", say: "one singer's timbre", o: { rank: 16, steps: 1500, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5 } },
++    language: { label: "Language", say: "diction of a language; exact lyrics, many voices", o: { rank: 32, steps: 3000, ar_loss_weight: 1.0, ar_kl_weight: 0.1, ar_lr_multiplier: 1.0 } },
++    artist:   { label: "Artist", say: "all of it; a large, varied catalogue", o: { rank: 32, steps: 3000, ar_loss_weight: 0.7, ar_kl_weight: 0.2, ar_lr_multiplier: 0.7 } }
++  };
++  var state = { hooks: null, data: null, raw: null, scan: null, rows: [], run: "", timer: 0, kind: "style" };
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
++  function api(path, body) {
++    var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
++    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
++  }
++  function clock(s) { s = Math.round(s || 0); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
++  function gb(b) { return (b / 1e9).toFixed(1) + " GB"; }
++  function slug(s) { return String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "set"; }
++
++  function load() {
++    return api("/train/datasets").then(function (d) { state.data = d; paint(); }).catch(function (e) {
++      $("trBody").innerHTML = '<p class="row-hint">The lab does not answer: ' + esc(e.message) + "</p>";
++    });
++  }
++
++  function paint() {
++    var d = state.data;
++    if (!d) return;
++    $("trWarn").innerHTML = (!d.aitk_ready ? '<p class="tr-warn">AI-Toolkit is not found at <code>' + esc(d.aitk) + "</code>: clone ostris/ai-toolkit there (or set AITK_ROOT for the lab).</p>" : "") +
++      (!d.head ? '<p class="tr-warn">The realaudio tokenizer is missing from <code>checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/</code>.</p>' : "");
++    $("trRaw").innerHTML = d.raw.length ? d.raw.map(function (r) {
++      return '<button type="button" class="tr-pick' + (state.raw === r.name ? " is-on" : "") + '" data-raw="' + esc(r.name) + '"><b>' + esc(r.name) + "</b><span>" +
++        r.tracks + " tracks · " + gb(r.bytes) + (r.captions ? " · " + r.captions + " captions" : "") + "</span></button>";
++    }).join("") : '<p class="row-hint">Put a folder of songs into <code>datasets/raw/</code>, then press Reload.</p>';
++    $("trSets").innerHTML = d.prepared.length ? d.prepared.map(function (p) {
++      return '<label class="tr-set"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + ($("trRunName").dataset.set === p.name ? " checked" : "") + " /> <b>" + esc(p.name) + "</b> <span>" +
++        p.tracks + " tracks · " + clock(p.seconds) + " · from " + esc(p.from) + " · " + esc(p.made) + "</span></label>";
++    }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
++    $("trRuns").innerHTML = d.runs.length ? d.runs.map(function (r) {
++      return '<div class="tr-run"><b>' + esc(r.name) + "</b> <span class=\"tr-st is-" + esc(r.status) + '">' + esc(r.status) + "</span> <span>" + esc(r.dataset) + " · " +
++        (r.step || 0) + " / " + (r.steps || "?") + (r.ar_ce != null ? " · ar_ce " + Number(r.ar_ce).toFixed(3) : "") + "</span>" +
++        (r.lora ? ' <code>loras/' + esc(r.lora) + "</code>" : "") + (r.error ? ' <span class="tr-err">' + esc(r.error) + "</span>" : "") +
++        ' <button type="button" class="btn ghost small" data-watch="' + esc(r.name) + '">Watch</button></div>';
++    }).join("") : '<p class="row-hint">No runs yet.</p>';
++  }
++
++  // ---- step 1: the raw tracks
++  function pickRaw(name) {
++    state.raw = name; paint();
++    $("trTracks").innerHTML = '<p class="row-hint">Reading the folder…</p>';
++    api("/train/scan?name=" + encodeURIComponent(name)).then(function (d) {
++      state.rows = d.tracks.map(function (t) {
++        return { file: t.file, seconds: t.seconds, include: (t.seconds || 0) >= 30, style: "", lyrics: t.lyrics || "", from: t.lyrics_from || "", hints: t.hints || [] };
++      });
++      $("trSetName").value = slug(name);
++      paintTracks();
++    }).catch(function (e) { $("trTracks").innerHTML = '<p class="tr-warn">' + esc(e.message) + "</p>"; });
++  }
++  function paintTracks() {
++    var n = state.rows.filter(function (r) { return r.include; }).length, secs = state.rows.reduce(function (s, r) { return s + (r.include ? r.seconds || 0 : 0); }, 0);
++    var groups = {};                    // versions of one song: the same name once the version marks are taken off
++    state.rows.forEach(function (r) { var k = r.file.replace(/\.[^.]+$/, "").replace(/\bv?\d+([._]\d+)*\b|\(\d+\)|extra|remaster(ed)?|[^a-zа-яё]+/gi, " ").trim().toLowerCase(); (groups[k] = groups[k] || []).push(r); });
++    var dups = Object.keys(groups).filter(function (k) { return groups[k].filter(function (r) { return r.include; }).length > 2; }).length;
++    $("trTracksNote").textContent = n + " of " + state.rows.length + " in · " + clock(secs) + " · " +
++      state.rows.filter(function (r) { return r.include && r.lyrics; }).length + " with lyrics";
++    $("trTracks").innerHTML = state.rows.map(function (r, i) {
++      var long = (r.seconds || 0) > 360, short = (r.seconds || 0) < 30;
++      return '<div class="tr-track' + (r.include ? "" : " is-out") + '"><label class="tr-in"><input type="checkbox" data-in="' + i + '"' + (r.include ? " checked" : "") + " /></label>" +
++        '<div class="tr-tbody"><div class="tr-thead"><span class="tr-file">' + esc(r.file) + '</span><span class="tr-sec' + (long || short ? " is-bad" : "") + '">' + clock(r.seconds) +
++        (long ? " · long: the AR trains on the whole song" : short ? " · under 0:30" : "") + (r.lyrics ? "" : " · no lyrics") + '</span><button type="button" class="btn ghost small" data-open="' + i + '">' + (r.lyrics ? "Lyrics ✓" : "Lyrics") + "</button></div>" +
++        '<div class="tr-edit" data-edit="' + i + '" hidden>' + (r.from ? '<span class="row-hint">lyrics from ' + esc(r.from) + (r.hints.length ? " · hints (not in the caption): " + esc(r.hints.join(" · ")) : "") + "</span>" : "") +
++        '<input type="text" data-style="' + i + '" value="' + esc(r.style) + '" placeholder="a style of its own (empty: the shared one)" />' +
++        '<textarea rows="8" data-lyrics="' + i + '" placeholder="[Verse]\nthe lyrics exactly as sung (empty for an instrumental)">' + esc(r.lyrics) + "</textarea></div></div></div>";
++    }).join("");
++  }
++
++  // ---- step 2: make the set
++  function makeSet() {
++    if (!state.raw) return toast("Pick a raw folder first", true);
++    var style = $("trStyle").value.trim(), trigger = $("trTrigger").value.trim();
++    if (!style) return toast("Write the shared style line: what is heard, in the words you will generate with", true);
++    var name = slug($("trSetName").value);
++    var tracks = state.rows.map(function (r) { return { file: r.file, include: r.include, style: r.style ? (trigger ? trigger + ", " : "") + r.style : "", lyrics: r.lyrics }; });
++    $("trMake").disabled = true;
++    api("/train/prepare", { from: state.raw, name: name, style: (trigger ? trigger + ", " : "") + style, tracks: tracks }).then(function () {
++      (function poll() {
++        api("/train/prepare?name=" + encodeURIComponent(name)).then(function (j) {
++          $("trMakeState").textContent = j.status === "running" ? "making… " + j.done + " / " + j.total : j.status === "done" ? "made: datasets/prepared/" + name : "failed: " + (j.error || "");
++          if (j.status === "running") return setTimeout(poll, 1500);
++          $("trMake").disabled = false;
++          if (j.status === "done") { $("trRunName").dataset.set = name; load(); toast("The set " + name + " is made"); }
++        });
++      })();
++    }).catch(function (e) { $("trMake").disabled = false; toast(e.message, true); });
++  }
++
++  // ---- step 3: the run
++  function setKind(k) {
++    state.kind = k;
++    Array.prototype.forEach.call(document.querySelectorAll("[data-kind]"), function (b) { b.classList.toggle("is-on", b.dataset.kind === k); });
++    var o = KINDS[k].o;
++    Object.keys(o).forEach(function (key) { var el = $("tr_" + key); if (el) el.value = o[key]; });
++    $("trKindSay").textContent = KINDS[k].say;
++  }
++  function startRun() {
++    var set = (document.querySelector('input[name="trSet"]:checked') || {}).value;
++    if (!set) return toast("Pick a set (step 2)", true);
++    var spec = { dataset: set, name: slug($("trRunName").value || set + "-" + state.kind) };
++    ["steps", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier"].forEach(function (k) { spec[k] = parseFloat($("tr_" + k).value); });
++    spec.cot = $("tr_cot").value; spec.quant = $("tr_quant").value; spec.do_separation = $("tr_sep").checked;
++    window.HeresyDialog.confirm("Train " + spec.name + "?\n\n" + spec.steps + " steps on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight +
++      ". It takes a GPU of its own for hours; the first run also fetches Comfy-Org's YuE2 weights.", { ok: "Train" }).then(function (ok) {
++      if (!ok) return;
++      return api("/train/run", spec).then(function () { toast("Training " + spec.name); watch(spec.name); load(); });
++    }).catch(function (e) { toast(e.message, true); });
++  }
++  function watch(name) {
++    state.run = name; clearTimeout(state.timer);
++    (function poll() {
++      api("/train/run?name=" + encodeURIComponent(name)).then(function (r) {
++        var pct = r.steps ? Math.round(100 * (r.step || 0) / r.steps) : 0;
++        $("trWatch").hidden = false;
++        $("trWatchHead").innerHTML = "<b>" + esc(name) + '</b> <span class="tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span> " + (r.step || 0) + " / " + (r.steps || "?") +
++          (r.loss != null ? " · loss " + Number(r.loss).toFixed(4) : "") + (r.ar_ce != null ? " · ar_ce " + Number(r.ar_ce).toFixed(3) + (r.ar_ce < 0.3 ? " ⚠ near 0: memorizing" : "") : "") +
++          (r.lora ? " · <code>loras/" + esc(r.lora) + "</code>" : "") + (r.error ? ' <span class="tr-err">' + esc(r.error) + "</span>" : "");
++        $("trBar").style.width = pct + "%";
++        $("trBar").parentNode.classList.toggle("is-running", r.status === "running");
++        $("trTail").textContent = (r.tail || []).join("\n");
++        $("trStop").hidden = r.status !== "running";
++        if (r.status === "running" && state.run === name) state.timer = setTimeout(poll, 3000); else load();
++      }).catch(function (e) { $("trWatchHead").textContent = e.message; });
++    })();
++  }
++
++  function init(hooks) {
++    if (!$("view-train")) return;
++    state.hooks = hooks;
++    $("trReload").addEventListener("click", load);
++    $("trRaw").addEventListener("click", function (e) { var b = e.target.closest("[data-raw]"); if (b) pickRaw(b.dataset.raw); });
++    $("trTracks").addEventListener("change", function (e) {
++      var i = e.target.dataset.in;
++      if (i !== undefined) { state.rows[+i].include = e.target.checked; paintTracks(); }
++    });
++    $("trTracks").addEventListener("input", function (e) {
++      if (e.target.dataset.style !== undefined) state.rows[+e.target.dataset.style].style = e.target.value;
++      if (e.target.dataset.lyrics !== undefined) state.rows[+e.target.dataset.lyrics].lyrics = e.target.value;
++    });
++    $("trTracks").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-open]");
++      if (b) { var ed = document.querySelector('[data-edit="' + b.dataset.open + '"]'); ed.hidden = !ed.hidden; }
++    });
++    $("trAllIn").addEventListener("click", function () { state.rows.forEach(function (r) { r.include = true; }); paintTracks(); });
++    $("trNoneIn").addEventListener("click", function () { state.rows.forEach(function (r) { r.include = false; }); paintTracks(); });
++    $("trMake").addEventListener("click", makeSet);
++    $("trKinds").innerHTML = Object.keys(KINDS).map(function (k) { return '<button type="button" class="coll-chip" data-kind="' + k + '">' + KINDS[k].label + "</button>"; }).join("");
++    $("trKinds").addEventListener("click", function (e) { var b = e.target.closest("[data-kind]"); if (b) setKind(b.dataset.kind); });
++    $("trRun").addEventListener("click", startRun);
++    $("trStop").addEventListener("click", function () {
++      window.HeresyDialog.confirm("Stop " + state.run + "?\n\nAI-Toolkit saves what it has on the way out; the last checkpoint goes to loras/.", { ok: "Stop", danger: true })
++        .then(function (ok) { if (ok) return api("/train/stop", { name: state.run }).then(function () { toast("Stopping " + state.run); }); }).catch(function (e) { toast(e.message, true); });
++    });
++    $("trRuns").addEventListener("click", function (e) { var b = e.target.closest("[data-watch]"); if (b) watch(b.dataset.watch); });
++    setKind("style");
++  }
++
++  window.HeresyTrain = { init: init, reload: load };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index b3ea298..4df9e7a 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -43,6 +43,7 @@
+     <button type="button" data-tab="write">Writer</button>
+     <button type="button" data-tab="post">Post</button>
+     <button type="button" data-tab="collection">Collection</button>
++    <button type="button" data-tab="train">Train</button>
+   </nav>
+ 
+   <div class="spacer"></div>
+@@ -1091,6 +1092,52 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+   </section>
+ 
+ 
++  <!-- HERESY 1063: Train — LoRA adapters for YuE2, a wizard (heresy-train.js, lab/training.py) -->
++  <section class="col train-col is-hidden" id="view-train">
++    <div class="col-head"><h2>Train</h2><span class="col-note">a LoRA for YuE2 from your own songs · the guide: LORA-TRAINING.md</span>
++      <span class="spacer"></span><button type="button" class="btn ghost small" id="trReload">Reload</button></div>
++    <div id="trWarn"></div>
++    <div class="tr-steps" id="trBody">
++      <section class="tr-step"><h3><span class="ps-mark">1</span> Raw material <em>a folder of datasets/raw/</em></h3>
++        <div class="tr-picks" id="trRaw"></div>
++        <div class="tr-bar"><span class="row-hint" id="trTracksNote"></span><span class="spacer"></span>
++          <button type="button" class="btn ghost small" id="trAllIn">All in</button><button type="button" class="btn ghost small" id="trNoneIn">None</button></div>
++        <div class="tr-tracks" id="trTracks"></div>
++      </section>
++      <section class="tr-step"><h3><span class="ps-mark">2</span> The set <em>a caption for every track: the style line, then the lyrics</em></h3>
++        <div class="field-row wrap">
++          <label class="field"><span class="label">Trigger word <em>calls the style by name later</em></span><input type="text" id="trTrigger" placeholder="fosforida" /></label>
++          <label class="field grow"><span class="label">Shared style line <em>what is heard: genre, instruments, voice, mood (not the SUNO prompt)</em></span>
++            <input type="text" id="trStyle" placeholder="dark cinematic gothic metal, female contralto vocal, church choir, slow" /></label>
++          <label class="field"><span class="label">Set name</span><input type="text" id="trSetName" /></label>
++        </div>
++        <div class="tr-bar"><button type="button" class="btn primary small" id="trMake">Make the set</button><span class="row-hint" id="trMakeState"></span></div>
++      </section>
++      <section class="tr-step"><h3><span class="ps-mark">3</span> Training <em>AI-Toolkit (Ostris) underneath</em></h3>
++        <div class="tr-sets" id="trSets"></div>
++        <div class="tr-bar"><span class="label">Kind</span><span id="trKinds"></span><span class="row-hint" id="trKindSay"></span></div>
++        <div class="field-row wrap tr-knobs">
++          <label class="field"><span class="label">Run name</span><input type="text" id="trRunName" placeholder="fosforida-style-v1" /></label>
++          <label class="field"><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="20000" step="50" /></label>
++          <label class="field"><span class="label">Rank</span><input type="number" id="tr_rank" min="4" max="128" step="4" /></label>
++          <label class="field"><span class="label">Learning rate</span><input type="number" id="tr_lr" value="0.0001" step="0.00001" /></label>
++          <label class="field"><span class="label">AR weight <em>0 = sound only</em></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
++          <label class="field"><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
++          <label class="field"><span class="label">AR speed</span><input type="number" id="tr_ar_lr_multiplier" min="0" max="2" step="0.1" /></label>
++          <label class="field"><span class="label">Mode</span><select id="tr_cot"><option value="off">Direct</option><option value="full">Full (score)</option><option value="melody">Melody</option></select></label>
++          <label class="field"><span class="label">Base weights</span><select id="tr_quant"><option value="int8">int8</option><option value="bf16">bf16</option></select></label>
++          <label class="check"><input type="checkbox" id="tr_sep" /> <span>Separate vocals and music</span></label>
++        </div>
++        <div class="tr-bar"><button type="button" class="btn primary small" id="trRun">Train</button>
++          <button type="button" class="btn ghost small danger" id="trStop" hidden>Stop</button></div>
++        <div class="tr-watch" id="trWatch" hidden><div id="trWatchHead"></div><div class="pc-bar"><i id="trBar"></i></div><pre class="mono tr-tail" id="trTail"></pre></div>
++      </section>
++      <section class="tr-step"><h3><span class="ps-mark">4</span> Runs <em>a finished LoRA is in loras/RUN/, ready in Create</em></h3>
++        <div id="trRuns"></div>
++      </section>
++    </div>
++  </section>
++
+   <!-- HERESY 1041: the Collection — every take, searched, filtered, grouped, acted on many at once -->
+   <section class="col coll-col is-hidden" id="view-collection">
+     <div class="col-head"><h2>Collection</h2><span class="col-note" id="collNote"></span></div>
+@@ -1361,6 +1408,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="heresy-textprep.js"></script>
+ <script src="heresy-menu.js"></script>
+ <script src="heresy-writer.js"></script>
++<script src="heresy-train.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+ <script src="heresy-inspect.js"></script>
+-- 
+2.43.0
+

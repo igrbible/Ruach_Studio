@@ -1,0 +1,27 @@
+# Ruach Studio's server (yue2.cpp + HERESY), a systemd user unit. A template: systemd/install-units.sh
+# writes it into ~/.config/systemd/user/ with @ROOT@ replaced by where the studio actually is.
+#   systemctl --user enable --now ruach-studio      start it now and at every login (at boot with linger)
+#   journalctl --user -u ruach-studio -f            its log (also on the page, Engine)
+[Unit]
+# HERESY 1112 (Viktor): up again after any fall, as many times as it takes
+StartLimitIntervalSec=0
+Description=Ruach Studio server (yue2.cpp + HERESY patches)
+Wants=heresy-lab.service
+After=network-online.target heresy-lab.service
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@
+Environment=NO_COLOR=1
+ExecStart=@ROOT@/start.sh
+# the server ends a song cleanly on Ctrl-C, as in a terminal
+KillSignal=SIGINT
+TimeoutStopSec=30
+Restart=always
+RestartSec=5
+# HERESY 1167 (Viktor: «Может и reload для сисюнитов докрутишь?»): systemctl --user reload restarts it when it is
+# empty (a restart under a running take drops the engine's queue); the waiting is a unit of its own
+ExecReload=@ROOT@/systemd/reload-when-idle.sh studio
+
+[Install]
+WantedBy=default.target

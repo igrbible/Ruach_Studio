@@ -1,0 +1,434 @@
+From cc769f4443fdbb7fb864452d3ae4bddcb2131331 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 16:36:47 -0600
+Subject: [PATCH 1014/1177] Three workspaces: Create, Write, Post
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1014. Tabs in the top bar, kept per browser; the takes list stays in all
+three, and the take picked there is the one Post works on.
+- Create: the form and the take card, as the Kit has them.
+- Write: the writing room at full size, with the song in the form beside it
+  (title, style with its length, the score's K/M/Q, the lyrics), refreshed as
+  the form changes and after a draft is applied.
+- Post: what is done to a finished take — Spectrum and Lyrics check moved
+  here from the card; Stems and AudioSR have their places. The take card has
+  a Post row that opens this take there at that tool.
+The spectrum only measures when it is on screen: a take picked in Create no
+longer downloads a whole song in the background.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |  18 +++
+ tools/console/app.js             |  53 +++++++
+ tools/console/heresy-spectrum.js |   3 +-
+ tools/console/index.html         | 239 ++++++++++++++++++-------------
+ tools/public/index.html.gz       | Bin 247790 -> 249632 bytes
+ 5 files changed, 212 insertions(+), 101 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index df9a1a8..5b7b323 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1929,3 +1929,21 @@ html.hz-open { overflow: hidden; }
+ /* ------------------------------------------------ HERESY 1012: writers */
+ .chat-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+ .assist-provider select { width: auto; }
++
++/* ------------------------------------------------ HERESY 1014: three workspaces */
++.tabs { display: flex; gap: 2px; padding: 2px; margin-left: 18px; background: var(--sunk); border-radius: var(--r-md); }
++.tabs button { padding: 5px 16px; border: 0; border-radius: calc(var(--r-md) - 2px); background: none; color: var(--muted);
++  font: 500 13px/1.3 var(--sans); cursor: pointer; }
++.tabs button:hover { color: var(--ink); }
++.tabs button.is-active { background: var(--raise); color: var(--ink); box-shadow: 0 1px 2px var(--shadow-lg, rgba(0,0,0,.15)); }
++/* Write and Post take the place of the form and the take; the takes list stays */
++.write-col, .post-col { grid-column: 1 / span 2; }
++body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { display: none; }
++.write-grid { display: grid; grid-template-columns: minmax(300px, 0.9fr) minmax(420px, 1.1fr); gap: 18px; align-items: start; }
++@media (max-width: 1300px) { .write-grid { grid-template-columns: minmax(0, 1fr); } }
++.write-current { position: sticky; top: 0; display: flex; flex-direction: column; gap: 10px; }
++.write-cur { display: flex; flex-direction: column; gap: 4px; }
++.write-cur p, .write-cur pre { margin: 0; font-size: 12.5px; color: var(--ink); }
++.write-cur pre { white-space: pre-wrap; max-height: 36vh; overflow: auto; font: 12.5px/1.55 var(--mono); }
++#curStyle { max-height: 22vh; }
++.post-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e708ebd..955be4a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2697,6 +2697,7 @@
+     paintTakeMeta();
+     if (window.HeresySpectrum) window.HeresySpectrum.setTake(spectrumTake(take));   // HERESY 1007
+     if (window.HeresyGloss) window.HeresyGloss.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1011
++    if (document.body.dataset.tab === "post") paintPost();   // HERESY 1014
+     setTimeout(paintCardFolds, 0);   // HERESY 1009: the peeks read the texts filled below
+     $("metaStyle").textContent = take.style;
+     var parent = take.parent ? findTake(take.parent) : null;
+@@ -4758,6 +4759,56 @@
+     });
+   }
+ 
++  /* ---------------------------------------------- HERESY 1014: three workspaces */
++  // Create (the form and the take, as the Kit has it), Write (the writing room with the
++  // song beside it) and Post (what is done to a finished take). The takes list stays in all
++  // three: a take picked there is the one Post works on. Kept per browser.
++  var TAB_KEY = "yue2.tab";
++  function currentTab() { return document.body.dataset.tab || "create"; }
++  function paintCurrentSong() {
++    var style = $("style").value.trim(), lyrics = $("lyrics").value.trim(), abc = $("abc").value.trim() || STATE.abcRendered || "";
++    $("curTitle").textContent = $("title").value.trim() || "untitled";
++    $("curStyle").textContent = style || "no style yet";
++    $("curStyleSize").textContent = style ? style.length + " characters" : "";
++    $("curLyrics").textContent = lyrics || "no lyrics yet";
++    $("curLyricsSize").textContent = lyrics ? lyrics.split(/\r?\n/).filter(function (l) { return l.trim(); }).length + " lines" : "";
++    var h = window.HeresyAssist ? window.HeresyAssist.abcHeader(abc) : {};
++    $("curScore").textContent = h.K || h.M || h.Q ? "K:" + (h.K || "?") + "  M:" + (h.M || "?") + "  Q:" + (h.Q || "?")
++      : "no score in the form: in Full mode the model writes one";
++  }
++  function paintPost() {
++    var take = STATE.take;
++    $("postTitle").textContent = take ? displayTitle(take) : "Post";
++    $("postNote").textContent = take ? takeLabel(take).replace(displayTitle(take), "").replace(/^ · /, "") || take.name : "pick a take on the right";
++  }
++  function setTab(tab) {
++    if (["create", "write", "post"].indexOf(tab) < 0) tab = "create";
++    document.body.dataset.tab = tab;
++    $("view-compose").classList.toggle("is-hidden", tab !== "create");
++    $("view-take").classList.toggle("is-hidden", tab !== "create");
++    $("view-write").classList.toggle("is-hidden", tab !== "write");
++    $("view-post").classList.toggle("is-hidden", tab !== "post");
++    all("#tabs [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
++    store(TAB_KEY, tab === "create" ? null : tab);
++    if (tab === "write") paintCurrentSong();
++    if (tab === "post") paintPost();
++    if (tab === "create") drawWave();
++    window.dispatchEvent(new Event("resize"));   // pictures measure their new width
++  }
++  all("#tabs [data-tab]").forEach(function (b) { b.addEventListener("click", function () { setTab(b.dataset.tab); }); });
++  all("[data-goto-tab]").forEach(function (b) { b.addEventListener("click", function () { setTab(b.dataset.gotoTab); }); });
++  // From the take card (and Post's own row): open Post on this take at that tool.
++  all("[data-post-open]").forEach(function (b) {
++    b.addEventListener("click", function () {
++      var panel = $(b.dataset.postOpen);
++      setTab("post");
++      if (panel) { panel.open = true; panel.scrollIntoView({ behavior: "smooth", block: "start" }); }
++    });
++  });
++  ["title", "style", "lyrics", "abc"].forEach(function (id) {
++    $(id).addEventListener("input", function () { if (currentTab() === "write") paintCurrentSong(); });
++  });
++
+   /* ---------------------------------------- HERESY 1010: the writing room */
+   var A = window.HeresyAssist, assistBefore = null;
+   if (A) {
+@@ -4894,6 +4945,7 @@
+       growLyrics();
+       $("undoApply").classList.remove("is-hidden");
+       toast(what === "all" ? "Draft applied" : what === "style" ? "Style applied" : "Lyrics applied");
++      paintCurrentSong();
+     };
+     $("applyDraft").addEventListener("click", function () { apply("all"); });
+     $("applyStyle").addEventListener("click", function () { apply("style"); });
+@@ -5066,5 +5118,6 @@
+   paintLibrary();
+   paintEngine();
+   queueComfort();   // HERESY 1006
++  setTab(recall(TAB_KEY) || "create");   // HERESY 1014
+   boot();
+ })();
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+index 9342595..ce13b37 100644
+--- a/tools/console/heresy-spectrum.js
++++ b/tools/console/heresy-spectrum.js
+@@ -388,7 +388,8 @@
+   }
+ 
+   function render() {
+-    if (!panel || !panel.open || !state.take) return;
++    // HERESY 1014: only when on screen — in a hidden tab it would fetch a whole take for nothing
++    if (!panel || !panel.open || !state.take || !panel.offsetParent) return;
+     var take = state.take, token = ++state.drawn;
+     var wantB = state.other;
+     var jobs = [analyse(take, say)];
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 88c537a..0418170 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -45,6 +45,13 @@
+     </div>
+   </div>
+ 
++  <!-- HERESY 1014: the three workspaces -->
++  <nav class="tabs" id="tabs" aria-label="Workspace">
++    <button type="button" data-tab="create" class="is-active">Create</button>
++    <button type="button" data-tab="write">Write</button>
++    <button type="button" data-tab="post">Post</button>
++  </nav>
++
+   <div class="spacer"></div>
+ 
+   <div class="head-actions">
+@@ -290,60 +297,6 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       </div>
+     </details>
+ 
+-    <!-- HERESY 1010: YuE2 Studio's songwriting assistant (heresy-assist.js), with the current song as context -->
+-    <details class="drawer" id="assistDrawer">
+-      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Writing room</span><span class="sum-say">The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.</span></span></summary>
+-      <div class="drawer-body assist">
+-        <label class="field">
+-          <span class="label">What's the song about? <em>or what to change</em></span>
+-          <textarea id="assistBrief" rows="4" placeholder="Build an arc for every section from the style and the lyrics; keep my words."></textarea>
+-        </label>
+-        <div class="assist-chips" id="assistChips"></div>
+-        <!-- HERESY 1012: the writer is the page's chat server, or OpenRouter with the user's key -->
+-        <div class="field-row wrap assist-provider">
+-          <label class="field"><span class="label">Writer</span>
+-            <select id="assistProvider">
+-              <option value="engine">Chat server under Engine (vLLM, LM Studio, Ollama)</option>
+-              <option value="openrouter">OpenRouter</option>
+-            </select></label>
+-          <label class="field grow or-only"><span class="label">Model <em>any OpenRouter id</em></span>
+-            <input type="text" id="orModel" list="orModels" placeholder="provider/model" autocomplete="off" spellcheck="false" /><datalist id="orModels"></datalist></label>
+-          <label class="field or-only"><span class="label">API key</span><input type="password" id="orKey" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
+-        </div>
+-        <label class="check or-only"><input type="checkbox" id="orRemember" /> <span>Remember the key in this browser (otherwise it lives until the page is closed)</span></label>
+-        <div class="field-row wrap">
+-          <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
+-          <label class="field assist-num"><span class="label">Temperature <em>blank: the server's</em></span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
+-          <label class="field assist-num"><span class="label">Max output tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="8192" /></label>
+-        </div>
+-        <details class="assist-prefs">
+-          <summary>Your writing preferences <span class="dim" id="assistPrefsSize"></span></summary>
+-          <textarea id="assistPrefs" rows="5" placeholder="Standing instructions added to every draft: language, phonetics, spelling, names, what to keep…"></textarea>
+-          <p class="row-hint">Added to the built-in YuE2 songwriting instructions for every draft. Kept in this browser.</p>
+-          <details class="assist-system"><summary>Read the complete songwriting instructions</summary><pre class="mono" id="assistSystem"></pre></details>
+-        </details>
+-        <div class="assist-go">
+-          <button type="button" class="btn writer" id="assistBtn"><span aria-hidden="true">✦</span> <span id="assistLabel">Create a draft</span></button>
+-          <span class="row-hint" id="assistStatus"></span>
+-        </div>
+-        <p class="row-hint">Your brief and the current song go to the chat server set under Engine.</p>
+-        <section class="assist-draft is-hidden" id="assistDraft">
+-          <div class="assist-draft-head"><strong>Your draft</strong><span class="dim mono" id="assistModel"></span></div>
+-          <label class="field"><span class="label">Title</span><input type="text" id="draftTitle" /></label>
+-          <label class="field"><span class="label">Style <em id="draftStyleSize"></em></span><textarea id="draftStyle" rows="4"></textarea></label>
+-          <label class="field"><span class="label">Lyrics</span><textarea id="draftLyrics" rows="12" spellcheck="false"></textarea></label>
+-          <details class="assist-notes" open><summary>Writing notes</summary><p id="draftNotes"></p></details>
+-          <div class="assist-apply">
+-            <button type="button" class="btn primary small" id="applyDraft">Apply draft</button>
+-            <button type="button" class="btn ghost small" id="applyLyrics">Use lyrics</button>
+-            <button type="button" class="btn ghost small" id="applyStyle">Use style</button>
+-            <button type="button" class="btn ghost small is-hidden" id="undoApply">Undo</button>
+-          </div>
+-        </section>
+-        <details class="assist-raw is-hidden" id="assistRaw"><summary>Raw response</summary><pre class="mono" id="assistRawText"></pre></details>
+-      </div>
+-    </details>
+-
+     <form id="composeForm" class="compose" novalidate>
+       <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
+       <label class="field titlefield">
+@@ -639,6 +592,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <button type="button" class="btn ghost small" id="reuseTake" data-tip="Reuse: the prompt, lyrics and every setting (mode, sampling, guidance, VAE, sliders, LoRAs, output) for a new song: no score, no seeds, no music codes, so Generate writes new music">Reuse</button>
+           <button type="button" class="btn ghost small" id="rerenderSound" title="Same music, a new sound seed (seconds)">Re-render sound</button>
+         </div></div>
++        <div class="tool-group"><span class="tool-cap">Post</span><div class="tool-row">
++          <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in Post: its spectrum">Spectrum</button>
++          <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in Post: Whisper against the lyrics">Lyrics check</button>
++        </div></div>
+         <div class="tool-group"><span class="tool-cap">Files</span><div class="tool-row">
+           <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds">Request</button>
+           <button type="button" class="btn ghost small" id="dlScore" title="The score as ABC notation (.abc)">Score</button>
+@@ -649,52 +606,6 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <div class="decode-switch" id="decodeSwitch"></div>
+       <div class="decode-switch" id="soundSwitch"></div>
+ 
+-      <!-- HERESY 1007: the spectrum of this take, measured in the page (heresy-spectrum.js) -->
+-      <details class="drawer" id="spectrumPanel">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Spectrum</span><span class="sum-say">Where the sound sits: spectrogram, average spectrum, band energy. Lay another take over it to compare.</span></span></summary>
+-        <div class="drawer-body spectrum-body">
+-          <div class="spec-bar">
+-            <div class="score-tabs">
+-              <button type="button" class="spec-scale is-active" data-spec-scale="log">Log</button>
+-              <button type="button" class="spec-scale" data-spec-scale="linear">Linear</button>
+-            </div>
+-            <label class="spec-compare"><span>Compare with</span><select id="specCompare"></select></label>
+-            <span class="spec-state mono" id="specState"></span>
+-          </div>
+-          <!-- each picture opens over the whole screen (⤢ or a double click), to zoom and scroll -->
+-          <div class="spec-stage">
+-            <canvas id="specA"></canvas>
+-            <div class="spec-head" id="specHead" hidden></div>
+-            <button type="button" class="spec-expand" data-expand="specA" data-tip="Full screen: zoom and scroll (or double-click the picture). A click plays from there when this take is in the player.">⤢</button>
+-          </div>
+-          <div class="spec-stage" id="specStageB" hidden>
+-            <canvas id="specB"></canvas>
+-            <button type="button" class="spec-expand" data-expand="specB" data-tip="Full screen: zoom and scroll">⤢</button>
+-          </div>
+-          <div class="spec-stage">
+-            <canvas id="specAvg"></canvas>
+-            <button type="button" class="spec-expand" data-expand="specAvg" data-tip="Full screen: zoom and scroll">⤢</button>
+-          </div>
+-          <div class="spec-stage">
+-            <canvas id="specBands"></canvas>
+-            <button type="button" class="spec-expand" data-expand="specBands" data-tip="Full screen: zoom and scroll">⤢</button>
+-          </div>
+-        </div>
+-      </details>
+-
+-      <!-- HERESY 1011: Whisper against the lyrics, run on Forge by heresy-lab (heresy-gloss.js) -->
+-      <details class="drawer" id="glossPanel">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
+-        <div class="drawer-body gloss-body">
+-          <div class="gloss-bar-row">
+-            <button type="button" class="btn ghost small" id="glossRun">Listen with Whisper</button>
+-            <span class="row-hint mono" id="glossState"></span>
+-          </div>
+-          <div id="glossResult"></div>
+-          <p class="row-hint">Per minute: the mean match to the closest lyric line, 0.6 and up clear, below 0.4 glossolalia. "Reached" is the furthest line matched, not a count of lines sung. A click on a minute or a time plays from there.</p>
+-        </div>
+-      </details>
+-
+       <!-- what the song actually is: prompt first, words under it -->
+       <div class="word-row">
+         <section class="panel" data-card-fold="prompt">
+@@ -742,6 +653,134 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     </div>
+   </section>
+ 
++  <!-- HERESY 1014: the Write tab — the writing room with the song in the form beside it -->
++  <section class="col write-col is-hidden" id="view-write">
++    <div class="col-head"><h2>Write</h2><span class="col-note">the chat model works on the song in the Create form</span></div>
++    <div class="write-grid">
++      <section class="panel write-current">
++        <div class="panel-head"><h3>The song now</h3><div class="spacer"></div>
++          <button type="button" class="btn ghost small" data-goto-tab="create">Edit in Create</button></div>
++        <div class="write-cur"><span class="label">Title</span><p id="curTitle"></p></div>
++        <div class="write-cur"><span class="label">Style <em id="curStyleSize"></em></span><pre id="curStyle"></pre></div>
++        <div class="write-cur"><span class="label">Score <em>the key, meter and tempo the style must agree with</em></span><p class="mono" id="curScore"></p></div>
++        <div class="write-cur"><span class="label">Lyrics <em id="curLyricsSize"></em></span><pre id="curLyrics"></pre></div>
++      </section>
++      <div class="write-room">
++    <!-- HERESY 1010: YuE2 Studio's songwriting assistant (heresy-assist.js), with the current song as context -->
++    <details class="drawer" id="assistDrawer" open>
++      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Writing room</span><span class="sum-say">The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.</span></span></summary>
++      <div class="drawer-body assist">
++        <label class="field">
++          <span class="label">What's the song about? <em>or what to change</em></span>
++          <textarea id="assistBrief" rows="4" placeholder="Build an arc for every section from the style and the lyrics; keep my words."></textarea>
++        </label>
++        <div class="assist-chips" id="assistChips"></div>
++        <!-- HERESY 1012: the writer is the page's chat server, or OpenRouter with the user's key -->
++        <div class="field-row wrap assist-provider">
++          <label class="field"><span class="label">Writer</span>
++            <select id="assistProvider">
++              <option value="engine">Chat server under Engine (vLLM, LM Studio, Ollama)</option>
++              <option value="openrouter">OpenRouter</option>
++            </select></label>
++          <label class="field grow or-only"><span class="label">Model <em>any OpenRouter id</em></span>
++            <input type="text" id="orModel" list="orModels" placeholder="provider/model" autocomplete="off" spellcheck="false" /><datalist id="orModels"></datalist></label>
++          <label class="field or-only"><span class="label">API key</span><input type="password" id="orKey" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
++        </div>
++        <label class="check or-only"><input type="checkbox" id="orRemember" /> <span>Remember the key in this browser (otherwise it lives until the page is closed)</span></label>
++        <div class="field-row wrap">
++          <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
++          <label class="field assist-num"><span class="label">Temperature <em>blank: the server's</em></span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
++          <label class="field assist-num"><span class="label">Max output tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="8192" /></label>
++        </div>
++        <details class="assist-prefs">
++          <summary>Your writing preferences <span class="dim" id="assistPrefsSize"></span></summary>
++          <textarea id="assistPrefs" rows="5" placeholder="Standing instructions added to every draft: language, phonetics, spelling, names, what to keep…"></textarea>
++          <p class="row-hint">Added to the built-in YuE2 songwriting instructions for every draft. Kept in this browser.</p>
++          <details class="assist-system"><summary>Read the complete songwriting instructions</summary><pre class="mono" id="assistSystem"></pre></details>
++        </details>
++        <div class="assist-go">
++          <button type="button" class="btn writer" id="assistBtn"><span aria-hidden="true">✦</span> <span id="assistLabel">Create a draft</span></button>
++          <span class="row-hint" id="assistStatus"></span>
++        </div>
++        <p class="row-hint">Your brief and the current song go to the chat server set under Engine.</p>
++        <section class="assist-draft is-hidden" id="assistDraft">
++          <div class="assist-draft-head"><strong>Your draft</strong><span class="dim mono" id="assistModel"></span></div>
++          <label class="field"><span class="label">Title</span><input type="text" id="draftTitle" /></label>
++          <label class="field"><span class="label">Style <em id="draftStyleSize"></em></span><textarea id="draftStyle" rows="4"></textarea></label>
++          <label class="field"><span class="label">Lyrics</span><textarea id="draftLyrics" rows="12" spellcheck="false"></textarea></label>
++          <details class="assist-notes" open><summary>Writing notes</summary><p id="draftNotes"></p></details>
++          <div class="assist-apply">
++            <button type="button" class="btn primary small" id="applyDraft">Apply draft</button>
++            <button type="button" class="btn ghost small" id="applyLyrics">Use lyrics</button>
++            <button type="button" class="btn ghost small" id="applyStyle">Use style</button>
++            <button type="button" class="btn ghost small is-hidden" id="undoApply">Undo</button>
++          </div>
++        </section>
++        <details class="assist-raw is-hidden" id="assistRaw"><summary>Raw response</summary><pre class="mono" id="assistRawText"></pre></details>
++      </div>
++    </details>
++
++      </div>
++    </div>
++  </section>
++
++  <!-- HERESY 1014: the Post tab — what is done to a finished take, on Forge -->
++  <section class="col post-col is-hidden" id="view-post">
++    <div class="col-head"><h2 id="postTitle">Post</h2><span class="col-note" id="postNote">pick a take on the right</span></div>
++    <div class="post-tools" id="postTools">
++      <button type="button" class="btn ghost small" data-post-open="spectrumPanel">Spectrum</button>
++      <button type="button" class="btn ghost small" data-post-open="glossPanel">Lyrics check</button>
++      <button type="button" class="btn ghost small" disabled data-tip="Coming: stem separation on Forge, in heresy-lab">Stems</button>
++      <button type="button" class="btn ghost small" disabled data-tip="Coming: AudioSR upscaling and clean-up, before or after the stems">AudioSR</button>
++    </div>
++      <!-- HERESY 1007: the spectrum of this take, measured in the page (heresy-spectrum.js) -->
++      <details class="drawer" id="spectrumPanel" open>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Spectrum</span><span class="sum-say">Where the sound sits: spectrogram, average spectrum, band energy. Lay another take over it to compare.</span></span></summary>
++        <div class="drawer-body spectrum-body">
++          <div class="spec-bar">
++            <div class="score-tabs">
++              <button type="button" class="spec-scale is-active" data-spec-scale="log">Log</button>
++              <button type="button" class="spec-scale" data-spec-scale="linear">Linear</button>
++            </div>
++            <label class="spec-compare"><span>Compare with</span><select id="specCompare"></select></label>
++            <span class="spec-state mono" id="specState"></span>
++          </div>
++          <!-- each picture opens over the whole screen (⤢ or a double click), to zoom and scroll -->
++          <div class="spec-stage">
++            <canvas id="specA"></canvas>
++            <div class="spec-head" id="specHead" hidden></div>
++            <button type="button" class="spec-expand" data-expand="specA" data-tip="Full screen: zoom and scroll (or double-click the picture). A click plays from there when this take is in the player.">⤢</button>
++          </div>
++          <div class="spec-stage" id="specStageB" hidden>
++            <canvas id="specB"></canvas>
++            <button type="button" class="spec-expand" data-expand="specB" data-tip="Full screen: zoom and scroll">⤢</button>
++          </div>
++          <div class="spec-stage">
++            <canvas id="specAvg"></canvas>
++            <button type="button" class="spec-expand" data-expand="specAvg" data-tip="Full screen: zoom and scroll">⤢</button>
++          </div>
++          <div class="spec-stage">
++            <canvas id="specBands"></canvas>
++            <button type="button" class="spec-expand" data-expand="specBands" data-tip="Full screen: zoom and scroll">⤢</button>
++          </div>
++        </div>
++      </details>
++
++      <!-- HERESY 1011: Whisper against the lyrics, run on Forge by heresy-lab (heresy-gloss.js) -->
++      <details class="drawer" id="glossPanel" open>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
++        <div class="drawer-body gloss-body">
++          <div class="gloss-bar-row">
++            <button type="button" class="btn ghost small" id="glossRun">Listen with Whisper</button>
++            <span class="row-hint mono" id="glossState"></span>
++          </div>
++          <div id="glossResult"></div>
++          <p class="row-hint">Per minute: the mean match to the closest lyric line, 0.6 and up clear, below 0.4 glossolalia. "Reached" is the furthest line matched, not a count of lines sung. A click on a minute or a time plays from there.</p>
++        </div>
++      </details>
++
++  </section>
++
+   <!-- takes -------------------------------------------------------------- -->
+   <aside class="library" id="library">
+     <header class="lib-head">
+-- 
+2.43.0
+

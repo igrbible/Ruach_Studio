@@ -1,0 +1,176 @@
+From 6717667ea4b3d51b1515da96df03ce54566df80f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 30 Sep 2026 23:13:05 -0600
+Subject: [PATCH 1026/1177] YuE2 OS: the logo, no web links in the workspace,
+ take IDs, a player that follows the list
+
+- Header: the YuE2 OS logo (the favicon's treble clef, the word, an OS plate that inverts by
+  night through --amber/--on-amber). The three links to GitHub left the header; the sources
+  live in the Engine room's About, with a YuE2 OS block for what this fork adds.
+- The page title is YuE2 OS.
+- The take card shows its ID (the folder in outputs/); a click copies it.
+- A click on another take in the list while one plays switches the player to it and plays.
+- Toasts stay five seconds longer.
+- Style and lyrics no longer jump while typing at their row cap: at the cap nothing is
+  re-measured, and below it every scrolling parent keeps its place.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |  11 +++++++++++
+ tools/console/app.js       |  33 ++++++++++++++++++++++++++++++++-
+ tools/console/index.html   |  27 ++++++++++++++-------------
+ tools/public/index.html.gz | Bin 276634 -> 278626 bytes
+ 4 files changed, 57 insertions(+), 14 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index bb81573..15ad4e4 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2049,3 +2049,14 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .in-bar > em { position: absolute; left: 0; right: 0; bottom: 2px; font-style: normal; font-size: 10px; text-align: center; color: var(--ink); text-shadow: 0 0 3px var(--panel); }
+ .in-list { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; }
+ .in-item { white-space: nowrap; }
++
++/* HERESY 1026: the YuE2 OS logo. Day: burgundy clef, ink word, OS white on burgundy.
++   Night: coral clef, light word, OS dark on coral: the plate inverts with the theme. */
++.brand-logo { display: inline-flex; align-items: center; gap: 7px; user-select: none; }
++.brand-clef { fill: var(--amber); flex: none; margin-top: 2px; }
++.brand-word { font: 400 22px/1 var(--display); letter-spacing: .01em; color: var(--ink); }
++.brand-word .two { color: var(--amber); }
++.brand-os { font: 700 11px/1 var(--mono); letter-spacing: .14em; padding: 4px 4px 4px 6px; border-radius: 4px;
++  background: var(--amber); color: var(--on-amber); transform: translateY(-1px); }
++.take-id { text-transform: none; letter-spacing: 0; background: none; border: 0; padding: 0; font-size: 11.5px; color: var(--dim); cursor: copy; user-select: all; }
++.take-id:hover, .take-id:focus-visible { color: var(--amber); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index ffe7ccb..36eb497 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -142,7 +142,7 @@
+       el.style.transition = "opacity .3s ease";
+       el.style.opacity = "0";
+       setTimeout(function () { el.remove(); }, 320);
+-    }, kind === "bad" ? 8000 : 4200);
++    }, kind === "bad" ? 13000 : 9200);   // HERESY 1026: five seconds more to read
+   }
+ 
+   var toasted = {};
+@@ -2788,6 +2788,9 @@
+     if (take.seconds) eyebrow.push(clock(take.seconds) + " long");
+     if (take.render_seconds) eyebrow.push("made in " + clock(take.render_seconds));
+     $("takeEyebrow").textContent = eyebrow.join(" · ");
++    // HERESY 1026: the take's ID, the folder name on disk; a click copies it
++    $("takeEyebrow").insertAdjacentHTML("beforeend", ' · <button type="button" class="take-id mono" data-tip="The take\'s ID (its folder in outputs/). Click to copy.">' +
++      escape(take.name) + "</button>");
+     $("takeTitle").textContent = displayTitle(take);
+     // Favourite, Rename and Delete as small icons on the title line (Delete asks first)
+     $("takeActions").innerHTML =
+@@ -3418,6 +3421,19 @@
+     paintPlayHere();
+   }
+   $("playHere").addEventListener("click", function () { playNow(STATE.take); });
++  $("takeEyebrow").addEventListener("click", function (event) {   // HERESY 1026
++    var b = event.target.closest(".take-id");
++    if (!b) return;
++    var text = b.textContent, done = function () { toast("Copied: " + text); };
++    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, function () { pick(b); });
++    else pick(b);
++    function pick(el) {   // over plain http the clipboard API is off: select it for Ctrl+C
++      var r = document.createRange(); r.selectNodeContents(el);
++      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
++      try { if (document.execCommand("copy")) { done(); return; } } catch (e) { /* fall through */ }
++      toast("Selected: press Ctrl+C");
++    }
++  });
+ 
+   function togglePlay() {
+     if (!audio.getAttribute("src") && STATE.take) loadPlayer(STATE.take, false);
+@@ -3729,7 +3745,11 @@
+     var card = event.target.closest(".take");
+     if (!card) return;
+     if (card.dataset.run) return openRunRow(card.dataset.run);
++    // HERESY 1026 (Viktor): a click on another take while one plays switches the player to it,
++    // from the start, and plays on. Idle, the player follows the page as before.
++    var playing = isPlaying() && !(STATE.playerTake && STATE.playerTake.name === card.dataset.name);
+     openTake(card.dataset.name);
++    if (playing && event.detail !== 2) playNow(findTake(card.dataset.name));
+     // A double-click plays the song (renaming is the song page's Rename button). It is read from the
+     // second click itself: the first click redraws the list, and the browser then sends no dblclick.
+     if (event.detail === 2) playNow(findTake(card.dataset.name));
+@@ -4736,10 +4756,21 @@
+     var outer = cs.boxSizing === "border-box" ? pad + edge : 0;
+     var inner = cs.boxSizing === "border-box" ? edge : -pad;
+     var min = area.rows * line + outer, max = (parseInt(area.dataset.maxRows, 10) || 8) * line + outer;
++    // HERESY 1026: at the cap with more text than fits, nothing to measure: collapsing the box to
++    // "auto" on every key made the text jump and hid half of the last line while typing.
++    if (area.scrollHeight + inner > max && Math.abs(area.offsetHeight - (cs.boxSizing === "border-box" ? max : max + pad + edge)) < 1) {
++      area.style.overflowY = "auto";
++      return;
++    }
++    var keep = [], node = area;                // the box and every scrolling parent keep their place
++    while (node && node !== document.documentElement) { keep.push([node, node.scrollTop]); node = node.parentElement; }
++    var page = window.scrollY;
+     area.style.height = "auto";
+     var want = area.scrollHeight + inner;
+     area.style.height = Math.min(max, Math.max(min, want)) + "px";
+     area.style.overflowY = want > max ? "auto" : "hidden";
++    keep.forEach(function (k) { if (k[0].scrollTop !== k[1]) k[0].scrollTop = k[1]; });
++    if (window.scrollY !== page) window.scrollTo(window.scrollX, page);
+   }
+ 
+   // Blocks with data-fold fold on a click on their heading, as the song boxes do in
+diff --git a/tools/console/index.html b/tools/console/index.html
+index df5ef5d..e347f3c 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -3,7 +3,7 @@
+ <head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+-<title>YuE2 Console · cpp</title>
++<title>YuE2 OS</title>
+ <!-- HERESY 1006: a treble clef with A4, the second space. Glyphs from Noto Music (SIL OFL 1.1). -->
+ <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0yMzUgLTEzNTAgMTc3MCAxNzcwIj4KPHN0eWxlPi5ze3N0cm9rZTojOGE4MTcyO3N0cm9rZS13aWR0aDo0NH0uZ3tmaWxsOiNjODg5MmV9QG1lZGlhIChwcmVmZXJzLWNvbG9yLXNjaGVtZTpkYXJrKXsuc3tzdHJva2U6I2EzOWE4YX0uZ3tmaWxsOiNlOGIwNGF9fTwvc3R5bGU+CjxnIHRyYW5zZm9ybT0ic2NhbGUoMSAtMSkiPjxnIGNsYXNzPSJzIj48bGluZSB4MT0iLTQwIiB4Mj0iMTM0MCIgeTE9IjAiIHkyPSIwIi8+PGxpbmUgeDE9Ii00MCIgeDI9IjEzNDAiIHkxPSIyNTAiIHkyPSIyNTAiLz48bGluZSB4MT0iLTQwIiB4Mj0iMTM0MCIgeTE9IjUwMCIgeTI9IjUwMCIvPjxsaW5lIHgxPSItNDAiIHgyPSIxMzQwIiB5MT0iNzUwIiB5Mj0iNzUwIi8+PGxpbmUgeDE9Ii00MCIgeDI9IjEzNDAiIHkxPSIxMDAwIiB5Mj0iMTAwMCIvPjwvZz48cGF0aCBjbGFzcz0iZyIgZD0iTTMxNCA4MDFRMzAwIDg1NCAyOTEuMCA5MDYuMFEyODIgOTU4IDI4MiAxMDEyUTI4MiAxMDU5IDI4OC41IDExMDAuNVEyOTUgMTE0MiAzMDcgMTE3N1EzMjAgMTIxNyAzNDEuMCAxMjUyLjVRMzYyIDEyODggMzg1LjUgMTMxMS4wUTQwOSAxMzM0IDQyNyAxMzM0UTQ1MSAxMzM0IDQ5MyAxMjQ5UTUxNCAxMjA2IDUyNC4wIDExNTYuMFE1MzQgMTEwNiA1MzQgMTA0OVE1MzQgOTc4IDUxNS4wIDkwNy41UTQ5NiA4MzcgNDU5LjUgNzc1LjBRNDIzIDcxMyAzNzIgNjY2TDQwNyA0OThRNDIyIDUwMCA0MzIuMCA1MDEuMFE0NDIgNTAyIDQ0NyA1MDJRNTA4IDUwMiA1NTYuMCA0NjcuNVE2MDQgNDMzIDYzMi41IDM3Ny4wUTY2MSAzMjEgNjYxIDI1NFE2NjEgMTc3IDYyMS41IDExNS41UTU4MiA1NCA1MDMgMjVRNTA4IDggNTMyIC0xMTdRNTM4IC0xNDcgNTQxLjAgLTE2NC41UTU0NCAtMTgyIDU0NS4wIC0xOTUuMFE1NDYgLTIwOCA1NDYgLTIyNVE1NDYgLTI3NSA1MjEuNSAtMzE0LjVRNDk3IC0zNTQgNDU1LjUgLTM3Ni4wUTQxNCAtMzk4IDM2MyAtMzk4UTMxMSAtMzk4IDI3MS4wIC0zNzguNVEyMzEgLTM1OSAyMDguMCAtMzI0LjVRMTg1IC0yOTAgMTg1IC0yNDVRMTg1IC0xOTcgMjExLjUgLTE2NS4wUTIzOCAtMTMzIDI4NyAtMTMzUTMyOSAtMTMzIDM1NS41IC0xNjMuNVEzODIgLTE5NCAzODIgLTIzNlEzODIgLTI3MiAzNTcuMCAtMjk5LjBRMzMyIC0zMjYgMjkyIC0zMjZIMjgyUTMwOCAtMzY1IDM2NCAtMzY1UTQzMyAtMzY1IDQ3Mi4wIC0zMjAuMFE1MTEgLTI3NSA1MTEgLTIwNVE1MTEgLTE4OCA1MDcuMCAtMTU5LjVRNTAzIC0xMzEgNDkzIC05MVE0ODMgLTUxIDQ3Ny41IC0yNS4wUTQ3MiAxIDQ3MCAxMlE0MzYgMiAzOTAgMlEzMDQgMiAyMjIgNTJRMTQyIDEwMiA5Ni4wIDE4NC4wUTUwIDI2NiA1MCAzNjFRNTAgNDUxIDkxIDUzMFExMzIgNjA5IDE5Mi41IDY3NS4wUTI1MyA3NDEgMzE0IDgwMVpNMzQxIDgyNlEzNjQgODM4IDM5MC4wIDg3MC41UTQxNiA5MDMgNDQwLjAgOTQ1LjBRNDY0IDk4NyA0NzkuMCAxMDI5LjVRNDk0IDEwNzIgNDk0IDExMDZRNDk0IDExNDIgNDgzLjAgMTE2My4wUTQ3MiAxMTg0IDQ0NSAxMTg0UTQyMSAxMTg0IDM5OC41IDExNjIuMFEzNzYgMTE0MCAzNTguNSAxMTAzLjVRMzQxIDEwNjcgMzMxLjAgMTAyMi4wUTMyMSA5NzcgMzIxIDkzMFEzMjEgODk4IDMyNy41IDg3Mi4wUTMzNCA4NDYgMzQxIDgyNlpNMzk4IDM3OVEzNzEgMzczIDM0Ny4wIDM1My41UTMyMyAzMzQgMzA4LjUgMzA2LjVRMjk0IDI3OSAyOTQgMjQ4UTI5NCAyMjMgMzA3LjAgMTk2LjVRMzIwIDE3MCAzMzkgMTU0UTM1MiAxNDIgMzY1IDEzNlEzODAgMTI5IDM4MCAxMjNRMzgwIDEyMCAzNzAgMTE3UTMzMiAxMjYgMzAxLjUgMTUxLjBRMjcxIDE3NiAyNTMuNSAyMTEuNVEyMzYgMjQ3IDIzNiAyODdRMjM2IDMzMCAyNTMuNSAzNzAuMFEyNzEgNDEwIDMwMi41IDQ0Mi4wUTMzNCA0NzQgMzc0IDQ5MEwzNDUgNjQxUTIyOSA1NDcgMTc0LjUgNDU2LjVRMTIwIDM2NiAxMjAgMjc3UTEyMCAyMTIgMTU0LjAgMTU2LjBRMTg4IDEwMCAyNDcuMCA2NS41UTMwNiAzMSAzODAgMzFRNDAwIDMxIDQyMC41IDM1LjBRNDQxIDM5IDQ2NCA0NVpNNDk1IDU1UTU5MyA5NyA1OTMgMjI3UTU5MyAyNzAgNTcxLjAgMzA1LjVRNTQ5IDM0MSA1MTIuMCAzNjIuMFE0NzUgMzgzIDQyOSAzODNaIi8+PHBhdGggY2xhc3M9ImciIHRyYW5zZm9ybT0idHJhbnNsYXRlKDgwMCAyNDEpIiBkPSJNNTAgMTM1UTUwIDE3MiA3Ny4wIDIwMC4wUTEwNCAyMjggMTUwLjUgMjQ0LjBRMTk3IDI2MCAyNTMgMjYwUTMxMCAyNjAgMzU4LjAgMjQ0LjVRNDA2IDIyOSA0MzUuMCAyMDEuMFE0NjQgMTczIDQ2NCAxMzVRNDY0IDk2IDQzNi4wIDY3LjVRNDA4IDM5IDM2MS41IDIzLjVRMzE1IDggMjU5IDhRMjAzIDggMTU1LjUgMjMuMFExMDggMzggNzkuMCA2Ni41UTUwIDk1IDUwIDEzNVpNMjgwIDI4UTMxNCAyOCAzMjYuNSA1My4wUTMzOSA3OCAzMzkgMTEyUTMzOSAxNDcgMzI0LjUgMTc2LjBRMzEwIDIwNSAyODYuMCAyMjIuNVEyNjIgMjQwIDIzMiAyNDBRMTk4IDI0MCAxODYuNSAyMTUuMFExNzUgMTkwIDE3NSAxNTZRMTc1IDEyMiAxODkuMCA5My4wUTIwMyA2NCAyMjYuNSA0Ni4wUTI1MCAyOCAyODAgMjhaIi8+PC9nPjwvc3ZnPg==" />
+ <link rel="preconnect" href="https://fonts.googleapis.com" />
+@@ -23,18 +23,10 @@
+ <!-- ---------------------------------------------------------------- topbar -->
+ <header class="topbar">
+   <div class="brand">
+-    <!-- the music note, top left: it opens the collection's own repository -->
+-    <a class="brand-mark" href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer" aria-label="yue2-kit on GitHub"
+-       data-tip="yue2-kit on GitHub: this collection's install kit, its patches and its releases">
+-      <svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
+-        <path d="M6 30 L6 12 L20 8 L20 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+-        <circle cx="10.5" cy="30" r="4.4" fill="currentColor"/>
+-        <circle cx="24.5" cy="26" r="4.4" fill="currentColor"/>
+-        <path d="M28 13 L36 13 M28 18 L36 18 M28 23 L36 23" stroke="currentColor" stroke-width="1.1" opacity="0.55"/>
+-      </svg>
+-    </a>
+-    <h1><a class="brand-link" href="https://github.com/multimodal-art-projection/YuE" target="_blank" rel="noopener noreferrer" data-tip="YuE, the music model this app runs: its repo on GitHub (opens in a new tab)">YuE<span class="two">2</span></a></h1>
+-    <a class="engine-tag" href="https://github.com/ServeurpersoCom/yue2.cpp" target="_blank" rel="noopener noreferrer" data-tip="The C++ engine this page runs on: its repo on GitHub (opens in a new tab)">cpp</a>
++    <!-- HERESY 1026: YuE2 OS. The mark is the treble clef of the favicon (Noto Music, OFL); the colours
++         follow the theme and invert by night (--amber / --on-amber). No links here: the sources
++         live in the Engine room, the workspace never sends you to the web. -->
++    <span class="brand-logo" role="img" aria-label="YuE2 OS"><svg class="brand-clef" viewBox="30 -1350 660 1770" width="17" height="32" aria-hidden="true"><g transform="scale(1 -1)"><path d="M314 801Q300 854 291.0 906.0Q282 958 282 1012Q282 1059 288.5 1100.5Q295 1142 307 1177Q320 1217 341.0 1252.5Q362 1288 385.5 1311.0Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524.0 1156.0Q534 1106 534 1049Q534 978 515.0 907.5Q496 837 459.5 775.0Q423 713 372 666L407 498Q422 500 432.0 501.0Q442 502 447 502Q508 502 556.0 467.5Q604 433 632.5 377.0Q661 321 661 254Q661 177 621.5 115.5Q582 54 503 25Q508 8 532 -117Q538 -147 541.0 -164.5Q544 -182 545.0 -195.0Q546 -208 546 -225Q546 -275 521.5 -314.5Q497 -354 455.5 -376.0Q414 -398 363 -398Q311 -398 271.0 -378.5Q231 -359 208.0 -324.5Q185 -290 185 -245Q185 -197 211.5 -165.0Q238 -133 287 -133Q329 -133 355.5 -163.5Q382 -194 382 -236Q382 -272 357.0 -299.0Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472.0 -320.0Q511 -275 511 -205Q511 -188 507.0 -159.5Q503 -131 493 -91Q483 -51 477.5 -25.0Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96.0 184.0Q50 266 50 361Q50 451 91 530Q132 609 192.5 675.0Q253 741 314 801ZM341 826Q364 838 390.0 870.5Q416 903 440.0 945.0Q464 987 479.0 1029.5Q494 1072 494 1106Q494 1142 483.0 1163.0Q472 1184 445 1184Q421 1184 398.5 1162.0Q376 1140 358.5 1103.5Q341 1067 331.0 1022.0Q321 977 321 930Q321 898 327.5 872.0Q334 846 341 826ZM398 379Q371 373 347.0 353.5Q323 334 308.5 306.5Q294 279 294 248Q294 223 307.0 196.5Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 301.5 151.0Q271 176 253.5 211.5Q236 247 236 287Q236 330 253.5 370.0Q271 410 302.5 442.0Q334 474 374 490L345 641Q229 547 174.5 456.5Q120 366 120 277Q120 212 154.0 156.0Q188 100 247.0 65.5Q306 31 380 31Q400 31 420.5 35.0Q441 39 464 45ZM495 55Q593 97 593 227Q593 270 571.0 305.5Q549 341 512.0 362.0Q475 383 429 383Z"/></g></svg><span class="brand-word">YuE<span class="two">2</span></span><span class="brand-os">OS</span></span>
+   </div>
+ 
+   <div class="engine-chip">
+@@ -222,6 +214,15 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       </div>
+       <div class="about-grid">
+         <div class="about-projects">
++          <!-- HERESY 1026: the links the header used to carry live here, with what YuE2 OS adds -->
++          <section class="about-project"><h4>YuE2 OS</h4><p class="about-what">On Steroids: the heresy patches 1001+ over the collection below, and the lab beside it</p><ul class="about-links">
++            <li><a href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer">The collection it forks</a><span class="about-where">github · IronWolve/yue2-kit</span></li>
++            <li><a href="https://github.com/woongzip1/UniverSR" target="_blank" rel="noopener noreferrer">Upscale: UniverSR</a><span class="about-where">github · woongzip1/UniverSR · MIT</span></li>
++            <li><a href="https://github.com/nomadkaraoke/python-audio-separator" target="_blank" rel="noopener noreferrer">Stems: audio-separator (BS-Roformer, htdemucs_ft)</a><span class="about-where">github · nomadkaraoke/python-audio-separator</span></li>
++            <li><a href="https://github.com/SYSTRAN/faster-whisper" target="_blank" rel="noopener noreferrer">Lyrics check: faster-whisper</a><span class="about-where">github · SYSTRAN/faster-whisper</span></li>
++            <li><a href="https://github.com/andremichelle/openDAW" target="_blank" rel="noopener noreferrer">DAW (coming): openDAW</a><span class="about-where">github · andremichelle/openDAW · AGPL-3.0</span></li>
++            <li><a href="https://fontawesome.com/license/free" target="_blank" rel="noopener noreferrer">Icons: Font Awesome Free</a><span class="about-where">CC BY 4.0</span></li>
++          </ul></section>
+           <section class="about-project"><h4>YuE2</h4><p class="about-what">the music model, by the Multimodal Art Projection team</p><ul class="about-links">
+             <li><a href="https://map-yue2.github.io/" target="_blank" rel="noopener noreferrer">Project page</a><span class="about-where">map-yue2.github.io</span></li>
+             <li><a href="https://github.com/multimodal-art-projection/YuE" target="_blank" rel="noopener noreferrer">Code and guides</a><span class="about-where">github · multimodal-art-projection/YuE</span></li>
+-- 
+2.43.0
+

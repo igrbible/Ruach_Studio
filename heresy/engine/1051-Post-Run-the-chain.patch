@@ -1,0 +1,211 @@
+From 90aab9f31f27f869a795c757c269c4ab97436890 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 13:54:18 -0600
+Subject: [PATCH 1051/1177] Post: Run the chain
+
+1054 (Viktor): one row above Post's steps runs them in order on Forge, each
+on the file the one before made: Debuzz (for every YuE2 take; off for an
+imported track) -> Upscale (optional, subtle/normal/high) -> Remaster (always,
+with the settings of the Remaster step: 432 Hz, LUFS, preset), then the
+checks on the final file: Artifacts, Spectrum; the lyrics heard on the take;
+stems. The page starts it and watches it step by step; closing the page stops
+nothing; a failed step says so and what was made before it stays.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  20 +++++++
+ tools/console/app.js            |   2 +-
+ tools/console/heresy-derived.js |  10 ++--
+ tools/console/heresy-post.js    |  91 +++++++++++++++++++++++++++++++-
+ tools/public/index.html.gz      | Bin 338695 -> 340877 bytes
+ 5 files changed, 118 insertions(+), 5 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index c6b6f1e..5f0644f 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2367,3 +2367,23 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .skip-btn .ui-ico { width: 20px; height: 20px; }
+ .pb-btn .ui-ico { width: 18px; height: 18px; }
+ .coll-act .ui-ico { width: 17px; height: 17px; }
++
++/* HERESY 1054: the chain in Post */
++.post-chain { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
++.pc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; }
++.pc-cap { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-right: 4px; }
++.pc-node { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--line); border-radius: var(--r-pill); }
++.pc-node.is-req { border-color: var(--amber-dim); }
++.pc-node em { font-style: normal; color: var(--muted); font-size: 12px; }
++.pc-node select, .pc-check select { width: auto; padding: 0 4px; font-size: 12px; }
++.pc-arrow { color: var(--dim); }
++.pc-then { color: var(--dim); font-size: 12px; margin-left: 6px; }
++.pc-check { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
++.pc-status { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12.5px; min-height: 0; }
++.pc-status:empty { display: none; }
++.pc-st { padding: 1px 8px; border-radius: var(--r-pill); background: var(--sunk); color: var(--dim); }
++.pc-st.is-running { color: var(--amber); }
++.pc-st.is-done { color: var(--good); }
++.pc-st.is-failed { color: var(--bad); }
++.pc-say { margin-left: 6px; color: var(--muted); }
++.pc-say.is-bad { color: var(--bad); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index fe0ab1d..b82dafb 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5739,7 +5739,7 @@
+   }
+   if (window.HeresyGloss) window.HeresyGloss.init({ seek: seekTake });   // HERESY 1011
+   if (window.HeresyInspect) window.HeresyInspect.init({ seek: seekTake });   // HERESY 1025
+-  if (window.HeresyPost) window.HeresyPost.init();   // HERESY 1029
++  if (window.HeresyPost) window.HeresyPost.init({ toast: toast });   // HERESY 1029; 1054 the chain
+   if (window.HeresyDerived) window.HeresyDerived.init({   // HERESY 1021
+     compare: function (path) {
+       var f = window.HeresyDerived.files().filter(function (x) { return x.source === path; })[0];
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 0ae3111..1c7d48f 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -207,8 +207,7 @@
+       .then(function () { $("dbRun").disabled = false; });
+   }
+ 
+-  function remaster() {
+-    if (!state.take) return;
++  function remasterSettings() {            // HERESY 1054: the form's settings, for the Remaster button and the chain
+     var levels = {};
+     Array.prototype.forEach.call(document.querySelectorAll("[data-rm-level]"), function (i) {
+       if (i.value.trim() !== "") levels[i.dataset.rmLevel] = parseFloat(i.value);
+@@ -219,6 +218,11 @@
+               deess: $("rmDeess").checked, deess_mode: $("rmDeessMode").value, hz432: $("rm432").checked,
+               loudnorm: $("rmLoud").checked, lufs: parseFloat($("rmLufs").value) || -14, tp: parseFloat($("rmTp").value) || -1,
+               formats: $("rmMp3").checked ? ["wav", "flac", "mp3"] : ["wav", "flac"] };
++    return s;
++  }
++  function remaster() {
++    if (!state.take) return;
++    var s = remasterSettings();
+     $("rmRun").disabled = true;
+     $("rmState").textContent = "sending to Forge…";
+     fetch("/lab/remaster?name=" + encodeURIComponent(state.take.name) + "&s=" + encodeURIComponent(JSON.stringify(s)))
+@@ -266,5 +270,5 @@
+     refresh();
+   }
+ 
+-  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh };
++  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings };
+ })();
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index b96e783..6d85686 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -48,9 +48,92 @@
+     window.dispatchEvent(new Event("resize"));             // a picture shown measures its new width
+   }
+ 
+-  function init() {
++  // ---- HERESY 1054: the chain (Viktor): Debuzz -> Upscale (optional) -> Remaster, then the checks;
++  // run on Forge as one job (POST /lab/chain), watched here; closing the page stops nothing.
++  var CHAIN_KEY = "yue2.chain", chain = { timer: 0, hooks: null, watching: "" };
++  function chainPrefs() { try { return JSON.parse(localStorage.getItem(CHAIN_KEY) || "{}"); } catch (e) { return {}; } }
++  function saveChainPrefs() {
++    var p = { strength: $("pcStrength").value, upscale: $("pcUpscale").checked, upMode: $("pcUpMode").value, inspect: $("pcInspect").checked,
++              spectrum: $("pcSpectrum").checked, gloss: $("pcGloss").checked, stems: $("pcStems").checked, stemsMode: $("pcStemsMode").value };
++    try { localStorage.setItem(CHAIN_KEY, JSON.stringify(p)); } catch (e) { /* private mode */ }
++  }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function chainMarkup() {
++    var p = chainPrefs(), box = document.createElement("section");
++    box.className = "post-chain"; box.id = "postChain";
++    box.innerHTML =
++      '<div class="pc-row"><strong class="pc-cap">Chain</strong>' +
++      '<label class="pc-node is-req" data-tip="The VAE frame buzz out: needed for every YuE2 take; off for a track imported from elsewhere"><input type="checkbox" id="pcDebuzz" checked /> Debuzz ' +
++        '<select id="pcStrength">' + [50, 60, 70, 80, 90, 100].map(function (v) { return '<option value="' + v / 100 + '"' + ((p.strength || "0.8") == v / 100 ? " selected" : "") + ">" + v + " %</option>"; }).join("") + "</select></label>" +
++      '<span class="pc-arrow">›</span><label class="pc-node"><input type="checkbox" id="pcUpscale"' + (p.upscale ? " checked" : "") + ' /> Upscale ' +
++        '<select id="pcUpMode">' + ["subtle", "normal", "high"].map(function (m) { return "<option" + (p.upMode === m ? " selected" : "") + ">" + m + "</option>"; }).join("") + "</select></label>" +
++      '<span class="pc-arrow">›</span><span class="pc-node is-req" data-tip="With the settings of the Remaster step below">Remaster <em id="pcRmSay"></em></span>' +
++      '<span class="pc-then">then</span>' +
++      '<label class="pc-check"><input type="checkbox" id="pcInspect"' + (p.inspect !== false ? " checked" : "") + " /> Artifacts</label>" +
++      '<label class="pc-check"><input type="checkbox" id="pcSpectrum"' + (p.spectrum ? " checked" : "") + " /> Spectrum</label>" +
++      '<label class="pc-check" data-tip="Whisper on the take: are the words the lyrics"><input type="checkbox" id="pcGloss"' + (p.gloss ? " checked" : "") + " /> Lyrics</label>" +
++      '<label class="pc-check"><input type="checkbox" id="pcStems"' + (p.stems ? " checked" : "") + ' /> Stems <select id="pcStemsMode"><option value="vocals"' + (p.stemsMode !== "four" ? " selected" : "") +
++        '>vocals</option><option value="four"' + (p.stemsMode === "four" ? " selected" : "") + ">four</option></select></label>" +
++      '<span class="spacer"></span><button type="button" class="btn primary small" id="pcRun">Run the chain</button></div>' +
++      '<div class="pc-status" id="pcStatus"></div>';
++    return box;
++  }
++  function paintRemasterSay() {
++    var D = window.HeresyDerived, s = D && D.remasterSettings ? D.remasterSettings() : null;
++    if (!s || !$("pcRmSay")) return;
++    $("pcRmSay").textContent = (s.hz432 === false ? "440" : "432") + " Hz · " + (s.loudnorm === false ? "no loudnorm" : s.lufs + " LUFS") + " · " + s.preset;
++  }
++  var MARK = { waiting: "·", running: "…", done: "✓", failed: "✕" };
++  var NAMES = { debuzz: "Debuzz", upscale: "Upscale", remaster: "Remaster", inspect: "Artifacts", spectrum: "Spectrum", gloss: "Lyrics", stems: "Stems" };
++  function paintChain(job) {
++    var box = $("pcStatus");
++    if (!box) return;
++    if (!job || job.status === "none") { box.innerHTML = ""; $("pcRun").disabled = false; return; }
++    box.innerHTML = job.steps.map(function (s) {
++      return '<span class="pc-st is-' + s.status + '" title="' + esc(s.error || s.file || "") + '">' + MARK[s.status] + " " + NAMES[s.step] + "</span>";
++    }).join('<span class="pc-arrow">›</span>') +
++      (job.status === "done" ? '<span class="pc-say">done' + (job.final ? ": the remaster is in the tree" : "") + "</span>" : "") +
++      (job.status === "failed" ? '<span class="pc-say is-bad">' + esc(job.error || "failed") + " · what was made before stays</span>" : "");
++    $("pcRun").disabled = job.status === "running";
++  }
++  function watchChain(name) {
++    clearTimeout(chain.timer);
++    chain.watching = name;
++    fetch("/lab/chain?name=" + encodeURIComponent(name)).then(function (r) { return r.json(); }).then(function (job) {
++      if (chain.watching !== name) return;
++      if (state.take && state.take.name === name) paintChain(job);
++      if (job.status === "running") { chain.timer = setTimeout(function () { watchChain(name); }, 2000); return; }
++      if (window.HeresyDerived) window.HeresyDerived.refresh();
++      if (job.status === "done" && chain.started === name) { chain.started = ""; chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain is done: " + job.steps.length + " steps"); }
++      if (job.status === "failed" && chain.started === name) { chain.started = ""; chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain stopped at " + (job.error || "a step"), "bad"); }
++    }).catch(function () { /* the lab will answer on the next take */ });
++  }
++  function runChain() {
++    if (!state.take) return;
++    saveChainPrefs();
++    var D = window.HeresyDerived, body = {
++      name: state.take.name, debuzz: $("pcDebuzz").checked, strength: parseFloat($("pcStrength").value),
++      upscale: $("pcUpscale").checked, upscale_mode: $("pcUpMode").value,
++      remaster: D && D.remasterSettings ? D.remasterSettings() : {},
++      inspect: $("pcInspect").checked, spectrum: $("pcSpectrum").checked, gloss: $("pcGloss").checked,
++      stems: $("pcStems").checked, stems_mode: $("pcStemsMode").value };
++    $("pcRun").disabled = true;
++    fetch("/lab/chain", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
++      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
++      .then(function (job) { chain.started = state.take.name; paintChain(job); watchChain(state.take.name); })
++      .catch(function (e) { $("pcRun").disabled = false; chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain did not start: " + e.message, "bad"); });
++  }
++
++  function init(hooks) {
++    chain.hooks = hooks || {};
+     var bar = $("postSteps");
+     if (!bar) return;
++    bar.parentNode.insertBefore(chainMarkup(), bar);
++    $("pcRun").addEventListener("click", runChain);
++    $("postChain").addEventListener("change", function (e) { if (e.target.id !== "pcDebuzz") saveChainPrefs(); });
++    $("postChain").addEventListener("mouseenter", paintRemasterSay);
++    if ($("remasterPanel")) { $("remasterPanel").addEventListener("change", paintRemasterSay); $("remasterPanel").addEventListener("input", paintRemasterSay); }
++    paintRemasterSay();
+     bar.innerHTML = STEPS.map(function (s, i) {
+       return (i ? '<span class="ps-arrow" aria-hidden="true">›</span>' : "") +
+         '<button type="button" role="tab" class="ps-step" data-step-panel="' + s.id + '"><span class="ps-mark">' + (i + 1) +
+@@ -84,6 +167,12 @@
+     state.take = take;
+     state.done = {};
+     paint();
++    if (take && $("pcDebuzz")) {                         // HERESY 1054: an imported track has no YuE2 buzz
++      $("pcDebuzz").checked = !/-import-/.test(take.name);
++      paintChain(null);
++      paintRemasterSay();
++      watchChain(take.name);
++    }
+   }
+ 
+   window.HeresyPost = { init: init, setTake: setTake, select: select, has: function (id) { return STEPS.some(function (s) { return s.id === id; }); } };
+-- 
+2.43.0
+

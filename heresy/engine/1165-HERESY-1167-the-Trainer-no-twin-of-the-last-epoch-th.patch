@@ -1,0 +1,114 @@
+From 8d8fc29d1eb78ef8a6ccd4c85aa0759ae9c7d72a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 23:51:48 -0600
+Subject: [PATCH 1165/1177] HERESY 1167: the Trainer: no twin of the last
+ epoch, the Runs column the window's height, the log at the page's foot
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, the night of 05.10.2026:
+· «У Тренера последний чекпоинт дублируется в списке. В каждой сессии»: the run's final file (no step in its name) is the
+  last epoch's twin; it is listed only when no numbered checkpoint has its step (lab/training.py).
+· «Колонку Runs вытяни по всей высоте страницы»: the column as tall as the window, however few runs.
+· «The log открывает новую вкладку. Вынеси это вниз в подвальный фрейм»: the log in a panel at the page's foot, its tail
+  following a live run every 3 s while open; ✕ or Esc closes it; Download keeps the whole file a click away.
+
+cdp-console 334/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         | 11 ++++++++++
+ tools/console/heresy-train.js | 41 +++++++++++++++++++++++++++++++++--
+ 2 files changed, 50 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index b542636..8c917c9 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3987,3 +3987,14 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .lib-toggle.lib-rate-f { display: inline-grid; place-items: center; padding-left: 7px; padding-right: 7px; }
+ .lib-toggle.lib-rate-f svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+ .lib-toggle.lib-rate-f[aria-pressed="true"] svg { fill: currentColor; fill-opacity: .25; }
++/* HERESY 1167 (Viktor: «Колонку Runs вытяни по всей высоте страницы»): as tall as the window, however few runs */
++.tr-side { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 80px); }
++/* the run's log at the page's foot (Viktor: «Вынеси это вниз в подвальный фрейм») */
++.tr-logdock { position: fixed; left: 16px; right: 16px; bottom: calc(var(--playbar-h, 60px) + 10px); z-index: 36; height: min(38vh, 380px);
++  display: flex; flex-direction: column; border: 1px solid var(--line-strong-a, var(--line-a)); border-radius: var(--r-md); background: var(--panel);
++  box-shadow: 0 -12px 40px -16px var(--shadow-lg); }
++.tr-logdock[hidden] { display: none; }
++.tr-logdock-head { display: flex; align-items: center; gap: 10px; padding: 8px 10px 6px 14px; border-bottom: 1px solid var(--line-a); }
++.tr-logdock-head .spacer { flex: 1; }
++.tr-logdock-name { font-size: 12px; }
++.tr-logdock-body { flex: 1; margin: 0; padding: 8px 14px 10px; overflow: auto; font-size: 12px; line-height: 1.45; white-space: pre; color: var(--muted); }
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index cb01d99..239378c 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -223,7 +223,7 @@
+     pop.style.position = "fixed"; pop.style.right = "auto"; pop.style.top = Math.round(box.bottom + 4) + "px";
+     pop.style.left = Math.max(8, Math.round(box.right - 190)) + "px";
+     pop.innerHTML = '<button type="button" role="menuitem" data-act="open">Telemetry</button>' +
+-      '<a role="menuitem" href="/lab/train/log?name=' + encodeURIComponent(r.name) + '" target="_blank" rel="noopener">The log</a>' +
++      '<button type="button" role="menuitem" data-act="log">The log</button>' +   // HERESY 1167: at the page's foot
+       '<button type="button" role="menuitem" data-act="' + (r.archived ? "unarchive" : "archive") + '">' + (r.archived ? "Out of the archive" : "Archive") + "</button>" +
+       (isLive(r) ? '<button type="button" role="menuitem" class="danger" data-act="stop">Stop…</button>'
+                  : '<button type="button" role="menuitem" class="danger" data-act="delete">Delete…</button>');
+@@ -235,7 +235,44 @@
+     setTimeout(function () { document.addEventListener("click", closeMenu, { once: true }); }, 0);
+   }
+   function closeMenu() { Array.prototype.forEach.call(document.querySelectorAll(".tr-menu"), function (m) { m.remove(); }); }
++  // HERESY 1167 (Viktor: «The log открывает новую вкладку. Вынеси это вниз в подвальный фрейм»): the run's log in a panel at
++  // the page's foot, its tail following a live run (every 3 s, only while it is open); ✕ or Esc closes it
++  var logDock = null;
++  function showLog(name) {
++    if (!logDock) {
++      logDock = document.createElement("section");
++      logDock.className = "tr-logdock";
++      logDock.innerHTML = '<div class="tr-logdock-head"><b>The log</b> <span class="mono dim tr-logdock-name" translate="no"></span>' +
++        '<span class="spacer"></span><a class="btn ghost small tr-logdock-dl" download>Download</a>' +
++        '<button type="button" class="btn ghost small tr-logdock-x" aria-label="Close" data-tip="Close (Esc)">✕</button></div>' +
++        '<pre class="mono tr-logdock-body"></pre>';
++      document.body.appendChild(logDock);
++      logDock.querySelector(".tr-logdock-x").addEventListener("click", hideLog);
++      document.addEventListener("keydown", function (e) { if (e.key === "Escape" && logDock && !logDock.hidden) hideLog(); });
++    }
++    logDock.hidden = false;
++    logDock.dataset.run = name;
++    logDock.querySelector(".tr-logdock-name").textContent = name;
++    logDock.querySelector(".tr-logdock-dl").href = "/lab/train/log?name=" + encodeURIComponent(name);
++    logDock.querySelector(".tr-logdock-dl").setAttribute("download", name + ".log");
++    pullLog();
++  }
++  function hideLog() { if (logDock) { logDock.hidden = true; clearTimeout(logDock.timer); } }
++  function pullLog() {
++    if (!logDock || logDock.hidden) return;
++    var name = logDock.dataset.run, body = logDock.querySelector(".tr-logdock-body");
++    clearTimeout(logDock.timer);
++    fetch("/lab/train/log?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.text() : ""; }).then(function (text) {
++      if (!logDock || logDock.dataset.run !== name) return;
++      var lines = text.split(/\r?\n|\r/).filter(function (l) { return l.trim(); }), atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 8;
++      body.textContent = lines.slice(-400).join("\n") || "(the log is empty)";
++      if (atEnd) body.scrollTop = body.scrollHeight;
++      var r = runs().filter(function (x) { return x.name === name; })[0];
++      if (r && isLive(r)) logDock.timer = setTimeout(pullLog, 3000);
++    }).catch(function () { logDock.timer = setTimeout(pullLog, 6000); });
++  }
+   function act(name, what) {
++    if (what === "log") return showLog(name);        // HERESY 1167
+     if (what === "open") return openRun(name);
+     if (what === "archive" || what === "unarchive")
+       return api("/train/archive", { name: name, archived: what === "archive" }).then(function () { toast(what === "archive" ? name + " is archived" : name + " is back from the archive"); load(); }).catch(function (e) { toast(e.message, true); });
+@@ -359,7 +396,7 @@
+             .sort(function (x, y) { return (y.dataset === r.dataset) - (x.dataset === r.dataset); })
+             .map(function (x) { return '<option value="' + esc(x.name) + '"' + (x.name === state.cmp ? " selected" : "") + ">" + esc(x.name) + (x.dataset === r.dataset ? " \u00b7 same set" : "") + "</option>"; }).join("") + "</select>" +
+           (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
+-          '<a class="btn ghost small" href="/lab/train/log?name=' + encodeURIComponent(r.name) + '" target="_blank" rel="noopener">The log</a>' +
++          '<button type="button" class="btn ghost small" data-act="log" data-run="' + esc(r.name) + '">The log</button>' +   // HERESY 1167
+           '<button type="button" class="btn ghost small" data-menu="' + esc(r.name) + '" aria-label="More">⋯</button></div></div>' +
+       (r.note ? '<p class="row-hint tr-note" translate="no">' + esc(r.note) + "</p>" : "") +
+       '<div class="tr-prog' + (live ? " is-live" : "") + '"><div class="tr-pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+-- 
+2.43.0
+

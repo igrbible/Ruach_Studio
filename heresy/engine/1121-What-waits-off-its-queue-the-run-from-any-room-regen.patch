@@ -1,0 +1,989 @@
+From af935d026940a153bc39e88ddad27484535b13d7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 19:58:09 -0600
+Subject: [PATCH 1121/1177] What waits, off its queue; the run from any room;
+ regenerations seen at once (1165)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The engine's lamp opens what runs and what waits: this page's songs, the regenerations the lab queued (the engine's
+log names a run only when it begins) and the lab's work on the cards; a waiting one comes off its queue by its ✕,
+pressed twice; the list rebuilt only when what it holds changes (a button replaced under the pointer loses its
+click). The context menu closes only on a scroll of what it was opened over (the log dock following its lines took
+it away). The player's dot goes to the Creator before it shows the run or the take. The Librarian is read again when
+the lab says it filed a regenerated or refined take. The artwork overlay's play is the cards' hollow one; fresh
+cards' outline 1pt.
+
+Translation groundwork: plural forms in a catalog entry, {#N} parts that take a number only, parts looked up in
+turn; workspace, LoRA, font and repository names kept as typed (an <option> without a value is its own text); the
+LoRA and VAE tiles translated piece by piece and drawn again when the language changes; the Trainer's epoch tips.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               |  36 +++++-
+ tools/console/app.js                | 172 +++++++++++++++++++++++++---
+ tools/console/heresy-collection.js  |  48 ++++----
+ tools/console/heresy-i18n.js        |  65 +++++++++--
+ tools/console/heresy-instruments.js |  12 +-
+ tools/console/heresy-menu.js        |  14 ++-
+ tools/console/heresy-spectrum.js    |   2 +-
+ tools/console/heresy-train.js       |   8 +-
+ tools/console/index.html            |  36 +++---
+ tools/console/loras.js              |  60 +++++-----
+ tools/console/vaes.js               |  23 ++--
+ 11 files changed, 362 insertions(+), 114 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index cd623f8..b1923fe 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2180,7 +2180,7 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-band { position: fixed; z-index: 60; pointer-events: none; border: 1px solid var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); border-radius: 2px; }
+ /* HERESY 1162 (Viktor: «лёгкой пунктирной обводкой… снимать её при первом же проигрывании… визуально видно, что свежий»):
+    a take not heard yet, a new one or a regenerated one, wears a light dashed line until its first play */
+-.coll-card.is-fresh, .take.is-fresh { outline: 1.5px dashed color-mix(in srgb, var(--amber) 55%, transparent); outline-offset: -3px; }
++.coll-card.is-fresh, .take.is-fresh { outline: 1pt dashed color-mix(in srgb, var(--amber) 55%, transparent); outline-offset: -3px; }   /* 1165: 1pt (Viktor: «очень жирная кайма»; 1.5 px was) */
+ .coll-badge.rg { border-style: dashed; color: var(--amber); }
+ /* HERESY 1162: a hidden take's card dimmed; its class not .is-hidden, the page's display:none !important (it made Hidden show nothing) */
+ .coll-card.is-hidden-take { opacity: .65; }
+@@ -3467,3 +3467,37 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ /* HERESY 1148: the DAW way is experimental, and says so beside its heading */
+ .dw-exp { margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 500; letter-spacing: .04em; vertical-align: 2px;
+   color: var(--amber); background: color-mix(in oklab, var(--amber) 12%, transparent); }
++
++/* HERESY 1165 (Viktor: «В баре тултипом под красную/зелёную — вывод списка очереди, и возможность удалить из очереди…»):
++   what runs and what waits, under the engine's lamp; a waiting one off its queue by its ✕, pressed twice */
++.topbar .engine-chip, .engine-chip { cursor: pointer; border-radius: var(--r-sm); }
++.engine-chip:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
++.q-panel { position: fixed; z-index: 95; width: min(460px, calc(100vw - 16px)); max-height: min(70vh, 560px); overflow: auto; padding: 8px;
++  border: 1px solid var(--line-strong-a); border-radius: var(--r-md); background: var(--panel); box-shadow: 0 12px 34px var(--shadow-lg); font-size: 13px; }
++.q-panel[hidden] { display: none; }
++.q-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 2px 4px 8px; border-bottom: 1px solid var(--line); }
++.q-head b { flex: none; font-weight: 600; }
++.q-detail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; }
++.q-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 1px; }
++.q-row { display: grid; grid-template-columns: 8px auto minmax(0, 1fr) auto 26px; align-items: center; gap: 8px; min-height: 28px; padding: 2px 2px 2px 6px; border-radius: var(--r-sm); }
++.q-row:hover { background: var(--hover); }
++.q-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
++.q-row.is-run .q-dot { background: var(--good); animation: lamp-gpu 1.3s ease-in-out infinite; }
++.q-row.is-wait .q-dot { background: var(--amber); }
++.q-what { color: var(--muted); font-size: 12px; white-space: nowrap; }
++.q-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.q-state { color: var(--dim); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
++.q-off { justify-self: end; min-width: 26px; height: 24px; padding: 0 6px; border: 1px solid transparent; border-radius: var(--r-sm); background: none;
++  color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
++.q-off:hover { color: var(--bad); border-color: var(--line-strong-a); }
++.q-off.is-armed { color: #fff; background: var(--bad); border-color: var(--bad); }
++.q-row:has(.q-off.is-armed) { grid-template-columns: 8px auto minmax(0, 1fr) auto auto; }
++.q-row.is-gone { opacity: .55; }
++.q-row.is-gone .q-name { text-decoration: line-through; }
++.q-empty { padding: 6px 4px; color: var(--dim); font-size: 12px; }
++.q-hint { margin: 8px 4px 2px; color: var(--dim); font-size: 12px; line-height: 1.4; }
++@media (prefers-reduced-motion: reduce) { .q-row.is-run .q-dot { animation-duration: 2.6s; } }
++
++/* HERESY 1165: the overlay's play is the cards' hollow one, light on the overlay's dark in either theme */
++.art-cap .coll-play { width: 34px; height: 34px; color: #f1ece4; }
++.art-cap .coll-play:hover, .art-cap .coll-play.is-playing { color: #fff; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f5e866a..0f52b55 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -132,7 +132,7 @@
+     if (d < 60) return "just now";
+     if (d < 3600) return Math.floor(d / 60) + " min ago";
+     if (d < 86400) return Math.floor(d / 3600) + " h ago";
+-    return new Date(epoch * 1000).toLocaleDateString();
++    return new Date(epoch * 1000).toLocaleDateString(document.documentElement.lang || undefined);   // HERESY 1165: the page's language
+   }
+ 
+   function toast(message, kind) {
+@@ -2575,27 +2575,162 @@
+     lamp.classList.toggle("is-gpu", s === "busy" || s === "working" || (s === "loading" && !!live));
+     $("engineState").textContent = state;
+     $("engineDetail").textContent = detail;
+-    var rows = (act.running || []).map(function (r) {
+-      return "\u2022 " + r.what + " \u00b7 " + r.name + (r.gpu != null ? " \u00b7 " + (r.gpu === "cpu" ? "CPU" : "GPU " + r.gpu) : "") +
+-        (r.steps ? " \u00b7 " + (r.step || 0) + "/" + r.steps : "") + (r.status === "queued" ? " \u00b7 waits for a card" :
+-        r.since ? " \u00b7 " + clock(Date.now() / 1000 - r.since) : "");
+-    });
+-    $("engineDetail").closest(".engine-chip").dataset.tip = $("engineState").textContent + " \u00b7 " + detail +   // HERESY 1017
+-      (rows.length ? "\n\nOn the cards now:\n" + rows.join("\n") : "");
++    // HERESY 1165: its words, and what runs and waits, are the queue panel's (below), no longer a tip
++    if (typeof QP !== "undefined" && QP) { QP.state = state; QP.detail = detail; paintQueue(); }
+   }
+ 
+   // HERESY 1157: the lab's work, as it starts and ends, into the Server log ("[Lab] …"), and what runs now for the lamp
+-  var ACT = { since: 0, running: [], busy: false };
++  var ACT = { since: 0, running: [], queue: [], busy: false, reloadTimer: 0 };
+   function pollActivity() {
+     if (ACT.busy) return;
+     ACT.busy = true;
++    var first = ACT.since === 0, filed = false;
+     api("/lab/activity?since=" + ACT.since).then(function (d) {
+-      (d && d.lines || []).forEach(function (l) { ACT.since = Math.max(ACT.since, l[0]); addLogLine("[Lab] " + l[1], false); });
++      (d && d.lines || []).forEach(function (l) {
++        ACT.since = Math.max(ACT.since, l[0]); addLogLine("[Lab] " + l[1], false);
++        if (/^\S+ (regenerate · .* → |refined · .* · into )/.test(l[1])) filed = true;   // HERESY 1165: the lab moved takes
++      });
+       if (d && d.seq < ACT.since) ACT.since = 0;                 // the lab restarted: its count began again
+       ACT.running = (d && d.running) || [];
++      ACT.queue = (d && d.queue) || [];                           // HERESY 1165: the regenerations the engine has not begun
++      if (filed && !first) librarianSoon();
+       paintEngine();
+-    }).catch(function () { ACT.running = []; }).then(function () { ACT.busy = false; });
++    }).catch(function () { ACT.running = []; ACT.queue = []; }).then(function () { ACT.busy = false; });
++  }
++  // HERESY 1165 (Viktor: «В Instrumental Probe FAILED, to REGENERATE какая-то аномалия. Не вижу, или что перегенерилось»):
++  // the lab files a regenerated take (and what the Refiner made) a moment after the engine ends it; the page read its
++  // takes again then, not the workspaces, so the old card stayed where the new one stands. Read again when the lab says it
++  // filed, never under a title being typed
++  function librarianSoon() {
++    clearTimeout(ACT.reloadTimer);
++    ACT.reloadTimer = setTimeout(function again() {
++      var a = document.activeElement;
++      if (document.querySelector(".coll-title-edit") || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest("#view-collection"))) {
++        ACT.reloadTimer = setTimeout(again, 1500);
++        return;
++      }
++      if (window.HeresyCollection) window.HeresyCollection.reload();
++      refreshLibrary().catch(function () {});
++    }, 300);
++  }
++
++  // HERESY 1165 (Viktor: «В баре тултипом под красную/зелёную — вывод списка очереди, и возможность удалить из очереди то
++  // или иное ожидающее действо»): under the engine's lamp, what runs and what waits: the songs (this page's own, and the
++  // regenerations the lab queued, which the engine's log names only when they begin) and the lab's work on the cards. A
++  // waiting one comes off its queue by its ✕, pressed twice (the first press asks: a slip would cost a render). It opens
++  // on hover or a click and stays while the pointer is on it, or until a click elsewhere when it was clicked open. The
++  // list is built again only when what it holds changes, the times in place: a button replaced under the pointer every
++  // half second would lose its click.
++  var QP = { el: null, pinned: false, hideTimer: 0, armed: "", armTimer: 0, gone: {}, built: "", state: "", detail: "" };
++  function queueRows() {
++    var act = (typeof ACT !== "undefined" && ACT) || {}, rows = [];
++    STATE.jobs.filter(function (j) { return isLive(j) && !j.provisional; }).forEach(function (j) {
++      var run = j.status !== "queued", stage = run ? currentStage(j) : null;
++      rows.push({ key: "engine:" + j.id, what: j.kind === "transcribe" ? "Transcription" : j.request && j.request.plan ? "Score plan" : "Song",
++                  name: j.title || j.id, run: run,
++                  state: run ? [stage ? stage.label : j.status === "saving" ? "Saving" : "Starting", j.started ? clock((Date.now() - j.started) / 1000) : ""] : ["waits"] });
++    });
++    (act.queue || []).forEach(function (q) {
++      if (STATE.jobs.some(function (j) { return j.id === q.job; })) return;          // this page knows it already
++      rows.push({ key: "engine:" + q.job, what: "Regenerate", name: q.old, run: false, state: ["waits"] });
++    });
++    (act.running || []).forEach(function (r) {
++      rows.push({ key: "lab:" + r.key, what: r.what, name: r.name, run: r.status !== "queued",
++                  state: r.status === "queued" ? ["waits for a card"]
++                    : [r.gpu != null ? (r.gpu === "cpu" ? "CPU" : "GPU " + r.gpu) : "", r.steps ? (r.step || 0) + "/" + r.steps : "", r.since ? clock(Date.now() / 1000 - r.since) : ""] });
++    });
++    rows.forEach(function (r) { r.state = r.state.filter(Boolean); });
++    return rows.sort(function (a, b) { return (b.run ? 1 : 0) - (a.run ? 1 : 0); });   // what runs first, then the waiting in their order
++  }
++  function queuePieces(list) { return list.map(function (p) { return "<span>" + escape(p) + "</span>"; }).join(" \u00b7 "); }
++  function paintQueue() {
++    if (!QP.el || QP.el.hidden) return;
++    var rows = queueRows();
++    QP.el.querySelector(".q-head").innerHTML = "<b>" + escape(QP.state) + "</b>" + (QP.detail ? '<span class="q-detail">' + queuePieces(QP.detail.split(" \u00b7 ")) + "</span>" : "");
++    var built = rows.map(function (r) { return [r.key, r.run, !!QP.gone[r.key], QP.armed === r.key, r.what, r.name].join("|"); }).join("\n");
++    var list = QP.el.querySelector(".q-list");
++    if (built !== QP.built) {
++      QP.built = built;
++      list.innerHTML = rows.length ? rows.map(function (r) {
++        var gone = !!QP.gone[r.key], armed = QP.armed === r.key;
++        return '<li class="q-row' + (r.run ? " is-run" : " is-wait") + (gone ? " is-gone" : "") + '" data-q="' + escape(r.key) + '">' +
++          '<span class="q-dot" aria-hidden="true"></span><span class="q-what">' + escape(r.what) + "</span>" +
++          '<span class="q-name" translate="no" title="' + escape(r.name) + '">' + escape(r.name) + '</span><span class="q-state"></span>' +
++          (r.run || gone ? "<span></span>" : '<button type="button" class="q-off' + (armed ? " is-armed" : "") + '" data-q-off="' + escape(r.key) + '" aria-label="' +
++            (armed ? "Press again to take it off" : "Take it off the queue") + '">' + (armed ? "Take it off?" : "\u2715") + "</button>") + "</li>";
++      }).join("") : '<li class="q-empty">Nothing runs and nothing waits.</li>';
++    }
++    rows.forEach(function (r) {
++      var cell = list.querySelector('[data-q="' + (window.CSS && CSS.escape ? CSS.escape(r.key) : r.key) + '"] .q-state');
++      var html = QP.gone[r.key] ? "<span>taken off</span>" : queuePieces(r.state);
++      if (cell && cell.innerHTML !== html) cell.innerHTML = html;
++    });
+   }
++  function takeOff(key) {
++    if (QP.armed !== key) {                                       // the first press asks
++      QP.armed = key;
++      clearTimeout(QP.armTimer);
++      QP.armTimer = setTimeout(function () { QP.armed = ""; paintQueue(); }, 4000);
++      return paintQueue();
++    }
++    QP.armed = "";
++    QP.gone[key] = 1;
++    paintQueue();
++    var kind = key.split(":")[0], id = key.slice(kind.length + 1);
++    (kind === "engine" ? post("/job?id=" + encodeURIComponent(id) + "&cancel=1") : post("/lab/jobs/cancel", { key: id })).then(function () {
++      toast("Taken off the queue");
++      if (kind === "engine") pollJobs(); else pollActivity();
++    }).catch(function (e) { delete QP.gone[key]; paintQueue(); toast(e.message, "bad"); });
++  }
++  function placeQueue() {
++    var chip = $("engineLamp").closest(".engine-chip"), r = chip.getBoundingClientRect(), w = QP.el.offsetWidth;
++    QP.el.style.top = Math.round(r.bottom + 6) + "px";
++    QP.el.style.left = Math.round(Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8))) + "px";
++  }
++  function queueOpen(pin) {
++    if (!QP.el) {
++      QP.el = document.createElement("div");
++      QP.el.id = "queuePanel";
++      QP.el.className = "q-panel";
++      QP.el.setAttribute("role", "dialog");
++      QP.el.setAttribute("aria-label", "What runs and what waits");
++      QP.el.hidden = true;
++      QP.el.innerHTML = '<div class="q-head"></div><ul class="q-list"></ul>' +
++        '<p class="q-hint">A waiting one comes off its queue with its \u2715, pressed twice. What runs stops where it is shown: a song in its run, a training in the Trainer.</p>';
++      document.body.appendChild(QP.el);
++      QP.el.addEventListener("mouseenter", function () { clearTimeout(QP.hideTimer); });
++      QP.el.addEventListener("mouseleave", function () { if (!QP.pinned) queueCloseSoon(); });
++      QP.el.addEventListener("click", function (e) { var b = e.target.closest("[data-q-off]"); if (b) takeOff(b.dataset.qOff); });
++    }
++    clearTimeout(QP.hideTimer);
++    if (pin) QP.pinned = true;
++    QP.el.hidden = false;
++    QP.built = "";
++    paintQueue();
++    placeQueue();
++    $("engineLamp").closest(".engine-chip").setAttribute("aria-expanded", "true");
++  }
++  function queueCloseSoon() { clearTimeout(QP.hideTimer); QP.hideTimer = setTimeout(queueClose, 300); }
++  function queueClose() {
++    if (!QP.el || QP.el.hidden) return;
++    QP.el.hidden = true; QP.pinned = false; QP.armed = "";
++    $("engineLamp").closest(".engine-chip").setAttribute("aria-expanded", "false");
++  }
++  (function () {
++    var chip = $("engineLamp").closest(".engine-chip");
++    chip.setAttribute("tabindex", "0");
++    chip.setAttribute("role", "button");
++    chip.setAttribute("aria-haspopup", "dialog");
++    chip.setAttribute("aria-expanded", "false");
++    chip.setAttribute("aria-label", "What runs and what waits");
++    chip.addEventListener("mouseenter", function () { queueOpen(false); });
++    chip.addEventListener("mouseleave", function () { if (!QP.pinned) queueCloseSoon(); });
++    chip.addEventListener("click", function () { if (QP.el && !QP.el.hidden && QP.pinned) queueClose(); else queueOpen(true); });
++    chip.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); chip.click(); } });
++    document.addEventListener("mousedown", function (e) { if (QP.el && !QP.el.hidden && !e.target.closest("#queuePanel, .engine-chip")) queueClose(); }, true);
++    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && QP.el && !QP.el.hidden) queueClose(); });
++    window.addEventListener("resize", function () { if (QP.el && !QP.el.hidden) placeQueue(); });
++  })();
+   setInterval(function () { if (document.visibilityState === "visible") pollActivity(); }, 3000);
+   setTimeout(pollActivity, 1500);
+ 
+@@ -3940,7 +4075,7 @@
+     back.className = "hd-back art-back";
+     back.innerHTML = '<figure class="art-fig" role="dialog" aria-modal="true" aria-label="The artwork" tabindex="-1">' +
+       '<img class="art-img" alt="" draggable="false" />' +
+-      '<figcaption class="art-cap"><button type="button" class="pb-btn art-play" aria-label="Play"></button>' +
++      '<figcaption class="art-cap"><button type="button" class="coll-play art-play" aria-label="Play"></button>' +
+       '<span class="art-title"></span><span class="art-count"></span>' +
+       '<button type="button" class="pb-btn art-close" aria-label="Close" data-tip="Close (Esc)">✕</button></figcaption>' +
+       '<p class="art-guess" hidden>≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.</p></figure>' +
+@@ -3952,7 +4087,9 @@
+     function paintPlay() {
+       var mine = STATE.playerTake && STATE.playerTake.name === shown() && !audio.paused;
+       var b = back.querySelector(".art-play");
+-      b.textContent = mine ? "❚❚" : "▶";
++      // HERESY 1165 (Viktor: «В оверлее картинок сделай такие же эстетичные полые кнопки воспроизведения как и везде»)
++      b.innerHTML = window.HeresyIcons ? window.HeresyIcons.ui(mine ? "pause" : "play") : (mine ? "❚❚" : "▶");
++      b.classList.toggle("is-playing", !!mine);
+       b.setAttribute("aria-label", mine ? "Pause" : "Play");
+     }
+     function paint() {
+@@ -4204,10 +4341,12 @@
+     pill.dataset.tip = tip;
+     $("statusText").textContent = text;
+   }
++  // HERESY 1165 (Viktor: «Кликание по кружочку… на регенерации как минимум не работает»): the run and the take are shown
++  // in the Creator; from another room the click showed them there, unseen
+   $("statusPill").addEventListener("click", function () {
+     var s = this.dataset.s;
+-    if ((s === "rendering" || s === "queued") && STATE.running) $("backToRun").click();
+-    else if ((s === "playing" || s === "paused") && STATE.playerTake) openTake(STATE.playerTake.name);
++    if ((s === "rendering" || s === "queued") && STATE.running) { if (document.body.dataset.tab !== "create") setTab("create"); $("backToRun").click(); }
++    else if ((s === "playing" || s === "paused") && STATE.playerTake) { if (document.body.dataset.tab !== "create") setTab("create"); openTake(STATE.playerTake.name); }
+   });
+   audio.addEventListener("timeupdate", function () {
+     $("timeNow").textContent = clock(audio.currentTime);
+@@ -4659,7 +4798,7 @@
+     var scored = STATE.takes.filter(function (t) { return t.has_score; });
+     var current = $("coverTake").value;
+     $("coverTake").innerHTML = scored.length
+-      ? scored.map(function (t) { return '<option value="' + escape(t.name) + '">' + escape(displayTitle(t)) + "</option>"; }).join("")
++      ? scored.map(function (t) { return '<option value="' + escape(t.name) + '" translate="no">' + escape(displayTitle(t)) + "</option>"; }).join("")   // 1165: titles are data
+       : '<option value="">no take has a score yet</option>';
+     if (current && scored.some(function (t) { return t.name === current; })) $("coverTake").value = current;
+     $("coverFromTake").disabled = !scored.length;
+@@ -5521,6 +5660,7 @@
+     var option = document.createElement("option");
+     option.value = family;
+     option.textContent = label;
++    if (family && label === family) option.setAttribute("translate", "no");   // HERESY 1165: a font's name; "(default)" still translates
+     if (family) option.style.fontFamily = JSON.stringify(family) + ", sans-serif";
+     return option;
+   }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 62040ca..a654ed0 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -55,6 +55,7 @@
+   function wsParts(w) { return String(w).split(SEP); }
+   function wsLeaf(w) { var p = wsParts(w); return p[p.length - 1]; }
+   var SOURCED = "Sourced for Regeneration";      // HERESY 1162: a section of the replaced, not shown in its parent
++  var STUDIO_SECTIONS = { "Sourced for Regeneration": 1, "Refined": 1 };   // HERESY 1165: the sections the studio names (they translate)
+   function inTree(r, place) {
+     return r.workspaces.some(function (w) { return w === place || (w.indexOf(place + SEP) === 0 && wsLeaf(w) !== SOURCED); });
+   }
+@@ -103,8 +104,9 @@
+         for (var i = from; i <= parts.length; i++) { var a = parts.slice(0, i).join(SEP); if (!once[a]) { once[a] = 1; perWs[a] = (perWs[a] || 0) + 1; } }
+       });
+     });
+-    var item = function (key, label, n) {
+-      return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + '" data-place="' + esc(key) + '"><span>' + esc(label) +
++    // HERESY 1165: a workspace's name is the user's, kept as typed in every language; the studio's own places translate
++    var item = function (key, label, n, own) {
++      return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + '" data-place="' + esc(key) + '"><span' + (own ? ' translate="no"' : "") + ">" + esc(label) +
+         '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
+     };
+     var pinAll = pinnedAll(), pinN = state.rows.filter(function (r) { return pinAll[r.name] && !r.hidden; }).length;
+@@ -115,7 +117,7 @@
+         var lk = (state.locks || {})[w] || {}, lock = lk.workspace || lk.tracks ?   // HERESY 1070
+           '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "";
+         var depth = wsParts(w).length;               // a section: its own name, indented under its parent (1161)
+-        return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : ""))
++        return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0, depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : ""))
+           .replace('<span class="coll-n">', lock + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">');
+       }).join("") +
+       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
+@@ -148,6 +150,8 @@
+   }
+ 
+   function ico(name) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(name) : ""; }   // HERESY 1051
++  // HERESY 1165: the plan mode by the name the form gives it (the card said its raw value, off), so it reads and translates
++  function cotWord(c) { return { off: "direct", full: "full plan", melody: "melody only" }[c] || c; }
+   function badge(text, cls) { return '<span class="coll-badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
+ 
+   // HERESY 1082: the Librarian's marks for a take in the Creator's column: derived, workspaces, like, dislike, note
+@@ -179,7 +183,8 @@
+         '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
+         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
+         '<button type="button" class="coll-ren" data-ren="' + esc(r.name) + '" title="Rename" aria-label="Rename">✎</button></div>' +
+-        '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
++        // HERESY 1165: each piece its own text, so the words among the numbers translate (heresy-i18n.js matches whole texts)
++        '<div class="coll-meta"><span>' + esc(r.created ? ago(r.created) : "") + "</span>" + (r.seconds ? " · <span>" + clock(r.seconds) + "</span>" : "") + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
+         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+         r.workspaces.map(function (w) { return badge(w, "w"); }).join("") +
+         // HERESY 1162: what it was made again from, on its card
+@@ -199,7 +204,10 @@
+     }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+     // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
+     var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
+-    $("collWhere").textContent = " \u203a " + (placeName || state.place);
++    // HERESY 1165: the studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
++    $("collWhere").innerHTML = " \u203a " + (placeName ? "<span>" + esc(placeName) + "</span>" : wsParts(state.place).map(function (p, i) {
++      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>";
++    }).join(SEP));
+     var inPlace = state.rows.filter(function (r) {
+       if (state.place === "__fav") return r.favorite && !r.hidden;
+       if (state.place === "__pinned") return !!pinnedAll()[r.name] && !r.hidden;
+@@ -229,8 +237,8 @@
+     el.innerHTML = list.length ? list.map(function (r) {
+       var on = now.name === r.name && now.playing;
+       return '<div class="coll-pin" data-name="' + esc(r.name) + '"><button type="button" class="coll-play' + (on ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (on ? "Pause" : "Play") + '">' + ico(on ? "pause" : "play") + "</button>" +
+-        '<div class="coll-pin-body"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + '</span><span class="coll-meta">' + esc(state.hooks.ago(r.created)) +
+-        (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + "</span></div>" +
++        '<div class="coll-pin-body"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + '</span><span class="coll-meta"><span>' + esc(state.hooks.ago(r.created)) + "</span>" +
++        (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + "</span></div>" +
+         '<button type="button" class="coll-unpin" data-unpin="' + esc(r.name) + '" aria-label="Unpin" data-tip="Unpin">\u00d7</button></div>';
+     }).join("") : '<p class="row-hint coll-pins-hint">' + (state.place === "__pinned" ? "Every take pinned in any workspace is below; each workspace shows its own four in this strip."
+       : "Pin up to four takes of this place here: right-click a take \u2192 Pin here.") + '</p>';
+@@ -263,9 +271,9 @@
+     $("collPins").hidden = !!n;
+     if (!n) paintPins();
+     $("collSelCount").textContent = n + " selected";
+-    $("collWsMove").innerHTML = '<option value="">Move to workspace…</option>' + state.ws.filter(function (w) { return w !== state.place; }).map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
++    $("collWsMove").innerHTML = '<option value="">Move to workspace…</option>' + state.ws.filter(function (w) { return w !== state.place; }).map(function (w) { return '<option translate="no">' + esc(w) + "</option>"; }).join("") +
+       '<option value="__new">+ a new one…</option>';
+-    $("collWsPick").innerHTML = '<option value="">Add to workspace…</option>' + state.ws.map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
++    $("collWsPick").innerHTML = '<option value="">Add to workspace…</option>' + state.ws.map(function (w) { return '<option translate="no">' + esc(w) + "</option>"; }).join("") +
+       '<option value="__new">+ a new one…</option>';
+     $("collHide").textContent = state.place === "__hidden" ? "Show again" : "Hide";
+     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
+@@ -274,7 +282,7 @@
+   function paintTrash() {
+     var clock = state.hooks.clock;
+     $("collTrashDays").value = String(state.trashDays || 0);
+-    $("collWhere").textContent = " \u203a Trash";
++    $("collWhere").innerHTML = " \u203a <span>Trash</span>";   // HERESY 1165: the word its own text
+     $("collNote").textContent = state.trash.length + " in the trash · " + (state.trash.reduce(function (s, i) { return s + i.bytes; }, 0) / 1e9).toFixed(2) + " GB";
+     $("collGrid").className = "coll-grid list";
+     var nsel = Object.keys(state.tsel).length;             // HERESY 1058: the button says what it will do
+@@ -284,8 +292,8 @@
+     $("collGrid").innerHTML = state.trash.length ? state.trash.map(function (it) {
+       var key = it.day + "/" + it.name, sel = !!state.tsel[key];
+       return '<article class="coll-card' + (sel ? " is-sel" : "") + '"><label class="coll-check"><input type="checkbox" data-tsel="' + esc(key) + '"' + (sel ? " checked" : "") + " /></label>" +
+-        '<div class="coll-body"><div class="coll-title">' + esc(it.title) + '</div><div class="coll-meta">in the trash since ' + esc(it.day) +
+-        (it.seconds ? " · " + clock(it.seconds) : "") + " · " + (it.bytes / 1e6).toFixed(0) + " MB</div></div></article>";
++        '<div class="coll-body"><div class="coll-title" translate="no">' + esc(it.title) + '</div><div class="coll-meta"><span>in the trash since ' + esc(it.day) + "</span>" +
++        (it.seconds ? " · <span>" + clock(it.seconds) + "</span>" : "") + " · <span>" + (it.bytes / 1e6).toFixed(0) + " MB</span></div></div></article>";
+     }).join("") : '<p class="row-hint coll-empty">The trash is empty.</p>';
+   }
+ 
+@@ -383,7 +391,7 @@
+     var sel = $("wsCurrent");
+     if (!sel) return;
+     var cur = current();
+-    sel.innerHTML = '<option value="">All Workspaces</option>' + state.ws.map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
++    sel.innerHTML = '<option value="">All Workspaces</option>' + state.ws.map(function (w) { return '<option translate="no">' + esc(w) + "</option>"; }).join("") +
+       '<option value="__new">+ New workspace\u2026</option>';
+     sel.value = cur;
+     sel.closest(".ws-current").classList.toggle("is-set", !!cur);
+@@ -929,8 +937,8 @@
+     requestOf(name).then(function (req) {
+       if (peekFor !== name) return;
+       var box = $("collPeek"), style = String(req.style || "");
+-      box.innerHTML = '<div class="peek-title">' + esc(r.title) + '</div><div class="coll-meta">' + esc(state.hooks.ago(r.created)) +
+-        (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + (req.cot ? " \u00b7 " + esc(req.cot) : "") + "</div>" +
++      box.innerHTML = '<div class="peek-title">' + esc(r.title) + '</div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created)) + "</span>" +
++        (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (req.cot ? " \u00b7 <span>" + esc(cotWord(req.cot)) + "</span>" : "") + "</div>" +
+         (style ? '<div class="peek-cap">Style</div><div class="peek-style">' + esc(style.length > 200 ? style.slice(0, 200) + "\u2026" : style) + "</div>" : "") +
+         (req.lyrics ? '<div class="peek-cap">Lyrics</div><pre class="peek-lyrics">' + esc(lyricsTight(req.lyrics, 6)) + "</pre>" : "") +
+         (r.note ? '<div class="peek-cap">Note</div><div class="peek-note">' + esc(r.note) + "</div>" : "");
+@@ -977,9 +985,9 @@
+     var now = state.hooks.playing(), mine = now.name === r.name && now.playing;
+     $("collSheetBody").innerHTML =
+       '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + ico(mine ? "pause" : "play") + "</button>" +
+-      '<div><div class="sheet-title"><span class="coll-title-text" data-sheet-ren="1" title="Click to rename">' + esc(r.title) + '</span></div><div class="coll-meta">' + esc(state.hooks.ago(r.created)) +
+-      (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + (req.cot ? " \u00b7 " + esc(req.cot) : "") + " \u00b7 " + esc(KINDS[r.kind] || r.kind) +
+-      (r.derived.length ? " \u00b7 made from it: " + esc(r.derived.join(", ")) : "") + "</div></div>" +
++      '<div><div class="sheet-title"><span class="coll-title-text" data-sheet-ren="1" title="Click to rename">' + esc(r.title) + '</span></div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created)) + "</span>" +
++      (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (req.cot ? " \u00b7 <span>" + esc(cotWord(req.cot)) + "</span>" : "") + " \u00b7 <span>" + esc(KINDS[r.kind] || r.kind) + "</span>" +
++      (r.derived.length ? " \u00b7 <span>made from it: " + esc(r.derived.join(", ")) + "</span>" : "") + "</div></div>" +
+       '<span class="pb-rate"><button type="button" class="pb-btn" data-sheet-rate="1" aria-pressed="' + (r.rating > 0) + '">' + ico("like") + '</button>' +
+       '<button type="button" class="pb-btn" data-sheet-rate="-1" aria-pressed="' + (r.rating < 0) + '">' + ico("dislike") + '</button>' +
+       '<button type="button" class="pb-btn" id="sheetFav" aria-pressed="' + r.favorite + '" >' + ico("star") + "</button></span></div>" +
+@@ -1133,8 +1141,8 @@
+       var rest = Object.keys(q).filter(function (k) { return !known[k] && (typeof q[k] !== "object" || q[k] === null); });
+       back.querySelector(".ds-box").innerHTML =
+         '<div class="ds-head"><div><div class="sheet-title">' + esc(r.title || t.title || name) + '</div><div class="coll-meta mono">' + esc(name) + "</div>" +
+-        '<div class="coll-meta">' + esc(h.ago(t.created)) + (t.seconds ? " \u00b7 " + h.clock(t.seconds) : "") + (t.render_seconds ? " \u00b7 made in " + h.clock(t.render_seconds) : "") +
+-        (t.model ? " \u00b7 " + esc(t.model) : "") + (t.truncated ? " \u00b7 hit the token cap" : "") + (q.parent ? " \u00b7 from " + esc(q.parent) : "") + "</div></div>" +
++        '<div class="coll-meta"><span>' + esc(h.ago(t.created)) + "</span>" + (t.seconds ? " \u00b7 <span>" + h.clock(t.seconds) + "</span>" : "") + (t.render_seconds ? " \u00b7 <span>made in " + h.clock(t.render_seconds) + "</span>" : "") +
++        (t.model ? " \u00b7 <span translate=\"no\">" + esc(t.model) + "</span>" : "") + (t.truncated ? " \u00b7 <span>hit the token cap</span>" : "") + (q.parent ? " \u00b7 <span>from " + esc(q.parent) + "</span>" : "") + "</div></div>" +
+         '<span class="spacer"></span><button type="button" class="btn ghost small" data-ds="json">Copy request JSON</button>' +
+         '<button type="button" class="btn ghost small" data-ds="create">Open in the Creator</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
+         '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
+diff --git a/tools/console/heresy-i18n.js b/tools/console/heresy-i18n.js
+index ee30689..50ffa8d 100644
+--- a/tools/console/heresy-i18n.js
++++ b/tools/console/heresy-i18n.js
+@@ -10,7 +10,10 @@
+ //
+ // Never translated: what is under [translate="no"] (what the user wrote: titles, lyrics, notes, the log), the insides of
+ // script, style, textarea, code and pre, SVG (the logo has its own words, below), and any text the catalog lacks: it stays
+-// English, whole, rather than half translated. A catalog key may hold {0}…{9} for the parts that change (numbers, names).
++// English, whole, rather than half translated. A catalog key may hold {0}…{9} for the parts that change (names, numbers);
++// {#0}…{#9} take a number only, so "{#0} MB" never swallows a longer text that happens to end in MB. What a part holds is
++// looked up too (a known word, or another pattern), and a translation may be the plural forms of its language
++// ({ one, few, many, other }, chosen by Intl.PluralRules on the key's first number): 1 трек, 2 трека, 5 треков.
+ (function () {
+   "use strict";
+ 
+@@ -32,6 +35,14 @@
+              "#logBody, #logDockBody, #logDockLast, .wr-item-title, .wr-take-title, .hi-tag, .hi-prompt";
+   var XHTML = "http://www.w3.org/1999/xhtml";
+   var CAT = {}, PAT = {}, lang = "en", observer = null;
++  var MISS = null, CUR = "";  // HERESY 1165: what the catalog lacks while RuachI18n.collect(true) is on, and where (a translator's tool)
++  function where(el, attr) {   // the element as a short path: tag.class#id < its parent < its grandparent
++    var out = [];
++    for (var e = el, i = 0; e && e.nodeType === 1 && i < 3; e = e.parentNode, i++) {
++      out.push(e.tagName.toLowerCase() + (e.id ? "#" + e.id : "") + (typeof e.className === "string" && e.className ? "." + e.className.trim().split(/\s+/).slice(0, 2).join(".") : ""));
++    }
++    return out.join(" < ") + (attr ? " @" + attr : "");
++  }
+   var SRC = new WeakMap();    // text node -> its English
+   var MINE = new WeakMap();   // text node -> what this module last wrote into it
+   var SRCA = new WeakMap();   // element -> { attribute: its English }
+@@ -46,24 +57,48 @@
+     var cat = CAT[code] || (CAT[code] = Object.create(null)), pat = PAT[code] || (PAT[code] = []);
+     Object.keys(table).forEach(function (raw) {
+       var en = norm(raw);
+-      if (/\{\d\}/.test(en)) {
+-        var re = "^" + en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\{(\d)\\\}/g, "(?<p$1>[\\s\\S]+?)") + "$";
+-        pat.push({ re: new RegExp(re), out: table[raw] });
++      if (/\{#?\d\}/.test(en)) {
++        var re = "^" + en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
++          .replace(/\\\{#(\d)\\\}/g, "(?<p$1>[-+]?\\d[\\d.,\u00a0\u202f]*)")      // HERESY 1165: a number only
++          .replace(/\\\{(\d)\\\}/g, "(?<p$1>[\\s\\S]+?)") + "$";
++        // the longest fixed piece of the key: a text without it cannot match, so most texts skip the expression
++        var lit = en.split(/\{#?\d\}/).sort(function (a, b) { return b.length - a.length; })[0];
++        pat.push({ re: new RegExp(re), lit: lit, out: table[raw] });
+       } else {
+-        cat[en] = table[raw];
++        cat[en] = typeof table[raw] === "string" ? table[raw] : (table[raw] || {}).other || "";   // forms need a number
+       }
+     });
+   }
+-  // the English for this language, or null when the catalog has none
+-  function look(en, code) {
+-    var cat = CAT[code || lang];
++  // HERESY 1165: a translation given as its language's plural forms; the count is the first number among the parts
++  var RULES = {};
++  function plural(out, m, code) {
++    if (typeof out === "string") return out;
++    var n = NaN;
++    for (var i = 0; i < 10 && isNaN(n); i++) {
++      var v = m.groups["p" + i];
++      if (v !== undefined && /^[-+]?\d[\d.,\u00a0\u202f]*$/.test(v)) n = Number(v.replace(/[\u00a0\u202f,]/g, ""));
++    }
++    var html = (LANGS.filter(function (l) { return l.code === code; })[0] || {}).html || code, form = "other";
++    try { form = isNaN(n) ? "other" : (RULES[html] || (RULES[html] = new Intl.PluralRules(html))).select(n); } catch (e) { /* no rules: other */ }
++    return out[form] !== undefined ? out[form] : out.other !== undefined ? out.other : out.many || out.one || "";
++  }
++  // the English for this language, or null when the catalog has none; the parts of a pattern are looked up in turn
++  // (a word, or a pattern of their own, three deep), and kept as they are when the catalog does not know them
++  function look(en, code, depth) {
++    var c = code || lang, cat = CAT[c];
+     if (!cat || !en) return null;
+     en = norm(en);
+     if (cat[en] !== undefined) return cat[en];
+-    var pats = PAT[code || lang] || [];
++    var pats = PAT[c] || [];
+     for (var i = 0; i < pats.length; i++) {
++      if (pats[i].lit && en.indexOf(pats[i].lit) < 0) continue;
+       var m = pats[i].re.exec(en);
+-      if (m) return pats[i].out.replace(/\{(\d)\}/g, function (_, n) { var v = m.groups["p" + n]; return v === undefined ? "" : (cat[v] !== undefined ? cat[v] : v); });
++      if (m) return plural(pats[i].out, m, c).replace(/\{#?(\d)\}/g, function (_, n) {
++        var v = m.groups["p" + n];
++        if (v === undefined) return "";
++        var inner = (depth || 0) < 3 ? look(v, c, (depth || 0) + 1) : null;
++        return inner === null ? v : inner;
++      });
+     }
+     return null;
+   }
+@@ -71,6 +106,7 @@
+   function render(en) {
+     if (lang === "en") return en;
+     var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(en), tr = m[2] ? look(m[2]) : null;
++    if (tr === null && MISS && /[A-Za-z]{2}/.test(m[2])) { var k = norm(m[2]); if (!MISS.has(k)) MISS.set(k, CUR); }
+     return tr === null ? en : m[1] + tr + m[3];
+   }
+   function t(en) { return lang === "en" ? en : render(String(en)); }
+@@ -87,6 +123,7 @@
+     return mine !== undefined && mine === node.nodeValue && SRC.has(node) ? SRC.get(node) : node.nodeValue;
+   }
+   function doText(node) {
++    if (MISS) CUR = where(node.parentNode);
+     var en = source(node);
+     SRC.set(node, en);
+     var out = render(en);
+@@ -101,6 +138,7 @@
+     if (!src) SRCA.set(el, src = {});
+     if (!mine) MINEA.set(el, mine = {});
+     src[a] = en;
++    if (MISS) CUR = where(el, a);
+     var out = render(en);
+     if (out !== v) el.setAttribute(a, out);
+     mine[a] = out;
+@@ -218,6 +256,11 @@
+     });
+   }
+ 
++  // HERESY 1164: a translator's tool: collect(true) counts every English text shown that the language's catalog lacks
++  // (the page walked again at once, then whatever appears), misses() lists them; collect(false) stops
++  function collect(on) { MISS = on ? new Map() : null; if (on && lang !== "en") apply(lang); }
++  function misses() { return MISS ? Array.from(MISS.entries()) : []; }   // [English, where it was seen first]
++
+   window.RuachI18n = { add: add, t: t, set: set, en: en, lang: function () { return lang; }, langs: LANGS, look: look, paintLogo: paintLogo,
+-                       start: function () { menu(); apply(recall() || "en"); } };
++                       collect: collect, misses: misses, start: function () { menu(); apply(recall() || "en"); } };
+ })();
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 0292461..30901fe 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -44,7 +44,7 @@
+       var mark = t.rating > 0 ? " 👍" : t.rating < 0 ? " 👎" : "";
+       var sd = t.seeds && (t.seeds[0] || t.seeds[1]) ? '<span class="hi-seed selectable" data-tip="Music seed and sound seed: the same two numbers make the same music again">' +
+         "\u266a " + esc(t.seeds[0]) + "<br>\u25ce " + esc(t.seeds[1]) + "</span>" : "";
+-      return '<div class="hi-ab"><button type="button" class="btn ghost small hi-play" data-hi-play="' + esc(t.name) + '" data-tip="' + esc(t.title) +
++      return '<div class="hi-ab"><button type="button" class="btn ghost small hi-play" translate="no" data-hi-play="' + esc(t.name) + '" data-tip="' + esc(t.title) +
+         (t.seconds ? " · " + Math.round(t.seconds) + " s" : "") + (t.note ? " · " + esc(t.note) : "") + '">▶ ' + v.toUpperCase() + mark + "</button>" + sd + "</div>";
+     }).join("");
+   }
+@@ -114,9 +114,9 @@
+     var bare = state.loaded && !p.a && !p.b;
+     var play = bare ? "" : playsHtml(p);
+     return '<tr class="' + (bare ? "is-no" : st.cls) + '">' + picHtml(p) + '<td class="hi-name">' +
+-      (bare ? '<span class="hi-bare">' + esc(i.tag || i.slug) + "</span>" : '<button type="button" class="hi-tag" data-hi-tag="' + esc(i.tag) + '" data-tip="into the Style prompt">' + esc(i.tag || i.slug) + "</button>") +
++      (bare ? '<span class="hi-bare" translate="no">' + esc(i.tag || i.slug) + "</span>" : '<button type="button" class="hi-tag" data-hi-tag="' + esc(i.tag) + '" data-tip="into the Style prompt">' + esc(i.tag || i.slug) + "</button>") +
+       '<div class="hi-home">' + esc(i.home) + '</div><div class="hi-st">' + esc(st.text) + "</div></td>" +
+-      '<td class="hi-say"><div>' + esc(i.en) + '</div><div class="hi-ru">' + esc(i.ru) + "</div>" +
++      '<td class="hi-say"><div translate="no">' + esc(i.en) + '</div><div class="hi-ru">' + esc(i.ru) + "</div>" +
+       (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") +
+       // HERESY 1148 (Viktor): the shofar's probes are kept and listed with the prompt they were made with
+       (i.prompt ? '<button type="button" class="hi-prompt" data-hi-tag="' + esc(i.prompt) + '" data-tip="The prompt both probes were made with: into the Style prompt">' + esc(i.prompt) + "</button>" : "") + "</td>" +
+@@ -132,7 +132,7 @@
+     var st = kept ? "\u2713 heard" : have ? "not judged yet" : "no probe yet";
+     return '<tr class="' + (kept ? "is-heard" : "is-wait") + '">' + picHtml(p) + '<td class="hi-name">' + (fold(s.name) === fold(s.tag) ? "" : '<div class="hi-sname">' + esc(s.name) + "</div>") +
+       '<button type="button" class="hi-tag" data-hi-tag="' + esc(s.tag) + '" data-tip="into the Style prompt">' + esc(s.tag) + '</button><div class="hi-st">' + esc(st) + "</div></td>" +
+-      '<td class="hi-say"><div>' + esc(s.en) + '</div><div class="hi-ru">' + esc(s.ru) + "</div>" + (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") + "</td>" +
++      '<td class="hi-say"><div translate="no">' + esc(s.en) + '</div><div class="hi-ru">' + esc(s.ru) + "</div>" + (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") + "</td>" +
+       '<td class="hi-plays">' + playsHtml(p) + "</td></tr>";
+   }
+   function paintStyles() {
+@@ -291,7 +291,7 @@
+     var A = window.HeresyArt;
+     box.innerHTML = chipList.map(function (f, n) {
+       var art = artOf(probes(f.item.slug)), c = chipState(f);
+-      return '<button type="button" class="hi-chip ' + c.cls + '" data-chip="' + n + '" aria-label="' + esc(chipName(f) + ": " + c.text) + '">' +
++      return '<button type="button" class="hi-chip ' + c.cls + '" translate="no" data-chip="' + n + '" aria-label="' + esc(chipName(f) + ": " + c.text) + '">' +
+         (art ? '<i style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)"></i>' : "") + esc(chipName(f)) + "</button>";
+     }).join("");
+   }
+@@ -301,7 +301,7 @@
+     return (art ? '<button type="button" class="hc-pic" data-hi-art="' + esc(art) + '" style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)" aria-label="See it whole">' +
+              (guess ? '<i data-tip="A guess: the painter does not know it">\u2248</i>' : "") + "</button>" : "") +
+       '<div class="hc-body"><b>' + esc(chipName(f)) + "</b>" + (it.home && it.home !== "everywhere" ? '<span class="hi-home">' + esc(it.home) + "</span>" : "") +
+-      '<span class="hc-st ' + c.cls + '">' + esc(c.text) + "</span><span>" + esc(it.en) + '</span><span class="hi-ru">' + esc(it.ru) + "</span>" +
++      '<span class="hc-st ' + c.cls + '">' + esc(c.text) + "</span><span translate=\"no\">" + esc(it.en) + '</span><span class="hi-ru">' + esc(it.ru) + "</span>" +
+       '<div class="hc-plays">' + playsHtml(p) + "</div></div>";
+   }
+   function showCard(n, anchor) {
+diff --git a/tools/console/heresy-menu.js b/tools/console/heresy-menu.js
+index 80fae8d..1003118 100644
+--- a/tools/console/heresy-menu.js
++++ b/tools/console/heresy-menu.js
+@@ -2,11 +2,11 @@
+ // here, so the cards stay small and the list of actions can grow. HeresyMenu.open(x, y, items):
+ // an item is {label, icon, hint, checked, danger, disabled, action} or {sep: true} or
+ // {label, items: [...]} for a submenu (opens on hover or →). Arrows, Enter, Esc and ← work;
+-// a click outside, a scroll or a resize closes it.
++// a click outside, a scroll of what it was opened over, or a resize closes it.
+ (function () {
+   "use strict";
+ 
+-  var root = null, stack = [];
++  var root = null, stack = [], anchor = null;
+   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+ 
+   function close() {
+@@ -93,6 +93,7 @@
+ 
+   function open(x, y, items) {
+     close();
++    anchor = document.elementFromPoint(x, y);         // HERESY 1165: what it is opened over, before it covers it
+     var entry = build(items, 0);
+     root = entry;
+     stack.push(entry);
+@@ -103,7 +104,14 @@
+ 
+   document.addEventListener("mousedown", function (e) { if (root && !e.target.closest(".hm-menu")) close(); }, true);
+   window.addEventListener("resize", close);
+-  document.addEventListener("scroll", function (e) { if (root && !(e.target.closest && e.target.closest(".hm-menu"))) close(); }, true);
++  // HERESY 1165 (Viktor: «Если консоль серверного лога открыта и там движение, убивается фокус курсора на мышином меню»):
++  // a scroll closes the menu only when it moves what the menu was opened over (the page, or a list holding it), as the
++  // tips do; the server log following its new lines scrolls itself every moment and took the menu away
++  document.addEventListener("scroll", function (e) {
++    var box = e.target;
++    if (!root || (box.closest && box.closest(".hm-menu"))) return;
++    if (box === document || box === document.documentElement || box === document.body || !anchor || (box.contains && box.contains(anchor))) close();
++  }, true);
+   window.addEventListener("blur", close);
+ 
+   window.HeresyMenu = { open: open, close: close };
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+index 69a6ec7..41d9456 100644
+--- a/tools/console/heresy-spectrum.js
++++ b/tools/console/heresy-spectrum.js
+@@ -443,7 +443,7 @@
+     sel.appendChild(none);
+     list.forEach(function (o) {
+       var opt = document.createElement("option");
+-      opt.value = o.url; opt.textContent = o.label;
++      opt.value = o.url; opt.textContent = o.label; opt.setAttribute("translate", "no");   // HERESY 1165: a take's title is data
+       sel.appendChild(opt);
+     });
+     sel.value = list.some(function (o) { return o.url === keep; }) ? keep : "";
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 90fea90..090536b 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -43,7 +43,9 @@
+     var s = Date.now() / 1000 - t;
+     return s < 90 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : s < 86400 ? Math.round(s / 3600) + " h ago" : Math.round(s / 86400) + " d ago";
+   }
+-  function when(t) { var d = new Date((t || 0) * 1000); return t ? d.toLocaleDateString() + " " + d.toTimeString().slice(0, 5) : ""; }
++  // HERESY 1165: a tip glued from pieces is translated piece by piece here (the page's translator matches whole texts)
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function when(t) { var d = new Date((t || 0) * 1000); return t ? d.toLocaleDateString(document.documentElement.lang || undefined) + " " + d.toTimeString().slice(0, 5) : ""; }   // 1165
+   function runs() { return (state.data && state.data.runs) || []; }
+   function runOf(name) { return runs().filter(function (r) { return r.name === name; })[0] || null; }
+   function isLive(r) { return r && (r.status === "running" || r.status === "stopping"); }
+@@ -80,6 +82,7 @@
+     }, runs().some(isLive) ? 5000 : 30000);
+   }
+ 
++  window.addEventListener("ruach-lang", function () { if (state.data) paint(); });   // HERESY 1165: its tips in the new language
+   function paint() {
+     warn(); paintRaw(); paintSets(); paintLive(); paintList(); paintPills(); gate(); listenPanel();
+     showPane(state.pane || "raw", true);
+@@ -378,8 +381,7 @@
+           '<span class="row-hint">pick one: into the Creator’s LoRAs, out of them, or as a file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
+         '<div class="tr-echips">' + cks.map(function (c) {
+           var why = cand[c.file];
+-          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="step ' + c.step + " · " + esc(when(c.saved)) +
+-            (c.lora ? " · in loras/" : "") + (why ? " · worth hearing first: " + esc(why) : "") + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
++          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
+         }).join("") + "</div>" +
+         (pick ? '<div class="tr-eact"><span><b>' + (pick.epoch != null ? "Epoch " + Math.round(pick.epoch) : "The final file") + "</b> · step " + pick.step + " · " + esc(when(pick.saved)) + " · " + gb(pick.bytes) +
+             (pick.lora ? ' · in the Creator as <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") +
+diff --git a/tools/console/index.html b/tools/console/index.html
+index fe900df..d711a72 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -563,32 +563,32 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <div class="about-projects">
+           <!-- HERESY 1026: the links the header used to carry live here, with what YuE2 OS adds -->
+           <section class="about-project"><h4>Ruach Studio <span class="about-version" id="studioVersion"></span></h4><p class="about-what">the heresy patches 1001+ over the collection below, and the lab beside it (once "YuE2 OS")</p><ul class="about-links">
+-            <li><a href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer">The collection it forks</a><span class="about-where">github · IronWolve/yue2-kit</span></li>
+-            <li><a href="https://github.com/woongzip1/UniverSR" target="_blank" rel="noopener noreferrer">Upscale: UniverSR</a><span class="about-where">github · woongzip1/UniverSR · MIT</span></li>
+-            <li><a href="https://github.com/nomadkaraoke/python-audio-separator" target="_blank" rel="noopener noreferrer">Stems: audio-separator (BS-Roformer, htdemucs_ft)</a><span class="about-where">github · nomadkaraoke/python-audio-separator</span></li>
+-            <li><a href="https://github.com/SYSTRAN/faster-whisper" target="_blank" rel="noopener noreferrer">Lyrics check: faster-whisper</a><span class="about-where">github · SYSTRAN/faster-whisper</span></li>
+-            <li><a href="https://fontawesome.com/license/free" target="_blank" rel="noopener noreferrer">Icons: Font Awesome Free</a><span class="about-where">CC BY 4.0</span></li>
++            <li><a href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer">The collection it forks</a><span class="about-where" translate="no">github · IronWolve/yue2-kit</span></li>
++            <li><a href="https://github.com/woongzip1/UniverSR" target="_blank" rel="noopener noreferrer">Upscale: UniverSR</a><span class="about-where" translate="no">github · woongzip1/UniverSR · MIT</span></li>
++            <li><a href="https://github.com/nomadkaraoke/python-audio-separator" target="_blank" rel="noopener noreferrer">Stems: audio-separator (BS-Roformer, htdemucs_ft)</a><span class="about-where" translate="no">github · nomadkaraoke/python-audio-separator</span></li>
++            <li><a href="https://github.com/SYSTRAN/faster-whisper" target="_blank" rel="noopener noreferrer">Lyrics check: faster-whisper</a><span class="about-where" translate="no">github · SYSTRAN/faster-whisper</span></li>
++            <li><a href="https://fontawesome.com/license/free" target="_blank" rel="noopener noreferrer">Icons: Font Awesome Free</a><span class="about-where" translate="no">CC BY 4.0</span></li>
+           </ul></section>
+           <section class="about-project"><h4>YuE2</h4><p class="about-what">the music model, by the Multimodal Art Projection team</p><ul class="about-links">
+-            <li><a href="https://map-yue2.github.io/" target="_blank" rel="noopener noreferrer">Project page</a><span class="about-where">map-yue2.github.io</span></li>
+-            <li><a href="https://github.com/multimodal-art-projection/YuE" target="_blank" rel="noopener noreferrer">Code and guides</a><span class="about-where">github · multimodal-art-projection/YuE</span></li>
+-            <li><a href="https://huggingface.co/m-a-p/YuE2-3B" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where">hugging face · m-a-p/YuE2-3B</span></li>
+-            <li><a href="https://huggingface.co/m-a-p/YuE2-Vae" target="_blank" rel="noopener noreferrer">Sound decoder</a><span class="about-where">hugging face · m-a-p/YuE2-Vae</span></li>
+-            <li><a href="https://huggingface.co/m-a-p/SheetSage2" target="_blank" rel="noopener noreferrer">Covers: transcriber</a><span class="about-where">hugging face · m-a-p/SheetSage2</span></li>
+-            <li><a href="https://huggingface.co/m-a-p/MERT-v2-FullSong" target="_blank" rel="noopener noreferrer">Covers: audio encoder</a><span class="about-where">hugging face · m-a-p/MERT-v2-FullSong</span></li>
+-            <li><a href="https://github.com/multimodal-art-projection/YuE/blob/main/docs/technical_report.pdf" target="_blank" rel="noopener noreferrer">Technical report</a><span class="about-where">pdf</span></li>
+-            <li><a href="https://arxiv.org/abs/2503.08638" target="_blank" rel="noopener noreferrer">Paper</a><span class="about-where">arxiv · 2503.08638</span></li>
++            <li><a href="https://map-yue2.github.io/" target="_blank" rel="noopener noreferrer">Project page</a><span class="about-where" translate="no">map-yue2.github.io</span></li>
++            <li><a href="https://github.com/multimodal-art-projection/YuE" target="_blank" rel="noopener noreferrer">Code and guides</a><span class="about-where" translate="no">github · multimodal-art-projection/YuE</span></li>
++            <li><a href="https://huggingface.co/m-a-p/YuE2-3B" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · m-a-p/YuE2-3B</span></li>
++            <li><a href="https://huggingface.co/m-a-p/YuE2-Vae" target="_blank" rel="noopener noreferrer">Sound decoder</a><span class="about-where" translate="no">hugging face · m-a-p/YuE2-Vae</span></li>
++            <li><a href="https://huggingface.co/m-a-p/SheetSage2" target="_blank" rel="noopener noreferrer">Covers: transcriber</a><span class="about-where" translate="no">hugging face · m-a-p/SheetSage2</span></li>
++            <li><a href="https://huggingface.co/m-a-p/MERT-v2-FullSong" target="_blank" rel="noopener noreferrer">Covers: audio encoder</a><span class="about-where" translate="no">hugging face · m-a-p/MERT-v2-FullSong</span></li>
++            <li><a href="https://github.com/multimodal-art-projection/YuE/blob/main/docs/technical_report.pdf" target="_blank" rel="noopener noreferrer">Technical report</a><span class="about-where" translate="no">pdf</span></li>
++            <li><a href="https://arxiv.org/abs/2503.08638" target="_blank" rel="noopener noreferrer">Paper</a><span class="about-where" translate="no">arxiv · 2503.08638</span></li>
+           </ul></section>
+           <section class="about-project"><h4>yue2.cpp</h4><p class="about-what">the C++ engine and server this app runs on</p><ul class="about-links">
+-            <li><a href="https://github.com/ServeurpersoCom/yue2.cpp" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where">github · ServeurpersoCom/yue2.cpp</span></li>
+-            <li><a href="https://huggingface.co/Serveurperso/YuE2-GGUF" target="_blank" rel="noopener noreferrer">Ready-made model files</a><span class="about-where">hugging face · Serveurperso/YuE2-GGUF</span></li>
++            <li><a href="https://github.com/ServeurpersoCom/yue2.cpp" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where" translate="no">github · ServeurpersoCom/yue2.cpp</span></li>
++            <li><a href="https://huggingface.co/Serveurperso/YuE2-GGUF" target="_blank" rel="noopener noreferrer">Ready-made model files</a><span class="about-where" translate="no">hugging face · Serveurperso/YuE2-GGUF</span></li>
+           </ul></section>
+           <section class="about-project"><h4>YuE2_WebUI</h4><p class="about-what">HTML layout inspired by Ladypoly/YuE2_WebUI</p><ul class="about-links">
+-            <li><a href="https://github.com/Ladypoly/YuE2_WebUI" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where">github · Ladypoly/YuE2_WebUI</span></li>
++            <li><a href="https://github.com/Ladypoly/YuE2_WebUI" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where" translate="no">github · Ladypoly/YuE2_WebUI</span></li>
+           </ul></section>
+           <section class="about-project"><h4>ggml</h4><p class="about-what">the tensor library underneath</p><ul class="about-links">
+-            <li><a href="https://github.com/ggml-org/ggml" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where">github · ggml-org/ggml</span></li>
+-            <li><a href="https://github.com/ServeurpersoCom/ggml" target="_blank" rel="noopener noreferrer">The fork yue2.cpp uses</a><span class="about-where">github · ServeurpersoCom/ggml</span></li>
++            <li><a href="https://github.com/ggml-org/ggml" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where" translate="no">github · ggml-org/ggml</span></li>
++            <li><a href="https://github.com/ServeurpersoCom/ggml" target="_blank" rel="noopener noreferrer">The fork yue2.cpp uses</a><span class="about-where" translate="no">github · ServeurpersoCom/ggml</span></li>
+           </ul></section>
+         </div>
+         <div class="about-addons" id="aboutAddons"></div>
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index c475762..6b36e3d 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -17,6 +17,11 @@
+ 
+   var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {} };
+ 
++  // HERESY 1165: a text glued from names and numbers is translated here, whole, from the English it is made as (the
++  // page's translator matches whole texts; its catalog holds the patterns); drawn again when the language changes
++  function tr(s) { return root.RuachI18n ? root.RuachI18n.t(s) : s; }
++  root.addEventListener("ruach-lang", function () { paint(); });
++
+   function escape(text) {
+     return String(text === undefined || text === null ? "" : text).replace(/[&<>"']/g, function (c) {
+       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+@@ -73,11 +78,11 @@
+   }
+ 
+   function chipTip(e) {
+-    if (e.error) return nameOf(e.id) + "\nCannot load: " + e.error;
+-    var lines = [nameOf(e.id) + " · " + halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half"),
+-      "rank " + e.rank + ", " + e.layout + " layout, " + e.size_mb + " MB"];
+-    if (triggerOf(e)) lines.push("Trigger word: " + triggerOf(e));
+-    if (e.mode) lines.push("Trained in " + (e.mode === "direct" ? "Direct" : e.mode) + " mode");
++    if (e.error) return nameOf(e.id) + "\n" + tr("Cannot load: " + e.error);
++    var lines = [nameOf(e.id) + " · " + tr(halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half")),
++      tr("rank " + e.rank + ", " + e.layout + " layout, " + e.size_mb + " MB")];
++    if (triggerOf(e)) lines.push(tr("Trigger word: " + triggerOf(e)));
++    if (e.mode) lines.push(tr("Trained in " + (e.mode === "direct" ? "Direct" : e.mode) + " mode"));
+     if (e.hint) lines.push(e.hint);
+     lines.push("loras/" + e.id);
+     return lines.join("\n");
+@@ -131,8 +136,8 @@
+     if (arStacked() < 2) return "";
+     var t = arTotal(), z = AR_TOTAL, cls = t > z.limit + 1e-9 ? "is-red" : t > z.safe + 1e-9 ? "is-amber" : "is-green";
+     var road = "--z1:" + (100 * z.safe / z.max).toFixed(1) + "%;--z2:" + (100 * z.limit / z.max).toFixed(1) + "%";
+-    return '<div class="lora-total ' + cls + '" data-tip="' + escape("All the music strengths together. Measured on this studio's takes: the score came out whole up to " +
+-        z.limit + " in every run, broken from 2.5 in every run. Green to " + z.safe + ", amber to " + z.limit + ", red past it.") + '">' +
++    return '<div class="lora-total ' + cls + '" data-tip="' + escape(tr("All the music strengths together. Measured on this studio's takes: the score came out whole up to " +
++        z.limit + " in every run, broken from 2.5 in every run. Green to " + z.safe + ", amber to " + z.limit + ", red past it.")) + '">' +
+       "<span>Music, together</span>" +
+       '<span class="lora-total-road" style="' + road + '"><i style="left:' + Math.min(100, 100 * t / z.max).toFixed(1) + '%"></i></span>' +
+       "<output>" + fmt(t, 2) + "</output></div>";
+@@ -145,12 +150,12 @@
+     var value = on ? choice[half] : 0, z = zones(e, half);
+     var road = "--z1:" + (100 * z.safe / z.max).toFixed(1) + "%;--z2:" + (100 * z.limit / z.max).toFixed(1) + "%";
+     return '<label class="lora-half' + (on ? "" : " is-off") + (on && overLimit(e, half, value) ? " is-over" : "") + '" data-tip="' + escape(on
+-      ? (half === "ar" ? "Strength on the music half: the score and the music tokens (0 off, 1 as trained)"
+-                       : "Strength on the sound half: the acoustic stage that turns music tokens into sound (0 off, 1 as trained)") +
+-        " · green to " + z.safe + ", amber to " + z.limit + ", red beyond"
+-      : "This file has no " + label.toLowerCase() + " half") + '"><span>' + label + "</span>" +
++      ? tr(half === "ar" ? "Strength on the music half: the score and the music tokens (0 off, 1 as trained)"
++                         : "Strength on the sound half: the acoustic stage that turns music tokens into sound (0 off, 1 as trained)") +
++        " · " + tr("green to " + z.safe + ", amber to " + z.limit + ", red beyond")
++      : tr("This file has no " + label.toLowerCase() + " half")) + '"><span>' + label + "</span>" +
+       '<input type="range" class="zoned" style="' + road + '" min="0" max="' + z.max + '" step="0.025" value="' + value + '"' + (on ? "" : " disabled") +
+-      ' data-lora="' + escape(choice.id) + '" data-half="' + half + '" aria-label="' + escape(nameOf(choice.id)) + " " + label + ' strength" />' +
++      ' data-lora="' + escape(choice.id) + '" data-half="' + half + '" aria-label="' + escape(tr(nameOf(choice.id) + " " + label + " strength")) + '" />' +
+       '<output data-tip="Double-click to type it">' + (on ? fmt(value, 2) : "—") + "</output></label>";
+   }
+ 
+@@ -191,25 +196,28 @@
+     S.choice.forEach(function (c) { on[c.id] = c; });
+     S.list.innerHTML = S.catalog.length ? S.catalog.map(function (e) {
+       var parts = String(e.name).split(" / "), main = parts.pop(), folder = parts.join(" / "), title = (source(e.id) || {}).title || main;
+-      var meta = e.error ? "cannot load: " + e.error
+-        : [halvesText(e), folder, "rank " + e.rank, e.size_mb + " MB", triggerOf(e) ? "trigger " + triggerOf(e) : "", e.mode ? e.mode + " mode" : ""]
+-          .filter(Boolean).join(" · ");
++      // HERESY 1165: each piece its own text, so its words translate; the folder and the trigger word are names
++      var meta = e.error ? escape(tr("cannot load: " + e.error))
++        : [[halvesText(e)], [folder, 1], ["rank " + e.rank], [e.size_mb + " MB"], [triggerOf(e) ? triggerOf(e) : "", 2], [e.mode ? e.mode + " mode" : ""]]
++          .filter(function (p) { return p[0]; })
++          .map(function (p) { return p[1] === 2 ? "<span>trigger</span> <span translate=\"no\">" + escape(p[0]) + "</span>" : "<span" + (p[1] ? ' translate="no"' : "") + ">" + escape(p[0]) + "</span>"; })
++          .join(" · ");
+       var src = source(e.id) || {}, url = webUrl(src.url);
+       var where = url
+         ? '<a class="tile-link" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer" data-tip="' +
+-          escape("Open its model card (new tab): " + url) + '"><span>' + escape(src.repo || url) + "</span>\u2197</a>"
++          escape(tr("Open its model card (new tab): " + url)) + '"><span translate="no">' + escape(src.repo || url) + "</span>\u2197</a>"
+         : '<span class="tile-repo" data-tip="' + escape("No source for this file in loras/sources.json; the (i) has its details") + '">' +
+-          escape(src.repo || "no source link") + "</span>";
++          (src.repo ? '<span translate="no">' + escape(src.repo) + "</span>" : "no source link") + "</span>";
+       return '<li class="lora-item' + (on[e.id] ? " is-on" : "") + (e.error ? " is-bad" : "") + '" data-lora="' + escape(e.id) + '">' +
+-        '<div class="lora-item-head"><span class="lora-item-name">' + escape(title) + "</span>" +
++        '<div class="lora-item-head"><span class="lora-item-name" translate="no">' + escape(title) + "</span>" +
+         (on[e.id] ? '<span class="tile-state">in the song form</span>' : "") + "</div>" +
+-        '<div class="tile-src">' + where + '<span class="info" tabindex="-1" role="img" aria-label="About ' + escape(nameOf(e.id)) +
++        '<div class="tile-src">' + where + '<span class="info" tabindex="-1" role="img" aria-label="' + escape(tr("About " + nameOf(e.id))) +
+         '" data-tip="' + escape(aboutTip(e)) + '"></span></div>' +
+-        '<div class="lora-item-meta">' + escape(meta) + "</div></li>";
++        '<div class="lora-item-meta">' + meta + "</div></li>";
+     }).join("") : '<li class="lora-item"><div class="lora-item-meta">No .safetensors files in the app\'s loras/ folder.</div></li>';
+     if (S.note) {
+       var active = S.choice.filter(function (c) { return entry(c.id); }).length;
+-      S.note.textContent = S.catalog.length + " in loras/" + (active ? " · " + active + " in the song form" : " · none in the song form");
++      S.note.textContent = tr(S.catalog.length + " in loras/") + " · " + (active ? tr(active + " in the song form") : tr("none in the song form"));
+     }
+   }
+ 
+@@ -243,24 +251,24 @@
+       // HERESY 1018: three columns the same in every row — the name (its trigger word under it,
+       // small), the sliders of the halves it has, the remove button — so the rows line up
+       var trig = triggerOf(e), inStyle = trig && S.opts.styleText && S.opts.styleText().toLowerCase().indexOf(trig.toLowerCase()) >= 0;
+-      return '<div class="lora-row' + (e ? "" : " is-missing") + '"><span class="lora-who"><span class="lora-name" data-tip="' + escape(e ? aboutTip(e) : "Not in loras/ any more") + '">' +
++      return '<div class="lora-row' + (e ? "" : " is-missing") + '"><span class="lora-who"><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) : tr("Not in loras/ any more")) + '">' +
+         escape(nameOf(c.id)) + "</span>" +
+         (trig ? (inStyle ? '<span class="lora-trigger is-in" data-tip="Its trigger word is in the style">\u2713 ' + escape(trig) + "</span>"
+                          : '<button type="button" class="lora-trigger" data-trigger="' + escape(trig) +
+                            '" data-tip="Add the trigger word to the style prompt">+ ' + escape(trig) + "</button>") : "") +
+         '</span><span class="lora-halves">' + halfControl(c, e, "ar") + halfControl(c, e, "nar") + "</span>" +
+-        '<button type="button" class="icon-btn" data-remove-lora="' + escape(c.id) + '" aria-label="Remove ' + escape(nameOf(c.id)) + '">✕</button></div>';
++        '<button type="button" class="icon-btn" data-remove-lora="' + escape(c.id) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '">✕</button></div>';
+     }).join("") + totalBar();
+     // one even grid of buttons: the name, which half it steers, and a few words on what it does
+     chips.innerHTML = S.catalog.map(function (e) {
+       var tag = e.error ? "cannot load" : tagOf(e) || halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half");
+       return '<button type="button" class="lora-pick' + (on[e.id] ? " is-on" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
+         (e.error ? " disabled" : "") + ' aria-pressed="' + (on[e.id] ? "true" : "false") + '" data-tip="' + escape(aboutTip(e)) + '">' +
+-        '<span class="lora-pick-name">' + escape(nameOf(e.id)) + "</span>" +
++        '<span class="lora-pick-name" translate="no">' + escape(nameOf(e.id)) + "</span>" +
+         (e.error ? "" : '<span class="lora-pick-half">' + halfShort(e) + "</span>") +
+         '<span class="lora-pick-tag">' + escape(tag) + "</span></button>";
+     }).join("");
+-    S.host.querySelector(".lora-hint").textContent = hints().join(" ");
++    S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+   }
+ 
+   function changed() {
+@@ -311,7 +319,7 @@
+       S.choice.forEach(function (c) { if (c.id === id) c[half] = parseFloat(event.target.value); });
+       event.target.nextElementSibling.textContent = fmt(event.target.value, 2);
+       event.target.parentNode.classList.toggle("is-over", overLimit(entry(id), half, parseFloat(event.target.value)));   // 1084
+-      S.host.querySelector(".lora-hint").textContent = hints().join(" ");
++      S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+     });
+     paint();
+   }
+diff --git a/tools/console/vaes.js b/tools/console/vaes.js
+index 2d7b771..aa44d0b 100644
+--- a/tools/console/vaes.js
++++ b/tools/console/vaes.js
+@@ -23,6 +23,10 @@
+   };
+   var S = { vaes: [], def: "", sources: {}, list: null, note: null, opts: {} };
+ 
++  // HERESY 1165: texts glued from names translated here, whole (see loras.js); drawn again when the language changes
++  function tr(s) { return root.RuachI18n ? root.RuachI18n.t(s) : s; }
++  root.addEventListener("ruach-lang", function () { paint(); });
++
+   function escape(text) {
+     return String(text === undefined || text === null ? "" : text).replace(/[&<>"']/g, function (c) {
+       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+@@ -53,24 +57,25 @@
+       var src = S.sources[v.name] || {}, ok = v.installed !== false, picked = ok && v.name === current;
+       var kind = kindOf(v);
+       if (picked) pickedLabel = labelOf(v);
+-      var recap = [labelOf(v) + (kind ? " · " + kind : ""), src.about || "", v.repo ? "Weights: " + v.repo : ""].filter(Boolean).join("\n");
++      var recap = [tr(labelOf(v)) + (kind ? " · " + tr(kind) : ""), src.about ? tr(src.about) : "", v.repo ? tr("Weights: " + v.repo) : ""].filter(Boolean).join("\n");
+       var url = webUrl(src.url);
+       var where = url
+         ? '<a class="tile-link" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer" data-tip="' +
+-          escape("Open its model card (new tab): " + url) + '"><span>' + escape(v.repo || url) + "</span>\u2197</a>"
+-        : '<span class="tile-repo" data-tip="' + escape(v.repo || v.name) + '">' + escape(v.repo || v.name) + "</span>";
+-      var meta = [NOTES[v.name] || "", v.name === S.def ? "engine default" : "", ok ? "" : "not downloaded"].filter(Boolean).join(" · ");
++          escape(tr("Open its model card (new tab): " + url)) + '"><span translate="no">' + escape(v.repo || url) + "</span>\u2197</a>"
++        : '<span class="tile-repo" translate="no" data-tip="' + escape(v.repo || v.name) + '">' + escape(v.repo || v.name) + "</span>";
++      var meta = [NOTES[v.name] || "", v.name === S.def ? "engine default" : "", ok ? "" : "not downloaded"].filter(Boolean)
++        .map(function (m) { return "<span>" + escape(m) + "</span>"; }).join(" · ");   // HERESY 1165: each its own text
+       return '<li class="lora-item vae-item' + (picked ? " is-on" : "") + (kind === "add-on" ? " is-addon" : "") + (ok ? "" : " is-bad") +
+         '" data-vae="' + escape(v.name) + '">' +
+         '<div class="lora-item-head"><span class="lora-item-name">' + escape(labelOf(v)) + badge(kind) + "</span>" +
+         (picked ? '<span class="tile-state">in the song form</span>' : "") + "</div>" +
+-        '<div class="tile-src">' + where + '<span class="info" tabindex="-1" role="img" aria-label="About the ' + escape(labelOf(v)) +
+-        ' VAE" data-tip="' + escape(recap) + '"></span></div>' +
+-        (meta ? '<div class="lora-item-meta">' + escape(meta) + "</div>" : "") + "</li>";
++        '<div class="tile-src">' + where + '<span class="info" tabindex="-1" role="img" aria-label="' + escape(tr("About the " + labelOf(v) + " VAE")) +
++        '" data-tip="' + escape(recap) + '"></span></div>' +
++        (meta ? '<div class="lora-item-meta">' + meta + "</div>" : "") + "</li>";
+     }).join("");
+     if (S.note) {
+-      S.note.textContent = S.vaes.length + " decoder" + (S.vaes.length === 1 ? "" : "s") +
+-        (pickedLabel ? " · " + pickedLabel + " picked in the form" : "") + " · a finished song can add another from its page";
++      S.note.textContent = tr(S.vaes.length + " decoder" + (S.vaes.length === 1 ? "" : "s")) +
++        (pickedLabel ? " · " + tr(pickedLabel + " picked in the form") : "") + " · " + tr("a finished song can add another from its page");
+     }
+   }
+ 
+-- 
+2.43.0
+

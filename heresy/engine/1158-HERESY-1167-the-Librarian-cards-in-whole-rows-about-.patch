@@ -1,0 +1,345 @@
+From a83f91c561959eb73cd53ffbc6ab7a34801883de Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 16:03:49 -0600
+Subject: [PATCH 1158/1177] =?UTF-8?q?HERESY=201167:=20the=20Librarian:=20c?=
+ =?UTF-8?q?ards=20in=20whole=20rows,=20about=20thirty=20at=20a=20time;=20t?=
+ =?UTF-8?q?he=20bar=20follows=20the=20workspace=20opened;=20the=20?=
+ =?UTF-8?q?=F0=9F=91=8D/=F0=9F=91=8E=20filters=20as=20icons,=20the=20?=
+ =?UTF-8?q?=C2=ABShow=20disliked=C2=BB=20box=20gone?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026:
+· «ленивую подгрузку карточек семплов цельными строками? При 3 в полосе - 30, При 4 в полосе - 32, и т.п. Чтобы DOM не
+  насиловать в Библиотеке»: a batch is the row's count times as many rows as make thirty or just over (3 → 30, 4 → 32,
+  5 → 30, 7 → 35); the next comes as the end nears (a sentinel under the grid, 900 px ahead, again while it stays in sight);
+  a repaint keeps as many as were shown, in whole rows of the width it has now; a new view (place, search, filters, sort,
+  tiles or list) starts from one batch; a take to reveal brings in the rows before it. Select all, the bulk acts and the
+  player go by the list, not by the cards drawn. Checked at 1920 px: 4 a row, 32 first, 96 and 160 on scrolling.
+· «В Библиотеке переход по воркспейсам не синхронизирует выбор в баре»: a workspace opened in the Librarian (its list, or
+  Open in its menu) is the one in hand in the bar too (new takes land in it, the rooms' column shows it); All Workspaces is
+  All again; the studio's own views (favourites, pinned, hidden, not in a workspace, the trash) and a frozen workspace leave
+  the bar as it is.
+· «Для чекбокса "показывать непонравившиеся" очень длинный текст… у нас же уже есть фильтр по UP/DOWN. Зря прикрутили это»:
+  the box goes; the 👎 filter shows the disliked (the column's ⋯ keeps «The disliked ones too», one setting with the
+  Librarian), the dislike's toast names it; the 👍 and 👎 filters are the cards' one-colour icons, each with its tip.
+3 keys in the six catalogs. cdp-console 334/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |   8 ++-
+ tools/console/heresy-collection.js | 100 +++++++++++++++++++++++------
+ tools/console/heresy-i18n-be.js    |   5 +-
+ tools/console/heresy-i18n-el.js    |   5 +-
+ tools/console/heresy-i18n-es.js    |   5 +-
+ tools/console/heresy-i18n-it.js    |   5 +-
+ tools/console/heresy-i18n-ru.js    |   5 +-
+ tools/console/heresy-i18n-uk.js    |   5 +-
+ tools/console/index.html           |   7 +-
+ 9 files changed, 114 insertions(+), 31 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3d927a0..68bf87d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3896,9 +3896,6 @@ html.i18n-wait .boot-veil > * { visibility: hidden; }
+ .wr-hand-acts { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+ .wr-hand-acts .btn { white-space: nowrap; }
+ 
+-/* HERESY 1167: the Librarian's «Show disliked» beside its sort */
+-.coll-headtools .coll-showdis { white-space: nowrap; font-size: 12.5px; color: var(--muted); }
+-.coll-headtools .coll-showdis input { margin: 0 4px 0 0; vertical-align: -2px; }
+ 
+ /* HERESY 1167 (Viktor: the Style block's heading line, «Знак вопроса… жирным SVG с полной выключкой вправо… WARNING… тултип
+    крупно 16pt… Полосу со счётчиками… не красным, а 80% gray… в одну строку»): the heading a row; at its end the WARNING
+@@ -3919,3 +3916,8 @@ html.i18n-wait .boot-veil > * { visibility: hidden; }
+ #styleMeter.size-meter, #styleMeter.size-meter.is-warn, #styleMeter.size-meter.is-over {
+   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: none; color: color-mix(in srgb, var(--ink) 80%, var(--panel));
+ }
++
++/* HERESY 1167: the Librarian's 👍 / 👎 filters in the cards' one-colour icons; the sentinel the next cards come by */
++.coll-chip-ico { display: inline-grid; place-items: center; padding-top: 2px; padding-bottom: 2px; }
++.coll-chip-ico svg { width: 15px; height: 15px; display: block; }
++.coll-more { height: 1px; }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index c9ee9e6..7572a26 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -74,6 +74,18 @@
+   // show them (the Librarian's box, the column's ⋯: one setting); the 👎 chip shows them whatever it says
+   var DISLIKED_KEY = "yue2.showDisliked";
+   function showDis() { return recall(DISLIKED_KEY) === "1"; }
++  // HERESY 1167 (Viktor: «В Библиотеке переход по воркспейсам не синхронизирует выбор в баре»): a workspace opened here is
++  // the one in hand in the bar too (new takes land in it, the rooms' column shows it); All Workspaces is All again; the
++  // studio's own views and a frozen workspace leave the bar as it is
++  function openPlace(place) {
++    state.place = place; state.sel = {};
++    var ws = place === "" || (place.charAt(0) !== "_" && state.ws.indexOf(place) >= 0 && !frozenWs(place));
++    if (ws && (recall(WS_KEY) || "") !== place) {
++      store(WS_KEY, place);
++      paintCurrent();
++      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
++    }
++  }
+   function frozenWs(w) { return (state.frozen || []).some(function (f) { return w === f || String(w).indexOf(f + SEP) === 0; }); }
+   function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
+   function shown() {
+@@ -194,8 +206,63 @@
+     var rows = shown(), view = recall(VIEW_KEY) || "tiles";
+     $("collGrid").className = "coll-grid " + view;
+     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) { b.classList.toggle("is-on", b.dataset.collView === view); });
++    // HERESY 1167: whole rows, about thirty cards at a time; a repaint keeps as many as were shown, a new view starts anew
++    var per = perRow(), sig = viewSig();
++    if (sig !== LAZY.sig) { LAZY.sig = sig; LAZY.shown = batch(); }
++    LAZY.shown = Math.max(batch(), Math.ceil(LAZY.shown / per) * per);
++    LAZY.rows = rows;
++    $("collGrid").innerHTML = rows.length ? rows.slice(0, LAZY.shown).map(cardHtml).join("")
++      : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
++    moreWatch();
++    iceCards();                                    // HERESY 1166: a frozen card's controls off
++    paintHead(rows);
++  }
++  // the next whole rows, as the end of the list nears (the sentinel under the grid in sight, or nearly)
++  var LAZY = { shown: 0, sig: "", rows: [], io: null };
++  function perRow() {
++    var g = $("collGrid"), cs = getComputedStyle(g), tpl = cs.gridTemplateColumns || "";
++    if (cs.display !== "grid" || !tpl || tpl === "none") return 1;
++    var m = /repeat\((\d+)/.exec(tpl);           // a hidden grid answers with its rule, not its columns
++    return Math.max(1, m ? +m[1] : tpl.split(" ").filter(Boolean).length);
++  }
++  function batch() { var n = perRow(); return n * Math.ceil(30 / n); }
++  function viewSig() {
++    return [state.place, state.q, JSON.stringify(state.kinds), JSON.stringify(state.derived), recall(SORT_KEY) || "new", recall(VIEW_KEY) || "tiles"].join("|");
++  }
++  function moreWatch() {
++    var g = $("collGrid"), s = $("collMore");
++    if (!s) {
++      s = document.createElement("div");
++      s.id = "collMore"; s.className = "coll-more"; s.setAttribute("aria-hidden", "true");
++      g.insertAdjacentElement("afterend", s);
++    }
++    s.hidden = LAZY.shown >= LAZY.rows.length;
++    if (!LAZY.io && window.IntersectionObserver) {
++      LAZY.io = new IntersectionObserver(function (es) { if (es.some(function (x) { return x.isIntersecting; })) more(); }, { rootMargin: "0px 0px 900px 0px" });
++      LAZY.io.observe(s);
++    }
++  }
++  function more() {
++    var s = $("collMore");
++    if (!s || s.hidden || state.place === "__trash" || LAZY.shown >= LAZY.rows.length) return;
++    var from = LAZY.shown;
++    LAZY.shown = Math.min(LAZY.rows.length, from + batch());
++    $("collGrid").insertAdjacentHTML("beforeend", LAZY.rows.slice(from, LAZY.shown).map(cardHtml).join(""));
++    iceCards();
++    s.hidden = LAZY.shown >= LAZY.rows.length;
++    requestAnimationFrame(function () {           // still in sight (a short batch, a tall window): the next one too
++      var b = s.getBoundingClientRect();
++      if (!s.hidden && b.top < innerHeight + 900 && b.width) more();
++    });
++  }
++  // a take to reveal: the rows up to it brought in first
++  function bringIn(name) {
++    var i = LAZY.rows.map(function (r) { return r.name; }).indexOf(name), per = perRow();
++    if (i >= LAZY.shown) { LAZY.shown = (Math.ceil((i + 1) / per) + 1) * per; paint(); }
++  }
++  function cardHtml(r) {
+     var clock = state.hooks.clock, ago = state.hooks.ago;
+-    $("collGrid").innerHTML = rows.length ? rows.map(function (r) {
++    {
+       var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
+       var mine = now.name === r.name;
+       var art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";   // HERESY 1154: beside the title, not in the play button
+@@ -222,8 +289,9 @@
+         // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height
+         (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" aria-label="Has a note">' + ico("note") + "</button>"
+                 : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
+-    }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+-    iceCards();                                    // HERESY 1166: a frozen card's controls off
++    }
++  }
++  function paintHead(rows) {
+     // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
+     var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
+     // HERESY 1165: the studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
+@@ -636,17 +704,12 @@
+     $("collSearch").addEventListener("input", function () { state.q = this.value; paint(); });
+     $("collSort").value = recall(SORT_KEY) || "new";
+     $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
+-    // HERESY 1167: the disliked shown or not, one setting with the rooms' takes column (its ⋯ menu)
+-    var showBox = $("collShowDisliked");
+-    if (showBox) {
+-      showBox.checked = showDis();
+-      showBox.addEventListener("change", function () {
+-        store(DISLIKED_KEY, this.checked ? "1" : "0");
+-        paint();
+-        window.dispatchEvent(new Event("ruach-disliked"));
+-      });
+-    }
+-    window.addEventListener("ruach-disliked", function () { if (showBox) showBox.checked = showDis(); paint(); });
++    // HERESY 1167: the disliked shown or not: the rooms' takes column's ⋯ («The disliked ones too»), one setting with this
++    window.addEventListener("ruach-disliked", function () { paint(); });
++    Array.prototype.forEach.call(document.querySelectorAll('#collFilters [data-kind="__liked"], #collFilters [data-kind="__disliked"]'), function (b) {
++      var svg = ico(b.dataset.kind === "__liked" ? "like" : "dislike");     // the cards' one-colour icons, not the emoji
++      if (svg) b.innerHTML = svg;
++    });
+     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) {
+       b.addEventListener("click", function () { store(VIEW_KEY, b.dataset.collView); paint(); });
+     });
+@@ -671,7 +734,7 @@
+       }
+       var p = e.target.closest("[data-place]");
+       if (!p) return;
+-      state.place = p.dataset.place; state.sel = {};
++      openPlace(p.dataset.place);                       // HERESY 1167: the bar follows
+       if (state.place === "__trash") loadTrash(); else paint();
+     });
+     $("collSide").addEventListener("dblclick", function (e) {
+@@ -1043,7 +1106,7 @@
+     var r = rowOf(name), before = r ? r.rating : 0;
+     if (r) { r.rating = value; paint(); }
+     if (value < 0 && !showDis()) {                       // HERESY 1167: it leaves the lists; said where it went
+-      toast("“" + (r ? r.title : name) + "” disliked: it leaves the lists; nothing is deleted (“Show disliked” brings it back)");
++      toast("“" + (r ? r.title : name) + "” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)");
+     }
+     var told = function () { if (state.hooks.libraryChanged) state.hooks.libraryChanged(); };   // HERESY 1167: the column too
+     told();
+@@ -1173,7 +1236,7 @@
+       var own = (state.frozen || []).indexOf(w) >= 0, by = (state.frozen || []).filter(function (f) { return w.indexOf(f + SEP) === 0; })[0];
+       return window.HeresyMenu.open(x, y, [
+         { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
+-        { icon: "\u25a6", label: "Open", action: function () { state.place = w; state.sel = {}; paint(); } },
++        { icon: "\u25a6", label: "Open", action: function () { openPlace(w); paint(); } },
+         { sep: true },
+         own ? { icon: "\u2600", label: "Unfreeze", action: function () { act({ op: "freeze", workspace: w, on: false }, "Unfrozen: \u201c" + w + "\u201d", true); } }
+             : { icon: "\u2744", label: "Frozen with \u201c" + by + "\u201d", disabled: true }
+@@ -1181,7 +1244,7 @@
+     }
+     window.HeresyMenu.open(x, y, [
+       { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
+-      { icon: "\u25a6", label: "Open", action: function () { state.place = w; state.sel = {}; paint(); } },
++      { icon: "\u25a6", label: "Open", action: function () { openPlace(w); paint(); } },
+       { icon: "\u2193", label: "New takes land here", checked: current() === w, action: function () { store(WS_KEY, current() === w ? "" : w); paintCurrent(); state.hooks.libraryChanged && state.hooks.libraryChanged(); } },
+       { sep: true },
+       // HERESY 1161: a section inside it, two levels below a workspace at most
+@@ -1414,6 +1477,7 @@
+       Array.prototype.forEach.call(document.querySelectorAll("#collFilters .is-on"), function (b) { b.classList.remove("is-on"); });
+     }
+     paint();
++    bringIn(name);                                  // HERESY 1167: past the cards shown: the rows up to it come in
+     var card = document.querySelector('#collGrid .coll-card[data-name="' + (window.CSS && CSS.escape ? CSS.escape(name) : name) + '"]');
+     if (!card) return;
+     card.scrollIntoView({ block: "center", behavior: "smooth" });
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 809ba0b..e8c8a14 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2582,5 +2582,8 @@ RuachI18n.add("be", {
+ "Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Сімвалаў: {0} · токенаў: ≈{1} · з тэкстам: ≈{2} з {3}",
+ "What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Чаго чакаць: YuE2 вучыўся на стылях без гэтага, а рухавік перадае стыль слова ў слова. Чаго мадэль не бачыла, можа прагучаць спетымі словамі або адвесці гук ад стылю. Напісаны як афіцыйныя стылі, стыль трымаецца.",
+ "What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Чаго чакаць: стыль, тэкст, партытура і песня дзеляць адно акно ў 24 576 токенаў; звыш бюджэту партытура ці песня абрываюцца.",
+-"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджэты токенаў партытуры і песні самі займаюць усё акно ў 24 576 токенаў: стылю і тэксту нічога не застаецца. Зменшы max tokens у «Сэмплінг партытуры» ці «Сэмплінг музыкі», або «Макс. даўжыня»."
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджэты токенаў партытуры і песні самі займаюць усё акно ў 24 576 токенаў: стылю і тэксту нічога не застаецца. Зменшы max tokens у «Сэмплінг партытуры» ці «Сэмплінг музыкі», або «Макс. даўжыня».",
++"Only the liked": "Толькі ўпадабаныя",
++"Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Толькі неўпадабаныя: «Не падабаецца» хавае сэмпл са спісаў, як у SUNO (нічога не выдаляецца); гэтая кнопка паказвае іх",
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не падабаецца: сэмпл сыходзіць са спісаў, нічога не выдалена (фільтр 👎 пакажа яго)"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index b1dfb31..48b5ae7 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2581,5 +2581,8 @@ RuachI18n.add("el", {
+ "Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Χαρακτήρες: {0} · tokens: ≈{1} · με τους στίχους: ≈{2} από {3}",
+ "What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Τι να περιμένεις: το YuE2 εκπαιδεύτηκε σε ύφη χωρίς αυτά, και η μηχανή περνά το ύφος λέξη προς λέξη. Ό,τι δεν είδε ποτέ το μοντέλο μπορεί να βγει τραγουδισμένο σαν λόγια ή να τραβήξει τον ήχο μακριά από το ύφος. Γραμμένο όπως τα επίσημα, το ύφος κρατά.",
+ "What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Τι να περιμένεις: το ύφος, οι στίχοι, η παρτιτούρα και το τραγούδι μοιράζονται ένα παράθυρο 24.576 tokens· πέρα από τον προϋπολογισμό η παρτιτούρα ή το τραγούδι κόβεται.",
+-"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Οι προϋπολογισμοί tokens της παρτιτούρας και του τραγουδιού γεμίζουν μόνοι τους το παράθυρο των 24.576 tokens: δεν μένει τίποτα για το ύφος και τους στίχους. Μείωσε το max tokens στη «Δειγματοληψία παρτιτούρας» ή στη «Δειγματοληψία μουσικής», ή τη «Μέγιστη διάρκεια»."
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Οι προϋπολογισμοί tokens της παρτιτούρας και του τραγουδιού γεμίζουν μόνοι τους το παράθυρο των 24.576 tokens: δεν μένει τίποτα για το ύφος και τους στίχους. Μείωσε το max tokens στη «Δειγματοληψία παρτιτούρας» ή στη «Δειγματοληψία μουσικής», ή τη «Μέγιστη διάρκεια».",
++"Only the liked": "Μόνο όσα μου αρέσουν",
++"Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Μόνο όσα δεν μου αρέσουν: το «Δεν μου αρέσει» κρύβει μια λήψη από τις λίστες, όπως στο SUNO (τίποτα δεν διαγράφεται)· αυτό το κουμπί τις δείχνει",
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "Το «{0}» δεν μου αρέσει: φεύγει από τις λίστες, τίποτα δεν διαγράφεται (το φίλτρο 👎 το δείχνει)"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 0df5121..f4bca34 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2581,5 +2581,8 @@ RuachI18n.add("es", {
+ "Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Caracteres: {0} · tokens: ≈{1} · con la letra: ≈{2} de {3}",
+ "What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Qué esperar: YuE2 aprendió de estilos sin esto, y el motor pasa el estilo palabra por palabra. Lo que el modelo nunca vio puede salir cantado como palabras o apartar el sonido del estilo. Escrito como los estilos oficiales, el estilo se sostiene.",
+ "What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Qué esperar: el estilo, la letra, la partitura y la canción comparten una ventana de 24 576 tokens; pasado el presupuesto, la partitura o la canción se cortan.",
+-"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Los presupuestos de tokens de la partitura y de la canción llenan solos la ventana de 24 576 tokens: no queda nada para el estilo y la letra. Baja max tokens en «Muestreo de la partitura» o «Muestreo de la música», o la «Duración máxima»."
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Los presupuestos de tokens de la partitura y de la canción llenan solos la ventana de 24 576 tokens: no queda nada para el estilo y la letra. Baja max tokens en «Muestreo de la partitura» o «Muestreo de la música», o la «Duración máxima».",
++"Only the liked": "Solo las que me gustan",
++"Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Solo las que no me gustan: «No me gusta» oculta una toma de las listas, como en SUNO (no se borra nada); este botón las muestra",
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» no me gusta: sale de las listas, no se borra nada (el filtro 👎 la muestra)"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 0b8f1ad..91af520 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2581,5 +2581,8 @@ RuachI18n.add("it", {
+ "Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Caratteri: {0} · token: ≈{1} · con il testo: ≈{2} su {3}",
+ "What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Cosa aspettarsi: YuE2 ha imparato da stili senza questo, e il motore passa lo stile parola per parola. Ciò che il modello non ha mai visto può uscire cantato come parole o portare il suono lontano dallo stile. Scritto come gli stili ufficiali, lo stile tiene.",
+ "What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Cosa aspettarsi: lo stile, il testo, la partitura e la canzone condividono una finestra di 24.576 token; oltre il budget la partitura o la canzone si interrompono.",
+-"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "I budget di token della partitura e della canzone riempiono da soli la finestra di 24.576 token: non resta nulla per lo stile e il testo. Abbassa max tokens in «Campionamento della partitura» o «Campionamento della musica», o la «Durata massima»."
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "I budget di token della partitura e della canzone riempiono da soli la finestra di 24.576 token: non resta nulla per lo stile e il testo. Abbassa max tokens in «Campionamento della partitura» o «Campionamento della musica», o la «Durata massima».",
++"Only the liked": "Solo i Mi piace",
++"Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Solo i Non mi piace: «Non mi piace» nasconde un take dalle liste, come in SUNO (non si cancella nulla); questo pulsante li mostra",
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» non mi piace: esce dalle liste, non si cancella nulla (il filtro 👎 lo mostra)"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index afa44bc..847f43a 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2587,5 +2587,8 @@ RuachI18n.add("ru", {
+ "Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Символов: {0} · токенов: ≈{1} · с текстом: ≈{2} из {3}",
+ "What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Чего ждать: YuE2 учился на стилях без этого, а движок передаёт стиль слово в слово. Чего модель не видела, может прозвучать спетыми словами или увести звук от стиля. Написанный как официальные стили, стиль держится.",
+ "What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Чего ждать: стиль, текст, партитура и песня делят одно окно в 24 576 токенов; сверх бюджета партитура или песня обрываются.",
+-"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджеты токенов партитуры и песни сами по себе занимают всё окно в 24 576 токенов: стилю и тексту ничего не остаётся. Уменьши max tokens в «Сэмплинг партитуры» или «Сэмплинг музыки», либо «Макс. длина»."
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджеты токенов партитуры и песни сами по себе занимают всё окно в 24 576 токенов: стилю и тексту ничего не остаётся. Уменьши max tokens в «Сэмплинг партитуры» или «Сэмплинг музыки», либо «Макс. длина».",
++"Only the liked": "Только понравившиеся",
++"Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Только непонравившиеся: «Не нравится» прячет семпл из списков, как в SUNO (ничего не удаляется); эта кнопка показывает их",
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не нравится: семпл уходит из списков, ничего не удалено (фильтр 👎 покажет его)"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 7025293..8b47065 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2582,5 +2582,8 @@ RuachI18n.add("uk", {
+ "Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Символів: {0} · токенів: ≈{1} · з текстом: ≈{2} з {3}",
+ "What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Чого чекати: YuE2 вчився на стилях без цього, а рушій передає стиль слово в слово. Чого модель не бачила, може прозвучати співаними словами або відвести звук від стилю. Написаний як офіційні стилі, стиль тримається.",
+ "What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Чого чекати: стиль, текст, партитура й пісня ділять одне вікно в 24 576 токенів; понад бюджет партитура чи пісня обриваються.",
+-"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджети токенів партитури й пісні самі займають усе вікно в 24 576 токенів: стилю й тексту нічого не лишається. Зменш max tokens у «Семплінг партитури» чи «Семплінг музики», або «Макс. довжина»."
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджети токенів партитури й пісні самі займають усе вікно в 24 576 токенів: стилю й тексту нічого не лишається. Зменш max tokens у «Семплінг партитури» чи «Семплінг музики», або «Макс. довжина».",
++"Only the liked": "Лише вподобані",
++"Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them": "Лише невподобані: «Не подобається» ховає семпл зі списків, як у SUNO (нічого не видаляється); ця кнопка показує їх",
++"“{0}” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)": "«{0}» не подобається: семпл іде зі списків, нічого не видалено (фільтр 👎 покаже його)"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index daadf93..2d3bf48 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1623,8 +1623,6 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <input type="search" id="collSearch" placeholder="Search: words, or * and ? as wildcards" autocomplete="off" />
+         <select id="collSort" aria-label="Sort"><option value="new">newest first</option><option value="old">oldest first</option>
+           <option value="title">by title</option><option value="long">longest first</option></select>
+-        <!-- HERESY 1167 (Viktor: «как в SUNO… дизлайк прятал трек, не удаляя… чекбокс показа/скрытия треков с дизлайками») -->
+-        <label class="check coll-showdis" data-tip="A dislike hides a take from the lists, as SUNO does; nothing is deleted. Ticked, the disliked show too; the 👎 chip shows only them"><input type="checkbox" id="collShowDisliked" /> <span>Show disliked</span></label>
+         <span class="coll-views"><button type="button" class="btn ghost small" data-coll-view="tiles">Tiles</button>
+           <button type="button" class="btn ghost small" data-coll-view="list">List</button></span>
+       </div></div>
+@@ -1642,8 +1640,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <button type="button" class="coll-chip" data-kind="regenerated">regenerated</button>
+             <button type="button" class="coll-chip" data-kind="rerendered">re-rendered</button>
+             <span class="coll-cap-inline">liked</span>
+-            <button type="button" class="coll-chip" data-kind="__liked" aria-label="Liked">👍</button>
+-            <button type="button" class="coll-chip" data-kind="__disliked" aria-label="Disliked">👎</button>
++            <!-- HERESY 1167: the cards' own one-colour icons (heresy-collection.js puts them in); a dislike hides a take, this shows them -->
++            <button type="button" class="coll-chip coll-chip-ico" data-kind="__liked" aria-label="Liked" data-tip="Only the liked">👍</button>
++            <button type="button" class="coll-chip coll-chip-ico" data-kind="__disliked" aria-label="Disliked" data-tip="Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them">👎</button>
+             <span class="coll-cap-inline">has</span>
+             <button type="button" class="coll-chip" data-der="stems">stems</button>
+             <button type="button" class="coll-chip" data-der="debuzz">debuzz</button>
+-- 
+2.43.0
+

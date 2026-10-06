@@ -1,0 +1,178 @@
+From b8f641d354492d88223278ed0b2dbf4b6b855a64 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 20:09:16 -0600
+Subject: [PATCH 1098/1177] Undo and the keyboard in the Librarian: Ctrl+A,
+ Esc, Delete, Ctrl+Z and the undo pill (1135)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  7 +++
+ tools/console/app.js               |  5 +-
+ tools/console/heresy-collection.js | 89 ++++++++++++++++++++++++++++--
+ 3 files changed, 96 insertions(+), 5 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index e80b33b..32728ec 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3207,3 +3207,10 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ /* HERESY 1133: the Writer's OpenRouter quick picks */
+ .or-picks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex-basis: 100%; }
+ .or-picks.is-hidden { display: none; }
++
++/* HERESY 1135: the undo pill: above the player, in the middle, for ten seconds after a change in the Librarian */
++.coll-undo { position: fixed; left: 50%; bottom: calc(var(--playbar-h, 60px) + 18px); transform: translateX(-50%); z-index: 60;
++  display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 14px; border-radius: 999px; border: 1px solid var(--amber-a);
++  background: var(--panel); box-shadow: 0 12px 30px -14px var(--shadow-lg, rgba(0,0,0,.45)); font-size: 13px; }
++.coll-undo[hidden] { display: none; }
++.coll-undo kbd { font: 500 10.5px/1 var(--mono); padding: 2px 4px; border-radius: 4px; border: 1px solid var(--line-a); margin-left: 4px; color: var(--dim); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index bd0919f..277b8c0 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5886,7 +5886,10 @@
+       HC && HC.trash ? { sep: true } : null,
+       HC && HC.trash ? { icon: "🗑", label: "Move to the trash…", danger: true, action: function () {
+         window.HeresyDialog.confirm("Move “" + displayTitle(take) + "” to the trash?\n\nNothing is deleted: the trash in the Librarian gives it back until it is emptied.", { ok: "To the trash", danger: true })
+-          .then(function (ok) { if (ok) return HC.trash([name]).then(function () { toast("Moved to the trash"); return refreshLibrary(); }); })
++          .then(function (ok) { if (ok) return HC.trash([name]).then(function (d) {     // HERESY 1135: with its undo
++            if (HC.undoable && d && d.moved && d.moved.length) HC.undoable("Moved to the trash", HC.untrash(d.moved)); else toast("Moved to the trash");
++            return refreshLibrary();
++          }); })
+           .catch(function (e) { toast(e.message, "bad"); });
+       } } : null
+     ].filter(Boolean);
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 83ee565..213f90a 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -378,11 +378,71 @@
+     if (!cur) return true;
+     return state.rows.some(function (r) { return r.name === name && r.workspaces.indexOf(cur) >= 0; });
+   }
+-  function act(body, done) {
++  // ---- HERESY 1135: undo, as a file manager has it. The last move, pin, hide, adding or taking out, marking or
++  // trashing in the Librarian goes back: the pill's Undo, or Ctrl+Z, for ten seconds after.
++  var undoState = { fn: null, timer: 0 };
++  function undoable(text, fn) {
++    var el = $("collUndo");
++    if (!el) {
++      el = document.createElement("div"); el.id = "collUndo"; el.className = "coll-undo"; el.hidden = true; el.setAttribute("role", "status");
++      el.innerHTML = '<span class="coll-undo-text"></span><button type="button" class="btn ghost small">Undo <kbd>Ctrl+Z</kbd></button>';
++      document.body.appendChild(el);
++      el.querySelector("button").addEventListener("click", undoLast);
++    }
++    undoState.fn = fn;
++    el.querySelector(".coll-undo-text").textContent = text;
++    el.hidden = false;
++    clearTimeout(undoState.timer);
++    undoState.timer = setTimeout(function () { el.hidden = true; undoState.fn = null; }, 10000);
++  }
++  function undoLast() {
++    var fn = undoState.fn, el = $("collUndo");
++    if (!fn) return;
++    undoState.fn = null;
++    if (el) el.hidden = true;
++    Promise.resolve(fn()).then(function () { toast("Undone"); }, function (e) { toast("Not undone: " + (e && e.message || e), true); });
++  }
++  // the workspaces each take had, given back: out of the ones it gained, into the ones it lost
++  function restoreWs(before) {
++    var gain = {}, lose = {};
++    Object.keys(before).forEach(function (n) {
++      var now = (rowOf(n) || { workspaces: [] }).workspaces, was = before[n];
++      now.forEach(function (w) { if (was.indexOf(w) < 0) (gain[w] = gain[w] || []).push(n); });
++      was.forEach(function (w) { if (now.indexOf(w) < 0) (lose[w] = lose[w] || []).push(n); });
++    });
++    var steps = Object.keys(gain).map(function (w) { return { op: "ws-remove", workspace: w, names: gain[w] }; })
++      .concat(Object.keys(lose).map(function (w) { return { op: "ws-add", workspace: w, names: lose[w] }; }));
++    return steps.reduce(function (p, b) { return p.then(function () { return act(b, null, true); }); }, Promise.resolve());
++  }
++  function undoFor(body) {
++    var list = (body.names || []).slice();
++    if (body.op === "ws-add" || body.op === "ws-remove" || body.op === "ws-move") {
++      var before = {};
++      list.forEach(function (n) { var r = rowOf(n); if (r) before[n] = r.workspaces.slice(); });
++      return function () { return restoreWs(before); };
++    }
++    if (body.op === "hide" || body.op === "show") return function () { return act({ op: body.op === "hide" ? "show" : "hide", names: list }, null, true); };
++    if (body.op === "pin") return function () { return act({ op: "pin", place: body.place, on: !body.on, names: list }, null, true); };
++    return null;
++  }
++  // a trash move given back: the takes from today's folder of the trash
++  function untrash(moved) {
++    return function () {
++      return api("/trash").then(function (d) {
++        var latest = {};
++        (d.items || []).forEach(function (it) { if (moved.indexOf(it.name) >= 0 && (!latest[it.name] || it.day > latest[it.name].day)) latest[it.name] = it; });
++        var items = Object.keys(latest).map(function (n) { return { day: latest[n].day, name: n }; });
++        if (!items.length) throw new Error("they are no longer in the trash");
++        return api("/trash", { op: "restore", items: items });
++      }).then(function () { if (state.hooks.refreshLibrary) state.hooks.refreshLibrary(); return load(); });
++    };
++  }
++  function act(body, done, quiet) {
++    var undo = quiet ? null : undoFor(body);             // what was, read before the change
+     return api("/collection", body).then(function (d) {
+       state.rows = d.takes || state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
+       state.pins = d.pins || state.pins || {};
+-      if (done) toast(done);
++      if (done) { if (undo) undoable(done, undo); else toast(done); }
+       paint();
+       paintCurrent();
+       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+@@ -581,6 +641,18 @@
+     });
+ 
+     $("collSelAll").addEventListener("click", function () { shown().forEach(function (r) { state.sel[r.name] = 1; }); paint(); });
++    // HERESY 1135: the keyboard, as in a file manager: Ctrl+A every take shown, Esc none, Delete to the trash (asked),
++    // Ctrl+Z the last change back. Only in the Librarian, never while typing or with a window open over it.
++    document.addEventListener("keydown", function (e) {
++      if (document.body.dataset.tab !== "collection") return;
++      var t = e.target, typing = t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
++      if (typing || document.querySelector(".hd-back, .ds-back, .hm-pop:not([hidden])") || !$("collDialog").hidden || !$("collSheet").hidden) return;
++      var mod = e.ctrlKey || e.metaKey, k = (e.key || "").toLowerCase();
++      if (mod && k === "a" && state.place !== "__trash") { e.preventDefault(); shown().forEach(function (r) { state.sel[r.name] = 1; }); paint(); }
++      else if (mod && k === "z" && undoState.fn) { e.preventDefault(); undoLast(); }
++      else if (e.key === "Escape" && names().length) { state.sel = {}; paint(); }
++      else if (e.key === "Delete" && names().length && state.place !== "__trash") { e.preventDefault(); $("collTrash").click(); }
++    });
+     $("collSelNone").addEventListener("click", function () { state.sel = {}; paint(); });
+     $("collLike").addEventListener("click", function () { rateMany(names(), 1); });        // HERESY 1108
+     $("collDislike").addEventListener("click", function () { rateMany(names(), -1); });
+@@ -610,7 +682,9 @@
+         if (ok) return api("/trash", { op: "move", names: n });
+       }).then(function (d) {
+         if (!d) return;
+-        toast(d.moved.length + " moved to the trash" + (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: their workspace locks its takes" : ""), d.locked && d.locked.length); state.sel = {};
++        var said = d.moved.length + " moved to the trash" + (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: their workspace locks its takes" : "");
++        if (d.moved.length) undoable(said, untrash(d.moved)); else toast(said, true);
++        state.sel = {};
+         if (hooks.refreshLibrary) hooks.refreshLibrary();
+         return load();
+       }).catch(function (e) { toast(e.message, true); });
+@@ -671,7 +745,13 @@
+     rows.forEach(function (r) { r.rating = v; }); paint();
+     return api("/collection", { op: "rate", names: list, value: v }).then(function (d) {
+       state.rows = d.takes || state.rows; paint();
+-      toast((v > 0 ? "Liked: " : v < 0 ? "Disliked: " : "Neither liked nor disliked: ") + list.length);
++      var was = {};                                       // HERESY 1135: each take's own mark back
++      rows.forEach(function (r, i) { (was[before[i]] = was[before[i]] || []).push(r.name); });
++      undoable((v > 0 ? "Liked: " : v < 0 ? "Disliked: " : "Neither liked nor disliked: ") + list.length, function () {
++        return Object.keys(was).reduce(function (p, val) {
++          return p.then(function () { return api("/collection", { op: "rate", names: was[val], value: +val }); });
++        }, Promise.resolve()).then(function (d2) { if (d2) state.rows = d2.takes || state.rows; paint(); if (state.hooks.libraryChanged) state.hooks.libraryChanged(); });
++      });
+       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+     }, function (e) { rows.forEach(function (r, i) { r.rating = before[i]; }); paint(); toast(e.message, true); });
+   }
+@@ -1040,5 +1120,6 @@
+                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
+                               markFavorite: markFavorite,
+                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
++                              undoable: undoable, untrash: untrash,
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+ })();
+-- 
+2.43.0
+

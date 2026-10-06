@@ -1,0 +1,591 @@
+From dfb7bffc0b1959df855d5f713fccedd25172d787 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 13:37:22 -0600
+Subject: [PATCH 1082/1177] Starter sets in the LoRA Trainer's Material step
+ (1100), Forge instead of Forge in every word, the guide's ? from Font Awesome
+ 4.7
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  14 +++++++---
+ tools/console/app.js               |   2 +-
+ tools/console/heresy-collection.js |   2 +-
+ tools/console/heresy-derived.js    |  24 ++++++++---------
+ tools/console/heresy-gloss.js      |   4 +--
+ tools/console/heresy-icons.js      |   2 ++
+ tools/console/heresy-inspect.js    |   6 ++---
+ tools/console/heresy-post.js       |   2 +-
+ tools/console/heresy-presets.js    |   8 +++---
+ tools/console/heresy-settings.js   |   2 +-
+ tools/console/heresy-spectrum.js   |  12 ++++-----
+ tools/console/heresy-textprep.js   |   2 +-
+ tools/console/heresy-train.js      |  40 +++++++++++++++++++++++++++++
+ tools/console/heresy-writer.js     |   4 +--
+ tools/console/index.html           |  33 +++++++++++++-----------
+ tools/public/index.html.gz         | Bin 398078 -> 399494 bytes
+ 16 files changed, 104 insertions(+), 53 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 1c54200..d2d0a06 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2481,7 +2481,7 @@ select { padding-top: 6px; padding-bottom: 6px; }
+   #wave { min-width: 0; flex: 1 1 60px; }
+ }
+ 
+-/* HERESY 1060: progress in Post: a bar under every job in the tree, and a floating card while Forge works */
++/* HERESY 1060: progress in Post: a bar under every job in the tree, and a floating card while Forge works */
+ .job-bar { height: 4px; margin-top: 6px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
+ .job-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--amber), var(--amber-hi), var(--amber)); background-size: 200% 100%;
+   animation: pc-flow 1.4s linear infinite; transition: width .9s linear; }
+@@ -2509,6 +2509,15 @@ body[data-tab="train"] .library, body[data-tab="train"] .col-grip { display: non
+ .tr-pick { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: none; color: var(--ink); font: inherit; cursor: pointer; }
+ .tr-pick span { font-size: 12px; color: var(--muted); }
+ .tr-pick.is-on { border-color: var(--amber); box-shadow: inset 2px 0 0 var(--amber); }
++/* HERESY 1100: the starter sets */
++.tr-phead .spacer { flex: 1; }
++.tr-starter { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md); }
++.tr-starter[hidden] { display: none; }
++.tr-st-row { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); }
++.tr-st-row > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
++.tr-st-row span { font-size: 12px; color: var(--muted); }
++.tr-st-row .tr-st-in { color: #3f9a4a; }
++.tr-st-row .tr-st-run { font-family: var(--mono); color: var(--ink); }
+ .tr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+ .tr-tracks { display: flex; flex-direction: column; gap: 3px; max-height: 460px; overflow: auto; }
+ .tr-track { display: flex; gap: 8px; padding: 4px 6px; border-bottom: 1px solid var(--line-soft); }
+@@ -2838,9 +2847,6 @@ body[data-tab="train"] .log-dock { bottom: 18px; }
+ @media (max-width: 1150px) { .log-dock { bottom: 10px; } }
+ 
+ /* HERESY 1096: the guide */
+-.guide-btn { min-width: 34px; height: 30px; padding: 0 9px; font: 600 15px/1 var(--sans); }
+-.head-more-items .hm-text { gap: 10px; font-size: 13px; }
+-.hm-glyph { display: inline-grid; place-items: center; width: 16px; font-weight: 700; }
+ .hg-back { position: fixed; inset: 0; z-index: 150; display: flex; align-items: center; justify-content: center; padding: 3vh 3vw;
+   background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(3px); opacity: 0; transition: opacity .16s ease; }
+ .hg-back.is-on { opacity: 1; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e113b7b..38978a2 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5693,7 +5693,7 @@
+       $("impState").textContent = "uploading " + Math.round(e.loaded / e.total * 100) + "% · " + (e.loaded / 1e6).toFixed(1) + " of " +
+         (e.total / 1e6).toFixed(1) + " MB · " + (e.loaded / 1e6 / Math.max(0.1, secs)).toFixed(1) + " MB/s";
+     };
+-    xhr.upload.onload = function () { $("impState").textContent = "converting on Forge…"; };
++    xhr.upload.onload = function () { $("impState").textContent = "converting on Forge…"; };
+     xhr.onerror = function () { $("impState").textContent = "the upload broke off"; button.disabled = false; };
+     xhr.onload = function () {
+       var r = {};
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 44159d9..16496ff 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -46,7 +46,7 @@
+       paint();
+       paintCurrent();
+       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+-    }).catch(function (e) { $("collGrid").innerHTML = '<p class="row-hint">The Librarian lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
++    }).catch(function (e) { $("collGrid").innerHTML = '<p class="row-hint">The Librarian lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
+   }
+ 
+   function shown() {
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 5797b3f..2db2c83 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -88,18 +88,18 @@
+   }
+ 
+   // ---- HERESY 1060: progress, estimated: the lab says running or queued, not how far. The rates are
+-  // measured on Forge (seconds of work per second of audio); the bar stops at 95 % until the file lands.
++  // measured on Forge (seconds of work per second of audio); the bar stops at 95 % until the file lands.
+   var RATE = { debuzz: 0.18, remaster: 0.12, upscale: 1.8, stems: 0.7 };
+   function progress(j) {
+     var el = Math.max(0, Math.round(Date.now() / 1000 - (j.started || Date.now() / 1000)));
+     var len = state.take && state.take.seconds || 0, rate = RATE[j.kind] * (j.kind === "stems" && j.mode === "four" ? 1.8 : 1);
+     var clockS = function (s) { return s >= 60 ? Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2) : s + " s"; };
+-    if (j.status === "queued") return { pct: 3, say: "waiting for Forge\u2026 " + clockS(el) };
++    if (j.status === "queued") return { pct: 3, say: "waiting for Forge\u2026 " + clockS(el) };
+     if (!len || !rate) return { pct: 50, say: "running\u2026 " + clockS(el) };
+     var est = Math.max(5, len * rate), pct = Math.min(95, Math.round(100 * el / est));
+     return { pct: pct, say: clockS(el) + (el < est ? " \u00b7 about " + clockS(Math.round(est - el)) + " left" : " \u00b7 longer than usual") };
+   }
+-  // a floating card in the Refiner while Forge works on the take in hand: what runs, how long, about how much is left
++  // a floating card in the Refiner while Forge works on the take in hand: what runs, how long, about how much is left
+   function paintJobs() {
+     var card = document.getElementById("postJobs");
+     if (!card) {
+@@ -109,7 +109,7 @@
+     var live = state.running.filter(function (j) { return j.status !== "failed"; });
+     card.hidden = !live.length || document.body.dataset.tab !== "post";
+     if (card.hidden) return;
+-    card.innerHTML = '<div class="pj-cap">On Forge now</div>' + live.map(function (j) {
++    card.innerHTML = '<div class="pj-cap">On Forge now</div>' + live.map(function (j) {
+       var p = progress(j);
+       return '<div class="pj-row"><div class="pj-head"><b>' + esc(KIND[j.kind] || j.kind) + (j.mode ? " \u00b7 " + esc(MODE[j.mode] || j.mode) : "") + "</b><span>" + esc(p.say) + "</span></div>" +
+         '<div class="job-bar' + (j.status === "queued" ? " is-queued" : "") + '"><i style="width:' + p.pct + '%"></i></div></div>';
+@@ -139,7 +139,7 @@
+         paintSources();
+         paintUpSources();
+         paintDbSources();
+-        // while Forge works on this take, look again every three seconds
++        // while Forge works on this take, look again every three seconds
+         clearTimeout(state.watch);
+         if (state.running.some(function (j) { return j.status !== "failed"; })) state.watch = setTimeout(refresh, 3000);
+       }).catch(function () {
+@@ -154,7 +154,7 @@
+   function split(mode) {
+     if (!state.take) return;
+     var token = state.token, name = state.take.name, started = Date.now();
+-    var ticker = setInterval(function () { say("Forge is splitting (" + MODE[mode] + ")… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
++    var ticker = setInterval(function () { say("Forge is splitting (" + MODE[mode] + ")… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
+     all(true);
+     function ask() {
+       return fetch("/lab/stems?name=" + encodeURIComponent(name) + "&mode=" + mode).then(function (r) {
+@@ -219,9 +219,9 @@
+     var q = "name=" + encodeURIComponent(state.take.name) + "&mode=" + $("upMode").value + "&variants=" + $("upVariants").value +
+       "&keep=" + ($("upKeep").checked ? "1" : "0") + ($("upSource").value ? "&source=" + encodeURIComponent($("upSource").value) : "");
+     $("upRun").disabled = true;
+-    $("upState").textContent = "sending to Forge…";
++    $("upState").textContent = "sending to Forge…";
+     fetch("/lab/upscale?" + q).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+-      .then(function () { $("upState").textContent = "running on Forge: it appears in the tree when done"; refresh(); })
++      .then(function () { $("upState").textContent = "running on Forge: it appears in the tree when done"; refresh(); })
+       .catch(function (e) { $("upState").textContent = "Could not: " + (e.message || e); })
+       .then(function () { $("upRun").disabled = false; });
+   }
+@@ -243,9 +243,9 @@
+       (fr ? "&period=" + fr.period + "&rate=" + fr.rate : "") +
+       ($("dbSource").value ? "&source=" + encodeURIComponent($("dbSource").value) : "");
+     $("dbRun").disabled = true;
+-    $("dbState").textContent = "sending to Forge…";
++    $("dbState").textContent = "sending to Forge…";
+     fetch("/lab/debuzz?" + q).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+-      .then(function () { $("dbState").textContent = "running on Forge: it appears in the tree when done"; refresh(); })
++      .then(function () { $("dbState").textContent = "running on Forge: it appears in the tree when done"; refresh(); })
+       .catch(function (e) { $("dbState").textContent = "Could not: " + (e.message || e); })
+       .then(function () { $("dbRun").disabled = false; });
+   }
+@@ -267,10 +267,10 @@
+     if (!state.take) return;
+     var s = remasterSettings();
+     $("rmRun").disabled = true;
+-    $("rmState").textContent = "sending to Forge…";
++    $("rmState").textContent = "sending to Forge…";
+     fetch("/lab/remaster?name=" + encodeURIComponent(state.take.name) + "&s=" + encodeURIComponent(JSON.stringify(s)))
+       .then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+-      .then(function () { $("rmState").textContent = "running on Forge: it appears in the tree above when done"; refresh(); })
++      .then(function () { $("rmState").textContent = "running on Forge: it appears in the tree above when done"; refresh(); })
+       .catch(function (e) { $("rmState").textContent = "Could not: " + (e.message || e); })
+       .then(function () { $("rmRun").disabled = false; });
+   }
+diff --git a/tools/console/heresy-gloss.js b/tools/console/heresy-gloss.js
+index dedc916..1110a8a 100644
+--- a/tools/console/heresy-gloss.js
++++ b/tools/console/heresy-gloss.js
+@@ -1,6 +1,6 @@
+ // HERESY 1011: the take's lyrics checked by ear — Whisper against the lyrics, per minute.
+ //
+-// The listening runs on Forge in heresy-lab (lab/lab.py, port 41870, reached through the
++// The listening runs on Forge in heresy-lab (lab/lab.py, port 41870, reached through the
+ // Kit server's /lab/ proxy): Whisper large-v3
+ // loads for one take, transcribes it, and leaves VRAM (Viktor 30.09.2026: load only
+ // when needed, unload at once). The measure is lab/gloss_core.py:
+@@ -86,7 +86,7 @@
+     if (!state.take) return;
+     var token = ++state.token, started = Date.now(), take = state.take, first = true;
+     $("glossRun").disabled = true;
+-    var ticker = setInterval(function () { say("Whisper is listening on Forge\u2026 " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
++    var ticker = setInterval(function () { say("Whisper is listening on Forge\u2026 " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
+     say("asking heresy-lab\u2026");
+     function ask() {
+       var url = lab() + "/gloss?name=" + encodeURIComponent(take.name) + src() + (force && first ? "&force=1" : "");
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index d4d21af..d0e229a 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -5,6 +5,8 @@
+ (function () {
+   "use strict";
+   var ICONS = {
++    // HERESY 1100: the guide's ?, Font Awesome 4.7 (SIL OFL 1.1) as Viktor chose it: the square dot; centred like the others
++    question: { w: 293, d: "M201.1 89.1V20.6Q201.1 16 197.7 12.6Q194.3 9.1 189.7 9.1H121.1Q116.6 9.1 113.1 12.6Q109.7 16 109.7 20.6V89.1Q109.7 93.7 113.1 97.1Q116.6 100.6 121.1 100.6H189.7Q194.3 100.6 197.7 97.1Q201.1 93.7 201.1 89.1ZM291.4 260.6Q291.4 245.1 287 231.7Q282.6 218.3 277 209.9Q271.4 201.4 261.3 192.9Q251.1 184.3 244.9 180.4Q238.6 176.6 227.4 170.3Q215.7 163.7 207.9 151.7Q200 139.7 200 132.6Q200 127.7 196.6 123.3Q193.1 118.9 188.6 118.9H120Q115.7 118.9 112.7 124.1Q109.7 129.4 109.7 134.9V147.7Q109.7 171.4 128.3 192.4Q146.9 213.4 169.1 223.4Q186 231.1 193.1 239.4Q200.3 247.7 200.3 261.1Q200.3 273.1 187 282.3Q173.7 291.4 156.3 291.4Q137.7 291.4 125.4 283.1Q115.4 276 94.9 250.3Q91.1 245.7 86 245.7Q82.6 245.7 78.9 248L32 283.7Q28.3 286.6 27.6 290.9Q26.9 295.1 29.1 298.9Q74.9 374.9 161.7 374.9Q184.6 374.9 207.7 366Q230.9 357.1 249.4 342.3Q268 327.4 279.7 305.9Q291.4 284.3 291.4 260.6Z" },
+     daw: { w: 512, d: "M80 -32H112V416H80ZM40 224H152V296H40ZM240 -32H272V416H240ZM200 56H312V128H200ZM400 -32H432V416H400ZM360 280H472V352H360Z" },   // HERESY 1075: three faders, drawn here
+     open: { w: 576, d: "M384 -32H432C443.3999938964844 -32 453.8999938964844 -26 459.6000061035156 -16.100006103515625L571.5999755859375 175.89999389648438C577.3999633789062 185.79998779296875 577.3999633789062 198.0 571.699951171875 208.0C565.9999389648438 218.0 555.5 224.0 544.0 224.0H144.0C132.60000610351562 224.0 122.09999084472656 218.0 116.39999389648438 208.10000610351562L47.99998474121094 90.89999389648438V352.0C47.99998474121094 360.79998779296875 55.199981689453125 368.0 63.99998474121094 368.0H181.49998474121094C185.69998168945312 368.0 189.79998779296875 366.29998779296875 192.79998779296875 363.29998779296875L219.29998779296875 336.79998779296875C240.29998779296875 315.79998779296875 268.7999725341797 304.0 298.49998474121094 304.0H415.99998474121094C424.7999725341797 304.0 431.99998474121094 296.79998779296875 431.99998474121094 288.0V256.0H479.99998474121094V288.0C479.99998474121094 323.29998779296875 451.2999725341797 352.0 415.99998474121094 352.0H298.49998474121094C281.49998474121094 352.0 265.1999969482422 358.70001220703125 253.19998168945312 370.70001220703125L226.69998168945312 397.29998779296875C214.69998168945312 409.29998779296875 198.3999786376953 416.0 181.3999786376953 416.0H63.99998474121094C28.699981689453125 416.0 -1.52587890625e-05 387.29998779296875 -1.52587890625e-05 352.0V32.0C-1.52587890625e-05 -3.29998779296875 28.699981689453125 -32.0 63.99998474121094 -32.0H87.69998168945312H383.9999694824219Z" },
+     save: { w: 448, d: "M48 352V32C48 23.20001220703125 55.19999694824219 16.0 64.0 16.0H384.0C392.79998779296875 16.0 400.0 23.20001220703125 400.0 32.0V277.5C400.0 281.70001220703125 398.29998779296875 285.79998779296875 395.29998779296875 288.79998779296875L429.1999816894531 322.70001220703125C441.1999816894531 310.70001220703125 447.8999938964844 294.4000244140625 447.8999938964844 277.4000244140625L448.0 32.0C448.0 -3.29998779296875 419.29998779296875 -32.0 384.0 -32.0H64.0C28.699996948242188 -32.0 0.0 -3.29998779296875 0.0 32.0V352.0C0.0 387.29998779296875 28.699996948242188 416.0 64.0 416.0H309.5C326.5 416.0 342.79998779296875 409.29998779296875 354.79998779296875 397.29998779296875L429.29998779296875 322.79998779296875L395.3999938964844 288.8999938964844L320.79998779296875 363.29998779296875C320.5 363.6000061035156 320.29998779296875 363.79998779296875 320.0 364.1000061035156V264.0C320.0 250.6999969482422 309.29998779296875 240.0 296.0 240.0H104.0C90.69999694824219 240.0 80.0 250.6999969482422 80.0 264.0V368.0H64.0C55.19999694824219 368.0 48.0 360.79998779296875 48.0 352.0ZM128.0 368.0V288.0H272.0V368.0H128.0ZM160.0 128.0C160.0 150.864990234375 172.19833374023438 171.99313354492188 192.0 183.42562866210938C211.80166625976562 194.85812377929688 236.19833374023438 194.85812377929688 256.0 183.42562866210938C275.8016662597656 171.99313354492188 288.0 150.864990234375 288.0 128.0C288.0 105.135009765625 275.8016662597656 84.00686645507812 256.0 72.57437133789062C236.19833374023438 61.141876220703125 211.80166625976562 61.141876220703125 192.0 72.57437133789062C172.19833374023438 84.00686645507812 160.0 105.135009765625 160.0 128.0Z" },
+diff --git a/tools/console/heresy-inspect.js b/tools/console/heresy-inspect.js
+index 9ae0d8e..6decdd8 100644
+--- a/tools/console/heresy-inspect.js
++++ b/tools/console/heresy-inspect.js
+@@ -1,4 +1,4 @@
+-// HERESY 1025: artifacts of a take, or of a file made from it, measured on Forge
++// HERESY 1025: artifacts of a take, or of a file made from it, measured on Forge
+ // (lab/inspect_job.py): held tones (named as notes, so a drone is not taken for a fault),
+ // the VAE's frame buzz (the highs trembling at 25 Hz and its multiples), click candidates,
+ // clipping, dropouts, DC, stereo correlation and loudness. Every finding with a time seeks.
+@@ -63,7 +63,7 @@
+         st.bands.map(function (b) { return chip(b.band, b.correlation.toFixed(2), b.correlation < 0 ? "bad" : b.correlation < 0.3 ? "warn" : "ok", ""); }).join("") + "</div>" +
+         ((st.negative || []).length ? '<div class="in-list">' + st.negative.map(function (n) { return '<span class="in-item">' + at(n.at) + " " + n.correlation.toFixed(2) + "</span>"; }).join("") + "</div>" : "");
+     }
+-    html += '<p class="row-hint">' + clock(r.seconds || 0) + " · " + (r.rate || "") + " Hz · measured in " + (r.took || "?") + " s on Forge</p>";
++    html += '<p class="row-hint">' + clock(r.seconds || 0) + " · " + (r.rate || "") + " Hz · measured in " + (r.took || "?") + " s on Forge</p>";
+     $("inResult").innerHTML = html;
+     if (state.take) window.dispatchEvent(new CustomEvent("heresy-step", { detail: { name: state.take.name, step: "inspect" } }));   // HERESY 1029
+   }
+@@ -72,7 +72,7 @@
+     if (!state.take) return;
+     var token = ++state.token, started = Date.now();
+     $("inRun").disabled = true;
+-    var ticker = setInterval(function () { say("Forge is listening for faults… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
++    var ticker = setInterval(function () { say("Forge is listening for faults… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
+     function ask(first) {
+       return fetch("/lab/inspect?name=" + encodeURIComponent(state.take.name) + src() + (force && first ? "&force=1" : "")).then(function (r) {
+         return r.json().then(function (b) {
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index 251840b..052fbff 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -49,7 +49,7 @@
+   }
+ 
+   // ---- HERESY 1054: the chain (Viktor): Debuzz -> Upscale (optional) -> Remaster, then the checks;
+-  // run on Forge as one job (POST /lab/chain), watched here; closing the page stops nothing.
++  // run on Forge as one job (POST /lab/chain), watched here; closing the page stops nothing.
+   var CHAIN_KEY = "yue2.chain", chain = { timer: 0, hooks: null, watching: "" };
+   function chainPrefs() { try { return JSON.parse(localStorage.getItem(CHAIN_KEY) || "{}"); } catch (e) { return {}; } }
+   function saveChainPrefs() {
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+index 6050abc..d8b2092 100644
+--- a/tools/console/heresy-presets.js
++++ b/tools/console/heresy-presets.js
+@@ -1,4 +1,4 @@
+-// HERESY 1032: a library of styles and profiles, kept by the lab on Forge in the user config folder
++// HERESY 1032: a library of styles and profiles, kept by the lab on Forge in the user config folder
+ // (user/presets.json): every browser and device sees the same, and a cleared browser loses none.
+ // A style is a text. A profile is every knob but the texts and seeds (app.js captures and applies it).
+ // Two profiles are built in: Music, as the engine's defaults, and Speech, for long spoken word.
+@@ -29,7 +29,7 @@
+   }
+   function load() {
+     return fetch(URL).then(function (r) { return r.ok ? r.json() : { styles: [], setups: [] }; })
+-      .then(take, function () { take({ styles: [], setups: [] }); toast("The library is on Forge's lab, which does not answer: only the built-in profiles for now", true); });
++      .then(take, function () { take({ styles: [], setups: [] }); toast("The library is on Forge's lab, which does not answer: only the built-in profiles for now", true); });
+   }
+   function take(d) {
+     state.styles = d.styles || [];
+@@ -81,7 +81,7 @@
+         return state.styles.some(function (s) { return s.name === name; }) ? window.HeresyDialog.confirm("“" + name + "” exists. Replace it?", { ok: "Replace" }) : true;
+       }).then(function (ok) {
+         if (!ok) return;
+-        return send({ op: "put", kind: "style", name: name, data: text }).then(function (d) { take(d); $("styleLib").value = name; $("styleDel").disabled = false; toast("Style “" + name + "” saved on Forge"); });
++        return send({ op: "put", kind: "style", name: name, data: text }).then(function (d) { take(d); $("styleLib").value = name; $("styleDel").disabled = false; toast("Style “" + name + "” saved on Forge"); });
+       }).catch(function (e) { toast("Not saved: " + e.message, true); });
+     });
+     $("styleDel").addEventListener("click", function () {
+@@ -108,7 +108,7 @@
+         return state.setups.some(function (s) { return s.name === name; }) ? window.HeresyDialog.confirm("“" + name + "” exists. Replace it?", { ok: "Replace" }) : true;
+       }).then(function (ok) {
+         if (!ok) return;
+-        return send({ op: "put", kind: "setup", name: name, data: data }).then(function (d) { take(d); $("setupLib").value = "s:" + name; $("setupDel").disabled = false; toast("Profile “" + name + "” saved on Forge"); });
++        return send({ op: "put", kind: "setup", name: name, data: data }).then(function (d) { take(d); $("setupLib").value = "s:" + name; $("setupDel").disabled = false; toast("Profile “" + name + "” saved on Forge"); });
+       }).catch(function (e) { toast("Not saved: " + e.message, true); });
+     });
+     $("setupDel").addEventListener("click", function () {
+diff --git a/tools/console/heresy-settings.js b/tools/console/heresy-settings.js
+index 2059610..a2896cb 100644
+--- a/tools/console/heresy-settings.js
++++ b/tools/console/heresy-settings.js
+@@ -1,5 +1,5 @@
+ // HERESY 1027: the page's settings (its yue2.* keys in the browser's storage) mirrored to disk on
+-// Forge through the lab: the studio's user/settings.json (since 02.10.2026; before, ~/.config/yue2_os, which the lab
++// Forge through the lab: the studio's user/settings.json (since 02.10.2026; before, ~/.config/yue2_os, which the lab
+ // copies once). A cleared browser, a private window or another device gets them back.
+ //
+ // Load: before app.js reads anything, the file is read at once (a synchronous request for one
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+index 6806c14..69a6ec7 100644
+--- a/tools/console/heresy-spectrum.js
++++ b/tools/console/heresy-spectrum.js
+@@ -164,7 +164,7 @@
+   // The take comes as FLAC when the server offers it (the same samples, about 40% fewer bytes),
+   // else as it is. Every phase is timed; the times go to the status line.
+   var cache = [];
+-  // HERESY 1020: the spectrum computed on Forge by heresy-lab (lab/spectrum_job.py, the same
++  // HERESY 1020: the spectrum computed on Forge by heresy-lab (lab/spectrum_job.py, the same
+   // method in numpy), fetched through the Kit at /lab/spectrum: ~8 MB gzipped instead of the
+   // whole take. 202 while it is computed. Its layout: "HSP1", uint32 header length, header
+   // JSON, uint8 spectrogram (0.5 dB steps from -120 dB), float32 Welch average, float32 bands.
+@@ -173,7 +173,7 @@
+     function ask() {
+       return fetch("/lab/spectrum?name=" + encodeURIComponent(name) + (source ? "&source=" + encodeURIComponent(source) : "")).then(function (r) {
+         if (r.status === 202) {
+-          say("Forge is measuring\u2026 " + Math.round((performance.now() - started) / 1000) + "s");
++          say("Forge is measuring\u2026 " + Math.round((performance.now() - started) / 1000) + "s");
+           return new Promise(function (resolve) { setTimeout(resolve, 1000); }).then(ask);
+         }
+         if (r.status === 502) { var gone = new Error("heresy-lab is not running"); gone.noLab = true; throw gone; }
+@@ -182,7 +182,7 @@
+       }).catch(function (error) {
+         // HERESY 1021: a transfer cut on a slow line is asked again, twice, before giving up
+         if (error.noLab || error.message.indexOf("heresy-lab answered") === 0 || ++tries > 2) throw error;
+-        say("the line dropped; asking Forge again (" + tries + ")\u2026");
++        say("the line dropped; asking Forge again (" + tries + ")\u2026");
+         return new Promise(function (resolve) { setTimeout(resolve, 1500); }).then(ask);
+       });
+     }
+@@ -202,7 +202,7 @@
+         var freqs = new Float64Array(h.welchBins);
+         for (var k = 0; k < h.welchBins; k++) freqs[k] = k * h.sr / h.welchN;
+         return { seconds: h.seconds, peak: h.peak, sr: h.sr, spec: { db: db, frames: h.frames, bins: h.bins, hop: h.hop },
+-                 freqs: freqs, avg: avg, bands: bands, bytes: bytes, where: "Forge",
++                 freqs: freqs, avg: avg, bands: bands, bytes: bytes, where: "Forge",
+                  times: { fetch: fetched, decode: 0, stft: 0, welch: 0 } };
+       });
+     });
+@@ -296,7 +296,7 @@
+ 
+   function drawSpectrogram(el, data, label, color, scale, range, w, h) {
+     var c = canvasFor(el, h || 250, w), g = c.g, pw = c.w - PAD.l - PAD.r, ph = c.h - PAD.t - PAD.b;
+-    var s = data.spec, nyq = (data.sr || SR) / 2, dpr = c.dpr;   // HERESY 1020: Forge's spectrum keeps 48 kHz
++    var s = data.spec, nyq = (data.sr || SR) / 2, dpr = c.dpr;   // HERESY 1020: Forge's spectrum keeps 48 kHz
+     var W = Math.round(pw * dpr), H = Math.round(ph * dpr), img = g.createImageData(W, H), px = img.data;
+     var lo = range[0], span = Math.max(1e-6, range[1] - range[0]);
+     // the bin under each pixel row, found once
+@@ -485,7 +485,7 @@
+       var tm = a.times || {}, f1 = function (x) { return (x || 0).toFixed(1); };
+       say(clock(a.seconds) + " · peak " + (20 * Math.log10(a.peak + 1e-12)).toFixed(1) + " dBFS" +
+           (b ? " · second " + clock(b.seconds) + ", peak " + (20 * Math.log10(b.peak + 1e-12)).toFixed(1) + " dBFS" : "") +
+-          (a.where === "Forge" ? " · measured on Forge, " + (a.bytes / 1e6).toFixed(1) + " MB in " + f1(tm.fetch) + " s"
++          (a.where === "Forge" ? " · measured on Forge, " + (a.bytes / 1e6).toFixed(1) + " MB in " + f1(tm.fetch) + " s"
+             : " · measured here: " + (a.bytes / 1e6).toFixed(0) + " MB in " + f1(tm.fetch) + " s, decoded " + f1(tm.decode) +
+               " s, measured " + f1((tm.stft || 0) + (tm.welch || 0)) + " s"));
+       tick();
+diff --git a/tools/console/heresy-textprep.js b/tools/console/heresy-textprep.js
+index f6099bf..00658e4 100644
+--- a/tools/console/heresy-textprep.js
++++ b/tools/console/heresy-textprep.js
+@@ -225,7 +225,7 @@
+         if (!name) return toast("Give the profile a name", true);
+         if (BUILT_IN.some(function (p) { return p.name === name; })) return toast("That name is a built-in profile: choose another", true);
+         send({ op: "put", kind: "textprofile", name: name, data: { shape: editing.shape, rules: editing.rules } })
+-          .then(function () { editing.name = name; editing.builtin = false; toast("Text profile “" + name + "” saved on Forge"); return load(); })
++          .then(function () { editing.name = name; editing.builtin = false; toast("Text profile “" + name + "” saved on Forge"); return load(); })
+           .then(function () { $("tpEdPick").value = name; if ($("tpPick")) $("tpPick").value = name; })
+           .catch(function (e) { toast("Not saved: " + e.message, true); });
+       });
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 3c79439..b58bb7c 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -456,6 +456,44 @@
+     }).join("");
+   }
+ 
++  // HERESY 1100: the starter sets (Viktor: "so a person can start experimenting, not beat their head against a wall").
++  // Shown on a click; each fetched only after its size and terms are read and agreed; while one downloads, its
++  // bytes so far; when it lands, the Material list reads it like any folder.
++  var starter = { open: false, data: null, timer: 0 };
++  function loadStarter() {
++    return api("/train/starter").then(function (d) { starter.data = d; paintStarter(); }).catch(function (e) {
++      $("trStarter").innerHTML = '<p class="tr-warn">The starter sets could not be listed: ' + esc(e.message) + "</p>";
++    });
++  }
++  function paintStarter() {
++    var d = starter.data, el = $("trStarter");
++    if (!d) return;
++    var busy = false, landed = false;
++    el.innerHTML = '<p class="row-hint">' + esc(d.terms) + ". Downloading means accepting them.</p>" + d.sets.map(function (s) {
++      var j = s.job || {}, right;
++      if (s.present) right = '<span class="tr-st-in">✓ in datasets/raw/</span>';
++      else if (j.status === "running") { busy = true; right = '<span class="tr-st-run">' + gb(j.got || 0) + " of " + gb(s.bytes) + "…</span>"; }
++      else right = (j.status === "failed" ? '<span class="tr-warn">' + esc(j.error) + "</span>" : "") + '<button type="button" class="btn ghost small" data-starter="' + esc(s.name) + '">Download · ' + gb(s.bytes) + "</button>";
++      if (j.status === "done") landed = true;
++      return '<div class="tr-st-row"><div><b>' + esc(s.name) + "</b><span>" + esc(s.what) + " · " + s.tracks + " tracks</span></div>" + right + "</div>";
++    }).join("");
++    clearTimeout(starter.timer);
++    if (busy && starter.open) starter.timer = setTimeout(loadStarter, 2000);
++    if (landed && !busy) load();
++  }
++  function toggleStarter() {
++    starter.open = !starter.open;
++    $("trStarter").hidden = !starter.open;
++    $("trStarterOpen").setAttribute("aria-expanded", String(starter.open));
++    if (starter.open) { $("trStarter").innerHTML = '<p class="row-hint">Asking the lab…</p>'; loadStarter(); } else clearTimeout(starter.timer);
++  }
++  function fetchStarter(name) {
++    var s = starter.data.sets.filter(function (x) { return x.name === name; })[0];
++    confirmBox("Download " + s.name + "?\n\n" + s.what + ", " + s.tracks + " tracks, " + gb(s.bytes) + " from Hugging Face (" + starter.data.repo + ") into datasets/raw/" + s.name + ".\n\n" + starter.data.terms + ".", { ok: "Download, terms accepted" })
++      .then(function (ok) { if (ok) return api("/train/starter", { name: name }).then(function (d) { starter.data = d; paintStarter(); }); })
++      .catch(function (e) { toast(e.message, true); });
++  }
++
+   // ------------------------------------------------------------------ 2 The set
+   function makeSet() {
+     if (!state.raw) { showPane("raw"); return toast("Pick a raw folder first", true); }
+@@ -604,6 +642,8 @@
+     $("trFold").addEventListener("click", function () { state.folded = true; keep("yue2.trFolded", "1"); paintList(); });
+     $("trUnfold").addEventListener("click", function () { state.folded = false; keep("yue2.trFolded", null); paintList(); });
+     $("trRaw").addEventListener("click", function (e) { var b = e.target.closest("[data-raw]"); if (b) pickRaw(b.dataset.raw); });
++    $("trStarterOpen").addEventListener("click", toggleStarter);
++    $("trStarter").addEventListener("click", function (e) { var b = e.target.closest("[data-starter]"); if (b) fetchStarter(b.dataset.starter); });
+     $("trTracks").addEventListener("change", function (e) { var i = e.target.dataset.in; if (i !== undefined) { state.rows[+i].include = e.target.checked; paintTracks(); paintPills(); } });
+     $("trTracks").addEventListener("input", function (e) {
+       if (e.target.dataset.style !== undefined) state.rows[+e.target.dataset.style].style = e.target.value;
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index 85d8a45..ceef3d2 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -94,7 +94,7 @@
+   // ---- the list
+   function loadList() {
+     return api().then(function (d) { state.docs = d.docs || []; state.listOk = true; paintList(); paintHand(); })
+-      .catch(function (e) { $("wrList").innerHTML = '<p class="row-hint">The notebook lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
++      .catch(function (e) { $("wrList").innerHTML = '<p class="row-hint">The notebook lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
+   }
+   function paintList() {
+     var HC = window.HeresyCollection, m = HC ? HC.matcher(state.q) : function () { return true; }, hand = recall(HAND_KEY);
+@@ -294,7 +294,7 @@
+     $("wrDelete").addEventListener("click", function () {
+       if (!state.doc) return;
+       var id = state.doc.id;
+-      window.HeresyDialog.confirm("Delete “" + state.doc.title + "” from the notebook?\n\nIt goes to writer/.trash on Forge, with its versions; the takes stay in the library.", { danger: true }).then(function (ok) {
++      window.HeresyDialog.confirm("Delete “" + state.doc.title + "” from the notebook?\n\nIt goes to writer/.trash on Forge, with its versions; the takes stay in the library.", { danger: true }).then(function (ok) {
+         if (!ok) return;
+         clearTimeout(state.timer); state.dirty = false;
+         return api({ op: "delete", id: id }).then(function (d) {
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 1b7830c..001b1a7 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -66,7 +66,7 @@
+     <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
+     <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="openDAW: the DAW beside the studio, in a new tab (a take goes there as Download → DAWproject; there File → Import → DAWproject…). Shift-click: its address">DAW</button>
+     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
+-    <button type="button" class="btn ghost small guide-btn" id="guideOpen" aria-label="The guide" data-tip="The guide: every room, what each thing does (opens on the room you are in)">?</button>
++    <button type="button" class="btn ghost small" id="guideOpen" data-icon="question" aria-label="The guide" data-tip="The guide: every room, what each thing does (opens on the room you are in)">The guide</button>
+     <div class="menu-wrap head-more">
+       <button type="button" class="btn ghost small head-more-btn" id="headMore" aria-haspopup="true" aria-expanded="false" aria-label="More" data-tip="More: the card and its memory, the model, themes, prompts, examples, the engine">&#9776;</button>
+       <div class="head-more-pop is-hidden" id="headMorePop" role="menu" aria-label="More">
+@@ -84,7 +84,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     </div>
+           <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now" disabled>Unload model</button>
+           <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
+-          <button type="button" class="btn ghost small hm-text" id="guideOpenMenu"><span class="hm-glyph">?</span> The guide</button>
++          <button type="button" class="btn ghost small" id="guideOpenMenu" data-icon="question" data-tip="The guide: every room, what each thing does">The guide</button>
+         </div>
+       </div>
+     </div>
+@@ -183,7 +183,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <input type="text" id="chatUrl" placeholder="http://127.0.0.1:18000/v1" autocomplete="off" spellcheck="false" /></label>
+         <!-- HERESY 1012: the local runners YuE2 Studio knows, one click each -->
+         <div class="chat-presets" id="chatPresets">
+-          <button type="button" class="btn ghost small" data-chat-url="http://192.168.1.10:8008/v1">vLLM · Forge :8008</button>
++          <button type="button" class="btn ghost small" data-chat-url="http://192.168.1.10:8008/v1">vLLM · Forge :8008</button>
+           <button type="button" class="btn ghost small" data-chat-url="http://127.0.0.1:1234/v1">LM Studio :1234</button>
+           <button type="button" class="btn ghost small" data-chat-url="http://127.0.0.1:11434/v1">Ollama :11434</button>
+         </div>
+@@ -388,10 +388,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <button type="button" class="btn ghost small" id="keyToScore"></button>
+           <button type="button" class="btn ghost small" id="keyToStyle"></button></span>
+       </label>
+-      <!-- HERESY 1032: saved styles, kept on Forge (heresy-presets.js) -->
++      <!-- HERESY 1032: saved styles, kept on Forge (heresy-presets.js) -->
+       <div class="lib-row" id="styleLibRow">
+         <select id="styleLib" aria-label="Saved styles"><option value="">Saved styles…</option></select>
+-        <button type="button" class="btn ghost small" id="styleSave" data-tip="Keep this style under a name, on Forge: every browser sees it">Save style…</button>
++        <button type="button" class="btn ghost small" id="styleSave" data-tip="Keep this style under a name, on Forge: every browser sees it">Save style…</button>
+         <button type="button" class="btn ghost small" id="styleDel" disabled>Delete</button>
+       </div>
+ 
+@@ -430,7 +430,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <span class="label">Profile</span>
+         <select id="setupLib" aria-label="Profiles" data-tip="A profile sets the mode, length, sampling, guidance, steps, VAE, sliders, LoRAs and output; the texts and seeds stay"></select>
+         <button type="button" class="btn ghost small" id="setupApply">Apply</button>
+-        <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save profile…</button>
++        <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save profile…</button>
+         <button type="button" class="btn ghost small" id="setupDel" disabled>Delete</button>
+       </div>
+ 
+@@ -918,7 +918,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     </div>
+   </section>
+ 
+-  <!-- HERESY 1014: the Post tab — what is done to a finished take, on Forge -->
++  <!-- HERESY 1014: the Post tab — what is done to a finished take, on Forge -->
+   <section class="col post-col is-hidden" id="view-post">
+     <div class="col-head"><h2 id="postTitle">Refiner</h2><span class="col-note" id="postNote">pick a take on the right</span></div>
+     <!-- HERESY 1023: a track from elsewhere (a SUNO track…) becomes a take, and every tool here works on it -->
+@@ -942,7 +942,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     <nav class="post-steps" id="postSteps" role="tablist" aria-label="Refiner steps"></nav>
+       <!-- HERESY 1021: what is made from this take, as a tree (heresy-derived.js) -->
+       <details class="drawer" id="derivedPanel" open>
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Stems</span><span class="sum-say">Split on Forge: BS-Roformer for the voice, htdemucs_ft for drums, bass and the rest. Each file plays, goes into the spectrum and the lyrics check.</span></span></summary>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Stems</span><span class="sum-say">Split on Forge: BS-Roformer for the voice, htdemucs_ft for drums, bass and the rest. Each file plays, goes into the spectrum and the lyrics check.</span></span></summary>
+         <div class="drawer-body derived-body">
+           <div class="dv-actions">
+             <button type="button" class="btn ghost small" data-dv-split="vocals" data-tip="BS-Roformer ep317 (SDR 12.97): vocals and instrumental, about 4 minutes for 7">Split: vocals + instrumental</button>
+@@ -954,7 +954,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+       <!-- HERESY 1022: the Debunker v6 pipeline on the take or its stems (lab/remaster_job.py) -->
+       <details class="drawer" id="remasterPanel">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Remaster</span><span class="sum-say">The Debunker v6 on Forge: mix the stems or take the take, clean, de-ess, 432 Hz, loudness. Each run is a new branch of the tree.</span></span></summary>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Remaster</span><span class="sum-say">The Debunker v6 on Forge: mix the stems or take the take, clean, de-ess, 432 Hz, loudness. Each run is a new branch of the tree.</span></span></summary>
+         <div class="drawer-body rm-body">
+           <div class="rm-grid">
+             <label class="field"><span class="label">Source</span><select id="rmSource"><option value="">the take</option></select></label>
+@@ -995,7 +995,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+       <!-- HERESY 1024: UniverSR redraws the top of the take or of a file made from it -->
+       <details class="drawer" id="upscalePanel">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Upscale</span><span class="sum-say">UniverSR on Forge draws the top of the spectrum anew. Each run is a branch of the tree; its variants differ by the noise.</span></span></summary>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Upscale</span><span class="sum-say">UniverSR on Forge draws the top of the spectrum anew. Each run is a branch of the tree; its variants differ by the noise.</span></span></summary>
+         <div class="drawer-body rm-body">
+           <div class="rm-grid">
+             <label class="field"><span class="label">Source</span><select id="upSource"><option value="">the take</option></select></label>
+@@ -1035,7 +1035,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         </div>
+       </details>
+ 
+-      <!-- HERESY 1025: faults measured on Forge: held tones, the VAE's frame buzz, clicks, clipping (heresy-inspect.js) -->
++      <!-- HERESY 1025: faults measured on Forge: held tones, the VAE's frame buzz, clicks, clipping (heresy-inspect.js) -->
+       <details class="drawer" id="inspectPanel">
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Artifacts</span><span class="sum-say">What may be wrong in the sound: a tone that will not leave, the VAE's 25-frame buzz in the highs, clicks, clipping, dropouts, stereo that fights itself. A time plays from there.</span></span></summary>
+         <div class="drawer-body rm-body">
+@@ -1081,9 +1081,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         </div>
+       </details>
+ 
+-      <!-- HERESY 1011: Whisper against the lyrics, run on Forge by heresy-lab (heresy-gloss.js) -->
++      <!-- HERESY 1011: Whisper against the lyrics, run on Forge by heresy-lab (heresy-gloss.js) -->
+       <details class="drawer" id="glossPanel" open>
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
+         <div class="drawer-body gloss-body">
+           <div class="gloss-bar-row">
+             <select id="glossSource" aria-label="What Whisper listens to" data-tip="The take as it is, or a stem of it: on the vocal stem Whisper hears the words without the music"><option value="">the take</option></select>
+@@ -1134,7 +1134,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         </nav>
+ 
+         <section class="tr-pane" data-pane="raw">
+-          <div class="tr-phead"><b>Material</b><span class="row-hint">a folder of songs in <code>datasets/raw/</code>; pick it, choose the tracks, give each its lyrics</span></div>
++          <div class="tr-phead"><b>Material</b><span class="row-hint">a folder of songs in <code>datasets/raw/</code>; pick it, choose the tracks, give each its lyrics</span>
++            <span class="spacer"></span><button type="button" class="btn ghost small" id="trStarterOpen" aria-expanded="false" data-tip="Ready sets to try a first adapter with: GTSinger joined into songs, Russian and English">Starter sets</button></div>
++          <!-- HERESY 1100: the starter sets, fetched on the user's word (lab/starter.py) -->
++          <div class="tr-starter" id="trStarter" hidden></div>
+           <div class="tr-picks" id="trRaw"></div>
+           <div class="tr-bar"><span class="row-hint" id="trTracksNote"></span><span class="spacer"></span>
+             <button type="button" class="btn ghost small" id="trAllIn">All in</button><button type="button" class="btn ghost small" id="trNoneIn">None</button>
+@@ -1246,7 +1249,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <span class="coll-sep"></span>
+           <select id="collExportFmt" aria-label="Export format"><option value="flac">FLAC</option><option value="wav">WAV</option></select>
+           <label class="check"><input type="checkbox" id="collExportDer" /> <span>with what is made from them</span></label>
+-          <button type="button" class="btn ghost small" id="collExport" data-tip="A ZIP made on Forge, then saved by the browser where you tell it">Export ZIP</button>
++          <button type="button" class="btn ghost small" id="collExport" data-tip="A ZIP made on Forge, then saved by the browser where you tell it">Export ZIP</button>
+           <span class="coll-sep"></span>
+           <button type="button" class="btn ghost small danger" id="collTrash">To the trash</button>
+         </div>
+-- 
+2.43.0
+

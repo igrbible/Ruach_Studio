@@ -1,0 +1,41 @@
+From 160c04fd75a28ecb2bbe776001b70761fe0281e1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 01:30:08 -0600
+Subject: [PATCH 1129/1177] A renamed probe still found by the sheet (1166,
+ part nine)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor: «смело переименовывай все треки в законченных 💎 воркспейсах. Под единый стиль». The
+instruments' sheet found an instrument's probes, ▶ A and ▶ B, its picture and its verdict by the
+take's title (probe60-SLUG-a/b); a probe renamed for the public (Harp · A) would have left every
+instrument «not identified». It falls back on the take's own name, which a rename never changes
+(the title first, so the probes renamed into Styles on purpose, probe60-orchestral-a/b, stay
+where they are).
+
+cdp-console 316/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-instruments.js | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 4fb30f4..8560824 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -28,7 +28,8 @@
+   function probes(slug) {
+     var out = {}, rank = {};
+     state.rows.forEach(function (r) {
+-      var m = /^(probe|style)(60|120)-(.+)-([ab])$/.exec(r.title || "");
++      // HERESY 1166: a probe renamed for the public (Harp · A) is found by the take's own name, which a rename never changes
++      var re = /^(probe|style)(60|120)-(.+)-([ab])$/, m = re.exec(r.title || "") || re.exec(String(r.name || "").replace(/^\d{8}-\d{6}-/, ""));
+       if (!m || m[3] !== slug) return;
+       var k = (m[1] === "style" ? 1000 : 0) + +m[2];
+       if (!out[m[4]] || k > rank[m[4]]) { out[m[4]] = r; rank[m[4]] = k; }
+-- 
+2.43.0
+

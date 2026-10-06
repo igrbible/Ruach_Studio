@@ -1,0 +1,40 @@
+From 6c5eff28af5fbb6054dc30c90db27e89d8a655cf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 00:38:23 -0600
+Subject: [PATCH 1068/1177] =?UTF-8?q?Take=20menu:=20Download=20=E2=86=92?=
+ =?UTF-8?q?=20DAWproject=20(mix=20+=20stems),=20for=20openDAW=20or=20any?=
+ =?UTF-8?q?=20DAW?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 2e81e04..5120125 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5273,7 +5273,15 @@
+       ] },
+       { icon: "⤓", label: "Download", items: [
+         { label: formatExt(take.format).toUpperCase(), action: save(downloadUrl(take), audioFileName(take)) },
+-        convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null
++        convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null,
++        take.session ? null : { sep: true },             // HERESY 1074: the take, its mix and stems, for openDAW or any DAW
++        take.session ? null : { label: "DAWproject", hint: "mix + stems · openDAW, Bitwig, Studio One", action: function () {
++          toast("Packing the DAWproject: the mix and every stem, as 24-bit WAV");
++          api("/lab/dawproject?name=" + encodeURIComponent(name)).then(function (d) {   // packed into the take; the engine hands it over
++            toast("DAWproject: " + d.tracks.join(", ") + " · " + d.bpm + " bpm, " + d.meter + " · " + (d.bytes / 1048576).toFixed(0) + " MB");
++            save("/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(d.path), fileTitle(take) + ".dawproject")();
++          }).catch(function (e) { toast("No DAWproject: " + e.message, "bad"); });
++        } }
+       ].filter(Boolean) },
+       HC && HC.trash ? { sep: true } : null,
+       HC && HC.trash ? { icon: "🗑", label: "Move to the trash…", danger: true, action: function () {
+-- 
+2.43.0
+

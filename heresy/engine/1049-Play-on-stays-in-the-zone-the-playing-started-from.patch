@@ -1,0 +1,78 @@
+From 944e88eb1d07c43630f04446bd4791ba6924ae28 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 13:29:29 -0600
+Subject: [PATCH 1049/1177] Play-on stays in the zone the playing started from
+
+1052 (Viktor): started from the Collection, play-on and previous/next take
+the takes its search and filters show now; started from the takes column,
+the column as its search shows it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js               |  13 +++++++++++--
+ tools/console/heresy-collection.js |   1 +
+ tools/public/index.html.gz         | Bin 338249 -> 338450 bytes
+ 3 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 7bbdfb6..b62bb69 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3651,7 +3651,11 @@
+ 
+   // HERESY 1009: the takes in the order the list shows them, newest on top: "next"
+   // goes down, into the history. A card that shows the playing take follows it.
++  // HERESY 1052 (Viktor): play-on and ⏮⏭ stay in the zone the playing started from: the Collection
++  // as its search and filters show it now, or the takes column as its search shows it
+   function listOrder() {
++    var HC = window.HeresyCollection;
++    if (STATE.playZone === "collection" && HC && HC.order && HC.loaded()) return HC.order();
+     var seen = {}, names = [];
+     all("#libList .take[data-name]").forEach(function (card) {
+       if (!seen[card.dataset.name]) { seen[card.dataset.name] = true; names.push(card.dataset.name); }
+@@ -3931,6 +3935,7 @@
+     var card = event.target.closest(".take");
+     if (!card) return;
+     if (card.dataset.run) return openRunRow(card.dataset.run);
++    STATE.playZone = "list";                                  // HERESY 1052
+     // HERESY 1026/1040 (Viktor): with "play on click" on, a click on a take plays it at once, from
+     // the start (the take already playing keeps playing). Off: a click only opens it.
+     var already = STATE.playerTake && STATE.playerTake.name === card.dataset.name && isPlaying();
+@@ -5188,7 +5193,11 @@
+       return function () { var a = document.createElement("a"); a.href = url; a.download = file; document.body.appendChild(a); a.click(); a.remove(); };
+     };
+     var items = [
+-      { icon: now ? "❚❚" : "▶", label: now ? "Pause" : "Play", action: function () { if (now) togglePlay(); else playNow(take); } },
++      { icon: now ? "❚❚" : "▶", label: now ? "Pause" : "Play", action: function () {
++        if (now) return togglePlay();
++        STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
++        playNow(take);
++      } },
+       { icon: "✎", label: "Open in Create", action: go("create") },
+       { icon: "⚗", label: "Open in Post", action: go("post") },
+       HC && HC.openSheet && document.body.dataset.tab === "collection" ? { icon: "▤", label: "Open the sheet", action: function () { HC.openSheet(name); } } : null,
+@@ -5271,7 +5280,7 @@
+   if (window.HeresyCollection) window.HeresyCollection.init({
+     toast: toast, clock: clock, ago: ago, findTake: findTake, getRequest: getRequest,
+     openTake: function (name, where) { openTake(name); setTab(where === "post" ? "post" : "create"); },
+-    playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, togglePlay: togglePlay,
++    playNow: function (t) { STATE.playZone = "collection"; playNow(t); }, updateTake: updateTake, refreshLibrary: refreshLibrary, togglePlay: togglePlay,
+     playing: function () { return { name: STATE.playerTake ? STATE.playerTake.name : "", playing: isPlaying() }; }, libraryChanged: function () { paintLibrary(); paintRate(); paintNote(); },
+     menu: function (name, x, y) { takeMenu(name, x, y); },
+     rename: renameTake
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index de57401..f67ef3a 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -590,6 +590,7 @@
+ 
+   window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, matcher: matcher, landed: landed, inCurrent: inCurrent,
+                               current: current, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
++                              order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+ })();
+-- 
+2.43.0
+

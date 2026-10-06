@@ -1,0 +1,195 @@
+From ba594dd1d91de6b259f9282cc06b7f7b416ea459 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 12:07:54 -0600
+Subject: [PATCH 1044/1177] Ruach Studio: the name, the dove, Writer; play
+ buttons that follow the player
+
+- The studio is Ruach Studio (Viktor): a name that outlives YuE2 -> YuE3. The mark is a
+  descending dove over a wave of staff lines, drawn for it; the colours follow the theme and the
+  "Studio" plate inverts by night. It is the favicon, the page title and the head of the Engine
+  room's About too.
+- The Write tab is Writer.
+- The Collection's play buttons follow the player: the take in it shows a pause sign while it
+  plays and its card is marked; a click there pauses and resumes, as the player's own button.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  12 ++++++++++++
+ tools/console/app.js               |   6 +++++-
+ tools/console/heresy-collection.js |  29 ++++++++++++++++++++++++-----
+ tools/console/index.html           |  15 ++++++++-------
+ tools/public/index.html.gz         | Bin 321825 -> 320433 bytes
+ 5 files changed, 49 insertions(+), 13 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d006e41..b1a8e1d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2186,3 +2186,15 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .take-note { margin: 8px 0; }
+ .take-note textarea { width: 100%; }
+ .coll-note { margin-top: 4px; font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
++
++/* HERESY 1045: Ruach Studio — the dove */
++.brand-dove { flex: none; }
++.brand-dove .brand-bird { fill: var(--amber); }
++.brand-dove .brand-staff { fill: none; stroke: var(--ink); stroke-opacity: .32; stroke-width: 2.2; }
++.about-logo { display: inline-flex; align-items: center; gap: 12px; margin-right: 16px; }
++.about-name { display: flex; flex-direction: column; font: 400 24px/1.1 var(--display); color: var(--ink); }
++.about-name b { color: var(--amber); font-weight: 400; }
++.about-name small { font: 400 12px/1.4 var(--sans); color: var(--muted); margin-top: 2px; }
++
++.coll-card.is-current { border-color: var(--amber); }
++.coll-play.is-playing { background: var(--amber); color: var(--on-amber); border-color: var(--amber); font-size: 10px; letter-spacing: -1px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 4c71540..3dab080 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3599,6 +3599,9 @@
+   }
+ 
+   $("playBtn").addEventListener("click", togglePlay);
++  ["play", "pause", "ended", "emptied"].forEach(function (ev) {   // HERESY 1042: the Collection's buttons follow the player
++    audio.addEventListener(ev, function () { if (window.HeresyCollection) window.HeresyCollection.paintPlaying(); });
++  });
+ 
+   // Volume survives reloads; a browser remembering nothing is a small annoyance
+   // people notice every single time.
+@@ -5150,7 +5153,8 @@
+   /* ---------------------------------------------- HERESY 1041: the Collection */
+   if (window.HeresyCollection) window.HeresyCollection.init({
+     toast: toast, clock: clock, ago: ago, findTake: findTake, openTake: function (name) { openTake(name); setTab("create"); },
+-    playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, libraryChanged: function () { paintLibrary(); paintRate(); paintNote(); }
++    playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, togglePlay: togglePlay,
++    playing: function () { return { name: STATE.playerTake ? STATE.playerTake.name : "", playing: isPlaying() }; }, libraryChanged: function () { paintLibrary(); paintRate(); paintNote(); }
+   });
+   if ($("libSearch")) $("libSearch").addEventListener("input", function () { paintLibrary(); });
+ 
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 2a123a4..340efe6 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -99,10 +99,11 @@
+     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) { b.classList.toggle("is-on", b.dataset.collView === view); });
+     var clock = state.hooks.clock, ago = state.hooks.ago;
+     $("collGrid").innerHTML = rows.length ? rows.map(function (r) {
+-      var sel = !!state.sel[r.name];
+-      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + '" data-name="' + esc(r.name) + '">' +
++      var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
++      var mine = now.name === r.name;
++      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + (mine ? " is-current" : "") + '" data-name="' + esc(r.name) + '">' +
+         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+-        '<button type="button" class="coll-play" data-play="' + esc(r.name) + '" aria-label="Play">▶</button>' +
++        '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + (mine && now.playing ? "❚❚" : "▶") + "</button>" +
+         '<div class="coll-body"><div class="coll-title" data-open="' + esc(r.name) + '">' + (r.favorite ? "★ " : "") + (r.rating > 0 ? "👍 " : r.rating < 0 ? "👎 " : "") + esc(r.title) + "</div>" +
+         '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
+         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+@@ -235,7 +236,11 @@
+     $("collGrid").addEventListener("click", function (e) {
+       var play = e.target.closest("[data-play]"), open = e.target.closest("[data-open]"), cb = e.target.closest("[data-sel]"), tcb = e.target.closest("[data-tsel]");
+       if (tcb) { if (tcb.checked) state.tsel[tcb.dataset.tsel] = 1; else delete state.tsel[tcb.dataset.tsel]; return paint(); }
+-      if (play) { var t = hooks.findTake(play.dataset.play); if (t) hooks.playNow(t); return; }
++      if (play) {                                    // HERESY 1042: the same button as the player's for the take in it
++        var now = hooks.playing ? hooks.playing() : {};
++        if (now.name === play.dataset.play) { hooks.togglePlay(); return; }
++        var t = hooks.findTake(play.dataset.play); if (t) hooks.playNow(t); return;
++      }
+       if (open) { hooks.openTake(open.dataset.open); return; }
+       if (cb) {
+         var rows = shown(), i = rows.findIndex(function (r) { return r.name === cb.dataset.sel; });
+@@ -327,6 +332,20 @@
+     });
+   }
+ 
++  // the play buttons follow the player (called on play, pause, end, a new take)
++  function paintPlaying() {
++    var now = state.hooks && state.hooks.playing ? state.hooks.playing() : {};
++    Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (card) {
++      var mine = card.dataset.name === now.name, b = card.querySelector(".coll-play");
++      card.classList.toggle("is-current", mine);
++      if (!b) return;
++      var on = mine && now.playing;
++      b.classList.toggle("is-playing", on);
++      b.textContent = on ? "❚❚" : "▶";
++      b.setAttribute("aria-label", on ? "Pause" : "Play");
++    });
++  }
++
+   // HERESY 1044: a note on a take (the take card edits it)
+   function note(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.note || "" : ""; }
+   function setNote(name, text) {
+@@ -337,5 +356,5 @@
+   function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
+ 
+   window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, matcher: matcher, landed: landed, inCurrent: inCurrent,
+-                              current: current, rating: rating, rate: rate, note: note, setNote: setNote, loaded: function () { return state.loaded; } };
++                              current: current, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; } };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index c0286d4..372ee82 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -3,9 +3,9 @@
+ <head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+-<title>YuE2 OS</title>
++<title>Ruach Studio</title>
+ <!-- HERESY 1006: a treble clef with A4, the second space. Glyphs from Noto Music (SIL OFL 1.1). -->
+-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0yMzUgLTEzNTAgMTc3MCAxNzcwIj4KPHN0eWxlPi5ze3N0cm9rZTojOGE4MTcyO3N0cm9rZS13aWR0aDo0NH0uZ3tmaWxsOiNjODg5MmV9QG1lZGlhIChwcmVmZXJzLWNvbG9yLXNjaGVtZTpkYXJrKXsuc3tzdHJva2U6I2EzOWE4YX0uZ3tmaWxsOiNlOGIwNGF9fTwvc3R5bGU+CjxnIHRyYW5zZm9ybT0ic2NhbGUoMSAtMSkiPjxnIGNsYXNzPSJzIj48bGluZSB4MT0iLTQwIiB4Mj0iMTM0MCIgeTE9IjAiIHkyPSIwIi8+PGxpbmUgeDE9Ii00MCIgeDI9IjEzNDAiIHkxPSIyNTAiIHkyPSIyNTAiLz48bGluZSB4MT0iLTQwIiB4Mj0iMTM0MCIgeTE9IjUwMCIgeTI9IjUwMCIvPjxsaW5lIHgxPSItNDAiIHgyPSIxMzQwIiB5MT0iNzUwIiB5Mj0iNzUwIi8+PGxpbmUgeDE9Ii00MCIgeDI9IjEzNDAiIHkxPSIxMDAwIiB5Mj0iMTAwMCIvPjwvZz48cGF0aCBjbGFzcz0iZyIgZD0iTTMxNCA4MDFRMzAwIDg1NCAyOTEuMCA5MDYuMFEyODIgOTU4IDI4MiAxMDEyUTI4MiAxMDU5IDI4OC41IDExMDAuNVEyOTUgMTE0MiAzMDcgMTE3N1EzMjAgMTIxNyAzNDEuMCAxMjUyLjVRMzYyIDEyODggMzg1LjUgMTMxMS4wUTQwOSAxMzM0IDQyNyAxMzM0UTQ1MSAxMzM0IDQ5MyAxMjQ5UTUxNCAxMjA2IDUyNC4wIDExNTYuMFE1MzQgMTEwNiA1MzQgMTA0OVE1MzQgOTc4IDUxNS4wIDkwNy41UTQ5NiA4MzcgNDU5LjUgNzc1LjBRNDIzIDcxMyAzNzIgNjY2TDQwNyA0OThRNDIyIDUwMCA0MzIuMCA1MDEuMFE0NDIgNTAyIDQ0NyA1MDJRNTA4IDUwMiA1NTYuMCA0NjcuNVE2MDQgNDMzIDYzMi41IDM3Ny4wUTY2MSAzMjEgNjYxIDI1NFE2NjEgMTc3IDYyMS41IDExNS41UTU4MiA1NCA1MDMgMjVRNTA4IDggNTMyIC0xMTdRNTM4IC0xNDcgNTQxLjAgLTE2NC41UTU0NCAtMTgyIDU0NS4wIC0xOTUuMFE1NDYgLTIwOCA1NDYgLTIyNVE1NDYgLTI3NSA1MjEuNSAtMzE0LjVRNDk3IC0zNTQgNDU1LjUgLTM3Ni4wUTQxNCAtMzk4IDM2MyAtMzk4UTMxMSAtMzk4IDI3MS4wIC0zNzguNVEyMzEgLTM1OSAyMDguMCAtMzI0LjVRMTg1IC0yOTAgMTg1IC0yNDVRMTg1IC0xOTcgMjExLjUgLTE2NS4wUTIzOCAtMTMzIDI4NyAtMTMzUTMyOSAtMTMzIDM1NS41IC0xNjMuNVEzODIgLTE5NCAzODIgLTIzNlEzODIgLTI3MiAzNTcuMCAtMjk5LjBRMzMyIC0zMjYgMjkyIC0zMjZIMjgyUTMwOCAtMzY1IDM2NCAtMzY1UTQzMyAtMzY1IDQ3Mi4wIC0zMjAuMFE1MTEgLTI3NSA1MTEgLTIwNVE1MTEgLTE4OCA1MDcuMCAtMTU5LjVRNTAzIC0xMzEgNDkzIC05MVE0ODMgLTUxIDQ3Ny41IC0yNS4wUTQ3MiAxIDQ3MCAxMlE0MzYgMiAzOTAgMlEzMDQgMiAyMjIgNTJRMTQyIDEwMiA5Ni4wIDE4NC4wUTUwIDI2NiA1MCAzNjFRNTAgNDUxIDkxIDUzMFExMzIgNjA5IDE5Mi41IDY3NS4wUTI1MyA3NDEgMzE0IDgwMVpNMzQxIDgyNlEzNjQgODM4IDM5MC4wIDg3MC41UTQxNiA5MDMgNDQwLjAgOTQ1LjBRNDY0IDk4NyA0NzkuMCAxMDI5LjVRNDk0IDEwNzIgNDk0IDExMDZRNDk0IDExNDIgNDgzLjAgMTE2My4wUTQ3MiAxMTg0IDQ0NSAxMTg0UTQyMSAxMTg0IDM5OC41IDExNjIuMFEzNzYgMTE0MCAzNTguNSAxMTAzLjVRMzQxIDEwNjcgMzMxLjAgMTAyMi4wUTMyMSA5NzcgMzIxIDkzMFEzMjEgODk4IDMyNy41IDg3Mi4wUTMzNCA4NDYgMzQxIDgyNlpNMzk4IDM3OVEzNzEgMzczIDM0Ny4wIDM1My41UTMyMyAzMzQgMzA4LjUgMzA2LjVRMjk0IDI3OSAyOTQgMjQ4UTI5NCAyMjMgMzA3LjAgMTk2LjVRMzIwIDE3MCAzMzkgMTU0UTM1MiAxNDIgMzY1IDEzNlEzODAgMTI5IDM4MCAxMjNRMzgwIDEyMCAzNzAgMTE3UTMzMiAxMjYgMzAxLjUgMTUxLjBRMjcxIDE3NiAyNTMuNSAyMTEuNVEyMzYgMjQ3IDIzNiAyODdRMjM2IDMzMCAyNTMuNSAzNzAuMFEyNzEgNDEwIDMwMi41IDQ0Mi4wUTMzNCA0NzQgMzc0IDQ5MEwzNDUgNjQxUTIyOSA1NDcgMTc0LjUgNDU2LjVRMTIwIDM2NiAxMjAgMjc3UTEyMCAyMTIgMTU0LjAgMTU2LjBRMTg4IDEwMCAyNDcuMCA2NS41UTMwNiAzMSAzODAgMzFRNDAwIDMxIDQyMC41IDM1LjBRNDQxIDM5IDQ2NCA0NVpNNDk1IDU1UTU5MyA5NyA1OTMgMjI3UTU5MyAyNzAgNTcxLjAgMzA1LjVRNTQ5IDM0MSA1MTIuMCAzNjIuMFE0NzUgMzgzIDQyOSAzODNaIi8+PHBhdGggY2xhc3M9ImciIHRyYW5zZm9ybT0idHJhbnNsYXRlKDgwMCAyNDEpIiBkPSJNNTAgMTM1UTUwIDE3MiA3Ny4wIDIwMC4wUTEwNCAyMjggMTUwLjUgMjQ0LjBRMTk3IDI2MCAyNTMgMjYwUTMxMCAyNjAgMzU4LjAgMjQ0LjVRNDA2IDIyOSA0MzUuMCAyMDEuMFE0NjQgMTczIDQ2NCAxMzVRNDY0IDk2IDQzNi4wIDY3LjVRNDA4IDM5IDM2MS41IDIzLjVRMzE1IDggMjU5IDhRMjAzIDggMTU1LjUgMjMuMFExMDggMzggNzkuMCA2Ni41UTUwIDk1IDUwIDEzNVpNMjgwIDI4UTMxNCAyOCAzMjYuNSA1My4wUTMzOSA3OCAzMzkgMTEyUTMzOSAxNDcgMzI0LjUgMTc2LjBRMzEwIDIwNSAyODYuMCAyMjIuNVEyNjIgMjQwIDIzMiAyNDBRMTk4IDI0MCAxODYuNSAyMTUuMFExNzUgMTkwIDE3NSAxNTZRMTc1IDEyMiAxODkuMCA5My4wUTIwMyA2NCAyMjYuNSA0Ni4wUTI1MCAyOCAyODAgMjhaIi8+PC9nPjwvc3ZnPg==" />
++<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHN0eWxlPi5ie2ZpbGw6IzhlMWEyZX0uc3tzdHJva2U6IzhhODE3Mn1AbWVkaWEgKHByZWZlcnMtY29sb3Itc2NoZW1lOmRhcmspey5ie2ZpbGw6I2YwNzE3MX0uc3tzdHJva2U6I2EzOWE4YX19PC9zdHlsZT48ZyBjbGFzcz0icyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIyLjQiPjxwYXRoIGQ9Ik0zIDUwIEMgMTcgNDUsIDI3IDU1LCA0MSA1MCBTIDU4IDQ2LCA2MSA0OCIvPjxwYXRoIGQ9Ik0zIDU0LjUgQyAxNyA0OS41LCAyNyA1OS41LCA0MSA1NC41IFMgNTggNTAuNSwgNjEgNTIuNSIvPjxwYXRoIGQ9Ik0zIDU5IEMgMTcgNTQsIDI3IDY0LCA0MSA1OSBTIDU4IDU1LCA2MSA1NyIvPjwvZz48ZyBjbGFzcz0iYiI+PHBhdGggZD0iTTI5IDMwIEMgMjQgMjUuNSwgMTUgMTksIDQgOS41IEMgNy42IDEwLjIsIDkuOCAxMS4yLCAxMSAxMi44IEMgMTEuNiAxMS42LCAxMy42IDExLjgsIDE0LjggMTMuNiBDIDE1LjYgMTIuNiwgMTcuNiAxMy4wLCAxOC42IDE0LjggQyAxOS42IDE0LjAsIDIxLjYgMTQuNiwgMjIuNCAxNi42IEMgMjMuNiAxNi4wLCAyNS40IDE3LjAsIDI2LjAgMTkuMCBDIDI3LjQgMjEuMiwgMjguNiAyNS4wLCAyOSAzMCBaIi8+PHBhdGggZD0iTTM1LjAgMzAgQyA0MC4wIDI1LjUsIDQ5LjAgMTksIDYwLjAgOS41IEMgNTYuNCAxMC4yLCA1NC4yIDExLjIsIDUzLjAgMTIuOCBDIDUyLjQgMTEuNiwgNTAuNCAxMS44LCA0OS4yIDEzLjYgQyA0OC40IDEyLjYsIDQ2LjQgMTMuMCwgNDUuNCAxNC44IEMgNDQuNCAxNC4wLCA0Mi40IDE0LjYsIDQxLjYgMTYuNiBDIDQwLjQgMTYuMCwgMzguNiAxNy4wLCAzOC4wIDE5LjAgQyAzNi42IDIxLjIsIDM1LjQgMjUuMCwgMzUuMCAzMCBaIi8+PHBhdGggZD0iTTI3LjQgOCBMIDM2LjYgOCBMIDM1IDEzIEwgMzMuNiA5LjggTCAzMiAxNCBMIDMwLjQgOS44IEwgMjkgMTMgWiIvPjxwYXRoIGQ9Ik0zMiAxMSBDIDM2LjYgMTIuNSwgMzcuNiAxOSwgMzcuMiAyNiBDIDM3LjAgMzMsIDM1LjQgMzguNiwgMzIgNDIuNiBDIDI4LjYgMzguNiwgMjcuMCAzMywgMjYuOCAyNiBDIDI2LjQgMTksIDI3LjQgMTIuNSwgMzIgMTEgWiIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iNDQuMiIgcj0iMy42Ii8+PHBhdGggZD0iTTMwLjggNDcuMiBMIDMyIDUwLjIgTCAzMy4yIDQ3LjIgWiIvPjwvZz48L3N2Zz4=" />
+ <link rel="preconnect" href="https://fonts.googleapis.com" />
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+ <!-- the fonts never hold up the first paint: loaded as a print sheet, switched on when they arrive -->
+@@ -23,10 +23,10 @@
+ <!-- ---------------------------------------------------------------- topbar -->
+ <header class="topbar">
+   <div class="brand">
+-    <!-- HERESY 1026: YuE2 OS. The mark is the treble clef of the favicon (Noto Music, OFL); the colours
++    <!-- HERESY 1045: Ruach Studio. The mark is the descending dove over a staff (drawn for it); the colours
+          follow the theme and invert by night (--amber / --on-amber). No links here: the sources
+          live in the Engine room, the workspace never sends you to the web. -->
+-    <span class="brand-logo" role="img" aria-label="YuE2 OS"><svg class="brand-clef" viewBox="30 -1350 660 1770" width="17" height="32" aria-hidden="true"><g transform="scale(1 -1)"><path d="M314 801Q300 854 291.0 906.0Q282 958 282 1012Q282 1059 288.5 1100.5Q295 1142 307 1177Q320 1217 341.0 1252.5Q362 1288 385.5 1311.0Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524.0 1156.0Q534 1106 534 1049Q534 978 515.0 907.5Q496 837 459.5 775.0Q423 713 372 666L407 498Q422 500 432.0 501.0Q442 502 447 502Q508 502 556.0 467.5Q604 433 632.5 377.0Q661 321 661 254Q661 177 621.5 115.5Q582 54 503 25Q508 8 532 -117Q538 -147 541.0 -164.5Q544 -182 545.0 -195.0Q546 -208 546 -225Q546 -275 521.5 -314.5Q497 -354 455.5 -376.0Q414 -398 363 -398Q311 -398 271.0 -378.5Q231 -359 208.0 -324.5Q185 -290 185 -245Q185 -197 211.5 -165.0Q238 -133 287 -133Q329 -133 355.5 -163.5Q382 -194 382 -236Q382 -272 357.0 -299.0Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472.0 -320.0Q511 -275 511 -205Q511 -188 507.0 -159.5Q503 -131 493 -91Q483 -51 477.5 -25.0Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96.0 184.0Q50 266 50 361Q50 451 91 530Q132 609 192.5 675.0Q253 741 314 801ZM341 826Q364 838 390.0 870.5Q416 903 440.0 945.0Q464 987 479.0 1029.5Q494 1072 494 1106Q494 1142 483.0 1163.0Q472 1184 445 1184Q421 1184 398.5 1162.0Q376 1140 358.5 1103.5Q341 1067 331.0 1022.0Q321 977 321 930Q321 898 327.5 872.0Q334 846 341 826ZM398 379Q371 373 347.0 353.5Q323 334 308.5 306.5Q294 279 294 248Q294 223 307.0 196.5Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 301.5 151.0Q271 176 253.5 211.5Q236 247 236 287Q236 330 253.5 370.0Q271 410 302.5 442.0Q334 474 374 490L345 641Q229 547 174.5 456.5Q120 366 120 277Q120 212 154.0 156.0Q188 100 247.0 65.5Q306 31 380 31Q400 31 420.5 35.0Q441 39 464 45ZM495 55Q593 97 593 227Q593 270 571.0 305.5Q549 341 512.0 362.0Q475 383 429 383Z"/></g></svg><span class="brand-word">YuE<span class="two">2</span></span><span class="brand-os">OS</span></span>
++    <span class="brand-logo" role="img" aria-label="Ruach Studio"><svg class="brand-dove" viewBox="0 0 64 64" width="34" height="34" aria-hidden="true"><g class="brand-staff"><path d="M3 50 C 17 45, 27 55, 41 50 S 58 46, 61 48"/><path d="M3 54.5 C 17 49.5, 27 59.5, 41 54.5 S 58 50.5, 61 52.5"/><path d="M3 59 C 17 54, 27 64, 41 59 S 58 55, 61 57"/></g><g class="brand-bird"><path d="M29 30 C 24 25.5, 15 19, 4 9.5 C 7.6 10.2, 9.8 11.2, 11 12.8 C 11.6 11.6, 13.6 11.8, 14.8 13.6 C 15.6 12.6, 17.6 13.0, 18.6 14.8 C 19.6 14.0, 21.6 14.6, 22.4 16.6 C 23.6 16.0, 25.4 17.0, 26.0 19.0 C 27.4 21.2, 28.6 25.0, 29 30 Z"/><path d="M35.0 30 C 40.0 25.5, 49.0 19, 60.0 9.5 C 56.4 10.2, 54.2 11.2, 53.0 12.8 C 52.4 11.6, 50.4 11.8, 49.2 13.6 C 48.4 12.6, 46.4 13.0, 45.4 14.8 C 44.4 14.0, 42.4 14.6, 41.6 16.6 C 40.4 16.0, 38.6 17.0, 38.0 19.0 C 36.6 21.2, 35.4 25.0, 35.0 30 Z"/><path d="M27.4 8 L 36.6 8 L 35 13 L 33.6 9.8 L 32 14 L 30.4 9.8 L 29 13 Z"/><path d="M32 11 C 36.6 12.5, 37.6 19, 37.2 26 C 37.0 33, 35.4 38.6, 32 42.6 C 28.6 38.6, 27.0 33, 26.8 26 C 26.4 19, 27.4 12.5, 32 11 Z"/><circle cx="32" cy="44.2" r="3.6"/><path d="M30.8 47.2 L 32 50.2 L 33.2 47.2 Z"/></g></svg><span class="brand-word">Ruach</span><span class="brand-os">Studio</span></span>
+   </div>
+ 
+   <div class="engine-chip">
+@@ -40,7 +40,7 @@
+   <!-- HERESY 1014: the three workspaces -->
+   <nav class="tabs" id="tabs" aria-label="Workspace">
+     <button type="button" data-tab="create" class="is-active">Create</button>
+-    <button type="button" data-tab="write">Write</button>
++    <button type="button" data-tab="write">Writer</button>
+     <button type="button" data-tab="post">Post</button>
+     <button type="button" data-tab="collection">Collection</button>
+   </nav>
+@@ -218,6 +218,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     <!-- credits: upstream project names, not paths (build-page.sh's folder-name guard skips this block) -->
+     <div class="card wide about-card" id="aboutCard">
+       <div class="about-head">
++        <span class="about-logo" role="img" aria-label="Ruach Studio"><svg class="brand-dove" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><g class="brand-staff"><path d="M3 50 C 17 45, 27 55, 41 50 S 58 46, 61 48"/><path d="M3 54.5 C 17 49.5, 27 59.5, 41 54.5 S 58 50.5, 61 52.5"/><path d="M3 59 C 17 54, 27 64, 41 59 S 58 55, 61 57"/></g><g class="brand-bird"><path d="M29 30 C 24 25.5, 15 19, 4 9.5 C 7.6 10.2, 9.8 11.2, 11 12.8 C 11.6 11.6, 13.6 11.8, 14.8 13.6 C 15.6 12.6, 17.6 13.0, 18.6 14.8 C 19.6 14.0, 21.6 14.6, 22.4 16.6 C 23.6 16.0, 25.4 17.0, 26.0 19.0 C 27.4 21.2, 28.6 25.0, 29 30 Z"/><path d="M35.0 30 C 40.0 25.5, 49.0 19, 60.0 9.5 C 56.4 10.2, 54.2 11.2, 53.0 12.8 C 52.4 11.6, 50.4 11.8, 49.2 13.6 C 48.4 12.6, 46.4 13.0, 45.4 14.8 C 44.4 14.0, 42.4 14.6, 41.6 16.6 C 40.4 16.0, 38.6 17.0, 38.0 19.0 C 36.6 21.2, 35.4 25.0, 35.0 30 Z"/><path d="M27.4 8 L 36.6 8 L 35 13 L 33.6 9.8 L 32 14 L 30.4 9.8 L 29 13 Z"/><path d="M32 11 C 36.6 12.5, 37.6 19, 37.2 26 C 37.0 33, 35.4 38.6, 32 42.6 C 28.6 38.6, 27.0 33, 26.8 26 C 26.4 19, 27.4 12.5, 32 11 Z"/><circle cx="32" cy="44.2" r="3.6"/><path d="M30.8 47.2 L 32 50.2 L 33.2 47.2 Z"/></g></svg><span class="about-name">Ruach <b>Studio</b><small>a local studio for YuE2 · HERETICAL TANDEM</small></span></span>
+         <h3>About</h3>
+         <p class="about-credit"><a class="about-kit" href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer"
+           data-tip="This collection's own repository: the install kit, its patches and its releases">Customized Collection</a> by <strong>SeattleSysop</strong>
+@@ -226,7 +227,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <div class="about-grid">
+         <div class="about-projects">
+           <!-- HERESY 1026: the links the header used to carry live here, with what YuE2 OS adds -->
+-          <section class="about-project"><h4>YuE2 OS</h4><p class="about-what">On Steroids: the heresy patches 1001+ over the collection below, and the lab beside it</p><ul class="about-links">
++          <section class="about-project"><h4>Ruach Studio</h4><p class="about-what">the heresy patches 1001+ over the collection below, and the lab beside it (once "YuE2 OS")</p><ul class="about-links">
+             <li><a href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer">The collection it forks</a><span class="about-where">github · IronWolve/yue2-kit</span></li>
+             <li><a href="https://github.com/woongzip1/UniverSR" target="_blank" rel="noopener noreferrer">Upscale: UniverSR</a><span class="about-where">github · woongzip1/UniverSR · MIT</span></li>
+             <li><a href="https://github.com/nomadkaraoke/python-audio-separator" target="_blank" rel="noopener noreferrer">Stems: audio-separator (BS-Roformer, htdemucs_ft)</a><span class="about-where">github · nomadkaraoke/python-audio-separator</span></li>
+@@ -744,7 +745,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ 
+   <!-- HERESY 1014: the Write tab — the writing room with the song in the form beside it -->
+   <section class="col write-col is-hidden" id="view-write">
+-    <div class="col-head"><h2>Write</h2><span class="col-note">the chat model works on the song in the Create form</span></div>
++    <div class="col-head"><h2>Writer</h2><span class="col-note">the chat model works on the song in the Create form</span></div>
+     <div class="write-grid">
+       <section class="panel write-current">
+         <div class="panel-head"><h3>The song now</h3><div class="spacer"></div>
+-- 
+2.43.0
+

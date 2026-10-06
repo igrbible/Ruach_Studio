@@ -1,0 +1,68 @@
+From 19bf59fe070595be9d24f6b45fea7b5be6bc81f2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 04:52:56 -0600
+Subject: [PATCH 1039/1177] Sound variations of a long song no longer abort the
+ server
+
+The sound stage solves all variations of a chunk in one pass, and the attention of that pass holds
+heads x variations x frames x keys elements (keys: the cached sequence plus the chunk latents).
+Past 2^31 a CUDA kernel indexes out of bounds: "illegal memory access", and the whole server
+aborts with its queue. Viktor's server died so at 02:2x on a 4:27 song with 4 variations;
+reproduced on a 4:35 song (prefix 9415): 2 and more variations abort, 1 renders.
+
+The variations are now solved in groups small enough for one pass (a line in the log says so);
+each has its own noise and the same cache, so the result is what one pass would give. Measured:
+the 4:35 song renders 4 variations one at a time (4.7x realtime); a 30 s song still takes all 4
+in one pass. Probably the same fault as the "32 GB preset on a 24 GB card" crashes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/pipeline.h | 26 +++++++++++++++++++++++---
+ 1 file changed, 23 insertions(+), 3 deletions(-)
+
+diff --git a/src/pipeline.h b/src/pipeline.h
+index d58538d..e0d93db 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -1,4 +1,5 @@
+ #pragma once
++#include <cmath>
+ // pipeline.h: YuE2 generation pipeline
+ //
+ // Turns one request into tracks: a symbolic plan, a semantic token stream,
+@@ -658,9 +659,28 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                        (*songs)[(size_t) i * M + j].latents.data() + (size_t) start * YUE2_LATENT_DIM,
+                        span * sizeof(float));
+             }
+-            if (!nar_solve(nar, &p->kv, block.data(), frames, M, ar_len, i, r.steps, dbg, cancelled, cancel_data,
+-                           r.solver)) {
+-                return false;
++            // HERESY 1039: the attention of one pass holds heads x variations x frames x keys elements;
++            // past 2^31 a CUDA kernel indexes out of bounds ("illegal memory access") and the whole
++            // server aborts. Measured: a 4:35 song (prefix 9415) died with 2 variations and rendered
++            // with 1. The variations are solved in groups small enough for one pass; each draws on
++            // its own noise and the same cache, so the result is the one a single pass would give.
++            // keys: the cached sequence plus the chunk's own latents, padded (measured boundary: 1 variation
++            // of 6874 frames over ar_len 16290 rendered, 2 overflowed)
++            const double per_variation = (double) nar->cfg.n_heads * (double) frames * (double) (ar_len + frames + 256);
++            int          group         = (int) std::max(1.0, std::floor(2147483647.0 / per_variation));
++            if (group > M) {
++                group = M;
++            }
++            if (group < M) {
++                fprintf(stderr, "[NAR] Song %d chunk %d: %d variations solved %d at a time (one pass would overflow)\n", i,
++                        start / chunk_size + 1, M, group);
++            }
++            for (int g0 = 0; g0 < M; g0 += group) {
++                int gm = std::min(group, M - g0);
++                if (!nar_solve(nar, &p->kv, block.data() + span * (size_t) g0, frames, gm, ar_len, i, r.steps, dbg,
++                               cancelled, cancel_data, r.solver)) {
++                    return false;
++                }
+             }
+             for (int j = 0; j < M; j++) {
+                 memcpy((*songs)[(size_t) i * M + j].latents.data() + (size_t) start * YUE2_LATENT_DIM,
+-- 
+2.43.0
+

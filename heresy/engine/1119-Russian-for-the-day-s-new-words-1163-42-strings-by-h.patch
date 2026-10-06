@@ -1,0 +1,81 @@
+From 7b646afc0f6baff063e28b8f5c2860528e05225b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 15:27:22 -0600
+Subject: [PATCH 1119/1177] =?UTF-8?q?Russian=20for=20the=20day's=20new=20w?=
+ =?UTF-8?q?ords=20(1163):=2042=20strings=20by=20hand=20in=20heresy-i18n-ru?=
+ =?UTF-8?q?.js:=20the=20bulk=20bar=20(=D0=94=D0=BE=D0=B1=D0=B0=D0=B2=D0=B8?=
+ =?UTF-8?q?=D1=82=D1=8C=20/=20=D0=9F=D0=B5=D1=80=D0=B5=D0=BC=D0=B5=D1=81?=
+ =?UTF-8?q?=D1=82=D0=B8=D1=82=D1=8C=20=D0=B2=20=D0=BF=D1=80=D0=BE=D1=81?=
+ =?UTF-8?q?=D1=82=D1=80=D0=B0=D0=BD=D1=81=D1=82=D0=B2=D0=BE=E2=80=A6,=20?=
+ =?UTF-8?q?=D0=92=D1=8B=D0=B1=D1=80=D0=B0=D0=BD=D0=BE:=20N),=20the=20take'?=
+ =?UTF-8?q?s=20new=20menu=20items,=20New=20section=E2=80=A6,=20the=20sheet?=
+ =?UTF-8?q?'s=20tabs,=20groups=20and=20warning,=20the=20lamp's=20tip,=20th?=
+ =?UTF-8?q?e=20column's=20edge,=20the=20drag's=20question,=20the=20regen?=
+ =?UTF-8?q?=20badge?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-i18n-ru.js | 45 ++++++++++++++++++++++++++++++++-
+ 1 file changed, 44 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index d0105ae..6b16413 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1001,5 +1001,48 @@ RuachI18n.add("ru", {
+ "language · rank {0} · {1}": "язык · ранг {0} · {1}",
+ "artist · rank {0} · {1}": "артист · ранг {0} · {1}",
+ "{0} of what it adapts · {1} a half": "{0} от того, что он меняет · {1} на половину",
+-"here · {0}": "здесь · {0}"
++"here · {0}": "здесь · {0}",
++// HERESY 1163: added by hand, 03.10.2026 (the bar, menus and sheet of 1155–1162)
++"Add to workspace…": "Добавить в пространство…",
++"Move to workspace…": "Переместить в пространство…",
++"+ a new one…": "+ новое…",
++"{0} selected": "Выбрано: {0}",
++"packing {0} / {1}…": "упаковка {0} / {1}…",
++"Open the artwork": "Открыть обложку",
++"Redraw artwork": "Перерисовать обложку",
++"Draw artwork": "Нарисовать обложку",
++"Remove current artwork": "Снять обложку",
++"a new prompt, a new picture": "новый промпт, новая картинка",
++"half a minute on a GPU": "полминуты на GPU",
++"kept beside the take": "сохранится рядом с семплом",
++"Regenerate with a new seed": "Перегенерировать с новым зерном",
++"Regenerate {0} with new seeds": "Перегенерировать {0} с новыми зёрнами",
++"replaces it; the old one kept": "заменит его; старый сохранится",
++"New section…": "Новый подраздел…",
++"inside “{0}”": "внутри «{0}»",
++"Instruments": "Инструменты",
++"Styles": "Стили",
++"genres": "жанры",
++"modes of major and minor": "лады мажора и минора",
++"found in the instrument probes": "найдено в пробах инструментов",
++"{0} styles · what a probe gave instead of its instrument": "Стилей: {0} · что проба дала вместо своего инструмента",
++"not judged yet": "ещё не оценено",
++"no probe yet": "пробы ещё нет",
++"✓ heard": "✓ услышано",
++"The artwork: see it whole": "Обложка: посмотреть целиком",
++"Its picture: see it whole": "Картинка: посмотреть целиком",
++"On the cards now:": "Сейчас на картах:",
++"Drag to widen or narrow the workspaces; a double click folds them away": "Тяни, чтобы расширить или сузить колонку пространств; двойной щелчок сворачивает её",
++"Fold the workspaces away: the cards take one column more": "Свернуть пространства: карточкам прибавится колонка",
++"Show the workspaces": "Показать пространства",
++"regen": "реджен",
++"Regenerated with a new seed from {0}": "Перегенерирован с новым зерном из {0}",
++"Move {0} to “{1}”?": "Переместить {0} в «{1}»?",
++"Add {0} to “{1}”?": "Добавить {0} в «{1}»?",
++"Out of “{0}”. Ctrl+Z gives it back.": "Из «{0}». Ctrl+Z вернёт как было.",
++"Out of every other workspace they are in. Ctrl+Z gives it back.": "Из всех прочих пространств, где они есть. Ctrl+Z вернёт как было.",
++"They stay where they are as well. Ctrl+Z gives it back.": "Там, где они есть, они тоже останутся. Ctrl+Z вернёт как было.",
++"{0} takes": "Семплов: {0}",
++"≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.": "≈ Догадка: художник не знает этот инструмент, и критик не нашёл его ни на одной из нарисованных картинок.",
++"⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "⚠ Имя в стиле — просьба, а не обещание. Что играют ▶ A и ▶ B, то YuE2 и даёт на это имя, примерно в девяти случаях из десяти. Бывают великолепные пробы, A и B согласны, но инструмент не тот, что просили: верь уху, а не имени."
+ });
+-- 
+2.43.0
+

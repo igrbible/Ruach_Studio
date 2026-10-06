@@ -1,0 +1,14 @@
+build/
+*.wav
+
+tests/*/
+
+checkpoints/
+models/*.gguf
+__pycache__/
+node_modules/
+tools/webui/dist/
+training/datasets/
+training/checkpoints/
+# HERESY 1130: the page build.sh makes, read from disk by the server
+tools/public/index.html

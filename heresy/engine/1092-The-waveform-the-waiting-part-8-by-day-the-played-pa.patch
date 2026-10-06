@@ -1,0 +1,58 @@
+From 2812cf2803dab0a9cdf146a90b899664384e3b03 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 18:42:41 -0600
+Subject: [PATCH 1092/1177] The waveform: the waiting part ~8 % by day, the
+ played part at 60 %; HeresyWave.set() to try values live from the console
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js       |  17 +++++++++++++----
+ tools/public/index.html.gz | Bin 466527 -> 466821 bytes
+ 2 files changed, 13 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 8eb6cfb..fd8428e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4058,6 +4058,15 @@
+   // wide haze, a denser body, a bright core, so the sound thins out at its edges like breath. Drawn once per song,
+   // size and theme into two sprites (played, waiting); a frame only cuts them at the playhead.
+   var cloud = { peaks: null, w: 0, h: 0, dpr: 0, theme: null, played: null, rest: null };
++  // the cloud's strengths, to be tried live from the browser's console (Viktor, 02.10): HeresyWave.set({rest: 0.05,
++  // played: 0.6}); rest is the waiting part by day (×3 layers: 0.05 is ~8 % at the core), restNight the same by night,
++  // played the part that has sounded (1 = the accent at full). HeresyWave.get() says what is in force.
++  var WAVE = { rest: 0.05, restNight: 0.36, played: 0.6, epoch: 0 };
++  window.HeresyWave = {
++    get: function () { return { rest: WAVE.rest, restNight: WAVE.restNight, played: WAVE.played }; },
++    set: function (o) { ["rest", "restNight", "played"].forEach(function (k) { if (o && isFinite(o[k])) WAVE[k] = Math.max(0, Math.min(1, +o[k])); });
++      WAVE.epoch++; drawWave(); return this.get(); }
++  };
+   function cloudEnvelope(peaks, n) {
+     var raw = new Float32Array(n), step = peaks.length / n, i, j;
+     for (i = 0; i < n; i++) {                     // the loudest in each column, so no peak falls between two
+@@ -4097,17 +4106,17 @@
+     return c;
+   }
+   function cloudSprites(peaks, w, h, dpr) {
+-    if (cloud.peaks !== peaks || cloud.w !== w || cloud.h !== h || cloud.dpr !== dpr || cloud.theme !== themeCache) {
++    if (cloud.peaks !== peaks || cloud.w !== w || cloud.h !== h || cloud.dpr !== dpr || cloud.theme !== themeCache || cloud.epoch !== WAVE.epoch) {
+       var env = cloudEnvelope(peaks, Math.max(32, Math.floor(w / 2)));
+-      cloud = { peaks: peaks, w: w, h: h, dpr: dpr, theme: themeCache,
++      cloud = { peaks: peaks, w: w, h: h, dpr: dpr, theme: themeCache, epoch: WAVE.epoch,
+         played: cloudSprite(env, w, h, dpr, function (x, hh) {     // the accent, brighter at the crests
+           var g = x.createLinearGradient(0, 0, 0, hh);
+-          g.addColorStop(0, themeRGBA("amber-hi", 1)); g.addColorStop(0.5, themeRGBA("amber", 1)); g.addColorStop(1, themeRGBA("amber-hi", 1));
++          g.addColorStop(0, themeRGBA("amber-hi", WAVE.played)); g.addColorStop(0.5, themeRGBA("amber", WAVE.played)); g.addColorStop(1, themeRGBA("amber-hi", WAVE.played));
+           return g;
+         }),
+         rest: cloudSprite(env, w, h, dpr, function () {             // the waiting part: a light grey by day (Viktor: "much lighter,
+           var g = themeRGB("ground");                                 // it looks dirty"), as it was by night
+-          return themeRGBA("ink", (0.2126 * g[0] + 0.7152 * g[1] + 0.0722 * g[2]) / 255 > 0.5 ? 0.085 : 0.36);   // by day ~13 % at the core (three layers), ~3 % at the haze
++          return themeRGBA("ink", (0.2126 * g[0] + 0.7152 * g[1] + 0.0722 * g[2]) / 255 > 0.5 ? WAVE.rest : WAVE.restNight);
+         }) };
+     }
+     return cloud;
+-- 
+2.43.0
+

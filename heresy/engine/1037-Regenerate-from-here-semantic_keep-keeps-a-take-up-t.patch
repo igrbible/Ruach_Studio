@@ -1,0 +1,218 @@
+From 76329a2059e2384bb04308a5314bee21baf0b7ab Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 01:27:15 -0600
+Subject: [PATCH 1037/1177] Regenerate from here: semantic_keep keeps a take up
+ to a moment, the music goes on anew
+
+A request may carry semantic_keep (the start of a take music codes). The music stage continues
+from it: the kept codes follow the prompt in the conditional and unconditional prefixes of that
+stage only, the budget shrinks by them, and the song is the kept codes followed by the new ones;
+the sound stage keeps the plain prompt. A "Regenerate from..." button in the take card takes the
+moment from the player (or asks) and a new music seed. Tested: kept 1:00 of a reading, the first
+1500 frames identical, new music after; the sound before 1:00 is rendered again (same codes,
+correlation 0.6-0.97 to the old audio), since the sound stage hears each chunk whole.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/pipeline.h             |  38 ++++++++++++++++++++++-
+ src/request.cpp            |   7 +++++
+ src/request.h              |   5 +++
+ tools/console/app.js       |  61 +++++++++++++++++++++++++++++++++++++
+ tools/console/index.html   |   2 ++
+ tools/public/index.html.gz | Bin 305880 -> 306814 bytes
+ 6 files changed, 112 insertions(+), 1 deletion(-)
+
+diff --git a/src/pipeline.h b/src/pipeline.h
+index 9684f49..d58538d 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -489,8 +489,44 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+         }
+         sliders_used = sliders_active(&sliders);
+         qw3lm_set_sliders(lm, &sliders);
+-        bool semantic_ok = yue2_generate(lm, &p->kv, prefixes, negatives, guidance, semantic, r.lm_seed,
++        // HERESY 1037: regenerate from here. The kept codes follow the prompt (after the music start
++        // token, where the stage's own codes would be) in the conditional and the unconditional
++        // prefixes of this stage only; the acoustic stage below keeps the plain prompt and gets the
++        // kept codes in front of the new ones. The kept part counts in the budget.
++        std::vector<int>              keep;
++        std::vector<std::vector<int>> gen_prefixes = prefixes, gen_negatives = negatives;
++        if (!r.semantic_keep.empty()) {
++            if (!pipeline_parse_tokens(r.semantic_keep, &keep)) {
++                return false;
++            }
++            for (int & t : keep) {
++                t += YUE2_CODEC_OFFSET;
++            }
++            if ((int) keep.size() + 1 >= semantic.max_tokens) {
++                fprintf(stderr, "[AR] FATAL: %zu kept frames leave no budget of %d\n", keep.size(), semantic.max_tokens);
++                return false;
++            }
++            for (int i = 0; i < B; i++) {
++                gen_prefixes[i].insert(gen_prefixes[i].end(), keep.begin(), keep.end());
++                if (!gen_negatives.empty()) {
++                    gen_negatives[i].insert(gen_negatives[i].end(), keep.begin(), keep.end());
++                }
++            }
++            semantic.max_tokens -= (int) keep.size();
++            semantic.min_tokens = semantic.min_tokens > (int) keep.size() ? semantic.min_tokens - (int) keep.size() : 1;
++            if (semantic.min_tokens > semantic.max_tokens) {
++                semantic.min_tokens = semantic.max_tokens;
++            }
++            fprintf(stderr, "[AR] Continuing after %zu kept frames (%.1f s), budget %d\n", keep.size(),
++                    keep.size() / (double) YUE2_FRAME_RATE, semantic.max_tokens);
++        }
++        bool semantic_ok = yue2_generate(lm, &p->kv, gen_prefixes, gen_negatives, guidance, semantic, r.lm_seed,
+                                          YUE2_PHASE_SEMANTIC, &codes, cancelled, cancel_data);
++        if (semantic_ok && !keep.empty()) {
++            for (int i = 0; i < B; i++) {
++                codes[i].tokens.insert(codes[i].tokens.begin(), keep.begin(), keep.end());
++            }
++        }
+         qw3lm_set_sliders(lm, nullptr);
+         sliders_free(&sliders);
+         if (!semantic_ok) {
+diff --git a/src/request.cpp b/src/request.cpp
+index be4497f..d77b305 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -33,6 +33,7 @@ void request_init(Yue2Request * r) {
+     r->peak_clip        = 10;
+     r->cfg_scale        = -1.0f;
+     r->semantic_tokens  = "";
++    r->semantic_keep    = "";
+ 
+     r->abc_sampling      = YUE2_ABC_SAMPLING;
+     r->semantic_sampling = YUE2_SEMANTIC_SAMPLING;
+@@ -167,6 +168,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+     if ((v = yyjson_obj_get(obj, "semantic_tokens")) && yyjson_is_str(v)) {
+         r->semantic_tokens = yy_str(v);
+     }
++    if ((v = yyjson_obj_get(obj, "semantic_keep")) && yyjson_is_str(v)) {
++        r->semantic_keep = yy_str(v);
++    }
+     if ((v = yyjson_obj_get(obj, "cfg_scale")) && yyjson_is_num(v)) {
+         r->cfg_scale = (float) yyjson_get_num(v);
+     }
+@@ -299,6 +303,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+     if (!sparse || r->semantic_tokens != d.semantic_tokens) {
+         yyjson_mut_obj_add_strncpy(doc, root, "semantic_tokens", r->semantic_tokens.c_str(), r->semantic_tokens.size());
+     }
++    if (!r->semantic_keep.empty()) {   // HERESY 1037: written only when used
++        yyjson_mut_obj_add_strncpy(doc, root, "semantic_keep", r->semantic_keep.c_str(), r->semantic_keep.size());
++    }
+     if (!sparse || r->cfg_scale != d.cfg_scale) {
+         yyjson_mut_obj_add_real(doc, root, "cfg_scale", r->cfg_scale);
+     }
+diff --git a/src/request.h b/src/request.h
+index 10e390f..abe77bc 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -76,6 +76,11 @@ struct Yue2Request {
+     // single pass instead of the whole token loop.
+     std::string semantic_tokens;  // ""
+ 
++    // HERESY 1037: the start of a semantic stream to keep (CSV of codec values) when semantic_tokens
++    // is empty: the music stage continues from it instead of from the beginning ("regenerate from
++    // here"). It counts in the duration; the song is the kept codes followed by the new ones.
++    std::string semantic_keep;  // ""
++
+     // classifier free guidance on the semantic stage. Negative applies the
+     // default (HERESY 1031: 1.6 in every mode; the release had 1.01 in off mode
+     // and 1.0 otherwise), and a scale of exactly 1.0 keeps a single branch.
+diff --git a/tools/console/app.js b/tools/console/app.js
+index badb6fd..67c987a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3126,6 +3126,41 @@
+   });
+ 
+ 
++  // HERESY 1037: keep the take up to a moment, write the music anew from there
++  function parseClock(text) {
++    var m = String(text || "").trim().match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/);
++    return m ? (m[1] ? parseInt(m[1], 10) * 60 : 0) + parseFloat(m[2]) : NaN;
++  }
++  $("regenFrom").addEventListener("click", function () {
++    var take = STATE.take, button = this;
++    if (!take || take.session) return;
++    var here = STATE.playerTake && STATE.playerTake.name === take.name && audio.currentTime > 0 ? audio.currentTime : null;
++    var answer = prompt("Keep " + displayTitle(take) + " up to which moment (m:ss)? The music is written anew from there.",
++                        here !== null ? clock(here) : "");
++    if (answer === null) return;
++    var at = parseClock(answer);
++    if (!isFinite(at) || at <= 1 || at >= (take.seconds || 0) - 1) return toast("A moment between 0:01 and " + clock((take.seconds || 0) - 1), "bad");
++    button.disabled = true;
++    getRequest(take).then(function (req) {
++      var toks = String(req.semantic_tokens || "").split(",").filter(function (t) { return t.trim(); });
++      if (!toks.length) throw new Error("This take's request carries no music codes to keep");
++      var keep = Math.min(toks.length - 1, Math.round(at * FRAME_RATE));
++      var body = Object.assign({}, req);
++      delete body.plan_only;
++      delete body.semantic_tokens;
++      body.semantic_keep = toks.slice(0, keep).join(",");
++      body.lm_seed = randomSeed63();
++      body.lm_batch_size = 1;
++      body.synth_batch_size = 1;
++      body.parent = take.name;
++      body.title = displayTitle(take) + " \u00b7 from " + clock(at);
++      return submitJob(body, { kind: "song", title: body.title, group: "regen-" + Date.now(), index: 0, count: 1,
++                               versioned: false, variations: 1, baseTitle: body.title, parent: take.name });
++    }).then(function () { toast("Writing " + displayTitle(take) + " anew from " + clock(at) + "; everything before stays"); })
++      .catch(function (error) { toast(error.message, "bad"); })
++      .then(function () { button.disabled = false; });
++  });
++
+   // HERESY 1034: the same take, cut where its text ends (lab/textend_job.py finds the place)
+   $("trimToText").addEventListener("click", function () {
+     var take = STATE.take, button = this;
+@@ -4035,6 +4070,32 @@
+     });
+   });
+ 
++  // HERESY 1036: a take of the library transcribed from its own audio on the server
++  $("transcribeTake").addEventListener("click", function () {
++    var take = STATE.take, button = this;
++    if (!take || take.session) return;
++    if (!STATE.transcriber) return toast("The server runs without a transcriber (start it with --transcriber)", "bad");
++    var task = $("coverTask").value, name = displayTitle(take);
++    button.disabled = true;
++    $("coverDrawer").open = true;
++    $("coverAudioStatus").dataset.busy = "1";
++    $("coverAudioStatus").textContent = "Transcribing " + name + "…";
++    api("/transcribe?take=" + encodeURIComponent(take.name) + (task !== "full" ? "&melody_only=1" : ""), { method: "POST" }).then(function (data) {
++      var job = registerJob(data.id, { kind: "transcribe", title: name, task: task, fileName: name }, {});
++      clearInterval(coverTicker);
++      coverTicker = setInterval(function () {
++        if (!isLive(job)) { clearInterval(coverTicker); return; }
++        $("coverAudioStatus").textContent = job.status === "queued" ? "Waiting for the server…"
++          : "Transcribing " + name + "… " + Math.round((Date.now() - (job.started || job.submitted)) / 1000) + "s";
++      }, 500);
++      toast("Transcribing " + name + ": the score comes into the form for a cover");
++    }).catch(function (error) {
++      delete $("coverAudioStatus").dataset.busy;
++      $("coverAudioStatus").textContent = error.message;
++      toast(error.message, "bad");
++    }).then(function () { button.disabled = false; });
++  });
++
+   function finishTranscription(job) {
+     api("/job?id=" + encodeURIComponent(job.id) + "&result=1").then(function (data) {
+       var abc = (data && data.abc) || "";
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 656dd17..f00939e 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -657,6 +657,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <button type="button" class="btn ghost small" id="retakeTake" data-tip="Retake: this exact take into the form, with its score, both seeds and its music codes. Generate renders the same music again: try another VAE, sound seed or sound variations">Retake</button>
+           <button type="button" class="btn ghost small" id="reuseTake" data-tip="Reuse: the prompt, lyrics and every setting (mode, sampling, guidance, VAE, sliders, LoRAs, output) for a new song: no score, no seeds, no music codes, so Generate writes new music">Reuse</button>
+           <button type="button" class="btn ghost small" id="rerenderSound" title="Same music, a new sound seed (seconds)">Re-render sound</button>
++          <button type="button" class="btn ghost small" id="regenFrom" data-tip="Regenerate from here: everything before the chosen moment stays exactly as it is (its music codes are kept), and the music is written anew from there with a new music seed. The moment is where the player stands when this take plays; otherwise you are asked. For a song or reading that breaks down after a point.">Regenerate from…</button>
++          <button type="button" class="btn ghost small" id="transcribeTake" data-tip="SheetSage2 writes this take's own sound down as a score (the server reads the take itself; nothing is uploaded), into the form for a cover: with chords, or the melody only, as chosen under Cover a recording. Good for a reading made in Direct mode, which has no score.">Transcribe this take</button>
+           <button type="button" class="btn ghost small" id="trimToText" data-tip="For readings and songs that go on past their text: Whisper finds where the text ends, and the same take is rendered again from its own music codes cut there (+1.5 s). The same performance, without the returns and babble after the last line; only the sound stage runs.">Trim to the text</button>
+         </div></div>
+         <div class="tool-group"><span class="tool-cap">Post</span><div class="tool-row">
+-- 
+2.43.0
+

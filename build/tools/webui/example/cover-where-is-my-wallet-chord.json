@@ -1,0 +1,11 @@
+{
+	"title": "Where Is My Wallet",
+	"style": "Theatrical hard rock, palm-muted guitar riff, punchy rock drums, overdriven organ, gritty English lead vocal, 176 BPM\n",
+	"lyrics": "[Chorus]\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\n\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\n\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere's my wallet\nWhere\n",
+	"cot": "melody",
+	"abc": "X:1\nT:\nM:4/4\nL:1/16\nQ:1/4=176\nV: Vocal clef=treble name=\"Vocal Melody\" snm=\"Vocal\"\nV: Ins clef=treble name=\"Ins Melody\" snm=\"Inst.\"\nK:Cm\n% intro\nV: Vocal\n\"Cm\"z16|\"Cm\"z16|\"Cm\"z16|\"Cm\"z16|\nV: Ins\nZ4|\n% chorus\nV: Vocal\n\"Cm\"z2G2G2G2E8-|\"Cm\"E8z8|\"G7\"z2F2F2F2D8-|\"G7\"D8z8|\nV: Ins\nZ4|\nV: Vocal\n\"Cm\"z10G2G2G2|\nV: Ins\nZ|\nV: Vocal\n\"Ab\"E2A2A2A2\"Cm\"G2e2e2e2|\"Cm\"c8E2G2G2G2|\"G7\"D2A2A2A2G2f2f2f2|\"G7\"d8-d2g2g2f2|\nV: Ins\nZ4|\nV: Vocal\n\"Cm\"e8\"G7\"d2g2g2f2|\"Cm\"e8\"G7\"d2g2g2f2|\"Cm\"e4z4\"Ab7\"c4z4|\"G7\"g8\"Fm\"z2a2a2a2|\nV: Ins\nZ4|\nV: Vocal\n\"Fm\"f16|\"Fm\"z2A2A2A2\"Dm7b5\"F2D2D2D2|\"G7\"=B2A2A2A2G2G2G2G2|\"Cm\"E2A2A2A2\"Dm7b5\"F2D2D2D2|\nV: Ins\nZ4|\nV: Vocal\n\"G7\"=B2A2A2A2G2G2G2G2|\nV: Ins\nZ|\nV: Vocal\n\"Cm\"E2G2c2c2\"Dm7b5\"c8|\"G7\"=B2B2B2d2\"Cm\"d8|\"Cm\"c2c2c2e2\"G7\"e2d2d2f2|\"C7\"f2=e2e2g2\"Fm\"g2f2f2a2|\nV: Ins\nZ4|\nV: Vocal\n\"Gm7b5\"z2B2B2B2\"Cm\"G8-|\"Cm\"G8-G8|\"Fm\"z2c2c2c2z2_d2_d2_d2|\"Fm\"c2a2a2a2f8-|\nV: Ins\nZ4|\nV: Vocal\n\"Fm\"f2z6\"C7\"z2_d2_d2_d2|\"C7\"z2b2b2b2g8-|\"C7\"g2c'2c'2b2\"Fm\"a8|\"C7\"g2c'2c'2b2\"Fm\"a8|\nV: Ins\nZ4|\nV: Vocal\n\"C7\"g2c'2c'2b2\"Fm\"a2a2a2g2|\"Dm7b5\"f2f2f2e2\"G7\"d2d2d2c2|\nV: Ins\nZ2|\n",
+	"source": {
+		"url": "https://map-yue2.github.io/",
+		"case_id": "where-is-my-wallet-chord"
+	}
+}

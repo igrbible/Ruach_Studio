@@ -1,0 +1,22 @@
+Verse one: don't stop, it's the night, we'll dance 'til dawn, I'M HERE, they'RE gone
+decomposed accents: café näive èlèvé Å mãnana
+precomposed accents: café naïve élève Å mañana
+ordering torture: q̣̇ q̣̇ ą́ ǫ́
+excluded from composition: क़ क़ Ω Å
+hangul jamo: 각 한 vs 각 한
+cjk: 今晚不眠 路灯眨着眼睛、偷看谁的身影
+numbers: 123 ٠١٢ 一二三 Ⅰ ½ 42nd
+symbols:   ***---===   [[tag]] (backing) {curly} <abc> <|endoftext|> ’quote’
+spaces:	tab nbsp emspace  double   triple 
+
+
+   
+[Intro]
+X:1
+L:1/8
+M:4/4
+K:Cmaj
+"C"c2 e2 g2 c'2|"G7"B,2 d2 f2 b2|]
+emoji: 🎵🎶 🇫🇷 é😀
+   
+

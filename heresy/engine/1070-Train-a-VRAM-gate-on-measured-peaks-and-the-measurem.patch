@@ -1,0 +1,79 @@
+From c3914898ee418897a09073b6c1d90ba769d8c886 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 00:57:47 -0600
+Subject: [PATCH 1070/1177] Train: a VRAM gate on measured peaks, and the
+ measurements run by run
+
+HERESY 1076. The need for a base (int8, bf16) is the largest peak measured with it; a card smaller than that
+closes Train and says why, the room stays; which cards have it free now.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  6 ++++++
+ tools/console/heresy-train.js | 28 ++++++++++++++++++++++++++++
+ 2 files changed, 34 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 2acb0ff..914dce6 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2569,3 +2569,9 @@ tr.is-no .hi-tag { color: var(--bad); }
+ @media (max-width: 640px) { .hi-name { width: auto; } .hi-plays { width: auto; } .hi-table td { display: block; border: 0; } .hi-table tr { display: block; border-bottom: 1px solid var(--line-soft); } }
+ /* HERESY 1070: a locked workspace */
+ .coll-lock { flex: none; font-size: 11px; opacity: .75; }
++/* HERESY 1076: the trainer's VRAM gate */
++.tr-gate { display: flex; flex-direction: column; gap: 4px; }
++.tr-calc summary { cursor: pointer; font-size: 12px; color: var(--muted); }
++.tr-calc table { border-collapse: collapse; font-size: 12px; margin-top: 4px; }
++.tr-calc th, .tr-calc td { padding: 2px 10px 2px 0; text-align: left; border-bottom: 1px solid var(--line-soft); }
++.tr-calc th { color: var(--dim); font-weight: 500; }
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 1caaf76..3d8d029 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -45,6 +45,33 @@
+         p.tracks + " tracks · " + clock(p.seconds) + " · from " + esc(p.from) + " · " + esc(p.made) + "</span></label>";
+     }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
+     $("trRuns").innerHTML = d.runs.length ? d.runs.map(card).join("") : '<p class="row-hint">No runs yet.</p>';
++    gate();
++  }
++
++  // ---- HERESY 1076: the VRAM gate, on measured numbers only. Every run keeps its peak (nvidia-smi on its
++  // card); the need for a base (int8 or bf16) is the largest peak measured with it. A card smaller than
++  // that closes the Train button and says why; the room stays (sets are made here, trained elsewhere).
++  function gate() {
++    var d = state.data, el = $("trGate");
++    if (!el) { el = document.createElement("div"); el.id = "trGate"; el.className = "tr-gate"; $("trRun").parentNode.insertAdjacentElement("afterend", el); }
++    var quant = $("tr_quant").value, gb = function (mb) { return (mb / 1024).toFixed(1) + " GB"; };
++    var measured = (d.runs || []).filter(function (r) { return r.vram_peak_mb > 0 && r.options; });
++    var same = measured.filter(function (r) { return r.options.quant === quant; });
++    var need = same.reduce(function (m, r) { return Math.max(m, r.vram_peak_mb); }, 0);
++    var cards = Array.isArray(d.gpus) ? d.gpus : [], big = cards.reduce(function (m, c) { return c.total_mb > m.total_mb ? c : m; }, { total_mb: 0 });
++    var free = cards.filter(function (c) { return need && c.free_mb >= need; });
++    var shut = need && big.total_mb && big.total_mb < need;
++    $("trRun").disabled = !!shut;
++    var html = "";
++    if (!Array.isArray(d.gpus)) html += '<p class="tr-err">' + esc(d.gpus && d.gpus.error || "the cards could not be read") + "</p>";
++    else if (shut) html += '<p class="tr-warn">Training on ' + quant + " weights needed " + gb(need) + " on one card (measured); the largest card here has " + gb(big.total_mb) +
++      ". The room stays: make the sets here and train on a bigger card" + (quant === "bf16" ? ", or choose int8 weights (the adapter learns a little less exactly)" : "") + ".</p>";
++    else if (need) html += '<p class="row-hint">' + quant + " weights: " + gb(need) + " measured at the peak. " + (free.length ? "Free enough now: " + free.map(function (c) { return "GPU" + c.index; }).join(", ") + "."
++      : "No card has that free now (" + cards.map(function (c) { return "GPU" + c.index + " " + gb(c.free_mb); }).join(", ") + "): the run would wait or fail.") + "</p>";
++    else html += '<p class="row-hint">' + quant + " weights: not measured yet; the first run measures its peak" + (measured.length ? " (measured so far: " + measured[0].options.quant + " " + gb(measured[0].vram_peak_mb) + ")" : "") + ".</p>";
++    if (measured.length) html += '<details class="tr-calc"><summary>VRAM measured, run by run</summary><table><tr><th>run</th><th>weights</th><th>rank</th><th>window</th><th>peak</th></tr>' +
++      measured.map(function (r) { return "<tr><td>" + esc(r.name) + "</td><td>" + esc(r.options.quant) + "</td><td>" + esc(r.options.rank) + "</td><td>" + Math.round((r.options.train_window_frames || 0) / 25) + " s</td><td>" + gb(r.vram_peak_mb) + "</td></tr>"; }).join("") + "</table></details>";
++    el.innerHTML = html;
+   }
+ 
+   // ---- HERESY 1067: the history, a card a run (as the Collection's cards are for takes): what it was
+@@ -212,6 +239,7 @@
+     $("trMake").addEventListener("click", makeSet);
+     $("trKinds").innerHTML = Object.keys(KINDS).map(function (k) { return '<button type="button" class="coll-chip" data-kind="' + k + '">' + KINDS[k].label + "</button>"; }).join("");
+     $("trKinds").addEventListener("click", function (e) { var b = e.target.closest("[data-kind]"); if (b) setKind(b.dataset.kind); });
++    $("tr_quant").addEventListener("change", function () { if (state.data) gate(); });
+     $("trRun").addEventListener("click", startRun);
+     $("trStop").addEventListener("click", function () {
+       window.HeresyDialog.confirm("Stop " + state.run + "?\n\nAI-Toolkit saves what it has on the way out; the last checkpoint goes to loras/.", { ok: "Stop", danger: true })
+-- 
+2.43.0
+

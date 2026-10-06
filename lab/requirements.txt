@@ -1,0 +1,36 @@
+# heresy-lab · the Kit's Python neighbour (lab/lab.py) · its own venv, nothing outside the Kit
+#
+#   ./install-venv.sh          builds .venv from this list (Python 3.12, CUDA 12.8 wheels)
+#   requirements-lock.txt      the exact versions running now (pip freeze)
+#
+# lab.py itself needs only the standard library; the jobs run in .venv:
+#   whisper_job.py   faster-whisper on CUDA (cuDNN 9 and cuBLAS come with torch)
+#   spectrum_job.py  numpy (and soundfile for FLAC)
+#   stems_job.py     audio-separator: BS-Roformer and htdemucs_ft, weights in ../separation/
+#   remaster_job.py  the Debunker v6 (debunker.py) and ffmpeg (system)
+#   instrument sets  yt-dlp for long recordings (HERESY 1100); YouTube wants a JS runtime: node (system, as the page build)
+#
+# System, not pip: ffmpeg, node
+
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128
+torchaudio==2.11.0+cu128
+audio-separator[gpu]==0.47.0
+audioread            # audio-separator imports it without declaring it
+faster-whisper==1.2.1
+# faster-whisper reads files through PyAV with an argument PyAV 15+ dropped
+# (metadata_errors); whisper_job.py reads the audio itself (soundfile, torchaudio)
+# and hands Whisper a 16 kHz array, so any PyAV version does.
+soundfile
+numpy
+
+# Weights (not pip), all inside the Kit:
+#   ../whisper/whisper-large-v3-ct2-float16      Whisper large-v3, CTranslate2 float16, 2.9 GB
+#   ../separation/roformer/                      BS-Roformer ep317 (SDR 12.97), 610 MB
+#   ../separation/demucs/                        htdemucs_ft, 4 x 81 MB
+# universr (MIT, ICASSP 2026): lab/install-venv.sh clones vendor/UniverSR at its tested commit and installs it (pip -e)
+torchvision==0.26.0+cu128     # timm wants it; the PyPI build is CUDA 13 and breaks torch cu128
+transformers>=4.45,<5        # CLAP for the instrument probe (HERESY night 01.10)
+yt-dlp[default]              # audio of long recordings for instrument sets (HERESY 1100)
+diffusers==0.39.0            # artwork for takes, SDXL (HERESY 1120); 0.40 wants huggingface_hub 1.x, which transformers <5 refuses
+mutagen                      # the artwork's tests read the MP3's tags; audio-separator brings it too

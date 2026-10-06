@@ -1,0 +1,48 @@
+From ed575f07d98d8dd698aee31423438d63de109cab Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 17:24:41 -0600
+Subject: [PATCH 1056/1177] The staff on white pages; Full screen at the end of
+ its row
+
+1062 (Viktor): the score's staff, in the panel and full screen, on white paper
+with black ink in every theme, as printed; the Full screen button moves to the
+end of the score's row.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   3 +++
+ tools/console/index.html   |   2 +-
+ tools/public/index.html.gz | Bin 348450 -> 348562 bytes
+ 3 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index fa75ddb..fb8f9da 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2484,3 +2484,6 @@ select option, select optgroup { background: var(--panel); color: var(--ink); }
+ .pj-cap { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+ .pj-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+ .pj-head span { color: var(--muted); font-size: 12px; }
++
++/* HERESY 1062 (Viktor): the staff on white pages, as printed, in every theme and full screen */
++#scoreStaff.paper, .hz-paper { --paper: #ffffff; --paper-ink: #111111; --paper-line: #d0d0d0; background: #fff; box-shadow: inset 0 0 0 1px #e4e4e4; }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 14b676d..b3ea298 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -737,10 +737,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+               <select class="mp3-rate" id="staffPrintOrient" aria-label="Letter orientation" data-tip="US Letter: portrait or landscape">
+                 <option value="portrait">Letter ▯</option><option value="landscape">Letter ▭</option>
+               </select></span>
+-            <button type="button" class="btn ghost small" id="staffFull" data-tip="The staff over the whole screen: zoom and scroll (or double-click the staff)">⤢ Full screen</button>
+             <button type="button" class="btn ghost small" id="takeMidi" data-tip="The score as a MIDI file: tempo, meter, key, a track per voice and the sections as markers, for a DAW">MIDI</button>
+             <button type="button" class="btn ghost small" id="takeMarkers" data-tip="The sections (% verse …) as a marker list in seconds (CSV, as Reaper imports it)">Markers</button>
+             <button class="btn ghost small" id="reuseScore">Edit and re-render</button>
++            <button type="button" class="btn ghost small" id="staffFull" data-tip="The staff over the whole screen: zoom and scroll (or double-click the staff)">⤢ Full screen</button>
+           </div>
+           <!-- HERESY 1028: the score checked as YuE2's own dialect, with its numbers (heresy-score.js) -->
+           <div class="score-check" id="takeScoreCheck" hidden></div>
+-- 
+2.43.0
+

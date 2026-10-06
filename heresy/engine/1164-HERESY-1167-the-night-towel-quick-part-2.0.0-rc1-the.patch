@@ -1,0 +1,298 @@
+From b342e8a3c58be31065d66f5beb818195a1c2f12c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 23:40:15 -0600
+Subject: [PATCH 1164/1177] =?UTF-8?q?HERESY=201167:=20the=20night=20towel,?=
+ =?UTF-8?q?=20quick=20part:=202.0.0-rc1,=20the=20Takes=20count,=20the=20Wr?=
+ =?UTF-8?q?iter=20remembers=20its=20writer,=20New=20song=20asks,=20tips=20?=
+ =?UTF-8?q?after=20400=20ms,=20=F0=9F=91=8D=20=F0=9F=91=8E=20filters,=20Vi?=
+ =?UTF-8?q?ktor's=20look=20and=20fonts=20by=20default?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor's night towel of 05.10.2026:
+· «Наш первый релиз давай обозначим как 2.0.0-rc1».
+· «снова WORKSPACE лейбл отображается в баре»: the caption gone at every width.
+· «В Takes колонке… 3/1453… Нам нахер не нужно общее количество, если это не All workspaces»: a workspace in hand counts
+  its own takes only.
+· «В Писателе выбор LLM инстанса Writer не запоминается»: its settings were saved once before the writer and the model
+  were put back, so the next load found the defaults; saved after them now. «У Писателя пусть по умолчанию вкладка Takes
+  будет свёрнута»: each room keeps its own fold, the Writer's starts folded.
+· «В TEXT PROFILE очень длинный селектор»: it gives way, Apply and Undo on one line.
+· «кнопка New Song… без сторожа»: it asks first, as Clear.
+· «Глобально по всем тултипам Студии, выставь задержку в показ на 400ms… на статистических тегах под STYLES… 600ms»: a
+  tip after the pointer rests 400 ms (one reached by the keyboard at once); the style's chips' cards after 600 ms.
+· «добавь ещё палец вверх и вниз» beside ★: only the liked, only the disliked.
+· «дефолтом выставь все мои параметры как на скрине»: Noto Sans and Noto Sans Mono are the app's own fonts (loaded with
+  the page); softer corners, the accent glow and hover in the theme's colour are the default look; Default look brings
+  them back.
+
+cdp-console 334/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 15 +++++-
+ tools/console/app.js                | 73 ++++++++++++++++++++++-------
+ tools/console/heresy-instruments.js |  2 +-
+ tools/console/index.html            |  7 ++-
+ 4 files changed, 74 insertions(+), 23 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a3b78e9..b542636 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -10,8 +10,9 @@
+   --r-pill: 20px;   /* HERESY 1033: chips and steps follow the corner profile too */
+   --playbar-h: 124px;   /* HERESY 1106: the waveform across, the controls under it */
+ 
+-  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+-  --mono: "IBM Plex Mono", "Cascadia Mono", ui-monospace, monospace;
++  /* HERESY 1167 (Viktor: «дефолтом выставь все мои параметры»): Noto Sans and Noto Sans Mono, loaded with the page */
++  --sans: "Noto Sans", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
++  --mono: "Noto Sans Mono", "IBM Plex Mono", "Cascadia Mono", ui-monospace, monospace;
+   --display: "Bodoni Moda", "Didot", "Times New Roman", serif;   /* the logo and the (i) glyph only */
+   --heading: var(--sans);   /* headings, at medium weight; the Engine page's Fonts card can change all three */
+ 
+@@ -3976,3 +3977,13 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .take.is-running-row .take-title { padding-right: 34px; }
+ .run-cancel { flex: none; min-width: 30px; padding-left: 8px; padding-right: 8px; color: var(--dim); }
+ .run-cancel:hover { color: var(--bad); border-color: var(--bad-line); }
++/* HERESY 1167 (Viktor: «Чего-то снова WORKSPACE лейбл отображается в баре. Мы же удалили этот маркер»): gone at every width */
++.ws-current .ws-cap { display: none !important; }
++/* «В TEXT PROFILE очень длинный селектор. Undo перескакивает на следующую строку»: the select gives way, its note below */
++#tpRow { flex-wrap: wrap; }
++#tpRow select { flex: 0 1 210px; min-width: 120px; max-width: 210px; }
++#tpRow #tpNote { flex-basis: 100%; }
++/* the 👍 👎 filters beside ★ */
++.lib-toggle.lib-rate-f { display: inline-grid; place-items: center; padding-left: 7px; padding-right: 7px; }
++.lib-toggle.lib-rate-f svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
++.lib-toggle.lib-rate-f[aria-pressed="true"] svg { fill: currentColor; fill-opacity: .25; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 91379f1..f15b281 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -371,10 +371,21 @@
+ 
+   function tipTarget(node) { return node && node.closest ? node.closest("[data-tip], [data-tip-ref]") : null; }
+ 
++  // HERESY 1167 (Viktor: «Глобально по всем тултипам Студии, выставь задержку в показ на 400ms… А то у нас сотни тултипов
++  // на странице, и куда не двинешь мышью, куча выскачек»): a tip shows when the pointer rests 400 ms on its target
++  // (data-tip-delay names another wait); one reached by the keyboard shows at once
++  var tipWait = 0, tipNext = null;
+   document.addEventListener("mouseover", function (event) {
+     var target = tipTarget(event.target);
+-    if (target && target !== tipFor) showTip(target);
+-    else if (!target && tipFor && tipFor !== document.activeElement) hideTip();   // HERESY 1167: a focused one stays
++    if (target === tipNext || (target && target === tipFor)) return;
++    clearTimeout(tipWait);
++    tipNext = target;
++    if (target) {
++      var wait = parseInt(target.dataset.tipDelay, 10);
++      tipWait = setTimeout(function () { if (tipNext === target && target.isConnected) showTip(target); }, isFinite(wait) ? wait : 400);
++    }
++    if (!target && tipFor && tipFor !== document.activeElement) hideTip();   // HERESY 1167: a focused one stays
++    else if (target && tipFor && tipFor !== target && tipFor !== document.activeElement) hideTip();
+   });
+   document.addEventListener("focusin", function (event) {
+     var target = tipTarget(event.target);
+@@ -427,15 +438,19 @@
+   // The theme picker (themes.js, shared with the other console): a preview or a change redraws
+   // what the page paints itself from the theme's colours
+   // HERESY 1017: the takes list folds to a strip on the right and back; kept per browser
++  // HERESY 1167 (Viktor: «У Писателя пусть по умолчанию вкладка Takes будет свёрнута»): each room keeps its own fold; the
++  // Writer's starts folded
++  function libFoldKey() { return document.body.dataset.tab === "write" ? "yue2.libFolded.write" : "yue2.libFolded"; }
++  function libFolded() { var v = recall(libFoldKey()); return v === null ? libFoldKey() === "yue2.libFolded.write" : v === "1"; }
+   function paintLibFold() {
+-    var folded = recall("yue2.libFolded") === "1";
++    var folded = libFolded();
+     $("library").classList.toggle("is-folded", folded);
+     document.querySelector(".workspace").classList.toggle("lib-folded", folded);
+     $("libUnfoldCount").textContent = $("libCount").textContent;
+     window.dispatchEvent(new Event("resize"));
+   }
+-  $("libFold").addEventListener("click", function () { store("yue2.libFolded", "1"); paintLibFold(); });
+-  $("libUnfold").addEventListener("click", function () { store("yue2.libFolded", null); paintLibFold(); });
++  $("libFold").addEventListener("click", function () { store(libFoldKey(), "1"); paintLibFold(); });
++  $("libUnfold").addEventListener("click", function () { store(libFoldKey(), libFoldKey() === "yue2.libFolded.write" ? "0" : null); paintLibFold(); });
+   if (window.HeresyIcons) $("libUnfold").querySelector(".lib-unfold-icon").innerHTML = window.HeresyIcons.svg("expand");
+   paintLibFold();
+ 
+@@ -1326,7 +1341,11 @@
+     $("title").focus();
+     toast("New song: the form is back to its defaults (your VAE, output and theme choices stay)");
+   }
+-  $("newSong").addEventListener("click", newSong);
++  // HERESY 1167 (Viktor: «кнопка New Song… без сторожа и диалогового окна всё сотрёт в формах»): it asks first, as Clear
++  $("newSong").addEventListener("click", function () {
++    window.HeresyDialog.confirm("Start a new song?\n\nIts title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.",
++      { ok: "New song", danger: true }).then(function (yes) { if (yes) newSong(); });
++  });
+   // HERESY 1167 (Viktor: «Кнопка CLEAR не имеет сторожа. Нечаянно нажал - и полетели все формы в пустоту»): it asks first
+   $("clearForm").addEventListener("click", function () {
+     window.HeresyDialog.confirm("Clear the form?\n\nIts title, style, lyrics, score and every knob go back to the defaults. The takes stay.",
+@@ -5166,7 +5185,7 @@
+   function libFilters() {
+     var f = {};
+     try { f = JSON.parse(recall("yue2.libFilters") || "{}") || {}; } catch (e) { f = {}; }
+-    return { liked: !!f.liked, noDisliked: !!f.noDisliked, noted: !!f.noted, hidden: !!f.hidden };
++    return { liked: !!f.liked, noDisliked: !!f.noDisliked, noted: !!f.noted, hidden: !!f.hidden, dislikedOnly: !!f.dislikedOnly };
+   }
+   document.addEventListener("click", function (e) {
+     var b = e.target.closest("[data-libf]");
+@@ -5178,7 +5197,8 @@
+     }
+     var f = libFilters();
+     f[b.dataset.libf] = !f[b.dataset.libf];
+-    if (b.dataset.libf === "liked" && f.liked) f.noDisliked = false;
++    if (b.dataset.libf === "liked" && f.liked) { f.noDisliked = false; f.dislikedOnly = false; }
++    if (b.dataset.libf === "dislikedOnly" && f.dislikedOnly) f.liked = false;   // HERESY 1167: 👍 or 👎, not both
+     store("yue2.libFilters", JSON.stringify(f));
+     paintLibrary();
+   });
+@@ -5195,21 +5215,29 @@
+     }
+     // HERESY 1041: the quick search, and the takes hidden in the Librarian stay out of the column
+     var HC = window.HeresyCollection, q = $("libSearch") ? $("libSearch").value : "";
+-    var F = libFilters(), filtered = STATE.favOnly || F.liked || F.noDisliked || F.noted;
++    var F = libFilters(), filtered = STATE.favOnly || F.liked || F.noDisliked || F.noted || F.dislikedOnly;
+     if (HC) {
+       var m = HC.matcher(q);
+       shown = shown.filter(function (t) {                 // HERESY 1125: and the column's own filters
+         if (!F.hidden && HC.isHidden(t.name)) return false;
+         if (!HC.inCurrent(t.name) || !(m(displayTitle(t)) || m(t.name))) return false;
+         var r = HC.rating(t.name);
++        if (F.dislikedOnly) return r < 0 && !(F.noted && !HC.note(t.name));   // HERESY 1167: 👎 only the disliked
+         return !(F.liked && r <= 0) && !(r < 0 && !showDisliked()) && !(F.noted && !HC.note(t.name));   // HERESY 1167
+       });
+     }
+     filtered = filtered || shown.length !== STATE.takes.length;   // HERESY 1167: the disliked out of it count too
+-    $("libCount").textContent = filtered || refinedOnly ? shown.length + " / " + STATE.takes.length : String(STATE.takes.length);
++    // HERESY 1167 (Viktor: «Нам нахер не нужно общее количество, если это не All workspaces»): a workspace in hand counts
++    // its own takes only; the whole library's number only over All workspaces
++    var inWs = !!(HC && HC.current && HC.current());
++    $("libCount").textContent = inWs ? String(shown.length)
++      : filtered || refinedOnly ? shown.length + " / " + STATE.takes.length : String(STATE.takes.length);
+     $("refinedFilter").setAttribute("aria-pressed", refinedOnly ? "true" : "false");
+     $("libMenuBtn").classList.toggle("has-filter", F.liked || showDisliked() || F.noted || F.hidden);
+-    all("[data-libf]").forEach(function (b) { b.setAttribute("aria-checked", (b.dataset.libf === "disliked" ? showDisliked() : F[b.dataset.libf]) ? "true" : "false"); });
++    all("[data-libf]").forEach(function (b) {
++      var on = (b.dataset.libf === "disliked" ? showDisliked() : F[b.dataset.libf]) ? "true" : "false";
++      b.setAttribute(b.classList.contains("lib-rate-f") ? "aria-pressed" : "aria-checked", on);   // HERESY 1167: the 👍 👎 toggles
++    });
+     $("favFilter").setAttribute("aria-pressed", STATE.favOnly ? "true" : "false");
+ 
+     // A run in progress sits at the top of the list, so it is never lost.
+@@ -6248,9 +6276,13 @@
+   // work with any theme, and the fonts below. The options are this browser's ("yue2.look"); the <head>
+   // script puts them on <html> before the first paint, and app.css reads them there.
+   var LOOK_CHECKS = { hover: ["lookHover", "accent"], glow: ["lookGlow", "on"], motion: ["lookMotion", "reduced"] };
++  // HERESY 1167 (Viktor: «дефолтом выставь все мои параметры как на скрине»): nothing kept yet = his look; a choice kept
++  // is kept whole (an unticked option stays unticked)
++  var LOOK_DEFAULT = {"corners":"soft","glow":"on","hover":"accent"};
+   function savedLook() {
+-    var look;
+-    try { look = JSON.parse(recall("yue2.look") || "{}") || {}; } catch (error) { look = {}; }
++    var look, kept = recall("yue2.look");
++    if (kept === null) return Object.assign({}, LOOK_DEFAULT);
++    try { look = JSON.parse(kept) || {}; } catch (error) { look = {}; }
+     return look;
+   }
+   function applyLook() {
+@@ -6262,7 +6294,7 @@
+   function saveLook(key, value) {
+     var look = savedLook();
+     if (value) look[key] = value; else delete look[key];
+-    store("yue2.look", Object.keys(look).length ? JSON.stringify(look) : null);
++    store("yue2.look", JSON.stringify(look));        // HERESY 1167: even empty: «nothing kept» means the defaults now
+     applyLook();
+   }
+   function paintLook() {
+@@ -6313,11 +6345,12 @@
+   // Each menu lists the app's own fonts, a line, then the fonts this computer has: a common set, found by
+   // measuring, or every installed family after List all my fonts (the browser asks first; Chrome and Edge).
+   var FONT_ROLES = {
+-    sans: { select: "fontSans", generic: "sans-serif", own: "IBM Plex Sans" },
++    // HERESY 1167 (Viktor: «дефолтом выставь все мои параметры»): Noto Sans and Noto Sans Mono, loaded with the page
++    sans: { select: "fontSans", generic: "sans-serif", own: "Noto Sans" },
+     heading: { select: "fontHeading", generic: "sans-serif", own: "" },
+-    mono: { select: "fontMono", generic: "monospace", own: "IBM Plex Mono" }
++    mono: { select: "fontMono", generic: "monospace", own: "Noto Sans Mono" }
+   };
+-  var APP_FONTS = ["IBM Plex Sans", "IBM Plex Mono", "Bodoni Moda", "Space Grotesk", "Michroma"];
++  var APP_FONTS = ["Noto Sans", "Noto Sans Mono", "IBM Plex Sans", "IBM Plex Mono", "Bodoni Moda", "Space Grotesk", "Michroma"];
+   var COMMON_FONTS = ["Aptos", "Arial", "Avenir", "Avenir Next", "Bahnschrift", "Baskerville", "Calibri", "Cambria", "Candara",
+     "Cantarell", "Cascadia Code", "Cascadia Mono", "Charter", "Consolas", "Constantia", "Corbel", "Courier New", "DejaVu Sans",
+     "DejaVu Sans Mono", "DejaVu Serif", "Didot", "Fira Mono", "Fira Sans", "Franklin Gothic Medium", "Futura", "Garamond",
+@@ -7158,6 +7191,7 @@
+     if (tab === "train" && window.HeresyTrain) window.HeresyTrain.reload();
+     if (tab === "collection" && window.HeresyCollection) window.HeresyCollection.reload();
+     if (tab === "write") refreshChat().catch(function () {});   // HERESY 1110: the Writing room says its state at once
++    paintLibFold();                                   // HERESY 1167: each room its own fold
+     all("#tabs [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+     store(TAB_KEY, tab === "create" ? null : tab);
+     if (tab === "write") paintCurrentSong();
+@@ -7246,7 +7280,9 @@
+       $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
+     };
+     ["assistBrief", "assistPrefs", "assistTask", "assistTemp", "assistMax", "assistStructure"].forEach(function (id) { $(id).addEventListener("input", saveAssist); $(id).addEventListener("change", saveAssist); });
+-    saveAssist();
++    // HERESY 1167 (Viktor: «В Писателе выбор LLM инстанса Writer не запоминается»): saved here, before the writer and the
++    // model were put back, the defaults went into the store and the next load found them; the size alone is painted now
++    $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
+ 
+     var paintDraftSize = function () {
+       var n = $("draftStyle").value.trim().length;
+@@ -7263,6 +7299,7 @@
+     // HERESY 1133 (Viktor): OpenRouter by default when no chat server is set (Qwen and DeepSeek in the quick picks)
+     $("assistProvider").value = saved.provider ? (saved.provider === "openrouter" ? "openrouter" : "engine") : (recall("yue2.chatUrl") ? "engine" : "openrouter");
+     $("orModel").value = saved.orModel || "deepseek/deepseek-v4-pro";
++    saveAssist();                                     // HERESY 1167: now, with the writer and the model put back
+     all("[data-or-model]").forEach(function (b) {
+       b.addEventListener("click", function () { $("orModel").value = b.dataset.orModel; saveAssist(); paintAssistLine(); });
+     });
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index ed580e7..59053ea 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -465,7 +465,7 @@
+       var b = e.target.closest("[data-chip]");
+       if (!b || +b.dataset.chip === cardFor) return;
+       clearTimeout(cardTimer);
+-      cardTimer = setTimeout(function () { showCard(+b.dataset.chip, b); }, 220);
++      cardTimer = setTimeout(function () { showCard(+b.dataset.chip, b); }, 600);   // HERESY 1167 (Viktor: «Там 600ms задержки»)
+     });
+     [box, card].forEach(function (el) {
+       el.addEventListener("mouseleave", function () { clearTimeout(cardTimer); cardTimer = setTimeout(hideCard, 320); });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index dfbdf4b..28fc324 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -9,11 +9,11 @@
+ <link rel="preconnect" href="https://fonts.googleapis.com" />
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+ <!-- the fonts never hold up the first paint: loaded as a print sheet, switched on when they arrive -->
+-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Michroma&family=Space+Grotesk:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
++<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Michroma&family=Space+Grotesk:wght@400;500;600&family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+ <script>try { var t = localStorage.getItem("yue2.theme"); if (t) document.documentElement.dataset.theme = t;
+   var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: "sans-serif", heading: "sans-serif", mono: "monospace" };
+   for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, JSON.stringify(f[k]) + ", " + g[k]);
+-  var L = JSON.parse(localStorage.getItem("yue2.look") || "{}"), o = ["hover", "glow", "motion", "corners"];
++  var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners"];
+   for (var i = 0; i < o.length; i++) if (typeof L[o[i]] === "string") document.documentElement.dataset[o[i]] = L[o[i]];
+   var lang = localStorage.getItem("yue2.lang");                 // HERESY 1148: no English flash before the translation
+   if (lang && lang !== "en") { document.documentElement.classList.add("i18n-wait");
+@@ -1729,6 +1729,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <span class="count mono" id="libCount">0</span>
+       <div class="spacer"></div>
+       <button type="button" class="lib-toggle" id="favFilter" aria-pressed="false" title="Show favourites only">★ Favourites</button>
++      <!-- HERESY 1167 (Viktor: «добавь ещё палец вверх и вниз. Так будет полная сортировка») -->
++      <button type="button" class="lib-toggle lib-rate-f" data-libf="liked" aria-pressed="false" aria-label="Only the liked" data-tip="Only the liked" data-ui="like"></button>
++      <button type="button" class="lib-toggle lib-rate-f" data-libf="dislikedOnly" aria-pressed="false" aria-label="Only the disliked" data-tip="Only the disliked (a dislike hides a take everywhere else)" data-ui="dislike"></button>
+       <!-- HERESY 1132: in the Refiner, the takes it refined (the newest first); All for a new one -->
+       <button type="button" class="lib-toggle lib-refined" id="refinedFilter" aria-pressed="true" title="Only the takes refined here, the newest refine first; press for every take">Refined</button>
+       <button type="button" class="icon-btn lib-fold" id="libFold" data-icon="collapse" data-tip="Fold the takes list to the right">Fold</button>
+-- 
+2.43.0
+

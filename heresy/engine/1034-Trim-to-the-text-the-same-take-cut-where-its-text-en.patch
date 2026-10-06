@@ -1,0 +1,77 @@
+From 6034fe13ac9623828ec5096ae676a304fad42642 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 01:09:41 -0600
+Subject: [PATCH 1034/1177] Trim to the text: the same take, cut where its text
+ ends
+
+A button in the take card (Make again). The lab hears the take with Whisper (the freest GPU,
+or the CPU) and finds where its text ends: each line, or sentence of a long line, looked for in
+order after the one before, its FIRST confident hearing counting, so a model that runs past the
+text and reads its last lines again does not move the end. The take is then rendered again from
+its own music codes cut there + 1.5 s: the same performance without the returns and babble after
+the last line; only the sound stage runs. Measured on a four-language reading: 4:09 -> 2:30.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js       |  30 ++++++++++++++++++++++++++++++
+ tools/console/index.html   |   1 +
+ tools/public/index.html.gz | Bin 299076 -> 299699 bytes
+ 3 files changed, 31 insertions(+)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 94e352c..755c86b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3106,6 +3106,36 @@
+   });
+ 
+ 
++  // HERESY 1034: the same take, cut where its text ends (lab/textend_job.py finds the place)
++  $("trimToText").addEventListener("click", function () {
++    var take = STATE.take, button = this;
++    if (!take) return;
++    button.disabled = true;
++    var started = Date.now(), ask = function () {
++      return fetch("/lab/textend?name=" + encodeURIComponent(take.name)).then(function (r) {
++        return r.json().then(function (b) {
++          if (r.status === 202) {
++            button.textContent = "Listening\u2026 " + Math.round((Date.now() - started) / 1000) + " s";
++            return new Promise(function (res) { setTimeout(res, 2500); }).then(ask);
++          }
++          if (!r.ok) throw new Error(b.error || r.status);
++          return b;
++        });
++      });
++    };
++    ask().then(function (r) {
++      if (!r.text_end) throw new Error("No line of the text was heard in this take");
++      if (r.keep_frames >= r.frames_total - 25) return toast("The text runs to the end (" + clock(r.text_end) + " of " + clock(r.seconds) + "): nothing to trim");
++      if (!confirm("The text ends at " + clock(r.text_end) + " of " + clock(r.seconds) + " (" + r.heard + " of " + r.units +
++                   " lines heard in order).\n\nRender this take again, cut at " + clock(r.keep_seconds) + "? The same performance; only the sound stage runs.")) return;
++      return getRequest(take).then(function (req) {
++        var toks = String(req.semantic_tokens || "").split(",").filter(function (t) { return t.trim(); });
++        return replayTake(take, { semantic_tokens: toks.slice(0, r.keep_frames).join(","), duration: r.keep_frames / FRAME_RATE }, "Trimmed to the text");
++      }).then(function () { toast("Rendering " + displayTitle(take) + " cut at " + clock(r.keep_seconds) + "\u2026"); });
++    }).catch(function (error) { toast(error.message, "bad"); })
++      .then(function () { button.disabled = false; button.textContent = "Trim to the text"; });
++  });
++
+   $("takeActions").addEventListener("click", function (event) {
+     var take = STATE.take;
+     if (!take) return;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 041597c..159d9a6 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -654,6 +654,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <button type="button" class="btn ghost small" id="retakeTake" data-tip="Retake: this exact take into the form, with its score, both seeds and its music codes. Generate renders the same music again: try another VAE, sound seed or sound variations">Retake</button>
+           <button type="button" class="btn ghost small" id="reuseTake" data-tip="Reuse: the prompt, lyrics and every setting (mode, sampling, guidance, VAE, sliders, LoRAs, output) for a new song: no score, no seeds, no music codes, so Generate writes new music">Reuse</button>
+           <button type="button" class="btn ghost small" id="rerenderSound" title="Same music, a new sound seed (seconds)">Re-render sound</button>
++          <button type="button" class="btn ghost small" id="trimToText" data-tip="For readings and songs that go on past their text: Whisper finds where the text ends, and the same take is rendered again from its own music codes cut there (+1.5 s). The same performance, without the returns and babble after the last line; only the sound stage runs.">Trim to the text</button>
+         </div></div>
+         <div class="tool-group"><span class="tool-cap">Post</span><div class="tool-row">
+           <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in Post: its spectrum">Spectrum</button>
+-- 
+2.43.0
+

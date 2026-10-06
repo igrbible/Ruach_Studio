@@ -1,0 +1,1108 @@
+From b850b259d8515c06761c090e1c2eff6a7ed6a44e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 16:27:52 -0600
+Subject: [PATCH 1053/1177] Karaoke timing; the studio's own dialogs and
+ dropdowns; datasheet; cards, trash, chain
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+1056: karaoke timing in the Lyrics step: Whisper with word times, the lyric
+lines aligned to the heard words, a line too little heard placed between its
+neighbours and marked guessed; .lrc and .srt; a click on a time plays there.
+1057: every browser confirm() and prompt() (30 of them) is the studio's own
+dialog: title and explanation, Enter yes, Esc no.
+1058: every dropdown in the studio's dress (a drawn chevron); cards keep one
+height: a note is a mark at the end of the row, its words on hover; the card
+that sounds pulses; "Not in a workspace" on the left; the trash: Select all,
+Clear, "Wipe out the trash" (or "Delete N for good" when some are ticked),
+its term on one line.
+1059: the menu offers the other rooms only ("Open in Collection" shows the
+take there, flashed); "Open the datasheet": everything a take was made with
+(style, lyrics, score, mode, seeds, sampling, sliders, LoRAs, the request as
+JSON) without leaving the room; the chain shows its progress ("Enjoy the
+magic… 2 / 5") and Artifacts turns to its final file when done; remaster
+lengths in the tree; the player fits a narrow or zoomed window again (the
+1042 rule had undone the 1150 px query).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  84 +++++++++++++
+ tools/console/app.js               |  90 ++++++++------
+ tools/console/heresy-collection.js | 183 +++++++++++++++++++++++------
+ tools/console/heresy-derived.js    |   2 +-
+ tools/console/heresy-dialog.js     |  56 +++++++++
+ tools/console/heresy-gloss.js      |  52 +++++++-
+ tools/console/heresy-icons.js      |   1 +
+ tools/console/heresy-inspect.js    |  19 ++-
+ tools/console/heresy-post.js       |  16 ++-
+ tools/console/heresy-presets.js    |  53 +++++----
+ tools/console/heresy-score.js      |   8 +-
+ tools/console/heresy-textprep.js   |   6 +-
+ tools/console/heresy-writer.js     |  37 +++---
+ tools/console/index.html           |  21 +++-
+ tools/public/index.html.gz         | Bin 341122 -> 347371 bytes
+ 15 files changed, 501 insertions(+), 127 deletions(-)
+ create mode 100644 tools/console/heresy-dialog.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 5f0644f..9604fbf 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2387,3 +2387,87 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .pc-st.is-failed { color: var(--bad); }
+ .pc-say { margin-left: 6px; color: var(--muted); }
+ .pc-say.is-bad { color: var(--bad); }
++
++/* HERESY 1056: karaoke timing */
++.kt-box { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
++.kt-cap { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
++.kt-rows { margin: 8px 0 0; padding: 0; list-style: none; max-height: 320px; overflow: auto; font-size: 13px; }
++.kt-rows li { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--line-soft); }
++.kt-rows li.is-guessed { color: var(--muted); font-style: italic; }
++.kt-t { flex: none; border: 0; background: none; color: var(--amber); cursor: pointer; padding: 0; font-size: 12px; }
++.kt-rows li.is-guessed .kt-t { color: var(--dim); }
++
++/* HERESY 1057: the studio's own dialogs */
++.hd-back { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; padding: 16px;
++  background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(3px); opacity: 0; transition: opacity .12s ease; }
++.hd-back.is-on { opacity: 1; }
++.hd-back.is-leaving { opacity: 0; }
++.hd-box { width: min(480px, 100%); display: flex; flex-direction: column; gap: 10px; padding: 18px 20px 16px; border: 1px solid var(--line-strong);
++  border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 20px 60px var(--shadow-lg); transform: translateY(6px) scale(.98); transition: transform .12s ease; }
++.hd-back.is-on .hd-box { transform: none; }
++.hd-title { font: 600 16px/1.35 var(--sans); color: var(--ink); }
++.hd-body { white-space: pre-line; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
++.hd-input { width: 100%; }
++.hd-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
++
++/* HERESY 1058: every dropdown in the studio's own dress: no native arrow, a drawn chevron, room for it */
++select { appearance: none; -webkit-appearance: none; background-color: var(--field);
++  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
++  background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
++  padding-right: 26px !important; border: 1px solid var(--line); border-radius: var(--r-md); color: var(--ink); cursor: pointer; }
++select:hover { border-color: var(--hover-line, var(--line-strong)); }
++select:focus { background-image: linear-gradient(45deg, transparent 50%, var(--amber) 50%), linear-gradient(135deg, var(--amber) 50%, transparent 50%); }
++select option, select optgroup { background: var(--panel); color: var(--ink); }
++.coll-inline { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
++.coll-inline select { width: auto; padding-top: 4px; padding-bottom: 4px; }
++
++/* HERESY 1058: a note as a mark; the card that sounds pulses */
++.coll-hasnote { color: var(--amber); opacity: .9; }
++.coll-nonote { visibility: hidden; width: 29px; }
++.coll-card.is-sounding { animation: coll-pulse 1.6s ease-in-out infinite; }
++@keyframes coll-pulse {
++  0%, 100% { box-shadow: 0 2px 6px color-mix(in srgb, var(--amber) 18%, transparent); }
++  50% { box-shadow: 0 6px 22px color-mix(in srgb, var(--amber) 45%, transparent); }
++}
++@media (prefers-reduced-motion: reduce) { .coll-card.is-sounding { animation: none; box-shadow: 0 4px 16px color-mix(in srgb, var(--amber) 35%, transparent); } }
++
++/* HERESY 1059: the datasheet, and a card flashed into sight */
++.ds-back { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px;
++  background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(2px); }
++.ds-box { width: min(1240px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 18px 20px; border: 1px solid var(--line-strong);
++  border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 20px 60px var(--shadow-lg); display: flex; flex-direction: column; gap: 12px; }
++.ds-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
++.ds-head > div:first-child { min-width: 0; }
++.ds-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 18px; }
++@media (max-width: 900px) { .ds-cols { grid-template-columns: minmax(0, 1fr); } }
++.ds-texts .sheet-text { max-height: 260px; overflow: auto; }
++.ds-lyrics { max-height: 420px !important; }
++.ds-abc { font-size: 11.5px; max-height: 300px !important; }
++.ds-knobs { display: flex; flex-direction: column; gap: 10px; }
++.ds-group { padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: var(--r-md); }
++.ds-kv { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; font-size: 13px; }
++.ds-kv span { color: var(--muted); }
++.ds-kv b { font-weight: 500; font-family: var(--mono); font-size: 12.5px; text-align: right; overflow-wrap: anywhere; }
++.coll-card.is-flash { outline: 2px solid var(--amber); outline-offset: 2px; transition: outline-color .3s; }
++
++/* HERESY 1059: the chain's progress */
++.pc-bar { width: 100%; height: 5px; border-radius: 3px; background: var(--sunk); overflow: hidden; margin-bottom: 4px; }
++.pc-bar i { display: block; height: 100%; background: var(--good); transition: width .4s ease; }
++.pc-bar.is-running i { background: linear-gradient(90deg, var(--amber), var(--amber-hi), var(--amber)); background-size: 200% 100%; animation: pc-flow 1.4s linear infinite; }
++.pc-bar.is-failed i { background: var(--bad); }
++@keyframes pc-flow { from { background-position: 200% 0; } to { background-position: 0 0; } }
++.pc-st.is-running { animation: pc-blink 1.2s ease-in-out infinite; }
++@keyframes pc-blink { 50% { opacity: .55; } }
++#pcRun.is-magic { opacity: 1 !important; pointer-events: none; background: linear-gradient(90deg, var(--amber), var(--amber-hi), var(--amber)); background-size: 200% 100%; animation: pc-flow 2s linear infinite; }
++
++/* HERESY 1059: the player fits a narrow window (and a zoomed one): the 1042 rule had brought the
++   title block back over the 1150 px query; below 900 px the bar sheds what it can spare */
++@media (max-width: 1150px) { .playbar-id { display: none; } }
++@media (max-width: 900px) {
++  .playbar { gap: 6px; padding: 0 8px; }
++  .status-pill { width: auto; padding: 0 8px; }
++  #statusText { display: none; }
++  .autoplay-btn { padding: 2px 6px; font-size: 11px; }
++  #volume { display: none; }
++  #wave { min-width: 0; flex: 1 1 60px; }
++}
+diff --git a/tools/console/app.js b/tools/console/app.js
+index b616bf8..f6b7572 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2593,8 +2593,8 @@
+ 
+   $("resetPageSettings").addEventListener("click", function () {   // HERESY 1027
+     if (!window.HeresySettings) return;
+-    if (!confirm("Reset every page setting to its default, in this browser and on disk?\n\nThe library, the songs and the engine settings stay as they are.")) return;
+-    window.HeresySettings.reset();
++    window.HeresyDialog.confirm("Reset every page setting to its default, in this browser and on disk?\n\nThe library, the songs and the engine settings stay as they are.", { ok: "Reset", danger: true })
++      .then(function (ok) { if (ok) window.HeresySettings.reset(); });
+   });
+ 
+   $("saveSettings").addEventListener("click", function () {
+@@ -3164,13 +3164,15 @@
+     var take = STATE.take, button = this;
+     if (!take || take.session) return;
+     var here = STATE.playerTake && STATE.playerTake.name === take.name && audio.currentTime > 0 ? audio.currentTime : null;
+-    var answer = prompt("Keep " + displayTitle(take) + " up to which moment (m:ss)? The music is written anew from there.",
+-                        here !== null ? clock(here) : "");
+-    if (answer === null) return;
+-    var at = parseClock(answer);
+-    if (!isFinite(at) || at <= 1 || at >= (take.seconds || 0) - 1) return toast("A moment between 0:01 and " + clock((take.seconds || 0) - 1), "bad");
+-    button.disabled = true;
+-    getRequest(take).then(function (req) {
++    var at;
++    window.HeresyDialog.prompt("Regenerate from a moment\n\nKeep " + displayTitle(take) + " up to which moment (m:ss)? The music is written anew from there.",
++                               here !== null ? clock(here) : "", { ok: "Regenerate", placeholder: "1:30" }).then(function (answer) {
++      if (answer === null) throw null;
++      at = parseClock(answer);
++      if (!isFinite(at) || at <= 1 || at >= (take.seconds || 0) - 1) throw new Error("A moment between 0:01 and " + clock((take.seconds || 0) - 1));
++      button.disabled = true;
++      return getRequest(take);
++    }).then(function (req) {
+       var toks = String(req.semantic_tokens || "").split(",").filter(function (t) { return t.trim(); });
+       if (!toks.length) throw new Error("This take's request carries no music codes to keep");
+       var keep = Math.min(toks.length - 1, Math.round(at * FRAME_RATE));
+@@ -3186,7 +3188,7 @@
+       return submitJob(body, { kind: "song", title: body.title, group: "regen-" + Date.now(), index: 0, count: 1,
+                                versioned: false, variations: 1, baseTitle: body.title, parent: take.name });
+     }).then(function () { toast("Writing " + displayTitle(take) + " anew from " + clock(at) + "; everything before stays"); })
+-      .catch(function (error) { toast(error.message, "bad"); })
++      .catch(function (error) { if (error) toast(error.message, "bad"); })
+       .then(function () { button.disabled = false; });
+   });
+ 
+@@ -3212,12 +3214,14 @@
+       if (r.confident === false) throw new Error("Where the text ends cannot be told with confidence here (" + r.heard + " of " + r.units +
+         " lines heard in order, the last at line " + r.last_unit + "): nothing trimmed. Whisper hears some languages badly.");
+       if (r.keep_frames >= r.frames_total - 25) return toast("The text runs to the end (" + clock(r.text_end) + " of " + clock(r.seconds) + "): nothing to trim");
+-      if (!confirm("The text ends at " + clock(r.text_end) + " of " + clock(r.seconds) + " (" + r.heard + " of " + r.units +
+-                   " lines heard in order).\n\nRender this take again, cut at " + clock(r.keep_seconds) + "? The same performance; only the sound stage runs.")) return;
+-      return getRequest(take).then(function (req) {
++      return window.HeresyDialog.confirm("The text ends at " + clock(r.text_end) + " of " + clock(r.seconds) + " (" + r.heard + " of " + r.units +
++                   " lines heard in order).\n\nRender this take again, cut at " + clock(r.keep_seconds) + "? The same performance; only the sound stage runs.", { ok: "Trim it" }).then(function (ok) {
++        if (!ok) return;
++        return getRequest(take).then(function (req) {
+         var toks = String(req.semantic_tokens || "").split(",").filter(function (t) { return t.trim(); });
+         return replayTake(take, { semantic_tokens: toks.slice(0, r.keep_frames).join(","), duration: r.keep_frames / FRAME_RATE }, "Trimmed to the text");
+-      }).then(function () { toast("Rendering " + displayTitle(take) + " cut at " + clock(r.keep_seconds) + "\u2026"); });
++        }).then(function () { toast("Rendering " + displayTitle(take) + " cut at " + clock(r.keep_seconds) + "\u2026"); });
++      });
+     }).catch(function (error) { toast(error.message, "bad"); })
+       .then(function () { button.disabled = false; button.textContent = "Trim to the text"; });
+   });
+@@ -3485,9 +3489,13 @@
+   }
+ 
+   function deleteTake(take, confirmed, quiet) {
+-    if (!confirmed && !window.confirm("Delete \u201c" + displayTitle(take) + "\u201d and its files?")) return Promise.resolve(false);
+-    var gone = take.session ? Promise.resolve() : post("/library/delete?name=" + encodeURIComponent(take.name));
+-    return gone.then(function () {
++    var asked = confirmed ? Promise.resolve(true)
++      : window.HeresyDialog.confirm("Delete \u201c" + displayTitle(take) + "\u201d and its files?\n\nThis is for good. To keep a way back, move it to the trash from its menu (right-click).", { danger: true });
++    return asked.then(function (ok) {
++      if (!ok) return false;
++      return (take.session ? Promise.resolve() : post("/library/delete?name=" + encodeURIComponent(take.name))).then(function () { return true; });
++    }).then(function (went) {
++      if (!went) return false;
+       removeTake(take);
+       if (!quiet) { paintLibrary(); paintCoverTakes(); }
+       if (!confirmed) toast("Take deleted");
+@@ -3511,16 +3519,19 @@
+     var doomed = STATE.takes.filter(function (t) { return !t.favorite; });
+     var kept = STATE.takes.length - doomed.length;
+     if (!doomed.length) return toast(STATE.takes.length ? "Every take is a favourite; nothing to delete" : "The library is empty");
+-    if (!window.confirm("Delete " + doomed.length + (doomed.length === 1 ? " take that is" : " takes that are") +
+-                        " not a favourite, with their files? " + kept + (kept === 1 ? " favourite stays." : " favourites stay."))) return;
+-    var chain = Promise.resolve(), count = 0;
+-    doomed.forEach(function (take) {
+-      chain = chain.then(function () { return deleteTake(take, true, true).then(function (ok) { if (ok) count++; }); });
+-    });
+-    chain.then(function () {
++    var chain, count = 0;
++    window.HeresyDialog.confirm("Delete " + doomed.length + (doomed.length === 1 ? " take that is" : " takes that are") +
++                        " not a favourite, with their files?\n\n" + kept + (kept === 1 ? " favourite stays." : " favourites stay.") + " This is for good.", { danger: true }).then(function (ok) {
++      if (!ok) return;
++      chain = Promise.resolve();
++      doomed.forEach(function (take) {
++        chain = chain.then(function () { return deleteTake(take, true, true).then(function (ok) { if (ok) count++; }); });
++      });
++      return chain.then(function () {
+       paintLibrary();
+       paintCoverTakes();
+       toast("Deleted " + count + (count === 1 ? " take; " : " takes; ") + kept + (kept === 1 ? " favourite kept" : " favourites kept"), "good");
++      });
+     });
+   });
+ 
+@@ -5195,6 +5206,7 @@
+     var row = HC && HC.row ? HC.row(name) : null, r = HC ? HC.rating(name) : 0;
+     var now = STATE.playerTake && STATE.playerTake.name === name && isPlaying();
+     var ws = HC && HC.workspaces ? HC.workspaces() : [], inWs = row ? row.workspaces : [], hand = recall("yue2.writerDoc");
++    var here = document.body.dataset.tab || "create";
+     var changed = function () { paintLibrary(); paintRate(); };
+     var go = function (where) { return function () { openTake(name); setTab(where); }; };
+     var copy = function (what, get) {
+@@ -5212,29 +5224,34 @@
+         STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
+         playNow(take);
+       } },
+-      { icon: "✎", label: "Open in Create", action: go("create") },
+-      { icon: "⚗", label: "Open in Post", action: go("post") },
+-      HC && HC.openSheet && document.body.dataset.tab === "collection" ? { icon: "▤", label: "Open the sheet", action: function () { HC.openSheet(name); } } : null,
++      // HERESY 1059 (Viktor): the other rooms only, never the one you are in
++      here !== "create" ? { icon: "✎", label: "Open in Create", action: go("create") } : null,
++      here !== "post" ? { icon: "⚗", label: "Open in Post", action: go("post") } : null,
++      HC && HC.reveal && here !== "collection" ? { icon: "▦", label: "Open in Collection", action: function () { setTab("collection"); HC.reveal(name); } } : null,
++      HC && HC.openSheet && here === "collection" ? { icon: "▤", label: "Open the sheet", action: function () { HC.openSheet(name); } } : null,
++      HC && HC.datasheet ? { icon: "☰", label: "Open the datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
+       { sep: true },
+       HC ? { icon: "👍", label: "Like", checked: r > 0, action: function () { HC.rate(name, r > 0 ? 0 : 1).then(changed); } } : null,
+       HC ? { icon: "👎", label: "Dislike", checked: r < 0, action: function () { HC.rate(name, r < 0 ? 0 : -1).then(changed); } } : null,
+       { icon: "☆", label: "Favourite", checked: !!take.favorite, action: function () { toggleFavorite(take).then(function () { changed(); if (HC) HC.reload(); }); } },
+       HC ? { icon: "✍", label: "Note…", action: function () {
+-        var t = prompt("A note on “" + displayTitle(take) + "” (empty to remove it):", HC.note(name));
+-        if (t !== null) HC.setNote(name, t).then(paintNote);
++        window.HeresyDialog.prompt("A note on “" + displayTitle(take) + "”\n\nEmpty removes it.", HC.note(name), { ok: "Keep the note", max: 4000 })
++          .then(function (t) { if (t !== null) HC.setNote(name, t).then(paintNote); });
+       } } : null,
+       { icon: "Aa", label: "Rename…", action: function () {
+-        var t = prompt("A new title (up to " + TITLE_MAX + " characters):", displayTitle(take));
+-        if (t === null) return;
+-        renameTake(name, t).then(function (ok) { if (ok && HC) HC.reload(); }).catch(function (e) { toast(e.message, "bad"); });
++        window.HeresyDialog.prompt("Rename the take\n\nUp to " + TITLE_MAX + " characters; invisible controls are taken out.", displayTitle(take), { ok: "Rename", max: TITLE_MAX })
++          .then(function (t) { if (t !== null) return renameTake(name, t).then(function (ok) { if (ok && HC) HC.reload(); }); })
++          .catch(function (e) { toast(e.message, "bad"); });
+       } },
+       { sep: true },
+       HC ? { icon: "▦", label: "Workspaces", items: ws.map(function (w) {
+         var on = inWs.indexOf(w) >= 0;
+         return { label: w, checked: on, action: function () { HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: [name] }, on ? "Taken out of “" + w + "”" : "Added to “" + w + "”"); } };
+       }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
+-        var w = (prompt("A name for the new workspace:") || "").trim();
+-        if (w) HC.act({ op: "ws-add", workspace: w, names: [name] }, "Added to “" + w + "”");
++        window.HeresyDialog.prompt("A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name" }).then(function (w) {
++          w = (w || "").trim();
++          if (w) HC.act({ op: "ws-add", workspace: w, names: [name] }, "Added to “" + w + "”");
++        });
+       } }]) } : null,
+       HC ? { icon: "◌", label: row && row.hidden ? "Show again" : "Hide from the lists", action: function () {
+         HC.act({ op: row && row.hidden ? "show" : "hide", names: [name] }, row && row.hidden ? "Shown again" : "Hidden from the lists (not deleted)");
+@@ -5263,8 +5280,9 @@
+       ].filter(Boolean) },
+       HC && HC.trash ? { sep: true } : null,
+       HC && HC.trash ? { icon: "🗑", label: "Move to the trash…", danger: true, action: function () {
+-        if (!confirm("Move “" + displayTitle(take) + "” to the trash?\n\nNothing is deleted: the trash in the Collection gives it back until it is emptied.")) return;
+-        HC.trash([name]).then(function () { toast("Moved to the trash"); return refreshLibrary(); }).catch(function (e) { toast(e.message, "bad"); });
++        window.HeresyDialog.confirm("Move “" + displayTitle(take) + "” to the trash?\n\nNothing is deleted: the trash in the Collection gives it back until it is emptied.", { ok: "To the trash", danger: true })
++          .then(function (ok) { if (ok) return HC.trash([name]).then(function () { toast("Moved to the trash"); return refreshLibrary(); }); })
++          .catch(function (e) { toast(e.message, "bad"); });
+       } } : null
+     ].filter(Boolean);
+     window.HeresyMenu.open(x, y, items);
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index f67ef3a..97bcb47 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -18,6 +18,9 @@
+   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+   function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private */ } }
++  // HERESY 1057: the studio's own dialogs (heresy-dialog.js)
++  function ask(text, opts) { return window.HeresyDialog.confirm(text, opts); }
++  function askName(text, value, opts) { return window.HeresyDialog.prompt(text, value, opts).then(function (v) { return (v || "").trim(); }); }
+   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
+   function api(path, body) {
+     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+@@ -50,6 +53,7 @@
+     var m = matcher(state.q), anyDer = Object.keys(state.derived).length;
+     var rows = state.rows.filter(function (r) {
+       if (state.place === "__fav" && !r.favorite) return false;
++      if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
+       if (state.place === "__hidden") { if (!r.hidden) return false; }
+       else if (r.hidden) return false;
+       if (state.place && state.place.charAt(0) !== "_" && r.workspaces.indexOf(state.place) < 0) return false;
+@@ -71,10 +75,11 @@
+   }
+ 
+   function paintSide() {
+-    var counts = { "": 0, __fav: 0, __hidden: 0 }, perWs = {};
++    var counts = { "": 0, __fav: 0, __hidden: 0, __none: 0 }, perWs = {};
+     state.rows.forEach(function (r) {
+       if (r.hidden) { counts.__hidden++; return; }
+       counts[""]++; if (r.favorite) counts.__fav++;
++      if (!r.workspaces.length) counts.__none++;
+       r.workspaces.forEach(function (w) { perWs[w] = (perWs[w] || 0) + 1; });
+     });
+     var item = function (key, label, n) {
+@@ -82,6 +87,7 @@
+         '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
+     };
+     $("collSide").innerHTML = item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
++      item("__none", "Not in a workspace", counts.__none) +
+       '<div class="coll-cap">Workspaces</div>' + state.ws.map(function (w) {
+         return item(w, w, perWs[w] || 0).replace('<span class="coll-n">', '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete…" role="button">\u22ef</span><span class="coll-n">');
+       }).join("") +
+@@ -104,7 +110,7 @@
+     $("collGrid").innerHTML = rows.length ? rows.map(function (r) {
+       var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
+       var mine = now.name === r.name;
+-      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + (mine ? " is-current" : "") + '" data-name="' + esc(r.name) + '">' +
++      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + '" data-name="' + esc(r.name) + '">' +
+         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+         '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
+         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
+@@ -112,13 +118,16 @@
+         '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
+         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+         r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" +
+-        (r.note ? '<div class="coll-note" title="' + esc(r.note) + '">' + esc(r.note.length > 140 ? r.note.slice(0, 140) + "\u2026" : r.note) + "</div>" : "") + "</div>" +
++        "</div>" +
+         // HERESY 1048: like, dislike, favourite, Post and the menu, on the card itself
+         '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + '</button>' +
+         '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + '</button>' +
+         '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" title="Favourite">' + ico("star") + "</button>" +
+         '<button type="button" class="coll-act post" data-cgo="post" title="Load into Post">Post</button>' +
+-        '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button></div></article>';
++        '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' +
++        // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height
++        (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" title="' + esc(r.note) + '" aria-label="Has a note">' + ico("note") + "</button>"
++                : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
+     }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+     $("collNote").textContent = rows.length + " shown · " + state.rows.length + " in the library";
+     paintBulk(rows);
+@@ -141,6 +150,10 @@
+     $("collTrashDays").value = String(state.trashDays || 0);
+     $("collNote").textContent = state.trash.length + " in the trash · " + (state.trash.reduce(function (s, i) { return s + i.bytes; }, 0) / 1e9).toFixed(2) + " GB";
+     $("collGrid").className = "coll-grid list";
++    var nsel = Object.keys(state.tsel).length;             // HERESY 1058: the button says what it will do
++    $("collEmpty").textContent = nsel ? "Delete " + nsel + " for good" : "Wipe out the trash";
++    $("collEmpty").disabled = !state.trash.length;
++    $("collRestore").disabled = !nsel;
+     $("collGrid").innerHTML = state.trash.length ? state.trash.map(function (it) {
+       var key = it.day + "/" + it.name, sel = !!state.tsel[key];
+       return '<article class="coll-card' + (sel ? " is-sel" : "") + '"><label class="coll-check"><input type="checkbox" data-tsel="' + esc(key) + '"' + (sel ? " checked" : "") + " /></label>" +
+@@ -231,8 +244,9 @@
+       if (more) { e.stopPropagation(); var rc = more.getBoundingClientRect(); wsMenu(more.dataset.wsMenu, rc.left, rc.bottom + 2); return; }
+       var nw = e.target.closest("[data-ws-new]");
+       if (nw) {
+-        var name = prompt("A name for the new workspace:");
+-        if (name && name.trim()) act({ op: "ws-create", workspace: name.trim() }, "Workspace “" + name.trim() + "” made");
++        askName("A new workspace", "", { ok: "Make it", placeholder: "its name" }).then(function (name) {
++          if (name) act({ op: "ws-create", workspace: name }, "Workspace “" + name + "” made");
++        });
+         return;
+       }
+       var p = e.target.closest("[data-place]");
+@@ -256,10 +270,12 @@
+     $("collWsMove").addEventListener("change", function () {   // HERESY 1050: into one workspace, out of this one
+       var w = this.value; this.value = "";
+       if (!w) return;
+-      if (w === "__new") { w = (prompt("A name for the new workspace:") || "").trim(); if (!w) return; }
+       var from = state.place && state.place.charAt(0) !== "_" ? state.place : "", n = names().length;
+-      act({ op: "ws-move", workspace: w, from: from, names: names() }, n + " moved to \u201c" + w + "\u201d" + (from ? " (out of \u201c" + from + "\u201d)" : " (out of every other workspace)"));
+-      state.sel = {};
++      (w === "__new" ? askName("A new workspace for the " + n + " selected", "", { ok: "Move them there", placeholder: "its name" }) : Promise.resolve(w)).then(function (w) {
++        if (!w) return;
++        act({ op: "ws-move", workspace: w, from: from, names: names() }, n + " moved to \u201c" + w + "\u201d" + (from ? " (out of \u201c" + from + "\u201d)" : " (out of every other workspace)"));
++        state.sel = {};
++      });
+     });
+     $("collGrid").addEventListener("click", function (e) {
+       var play = e.target.closest("[data-play]"), open = e.target.closest("[data-open]"), cb = e.target.closest("[data-sel]"), tcb = e.target.closest("[data-tsel]");
+@@ -347,8 +363,9 @@
+     $("collWsPick").addEventListener("change", function () {
+       var w = this.value; this.value = "";
+       if (!w) return;
+-      if (w === "__new") { w = (prompt("A name for the new workspace:") || "").trim(); if (!w) return; }
+-      act({ op: "ws-add", workspace: w, names: names() }, names().length + " added to “" + w + "”");
++      (w === "__new" ? askName("A new workspace for the selected", "", { ok: "Add them there", placeholder: "its name" }) : Promise.resolve(w)).then(function (w) {
++        if (w) act({ op: "ws-add", workspace: w, names: names() }, names().length + " added to “" + w + "”");
++      });
+     });
+     $("collWsOut").addEventListener("click", function () { act({ op: "ws-remove", workspace: state.place, names: names() }, "Taken out of “" + state.place + "”"); state.sel = {}; });
+     $("collHide").addEventListener("click", function () {
+@@ -359,8 +376,10 @@
+     $("collExport").addEventListener("click", exportZip);
+     $("collTrash").addEventListener("click", function () {
+       var n = names(); if (!n.length) return;
+-      if (!confirm("Move " + n.length + " take" + (n.length > 1 ? "s" : "") + " to the trash?\n\nNothing is deleted: the trash gives them back until it is emptied.")) return;
+-      api("/trash", { op: "move", names: n }).then(function (d) {
++      ask("Move " + n.length + " take" + (n.length > 1 ? "s" : "") + " to the trash?\n\nNothing is deleted: the trash gives them back until it is emptied.", { ok: "To the trash", danger: true }).then(function (ok) {
++        if (ok) return api("/trash", { op: "move", names: n });
++      }).then(function (d) {
++        if (!d) return;
+         toast(d.moved.length + " moved to the trash"); state.sel = {};
+         if (hooks.refreshLibrary) hooks.refreshLibrary();
+         return load();
+@@ -368,6 +387,8 @@
+     });
+     // the trash
+     var chosen = function () { return Object.keys(state.tsel).map(function (k) { var p = k.split("/"); return { day: p[0], name: p[1] }; }); };
++    $("collTSelAll").addEventListener("click", function () { state.trash.forEach(function (it) { state.tsel[it.day + "/" + it.name] = 1; }); paint(); });
++    $("collTSelNone").addEventListener("click", function () { state.tsel = {}; paint(); });
+     $("collRestore").addEventListener("click", function () {
+       var items = chosen(); if (!items.length) return toast("Tick what to give back", true);
+       api("/trash", { op: "restore", items: items }).then(function (d) { toast(d.restored.length + " back in the library"); if (hooks.refreshLibrary) hooks.refreshLibrary(); return load().then(loadTrash); })
+@@ -377,29 +398,34 @@
+       var items = chosen(), all = !items.length;
+       var n = all ? state.trash.length : items.length;
+       if (!n) return;
+-      if (!confirm((all ? "Empty the whole trash: " : "Delete for good: ") + n + " take" + (n > 1 ? "s" : "") + ", with everything made from them.\n\nThis cannot be undone.")) return;
+-      api("/trash", { op: "empty", items: all ? null : items }).then(function (d) { toast(d.emptied.length + " deleted for good"); return loadTrash(); })
+-        .catch(function (e) { toast(e.message, true); });
++      ask((all ? "Wipe out the whole trash: " : "Delete for good: ") + n + " take" + (n > 1 ? "s" : "") + ", with everything made from them.\n\nThis cannot be undone.", { ok: all ? "Wipe out" : "Delete for good", danger: true }).then(function (ok) {
++        if (ok) return api("/trash", { op: "empty", items: all ? null : items }).then(function (d) { toast(d.emptied.length + " deleted for good"); state.tsel = {}; return loadTrash(); });
++      }).catch(function (e) { toast(e.message, true); });
+     });
+     $("collTrashDays").addEventListener("change", function () {
+-      var days = parseInt(this.value, 10) || 0;
+-      if (days && !confirm("Empty the trash by itself: whatever has lain there more than " + days + " days is deleted for good, every hour from now on.")) { this.value = String(state.trashDays || 0); return; }
+-      act({ op: "trash-days", days: days }, days ? "The trash empties itself after " + days + " days" : "The trash keeps everything until you empty it");
++      var days = parseInt(this.value, 10) || 0, sel = this;
++      (days ? ask("Empty the trash by itself?\n\nWhatever has lain there more than " + days + " days is deleted for good, every hour from now on.", { ok: "Every " + days + " days", danger: true }) : Promise.resolve(true)).then(function (ok) {
++        if (!ok) { sel.value = String(state.trashDays || 0); return; }
++        act({ op: "trash-days", days: days }, days ? "The trash empties itself after " + days + " days" : "The trash keeps everything until you empty it");
++      });
+     });
+     $("wsCurrent").addEventListener("change", function () {
+       var w = this.value;
+-      if (w === "__new") {
+-        w = (prompt("A name for the new workspace:") || "").trim();
+-        if (!w) { paintCurrent(); return; }
+-        store(WS_KEY, w);
+-        act({ op: "ws-create", workspace: w }, "Workspace \u201c" + w + "\u201d made and in hand: new takes land in it");
+-      } else {
+-        store(WS_KEY, w);
+-        toast(w ? "Workspace \u201c" + w + "\u201d in hand: the list shows it, new takes land in it" : "All Workspaces in the list; new takes in no workspace");
+-      }
+-      state.place = w; state.sel = {};
+-      paint(); paintCurrent();
+-      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
++      var made = w === "__new" ? askName("A new workspace\n\nIt is in hand at once: the list shows it, new takes land in it.", "", { ok: "Make it", placeholder: "its name" }) : Promise.resolve(null);
++      made.then(function (name) {
++        if (w === "__new") {
++          if (!name) { paintCurrent(); return; }
++          w = name;
++          store(WS_KEY, w);
++          act({ op: "ws-create", workspace: w }, "Workspace \u201c" + w + "\u201d made and in hand: new takes land in it");
++        } else {
++          store(WS_KEY, w);
++          toast(w ? "Workspace \u201c" + w + "\u201d in hand: the list shows it, new takes land in it" : "All Workspaces in the list; new takes in no workspace");
++        }
++        state.place = w; state.sel = {};
++        paint(); paintCurrent();
++        if (state.hooks.libraryChanged) state.hooks.libraryChanged();
++      });
+     });
+     state.place = recall(WS_KEY) || "";
+     load();
+@@ -486,6 +512,7 @@
+     Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (card) {
+       var mine = card.dataset.name === now.name, b = card.querySelector(".coll-play");
+       card.classList.toggle("is-current", mine);
++      card.classList.toggle("is-sounding", mine && !!now.playing);   // HERESY 1058: a pulse under the card that sounds
+       if (!b) return;
+       var on = mine && now.playing;
+       b.classList.toggle("is-playing", on);
+@@ -512,10 +539,11 @@
+     if (recall(WS_KEY) === from) store(WS_KEY, to);
+   }
+   function renameWs(w) {
+-    var to = (prompt("Rename the workspace \u201c" + w + "\u201d:", w) || "").trim();
+-    if (!to || to === w) return;
+-    if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
+-    act({ op: "ws-rename", workspace: w, to: to }, "Workspace renamed").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
++    askName("Rename the workspace \u201c" + w + "\u201d", w, { ok: "Rename" }).then(function (to) {
++      if (!to || to === w) return;
++      if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
++      act({ op: "ws-rename", workspace: w, to: to }, "Workspace renamed").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
++    });
+   }
+   function closeDialog() { $("collDialog").hidden = true; $("collDialogBody").innerHTML = ""; }
+   function deleteWs(w) {
+@@ -538,9 +566,11 @@
+       if (how === "only") {
+         done = act({ op: "ws-delete", workspace: w }, "Workspace \u201c" + w + "\u201d deleted; its takes stay unsorted").then(function (ok) { if (ok) followRename(w, ""); });
+       } else if (how === "move") {
+-        var to = $("wsDelTo").value;
+-        if (to === "__new" || !to) { to = (prompt("A name for the new workspace:") || "").trim(); if (!to) return; }
+-        done = act({ op: "ws-merge", workspace: w, to: to }, takes.length + " moved into \u201c" + to + "\u201d; \u201c" + w + "\u201d deleted").then(function (ok) { if (ok) followRename(w, to); });
++        var pick = $("wsDelTo").value;
++        done = (pick === "__new" || !pick ? askName("A new workspace for its takes", "", { ok: "Move them there", placeholder: "its name" }) : Promise.resolve(pick)).then(function (to) {
++          if (!to) return;
++          return act({ op: "ws-merge", workspace: w, to: to }, takes.length + " moved into \u201c" + to + "\u201d; \u201c" + w + "\u201d deleted").then(function (ok) { if (ok) followRename(w, to); });
++        });
+       } else {
+         var spare = $("wsDelSpare") && $("wsDelSpare").checked;
+         var gone = takes.filter(function (r) { return !(spare && r.workspaces.length > 1); }).map(function (r) { return r.name; });
+@@ -553,6 +583,82 @@
+     });
+   }
+ 
++  // ---- HERESY 1059: the datasheet: everything a take was made with, as Create shows it, without going there
++  var MODES = { off: "Direct", plan: "Plan", full: "Full" };
++  function kv(k, v) { return v === undefined || v === null || v === "" ? "" : '<div class="ds-kv"><span>' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }
++  function samplingTable(title, s) {
++    if (!s) return "";
++    var names = { temperature: "temperature", top_p: "top-p", top_k: "top-k", repetition_penalty: "repetition penalty", penalty_window: "penalty window", min_tokens: "min tokens", max_tokens: "max tokens" };
++    return '<div class="ds-group"><div class="peek-cap">' + esc(title) + "</div>" + Object.keys(s).map(function (k) { return kv(names[k] || k, s[k]); }).join("") + "</div>";
++  }
++  function openDatasheet(name) {
++    hidePeek();
++    var h = state.hooks, t = h.findTake(name);
++    if (!t) return toast("Not in the library", true);
++    var back = document.createElement("div");
++    back.className = "ds-back";
++    back.innerHTML = '<div class="ds-box" role="dialog" aria-modal="true"><p class="row-hint">Reading the take\u2026</p></div>';
++    document.body.appendChild(back);
++    function close() { document.removeEventListener("keydown", key, true); back.remove(); }
++    function key(e) { if (e.key === "Escape" && !document.querySelector(".hd-back")) { e.preventDefault(); e.stopPropagation(); close(); } }
++    document.addEventListener("keydown", key, true);
++    back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
++    h.getRequest(t).then(function (q) {
++      var r = rowOf(name) || {}, codes = String(q.semantic_tokens || "").split(",").filter(Boolean).length, keep = String(q.semantic_keep || "").split(",").filter(Boolean).length;
++      var known = { style: 1, lyrics: 1, abc: 1, cot: 1, duration: 1, lm_seed: 1, seed: 1, solver: 1, steps: 1, abc_sampling: 1, semantic_sampling: 1, semantic_tokens: 1, semantic_keep: 1,
++                    cfg_scale: 1, output_format: 1, title: 1, vae: 1, sliders: 1, loras: 1, parent: 1, plan_only: 1, mp3_bitrate: 1, peak_clip: 1, lm_batch_size: 1, synth_batch_size: 1 };
++      var rest = Object.keys(q).filter(function (k) { return !known[k] && (typeof q[k] !== "object" || q[k] === null); });
++      back.querySelector(".ds-box").innerHTML =
++        '<div class="ds-head"><div><div class="sheet-title">' + esc(r.title || t.title || name) + '</div><div class="coll-meta mono">' + esc(name) + "</div>" +
++        '<div class="coll-meta">' + esc(h.ago(t.created)) + (t.seconds ? " \u00b7 " + h.clock(t.seconds) : "") + (t.render_seconds ? " \u00b7 made in " + h.clock(t.render_seconds) : "") +
++        (t.model ? " \u00b7 " + esc(t.model) : "") + (t.truncated ? " \u00b7 hit the token cap" : "") + (q.parent ? " \u00b7 from " + esc(q.parent) : "") + "</div></div>" +
++        '<span class="spacer"></span><button type="button" class="btn ghost small" data-ds="json">Copy request JSON</button>' +
++        '<button type="button" class="btn ghost small" data-ds="create">Open in Create</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
++        '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
++        '<div class="peek-cap">Lyrics</div><pre class="sheet-text ds-lyrics">' + esc(q.lyrics || "") + "</pre>" +
++        (q.abc ? '<div class="peek-cap">Score (ABC)</div><pre class="sheet-text mono ds-abc">' + esc(q.abc) + "</pre>" : "") + "</div>" +
++        '<div class="ds-knobs"><div class="ds-group"><div class="peek-cap">Song</div>' + kv("mode", MODES[q.cot] || q.cot) + kv("length asked", q.duration ? h.clock(q.duration) : "") +
++        kv("format", q.output_format + (q.output_format === "mp3" ? " " + q.mp3_bitrate : "")) + kv("VAE", q.vae) + kv("peak clip", q.peak_clip) +
++        kv("music codes", codes ? codes + " (" + h.clock(codes / 25) + ")" : "") + kv("kept from the parent", keep ? keep + " codes (" + h.clock(keep / 25) + ")" : "") + "</div>" +
++        '<div class="ds-group"><div class="peek-cap">Sound</div>' + kv("guidance", q.cfg_scale) + kv("steps", q.steps) + kv("solver", q.solver) +
++        kv("batch", (q.lm_batch_size || 1) + " \u00d7 " + (q.synth_batch_size || 1)) + "</div>" +
++        '<div class="ds-group"><div class="peek-cap">Seeds</div>' + kv("music", q.lm_seed) + kv("sound", q.seed) + "</div>" +
++        samplingTable("Score sampling", q.abc_sampling) + samplingTable("Music sampling", q.semantic_sampling) +
++        '<div class="ds-group"><div class="peek-cap">Sliders and LoRAs</div>' +
++          ((q.sliders || []).map(function (s) { return kv(s.name || s.path || "slider", s.scale != null ? s.scale : s.value); }).join("") || '<div class="ds-kv"><span>sliders</span><b>none</b></div>') +
++          ((q.loras || []).map(function (l) { return kv(l.name || l.path || "LoRA", l.scale); }).join("") || '<div class="ds-kv"><span>LoRAs</span><b>none</b></div>') + "</div>" +
++        (rest.length ? '<div class="ds-group"><div class="peek-cap">The rest</div>' + rest.map(function (k) { return kv(k, String(q[k])); }).join("") + "</div>" : "") +
++        "</div></div>";
++      back.querySelector(".ds-box").addEventListener("click", function (e) {
++        var b = e.target.closest("[data-ds]");
++        if (!b) return;
++        if (b.dataset.ds === "close") return close();
++        if (b.dataset.ds === "create") { close(); h.openTake(name, "create"); return; }
++        if (b.dataset.ds === "json") {
++          var copy = Object.assign({}, q);
++          if (copy.semantic_tokens) copy.semantic_tokens = "(" + codes + " codes, left out)";
++          navigator.clipboard.writeText(JSON.stringify(copy, null, 2)).then(function () { toast("The request is on the clipboard (music codes left out)"); })
++            .catch(function (e) { toast("Not copied: " + e.message, true); });
++        }
++      });
++    }).catch(function (e) { close(); toast(e.message, true); });
++  }
++
++  // ---- HERESY 1059: "Open in Collection": the Collection with the take in sight, flashed
++  function reveal(name) {
++    if (!shown().some(function (r) { return r.name === name; })) {   // out of the current view: the whole library, no search
++      state.place = ""; state.q = ""; state.kinds = {}; state.derived = {};
++      $("collSearch").value = "";
++      Array.prototype.forEach.call(document.querySelectorAll("#collFilters .is-on"), function (b) { b.classList.remove("is-on"); });
++    }
++    paint();
++    var card = document.querySelector('#collGrid .coll-card[data-name="' + (window.CSS && CSS.escape ? CSS.escape(name) : name) + '"]');
++    if (!card) return;
++    card.scrollIntoView({ block: "center", behavior: "smooth" });
++    card.classList.add("is-flash");
++    setTimeout(function () { card.classList.remove("is-flash"); }, 1800);
++  }
++
+   // HERESY 1049: the title edited where it stands (Enter or leaving the field keeps it, Esc does not)
+   function renameIn(span, name, after) {
+     if (!span || !state.hooks.rename || span.parentNode.querySelector(".coll-title-edit")) return;
+@@ -591,6 +697,7 @@
+   window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, matcher: matcher, landed: landed, inCurrent: inCurrent,
+                               current: current, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
++                              datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+ })();
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 42fb185..8554715 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -67,7 +67,7 @@
+         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
+       (m.files || []).forEach(function (f) {
+         var url = fileUrl(take.name, f.path);
+-        html += '<div class="dv-node"><span class="dv-name">↳ ' + esc(f.name) + '</span><span class="dv-meta mono">' + clock(f.seconds || 0) + "</span>" +
++        html += '<div class="dv-node"><span class="dv-name">↳ ' + esc(f.name) + '</span><span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
+           '<audio controls preload="none" src="' + esc(url) + '"></audio>' +
+           '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
+           (/vocal/i.test(f.name) ? '<button type="button" class="btn ghost small" data-dv-gloss="' + esc(f.path) + '" data-tip="Whisper on this file against the lyrics">Lyrics check</button>' : "") +
+diff --git a/tools/console/heresy-dialog.js b/tools/console/heresy-dialog.js
+new file mode 100644
+index 0000000..07df17b
+--- /dev/null
++++ b/tools/console/heresy-dialog.js
+@@ -0,0 +1,56 @@
++// HERESY 1057 (Viktor): the studio's own dialogs instead of the browser's confirm() and prompt().
++// HeresyDialog.confirm(text, {ok, cancel, danger}) -> Promise<boolean>
++// HeresyDialog.prompt(text, value, {ok, placeholder, max}) -> Promise<string|null>
++// The first paragraph of the text is the title, the rest the explanation. Enter answers yes (or
++// gives the field), Esc answers no; a click beside the box is no as well. One dialog at a time.
++(function () {
++  "use strict";
++
++  var chain = Promise.resolve();
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++
++  function show(kind, text, value, opts) {
++    opts = opts || {};
++    var parts = String(text || "").split(/\n\s*\n/), title = parts.shift(), body = parts.join("\n\n");
++    return new Promise(function (resolve) {
++      var back = document.createElement("div"), before = document.activeElement;
++      back.className = "hd-back";
++      back.innerHTML = '<div class="hd-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
++        '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
++        (kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' : "") +
++        '<div class="hd-acts">' + (kind === "alert" ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
++        '<button type="button" class="btn small ' + (opts.danger ? "danger-fill" : "primary") + ' hd-yes">' + esc(opts.ok || (kind === "prompt" ? "OK" : opts.danger ? "Delete" : "OK")) + "</button></div></div>";
++      document.body.appendChild(back);
++      var input = back.querySelector(".hd-input");
++      if (input) { input.value = value == null ? "" : String(value); }
++      function done(yes) {
++        document.removeEventListener("keydown", key, true);
++        back.classList.add("is-leaving");
++        setTimeout(function () { back.remove(); }, 120);
++        if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
++        resolve(kind === "prompt" ? (yes ? input.value : null) : !!yes);
++      }
++      function key(e) {
++        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(false); }
++        else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); done(true); }
++      }
++      document.addEventListener("keydown", key, true);
++      back.addEventListener("mousedown", function (e) { if (e.target === back) done(false); });
++      back.querySelector(".hd-yes").addEventListener("click", function () { done(true); });
++      var no = back.querySelector(".hd-no");
++      if (no) no.addEventListener("click", function () { done(false); });
++      requestAnimationFrame(function () { back.classList.add("is-on"); (input || back.querySelector(".hd-yes")).focus(); if (input) input.select(); });
++    });
++  }
++  function queued(kind, text, value, opts) {
++    var p = chain.then(function () { return show(kind, text, value, opts); });
++    chain = p.then(function () {}, function () {});
++    return p;
++  }
++
++  window.HeresyDialog = {
++    confirm: function (text, opts) { return queued("confirm", text, null, opts); },
++    prompt: function (text, value, opts) { return queued("prompt", text, value, opts); },
++    alert: function (text, opts) { return queued("alert", text, null, opts); }
++  };
++})();
+diff --git a/tools/console/heresy-gloss.js b/tools/console/heresy-gloss.js
+index e80c2d3..dedc916 100644
+--- a/tools/console/heresy-gloss.js
++++ b/tools/console/heresy-gloss.js
+@@ -113,9 +113,56 @@
+     }).then(function () { clearInterval(ticker); $("glossRun").disabled = false; });
+   }
+ 
++  // ---- HERESY 1056: karaoke timing
++  var kt = { timer: 0 };
++  function ktClock(t) { var m = Math.floor(t / 60), s = (t % 60).toFixed(1); return m + ":" + (s < 10 ? "0" : "") + s; }
++  function ktPaint(r) {
++    var name = state.take && state.take.name, base = "/lab/timing?name=" + encodeURIComponent(name || "");
++    var file = (state.take && state.take.label ? state.take.label : name || "take").replace(/[\\/:*?"<>|]+/g, " ").trim();
++    $("ktLrc").hidden = $("ktSrt").hidden = !r;
++    $("ktRows").hidden = !r;
++    if (!r) { $("ktRows").innerHTML = ""; return; }
++    $("ktLrc").href = base + "&fmt=lrc"; $("ktLrc").download = file + ".lrc";
++    $("ktSrt").href = base + "&fmt=srt"; $("ktSrt").download = file + ".srt";
++    var guessed = r.rows.filter(function (x) { return x.guessed; }).length;
++    $("ktState").textContent = r.rows.length + " lines · " + Math.round(r.heard * 100) + " % on heard words" + (guessed ? " · " + guessed + " guessed" : "") + " · " + r.language;
++    $("ktRun").textContent = "Time again";
++    $("ktRows").innerHTML = r.rows.map(function (x) {
++      return '<li class="' + (x.guessed ? "is-guessed" : "") + '"><button type="button" class="kt-t mono" data-kt="' + x.start + '">' + ktClock(x.start) + "</button><span>" +
++        x.text.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }) + "</span></li>";
++    }).join("");
++  }
++  function ktPeek() {
++    if (!state.take) return;
++    var name = state.take.name;
++    fetch("/lab/timing?name=" + encodeURIComponent(name) + "&cached=1").then(function (r) { return r.ok ? r.json() : null; })
++      .then(function (r) { if (state.take && state.take.name === name) ktPaint(r && r.rows ? r : null); }).catch(function () {});
++  }
++  function ktRun(force) {
++    if (!state.take) return;
++    var name = state.take.name, t0 = Date.now();
++    clearTimeout(kt.timer);
++    $("ktRun").disabled = true;
++    (function poll(first) {
++      fetch("/lab/timing?name=" + encodeURIComponent(name) + (first && force ? "&force=1" : ""))
++        .then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
++        .then(function (r) {
++          if (!state.take || state.take.name !== name) return;
++          if (r.rows) { ktPaint(r); $("ktRun").disabled = false; return; }
++          $("ktState").textContent = (r.status === "queued" ? "waiting for the GPU" : "Whisper listens") + " · " + Math.round((Date.now() - t0) / 1000) + " s";
++          kt.timer = setTimeout(function () { poll(false); }, 2000);
++        }).catch(function (e) { $("ktState").textContent = "Could not: " + e.message; $("ktRun").disabled = false; });
++    })(true);
++  }
++
+   function init(hooks) {
+     if (!$("glossPanel")) return;
+     state.hooks = hooks;
++    $("ktRun").addEventListener("click", function () { ktRun(this.textContent === "Time again"); });
++    $("ktRows").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-kt]");
++      if (b && state.hooks && state.hooks.seek) state.hooks.seek(state.take, parseFloat(b.dataset.kt));
++    });
+     $("glossRun").addEventListener("click", function () { run($("glossRun").textContent === "Listen again"); });
+     $("glossSource").addEventListener("change", function () { useSource(this.value, false); });
+     // the take's derived files (vocal stems first) become sources as they appear
+@@ -128,7 +175,7 @@
+       sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
+     });
+     // An already measured take shows at once when the drawer opens (the lab keeps a cache).
+-    $("glossPanel").addEventListener("toggle", function () { if ($("glossPanel").open && !$("glossResult").childNodes.length) peek(); });
++    $("glossPanel").addEventListener("toggle", function () { if ($("glossPanel").open && !$("glossResult").childNodes.length) { peek(); ktPeek(); } });
+   }
+ 
+   function peek() {
+@@ -160,7 +207,8 @@
+     $("glossResult").textContent = "";
+     $("glossRun").textContent = "Listen with Whisper";
+     say("");
+-    if ($("glossPanel").open) peek();
++    clearTimeout(kt.timer); $("ktRun").textContent = "Time the lines"; $("ktRun").disabled = false; $("ktState").textContent = ""; ktPaint(null);
++    if ($("glossPanel").open) { peek(); ktPeek(); }
+   }
+ 
+   window.HeresyGloss = { init: init, setTake: setTake, useSource: useSource };
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 4ebf4d7..7825521 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -53,6 +53,7 @@
+     next: '<rect class="f" x="16.9" y="5" width="2.6" height="14" rx="1"/><path class="f" d="M4.5 6.1v11.8a1 1 0 0 0 1.55.83L14.4 13a1.2 1.2 0 0 0 0-2L6.05 5.27A1 1 0 0 0 4.5 6.1z"/>',
+     like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+     dislike: '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
++    note: '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><path d="M7 12h7M7 16h5"/>',
+     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'
+   };
+   function ui(name, cls) {
+diff --git a/tools/console/heresy-inspect.js b/tools/console/heresy-inspect.js
+index ea8121c..9ae0d8e 100644
+--- a/tools/console/heresy-inspect.js
++++ b/tools/console/heresy-inspect.js
+@@ -120,5 +120,22 @@
+       .catch(function () {});
+   }
+ 
+-  window.HeresyInspect = { init: init, setTake: setTake };
++  // HERESY 1059: a source chosen from outside (the chain's final file), its measurement shown if made
++  function useSource(source) {
++    if (!state.take || !$("inspectPanel")) return;
++    var sel = $("inSource");
++    if (!Array.prototype.some.call(sel.options, function (o) { return o.value === source; })) {
++      var o = document.createElement("option");
++      o.value = source; o.textContent = source.split("/").slice(-2).join(" · ");
++      sel.appendChild(o);
++    }
++    sel.value = source; state.source = source; state.token++;
++    $("inResult").innerHTML = ""; $("inRun").textContent = "Inspect"; say("");
++    var token = state.token;
++    fetch("/lab/inspect?cached=1&name=" + encodeURIComponent(state.take.name) + src()).then(function (r) { return r.status === 200 ? r.json() : null; })
++      .then(function (r) { if (r && token === state.token && r.loudness) { paint(r); $("inRun").textContent = "Inspect again"; } })
++      .catch(function () {});
++  }
++
++  window.HeresyInspect = { init: init, setTake: setTake, useSource: useSource };
+ })();
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index a2b8dd0..251840b 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -88,13 +88,18 @@
+   function paintChain(job) {
+     var box = $("pcStatus");
+     if (!box) return;
+-    if (!job || job.status === "none") { box.innerHTML = ""; $("pcRun").disabled = false; return; }
+-    box.innerHTML = job.steps.map(function (s) {
++    if (!job || job.status === "none") { box.innerHTML = ""; $("pcRun").disabled = false; $("pcRun").textContent = "Run the chain"; $("pcRun").classList.remove("is-magic"); return; }
++    var done = job.steps.filter(function (s) { return s.status === "done"; }).length, n = job.steps.length;
++    var cur = job.steps.filter(function (s) { return s.status === "running"; })[0];
++    box.innerHTML = '<div class="pc-bar' + (job.status === "running" ? " is-running" : job.status === "failed" ? " is-failed" : "") + '"><i style="width:' +
++      Math.round(100 * (done + (cur ? 0.5 : 0)) / n) + '%"></i></div>' + job.steps.map(function (s) {
+       return '<span class="pc-st is-' + s.status + '" title="' + esc(s.error || s.file || "") + '">' + MARK[s.status] + " " + NAMES[s.step] + "</span>";
+     }).join('<span class="pc-arrow">›</span>') +
+       (job.status === "done" ? '<span class="pc-say">done' + (job.final ? ": the remaster is in the tree" : "") + "</span>" : "") +
+       (job.status === "failed" ? '<span class="pc-say is-bad">' + esc(job.error || "failed") + " · what was made before stays</span>" : "");
+     $("pcRun").disabled = job.status === "running";
++    $("pcRun").textContent = job.status === "running" ? "\u2728 Enjoy the magic\u2026 " + (done + 1) + " / " + n + (cur ? " \u00b7 " + NAMES[cur.step] : "") : "Run the chain";
++    $("pcRun").classList.toggle("is-magic", job.status === "running");
+   }
+   function watchChain(name) {
+     clearTimeout(chain.timer);
+@@ -104,7 +109,12 @@
+       if (state.take && state.take.name === name) paintChain(job);
+       if (job.status === "running") { chain.timer = setTimeout(function () { watchChain(name); }, 2000); return; }
+       if (window.HeresyDerived) window.HeresyDerived.refresh();
+-      if (job.status === "done" && chain.started === name) { chain.started = ""; chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain is done: " + job.steps.length + " steps"); }
++      if (job.status === "done" && chain.started === name) {
++        chain.started = "";
++        chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain is done: " + job.steps.length + " steps; Artifacts now shows the final file");
++        // HERESY 1059: the checks were made on the final file: the Artifacts step shows that one, not the take
++        if (job.final && window.HeresyInspect && window.HeresyInspect.useSource && job.steps.some(function (s) { return s.step === "inspect"; })) window.HeresyInspect.useSource(job.final);
++      }
+       if (job.status === "failed" && chain.started === name) { chain.started = ""; chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain stopped at " + (job.error || "a step"), "bad"); }
+     }).catch(function () { /* the lab will answer on the next take */ });
+   }
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+index 01d7c46..a390ed1 100644
+--- a/tools/console/heresy-presets.js
++++ b/tools/console/heresy-presets.js
+@@ -64,26 +64,32 @@
+       var s = state.styles.filter(function (x) { return x.name === this.value; }, this)[0];
+       $("styleDel").disabled = !s;
+       if (!s) return;
+-      var now = hooks.style().trim();
+-      if (now && now !== s.text.trim() && !confirm("Replace the style in the form with “" + s.name + "”?")) { this.value = ""; $("styleDel").disabled = true; return; }
+-      hooks.setStyle(s.text);
+-      toast("Style “" + s.name + "” in the form");
++      var now = hooks.style().trim(), sel = this;
++      (now && now !== s.text.trim() ? window.HeresyDialog.confirm("Replace the style in the form with “" + s.name + "”?", { ok: "Replace" }) : Promise.resolve(true)).then(function (ok) {
++        if (!ok) { sel.value = ""; $("styleDel").disabled = true; return; }
++        hooks.setStyle(s.text);
++        toast("Style “" + s.name + "” in the form");
++      });
+     });
+     $("styleSave").addEventListener("click", function () {
+       var text = hooks.style().trim();
+       if (!text) return toast("The style field is empty", true);
+-      var name = prompt("A name for this style:", $("styleLib").value || "");
+-      if (!name || !name.trim()) return;
+-      name = name.trim();
+-      if (state.styles.some(function (s) { return s.name === name; }) && !confirm("“" + name + "” exists. Replace it?")) return;
+-      send({ op: "put", kind: "style", name: name, data: text }).then(function (d) { take(d); $("styleLib").value = name; $("styleDel").disabled = false; toast("Style “" + name + "” saved on Forge"); })
+-        .catch(function (e) { toast("Not saved: " + e.message, true); });
++      var name;
++      window.HeresyDialog.prompt("Save the style\n\nA name to find it by under the style field.", $("styleLib").value || "", { ok: "Save", placeholder: "its name" }).then(function (v) {
++        name = (v || "").trim();
++        if (!name) return false;
++        return state.styles.some(function (s) { return s.name === name; }) ? window.HeresyDialog.confirm("“" + name + "” exists. Replace it?", { ok: "Replace" }) : true;
++      }).then(function (ok) {
++        if (!ok) return;
++        return send({ op: "put", kind: "style", name: name, data: text }).then(function (d) { take(d); $("styleLib").value = name; $("styleDel").disabled = false; toast("Style “" + name + "” saved on Forge"); });
++      }).catch(function (e) { toast("Not saved: " + e.message, true); });
+     });
+     $("styleDel").addEventListener("click", function () {
+       var name = $("styleLib").value;
+-      if (!name || !confirm("Delete the saved style “" + name + "”?")) return;
+-      send({ op: "delete", kind: "style", name: name }).then(function (d) { take(d); toast("Style “" + name + "” deleted"); })
+-        .catch(function (e) { toast("Not deleted: " + e.message, true); });
++      if (!name) return;
++      window.HeresyDialog.confirm("Delete the saved style “" + name + "”?", { danger: true }).then(function (ok) {
++        if (ok) return send({ op: "delete", kind: "style", name: name }).then(function (d) { take(d); toast("Style “" + name + "” deleted"); });
++      }).catch(function (e) { toast("Not deleted: " + e.message, true); });
+     });
+     $("setupLib").addEventListener("change", function () { $("setupDel").disabled = this.value.indexOf("s:") !== 0; });
+     $("setupApply").addEventListener("click", function () {
+@@ -95,20 +101,23 @@
+     $("setupSave").addEventListener("click", function () {
+       var data;
+       try { data = hooks.capture(); } catch (e) { return toast("The form does not read: " + e.message, true); }
+-      var name = prompt("A name for this profile (every knob but the texts and seeds):", "");
+-      if (!name || !name.trim()) return;
+-      name = name.trim();
+-      if (state.setups.some(function (s) { return s.name === name; }) && !confirm("“" + name + "” exists. Replace it?")) return;
+-      send({ op: "put", kind: "setup", name: name, data: data }).then(function (d) { take(d); $("setupLib").value = "s:" + name; $("setupDel").disabled = false; toast("Profile “" + name + "” saved on Forge"); })
+-        .catch(function (e) { toast("Not saved: " + e.message, true); });
++      var name;
++      window.HeresyDialog.prompt("Save the profile\n\nEvery knob of the form but the texts and seeds.", "", { ok: "Save", placeholder: "its name" }).then(function (v) {
++        name = (v || "").trim();
++        if (!name) return false;
++        return state.setups.some(function (s) { return s.name === name; }) ? window.HeresyDialog.confirm("“" + name + "” exists. Replace it?", { ok: "Replace" }) : true;
++      }).then(function (ok) {
++        if (!ok) return;
++        return send({ op: "put", kind: "setup", name: name, data: data }).then(function (d) { take(d); $("setupLib").value = "s:" + name; $("setupDel").disabled = false; toast("Profile “" + name + "” saved on Forge"); });
++      }).catch(function (e) { toast("Not saved: " + e.message, true); });
+     });
+     $("setupDel").addEventListener("click", function () {
+       var v = $("setupLib").value;
+       if (v.indexOf("s:") !== 0) return;
+       var name = v.slice(2);
+-      if (!confirm("Delete the saved profile “" + name + "”?")) return;
+-      send({ op: "delete", kind: "setup", name: name }).then(function (d) { take(d); toast("Profile “" + name + "” deleted"); })
+-        .catch(function (e) { toast("Not deleted: " + e.message, true); });
++      window.HeresyDialog.confirm("Delete the saved profile “" + name + "”?", { danger: true }).then(function (ok) {
++        if (ok) return send({ op: "delete", kind: "setup", name: name }).then(function (d) { take(d); toast("Profile “" + name + "” deleted"); });
++      }).catch(function (e) { toast("Not deleted: " + e.message, true); });
+     });
+     paint();
+     load();
+diff --git a/tools/console/heresy-score.js b/tools/console/heresy-score.js
+index 6b0f2a4..1300a2a 100644
+--- a/tools/console/heresy-score.js
++++ b/tools/console/heresy-score.js
+@@ -99,13 +99,15 @@
+       var file = this.files && this.files[0];
+       this.value = "";
+       if (!file) return;
+-      if ($("abc").value.trim() && !confirm("Replace the score in the form with " + file.name + "?")) return;
+-      file.arrayBuffer().then(function (buf) {
++      ($("abc").value.trim() ? window.HeresyDialog.confirm("Replace the score in the form with " + file.name + "?", { ok: "Replace" }) : Promise.resolve(true)).then(function (ok) {
++        if (!ok) throw null;
++        return file.arrayBuffer();
++      }).then(function (buf) {
+         var r = A.fromMidi(new Uint8Array(buf), { key: $("midiInKey").value || undefined });
+         set(r.abc);
+         toast("Score from " + file.name + ": Vocal " + r.from.vocal + " (" + r.report.voices.Vocal.notes + " notes), Ins " + r.from.ins +
+               " (" + r.report.voices.Ins.notes + "), " + r.report.key + ", " + r.report.bpm + " BPM");
+-      }).catch(function (error) { toast("This MIDI could not become a score: " + error.message, true); });
++      }).catch(function (error) { if (error) toast("This MIDI could not become a score: " + error.message, true); });
+     });
+     form();
+   }
+diff --git a/tools/console/heresy-textprep.js b/tools/console/heresy-textprep.js
+index 8ba59a2..f6099bf 100644
+--- a/tools/console/heresy-textprep.js
++++ b/tools/console/heresy-textprep.js
+@@ -232,9 +232,9 @@
+       $("tpEdDel").addEventListener("click", function () {
+         var name = editing && editing.name;
+         if (!name || (find(name) || {}).builtin) return;
+-        if (!confirm("Delete the text profile “" + name + "”?")) return;
+-        send({ op: "delete", kind: "textprofile", name: name }).then(function () { editing = null; toast("Text profile deleted"); return load(); })
+-          .catch(function (e) { toast(e.message, true); });
++        window.HeresyDialog.confirm("Delete the text profile “" + name + "”?", { danger: true }).then(function (ok) {
++          if (ok) return send({ op: "delete", kind: "textprofile", name: name }).then(function () { editing = null; toast("Text profile deleted"); return load(); });
++        }).catch(function (e) { toast(e.message, true); });
+       });
+       $("tpFromLyrics").addEventListener("click", function () { $("tpTestIn").value = hooks.lyrics().value; preview(); });
+     }
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index 0a94902..7c4077b 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -222,13 +222,15 @@
+   function intoCreate(doc) {
+     var f = state.hooks.form(), hand = recall(HAND_KEY);
+     var busy = (f.lyrics || "").trim() && f.lyrics !== doc.lyrics && hand !== doc.id;
+-    if (busy && !confirm("Put “" + doc.title + "” into Create?\n\nThe title, style and lyrics there now are replaced" +
+-        (hand ? " (they belong to another document in the Writer, which keeps them)." : ". They are in no document: “Save to Writer” first, if they matter."))) return;
+-    state.hooks.load(doc);
+-    store(HAND_KEY, doc.id);
+-    paintList(); paintHand();
+-    if (state.doc && state.doc.id === doc.id) $("wrHandBtn").textContent = "In hand in Create ✎";
+-    toast("“" + doc.title + "” is in Create; what is made from it is linked to it");
++    (busy ? window.HeresyDialog.confirm("Put “" + doc.title + "” into Create?\n\nThe title, style and lyrics there now are replaced" +
++        (hand ? " (they belong to another document in the Writer, which keeps them)." : ". They are in no document: “Save to Writer” first, if they matter."), { ok: "Put it in Create" }) : Promise.resolve(true)).then(function (ok) {
++      if (!ok) return;
++      state.hooks.load(doc);
++      store(HAND_KEY, doc.id);
++      paintList(); paintHand();
++      if (state.doc && state.doc.id === doc.id) $("wrHandBtn").textContent = "In hand in Create ✎";
++      toast("“" + doc.title + "” is in Create; what is made from it is linked to it");
++    });
+   }
+   function paintHand() {
+     var id = recall(HAND_KEY), d = state.docs.filter(function (x) { return x.id === id; })[0];
+@@ -283,19 +285,22 @@
+     $("wrHandBtn").addEventListener("click", function () { if (state.doc) flush().then(function () { intoCreate(state.doc); }); });
+     $("wrKeep").addEventListener("click", function () {
+       if (!state.doc) return;
+-      var label = prompt("Keep this version — a few words to know it by (optional):", "");
+-      if (label === null) return;
+-      flush().then(function () { return api({ op: "snapshot", id: state.doc.id, label: label.trim() }); })
+-        .then(function (doc) { state.doc = doc; paintVersions(); patchListRow(doc); toast("Version kept"); }).catch(function (e) { toast(e.message, true); });
++      window.HeresyDialog.prompt("Keep this version\n\nA few words to know it by (or none).", "", { ok: "Keep it", placeholder: "the chorus works now" }).then(function (label) {
++        if (label === null) return;
++        return flush().then(function () { return api({ op: "snapshot", id: state.doc.id, label: label.trim() }); })
++          .then(function (doc) { state.doc = doc; paintVersions(); patchListRow(doc); toast("Version kept"); });
++      }).catch(function (e) { toast(e.message, true); });
+     });
+     $("wrDelete").addEventListener("click", function () {
+       if (!state.doc) return;
+-      if (!confirm("Delete “" + state.doc.title + "” from the notebook?\n\nIt goes to writer/.trash on Forge, with its versions; the takes stay in the library.")) return;
+       var id = state.doc.id;
+-      clearTimeout(state.timer); state.dirty = false;
+-      api({ op: "delete", id: id }).then(function (d) {
+-        if (recall(HAND_KEY) === id) store(HAND_KEY, null);
+-        state.doc = null; state.docs = d.docs || []; paintDoc(); paintList(); paintHand(); toast("Deleted (kept in writer/.trash)");
++      window.HeresyDialog.confirm("Delete “" + state.doc.title + "” from the notebook?\n\nIt goes to writer/.trash on Forge, with its versions; the takes stay in the library.", { danger: true }).then(function (ok) {
++        if (!ok) return;
++        clearTimeout(state.timer); state.dirty = false;
++        return api({ op: "delete", id: id }).then(function (d) {
++          if (recall(HAND_KEY) === id) store(HAND_KEY, null);
++          state.doc = null; state.docs = d.docs || []; paintDoc(); paintList(); paintHand(); toast("Deleted (kept in writer/.trash)");
++        });
+       }).catch(function (e) { toast(e.message, true); });
+     });
+     $("wrVersions").addEventListener("click", function (e) {
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 3f5c1b2..14b676d 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1069,6 +1069,18 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+             <span class="row-hint mono" id="glossState"></span>
+           </div>
+           <div id="glossResult"></div>
++          <!-- HERESY 1056: karaoke timing: the lyric lines on the times Whisper heard their words -->
++          <div class="kt-box">
++            <div class="gloss-bar-row">
++              <strong class="kt-cap">Karaoke timing</strong>
++              <button type="button" class="btn ghost small" id="ktRun" data-tip="Whisper with word times, then every lyric line on the time its words were heard; a line too little heard gets a time between its neighbours, marked guessed">Time the lines</button>
++              <span class="row-hint mono" id="ktState"></span>
++              <span class="spacer"></span>
++              <a class="btn ghost small" id="ktLrc" hidden>⤓ .lrc</a>
++              <a class="btn ghost small" id="ktSrt" hidden>⤓ .srt</a>
++            </div>
++            <ol class="kt-rows" id="ktRows" hidden></ol>
++          </div>
+           <p class="row-hint">Per minute: the mean match to the closest lyric line, 0.6 and up clear, below 0.4 glossolalia. "Reached" is the furthest line matched, not a count of lines sung. A click on a minute or a time plays from there.</p>
+         </div>
+       </details>
+@@ -1108,9 +1120,13 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           </div>
+         </div>
+         <div class="coll-bar" id="collTrashBar" hidden>
++          <button type="button" class="btn ghost small" id="collTSelAll">Select all</button>
++          <button type="button" class="btn ghost small" id="collTSelNone">Clear</button>
++          <span class="coll-sep"></span>
+           <button type="button" class="btn ghost small" id="collRestore">Give back</button>
+-          <button type="button" class="btn ghost small danger" id="collEmpty" data-tip="The ticked ones, or with none ticked the whole trash: deleted for good, with everything made from them. Asks first.">Delete for good</button>
+-          <label class="field rm-num"><span class="label">Empty by itself</span>
++          <button type="button" class="btn ghost small danger" id="collEmpty" data-tip="The ticked ones, or with none ticked the whole trash: deleted for good, with everything made from them. Asks first.">Wipe out the trash</button>
++          <span class="spacer"></span>
++          <label class="coll-inline"><span class="coll-cap-inline">Empty by itself</span>
+             <select id="collTrashDays"><option value="0">never</option><option value="7">after 7 days</option><option value="14">after 14 days</option><option value="28">after 28 days</option></select></label>
+         </div>
+         <div class="coll-bulk" id="collBulk" hidden>
+@@ -1329,6 +1345,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     The server writes up to <strong data-fill="max-batch">1</strong> side by side in one pass; more are
+     queued as further passes.</p>
+ </template>
++<script src="heresy-dialog.js"></script>
+ <script src="heresy-settings.js"></script>
+ <script src="examples.js"></script>
+ <script src="instrumental.js"></script>
+-- 
+2.43.0
+

@@ -1,0 +1,502 @@
+From 70274a83b8e4342cdab73a17054c8aea51bf4033 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 19:47:29 -0600
+Subject: [PATCH 1096/1177] The Refiner's progress up top and each step's yield
+ (1129); the page from disk, no gzip in the loop (1130); the score in the
+ datasheet, a Direct take's from its sound (1131); the Refiner's own column
+ and F5 (1132)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .gitignore                         |   2 +
+ tools/console/app.css              |  38 +++++++++
+ tools/console/app.js               |  40 +++++++++-
+ tools/console/heresy-collection.js |  67 +++++++++++++---
+ tools/console/heresy-derived.js    | 122 ++++++++++++++++++++++-------
+ tools/console/heresy-post.js       |   1 +
+ tools/console/index.html           |   2 +
+ tools/yue-server.cpp               |  12 +++
+ 8 files changed, 242 insertions(+), 42 deletions(-)
+
+diff --git a/.gitignore b/.gitignore
+index 8954277..22faf09 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -10,3 +10,5 @@ node_modules/
+ tools/webui/dist/
+ training/datasets/
+ training/checkpoints/
++# HERESY 1130: the page build.sh makes, read from disk by the server
++tools/public/index.html
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d7b7ae1..10d2077 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3165,3 +3165,41 @@ input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+ /* HERESY 1128: the datasheet's sliders and LoRAs: a long name wraps, its strength stays on the right */
+ .ds-kv-long span { min-width: 0; overflow-wrap: anywhere; }
+ .ds-kv-long b { flex: none; white-space: nowrap; }
++
++/* ---------------------------------------------------------------- HERESY 1129: the Refiner's progress up top; each step's yield
++   The room's head names what runs (always in sight); the step's own block carries it at its top; its tab beats. */
++.post-live { margin-left: auto; display: flex; flex-direction: column; gap: 4px; min-width: 260px; max-width: 420px; align-self: center; }
++.post-live[hidden], .dv-live[hidden] { display: none; }
++.dv-live { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; padding: 8px 10px; border-radius: var(--r-md);
++  background: color-mix(in oklab, var(--amber) 7%, transparent); border: 1px solid var(--amber-a); }
++.dv-live-row .job-bar, .post-live .job-bar { margin-top: 4px; }
++.dv-live-head { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; }
++.dv-live-head span { color: var(--muted); font-size: 12px; font-family: var(--mono); }
++.dv-live-row.is-failed .dv-live-head span { color: var(--bad); font-family: inherit; }
++.post-live .dv-live-head { font-size: 12px; }
++#postSteps .ps-step.is-running .ps-mark { position: relative; }
++#postSteps .ps-step.is-running .ps-mark::after { content: ""; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%;
++  background: var(--amber); animation: status-pulse 1.2s ease-in-out infinite; }
++.dv-made { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
++.dv-made:empty { display: none; }
++.dv-made-cap { font: 600 10.5px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin-right: 2px; }
++.dv-made-none { font-size: 12px; color: var(--dim); }
++.dv-chip { padding: 3px 9px; border-radius: 999px; border: 1px solid var(--amber-a); background: color-mix(in oklab, var(--amber) 6%, transparent);
++  color: var(--ink); font-size: 12px; cursor: pointer; }
++.dv-chip:hover { background: color-mix(in oklab, var(--amber) 14%, transparent); }
++/* the tree: the step open lights its branches; a chip under the pointer lights its own; a click flashes it */
++#derivedTree .dv-group { transition: background .2s ease, box-shadow .2s ease; }
++#derivedTree[data-lit="stems"] .dv-group[data-kind="stems"], #derivedTree[data-lit="remaster"] .dv-group[data-kind="remaster"],
++#derivedTree[data-lit="upscale"] .dv-group[data-kind="upscale"], #derivedTree[data-lit="debuzz"] .dv-group[data-kind="debuzz"],
++#derivedTree .dv-group.is-lit { background: color-mix(in oklab, var(--amber) 6%, transparent); box-shadow: inset 3px 0 0 var(--amber-a); border-radius: var(--r-sm); }
++#derivedTree .dv-group.is-flash { animation: dv-flash 1.6s ease-out; }
++@keyframes dv-flash { 0%, 30% { background: color-mix(in oklab, var(--amber) 22%, transparent); } 100% { background: transparent; } }
++
++/* HERESY 1132: the Refiner's own toggle in the Takes column (Refined / every take), shown in the Refiner only */
++.lib-refined { display: none; }
++body[data-tab="post"] .lib-refined { display: inline-flex; }
++
++/* HERESY 1131: the datasheet's score, open */
++.ds-staff:empty { display: none; }
++.ds-score-say { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--dim); margin-left: 6px; }
++.ds-noscore { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 2px 0 6px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 9b9d98d..66b3af6 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3701,6 +3701,30 @@
+       .catch(function (error) { toast(error.message, "bad"); });
+   });
+ 
++  // HERESY 1132: the refined takes (the lab's index), read on entering the Refiner and when its tree changes
++  STATE.refined = {};
++  function refreshRefined() {
++    return api("/lab/refined").then(function (d) { STATE.refined = (d && d.refined) || {}; paintLibrary(); }).catch(function () { /* the lab away */ });
++  }
++  var refinedSeen = "";
++  window.addEventListener("heresy-derived", function (e) {          // a branch landed or started: the column follows
++    var key = e.detail ? e.detail.name + ":" + (e.detail.files || []).length : "";
++    if (key !== refinedSeen) { refinedSeen = key; refreshRefined(); }
++  });
++  $("refinedFilter").addEventListener("click", function () {
++    store("yue2.postAll", recall("yue2.postAll") === "1" ? null : "1");
++    paintLibrary();
++  });
++  // F5 in the Refiner: the take it was refining comes back (Viktor: «обновил страницу и потерялся полностью»)
++  var postRestored = false;
++  function restorePostTake() {
++    if (postRestored || document.body.dataset.tab !== "post") return;
++    var name = recall("yue2.postTake");
++    if (!name || !findTake(name)) return;
++    postRestored = true;
++    if (!STATE.take || STATE.take.name !== name) openTake(name);
++  }
++
+   $("favFilter").addEventListener("click", function () {
+     STATE.favOnly = !STATE.favOnly;
+     store("yue2.favOnly", STATE.favOnly ? "1" : null);
+@@ -4298,6 +4322,7 @@
+       paintLibrary();
+       paintCoverTakes();
+       if (STATE.take) { paintDecodeSwitch(); paintSoundSwitch(); }
++      restorePostTake();   // HERESY 1132
+     });
+   }
+ 
+@@ -4325,6 +4350,13 @@
+   function paintLibrary() {
+     var list = $("libList");
+     var shown = STATE.favOnly ? STATE.takes.filter(function (t) { return t.favorite; }) : STATE.takes;
++    // HERESY 1132: the Refiner's column holds what was refined, the newest refine first (Viktor: «в этой комнате не
++    // нужно показывать всё общее, только то, что принадлежит артефактам рефайнера»); "All" for a take not refined yet
++    var refinedOnly = document.body.dataset.tab === "post" && recall("yue2.postAll") !== "1";
++    if (refinedOnly) {
++      shown = shown.filter(function (t) { return STATE.refined[t.name] || (STATE.take && STATE.take.name === t.name); })
++        .sort(function (a, b) { return (STATE.refined[b.name] || 9e9) - (STATE.refined[a.name] || 9e9); });
++    }
+     // HERESY 1041: the quick search, and the takes hidden in the Librarian stay out of the column
+     var HC = window.HeresyCollection, q = $("libSearch") ? $("libSearch").value : "";
+     var F = libFilters(), filtered = STATE.favOnly || F.liked || F.noDisliked || F.noted;
+@@ -4337,7 +4369,8 @@
+         return !(F.liked && r <= 0) && !(F.noDisliked && r < 0) && !(F.noted && !HC.note(t.name));
+       });
+     }
+-    $("libCount").textContent = filtered ? shown.length + " / " + STATE.takes.length : String(STATE.takes.length);
++    $("libCount").textContent = filtered || refinedOnly ? shown.length + " / " + STATE.takes.length : String(STATE.takes.length);
++    $("refinedFilter").setAttribute("aria-pressed", refinedOnly ? "true" : "false");
+     $("libMenuBtn").classList.toggle("has-filter", F.liked || F.noDisliked || F.noted || F.hidden);
+     all("[data-libf]").forEach(function (b) { b.setAttribute("aria-checked", F[b.dataset.libf] ? "true" : "false"); });
+     $("favFilter").setAttribute("aria-pressed", STATE.favOnly ? "true" : "false");
+@@ -6024,6 +6057,7 @@
+     var take = STATE.take;
+     $("postTitle").textContent = take ? displayTitle(take) : "Refiner";
+     $("postNote").textContent = take ? takeLabel(take).replace(displayTitle(take), "").replace(/^ · /, "") || take.name : "pick a take on the right";
++    if (take && document.body.dataset.tab === "post") store("yue2.postTake", take.name);   // HERESY 1132: for F5
+   }
+   function setTab(tab) {
+     if (["create", "write", "post", "collection", "train"].indexOf(tab) < 0) tab = "create";
+@@ -6040,7 +6074,8 @@
+     all("#tabs [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+     store(TAB_KEY, tab === "create" ? null : tab);
+     if (tab === "write") paintCurrentSong();
+-    if (tab === "post") paintPost();
++    if (tab === "post") { paintPost(); refreshRefined(); restorePostTake(); }   // HERESY 1132
++    paintLibrary();                                                          // the Refiner's column is its own
+     if (tab === "create") drawWave();
+     window.dispatchEvent(new Event("resize"));   // pictures measure their new width
+   }
+@@ -6437,3 +6472,4 @@
+   setTab(recall(TAB_KEY) || "create");   // HERESY 1014
+   boot();
+ })();
++
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 27bade1..83ee565 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -888,10 +888,12 @@
+         '<button type="button" class="btn ghost small" data-ds="create">Open in the Creator</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
+         '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
+         '<div class="peek-cap">Lyrics</div><pre class="sheet-text ds-lyrics">' + esc(q.lyrics || "") + "</pre>" +
+-        // HERESY 1126: the score as a staff, folded; drawn when unfolded (abcjs); its ABC text beside, folded too
+-        '<details class="ds-score"><summary class="peek-cap">Score' + (q.abc ? "" : "<em>none: a Direct take writes no score (Full plan and Melody only do)</em>") + "</summary>" +
+-          (q.abc ? '<div class="ds-staff"></div><details class="ds-abc-raw"><summary class="peek-cap">ABC text</summary><pre class="sheet-text mono ds-abc">' + esc(q.abc) + "</pre></details>" : "") +
+-        "</details></div>" +
++        // HERESY 1131 (Viktor: «нотный ряд ABC… сложенный аккордеон не нужен»): the score open and drawn, its ABC under it;
++        // a Direct take writes none: the one written from its sound, or the way to write it
++        '<div class="peek-cap">Score <em class="ds-score-say"></em></div><div class="ds-staff"></div>' +
++        '<pre class="sheet-text mono ds-abc"' + (q.abc ? "" : " hidden") + ">" + esc(q.abc || "") + "</pre>" +
++        (q.abc ? "" : '<div class="ds-noscore row-hint">A Direct take writes no score. <button type="button" class="btn ghost small" data-ds="score">Write it from the sound</button> <span class="ds-score-run mono"></span></div>') +
++        "</div>" +
+         '<div class="ds-knobs"><div class="ds-group"><div class="peek-cap">Song</div>' + kv("mode", MODES[q.cot] || q.cot) + kv("length asked", q.duration ? h.clock(q.duration) : "") +
+         kv("format", q.output_format + (q.output_format === "mp3" ? " " + q.mp3_bitrate : "")) + kv("VAE", q.vae) + kv("peak clip", q.peak_clip) +
+         kv("music codes", codes ? codes + " (" + h.clock(codes / 25) + ")" : "") + kv("kept from the parent", keep ? keep + " codes (" + h.clock(keep / 25) + ")" : "") + "</div>" +
+@@ -915,21 +917,60 @@
+           }).join("") || '<div class="ds-kv"><span>LoRAs</span><b>none</b></div>') + "</div>" +
+         (rest.length ? '<div class="ds-group"><div class="peek-cap">The rest</div>' + rest.map(function (k) { return kv(k, String(q[k])); }).join("") + "</div>" : "") +
+         "</div></div>";
+-      var score = back.querySelector(".ds-score");
+-      if (score && q.abc) score.addEventListener("toggle", function () {
+-        var staff = score.querySelector(".ds-staff");
+-        if (!score.open || staff.dataset.drawn) return;
+-        if (!window.ABCJS) { staff.textContent = "The engraver did not load: the ABC text below is the score."; score.querySelector(".ds-abc-raw").open = true; return; }
++      // HERESY 1131: draw a score into the sheet (abcjs comes from the network: wait for it a little)
++      var staffBox = back.querySelector(".ds-staff"), abcBox = back.querySelector(".ds-abc"), sayBox = back.querySelector(".ds-score-say");
++      function drawScore(abc, tries) {
++        if (!window.ABCJS) {
++          if ((tries || 0) < 20) return setTimeout(function () { drawScore(abc, (tries || 0) + 1); }, 500);
++          staffBox.textContent = "The engraver did not load: the ABC below is the score.";
++          return;
++        }
+         try {
+-          window.ABCJS.renderAbc(staff, q.abc, { responsive: "resize", staffwidth: 900, paddingtop: 4, paddingbottom: 8,
++          window.ABCJS.renderAbc(staffBox, abc, { responsive: "resize", staffwidth: 900, paddingtop: 4, paddingbottom: 8,
+             foregroundColor: getComputedStyle(document.documentElement).getPropertyValue("--paper-ink").trim() || "#2a2318" });
+-          staff.dataset.drawn = "1";
+-        } catch (err) { staff.textContent = "This score could not be engraved; read it as ABC below."; }
+-      });
++        } catch (err) { staffBox.textContent = "This score could not be engraved; read it as ABC below."; }
++      }
++      function showScore(abc, note) {
++        abcBox.textContent = abc; abcBox.hidden = false;
++        var none = back.querySelector(".ds-noscore");
++        if (none) none.remove();
++        if (note) sayBox.textContent = note;
++        drawScore(abc);
++      }
++      if (q.abc) drawScore(q.abc);
++      else fetch("/lab/score?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
++        if (d && d.abc) showScore(d.abc, "written from its sound by " + (d.by || "the transcriber") + (d.made ? ", " + d.made : ""));
++      }).catch(function () {});
++      // a Direct take's score from its sound: the engine's transcriber on the take's own audio. The page never adopts this
++      // job (the cover form in the Creator is not touched): the sheet watches it itself, and the lab keeps the score.
++      function scoreFromSound(btn) {
++        var run = back.querySelector(".ds-score-run"), t0 = Date.now(), tick;
++        btn.disabled = true;
++        var said = function (text) { if (run) run.textContent = text; };
++        fetch("/transcribe?take=" + encodeURIComponent(name), { method: "POST" }).then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
++          .then(function (job) {
++            tick = setInterval(function () { said("the transcriber is writing it… " + Math.round((Date.now() - t0) / 1000) + " s"); }, 1000);
++            var ask = function () {
++              return fetch("/job?id=" + encodeURIComponent(job.id)).then(function (r) { return r.json(); }).then(function (st) {
++                if (st.status === "done") return fetch("/job?id=" + encodeURIComponent(job.id) + "&result=1").then(function (r) { return r.json(); });
++                if (st.status === "failed" || st.status === "cancelled") throw new Error(st.error || st.status);
++                return new Promise(function (ok) { setTimeout(ok, 2000); }).then(ask);
++              });
++            };
++            return ask();
++          }).then(function (res) {
++            var abc = res && res.abc;
++            if (!abc) throw new Error("the transcriber wrote nothing");
++            return fetch("/lab/score?name=" + encodeURIComponent(name), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ abc: abc }) })
++              .then(function () { showScore(abc, "written from its sound by the transcriber (SheetSage2), now"); });
++          }).catch(function (e) { said("not written: " + (e.message || e)); btn.disabled = false; })
++          .then(function () { clearInterval(tick); });
++      }
+       back.querySelector(".ds-box").addEventListener("click", function (e) {
+         var b = e.target.closest("[data-ds]");
+         if (!b) return;
+         if (b.dataset.ds === "close") return close();
++        if (b.dataset.ds === "score") return scoreFromSound(b);
+         if (b.dataset.ds === "create") { close(); h.openTake(name, "create"); return; }
+         if (b.dataset.ds === "json") {
+           var copy = Object.assign({}, q);
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 2db2c83..b118244 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -6,7 +6,7 @@
+ (function () {
+   "use strict";
+ 
+-  var state = { take: null, list: [], running: [], token: 0, hooks: null };
++  var state = { take: null, list: [], running: [], token: 0, hooks: null, lit: "" };
+   function $(id) { return document.getElementById(id); }
+   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
+@@ -60,8 +60,15 @@
+     if (!take) { host.innerHTML = '<p class="row-hint">Pick a take on the right.</p>'; return; }
+     var html = '<div class="dv-node dv-root"><span class="dv-name">' + esc(take.label || take.name) + '</span><span class="dv-meta">the take</span></div>';
+     if (!state.list.length && !state.running.length) html += '<p class="row-hint dv-empty">Nothing made from this take yet.</p>';
++    // HERESY 1129: what runs now stands first: the tree grows upward, the newest on top
++    state.running.forEach(function (j, i) {
++      var failed = j.status === "failed", p = progress(j);
++      html += '<div class="dv-group is-running' + (failed ? " is-failed" : "") + '" data-job="' + i + '" data-kind="' + esc(j.kind || "") + '"><div class="dv-group-head"><strong>' + esc(KIND[j.kind] || j.kind || "Job") + "</strong>" +
++        (j.mode ? " · " + esc(MODE[j.mode] || j.mode) : "") + '<span class="dv-meta">' + (failed ? "failed: " + esc(j.error || "") : esc(p.say)) + "</span></div>" +
++        (failed ? "" : '<div class="job-bar' + (j.status === "queued" ? " is-queued" : "") + '"><i style="width:' + p.pct + '%"></i></div>') + "</div>";
++    });
+     state.list.forEach(function (m) {
+-      html += '<div class="dv-group"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
++      html += '<div class="dv-group" data-dv-id="' + esc(m.id || "") + '" data-kind="' + esc(m.kind || "") + '"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
+         (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
+         (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
+         (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
+@@ -76,14 +83,14 @@
+       });
+       html += "</div>";
+     });
+-    state.running.forEach(function (j, i) {
+-      var failed = j.status === "failed", p = progress(j);
+-      html += '<div class="dv-group is-running' + (failed ? " is-failed" : "") + '" data-job="' + i + '"><div class="dv-group-head"><strong>' + esc(KIND[j.kind] || j.kind || "Job") + "</strong>" +
+-        (j.mode ? " · " + esc(MODE[j.mode] || j.mode) : "") + '<span class="dv-meta">' + (failed ? "failed: " + esc(j.error || "") : esc(p.say)) + "</span></div>" +
+-        (failed ? "" : '<div class="job-bar' + (j.status === "queued" ? " is-queued" : "") + '"><i style="width:' + p.pct + '%"></i></div>') + "</div>";
+-    });
+     host.innerHTML = html;
+-    paintJobs();
++    if (!state.lit) {                                   // the step open when the page loaded lights its branches too
++      var open = document.querySelector("#postSteps .is-active[data-step-panel]");
++      if (open) state.lit = STEP_KIND[open.dataset.stepPanel] || "";
++    }
++    host.dataset.lit = state.lit || "";
++    paintLive();
++    paintMade();
+     window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: take.name, files: files() } }));
+   }
+ 
+@@ -99,21 +106,67 @@
+     var est = Math.max(5, len * rate), pct = Math.min(95, Math.round(100 * el / est));
+     return { pct: pct, say: clockS(el) + (el < est ? " \u00b7 about " + clockS(Math.round(est - el)) + " left" : " \u00b7 longer than usual") };
+   }
+-  // a floating card in the Refiner while Forge works on the take in hand: what runs, how long, about how much is left
+-  function paintJobs() {
+-    var card = document.getElementById("postJobs");
+-    if (!card) {
+-      card = document.createElement("div"); card.id = "postJobs"; card.className = "post-jobs"; card.hidden = true;
+-      document.body.appendChild(card);
++  // HERESY 1129: what runs, where the eye already is. The room's head (always in sight) names every job with its bar;
++  // the step's own block carries its jobs at its top, its tab a beating dot; each step shows what it has made for the
++  // take (a click finds it in the tree), and the step open lights its own branches in the tree. The floating card of
++  // 1060 (it sat over the server log and the takes) is retired.
++  var PANEL = { stems: "derivedPanel", remaster: "remasterPanel", upscale: "upscalePanel", debuzz: "debuzzPanel" };
++  var STEP_KIND = { derivedPanel: "stems", remasterPanel: "remaster", upscalePanel: "upscale", debuzzPanel: "debuzz" };
++  function slots(kind) {
++    var p = $(PANEL[kind]), body = p && p.querySelector(".drawer-body");
++    if (!body) return null;
++    var live = body.querySelector(":scope > .dv-live"), made = body.querySelector(":scope > .dv-made");
++    if (!live) { live = document.createElement("div"); live.className = "dv-live"; body.insertBefore(live, body.firstChild); }
++    if (!made) { made = document.createElement("div"); made.className = "dv-made"; live.after(made); }
++    return { live: live, made: made };
++  }
++  function liveRow(j) {
++    var p = progress(j), failed = j.status === "failed";
++    return '<div class="dv-live-row' + (failed ? " is-failed" : "") + '"><div class="dv-live-head"><b>' + esc(KIND[j.kind] || j.kind || "Job") + (j.mode ? " \u00b7 " + esc(MODE[j.mode] || j.mode) : "") + "</b>" +
++      "<span>" + (failed ? "failed: " + esc(j.error || "") : esc(p.say)) + "</span></div>" +
++      (failed ? "" : '<div class="job-bar' + (j.status === "queued" ? " is-queued" : "") + '"><i style="width:' + p.pct + '%"></i></div>') + "</div>";
++  }
++  function paintLive() {
++    var head = $("postLive"), live = state.running.filter(function (j) { return j.status !== "failed"; });
++    if (!head) {
++      var ch = document.querySelector("#view-post .col-head");
++      if (ch) { head = document.createElement("div"); head.id = "postLive"; head.className = "post-live"; ch.appendChild(head); }
+     }
+-    var live = state.running.filter(function (j) { return j.status !== "failed"; });
+-    card.hidden = !live.length || document.body.dataset.tab !== "post";
+-    if (card.hidden) return;
+-    card.innerHTML = '<div class="pj-cap">On Forge now</div>' + live.map(function (j) {
+-      var p = progress(j);
+-      return '<div class="pj-row"><div class="pj-head"><b>' + esc(KIND[j.kind] || j.kind) + (j.mode ? " \u00b7 " + esc(MODE[j.mode] || j.mode) : "") + "</b><span>" + esc(p.say) + "</span></div>" +
+-        '<div class="job-bar' + (j.status === "queued" ? " is-queued" : "") + '"><i style="width:' + p.pct + '%"></i></div></div>';
+-    }).join("");
++    if (head) { head.innerHTML = live.map(liveRow).join(""); head.hidden = !live.length; }
++    Object.keys(PANEL).forEach(function (kind) {
++      var s = slots(kind);
++      if (!s) return;
++      var mine = state.running.filter(function (j) { return j.kind === kind; });
++      s.live.innerHTML = mine.map(liveRow).join("");
++      s.live.hidden = !mine.length;
++      var tab = document.querySelector('#postSteps [data-step-panel="' + PANEL[kind] + '"]');
++      if (tab) tab.classList.toggle("is-running", mine.some(function (j) { return j.status !== "failed"; }));
++    });
++    var old = document.getElementById("postJobs");
++    if (old) old.remove();
++  }
++  function madeLabel(m) {
++    var s = m.settings || {}, at = String(m.created || "").slice(11, 16);
++    var what = m.kind === "stems" ? (MODE[m.mode] || m.mode || "stems")
++      : m.kind === "remaster" ? (m.source && m.source !== "the take" ? (s.preset || "balanced") + " from stems" : "from the take") + (s.loudnorm !== false ? ", " + (s.lufs || -14) + " LUFS" : "")
++      : m.kind === "upscale" ? (m.mode || "upscale") + ", " + ((m.files || []).length) + " file" + ((m.files || []).length === 1 ? "" : "s")
++      : m.kind === "debuzz" ? Math.round((m.strength || 0) * 100) + " %" : m.kind;
++    return what + (at ? " \u00b7 " + at : "");
++  }
++  function paintMade() {
++    Object.keys(PANEL).forEach(function (kind) {
++      var s = slots(kind);
++      if (!s) return;
++      var mine = state.list.filter(function (m) { return m.kind === kind; });
++      s.made.innerHTML = !state.take ? "" : '<span class="dv-made-cap">Made here</span>' + (mine.length ? mine.map(function (m) {
++        return '<button type="button" class="dv-chip" data-dv-go="' + esc(m.id || "") + '" data-tip="Find it in the tree below">' + esc(madeLabel(m)) + "</button>";
++      }).join("") : '<span class="dv-made-none">nothing yet for this take</span>');
++    });
++  }
++  function lightStep(panel) {
++    state.lit = STEP_KIND[panel] || "";
++    var host = $("derivedTree");
++    if (host) host.dataset.lit = state.lit;
+   }
+   // each second: only the bars and their words, never the tree (its players would start over)
+   setInterval(function () {
+@@ -124,7 +177,7 @@
+       if (meta) meta.textContent = p.say;
+       if (bar) bar.style.width = p.pct + "%";
+     });
+-    paintJobs();
++    if (state.running.length) paintLive();
+   }, 1000);
+ 
+   function refresh() {
+@@ -221,7 +274,7 @@
+     $("upRun").disabled = true;
+     $("upState").textContent = "sending to Forge…";
+     fetch("/lab/upscale?" + q).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+-      .then(function () { $("upState").textContent = "running on Forge: it appears in the tree when done"; refresh(); })
++      .then(function () { $("upState").textContent = "running on Forge: the bar above says how far; it lands in the tree"; refresh(); })
+       .catch(function (e) { $("upState").textContent = "Could not: " + (e.message || e); })
+       .then(function () { $("upRun").disabled = false; });
+   }
+@@ -245,7 +298,7 @@
+     $("dbRun").disabled = true;
+     $("dbState").textContent = "sending to Forge…";
+     fetch("/lab/debuzz?" + q).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+-      .then(function () { $("dbState").textContent = "running on Forge: it appears in the tree when done"; refresh(); })
++      .then(function () { $("dbState").textContent = "running on Forge: the bar above says how far; it lands in the tree"; refresh(); })
+       .catch(function (e) { $("dbState").textContent = "Could not: " + (e.message || e); })
+       .then(function () { $("dbRun").disabled = false; });
+   }
+@@ -270,7 +323,7 @@
+     $("rmState").textContent = "sending to Forge…";
+     fetch("/lab/remaster?name=" + encodeURIComponent(state.take.name) + "&s=" + encodeURIComponent(JSON.stringify(s)))
+       .then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+-      .then(function () { $("rmState").textContent = "running on Forge: it appears in the tree above when done"; refresh(); })
++      .then(function () { $("rmState").textContent = "running on Forge: the bar above says how far; it lands in the tree"; refresh(); })
+       .catch(function (e) { $("rmState").textContent = "Could not: " + (e.message || e); })
+       .then(function () { $("rmRun").disabled = false; });
+   }
+@@ -292,6 +345,21 @@
+       if (sp && state.hooks.compare) state.hooks.compare(sp.dataset.dvSpectrum);
+       if (gl && state.hooks.gloss) state.hooks.gloss(gl.dataset.dvGloss);
+     });
++    // HERESY 1129: a step's chips find what it made in the tree; the step open lights its own branches
++    document.addEventListener("click", function (event) {
++      var go = event.target.closest("[data-dv-go]");
++      if (!go) return;
++      var g = document.querySelector('#derivedTree [data-dv-id="' + go.dataset.dvGo + '"]');
++      if (!g) return;
++      g.scrollIntoView({ block: "center", behavior: "smooth" });
++      g.classList.remove("is-flash"); void g.offsetWidth; g.classList.add("is-flash");
++    });
++    document.addEventListener("mouseover", function (event) {
++      var go = event.target.closest && event.target.closest("[data-dv-go]");
++      Array.prototype.forEach.call(document.querySelectorAll("#derivedTree .dv-group.is-lit"), function (g) { g.classList.remove("is-lit"); });
++      if (go) { var g = document.querySelector('#derivedTree [data-dv-id="' + go.dataset.dvGo + '"]'); if (g) g.classList.add("is-lit"); }
++    });
++    window.addEventListener("heresy-post-step", function (e) { lightStep(e.detail && e.detail.panel); });
+     // one player at a time: starting a stem pauses the others
+     $("derivedTree").addEventListener("play", function (event) {
+       Array.prototype.forEach.call($("derivedTree").querySelectorAll("audio"), function (a) { if (a !== event.target) a.pause(); });
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index 052fbff..7bb2229 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -45,6 +45,7 @@
+       if (s.id === id && !p.open) p.open = true;           // its own toggle draws it
+     });
+     paint();
++    window.dispatchEvent(new CustomEvent("heresy-post-step", { detail: { panel: id } }));   // HERESY 1129: the tree lights its branches
+     window.dispatchEvent(new Event("resize"));             // a picture shown measures its new width
+   }
+ 
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 07f7e89..1894433 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1584,6 +1584,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <span class="count mono" id="libCount">0</span>
+       <div class="spacer"></div>
+       <button type="button" class="lib-toggle" id="favFilter" aria-pressed="false" title="Show favourites only">★ Favourites</button>
++      <!-- HERESY 1132: in the Refiner, the takes it refined (the newest first); All for a new one -->
++      <button type="button" class="lib-toggle lib-refined" id="refinedFilter" aria-pressed="true" title="Only the takes refined here, the newest refine first; press for every take">Refined</button>
+       <button type="button" class="icon-btn lib-fold" id="libFold" data-icon="collapse" data-tip="Fold the takes list to the right">Fold</button>
+       <div class="menu-wrap">
+         <button type="button" class="icon-btn" id="libMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Library actions" title="Library actions">⋯</button>
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 9f8a993..3fd628b 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -2244,7 +2244,19 @@ int main(int argc, char ** argv) {
+         });
+     }
+ 
++    // HERESY 1130: the page from disk at every load (RUACH_PAGE, which start.sh points at build/tools/public/index.html),
++    // so a page built anew shows on a reload: no server build, no restart, no gzip (a studio of one machine and its
++    // network has no use for it). The copy embedded at build time answers only when there is no page on disk.
+     svr.Get("/", [](const httplib::Request & req, httplib::Response & res) {
++        const char * disk = getenv("RUACH_PAGE");
++        if (disk && *disk) {
++            std::string page = read_file(disk);
++            if (!page.empty()) {
++                res.set_header("Cache-Control", "no-store");
++                res.set_content(page, "text/html; charset=utf-8");
++                return;
++            }
++        }
+         if (req.get_header_value("Accept-Encoding").find("gzip") == std::string::npos) {
+             res.status = 406;
+             res.set_content("gzip required", "text/plain");
+-- 
+2.43.0
+

@@ -1,0 +1,193 @@
+From 04c64bd2bf52f5c498359c411f40d1aae7c2359d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 11:06:05 -0600
+Subject: [PATCH 1151/1177] HERESY 1167: the Librarian's tiles, the kitchen
+ from 1400 px, a regenerating card breathes, the reading at 60 BPM
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026:
+- «наш лимит в 80 символов не вмещается полностью в карточке. Что если заголовок трека полностью, с самого начала
+  строки, а PLAY кнопку опустить на строку ниже?» — in the tiles the title takes the card's first line(s) whole; ▶ goes
+  a line down beside the time and the badges, the check box under it on the likes' line.
+- «в дефолтном разрешении 1080p не 4 колонки, а 3, и при схлопнутой левой колонке в Коллекциях 4» — from 1401 to 2199 px
+  three tiles a row, four with the workspaces folded; 2K and past it as they were.
+- «в пометках regen сделай тоньше обводку и радиус углов мелкий 2px» — the regen badge's edge was the browser's medium
+  (3 px, no width given) on a pill: 1 px, corners 2 px.
+- «При 100-110% скейле видна новая раскладка, а при 125% - старые три колонки»; «на ноуте с 10% подымать скейл» — the
+  kitchen from 1400 px (1920 at 125 % is 1536, at 133 % 1440; measured at 1440: the columns 451 + 451, the take 480).
+- «Когда редженится карточка, можешь добавить ей 60% полупрозрачности и вибрацию до 75%» — a take being made again
+  (its regeneration waiting or running, as the lab's activity names it) breathes between 60 % and 75 % on its card.
+- «72BPM для чтения - много. 60BPM хорошо, в точку. `60BPM with non-linear rubato drift.`» — the Writer's charter.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 46 ++++++++++++++++++++++++++----
+ tools/console/app.js               | 20 +++++++++++--
+ tools/console/heresy-assist.js     |  5 ++--
+ tools/console/heresy-collection.js |  2 +-
+ 4 files changed, 62 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 4a45074..597951a 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3640,8 +3640,10 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+    пересмотреть и реорганизовать. Статистику/карту трека реально нужно на 1/3 ширины справа… [дубли] во втором фрейме
+    1/3 ширины вниз этого фрейма под-фреймом. И для экономии пространства карточки сделать более компактными… Каждую
+    секцию отчётливо обособить, может даже едва заметным карточным абажуром. Схлопнутые блоки тоже нужно как-то более
+-   контрастно изобразить». At every width the form is two columns of cards, the words and the machine; from 1600 px
+-   they stand side by side over two thirds of the room, and the right third holds the take over its takes. */
++   контрастно изобразить». At every width the form is two columns of cards, the words and the machine; from 1400 px
++   they stand side by side over two thirds of the room, and the right third holds the take over its takes (1600 at
++   first; Viktor: «при 125% - старые три колонки», his laptop scaled up: 1920 px at 125 % is a window of 1536, at
++   133 % of 1440). */
+ 
+ /* each part of the form on a ground of its own, barely raised: the lampshade */
+ .compose { gap: 14px; }
+@@ -3677,8 +3679,8 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ .compose [data-fold].is-folded > .label:hover { border-color: var(--amber-dim); }
+ .compose [data-fold] > .label .fold-chev { border-left-color: var(--amber); }
+ 
+-/* from 1600 px: the words | the machine over two thirds; the take over its takes in the last third */
+-@media (min-width: 1600px) {
++/* from 1400 px: the words | the machine over two thirds; the take over its takes in the last third */
++@media (min-width: 1400px) {
+   body[data-tab="create"] .workspace {
+     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+     grid-template-rows: var(--k-take, clamp(480px, 56%, 760px)) minmax(0, 1fr);   /* the take needs ~600 px, its takes the rest */
+@@ -3757,13 +3759,13 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ .k-plan #setupLibRow { flex-wrap: nowrap; margin: 0; }
+ .k-plan #setupLibRow select { flex: 1 1 160px; min-width: 0; max-width: 300px; }
+ 
+-@media (min-width: 1600px) {
++@media (min-width: 1400px) {
+   /* the four drawers two by two; an open one takes the whole width */
+   body[data-tab="create"] .k-card.k-more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+   body[data-tab="create"] .k-more .drawer[open] { grid-column: 1 / -1; }
+ }
+ 
+-@media (min-width: 1600px) {
++@media (min-width: 1400px) {
+   /* the take's tools tighter in its third: smaller buttons, closer rows */
+   body[data-tab="create"] #view-take .take-tools { gap: 8px 14px; }
+   body[data-tab="create"] #view-take .take-tools .btn.small { padding: 4px 9px; font-size: 11.5px; }
+@@ -3786,3 +3788,35 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+   body[data-tab="create"] #playbar .pb-ctrl { order: 3; flex: none; }
+   body[data-tab="create"] #playbar .pb-side { order: 4; flex: none; }
+ }
++
++/* HERESY 1167 (Viktor 05.10.2026: «У нас наш лимит в 80 символов не вмещается полностью в карточке. Что если заголовок
++   трека полностью, с самого начала строки, а PLAY кнопку опустить на строку ниже?»): in the tiles the title takes the
++   card's first line(s) whole, from its very start, as long as it is (80 characters at most); ▶ goes a line down, beside
++   the time and the badges; the check box stays under it, on the likes' line, and that line keeps to the card's foot */
++.coll-grid:not(.list) .coll-card { display: grid; grid-template-columns: 30px minmax(0, 1fr); grid-template-rows: auto auto 1fr auto;
++  grid-template-areas: "title title" "play meta" "play badges" "check acts"; column-gap: 8px; row-gap: 3px; }
++.coll-grid:not(.list) .coll-body { display: contents; }
++.coll-grid:not(.list) .coll-title { grid-area: title; align-items: flex-start; }
++.coll-grid:not(.list) .coll-title-text { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
++.coll-grid:not(.list) .coll-play { grid-area: play; align-self: start; }
++.coll-grid:not(.list) .coll-meta { grid-area: meta; align-self: center; }
++.coll-grid:not(.list) .coll-badges { grid-area: badges; align-self: start; margin-top: 1px; }
++.coll-grid:not(.list) .coll-check { grid-area: check; }
++.coll-grid:not(.list) .coll-acts { grid-area: acts; }
++.coll-grid:not(.list) .coll-card.has-art .coll-title, .coll-grid:not(.list) .coll-card.has-art .coll-meta,
++.coll-grid:not(.list) .coll-card.has-art .coll-badges { padding-right: 54px; }
++/* HERESY 1167 (Viktor: «в дефолтном разрешении 1080p не 4 колонки, а 3, и при схлопнутой левой колонке в Коллекциях 4. Так
++   больше воздуха для карточек»): from 1401 to 2199 px three tiles a row, four with the workspaces folded; 2K keeps its
++   four and five, and the steps past it stay */
++@media (min-width: 1401px) and (max-width: 2199px) {
++  .coll-grid.tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
++  .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
++/* HERESY 1167 (Viktor: «в пометках regen сделай тоньше обводку и радиус углов мелкий 2px»): the regen badge's dashed edge was
++   the browser's medium (3 px: no width was given) on a pill */
++.coll-badge.rg { border: 1px dashed currentColor; border-radius: 2px; padding: 0 6px; }
++
++/* HERESY 1167 (Viktor 05.10.2026: «Когда редженится карточка, можешь добавить ей 60% полупрозрачности и вибрацию до 75%
++   полупрозрачности?»): a take being made again breathes between 60 % and 75 % till the new one lands */
++@keyframes regen-breathe { from { opacity: .6; } to { opacity: .75; } }
++.coll-card.is-regenerating, .take.is-regenerating { opacity: .6; animation: regen-breathe 1.1s ease-in-out infinite alternate; }
++@media (prefers-reduced-motion: reduce) { .coll-card.is-regenerating, .take.is-regenerating { animation: none; } }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 53f39a8..1b15bd3 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2811,10 +2811,25 @@
+       if (d && d.seq < ACT.since) ACT.since = 0;                 // the lab restarted: its count began again
+       ACT.running = (d && d.running) || [];
+       ACT.queue = (d && d.queue) || [];                           // HERESY 1165: the regenerations the engine has not begun
++      markRegen((d && d.regenerating) || []);                     // HERESY 1167
+       if (filed && !first) librarianSoon();
+       paintEngine();
+     }).catch(function () { ACT.running = []; ACT.queue = []; }).then(function () { ACT.busy = false; });
+   }
++  // HERESY 1167 (Viktor 05.10.2026: «Когда редженится карточка, можешь добавить ей 60% полупрозрачности и вибрацию до 75%
++  // полупрозрачности?»): a take being made again, its regeneration waiting or running, breathes on its card (the takes
++  // list's and the Librarian's) until the new one lands; the cards drawn anew meanwhile ask HeresyRegen.has
++  var REGENNING = {};
++  function markRegen(names) {
++    var next = {};
++    names.forEach(function (n) { next[n] = 1; });
++    var same = Object.keys(next).length === Object.keys(REGENNING).length && Object.keys(next).every(function (n) { return REGENNING[n]; });
++    REGENNING = next;
++    if (same && !names.length) return;
++    all(".take[data-name], .coll-card[data-name]").forEach(function (c) { c.classList.toggle("is-regenerating", !!REGENNING[c.dataset.name]); });
++  }
++  window.HeresyRegen = { has: function (name) { return !!REGENNING[name]; } };
++
+   // HERESY 1165 (Viktor: «В Instrumental Probe FAILED, to REGENERATE какая-то аномалия. Не вижу, или что перегенерилось»):
+   // the lab files a regenerated take (and what the Refiner made) a moment after the engine ends it; the page read its
+   // takes again then, not the workspaces, so the old card stayed where the new one stands. Read again when the lab says it
+@@ -4946,7 +4961,8 @@
+       if (take.variation > 0 && !/ · sound \d+/.test(title)) tags += '<span class="tag">sound ' + (take.variation + 1) + "</span>";
+       if (take.format === "mp3") tags += '<span class="tag">mp3</span>';
+       if (take.parent) tags += '<span class="tag re" title="Re-rendered from another take: same music">re-render</span>';
+-      return '<article class="take' + active + (take.favorite ? " is-fav" : "") + (HC && HC.isHidden(take.name) ? " is-hidden-take" : "") + (HC && HC.isFresh && HC.isFresh(take.name) ? " is-fresh" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
++      return '<article class="take' + active + (take.favorite ? " is-fav" : "") + (HC && HC.isHidden(take.name) ? " is-hidden-take" : "") + (HC && HC.isFresh && HC.isFresh(take.name) ? " is-fresh" : "") +
++        (window.HeresyRegen && window.HeresyRegen.has(take.name) ? " is-regenerating" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
+         '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
+         '" title="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>" +
+         '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>' +
+@@ -5785,7 +5801,7 @@
+   applyCols();
+ 
+   // ------------------------------------------------------------ the take over its takes (HERESY 1167)
+-  // From 1600 px the Creator's last third is the take over its takes (Viktor 05.10.2026: «во втором фрейме 1/3 ширины
++  // From 1400 px the Creator's last third is the take over its takes (Viktor 05.10.2026: «во втором фрейме 1/3 ширины
+   // вниз этого фрейма под-фреймом»). The line between them is dragged up or down (140 px left to each at least);
+   // double-click or Home gives the default back, arrows move a focused line. Kept as a share of the room's height,
+   // this browser's own ("yue2.kSplit"), so a taller window gives both more.
+diff --git a/tools/console/heresy-assist.js b/tools/console/heresy-assist.js
+index c50ae56..872b3be 100644
+--- a/tools/console/heresy-assist.js
++++ b/tools/console/heresy-assist.js
+@@ -133,8 +133,9 @@
+       "a steady unhurried reading pace, clear diction, audible breathing, dry studio acoustics with a short reverb tail\");\n" +
+       // HERESY 1167 (Viktor 05.10.2026, having heard the whole letter of Jude read: «Нужно BPM выставлять в голосовые стили
+       // с начиткой как базовый метроном, а то ускорение спича как реп. Не есть гуд»)
+-      "and a metronome for the reading, \"Tempo: 72 BPM, the same from the first word to the last\": without a BPM the reader\n" +
+-      "speeds up until the speech sounds like rap. A distant, very quiet low drone behind keeps it a voice-centric mix.\n" +
++      "and a metronome for the reading, \"60 BPM with non-linear rubato drift\" (Viktor's ear: 60 hits the mark; 72 reads\n" +
++      "well too, a little quicker): without a BPM the reader speeds up until the speech sounds like rap. A distant, very\n" +
++      "quiet low drone behind keeps it a voice-centric mix.\n" +
+       "Lyrics then hold the text to be read, enough of it for the length (about two words a second).";
+   }
+ 
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 8c9e1b0..61b9d7c 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -194,7 +194,7 @@
+       var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
+       var mine = now.name === r.name;
+       var art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";   // HERESY 1154: beside the title, not in the play button
+-      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '" draggable="true">' +
++      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '" draggable="true">' +
+         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+         '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
+         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
+-- 
+2.43.0
+

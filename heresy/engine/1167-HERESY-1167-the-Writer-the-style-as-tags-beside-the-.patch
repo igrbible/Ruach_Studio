@@ -1,0 +1,359 @@
+From 5b1ce8547b6db81e770cd4c5a4e72593ffde37b4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 01:21:31 -0600
+Subject: [PATCH 1167/1177] HERESY 1167: the Writer: the style as tags beside
+ the readable one, saved briefs, its notes as (i), another open document asked
+ about; the rooms say what they are; Sliders over LoRAs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, the night of 05.10.2026:
+· «Промптинг как в SD/SDXL: тегированные триггеры в порядке их важности… Но как опцию. Пусть LLM выдаёт полный
+  читабельный и тегированный»: the writer is asked for a fifth key, style_tags (short tags, the most important first,
+  the tempo last, about fifteen at most), beside the readable style. The draft shows both; «Into the form» picks which
+  one the draft puts in the Style field: the tags by default (his word the morning after: «YuE2 идеально кормить
+  короткие SD/SDXL тригерры»), the readable style when chosen or when the model gave no tags. The choice is remembered.
+· «сохранять/удалять промпты, чтобы каждый раз не переписывать заново»: briefs saved by name in the lab's presets
+  (every browser sees them): Saved briefs…, Save brief…, Delete (asks first).
+· «STRUCTURE и TEMPERATURE имеют inline подсказки. Это тоже в тултипы»: the Writer's inline notes are (i) tips; Remember
+  the key says in a big tip where the key goes (openrouter.ai, nowhere else).
+· «Я подал Фосфориду, а на выходе буратино. Там явный баг»: the writing room works on the song in the Creator; a request
+  sent while the notebook has another document open now asks first: put that one into the Creator and send on it, or
+  send on the Creator's song as it is.
+· «двумя строчками можно красиво вместить описание этой комнаты… В рефайнере нет такого Титла»: the Creator and the
+  Refiner say what they are in two lines beside their names (the Refiner's take title after it).
+· «статистику тоже можно двумя строками, чтобы дать место поиску. И поле поиска уверенно ужми на 50pt»: the Librarian's
+  numbers in two lines, the search 533 → 466 px; the head is one line from 1920 (at 1536 the search goes under).
+· «SLIDERS и LORAS в одной строке. Их нужно на отдельные строки… ширина фрейма нахер вылетает за все границы»: Sliders
+  over LoRAs on the take card; long names, amounts and values wrap inside the card.
+
+cdp-console 339/0/7 (four new checks of the Writer room), check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          | 23 +++++++++++
+ tools/console/app.js           | 74 +++++++++++++++++++++++++++++++++-
+ tools/console/help.js          |  8 ++++
+ tools/console/heresy-assist.js | 17 +++++++-
+ tools/console/heresy-writer.js |  8 +++-
+ tools/console/index.html       | 25 +++++++++---
+ 6 files changed, 144 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 69be9e8..dd7be38 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4009,3 +4009,26 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+   font: 500 10.5px/1.6 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+ /* HERESY 1167: a trigger word the run adds by itself, said quietly */
+ .lora-trigger.is-auto { opacity: .7; cursor: default; }
++/* HERESY 1167: the draft's style as tags, and which form goes into the form */
++.draft-style-form { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: -2px 0 6px; }
++.draft-style-form .label { margin: 0; }
++/* HERESY 1167: the Writer's saved briefs, a row under the brief as under the style */
++.assist-brief-lib { margin: 2px 0 8px; }
++.assist-brief-lib select { flex: 0 1 260px; min-width: 140px; }
++/* HERESY 1167 (Viktor: «две колонки SLIDERS и LORAS в одной строке. Их нужно на отдельные строки… Пройдись через все такие
++   моменты»): Sliders over LoRAs always; long names, amounts and values wrap inside the card instead of widening it */
++.meta-row.duo { grid-template-columns: minmax(0, 1fr); row-gap: 10px; }
++.meta-row.duo > .meta-col + .meta-col { border-left: none; padding-top: 10px; border-top: 1px solid var(--line-soft); }
++.meta-rows.addons { grid-template-columns: minmax(0, max-content) minmax(0, 1fr); }
++.meta-rows.addons .amt { white-space: normal; }
++.meta-rows dd { white-space: normal; overflow-wrap: anywhere; }
++.meta-rows dd.num { white-space: nowrap; }
++/* the rooms say what they are in two lines beside their names (as the Writer) */
++.col-note.col-note-two { white-space: normal; max-width: 430px; line-height: 1.35; align-self: center; }
++.post-head { flex-wrap: wrap; row-gap: 4px; }
++.post-head .post-take { font: 500 16px/1.4 var(--heading); color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46%; }
++.post-head .post-take:empty { display: none; }
++/* the Librarian's numbers in two lines, its search 50 pt narrower: the head on one line where it fits */
++.coll-head #collNote { flex: 0 1 680px; white-space: normal; line-height: 1.35; align-self: center; }
++.coll-headtools { flex: 0 1 auto; }
++.coll-headtools input[type="search"] { flex: 0 1 466px; width: 466px; min-width: 200px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index b625620..bf604f8 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -7191,7 +7191,7 @@
+   }
+   function paintPost() {
+     var take = STATE.take;
+-    $("postTitle").textContent = take ? displayTitle(take) : "Refiner";
++    $("postTitle").textContent = take ? displayTitle(take) : "";   // HERESY 1167: the room's name stands before it now
+     $("postNote").textContent = take ? takeLabel(take).replace(displayTitle(take), "").replace(/^ · /, "") || take.name : "pick a take on the right";
+     if (take && document.body.dataset.tab === "post") store("yue2.postTake", take.name);   // HERESY 1132: for F5
+   }
+@@ -7356,6 +7356,19 @@
+     $("assistBtn").addEventListener("click", function () {
+       var brief = $("assistBrief").value.trim(), button = this, started = Date.now(), model = null;
+       if (!brief) { $("assistBrief").focus(); return toast("Describe the song or the changes you want", "bad"); }
++      // HERESY 1167 (Viktor: «Я подал Фосфориду, а на выходе буратино. Там явный баг»): the room works on the Creator's song;
++      // a different document open in the notebook is asked about before anything is sent
++      var W = window.HeresyWriter, doc = W && W.openDoc ? W.openDoc() : null;
++      if (doc && W.inHand() !== doc.id && !button.dataset.goOn) {
++        window.HeresyDialog.confirm("The writing room works on the song in the Creator: “" + ($("title").value.trim() || "untitled") + "”.\n\n" +
++          "The notebook has “" + doc.title + "” open. Put it into the Creator and send the request on it?",
++          { ok: "Put it in and send", cancel: "Send on the Creator's song", must: true }).then(function (yes) {
++          var go = function () { button.dataset.goOn = "1"; button.click(); delete button.dataset.goOn; };
++          if (!yes) return go();
++          W.putInCreator(doc).then(function (ok) { if (ok) { paintCurrentSong(); go(); } });
++        });
++        return;
++      }
+       var task = $("assistTask").value, temp = $("assistTemp").value.trim();
+       var max = Math.max(256, parseInt($("assistMax").value, 10) || 8192);
+       button.disabled = true;
+@@ -7402,6 +7415,7 @@
+           // HERESY 1012: an empty field is "unchanged", shown as the current text, never applied as a blank
+           $("draftTitle").value = draft.title.trim() || $("title").value;
+           $("draftStyle").value = draft.style.trim() || $("style").value;
++          $("draftStyleTags").value = (draft.styleTags || "").trim();   // HERESY 1167: its twin as tags
+           $("draftLyrics").value = draft.lyrics.trim() || $("lyrics").value;
+           $("draftLyrics").dataset.unchanged = draft.lyrics.trim() ? "" : "1";
+           $("draftStyle").dataset.unchanged = draft.style.trim() ? "" : "1";
+@@ -7427,7 +7441,10 @@
+     var apply = function (what) {
+       assistBefore = { title: $("title").value, style: $("style").value, lyrics: $("lyrics").value };
+       if (what === "all" && $("draftTitle").value.trim()) $("title").value = $("draftTitle").value.trim();
+-      if ((what === "all" || what === "style") && $("draftStyle").value.trim()) $("style").value = $("draftStyle").value.trim();
++      // HERESY 1167: the tags or the readable style, as chosen (the readable one when the model gave no tags)
++      var form = (document.querySelector('input[name="draftStyleForm"]:checked') || {}).value || "tags";
++      var styleNow = form === "tags" && $("draftStyleTags").value.trim() ? $("draftStyleTags").value.trim() : $("draftStyle").value.trim();
++      if ((what === "all" || what === "style") && styleNow) $("style").value = styleNow;
+       if ((what === "all" || what === "lyrics") && $("draftLyrics").value.trim()) $("lyrics").value = $("draftLyrics").value.replace(/\s+$/, "");
+       ["title", "style", "lyrics"].forEach(function (id) { $(id).dispatchEvent(new Event("input", { bubbles: true })); });
+       growLyrics();
+@@ -7435,6 +7452,59 @@
+       toast(what === "all" ? "Draft applied" : what === "style" ? "Style applied" : "Lyrics applied");
+       paintCurrentSong();
+     };
++    // HERESY 1167 (Viktor: «сохранять/удалять промпты, чтобы каждый раз не переписывать заново»): briefs by name in the lab's
++    // preset store, as the styles are (every browser sees them)
++    (function () {
++      var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
++      var URL = "/lab/presets" + (SCOPE ? "?scope=" + encodeURIComponent(SCOPE) : ""), briefs = [];
++      function paintBriefs() {
++        var sel = $("assistBriefLib"), cur = sel.value;
++        sel.innerHTML = '<option value="">' + escape(briefs.length ? "Saved briefs…" : "No saved briefs yet") + "</option>" +
++          briefs.map(function (b) { return '<option value="' + escape(b.name) + '"' + (b.name === cur ? " selected" : "") + ">" + escape(b.name) + "</option>"; }).join("");
++        $("assistBriefDel").disabled = !sel.value;
++      }
++      function loadBriefs() {
++        return fetch(URL).then(function (r) { return r.ok ? r.json() : {}; }).then(function (d) { briefs = d.briefs || []; paintBriefs(); }, function () { paintBriefs(); });
++      }
++      function send(payload) {
++        return fetch(URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
++          .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); });
++      }
++      $("assistBriefLib").addEventListener("change", function () {
++        var b = briefs.filter(function (x) { return x.name === this.value; }, this)[0];
++        $("assistBriefDel").disabled = !b;
++        if (!b) return;
++        $("assistBrief").value = b.text;
++        $("assistBrief").dispatchEvent(new Event("input", { bubbles: true }));
++      });
++      $("assistBriefSave").addEventListener("click", function () {
++        var text = $("assistBrief").value.trim();
++        if (!text) { $("assistBrief").focus(); return toast("Write the brief first", "bad"); }
++        window.HeresyDialog.prompt("Save the brief\n\nA name to find it by under the brief.", $("assistBriefLib").value || "", { ok: "Save", placeholder: "its name" }).then(function (name) {
++          name = (name || "").trim();
++          if (!name) return;
++          send({ op: "put", kind: "brief", name: name, data: text }).then(function () { return loadBriefs(); }).then(function () {
++            $("assistBriefLib").value = name; $("assistBriefDel").disabled = false; toast("Brief saved: " + name);
++          }, function (e) { toast(e.message, "bad"); });
++        });
++      });
++      $("assistBriefDel").addEventListener("click", function () {
++        var name = $("assistBriefLib").value;
++        if (!name) return;
++        window.HeresyDialog.confirm("Delete the brief “" + name + "”?\n\nOnly the saved brief goes; the text in the box stays.", { ok: "Delete", danger: true }).then(function (yes) {
++          if (!yes) return;
++          send({ op: "delete", kind: "brief", name: name }).then(function () { return loadBriefs(); }).then(function () { toast("Brief deleted: " + name); },
++            function (e) { toast(e.message, "bad"); });
++        });
++      });
++      loadBriefs();
++    })();
++    // HERESY 1167: the choice of the style's form kept in this browser
++    (function () {
++      var kept = recall("yue2.draftStyleForm");
++      if (kept) all('input[name="draftStyleForm"]').forEach(function (r) { r.checked = r.value === kept; });
++      all('input[name="draftStyleForm"]').forEach(function (r) { r.addEventListener("change", function () { store("yue2.draftStyleForm", r.value); }); });
++    })();
+     $("applyDraft").addEventListener("click", function () { apply("all"); });
+     $("applyStyle").addEventListener("click", function () { apply("style"); });
+     $("applyLyrics").addEventListener("click", function () { apply("lyrics"); });
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 172b759..f9ac58c 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -88,6 +88,14 @@
+       "Heun: two calls, second order; less accurate than Midpoint at 32–64 steps, catches up only at many steps.\n" +
+       "Euler: one call, first order — ten times rougher at the same cost; for quick drafts.\n" +
+       "Lower error means closer to what the model meant, not necessarily a sound you prefer: listen.",
++    // HERESY 1167 (Viktor: «STRUCTURE и TEMPERATURE имеют inline подсказки. Это тоже в тултипы»): the Writer's hints as (i)
++    orModel: "Any model of openrouter.ai/models, written provider/model. The field offers the list as you type; the quick picks fill it in.",
++    assistStructure: "The section order the model gives new lyrics. «Keep mine» leaves the lyrics' own order.",
++    draftStyleTags: "The draft's style as tags, the most important first, as an SD/SDXL prompt is written. «Into the form» chooses " +
++      "which of the two, the tags or the readable style, the draft puts in the Style field.",
++    assistBriefLib: "Your saved briefs, kept by the lab (every browser sees them): picking one puts it in the box above.",
++    assistTemp: "How free the drafts are: lower keeps close to the brief and repeats itself more, higher invents more and wanders. " +
++      "Blank: the server's or the model's own default.",
+     maxLength: "A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second " +
+       "of this (Sampling shows it as the music's Max length). " +
+       "The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).",
+diff --git a/tools/console/heresy-assist.js b/tools/console/heresy-assist.js
+index 128ec30..ee0b6c3 100644
+--- a/tools/console/heresy-assist.js
++++ b/tools/console/heresy-assist.js
+@@ -59,7 +59,18 @@ document.addEventListener("keydown", function (e) {
+     "Give the lyrics as much text as the length needs, about two words a second: a text that runs out is sung or read",
+     "again from the top, or the voice goes on with words of its own (56 voice probes on two lines, 05.10.2026).",
+     "In a duet or a dialogue, name each part's voice on the first line of its section, in round brackets, the way this",
+-    "studio's own lyrics do: (Male Vocal), (Female Vocal), (Male and Female Vocal, together); and say the duet in the style."
++    "studio's own lyrics do: (Male Vocal), (Female Vocal), (Male and Female Vocal, together); and say the duet in the style.",
++    // HERESY 1167 (Viktor 05.10.2026, of a style that sang better than his long ones: «Промптинг как в SD/SDXL: тегированные
++    // триггеры в порядке их важности… Пусть LLM выдаёт полный читабельный и тегированный»)
++    "",
++    "THE STYLE AS TAGS, BESIDE THE READABLE ONE",
++    "Return a fifth string key, \"style_tags\": the same musical intent as the style, written the way an SD/SDXL prompt is:",
++    "short comma-separated tags, the most important first: the language and the genre with its era, then the defining",
++    "instruments and the lead voice, then the mood and the production, the tempo (BPM) last. No sentences, no \"No ...\"",
++    "phrases, no arrows, at most about fifteen tags. Measured on this engine (Viktor, 05.10.2026): \"cyberpunk electro-pop,",
++    "modern synthwave, aggressive bassline, energetic male vocals, dramatic intro, electronic hip-hop beat, catchy synth",
++    "hooks, 125 BPM\" gave a striking song where long descriptions gave less. Keep \"style\" readable and whole as before;",
++    "\"style_tags\" is its short twin, never empty when \"style\" is not."
+   ].join("\n");
+ 
+   var TASKS = [
+@@ -180,7 +191,9 @@ document.addEventListener("keydown", function (e) {
+     try {
+       var draft = JSON.parse(raw);
+       var ok = draft && typeof draft === "object" && ["title", "style", "lyrics", "notes"].every(function (k) { return typeof draft[k] === "string"; });
+-      return ok ? { title: draft.title, style: draft.style, lyrics: draft.lyrics, notes: draft.notes } : null;
++      // HERESY 1167: the style as tags beside it, when the model gave it (an older answer has none)
++      return ok ? { title: draft.title, style: draft.style, lyrics: draft.lyrics, notes: draft.notes,
++                    styleTags: typeof draft.style_tags === "string" ? draft.style_tags : "" } : null;
+     } catch (error) {
+       return null;
+     }
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index 211cecd..64761fb 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -222,17 +222,18 @@
+       return loadList().then(function () { return doc; });
+     }).catch(function (e) { toast(e.message, true); });
+   }
+-  function intoCreate(doc) {
++  function intoCreate(doc) {   // HERESY 1167: true when the document went into the Creator
+     var f = state.hooks.form(), hand = recall(HAND_KEY);
+     var busy = (f.lyrics || "").trim() && f.lyrics !== doc.lyrics && hand !== doc.id;
+     (busy ? window.HeresyDialog.confirm("Put “" + doc.title + "” into the Creator?\n\nThe title, style and lyrics there now are replaced" +
+         (hand ? " (they belong to another document in the Writer, which keeps them)." : ". They are in no document: “Save to Writer” first, if they matter."), { ok: "Put it in the Creator" }) : Promise.resolve(true)).then(function (ok) {
+-      if (!ok) return;
++      if (!ok) return false;
+       state.hooks.load(doc);
+       store(HAND_KEY, doc.id);
+       paintList(); paintHand();
+       if (state.doc && state.doc.id === doc.id) $("wrHandBtn").textContent = "In hand in the Creator ✎";
+       toast("“" + doc.title + "” is in the Creator; what is made from it is linked to it");
++      return true;
+     });
+   }
+   function paintHand() {
+@@ -345,6 +346,9 @@
+   }
+ 
+   window.HeresyWriter = { init: init, landed: landed, reload: loadList, open: open, fromCreate: fromCreate, md: md,
++                          // HERESY 1167: the document open in the notebook, and putting one into the Creator (for the writing room)
++                          openDoc: function () { return state.doc || null; }, inHand: function () { return recall(HAND_KEY) || ""; },
++                          putInCreator: function (doc) { return flush().then(function () { return intoCreate(doc); }); },
+                           saveTake: function (doc) { return api(Object.assign({ op: "put" }, doc)).then(function (d) { loadList(); return d; }); },
+                           link: function (id, names) { return api({ op: "link", id: id, takes: names }); } };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 28fc324..f19bd99 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -702,6 +702,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+   <section class="col compose-col" id="view-compose">
+     <div class="col-head">
+       <h2>Compose</h2>
++      <!-- HERESY 1167 (Viktor: «двумя строчками можно красиво вместить описание этой комнаты») -->
++      <span class="col-note col-note-two">the song as words and knobs: style, lyrics, score and sound; Generate makes it, Takes keep it</span>
+       <div class="spacer"></div>
+       <button type="button" class="btn ghost small" id="newSong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.">＋ New song</button>
+     </div>
+@@ -1278,6 +1280,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <textarea id="assistBrief" rows="4" placeholder="Build an arc for every section from the style and the lyrics; keep my words."></textarea>
+         </label>
+         <div class="assist-chips" id="assistChips"></div>
++        <!-- HERESY 1167 (Viktor: «давай тоже добавим опцию сохранять/удалять промпты, чтобы каждый раз не переписывать заново») -->
++        <div class="lib-row assist-brief-lib">
++          <select id="assistBriefLib" aria-label="Saved briefs"><option value="">Saved briefs…</option></select>
++          <button type="button" class="btn ghost small" id="assistBriefSave">Save brief…</button>
++          <button type="button" class="btn ghost small danger" id="assistBriefDel" disabled>Delete</button>
++        </div>
+         <!-- HERESY 1012: the writer is the page's chat server, or OpenRouter with the user's key -->
+         <div class="field-row wrap assist-provider">
+           <label class="field" data-tip="Who drafts. The chat server set under Engine runs on your own machine (vLLM, LM Studio, Ollama): nothing leaves it. OpenRouter is a service on the internet: the brief and the song go to openrouter.ai, with your key."><span class="label">Writer</span>
+@@ -1285,7 +1293,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+               <option value="engine">Chat server under Engine (vLLM, LM Studio, Ollama)</option>
+               <option value="openrouter">OpenRouter</option>
+             </select></label>
+-          <label class="field grow or-only" data-tip="Any model of openrouter.ai/models, written provider/model; the field offers the whole list as you type. The quick picks fill it in."><span class="label">Model <em>any OpenRouter id</em></span>
++          <label class="field grow or-only" data-tip="Any model of openrouter.ai/models, written provider/model; the field offers the whole list as you type. The quick picks fill it in."><span class="label">Model</span>
+             <input type="text" id="orModel" list="orModels" placeholder="provider/model" autocomplete="off" spellcheck="false" /><datalist id="orModels"></datalist></label>
+           <div class="or-only or-picks" aria-label="Quick picks"><span class="label">Quick picks</span>
+             <button type="button" class="btn ghost small" data-or-model="deepseek/deepseek-v4-pro" title="Strong and the cheapest per word: the default">DeepSeek V4 Pro</button>
+@@ -1294,10 +1302,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-flash">Qwen3.8 Flash</button></div>
+           <label class="field or-only" data-tip="Your OpenRouter key. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file. Without Remember it is gone when the page closes."><span class="label">API key</span><input type="password" id="orKey" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
+         </div>
+-        <label class="check or-only"><input type="checkbox" id="orRemember" /> <span>Remember the key in this browser (otherwise it lives until the page is closed)</span></label>
++        <label class="check or-only" data-tip-size="big" data-tip="Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file."><input type="checkbox" id="orRemember" /> <span>Remember the key</span></label>
+         <div class="field-row wrap">
+           <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
+-          <label class="field grow"><span class="label">Structure <em>section order for new lyrics</em></span>
++          <label class="field grow"><span class="label">Structure</span>
+             <select id="assistStructure">
+               <option value="">Keep mine — as the lyrics have it</option>
+               <option value="simple">Verse · Chorus</option>
+@@ -1305,7 +1313,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+               <option value="prechorus">With a pre-chorus</option>
+               <option value="full">Full arc — intro, pre-chorus, bridge, outro</option>
+             </select></label>
+-          <label class="field assist-num" data-tip="How free the drafts are: lower keeps close to the brief and repeats itself more, higher invents more and wanders. Blank: the server's or the model's own default."><span class="label">Temperature <em>blank: the server's</em></span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
++          <label class="field assist-num" data-tip="How free the drafts are: lower keeps close to the brief and repeats itself more, higher invents more and wanders. Blank: the server's or the model's own default."><span class="label">Temperature</span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
+           <label class="field assist-num" data-tip="The longest answer the model may give, in tokens. Too few cut a song off in the middle; a thinking model spends part of them on its thinking first."><span class="label">Max output tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="8192" /></label>
+         </div>
+         <details class="assist-prefs">
+@@ -1325,6 +1333,11 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <div class="assist-draft-head"><strong>Your draft</strong><span class="dim mono" id="assistModel"></span></div>
+           <label class="field"><span class="label">Title</span><input type="text" id="draftTitle" /></label>
+           <label class="field"><span class="label">Style <em id="draftStyleSize"></em></span><textarea id="draftStyle" rows="4"></textarea></label>
++          <!-- HERESY 1167 (Viktor: «Промптинг как в SD/SDXL… Но как опцию. Пусть LLM выдаёт полный читабельный и тегированный») -->
++          <label class="field"><span class="label">Style as tags <em>the most important first</em></span><textarea id="draftStyleTags" rows="2"></textarea></label>
++          <div class="field-row draft-style-form"><span class="label">Into the form</span>
++            <label class="check"><input type="radio" name="draftStyleForm" value="tags" checked /> <span>the tags</span></label>
++            <label class="check"><input type="radio" name="draftStyleForm" value="readable" /> <span>the readable style</span></label></div>
+           <label class="field"><span class="label">Lyrics</span><textarea id="draftLyrics" rows="12" spellcheck="false"></textarea></label>
+           <details class="assist-notes" open><summary>Writing notes</summary><p id="draftNotes"></p></details>
+           <div class="assist-apply">
+@@ -1364,7 +1377,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+   <!-- HERESY 1014: the Post tab — what is done to a finished take, on Forge -->
+   <section class="col post-col is-hidden" id="view-post">
+-    <div class="col-head"><h2 id="postTitle">Refiner</h2><span class="col-note" id="postNote">pick a take on the right</span></div>
++    <!-- HERESY 1167 (Viktor: «В рефайнере нет такого Титла. Туда тоже добавь»): the room's name and what it does, the take beside -->
++    <div class="col-head post-head"><h2>Refiner</h2><span class="col-note col-note-two">the take in hand, heard and mended: spectrum, artifacts, stems, remaster, upscale, lyrics check</span>
++      <span class="post-take" id="postTitle"></span><span class="col-note" id="postNote">pick a take on the right</span></div>
+     <!-- HERESY 1023: a track from elsewhere (a SUNO track…) becomes a take, and every tool here works on it -->
+     <details class="drawer" id="importPanel">
+       <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Import a track</span><span class="sum-say">WAV, FLAC, MP3… from anywhere: it becomes a take in the library (48 kHz 24-bit), marked imported, ready for stems, remaster and the rest.</span></span></summary>
+-- 
+2.43.0
+

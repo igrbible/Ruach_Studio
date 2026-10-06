@@ -1,0 +1,311 @@
+From 6914f962750a5b847414ec2ca2eccfc23b22b846 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 15:16:11 -0600
+Subject: [PATCH 1084/1177] The take as a REAPER project from the landing and
+ the menu (1104); Pinned, whole names on hover, favourites in step, a 20 %
+ glass player, theme-coloured checks (1105)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  22 ++++++++++---
+ tools/console/app.js               |  33 +++++++++++++++++--
+ tools/console/heresy-collection.js |  51 ++++++++++++++++++++++++++---
+ tools/console/heresy-daw.js        |  11 +++++--
+ tools/console/themes.css           |   2 ++
+ tools/public/index.html.gz         | Bin 405051 -> 406807 bytes
+ 6 files changed, 105 insertions(+), 14 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 004d665..895a1a9 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -867,7 +867,7 @@ select:disabled { opacity: .7; }
+ 
+ 
+ .check { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+-.check input { width: auto; accent-color: var(--amber); }
++.check input { width: auto; accent-color: var(--check, var(--amber)); }
+ .small-check { font-size: 12px; }
+ 
+ /* sound and output: the C++ engine's own knobs */
+@@ -1461,7 +1461,9 @@ textarea:hover::-webkit-scrollbar-thumb,
+   align-items: center;
+   gap: 14px;
+   padding: 0 18px;
+-  background: var(--panel);
++  /* HERESY 1105 (Viktor): 20 % see-through, the page blurred under it as it scrolls by */
++  background: color-mix(in srgb, var(--panel) 80%, transparent);
++  -webkit-backdrop-filter: blur(10px) saturate(1.15); backdrop-filter: blur(10px) saturate(1.15);
+   border-top: 1px solid var(--line);
+   box-shadow: 0 -14px 30px -24px var(--shadow-lg);
+ }
+@@ -1539,7 +1541,7 @@ textarea:hover::-webkit-scrollbar-thumb,
+ 
+ .volume { display: flex; align-items: center; gap: 7px; flex: none; }
+ /* HERESY 1101: the playback speed */
+-.speed-pick { flex: none; height: 28px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--r-sm, 6px); background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
++.speed-pick { flex: none; width: auto; max-width: 76px; height: 28px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--r-sm, 6px); background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
+ .speed-pick:hover { color: var(--ink); border-color: var(--line-strong); }
+ .speed-pick.is-on { color: var(--amber); border-color: var(--amber); }
+ 
+@@ -1645,7 +1647,7 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+   border: 1px solid var(--line); border-radius: var(--r-md); background: var(--field);
+ }
+ .toggle small { font-size: 11px; color: var(--dim); }
+-.toggle input { accent-color: var(--amber); margin: 0; align-self: center; }
++.toggle input { accent-color: var(--check, var(--amber)); margin: 0; align-self: center; }
+ .toggle:has(input:checked) { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, var(--field)); }
+ .toggle:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+ .slider-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+@@ -2822,7 +2824,7 @@ body[data-tab="train"] .workspace { height: calc(100vh - 52px - 8px); }
+ .gpu-table td { padding: 7px 10px 7px 0; border-top: 1px solid var(--line-soft, var(--line)); vertical-align: middle; }
+ .gpu-table td:nth-child(2), .gpu-table td:nth-child(3), .gpu-table td:nth-child(4), .gpu-table th:nth-child(2), .gpu-table th:nth-child(3), .gpu-table th:nth-child(4) { text-align: center; width: 90px; }
+ .gpu-table td.mono { font-size: 11.5px; color: var(--muted); }
+-.gpu-table input { accent-color: var(--amber); width: 16px; height: 16px; }
++.gpu-table input { accent-color: var(--check, var(--amber)); width: 16px; height: 16px; }
+ .gpu-card .btn[hidden] { display: none !important; }
+ 
+ /* HERESY 1092: the ☰ and what it holds, each item with its words */
+@@ -2950,3 +2952,13 @@ body[data-tab="train"] .log-dock { bottom: 18px; }
+ .dw-install summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+ .dw-install p { font-size: 12px; margin-top: 4px; }
+ .dw-now { margin-top: 10px; }
++.dw-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
++.dw-daw .dw-acts .btn { margin-top: 0; }
++
++/* HERESY 1105: a cut workspace name, whole, over the grid (pointer-events none: the button under it still takes the click) */
++.coll-fullname { position: fixed; z-index: 70; pointer-events: none; padding: 3px 6px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
++  background: var(--panel); color: var(--ink); white-space: nowrap; box-shadow: 0 8px 22px -12px var(--shadow-lg, rgba(0,0,0,.4)); }
++
++/* HERESY 1105 (Viktor): every checkbox and radio in its theme's colour, never the browser's blue: --check where a
++   theme names one (Viktor's two: dark gold), else the theme's own accent; read on the input, so the theme in force counts */
++input[type="checkbox"], input[type="radio"] { accent-color: var(--check, var(--amber)); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index b9ec48e..e333a52 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3548,6 +3548,8 @@
+ 
+   function toggleFavorite(take) {
+     return updateTake(take, { favorite: !take.favorite }).then(function (entry) {
++      var HC = window.HeresyCollection;                 // HERESY 1105: the Librarian's cards follow at once
++      if (HC && HC.markFavorite) HC.markFavorite(take.name, !!entry.favorite);
+       toast(entry.favorite ? "Kept as a favourite: " + displayTitle(entry) : "Removed from favourites: " + displayTitle(entry));
+     }).catch(function (error) { toast(error.message, "bad"); });
+   }
+@@ -5382,7 +5384,31 @@
+   if (window.HeresyTrain) window.HeresyTrain.init({ toast: toast });   // HERESY 1063
+   if (window.HeresyGpus) window.HeresyGpus.init({ toast: toast });     // HERESY 1091
+   // HERESY 1102: the DAW button opens the way out of the studio (heresy-daw.js); openDAW is gone
+-  if (window.HeresyDaw) window.HeresyDaw.init({ title: function () { return STATE.take ? displayTitle(STATE.take) : ""; } });
++  // HERESY 1104: a take as a REAPER project: the page writes the score's MIDI (the lab has no ABC reader), the lab packs
++  // the rest; the engine hands the ZIP over
++  function reaperProject(take) {
++    if (!take || take.session) return Promise.reject(new Error("open a take of the library first"));
++    toast("Packing the REAPER project: the mix, every stem, the score, the lyrics");
++    return getRequest(take).then(function (req) {
++      var midi = "";
++      try {
++        if (req.abc && window.HeresyAbc) {
++          var bytes = window.HeresyAbc.toMidi(window.HeresyAbc.parse(req.abc)), bin = "";
++          for (var i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, Array.prototype.slice.call(bytes, i, i + 8192));
++          midi = btoa(bin);
++        }
++      } catch (e) { toast("The score could not be read as MIDI (" + e.message + "): the project goes without it", "bad"); }
++      return post("/lab/daw/reaper", { name: take.name, midi: midi });
++    }).then(function (d) {
++      toast("REAPER: " + d.tracks.join(", ") + " · " + d.bpm + " bpm, " + d.meter + " · " + (d.bytes / 1048576).toFixed(0) + " MB" + (d.said.length > 2 ? " · " + d.said[2] : ""));
++      var a = document.createElement("a");                // its own download: the take menu's helper lives in the menu
++      a.href = "/library/file?name=" + encodeURIComponent(take.name) + "&path=" + encodeURIComponent(d.path); a.download = fileTitle(take) + ".reaper.zip";
++      document.body.appendChild(a); a.click(); a.remove();
++      return d;
++    });
++  }
++  if (window.HeresyDaw) window.HeresyDaw.init({ title: function () { return STATE.take ? displayTitle(STATE.take) : ""; },
++    reaper: function () { return reaperProject(STATE.take); } });
+   if (window.HeresyInstruments) window.HeresyInstruments.init({        // HERESY 1069: the ♪ cheat-sheet
+     toast: toast, findTake: findTake, playNow: function (t) { STATE.playZone = "collection"; playNow(t); }
+   });
+@@ -5442,7 +5468,7 @@
+         });
+       } }]) } : null,
+       // HERESY 1103 (Viktor): up to four takes pinned in the strip above the Librarian's grid, per workspace
+-      HC && HC.pin && here === "collection" ? (function () {
++      HC && HC.pin && here === "collection" && HC.place() !== "__pinned" ? (function () {
+         var on = HC.pinned(name);
+         return { icon: "\ud83d\udccc", label: on ? "Unpin" : "Pin here", hint: on ? "" : "four at most", action: function () { HC.pin(name, !on); } };
+       })() : null,
+@@ -5485,6 +5511,9 @@
+         { label: formatExt(take.format).toUpperCase(), action: save(downloadUrl(take), audioFileName(take)) },
+         convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null,
+         take.session ? null : { sep: true },             // HERESY 1074: the take, its mix and stems, for openDAW or any DAW
++        take.session ? null : { label: "REAPER project", hint: "mix, stems, score, lyrics", action: function () {   // HERESY 1104
++          reaperProject(take).catch(function (e) { toast("No REAPER project: " + e.message, "bad"); });
++        } },
+         take.session ? null : { label: "DAWproject", hint: "mix + stems · Bitwig, Studio One, Cubase", action: function () {
+           toast("Packing the DAWproject: the mix and every stem, as 24-bit WAV");
+           api("/lab/dawproject?name=" + encodeURIComponent(name)).then(function (d) {   // packed into the take; the engine hands it over
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 85044fb..b430c16 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -53,6 +53,7 @@
+     var m = matcher(state.q), anyDer = Object.keys(state.derived).length;
+     var rows = state.rows.filter(function (r) {
+       if (state.place === "__fav" && !r.favorite) return false;
++      if (state.place === "__pinned" && !pinnedAll()[r.name]) return false;   // HERESY 1105
+       if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
+       if (state.place === "__hidden") { if (!r.hidden) return false; }
+       else if (r.hidden) return false;
+@@ -86,7 +87,9 @@
+       return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + '" data-place="' + esc(key) + '"><span>' + esc(label) +
+         '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
+     };
++    var pinAll = pinnedAll(), pinN = state.rows.filter(function (r) { return pinAll[r.name] && !r.hidden; }).length;
+     $("collSide").innerHTML = item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
++      item("__pinned", "\ud83d\udccc Pinned", pinN) +
+       item("__none", "Not in a workspace", counts.__none) +
+       '<div class="coll-cap">Workspaces</div>' + state.ws.map(function (w) {
+         var lk = (state.locks || {})[w] || {}, lock = lk.workspace || lk.tracks ?   // HERESY 1070
+@@ -143,10 +146,11 @@
+                 : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
+     }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+     // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
+-    var placeName = { "": "All Workspaces", __fav: "Favourites", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
++    var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
+     $("collWhere").textContent = " \u203a " + (placeName || state.place);
+     var inPlace = state.rows.filter(function (r) {
+       if (state.place === "__fav") return r.favorite && !r.hidden;
++      if (state.place === "__pinned") return !!pinnedAll()[r.name] && !r.hidden;
+       if (state.place === "__none") return !r.workspaces.length && !r.hidden;
+       if (state.place === "__hidden") return r.hidden;
+       if (state.place) return !r.hidden && r.workspaces.indexOf(state.place) >= 0;
+@@ -176,10 +180,30 @@
+         '<div class="coll-pin-body"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + '</span><span class="coll-meta">' + esc(state.hooks.ago(r.created)) +
+         (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + "</span></div>" +
+         '<button type="button" class="coll-unpin" data-unpin="' + esc(r.name) + '" aria-label="Unpin" data-tip="Unpin">\u00d7</button></div>';
+-    }).join("") : '<p class="row-hint coll-pins-hint">Pin up to four takes of this place here: right-click a take \u2192 Pin here.</p>';
++    }).join("") : '<p class="row-hint coll-pins-hint">' + (state.place === "__pinned" ? "Every take pinned in any workspace is below; each workspace shows its own four in this strip."
++      : "Pin up to four takes of this place here: right-click a take \u2192 Pin here.") + '</p>';
++  }
++  function markFavorite(name, on) {              // HERESY 1105: a favourite set elsewhere, shown here without asking the lab
++    var r = rowOf(name);
++    if (r && r.favorite !== on) { r.favorite = on; paint(); }
++  }
++  function pinnedAll() {                         // HERESY 1105: every take pinned anywhere
++    var all = {};
++    Object.keys(state.pins || {}).forEach(function (k) { (state.pins[k] || []).forEach(function (n) { all[n] = 1; }); });
++    return all;
+   }
+   function pin(name, on) {
+-    return act({ op: "pin", place: state.place, on: !!on, names: [name] }, on ? "Pinned here" : "Unpinned");
++    // HERESY 1105: seen at once, then said by the lab (a far lab answers a second later); a refusal puts it back
++    var key = state.place, before = ((state.pins || {})[key] || []).slice();
++    if (!on) {
++      state.pins = state.pins || {};
++      state.pins[key] = before.filter(function (n) { return n !== name; });
++      paint();
++    }
++    return act({ op: "pin", place: key, on: !!on, names: [name] }, on ? "Pinned here" : "Unpinned").then(function (ok) {
++      if (!ok) { state.pins[key] = before; paint(); }
++      return ok;
++    });
+   }
+   function paintBulk(rows) {
+     var n = Object.keys(state.sel).length;
+@@ -433,7 +457,11 @@
+       var card = e.target.closest(".coll-card[data-name]"), cname = card && card.dataset.name;   // HERESY 1048
+       var crate = e.target.closest("[data-crate]");
+       if (crate) { var v = +crate.dataset.crate; rate(cname, rating(cname) === v ? 0 : v).then(function () { if (hooks.libraryChanged) hooks.libraryChanged(); }); return; }
+-      if (e.target.closest("[data-cfav]")) { var ft = hooks.findTake(cname); if (ft) hooks.updateTake(ft, { favorite: !ft.favorite }).then(load); return; }
++      if (e.target.closest("[data-cfav]")) {          // HERESY 1105: the card and the player follow at once
++        var ft = hooks.findTake(cname);
++        if (ft) hooks.updateTake(ft, { favorite: !ft.favorite }).then(function (entry) { markFavorite(cname, !!(entry || ft).favorite); if (hooks.libraryChanged) hooks.libraryChanged(); });
++        return;
++      }
+       var cgo = e.target.closest("[data-cgo]");
+       if (cgo) { hooks.openTake(cname, cgo.dataset.cgo); return; }
+       if (e.target.closest("[data-cmenu]") && hooks.menu) { var rc = e.target.getBoundingClientRect(); hooks.menu(cname, rc.left, rc.bottom + 2); return; }
+@@ -463,6 +491,20 @@
+     });
+     $("collGrid").addEventListener("mousedown", hidePeek);
+     $("collGrid").addEventListener("mousedown", bandStart);          // HERESY 1101: the rubber band
++    // HERESY 1105: a workspace name cut by the column, shown whole over the grid while the pointer is on it
++    var fullName = null;
++    $("collSide").addEventListener("mouseover", function (e) {
++      var b = e.target.closest(".coll-place"), lab = b && b.firstElementChild;
++      if (fullName && fullName.owner === b) return;
++      if (fullName) { fullName.remove(); fullName = null; }
++      if (!lab || lab.scrollWidth <= lab.clientWidth + 1) return;
++      var r = lab.getBoundingClientRect(), cs = getComputedStyle(b);
++      fullName = document.createElement("div");
++      fullName.className = "coll-fullname"; fullName.owner = b; fullName.textContent = lab.textContent;
++      fullName.style.cssText = "left:" + (r.left - 6) + "px;top:" + (r.top - 3) + "px;font-weight:" + cs.fontWeight;
++      document.body.appendChild(fullName);
++    });
++    $("collSide").addEventListener("mouseleave", function () { if (fullName) { fullName.remove(); fullName = null; } });
+     $("collPins").addEventListener("click", function (e) {          // HERESY 1103: the pinned takes
+       var b = e.target.closest("[data-play]"), o = e.target.closest("[data-open]"), u = e.target.closest("[data-unpin]");
+       if (u) return void pin(u.dataset.unpin, false);
+@@ -871,6 +913,7 @@
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
+                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
++                              markFavorite: markFavorite,
+                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+ })();
+diff --git a/tools/console/heresy-daw.js b/tools/console/heresy-daw.js
+index 9b48b6d..b9f9bd9 100644
+--- a/tools/console/heresy-daw.js
++++ b/tools/console/heresy-daw.js
+@@ -41,10 +41,11 @@
+                 : '<p class="row-hint">not on the studio’s machine; on your own computer it may well be</p>') +
+         '<p class="row-hint">' + esc(x.licence) + "</p>" +
+         (x.here ? "" : '<details class="dw-install"><summary>How to install it</summary><p>' + esc(x.install) + "</p></details>") +
+-        '<button type="button" class="btn small' + (on ? " primary" : " ghost") + '" data-dw-pick="' + esc(x.id) + '">' + (on ? "Your DAW ✓" : "I use this one") + "</button></div>";
++        '<div class="dw-acts"><button type="button" class="btn small' + (on ? " primary" : " ghost") + '" data-dw-pick="' + esc(x.id) + '">' + (on ? "Your DAW ✓" : "I use this one") + "</button>" +
++        (x.id === "reaper" ? '<button type="button" class="btn small ghost" data-dw-reaper="1"' + (title ? "" : " disabled") + '>Export the take</button>' : "") + "</div></div>";
+     }).join("") + "</div>";
+-    html += '<p class="row-hint dw-now">Now: <b>DAWproject</b> (mix and stems, for Bitwig, Studio One, Cubase) in a take’s menu → Download. ' +
+-      "Coming: the <b>REAPER</b> project, then <b>Waveform</b>'s.</p></section>";
++    html += '<p class="row-hint dw-now">Now: the <b>REAPER</b> project (the mix, every stem, the score as MIDI; the lyrics and sections once the take is timed in the Refiner’s lyrics check), and <b>DAWproject</b> (mix and stems, for Bitwig, Studio One, Cubase); both also in a take’s menu → Download. ' +
++      "Coming: <b>Waveform</b>’s project.</p></section>";
+     state.el.querySelector(".dw-box").innerHTML = html;
+   }
+   function load() {
+@@ -60,6 +61,10 @@
+       var b;
+       if (e.target === el || e.target.closest(".dw-close")) return close();
+       if ((b = e.target.closest("[data-dw-pick]"))) { keep(KEY, recall(KEY) === b.dataset.dwPick ? "" : b.dataset.dwPick); paint(); }
++      if ((b = e.target.closest("[data-dw-reaper]")) && state.hooks.reaper) {   // HERESY 1104: the take in hand, packed for REAPER
++        b.disabled = true; b.textContent = "Packing…";
++        state.hooks.reaper().then(function () { close(); }, function () { b.disabled = false; b.textContent = "Export the take"; });
++      }
+     });
+     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && state.el && !state.el.hidden) close(); });
+     state.el = el;
+diff --git a/tools/console/themes.css b/tools/console/themes.css
+index f485f99..cf24cb7 100644
+--- a/tools/console/themes.css
++++ b/tools/console/themes.css
+@@ -376,6 +376,7 @@
+ }
+ 
+ [data-theme="igr-day"] {
++  --check: #9a7a1d;   /* HERESY 1105 (Viktor): checkboxes in dark gold, beside the brick */
+   --ground: #fcfcfb;
+   --panel: #f3f3f2;
+   --raise: #eaeae9;
+@@ -411,6 +412,7 @@
+ 
+ /* HERESY 1015: Scroll by Lamplight — igr.bible by night, from YuE2 Studio (Viktor, 26.09.2026). */
+ [data-theme="igr-night"] {
++  --check: #c9a13b;   /* HERESY 1105 (Viktor): checkboxes in dark gold, beside the brick */
+   --ground: #1e1e1e;
+   --panel: #282828;
+   --raise: #313131;
+-- 
+2.43.0
+

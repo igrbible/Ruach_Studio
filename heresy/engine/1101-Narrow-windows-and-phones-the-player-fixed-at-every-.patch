@@ -1,0 +1,61 @@
+From 58ec085a364f1763f8fe2b045cf7f5839db95026 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 21:10:11 -0600
+Subject: [PATCH 1101/1177] Narrow windows and phones: the player fixed at
+ every width, the log above it or away, heads and rows that fold (1142)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 8fba66d..022b416 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3252,3 +3252,41 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ .gpu-guard.is-open .gpu-dot { background: var(--good); }
+ .gpu-guard.is-closed { color: var(--bad); }
+ .gpu-guard.is-closed .gpu-dot { background: var(--bad); }
++
++/* ---------------------------------------------------------------- HERESY 1142: narrow windows and phones
++   Measured at 390 and 768 px: the player fell below the screen (an old rule of the Kit made it sticky without a bottom
++   under 1150 px), the floating log sat where its controls are, the room heads notes did not wrap, the Librarians
++   tools and the Refiner trees rows ran past the edge. backups/ fonts/ HERETICAL_FIRE_SONGS/ IGRB_SMITHERY/ internal-workplan/ leisure/ LEXICON_MATRIX/ LEXICON_TEX/ pdf/ sty/ subprojects/ svg-inkscape/ tex-back/ tex-book-GCF/ tex-front/ tex-igrbible/ tex-igrbible-exported/ tex-lexicon-gr/ tex-misc/ tmpfs.gen/ tmpfs.out/ tmpfs.tmp/ utils/ WEBSITES/
++
++/* ---------------------------------------------------------------- HERESY 1142: narrow windows and phones
++   Measured at 390 and 768 px: the player fell below the screen (an old rule of the Kit made it sticky without a bottom
++   under 1150 px), the floating log sat where its controls are, the room heads' notes did not wrap, the Librarian's
++   tools and the Refiner tree's rows ran past the edge. */
++@media (max-width: 1150px) {
++  .playbar { position: fixed; }                                   /* fixed at every width: the body keeps room under it */
++  .log-dock { bottom: calc(var(--playbar-h, 124px) + 10px); }     /* above the player again */
++}
++@media (max-width: 900px) {
++  .col-head { flex-wrap: wrap; row-gap: 6px; }
++  .col-head .col-note, #collNote { flex: 1 1 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
++  #collHeadTools { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; }
++  .coll-place { min-width: 0; }
++}
++@media (max-width: 600px) {
++  .log-dock { display: none; }                                    /* a phone has no room for it: Engine has the whole log */
++  #derivedTree .dv-node, #derivedTree .dv-node.dv-orig { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
++  #derivedTree .dv-node audio { grid-column: 1 / -1; width: 100%; }
++  #derivedTree .dv-node .btn { justify-self: start; }
++  .cmp-row { grid-template-columns: 22px minmax(0, 1fr) 48px; }
++  .cmp-group { display: none; }
++}
++
++/* HERESY 1142: the player on a phone: the transport in the middle, the time beside it, the rest left to a wider window
++   (shuffle, repeat, play on click, play on, the speed and the volume: the phone has its own keys for the volume) */
++@media (max-width: 600px) {
++  #playbar .pb-row { justify-content: space-between; gap: 6px; }
++  #playbar #pbShuffle, #playbar #pbRepeat, #playbar #clickPlay, #playbar #autoplay, #playbar #playSpeed, #playbar .volume { display: none; }
++  #playbar .pb-ctrl { position: static; transform: none; margin: 0; }
++  #playbar .pb-side { margin-left: auto; gap: 6px; }
++  #playbar .time { font-size: 11.5px; white-space: nowrap; }
++}
+-- 
+2.43.0
+

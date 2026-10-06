@@ -1,0 +1,520 @@
+From e205b92bfe39a7bc11ea2742318cee65d72a6a58 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 04:19:37 -0600
+Subject: [PATCH 1076/1177] A broken score stops the run before the music
+ (1087); floors as fuses: a score not under 200 tokens, the music not under
+ 750, locked against stray edits, every knob in bounds (1088); the music half
+ together under a shared ceiling, Plan clears an old score (1089)
+
+The engine judges the score the AR wrote: M:, L:, K: present and clean, Q: a tempo, never three colons in a row
+(calibrated on the studio's takes: 20 whole, every broken one caught). The page explains in plain words: why,
+which adapters weighed on the music half, how far past their limits, and the shared ceiling measured on the
+takes (whole up to 2.25 together, broken from 2.5).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/pipeline.h             |  82 ++++++++++++++++++++++++++++
+ src/request.cpp            |   7 +++
+ src/request.h              |   1 +
+ src/sampling.h             |   6 +-
+ tools/console/app.css      |  30 ++++++++++
+ tools/console/app.js       | 109 +++++++++++++++++++++++++++++++++++--
+ tools/console/loras.js     |  34 +++++++++++-
+ tools/public/index.html.gz | Bin 354289 -> 384909 bytes
+ tools/yue-server.cpp       |   4 ++
+ 9 files changed, 263 insertions(+), 10 deletions(-)
+
+diff --git a/src/pipeline.h b/src/pipeline.h
+index e0d93db..a5656ac 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -26,6 +26,7 @@
+ #include "vae.h"
+ 
+ #include <cstdlib>
++#include <regex>
+ #include <cstring>
+ #include <optional>
+ #include <string>
+@@ -68,6 +69,7 @@ struct Yue2Pipeline {
+     std::string              lora_dir;
+     std::shared_ptr<LoraSet> loras;
+     std::string              last_error;
++    std::string              broken_score;  // HERESY 1087: the score a run was stopped for, shown to the user
+     DebugDumper        dumper;
+ 
+     // The cache, bound at configure to its config with the context override
+@@ -322,6 +324,74 @@ struct KvScope {
+ // track song * M + variation. Song i draws its tokens with lm_seed + i in
+ // KV set i, variation j draws its noise with seed + j, and the M variations
+ // of a song solve in one NAR graph over the set the AR left complete.
++// HERESY 1087: why a score the AR wrote is not a score, or "" when it is one. Calibrated on the studio's own
++// takes (02.10.2026): every good score has M:, L: and K: with clean values (M:2/4, L:1/16, Q:1/4=71, K:Dm)
++// and never two colons in a row; the broken ones have no K: line, garbage for Q:, colons in runs of 3 to 13.
++// Three colons in a row are the cheapest sure sign (Viktor): a written score never has them.
++static std::string yue2_score_broken(const std::string & abc) {
++    std::string M, L, Q, K;
++    bool        hasM = false, hasL = false, hasQ = false, hasK = false;
++    size_t      pos = 0;
++    for (int n = 0; pos < abc.size() && n < 40 && !hasK; n++) {
++        size_t e = abc.find('\n', pos);
++        if (e == std::string::npos) {
++            e = abc.size();
++        }
++        std::string line = abc.substr(pos, e - pos);
++        pos              = e + 1;
++        while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) {
++            line.pop_back();
++        }
++        if (line.size() < 2 || line[1] != ':') {
++            continue;
++        }
++        std::string v = line.substr(2);
++        while (!v.empty() && v[0] == ' ') {
++            v.erase(0, 1);
++        }
++        switch (line[0]) {
++            case 'M': if (!hasM) { hasM = true; M = v; } break;
++            case 'L': if (!hasL) { hasL = true; L = v; } break;
++            case 'Q': if (!hasQ) { hasQ = true; Q = v; } break;
++            case 'K': hasK = true; K = v; break;
++            default: break;
++        }
++    }
++    auto shown = [](const std::string & v) { return v.size() > 24 ? v.substr(0, 24) + "..." : v; };
++    std::vector<std::string> why;
++    if (!hasK) {
++        why.push_back("no key line (K:)");
++    } else if (!std::regex_match(K, std::regex(R"(^[A-G](#|b)?(m|min|maj|dor|phr|lyd|mix|aeo|loc|ion)?$)", std::regex::icase))) {
++        why.push_back("the key line is not a key (K:" + shown(K) + ")");
++    }
++    if (!hasM) {
++        why.push_back("no meter (M:)");
++    } else if (!std::regex_match(M, std::regex(R"(^(\d{1,2}/\d{1,2}|C\|?)$)"))) {
++        why.push_back("the meter is not a meter (M:" + shown(M) + ")");
++    }
++    if (!hasL) {
++        why.push_back("no note length (L:)");
++    } else if (!std::regex_match(L, std::regex(R"(^1/\d{1,3}$)"))) {
++        why.push_back("the note length is not one (L:" + shown(L) + ")");
++    }
++    if (hasQ && !std::regex_match(Q, std::regex(R"(^(\d{1,2}/\d{1,2}=)?\d{2,3}$)"))) {
++        why.push_back("the tempo is not a tempo (Q:" + shown(Q) + ")");
++    }
++    size_t run = 0, longest = 0;
++    for (char c : abc) {
++        run     = c == ':' ? run + 1 : 0;
++        longest = run > longest ? run : longest;
++    }
++    if (longest >= 3) {
++        why.push_back("colons in a run of " + std::to_string(longest));
++    }
++    std::string out;
++    for (size_t i = 0; i < why.size(); i++) {
++        out += (i ? "; " : "") + why[i];
++    }
++    return out;
++}
++
+ static bool pipeline_generate(Yue2Pipeline *          p,
+                               const Yue2Request &     r,
+                               std::vector<Yue2Song> * songs,
+@@ -360,6 +430,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+         ~LoraScope() { p->loras.reset(); }
+     } lora_scope = { p };
+     p->last_error.clear();
++    p->broken_score.clear();
+     if (!r.loras.empty()) {
+         std::string error;
+         if (!pipeline_open_loras(p, r.loras, &error)) {
+@@ -418,6 +489,17 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+             scores[i]    = bpe_decode(tok, abc_ids[i]);
+             truncated[i] = plans[i].truncated;
+         }
++        // HERESY 1087 (Viktor, 02.10.2026): adapters pushed past their limits make the AR write garbage for a
++        // score (no key, no meter, colons in runs). The music would be built on it; the run stops here instead.
++        for (int i = 0; r.score_guard && i < B; i++) {
++            std::string why = yue2_score_broken(scores[i]);
++            if (!why.empty()) {
++                fprintf(stderr, "[Pipeline] FATAL: the score of song %d is broken: %s\n", i, why.c_str());
++                p->broken_score = scores[i];
++                p->last_error   = "Broken score: " + why;
++                return false;
++            }
++        }
+     }
+ 
+     // Local addition: the score alone, no music and no audio
+diff --git a/src/request.cpp b/src/request.cpp
+index d77b305..fc1ee39 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -48,6 +48,7 @@ void request_init(Yue2Request * r) {
+     r->loras     = {};
+     r->plan_only = false;
+     r->parent    = "";
++    r->score_guard = true;
+ }
+ 
+ static inline std::string yy_str(yyjson_val * v) {
+@@ -193,6 +194,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+     if ((v = yyjson_obj_get(obj, "plan_only")) && yyjson_is_bool(v)) {
+         r->plan_only = yyjson_get_bool(v);
+     }
++    if ((v = yyjson_obj_get(obj, "score_guard")) && yyjson_is_bool(v)) {
++        r->score_guard = yyjson_get_bool(v);
++    }
+     if ((v = yyjson_obj_get(obj, "sliders")) && yyjson_is_arr(v)) {
+         size_t       idx, max;
+         yyjson_val * item;
+@@ -349,6 +353,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+     if (!sparse || r->plan_only != d.plan_only) {
+         yyjson_mut_obj_add_bool(doc, root, "plan_only", r->plan_only);
+     }
++    if (!sparse || r->score_guard != d.score_guard) {
++        yyjson_mut_obj_add_bool(doc, root, "score_guard", r->score_guard);
++    }
+     if (!sparse || r->parent != d.parent) {
+         yyjson_mut_obj_add_strncpy(doc, root, "parent", r->parent.c_str(), r->parent.size());
+     }
+diff --git a/src/request.h b/src/request.h
+index abe77bc..faef327 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -104,6 +104,7 @@ struct Yue2Request {
+     std::vector<Yue2SliderChoice> sliders;    // applied while the music tokens are written
+     std::vector<Yue2LoraChoice>   loras;      // merged into the weights for the whole run
+     bool                          plan_only;  // false; stop after the score
++    bool                          score_guard;  // true; a broken score stops the run before the music (HERESY 1087)
+     std::string                   parent;     // "" or the library take this re-renders
+ };
+ 
+diff --git a/src/sampling.h b/src/sampling.h
+index 36fdb6e..5145dd9 100644
+--- a/src/sampling.h
++++ b/src/sampling.h
+@@ -48,8 +48,10 @@ static bool yue2_sampling_valid(const Yue2Sampling & s, const char * stage) {
+ // окне 24576. 8192 на партитуру съело бы лирику — проверено Виктором.
+ // HERESY 1031: Viktor's stable set (01.10.2026, the steadiest takes so far). The release had
+ // ABC 0.7 / 0.9 / 30 and semantic 1.0 / 0.95 / 100 / 1.2 / window 50.
+-static const Yue2Sampling YUE2_ABC_SAMPLING      = { 0.95f, 0.95f, 50, 1.005f, 100, 32, 6144 };
+-static const Yue2Sampling YUE2_SEMANTIC_SAMPLING = { 0.9f, 0.95f, 100, 1.3f, 100, 200, 12000 };
++// HERESY 1088 (Viktor, 02.10.2026): floors as fuses. A score may not end before 200 tokens (the broken ones
++// ended at 40 to 54), the music not before 750 (30 s; a shorter requested length lowers it to that length).
++static const Yue2Sampling YUE2_ABC_SAMPLING      = { 0.95f, 0.95f, 50, 1.005f, 100, 200, 6144 };
++static const Yue2Sampling YUE2_SEMANTIC_SAMPLING = { 0.9f, 0.95f, 100, 1.3f, 100, 750, 12000 };
+ 
+ struct Yue2Candidate {
+     int   id;
+diff --git a/tools/console/app.css b/tools/console/app.css
+index ee10281..555c594 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2611,3 +2611,33 @@ tr.is-no .hi-tag { color: var(--bad); }
+ }
+ .lora-half input[type="range"].zoned:disabled { opacity: .4; }
+ .lora-half.is-over output { color: var(--bad); font-weight: 600; }
++
++/* HERESY 1088: the token floors and ceilings, locked against a stray edit; the lock opens them */
++.knob.is-locked input { color: var(--muted); background: var(--sunk, var(--field)); cursor: default; }
++.knob-lock { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 4px; vertical-align: -3px; border-radius: 4px;
++  color: var(--dim); cursor: pointer; }
++.knob-lock:hover, .knob-lock:focus-visible { color: var(--amber); outline: none; background: var(--hover); }
++.knob-lock svg { width: 11px; height: 11px; }
++.knob:not(.is-locked) .knob-lock { color: var(--amber); }
++.knob:not(.is-locked) .knob-lock .shackle { transform: translate(3px, -1px) rotate(18deg); transform-origin: 11px 7px; }
++/* HERESY 1089: the music half together, on the same road as each strength */
++.lora-total { display: grid; grid-template-columns: auto minmax(0, 1fr) 40px; align-items: center; gap: 8px; padding: 6px 10px; margin-top: 2px;
++  border: 1px dashed var(--line); border-radius: var(--r-md); font-size: 11px; color: var(--dim); }
++.lora-total output { font: 600 12px var(--mono); text-align: right; }
++.lora-total-road { position: relative; height: 6px; border-radius: 3px;
++  background: linear-gradient(to right, #3f9a4a 0, #3f9a4a var(--z1), #e0b030 var(--z2), #c8372d var(--z2), #c8372d 100%); }
++.lora-total-road i { position: absolute; top: -4px; width: 3px; height: 14px; margin-left: -1.5px; border-radius: 2px; background: var(--ink);
++  box-shadow: 0 0 0 1px var(--panel); }
++.lora-total.is-amber output { color: #c99a1c; }
++.lora-total.is-red { border-color: #c8372d; border-style: solid; }
++.lora-total.is-red output { color: #c8372d; }
++/* HERESY 1087: the broken-score window */
++.sg-box { max-width: 640px; }
++.sg-box .hd-body p { margin: 0 0 8px; }
++.sg-table { border-collapse: collapse; margin: 0 0 10px; font-size: 12.5px; width: 100%; }
++.sg-table th { text-align: left; font-weight: 500; color: var(--dim); padding: 2px 10px 2px 0; }
++.sg-table td { padding: 3px 10px 3px 0; border-top: 1px solid var(--line-soft); }
++.sg-table tr.is-red td { color: #c8372d; } .sg-table tr.is-amber td { color: #c99a1c; } .sg-table tr.is-green td:last-child { color: #3f9a4a; }
++.sg-abc summary { cursor: pointer; font-size: 12px; color: var(--muted); }
++.sg-abc pre { max-height: 220px; overflow: auto; margin: 6px 0 0; padding: 8px; font: 11.5px/1.45 var(--mono); background: var(--sunk); border-radius: var(--r-sm);
++  white-space: pre-wrap; word-break: break-all; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 66f0f91..578412b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -81,8 +81,9 @@
+   var PROTOCOL_DEFAULTS = {
+     cot: "full", duration: 480, steps: 32, peak_clip: 10, mp3_bitrate: 128, output_format: "mp3",
+     // HERESY 1031: Viktor's stable set, as the engine now has it
+-    abc_sampling: { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 32, max_tokens: 6144 },
+-    semantic_sampling: { temperature: 0.9, top_p: 0.95, top_k: 100, repetition_penalty: 1.3, penalty_window: 100, min_tokens: 200, max_tokens: 12000 }
++    // HERESY 1088: floors as fuses: a score not under 200 tokens, the music not under 750 (30 s)
++    abc_sampling: { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 200, max_tokens: 6144 },
++    semantic_sampling: { temperature: 0.9, top_p: 0.95, top_k: 100, repetition_penalty: 1.3, penalty_window: 100, min_tokens: 750, max_tokens: 12000 }
+   };
+ 
+   var FRAME_RATE = 25;    // music tokens per second of audio
+@@ -392,6 +393,16 @@
+   }
+   // the server refuses values past these (protocol bounds)
+   var KNOB_MAX = { temperature: 5, top_p: 1, penalty_window: 100 };
++  // HERESY 1088 (Viktor, 02.10.2026): every knob held inside sane bounds (a value past them is pulled back
++  // and said aloud), and the token floors and ceilings locked against a stray edit: the lock opens them
++  var KNOB_BOUNDS = {
++    temperature: [0.1, 2], top_p: [0.5, 1], top_k: [1, 1000], repetition_penalty: [1, 2], penalty_window: [1, 100],
++    min_tokens: { abc: [0, 6144], semantic: [0, 12000] }, max_tokens: { abc: [256, 6144], semantic: [250, 12000] }
++  };
++  var LOCKED_KNOBS = { min_tokens: true, max_tokens: true };
++  function knobBounds(group, key) { var b = KNOB_BOUNDS[key]; return b && !Array.isArray(b) ? b[group] : b; }
++  var LOCK_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/>' +
++    '<path class="shackle" d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+ 
+   function samplingDefault(group, key) {
+     var preset = STATE.defaults[group + "_sampling"] || PROTOCOL_DEFAULTS[group + "_sampling"];
+@@ -405,7 +416,7 @@
+       SAMPLER_KNOBS.forEach(function (knob) {
+         var wrap = document.createElement("label");
+         wrap.className = "knob";
+-        wrap.innerHTML = "<span>" + knob[1] + "</span>";
++        wrap.innerHTML = "<span>" + knob[1] + (LOCKED_KNOBS[knob[0]] ? ' <span class="knob-lock" role="button" tabindex="0" data-tip="Locked against a stray edit: click to change it">' + LOCK_SVG + "</span>" : "") + "</span>";
+         var input = document.createElement("input");
+         input.type = "number";
+         // The default also goes in the value attribute: that makes it the step
+@@ -418,6 +429,7 @@
+         input.dataset.key = knob[0];
+         input.setAttribute("value", def);
+         input.value = def;
++        if (LOCKED_KNOBS[knob[0]]) { input.readOnly = true; wrap.classList.add("is-locked"); }
+         wrap.appendChild(input);
+         host.appendChild(wrap);
+       });
+@@ -471,6 +483,38 @@
+       input.value = round(samplingDefault(input.dataset.group, input.dataset.key), 6);
+       syncShape();
+     }
++    guardKnob(input);
++  });
++  // HERESY 1088: a value past its bounds comes back inside them, and a floor never above its ceiling
++  function guardKnob(input) {
++    var group = input.dataset.group, key = input.dataset.key, b = knobBounds(group, key), v = parseFloat(input.value);
++    var label = (input.parentNode.querySelector("span") || {}).textContent || key;
++    if (b && isFinite(v) && (v < b[0] || v > b[1])) {
++      input.value = Math.min(b[1], Math.max(b[0], v));
++      toast(label.trim() + " is kept within " + b[0] + "\u2013" + b[1], "bad");
++    }
++    if (key === "min_tokens" || key === "max_tokens") {
++      var lo = knobInput(group, "min_tokens"), hi = knobInput(group, "max_tokens");
++      if (lo && hi && parseFloat(lo.value) > parseFloat(hi.value)) {
++        if (key === "min_tokens") lo.value = hi.value; else hi.value = lo.value;
++        toast("Min tokens may not pass Max tokens", "bad");
++      }
++    }
++    syncShape();
++  }
++  // the lock beside Min and Max tokens: open to change them, closed again by a second click
++  document.addEventListener("click", function (e) {
++    var lock = e.target.closest && e.target.closest(".knob-lock");
++    if (!lock) return;
++    e.preventDefault();
++    var wrap = lock.closest(".knob"), input = wrap.querySelector("input");
++    var open = wrap.classList.toggle("is-locked") === false;
++    input.readOnly = !open;
++    lock.dataset.tip = open ? "Open: click to lock it again" : "Locked against a stray edit: click to change it";
++    if (open) { input.focus(); input.select(); }
++  });
++  document.addEventListener("keydown", function (e) {
++    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("knob-lock")) { e.preventDefault(); e.target.click(); }
+   });
+ 
+   $("resetSampling").addEventListener("click", function () {
+@@ -1160,7 +1204,13 @@
+     var body;
+     try { body = buildRequest(true); } catch (error) { return toast(error.message, "bad"); }
+     if (body.cot === "off") return toast("Planning writes a score: choose Full plan or Melody only", "bad");
+-    if (body.abc) return toast("A score is already supplied — remove it (Supply your own score) to plan a new one", "bad");
++    // HERESY 1089 (Viktor, 02.10.2026): a score already in the field is cleared quietly and a new one planned
++    // (it used to refuse, and every new plan meant a trip to Supply your own score to empty the box)
++    if ($("abc").value.trim()) {
++      $("abc").value = "";
++      $("abc").dispatchEvent(new Event("input", { bubbles: true }));
++      try { body = buildRequest(true); } catch (error) { return toast(error.message, "bad"); }
++    }
+     if (!body.style || !body.lyrics.trim()) return toast("A style prompt and lyrics are both required", "bad");
+     var button = this;
+     button.disabled = true;
+@@ -1600,7 +1650,7 @@
+       return;
+     }
+     if (status === "done") return finishJob(job, data);
+-    if (status === "failed") return failJob(job, data.error || job.lastFatal || "The run failed; the server log (Engine) has the reason.");
++    if (status === "failed") return failJob(job, data.error || job.lastFatal || "The run failed; the server log (Engine) has the reason.", data);
+     if (status === "cancelled") return cancelledJob(job);
+   }
+ 
+@@ -1617,14 +1667,57 @@
+     paintAllRuns();
+   }
+ 
+-  function failJob(job, message) {
++  function failJob(job, message, data) {
+     if (!isLive(job)) return;
+     job.error = message;
+     settle(job, "failed");
++    if (/^Broken score: /.test(message) && !toasted["babel" + job.id]) {
++      toasted["babel" + job.id] = true;
++      return showBrokenScore(job, message.replace(/^Broken score: /, ""), (data && data.abc) || "");
++    }
+     toastOnce(job.id, message, "bad");
+     if (job.kind === "transcribe") transcriptionFailed(job, message);
+   }
+ 
++  // HERESY 1087 (Viktor, 02.10.2026): "a Tower of Babel built on strengths past the ceiling". The engine
++  // stops a run whose score is not a score before any music is made on it; here the user is told why, in
++  // plain words: what is wrong with the score, which adapters weighed on the music half and how far past
++  // their limits, and the way out: the green zone, fewer adapters on one half, or Direct mode.
++  function showBrokenScore(job, why, abc) {
++    var loras = ((job.request || {}).loras || []).filter(function (c) { return c.ar > 0; });
++    var sum = loras.reduce(function (s, c) { return s + c.ar; }, 0);
++    var rows = loras.map(function (c) {
++      var z = YueLoras.zone ? YueLoras.zone(c.id, "ar") : null, cls = !z ? "" : c.ar > z.limit ? "is-red" : c.ar > z.safe ? "is-amber" : "is-green";
++      return '<tr class="' + cls + '"><td>' + escape(YueLoras.name ? YueLoras.name(c.id) : c.id) + '</td><td class="mono">' + c.ar.toFixed(2) + "</td><td>" +
++        (z ? (c.ar > z.limit ? "past its limit " + z.limit : c.ar > z.safe ? "amber (green to " + z.safe + ")" : "green") : "") + "</td></tr>";
++    }).join("");
++    var back = document.createElement("div");
++    back.className = "hd-back";
++    back.innerHTML = '<div class="hd-box sg-box" role="alertdialog" aria-modal="true" aria-label="Broken score">' +
++      '<div class="hd-title">Babel in the score: the run stopped before the music</div>' +
++      '<div class="hd-body"><p>The music half (AR) wrote a score that is not one: <b>' + escape(why) + "</b>. Music built on it is noise, so " +
++        "the engine stopped here and nothing was spent on the sound.</p>" +
++        (loras.length ? "<p>What weighed on the music half in this run" + (loras.length > 1 ? " (" + loras.length + " adapters, together <b>" + sum.toFixed(2) + "</b>" +
++          (YueLoras.total && sum > YueLoras.total().limit ? ", past the shared ceiling " + YueLoras.total().limit + ": each may sit in its green and the sum still break the score" : ": stacked, their changes add up") + ")" : "") + ":</p>" +
++          '<table class="sg-table"><tr><th>adapter</th><th>music</th><th></th></tr>' + rows + "</table>" +
++          "<p>Most often this is strength past the ceiling: bring the music strengths into the green, take an adapter off the music half " +
++          "(its sound half can stay), or generate in Direct mode, which writes no score at all.</p>"
++        : "<p>No adapter weighed on the music half: the score sampling may be too hot (temperature, top-k). Reset sampling, or try another seed.</p>") +
++        (abc ? '<details class="sg-abc"><summary>What it wrote (' + abc.length + " characters)</summary><pre>" + escape(abc.slice(0, 4000)) + "</pre></details>" : "") +
++      '</div><div class="hd-acts">' + (loras.length && YueLoras.toGreen ? '<button type="button" class="btn ghost small" data-sg="green">Music strengths into the green</button>' : "") +
++        '<button type="button" class="btn small primary" data-sg="ok">Understood</button></div></div>';
++    document.body.appendChild(back);
++    function close() { back.classList.add("is-leaving"); setTimeout(function () { back.remove(); }, 120); }
++    back.addEventListener("click", function (e) {
++      var b = e.target.closest("[data-sg]");
++      if (e.target === back || (b && b.dataset.sg === "ok")) return close();
++      if (b && b.dataset.sg === "green") { var n = YueLoras.toGreen("ar"); toast(n ? n + " music strength" + (n > 1 ? "s" : "") + " brought into the green" : "Nothing was past the green", n ? "good" : ""); close(); }
++    });
++    requestAnimationFrame(function () { back.classList.add("is-on"); back.querySelector('[data-sg="ok"]').focus(); });
++    document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { document.removeEventListener("keydown", esc, true); close(); } }, true);
++  }
++  window.HeresyScoreGuard = { show: showBrokenScore };     // the same window by hand: a test, or a look
++
+   function cancelledJob(job) {
+     if (!isLive(job)) return;
+     job.error = "";
+@@ -4975,6 +5068,10 @@
+     var raw = recall(DRAFT_KEY), req = null;
+     try { req = raw ? JSON.parse(raw) : null; } catch (error) { req = null; }
+     if (req && typeof req === "object" && !Array.isArray(req)) {
++      [["abc", 32], ["semantic", 200]].forEach(function (old) {      // HERESY 1088: the floors before the fuses
++        var preset = req[old[0] + "_sampling"];
++        if (preset && preset.min_tokens === old[1]) preset.min_tokens = samplingDefault(old[0], "min_tokens");
++      });
+       try { loadRequestIntoForm(req); } catch (error) { console.warn("draft not restored:", error); }
+     }
+     STATE.draftReady = true;
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index daebdd3..d68731d 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -118,6 +118,25 @@
+     return { safe: 0.5, limit: 0.75, max: 1 };
+   }
+   function capOf(e, half) { return zones(e, half).max; }
++  // HERESY 1089 (Viktor, 02.10.2026): the shared ceiling of the music half. Each strength may sit in its own
++  // green and the run still break: stacked, they add up. Measured on the studio's takes (02.10.2026, the runs with
++  // adapters on the music half and a written score): whole at 1.55, 1.75 and 2.25 together, broken at 2.5, 2.5
++  // and 3.1 — every time. Green to 1.75, amber to 2.25, red past it; a sources.json "ar_total" may move it.
++  var AR_TOTAL = { safe: 1.75, limit: 2.25, max: 3.5 };
++  function arTotal() {
++    return S.choice.reduce(function (s, c) { var e = entry(c.id); return s + (e && has(e, "ar") ? c.ar || 0 : 0); }, 0);
++  }
++  function arStacked() { return S.choice.filter(function (c) { var e = entry(c.id); return e && has(e, "ar") && c.ar > 0; }).length; }
++  function totalBar() {
++    if (arStacked() < 2) return "";
++    var t = arTotal(), z = AR_TOTAL, cls = t > z.limit + 1e-9 ? "is-red" : t > z.safe + 1e-9 ? "is-amber" : "is-green";
++    var road = "--z1:" + (100 * z.safe / z.max).toFixed(1) + "%;--z2:" + (100 * z.limit / z.max).toFixed(1) + "%";
++    return '<div class="lora-total ' + cls + '" data-tip="' + escape("All the music strengths together. Measured on this studio's takes: the score came out whole up to " +
++        z.limit + " in every run, broken from 2.5 in every run. Green to " + z.safe + ", amber to " + z.limit + ", red past it.") + '">' +
++      "<span>Music, together</span>" +
++      '<span class="lora-total-road" style="' + road + '"><i style="left:' + Math.min(100, 100 * t / z.max).toFixed(1) + '%"></i></span>' +
++      "<output>" + fmt(t, 2) + "</output></div>";
++  }
+   function overLimit(e, half, v) { return v > zones(e, half).limit + 1e-9; }
+ 
+   function halfControl(choice, e, half) {
+@@ -151,6 +170,8 @@
+       if (has(e, "nar") && overLimit(e, "nar", c.nar)) notes.push("\u26a0 " + name + ": " + fmt(c.nar, 2) + " on the sound half is past its limit " + zones(e, "nar").limit + ".");
+     });
+     if (S.choice.length > 1) notes.push(S.choice.length + " stacked: their changes add up.");
++    if (arStacked() > 1 && arTotal() > AR_TOTAL.limit + 1e-9) notes.push("\u26a0 The music half carries " + fmt(arTotal(), 2) + " together, past the shared ceiling " +
++      AR_TOTAL.limit + ": runs this heavy wrote broken scores every time (measured). Lower some, or take one off the music half.");
+     return notes;
+   }
+ 
+@@ -221,7 +242,7 @@
+                            '" data-tip="Add the trigger word to the style prompt">+ ' + escape(trig) + "</button>") : "") +
+         '</span><span class="lora-halves">' + halfControl(c, e, "ar") + halfControl(c, e, "nar") + "</span>" +
+         '<button type="button" class="icon-btn" data-remove-lora="' + escape(c.id) + '" aria-label="Remove ' + escape(nameOf(c.id)) + '">✕</button></div>';
+-    }).join("");
++    }).join("") + totalBar();
+     // one even grid of buttons: the name, which half it steers, and a few words on what it does
+     chips.innerHTML = S.catalog.map(function (e) {
+       var tag = e.error ? "cannot load" : tagOf(e) || halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half");
+@@ -342,6 +363,15 @@
+     }).join(", ");
+   }
+ 
++  // HERESY 1087: for the broken-score window: a zone and a name by id, and the chosen strengths of one half
++  // brought down to their green (the count changed is returned)
++  function toGreen(half) {
++    var n = 0;
++    S.choice.forEach(function (c) { var z = zones(entry(c.id), half); if (c[half] > z.safe) { c[half] = z.safe; n++; } });
++    if (n) changed();
++    return n;
++  }
+   root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, describe: describe, lines: lines, repaint: paint,
+-    listInto: listInto, setSources: setSources };
++    listInto: listInto, setSources: setSources, zone: function (id, half) { return zones(entry(id), half); }, name: nameOf, toGreen: toGreen,
++    total: function () { return { value: arTotal(), stacked: arStacked(), safe: AR_TOTAL.safe, limit: AR_TOTAL.limit }; } };
+ })(window);
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 6db1471..9ddfba5 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1203,6 +1203,9 @@ static std::string job_status_json(const Job & job) {
+     }
+     if (status == JobStatus::FAILED && !job.error.empty()) {
+         yyjson_mut_obj_add_strncpy(doc, root, "error", job.error.c_str(), job.error.size());
++        if (!job.abc.empty()) {
++            yyjson_mut_obj_add_strncpy(doc, root, "abc", job.abc.c_str(), job.abc.size());
++        }
+     }
+     char *      json = yyjson_mut_write(doc, 0, NULL);
+     std::string out  = json ? json : "{}";
+@@ -1460,6 +1463,7 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
+     if (!ok) {
+         active_job_set(nullptr);
+         job->error = g_pipeline.last_error.empty() ? "generation failed; the server log has the reason" : g_pipeline.last_error;
++        job->abc   = g_pipeline.broken_score;      // HERESY 1087: what the AR wrote, for the page to show
+         job->status.store(job->cancel.load() ? JobStatus::CANCELLED : JobStatus::FAILED);
+         return;
+     }
+-- 
+2.43.0
+

@@ -1,0 +1,327 @@
+From f8004738a10410d50b41db461149e868e9d2cebf Mon Sep 17 00:00:00 2001
+From: Prometheus2 <noreply@anthropic.com>
+Date: Wed, 30 Sep 2026 10:24:52 -0600
+Subject: [PATCH 1004/1177] Sound solver: midpoint, multistep, heun and euler
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Слово Виктора 30.09.2026: «Попробуешь добавить Euler и Heun? Heun
+должен дать качество, однозначно».
+
+  midpoint    2 вызова сети на шаг, 2-й порядок — релиз
+  multistep   1 вызов, 2-й порядок: Adams-Bashforth 2, идея DPM++ 2M
+  heun        2 вызова, 2-й порядок, скорость в конце шага
+  euler       1 вызов, 1-й порядок — для черновиков
+
+⛔ Heun на ПОСЛЕДНЕМ шаге спрашивал бы сеть в t = 0, где её не учили
+(обучение берёт t строго внутри 0..1); там он делает простой Euler, как
+EDM при σ = 0. Multistep на первом шаге не имеет истории — тоже Euler.
+
+⭐ ПРОВЕРЕНО СХОДИМОСТЬЮ, А НЕ НА СЛУХ. Одни семантические токены (500),
+один сид шума; эталон — midpoint 160 шагов; ошибка латента:
+
+  решатель    8        16       32       64      наклон
+  euler      1.9e-1   9.9e-2   5.4e-2   3.0e-2   2.0× 1.9× 1.8×  1-й ✓
+  midpoint   4.2e-2   1.3e-2   3.8e-3   1.4e-3   3.2× 3.5× 2.8×  2-й ✓
+  heun       7.9e-2   2.6e-2   6.5e-3   1.5e-3   3.1× 3.9× 4.4×  2-й ✓
+  multistep  1.2e-1   4.3e-2   1.3e-2   3.5e-3   2.9× 3.3× 3.7×  2-й ✓
+
+При РАВНОЙ цене (64 вызова сети): multistep 64 → 3.5e-3, midpoint 32
+→ 3.8e-3, heun 32 → 6.5e-3, euler 64 → 3.0e-2. Heun при той же цене
+вдвое грубее midpoint — «однозначно лучше» не подтвердилось; его
+наклон лучший, но выигрывает он только на многих шагах.
+
+Число вызовов сети в логе сходится с замыслом: midpoint 2N, heun 2N−1,
+euler и multistep N.
+
+⚠ Ошибка решения уравнения — не качество звука. Слушать: 17 вариантов
+в ~/Temp/solver_conv/a_<решатель>_<шаги>.wav.
+
+Страница: список рядом с шагами, в запрос уходит только не-релизный
+решатель, переживает F5, подсказка (i) с этими числами.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/nar.h                  |  75 ++++++++++++++++++++++++++++++-------
+ src/pipeline.h             |   3 +-
+ src/request.cpp            |   7 ++++
+ src/request.h              |   7 ++++
+ tools/console/app.js       |   3 ++
+ tools/console/help.js      |   9 +++++
+ tools/console/index.html   |   7 ++++
+ tools/public/index.html.gz | Bin 214165 -> 214684 bytes
+ tools/yue-server.cpp       |   6 +++
+ 9 files changed, 103 insertions(+), 14 deletions(-)
+
+diff --git a/src/nar.h b/src/nar.h
+index f188a20..508014e 100644
+--- a/src/nar.h
++++ b/src/nar.h
+@@ -536,11 +536,27 @@ static void nar_dump_named(const Yue2NAR * n, const DebugDumper * dbg) {
+     }
+ }
+ 
+-// Midpoint flow matching solver, t walking from 1 down to 0.
++// Flow matching solvers, t walking from 1 down to 0.
+ // state [M, T_lat, latent_dim] holds the noise of every variation on entry
+ // and the latents on exit. The dumper, when enabled, records the first
+ // variation: the noise, the probes of the first evaluation, both velocities
+ // and the state of every step, and the latents.
++//
++// HERESY 1004: four solvers on the same uniform grid dt = 1/steps.
++//
++//   midpoint   v1 at t, v2 at t - dt/2 from a half Euler step, x -= v2·dt
++//              the release; 2 network calls a step, second order
++//   euler      x -= v1·dt;  1 call, first order
++//   heun       v2 at t - dt from a full Euler step, x -= (v1 + v2)/2 · dt
++//              2 calls, second order. On the LAST step t - dt is 0, where the
++//              network was never trained (training draws t strictly inside
++//              0..1); there it takes a plain Euler step, as EDM does at σ = 0.
++//   multistep  Adams-Bashforth 2: x -= (1.5·v_n − 0.5·v_{n−1}) · dt
++//              1 call, second order, reusing the previous velocity: the idea
++//              behind DPM++ 2M. The first step has no history and is Euler.
++//
++// The chunks of a song each solve their own ODE from t = 1, so the history of
++// the multistep solver lives inside one call and never crosses a chunk.
+ static bool nar_solve(Yue2NAR *            n,
+                       const Qw3lmKvCache * kv,
+                       float *              state,
+@@ -551,14 +567,17 @@ static bool nar_solve(Yue2NAR *            n,
+                       int                  steps,
+                       const DebugDumper *  dbg,
+                       bool (*cancelled)(void *) = nullptr,
+-                      void * cancel_data        = nullptr) {
++                      void * cancel_data        = nullptr,
++                      const std::string & solver = "midpoint") {
+     size_t             count = (size_t) n->latent_dim * T_lat * M;
+     std::vector<float> first(count), mid(count), second(count);
+     float              dt = 1.0f / (float) steps;
+     char               name[64];
++    const bool         euler = solver == "euler", heun = solver == "heun", multi = solver == "multistep";
+ 
+     debug_dump_2d(dbg, "noise", state, T_lat, n->latent_dim);
+     Timer solve_timer;
++    int   calls = 0;
+     for (int step = 0; step < steps; step++) {
+         Timer step_timer;
+         if (cancelled && cancelled(cancel_data)) {
+@@ -569,18 +588,48 @@ static bool nar_solve(Yue2NAR *            n,
+         if (!nar_velocity(n, kv, state, T_lat, M, ar_len, kv_set, nar_logit_clamped(t), first.data())) {
+             return false;
+         }
++        calls++;
+         if (dbg->enabled && step == 0) {
+             nar_dump_named(n, dbg);
+         }
+-        for (size_t i = 0; i < count; i++) {
+-            mid[i] = state[i] - first[i] * (dt * 0.5f);
+-        }
+-        if (!nar_velocity(n, kv, mid.data(), T_lat, M, ar_len, kv_set, nar_logit_clamped(t - dt * 0.5f),
+-                          second.data())) {
+-            return false;
+-        }
+-        for (size_t i = 0; i < count; i++) {
+-            state[i] -= second[i] * dt;
++        const bool last = step == steps - 1;
++        if (euler || (heun && last) || (multi && step == 0)) {
++            for (size_t i = 0; i < count; i++) {
++                state[i] -= first[i] * dt;
++            }
++            if (multi) {
++                second = first;  // the history for the next step
++            }
++        } else if (multi) {
++            // second holds v_{n-1}
++            for (size_t i = 0; i < count; i++) {
++                float v   = 1.5f * first[i] - 0.5f * second[i];
++                second[i] = first[i];
++                state[i] -= v * dt;
++            }
++        } else if (heun) {
++            for (size_t i = 0; i < count; i++) {
++                mid[i] = state[i] - first[i] * dt;
++            }
++            if (!nar_velocity(n, kv, mid.data(), T_lat, M, ar_len, kv_set, nar_logit_clamped(t - dt), second.data())) {
++                return false;
++            }
++            calls++;
++            for (size_t i = 0; i < count; i++) {
++                state[i] -= 0.5f * (first[i] + second[i]) * dt;
++            }
++        } else {
++            for (size_t i = 0; i < count; i++) {
++                mid[i] = state[i] - first[i] * (dt * 0.5f);
++            }
++            if (!nar_velocity(n, kv, mid.data(), T_lat, M, ar_len, kv_set, nar_logit_clamped(t - dt * 0.5f),
++                              second.data())) {
++                return false;
++            }
++            calls++;
++            for (size_t i = 0; i < count; i++) {
++                state[i] -= second[i] * dt;
++            }
+         }
+         snprintf(name, sizeof(name), "nar_step%d_first", step);
+         debug_dump_2d(dbg, name, first.data(), T_lat, n->latent_dim);
+@@ -592,8 +641,8 @@ static bool nar_solve(Yue2NAR *            n,
+     }
+     debug_dump_2d(dbg, "nar_x0", state, T_lat, n->latent_dim);
+ 
+-    fprintf(stderr, "[NAR] Solved: T_lat=%d, %d variations, %d steps, %.0f ms (%.1f ms/step)\n", T_lat, M, steps,
+-            solve_timer.ms(), solve_timer.ms() / steps);
++    fprintf(stderr, "[NAR] Solved: T_lat=%d, %d variations, %d steps (%s, %d network calls), %.0f ms (%.1f ms/step)\n",
++            T_lat, M, steps, solver.c_str(), calls, solve_timer.ms(), solve_timer.ms() / steps);
+     return true;
+ }
+ 
+diff --git a/src/pipeline.h b/src/pipeline.h
+index f2b4360..d6bf6f7 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -618,7 +618,8 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                        (*songs)[(size_t) i * M + j].latents.data() + (size_t) start * YUE2_LATENT_DIM,
+                        span * sizeof(float));
+             }
+-            if (!nar_solve(nar, &p->kv, block.data(), frames, M, ar_len, i, r.steps, dbg, cancelled, cancel_data)) {
++            if (!nar_solve(nar, &p->kv, block.data(), frames, M, ar_len, i, r.steps, dbg, cancelled, cancel_data,
++                           r.solver)) {
+                 return false;
+             }
+             for (int j = 0; j < M; j++) {
+diff --git a/src/request.cpp b/src/request.cpp
+index 46861bf..be4497f 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -27,6 +27,7 @@ void request_init(Yue2Request * r) {
+     r->lm_seed          = -1;
+     r->seed             = -1;
+     r->steps            = 32;
++    r->solver           = "midpoint";
+     r->lm_batch_size    = 1;
+     r->synth_batch_size = 1;
+     r->peak_clip        = 10;
+@@ -149,6 +150,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+     if ((v = yyjson_obj_get(obj, "peak_clip")) && yyjson_is_int(v)) {
+         r->peak_clip = yyjson_get_int(v);
+     }
++    if ((v = yyjson_obj_get(obj, "solver")) && yyjson_is_str(v)) {
++        r->solver = yyjson_get_str(v);
++    }
+     if ((v = yyjson_obj_get(obj, "steps")) && yyjson_is_int(v)) {
+         r->steps = yyjson_get_int(v);
+     }
+@@ -278,6 +282,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+     if (!sparse || r->seed != d.seed) {
+         yyjson_mut_obj_add_sint(doc, root, "seed", r->seed);
+     }
++    if (!sparse || r->solver != d.solver) {
++        yyjson_mut_obj_add_strncpy(doc, root, "solver", r->solver.c_str(), r->solver.size());
++    }
+     if (!sparse || r->steps != d.steps) {
+         yyjson_mut_obj_add_int(doc, root, "steps", r->steps);
+     }
+diff --git a/src/request.h b/src/request.h
+index fb15274..2b8b0e7 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -50,6 +50,13 @@ struct Yue2Request {
+     int64_t seed;     // -1 = random
+     int     steps;    // 32, midpoint steps of the flow matching ODE
+ 
++    // HERESY 1004: the flow matching solver. "midpoint" is the release (two
++    // network calls a step, second order). "euler" is one call, first order.
++    // "heun" is two calls, second order, velocity at the step's end instead of
++    // its middle. "multistep" is one call, second order: Adams-Bashforth 2,
++    // reusing the previous step's velocity, the idea behind DPM++ 2M.
++    std::string solver;  // "midpoint"
++
+     // batching: number of songs generated from this prompt. Song i draws
+     // its tokens with lm_seed + i, consecutive seeds.
+     int lm_batch_size;  // 1
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 48786cf..f1335d2 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -902,6 +902,7 @@
+     if (Object.keys(abcSampling).length) body.abc_sampling = abcSampling;
+     if (Object.keys(semanticSampling).length) body.semantic_sampling = semanticSampling;
+     body.vae = selectedVae();
++    if ($("odeSolver").value !== "midpoint") body.solver = $("odeSolver").value;  // HERESY 1004
+     if (STATE.sliderChoice.length) {
+       body.sliders = STATE.sliderChoice.map(function (c) { return { id: c.id, strength: c.strength }; });
+     }
+@@ -1107,6 +1108,7 @@
+     });
+     YueLoras.set(Array.isArray(req.loras) ? req.loras : []);
+     if (typeof req.steps === "number") $("odeSteps").value = req.steps;
++    $("odeSolver").value = ["midpoint", "multistep", "heun", "euler"].indexOf(req.solver) >= 0 ? req.solver : "midpoint";
+     if (typeof req.duration === "number") $("maxLength").value = round(req.duration, 3);
+     $("variations").value = typeof req.synth_batch_size === "number" ? Math.max(1, Math.min(9, req.synth_batch_size)) : 1;
+     if (FORMAT_LABELS[req.output_format]) $("outFormat").value = req.output_format;
+@@ -4549,6 +4551,7 @@
+       lm_seed: $("lmSeed").value.trim(), seed: $("soundSeed").value.trim(), cot: currentCot(),
+       cfg_scale: $("cfg").dataset.touched && $("cfg").value.trim() !== "" ? parseFloat($("cfg").value) : -1,
+       steps: parseInt($("odeSteps").value, 10), duration: parseFloat($("maxLength").value),
++      solver: $("odeSolver").value,
+       synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
+       output_format: $("outFormat").value, mp3_bitrate: parseInt($("mp3Bitrate").value, 10),
+       peak_clip: parseInt($("peakClip").value, 10),
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 6d4c3d8..e7ccb2c 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -57,6 +57,15 @@
+     shapeStyle: "Sets Guidance (CFG) from 0.85 to 1.15. Higher follows the style and lyrics more strongly; " +
+       "any setting except the middle runs the music stage at half speed.",
+     odeSteps: ODE,
++    odeSolver: "How the sound stage walks from noise to audio (HERESY 1004). Measured on one song against a 160-step " +
++      "reference, error at the same cost of 64 network calls: Midpoint 32 steps 3.8e-3 (the release), Multistep 64 steps " +
++      "3.5e-3, Heun 32 steps 6.5e-3, Euler 64 steps 3.0e-2.\n" +
++      "Midpoint: two network calls a step, second order — the release, and a strong default.\n" +
++      "Multistep: one call a step, second order (Adams-Bashforth 2, the idea behind DPM++ 2M): the same accuracy per call, " +
++      "and any step count, not only doubled ones.\n" +
++      "Heun: two calls, second order; less accurate than Midpoint at 32–64 steps, catches up only at many steps.\n" +
++      "Euler: one call, first order — ten times rougher at the same cost; for quick drafts.\n" +
++      "Lower error means closer to what the model meant, not necessarily a sound you prefer: listen.",
+     maxLength: "A ceiling on the song's length in seconds (480 by default): the music stage stops at 25 tokens per second of this. " +
+       "The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).",
+     variations: "Renders the same music up to 9 times with different sound seeds (seed, seed + 1, …) in one pass. " +
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f33c88c..239b3da 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -476,6 +476,13 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <div class="out-grid">
+             <label class="field"><span class="label">ODE steps <em>sound solver</em></span>
+               <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
++            <label class="field"><span class="label">Solver <em>sound ODE</em></span>
++              <select id="odeSolver">
++                <option value="midpoint">Midpoint · release</option>
++                <option value="multistep">Multistep · 1 call/step</option>
++                <option value="heun">Heun</option>
++                <option value="euler">Euler · draft</option>
++              </select></label>
+             <label class="field"><span class="label">Max length <em>seconds</em></span>
+               <input type="number" id="maxLength" step="10" /></label>
+             <label class="field"><span class="label">Sound variations <em>1–9</em></span>
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 99868a5..717d60a 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1293,6 +1293,12 @@ static bool validate(const httplib::Request & req, httplib::Response & res, Yue2
+         res.set_content(json_string("error", "unknown output format"), "application/json");
+         return false;
+     }
++    // HERESY 1004: only the solvers nar_solve knows; anything else would silently run midpoint
++    if (r->solver != "midpoint" && r->solver != "euler" && r->solver != "heun" && r->solver != "multistep") {
++        res.status = 400;
++        res.set_content(json_string("error", "solver must be midpoint, euler, heun or multistep"), "application/json");
++        return false;
++    }
+     // HERESY 1003: a ceiling of 160. Before it only "at least 1" was checked, so a slip
+     // of the finger (1600) meant an hour of flow matching for nothing.
+     if (r->steps < 1 || r->steps > 160) {
+-- 
+2.43.0
+

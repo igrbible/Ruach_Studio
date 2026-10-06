@@ -1,0 +1,74 @@
+From 6696d6d7b4fda21d4c66839bedf062359b16863f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 01:41:58 -0600
+Subject: [PATCH 1072/1177] Auto owns the context and the VAE tiles only, and
+ is shown again once the GPU is known
+
+HERESY 1071b. Auto named the backbone too: a Q8_0 picked in the top bar made it Manual at every F5;
+and at F5 the settings were painted before the hardware answered, so Auto could not be recognised.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 17 ++++++++---------
+ 1 file changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 51c61d0..e26b9cf 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2430,8 +2430,9 @@
+   // GPU memory between songs, the context (key/value cache) size and the VAE
+   // tile size. Presets only fill the form; Save applies.
+ 
+-  // HERESY 1071 (Viktor 02.10.2026): no size presets, Auto and Manual only. Auto fits the backbone, the
+-  // context and the VAE tiles to the GPU the server found; "Keep models loaded" stays your own choice.
++  // HERESY 1071 (Viktor 02.10.2026): no size presets, Auto and Manual only. Auto fits the context and the
++  // VAE tiles to the GPU the server found; the backbone (the top bar) and "Keep models loaded" stay yours.
++  // 1071b: Auto named the backbone too, so a Q8_0 picked in the top bar made it Manual at every F5.
+   function autoKnobs(gib) {
+     if (gib >= 23) return { model: "BF16", max_seq: 0, vae_core: 1024 };
+     if (gib >= 15.4) return { model: "BF16", max_seq: 0, vae_core: 512 };
+@@ -2453,13 +2454,12 @@
+   function shownPreset(settings) {
+     var a = autoKnobs(gpuGib());
+     if (recall(PRESET_KEY) !== "auto" || !a) return "manual";
+-    var same = a.max_seq === settings.max_seq && a.vae_core === settings.vae_core && (!modelThere(a.model) || a.model === settings.model);
+-    return same ? "auto" : "manual";
++    return a.max_seq === settings.max_seq && a.vae_core === settings.vae_core ? "auto" : "manual";
+   }
+   // Auto says what it found and what it sets.
+   function paintPresetSizes() {
+     var gib = gpuGib(), a = autoKnobs(gib), o = $("memPreset").querySelector('option[value="auto"]');
+-    if (o) o.textContent = "Auto" + (gib ? " (" + gib.toFixed(1) + " GB found" + (a ? ": " + (modelThere(a.model) ? a.model + ", " : "") +
++    if (o) o.textContent = "Auto" + (gib ? " (" + gib.toFixed(1) + " GB found" + (a ? ": " +
+       (a.max_seq ? "context " + a.max_seq.toLocaleString() : "whole context") + ", VAE tiles " + a.vae_core : ": too small for YuE2") + ")" : " (detect)");
+   }
+ 
+@@ -2559,13 +2559,11 @@
+     if (this.value !== "auto") return paintComputeHint();          // Manual: the knobs stay as they are, yours
+     var gib = gpuGib(), a = autoKnobs(gib);
+     if (!a) { this.value = "manual"; return toast(gib ? gib.toFixed(1) + " GB is too small for YuE2: set the knobs by hand" : "No GPU detected: set the knobs by hand", "bad"); }
+-    if (modelThere(a.model)) $("setModel").value = a.model;
+     $("setMaxSeq").value = a.max_seq;
+     $("setVaeCore").value = a.vae_core;
+     paintComputeHint();
+-    toast("Auto for " + gib.toFixed(1) + " GB: " + (modelThere(a.model) ? a.model + ", " : "") +
+-          (a.max_seq ? "context " + a.max_seq.toLocaleString() : "whole context") + ", VAE tiles " + a.vae_core +
+-          "; keeping models loaded stays your choice. Press Save to apply.");
++    toast("Auto for " + gib.toFixed(1) + " GB: " + (a.max_seq ? "context " + a.max_seq.toLocaleString() : "whole context") +
++          ", VAE tiles " + a.vae_core + "; the backbone and keeping models loaded stay your choice. Press Save to apply.");
+   });
+ 
+   $("resetPageSettings").addEventListener("click", function () {   // HERESY 1027
+@@ -2598,6 +2596,7 @@
+     return api("/hardware").then(function (hw) {
+       STATE.hardware = hw || {};
+       paintPresetSizes();   // HERESY 1027
++      if (STATE.settings && !STATE.settingsDirty) $("memPreset").value = shownPreset(STATE.settings);   // 1071b: Auto needs the GPU's size
+       STATE.noHardware = false;
+       paintHardware();
+     }).catch(function (error) {
+-- 
+2.43.0
+

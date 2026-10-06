@@ -1,0 +1,10 @@
+{
+	"title": "Afro-Jazz",
+	"style": "Funk Soul, Funk Jazz Fusion - Virtuoso, Fusion, Instrumental, Sofisticado , Piano Acustic , emotion, female",
+	"lyrics": "<SONG_PROMPT>\n<SONG_DETAILS>\n[GENRES: Funk Soul, Funk Jazz Fusion]\n[STYLE: Virtuoso, Fusion, Instrumental, Sofisticado]\n[MOOD: Intelectual, Groovy, Exploratório, Virtuoso]\n[TEMPO: 90–140 BPM]\n[INSTRUMENTATION: Voz Principal, Baixo Elétrico, Bateria Acústica, Rhodes, Piano Acústico, Saxofone, Trompete, Trombone, Guitarra (clean/drive)]\n[ARRANGEMENT: Harmonias jazzísticas, grooves funkeiros, improvisação estruturada]\n[PRODUCTION: Clareza instrumental, espacialização jazz, compressão musical]\n[STRUCTURE: Seções de solo, desenvolvimentos harmônicos, grooves complexos]\n[DYNAMICS: Variações dinâmicas, solos expressivos, interação musical]\n[EMOTIONS: Sofisticação groove, exploração musical, virtuosismo]\n</SONG_DETAILS>\n\n<TECHNICAL_TREATMENT>\n[Jazz recording techniques, instrument clarity, musical dynamics]\n</TECHNICAL_TREATMENT>\n\nTitle: Acommatique (Swahili – Refrains 4)\n\n[Refrain 1]\nAcommatique! Sitaanguka\nMsaada wangu watoka juu\nNainua macho milimani\nMungu ndiye mlinzi wangu\n\n[Refrain 2]\nAcommatique! Nina amani\nJua halitaniumiza, wala mwezi pia\nAnalinda maisha yangu yote\nUsiku na mchana yuko nami\n\n[Refrain 3]\nAcommatique! Sina hofu\nYeye anilindaye halali kamwe\nAnalinda njia yangu yote\nKuanzia leo hata milele\n\n[Refrain 4]\nAcommatique! Niko salama\nChini ya mabawa yake nina pumziko\nMsaada wangu watoka kwa Mungu\nMlinzi wa mbingu na dunia\n[Fadeout]\n[Ends]",
+	"cot": "full",
+	"source": {
+		"url": "https://map-yue2.github.io/",
+		"case_id": "0512748a57cf50a39002dccd"
+	}
+}

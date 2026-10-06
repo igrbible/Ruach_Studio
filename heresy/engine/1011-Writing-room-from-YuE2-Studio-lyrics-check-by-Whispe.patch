@@ -1,0 +1,623 @@
+From f60f950eea82fb957bf0deb62da59686d6513356 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 15:39:43 -0600
+Subject: [PATCH 1011/1177] Writing room from YuE2 Studio, lyrics check by
+ Whisper, bracket rule fixed
+
+HERESY 1011.
+- Writing room (heresy-assist.js): YuE2 Studio's songwriting assistant
+  (Apache-2.0), its songwriter.md verbatim and its assist(): five tasks
+  (song, lyrics, style, review, adapt), the current title, style, lyrics and
+  score as context, the user's standing writing preferences, a JSON draft with
+  notes that are never sung, apply all / lyrics / style and one undo. One rule
+  added and measured: style against the score (key, meter, tempo must agree;
+  a contradicting style lost 0.14 of lyric recognition over two seeds).
+  chatComplete takes an optional temperature; null lets the server choose.
+- Lyrics check in the take card (heresy-gloss.js): Whisper large-v3 on Forge
+  through /lab (loaded per take, VRAM freed after), matched to the lyrics per
+  minute: coloured minute bars, furthest line reached, returns back, every
+  heard segment with its closest lyric line; a click plays from there. A
+  Whisper loop on one text is flagged as a void measurement.
+- The bracket rule of 1009 was wrong: 29 of the 110 official examples have
+  lines in brackets, instrument cues like (saxophone) among them. Only the
+  shapes none has are flagged now: a "Label:", an arrow or a p/f mark inside.
+- Folded Prompt and Lyrics headings no longer wrap under their peek.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  48 +++++++++++-
+ tools/console/app.js           | 135 +++++++++++++++++++++++++++++----
+ tools/console/help.js          |  14 +++-
+ tools/console/heresy-assist.js |  89 ++++++++++++++++++++++
+ tools/console/heresy-gloss.js  | 130 +++++++++++++++++++++++++++++++
+ tools/console/index.html       |  57 ++++++++++++++
+ tools/public/index.html.gz     | Bin 235161 -> 245426 bytes
+ 7 files changed, 453 insertions(+), 20 deletions(-)
+ create mode 100644 tools/console/heresy-assist.js
+ create mode 100644 tools/console/heresy-gloss.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index cd8437b..c37a7d8 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1872,12 +1872,56 @@ html.hz-open { overflow: hidden; }
+ .skip-btn:hover, .skip-btn:focus-visible { color: var(--amber); }
+ .autoplay-btn { flex: none; opacity: .7; }
+ .autoplay-btn.is-on { opacity: 1; color: var(--amber); border-color: var(--amber); }
+-[data-card-fold] .panel-head h3 { cursor: pointer; user-select: none; }
++[data-card-fold] .panel-head h3 { cursor: pointer; user-select: none; white-space: nowrap; flex: none; }   /* the peek never pushes it onto two lines */
+ [data-card-fold] .panel-head h3 .fold-chev { display: inline-block; margin-right: 8px; vertical-align: 2px; transform: rotate(90deg); }
+ [data-card-fold].is-folded .panel-head h3 .fold-chev { transform: none; }
+ [data-card-fold].is-folded > :not(.panel-head) { display: none; }
+ [data-card-fold] .fold-peek { display: none; }
+ [data-card-fold].is-folded .fold-peek {
+-  display: inline; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
++  display: inline-block; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+   font-size: 12px; color: var(--dim);
+ }
++
++/* ------------------------------------------------ HERESY 1010: the writing room */
++.assist { gap: 12px; }
++.assist-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
++.assist-chips .chip { padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
++.assist-chips .chip:hover, .assist-chips .chip:focus-visible { border-color: var(--amber); color: var(--ink); }
++.assist-num { width: 150px; flex: none; }
++.assist-prefs > summary, .assist-system > summary, .assist-notes > summary, .assist-raw > summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
++.assist-prefs { display: flex; flex-direction: column; gap: 8px; }
++.assist-prefs textarea { margin-top: 8px; }
++.assist-system pre, .assist-raw pre { max-height: 320px; overflow: auto; white-space: pre-wrap; font-size: 11.5px; margin: 6px 0 0; }
++.assist-go { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
++.assist-go .row-hint { margin: 0; }
++.assist-draft { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--amber); border-radius: var(--r-md); padding: 12px;
++  background: color-mix(in srgb, var(--amber) 4%, transparent); }
++.assist-draft-head { display: flex; align-items: baseline; gap: 10px; }
++.assist-draft-head .dim { font-size: 11.5px; }
++.assist-notes p { white-space: pre-wrap; font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
++.assist-apply { display: flex; gap: 8px; flex-wrap: wrap; }
++
++/* ------------------------------------------------ HERESY 1011: lyrics check */
++.gloss-body { gap: 10px; }
++.gloss-bar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
++.gloss-bar-row .row-hint { margin: 0; }
++#glossState.is-bad { color: var(--bad-line, #c47a77); }
++.gloss-loop { margin: 0; color: var(--bad-line, #c47a77); font-size: 12.5px; }
++.gloss-bars { display: flex; gap: 4px; align-items: flex-end; height: 92px; }
++.gloss-bar { flex: 1; position: relative; height: 100%; background: var(--sunk); border-radius: 3px; cursor: pointer; min-width: 26px; }
++.gloss-fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 3px; background: var(--dim); }
++.gloss-bar.is-ok .gloss-fill { background: #3fae6a; }
++.gloss-bar.is-weak .gloss-fill { background: #d9a33a; }
++.gloss-bar.is-bad .gloss-fill { background: #c9543e; }
++.gloss-min, .gloss-val { position: absolute; left: 0; right: 0; text-align: center; font-size: 10.5px; color: var(--ink); text-shadow: 0 0 3px var(--panel); }
++.gloss-min { bottom: 2px; }
++.gloss-val { top: 2px; }
++.gloss-sum { margin: 0; font-size: 12px; color: var(--muted); }
++.gloss-segs > summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
++.gloss-list { list-style: none; margin: 6px 0 0; padding: 0; max-height: 420px; overflow: auto; font-size: 12.5px; }
++.gloss-list li { display: grid; grid-template-columns: 44px 38px 1fr 1fr; gap: 8px; padding: 3px 4px; border-bottom: 1px solid var(--line-soft); align-items: baseline; }
++.gloss-list li.is-bad { background: color-mix(in srgb, #c9543e 10%, transparent); }
++.gloss-list li.is-weak { background: color-mix(in srgb, #d9a33a 8%, transparent); }
++.gloss-time { background: none; border: 0; padding: 0; color: var(--amber); cursor: pointer; font-size: 12px; text-align: left; }
++.gloss-score { color: var(--dim); font-size: 11.5px; }
++.gloss-lyric { color: var(--dim); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 05891f7..aa922c7 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2696,6 +2696,7 @@
+ 
+     paintTakeMeta();
+     if (window.HeresySpectrum) window.HeresySpectrum.setTake(spectrumTake(take));   // HERESY 1007
++    if (window.HeresyGloss) window.HeresyGloss.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1011
+     setTimeout(paintCardFolds, 0);   // HERESY 1009: the peeks read the texts filled below
+     $("metaStyle").textContent = take.style;
+     var parent = take.parent ? findTake(take.parent) : null;
+@@ -4147,8 +4148,12 @@
+   // Structured output first, then plain chat, then the system turn folded into
+   // the user turn for templates that reject one. Only a refused request is
+   // worth another shape.
+-  function chatComplete(messages, model, maxTokens, schema) {
+-    var payload = { model: model, messages: messages, temperature: 0.9, top_p: 0.95, max_tokens: maxTokens, stream: false };
++  // HERESY 1010: temperature is optional — left out it stays 0.9 (the idea writer), null lets
++  // the server choose, as Studio's "Automatic"; top_p goes with the page's own temperature only.
++  function chatComplete(messages, model, maxTokens, schema, temperature) {
++    var payload = { model: model, messages: messages, max_tokens: maxTokens, stream: false };
++    if (temperature === undefined) { payload.temperature = 0.9; payload.top_p = 0.95; }
++    else if (temperature !== null) payload.temperature = temperature;
+     var attempts = [];
+     if (schema) attempts.push(Object.assign({}, payload, { response_format: { type: "json_schema", json_schema: { name: "brief", schema: schema } } }));
+     attempts.push(payload);
+@@ -4747,6 +4752,106 @@
+     });
+   }
+ 
++  /* ---------------------------------------- HERESY 1010: the writing room */
++  var A = window.HeresyAssist, assistBefore = null;
++  if (A) {
++    A.TASKS.forEach(function (t) { var o = document.createElement("option"); o.value = t[0]; o.textContent = t[1]; $("assistTask").appendChild(o); });
++    A.CHIPS.forEach(function (c) {
++      var b = document.createElement("button");
++      b.type = "button"; b.className = "chip"; b.textContent = c[0]; b.dataset.tip = c[1];
++      b.addEventListener("click", function () { $("assistBrief").value = c[1]; if (c[0] === "Style for YuE2") $("assistTask").value = "style"; saveAssist(); });
++      $("assistChips").appendChild(b);
++    });
++    $("assistSystem").textContent = A.system("");
++    var ASSIST_KEY = "yue2.assist";
++    var saved = {};
++    try { saved = JSON.parse(recall(ASSIST_KEY) || "{}") || {}; } catch (error) { saved = {}; }
++    $("assistBrief").value = saved.brief || "";
++    $("assistPrefs").value = saved.prefs || "";
++    $("assistTask").value = saved.task || "song";
++    if (saved.temp !== undefined) $("assistTemp").value = saved.temp;
++    if (saved.max) $("assistMax").value = saved.max;
++    var saveAssist = function () {
++      store(ASSIST_KEY, JSON.stringify({ brief: $("assistBrief").value, prefs: $("assistPrefs").value, task: $("assistTask").value,
++                                         temp: $("assistTemp").value, max: $("assistMax").value }));
++      $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
++    };
++    ["assistBrief", "assistPrefs", "assistTask", "assistTemp", "assistMax"].forEach(function (id) { $(id).addEventListener("input", saveAssist); $(id).addEventListener("change", saveAssist); });
++    saveAssist();
++
++    var paintDraftSize = function () {
++      var n = $("draftStyle").value.trim().length;
++      $("draftStyleSize").textContent = n ? n + " characters" : "";
++    };
++    $("draftStyle").addEventListener("input", paintDraftSize);
++
++    $("assistBtn").addEventListener("click", function () {
++      var brief = $("assistBrief").value.trim(), button = this, started = Date.now(), model = null;
++      if (!brief) { $("assistBrief").focus(); return toast("Describe the song or the changes you want", "bad"); }
++      var task = $("assistTask").value, temp = $("assistTemp").value.trim();
++      var max = Math.max(256, parseInt($("assistMax").value, 10) || 8192);
++      button.disabled = true;
++      $("assistLabel").textContent = "Writing…";
++      var ticker = setInterval(function () { $("assistStatus").textContent = "writing with " + (model || "the chat server") + "… " + Math.round((Date.now() - started) / 1000) + "s"; }, 1000);
++      var song = { title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value.trim() || STATE.abcRendered || "" };
++      refreshChat().then(function (status) {
++        if (!status.configured) throw new Error("Set the chat server address under Engine first");
++        if (!status.available) throw new Error(status.error || "The chat server is not answering at " + status.base);
++        if (!status.use) throw new Error("No model is loaded in the chat server");
++        model = status.use;
++        return chatComplete([{ role: "system", content: A.system($("assistPrefs").value) }, { role: "user", content: A.user(task, brief, song) }],
++                            model, max, null, temp === "" ? null : parseFloat(temp));
++      }).then(function (response) {
++        var choice = (response.choices || [])[0] || {};
++        var text = stripThinking(((choice.message || {}).content) || "");
++        var draft = A.parse(text), cut = choice.finish_reason === "length";
++        $("assistRawText").textContent = text;
++        $("assistRaw").classList.remove("is-hidden");
++        if (draft) {
++          $("draftTitle").value = draft.title;
++          $("draftStyle").value = draft.style;
++          $("draftLyrics").value = draft.lyrics;
++          $("draftNotes").textContent = draft.notes;
++          $("assistModel").textContent = model + " · " + Math.round((Date.now() - started) / 100) / 10 + "s";
++          paintDraftSize();
++          $("assistDraft").classList.remove("is-hidden");
++        } else {
++          $("assistDraft").classList.add("is-hidden");
++          $("assistRaw").open = true;
++        }
++        $("assistStatus").textContent = cut ? "The answer reached the output limit: review it carefully, or raise Max output tokens."
++          : draft ? "Your draft is ready. Review and edit it, then apply what you like."
++          : "The model did not return a complete draft; its raw answer is below.";
++      }).catch(function (error) {
++        $("assistStatus").textContent = "";
++        toast(error.message || String(error), "bad");
++      }).then(function () { clearInterval(ticker); button.disabled = false; $("assistLabel").textContent = "Create a draft"; });
++    });
++
++    // Apply into the form; one step back is kept.
++    var apply = function (what) {
++      assistBefore = { title: $("title").value, style: $("style").value, lyrics: $("lyrics").value };
++      if (what === "all" && $("draftTitle").value.trim()) $("title").value = $("draftTitle").value.trim();
++      if (what === "all" || what === "style") $("style").value = $("draftStyle").value.trim();
++      if (what === "all" || what === "lyrics") $("lyrics").value = $("draftLyrics").value.replace(/\s+$/, "");
++      ["title", "style", "lyrics"].forEach(function (id) { $(id).dispatchEvent(new Event("input", { bubbles: true })); });
++      growLyrics();
++      $("undoApply").classList.remove("is-hidden");
++      toast(what === "all" ? "Draft applied" : what === "style" ? "Style applied" : "Lyrics applied");
++    };
++    $("applyDraft").addEventListener("click", function () { apply("all"); });
++    $("applyStyle").addEventListener("click", function () { apply("style"); });
++    $("applyLyrics").addEventListener("click", function () { apply("lyrics"); });
++    $("undoApply").addEventListener("click", function () {
++      if (!assistBefore) return;
++      ["title", "style", "lyrics"].forEach(function (id) { $(id).value = assistBefore[id]; $(id).dispatchEvent(new Event("input", { bubbles: true })); });
++      growLyrics();
++      assistBefore = null;
++      this.classList.add("is-hidden");
++      toast("Back to what you had");
++    });
++  }
++
+   /* ------------------------------------ HERESY 1009: folding prompt and lyrics */
+   // The take card's Prompt and Lyrics start folded: a click on the heading opens
+   // them, and the choice is kept per browser. Folded, the heading shows a peek.
+@@ -4801,6 +4906,19 @@
+     return { name: take.name, url: takeAudioUrl(take), label: takeLabel(take),
+              flac: take.session ? "" : "/library/flac?name=" + encodeURIComponent(take.name) };
+   }
++  // a click on a picture or a time plays the shown take from there
++  function seekTake(shown, seconds) {
++    var take = findTake(shown.name);
++    if (!take) return;
++    var go = function () {
++      try { audio.currentTime = seconds; } catch (error) { /* not seekable yet */ }
++      audio.play().catch(function () {});
++    };
++    if (STATE.playerTake && STATE.playerTake.name === take.name && audio.getAttribute("src")) { go(); return; }
++    loadPlayer(take, false);
++    audio.addEventListener("loadedmetadata", go, { once: true });
++  }
++  if (window.HeresyGloss) window.HeresyGloss.init({ seek: seekTake });   // HERESY 1011
+   if (window.HeresySpectrum) {
+     window.HeresySpectrum.init({
+       others: function (shown) {
+@@ -4815,18 +4933,7 @@
+       time: function (shown) {
+         return STATE.playerTake && STATE.playerTake.name === shown.name && audio.getAttribute("src") ? audio.currentTime : null;
+       },
+-      // a click on the spectrogram plays this take from there
+-      seek: function (shown, seconds) {
+-        var take = findTake(shown.name);
+-        if (!take) return;
+-        var go = function () {
+-          try { audio.currentTime = seconds; } catch (error) { /* not seekable yet */ }
+-          audio.play().catch(function () {});
+-        };
+-        if (STATE.playerTake && STATE.playerTake.name === take.name && audio.getAttribute("src")) { go(); return; }
+-        loadPlayer(take, false);
+-        audio.addEventListener("loadedmetadata", go, { once: true });
+-      }
++      seek: seekTake
+     });
+   }
+ 
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 82140bd..a150f30 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -37,8 +37,8 @@
+     lyrics: "The words, with section tags such as [Verse], [Pre-Chorus], [Chorus], [Bridge], [Outro] on their own lines. " +
+       "The sections set the song's form, and together with the words its length: more sections, a longer song. " +
+       "Leave a blank line between sections. Lyrics count against the same budget as the style (see the counter under the style box).\n" +
+-      "⚠ Section tags and the sung words only. The official YuE2 skill: \"Keep implementation notes out of lyrics.\" " +
+-      "A note like (Music: swells, f) or (Emotional rise) can be sung; put the sound in the style and the dynamics in the score.",
++      "Lines in (brackets) are part of the training form: 29 of the 110 official examples have them, as instrument cues " +
++      "(saxophone), (brass), (male), backing echoes (I'm so good) or section names. Their notes hold no \"Label:\", arrows or p/f marks.",
+     modes: "Full plan: the model first writes a score (melody and chords) and the song follows it. Best for new songs; the score can be edited.\n" +
+       "Melody only: the score has the melody but no chords, so the accompaniment is free. Recommended for covers.\n" +
+       "Direct: no score; the music is written straight from style and lyrics. Some add-ons (the sliders, some LoRAs) were trained this way.\n" +
+@@ -331,8 +331,14 @@
+     if (/(^|[\s(;,\u2192\u2013>-])(ppp|pp|p|mp|mf|f|ff|fff)(?=[\s),;.\u2192\u2013>]|$)/.test(style)) w.push("dynamics marks (never in the official styles)");
+     var labels = style.match(/\b[A-Z][A-Za-z ]{1,20}:/g) || [];
+     if (labels.length >= 3) w.push(labels.length + " \"Label:\" fields (5 of 110 official styles use any)");
+-    var notes = (lyrics || "").split(/\r?\n/).filter(function (l) { return /^\s*\([^)]*[A-Za-z]{3}[^)]*\)\s*$/.test(l); }).length;
+-    if (notes) w.push(notes + " note line" + (notes > 1 ? "s" : "") + " in (brackets) in the lyrics: the model may sing them");
++    // HERESY 1010: bracket lines are legal (29 of 110 official examples: (saxophone), (male), (I'm so good)).
++    // Only the shapes none of them has are flagged: a "Label:", an arrow or a p/f mark inside the brackets.
++    var odd = (lyrics || "").split(/\r?\n/).filter(function (l) {
++      var m = l.match(/^\s*\((.*)\)\s*$/);
++      return m && (/\b[A-Z][A-Za-z ]{1,20}:/.test(m[1]) || /[\u2192\u2190]|->/.test(m[1]) ||
++                   /(^|[\s(;,\u2013>-])(ppp|pp|p|mp|mf|f|ff|fff)(?=[\s),;.\u2013>]|$)/.test(m[1]));
++    }).length;
++    if (odd) w.push(odd + " bracket line" + (odd > 1 ? "s" : "") + " in the lyrics with a \"Label:\", an arrow or a p/f mark (none in the official examples)");
+     return w;
+   }
+ 
+diff --git a/tools/console/heresy-assist.js b/tools/console/heresy-assist.js
+new file mode 100644
+index 0000000..860ae8d
+--- /dev/null
++++ b/tools/console/heresy-assist.js
+@@ -0,0 +1,89 @@
++// HERESY 1010: the songwriting assistant of YuE2 Studio, brought into the Kit.
++//
++// Ported from Yue2_Studio (Apache License 2.0): prompts/songwriter.md verbatim and
++// llm.py assist(): five tasks (song, lyrics, style, review, adapt), the current song
++// (title, style, lyrics, ABC) sent as context, the user's standing writing preferences
++// appended to the instructions, and a JSON draft with notes that are never sung.
++// Viktor 30.09.2026: "по моему запросу Квен прошёл через оба промпта стиля и лирики,
++// взял всё за основу, выстроил арку на каждую секцию… Умоляю, забери к нам тот код."
++//
++// One addition, measured the same day (~/Temp/style_test): a style whose key, tempo
++// and meter contradict the score costs diction. Same score and lyrics, two seeds:
++// the contradicting style scored 0.60 on lyric recognition, the same style made to
++// agree with the score 0.74; the first minute 0.45 against 0.78.
++//
++// The page talks to the chat server it already uses (Engine → chat URL); the Studio's
++// cloud providers are not ported.
++(function () {
++  "use strict";
++
++  var SONGWRITER = "You are a skilled lyricist, melody-aware lyric editor, and music producer working inside YuE2 Studio.\nRespond to the user's brief, including their language, subject, point of view, genre, emotional arc,\nvocal direction, desired structure, audience, explicitness preferences and requested length.\nIf details are omitted, make coherent musical choices. Preserve any words the user says to keep.\n\nEXPLICITNESS\nWhen the user asks for explicit lyrics, curse words, swearing or profanity, include actual uncensored\nswear words in the sung lyrics. Mature themes or an angry mood alone do not satisfy that request.\nDo not hide requested words behind asterisks, bleeps, euphemisms or section tags. Place profanity\nwhere it serves the narrator's emotion and natural prosody rather than mechanically padding lines.\nRespect a clean-lyrics request when given. Follow any explicit word choices or minimum counts.\n\nOUTPUT CONTRACT\nReturn a single JSON object with string keys \"title\", \"lyrics\", \"style\", and \"notes\".\nNo Markdown fences, introductory prose, or text outside the JSON. Encode line breaks as JSON newlines.\nFor lyrics-only work, preserve the supplied style. For style-only work, preserve the supplied lyrics.\nFor review, provide a revised draft and concise specific findings in notes. Do not claim you listened\nto audio or verified melodic alignment. Notes are visible to the user but never sent as sung lyrics.\n\nYUE2 NATIVE FORMAT\nStyle is a concise musical description: language, primary genre, subgenre or era when helpful,\nvocal timbre and delivery, mood, 2–5 defining instruments, rhythmic feel, intended BPM, and arrangement.\nPrefer a coherent palette over a pile of conflicting genre terms. Describe perceptible sound.\nPut genre, instrument, production, vocal and tempo directions in style, not as sentences in lyrics.\nDo not add the native [Tags] or [Lyrics] wrappers; the engine adds those automatically.\nLyrics contain actual singable words, line breaks, and bracketed section markers on their own lines.\nUse [Verse] and [Chorus]; use [Intro], [Pre-Chorus], [Bridge], [Interlude], [Outro] where useful.\nRepeated verses may use the same [Verse] tag. Spell out each repeated chorus in full, never \"repeat x2\".\nThese tags are textual arrangement cues, not deterministic commands. Custom performance tags are\nexperimental: only include when explicitly requested and explain uncertainty in notes. Never promise\na fixed length for an instrumental tag. Never put editorial explanations or your critique in lyrics.\nNo invented request fields such as reference_audio, phonemes, duration, negative_prompt or singer_id.\nAn instrumental brief should use minimal section cues and an instrumental style with no sung words.\n\nWRITING PROCESS\n1. Find the central tension and a short, distinctive hook before drafting. Use the user's concrete\n   details as material rather than replacing them with generic love/heart/dream/night language.\n2. Choose a clear narrator and tense. Build a small story with a change, discovery or consequence.\n   The second verse must add a new event or perspective; it must not paraphrase the first.\n3. Verses show actions, objects and sensory details; the chorus delivers a direct, memorable emotional\n   payoff. Do not spend the chorus's signature phrase or image in the preceding verse.\n4. Give the hook a natural accent and an easy-to-remember contour in the wording. Place the title\n   naturally in the chorus when suitable. Repeated choruses should remain recognizable.\n5. Write for the mouth and breath. Speak every line mentally. Natural word stresses should fall on\n   strong beats; don't twist grammar or pronunciation to fit a rhyme. Keep comparable lines similar\n   in syllable count and stress pattern. Allow space for held vowels and breaths at slower tempos.\n6. Match density to genre. Pop/folk can begin around 6–10 syllables per line; rock can be broader;\n   rap may use dense internal and multisyllabic rhyme. These are starting points, not hard limits.\n   R&B needs room for runs. Dance hooks can be sparse. User intent outranks a generic song template.\n7. Use conversational near rhyme for pop, an ABCB or ABAB feel where it serves a narrative ballad,\n   and internal/multisyllabic rhyme for rap. Do not force every genre into couplets. Never rhyme a\n   word with itself by accident. Keep deliberate refrain repetition distinct from lazy end rhymes.\n8. Prefer short, purposeful sections. As a starting structure: 4–6 lines in verses and chorus,\n   2–4 in pre-chorus/bridge, plus an ending. Add story-bearing sections rather than bloating verses.\n   Respect requested short excerpts. Do not assume Suno word counts predict YuE2 audio duration.\n9. Replace stock metaphors, filler, inverted syntax, purple prose and abstract emotion lists with\n   an image or action that belongs to this narrator. Avoid invented contractions and awkward acronyms.\n   Keep the user's language and idiom natural. Do not invent facts or quotations about real events.\n10. Make the ending intentional: changed hook context, a resolution, or a meaningful open question.\n\nCOVER / MELODY ADAPTATION\nWhen adapting supplied lyrics to a cover, preserve the requested story and hook while balancing\nsyllables, natural stress, phrase lengths, vowels on likely held notes and breath points. If source\nlyrics or score are supplied, use them as a guide. If only a style/brief is supplied, do not pretend\nto know the source melody. Do not regenerate or modify ABC in this response. The editable score is\na separate condition. A symbolic melody cover does not clone the original singer or waveform.\n\nFINAL QUALITY PASS (perform silently, then summarize useful findings in notes)\nCheck: user constraints; specific hook; consistent POV/tense; Verse 2 development; section contrast;\nsingability and syllable balance; natural grammar; intentional rhyme; no accidental self-rhymes;\nno chorus-hook leakage into preceding section; pacing vs tempo; complete chorus repeats; accurate\nsection tags; style/lyrics separation; intentional ending; no unsupported guarantees.\nIf pronunciation is ambiguous, mention the specific word in notes without silently damaging readable\nlyrics with phonetic substitutions. For cover work, report any assumed phrasing that needs listening.\nReturn polished original work, with concise notes about choices and remaining musical checks.\n";
++
++  var HERESY_ADDENDUM = [
++    "",
++    "STYLE AGAINST THE SCORE",
++    "When current_song.abc holds a score, its header fixes the key (K:), the meter (M:) and the",
++    "tempo (Q:, quarter notes per minute). A style that names a key, meter or tempo must agree",
++    "with them, or leave them out; never name a different one. When the draft keeps the score,",
++    "write the tempo exactly as the score has it. List every disagreement you found in the",
++    "supplied style in notes, naming both values. Measured on this engine: a style contradicting",
++    "the score costs clear diction across the song, most of all in the first minute."
++  ].join("\n");
++
++  var TASKS = [
++    ["song", "Lyrics + musical style"],
++    ["lyrics", "Lyrics only"],
++    ["style", "Musical style only"],
++    ["review", "Review & refine lyrics"],
++    ["adapt", "Adapt lyrics for a cover"]
++  ];
++
++  var CHIPS = [
++    ["Find the hook", "Give this song a stronger, more memorable chorus while keeping its story."],
++    ["Make it personal", "Make the lyrics more personal and specific, with natural conversational phrasing."],
++    ["Polish a draft", "Review the lyrics for singability, natural stress, rhyme, and story development. Revise weak lines."],
++    ["Style for YuE2", "Rewrite the style for YuE2: keep every audible detail, drop what it cannot hear, and make key, meter and tempo agree with the score."]
++  ];
++
++  function abcHeader(abc) {
++    var out = {};
++    String(abc || "").split(/\r?\n/).some(function (line) {
++      var m = line.match(/^([KMQL]):\s*(.*)$/);
++      if (m && !out[m[1]]) out[m[1]] = m[2].trim();
++      return /^K:/.test(line);
++    });
++    return out;
++  }
++
++  function system(preferences) {
++    var text = SONGWRITER.replace(/\s+$/, "") + "\n" + HERESY_ADDENDUM;
++    var own = String(preferences || "").trim();
++    return own ? text + "\n\nUSER WRITING PREFERENCES\n" + own : text;
++  }
++
++  // The same user turn as Studio's assist(): a JSON object with the task, the brief and
++  // the current song. The score's header travels beside it so the key is not missed.
++  function user(task, brief, song) {
++    var current = { title: song.title || "", style: song.style || "", lyrics: song.lyrics || "", abc: song.abc || "" };
++    var payload = { task: task, brief: brief, current_song: current };
++    var h = abcHeader(current.abc);
++    if (h.K || h.M || h.Q) payload.score_header = h;
++    return JSON.stringify(payload);
++  }
++
++  // Studio's reading of the answer: fences stripped, four string fields or no draft.
++  function parse(text) {
++    var raw = String(text || "").replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
++    var start = raw.indexOf("{"), end = raw.lastIndexOf("}");
++    if (start > 0 && end > start) raw = raw.slice(start, end + 1);   // a word or two around the object
++    try {
++      var draft = JSON.parse(raw);
++      var ok = draft && typeof draft === "object" && ["title", "style", "lyrics", "notes"].every(function (k) { return typeof draft[k] === "string"; });
++      return ok ? { title: draft.title, style: draft.style, lyrics: draft.lyrics, notes: draft.notes } : null;
++    } catch (error) {
++      return null;
++    }
++  }
++
++  window.HeresyAssist = { SONGWRITER: SONGWRITER, TASKS: TASKS, CHIPS: CHIPS, system: system, user: user, parse: parse, abcHeader: abcHeader };
++})();
+diff --git a/tools/console/heresy-gloss.js b/tools/console/heresy-gloss.js
+new file mode 100644
+index 0000000..895b700
+--- /dev/null
++++ b/tools/console/heresy-gloss.js
+@@ -0,0 +1,130 @@
++// HERESY 1011: the take's lyrics checked by ear — Whisper against the lyrics, per minute.
++//
++// The listening runs on Forge in heresy-lab (lab/lab.py, port 41870, reached through the
++// Kit server's /lab/ proxy): Whisper large-v3
++// loads for one take, transcribes it, and leaves VRAM (Viktor 30.09.2026: load only
++// when needed, unload at once). The measure is lab/gloss_core.py:
++//   per minute   mean match of what was heard to the closest lyric line (0..1)
++//   reached      the furthest lyric line a match of 0.5+ reached — not a count of lines sung
++//   backs        returns 8+ lines behind the furthest: the song going round
++//   loop         Whisper repeating one text: then the measurement itself is void
++(function () {
++  "use strict";
++
++  var state = { take: null, hooks: null, token: 0 };
++  function $(id) { return document.getElementById(id); }
++  // through the Kit server (/lab/… → 127.0.0.1:41870): one origin, one port to reach
++  function lab() { return "/lab"; }
++  function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
++  function grade(v) { return v === null || v === undefined ? "none" : v >= 0.6 ? "ok" : v >= 0.4 ? "weak" : "bad"; }
++
++  function say(text, bad) {
++    $("glossState").textContent = text || "";
++    $("glossState").classList.toggle("is-bad", !!bad);
++  }
++
++  function paint(r) {
++    var box = $("glossResult");
++    box.textContent = "";
++    if (r.loop) {
++      var warn = document.createElement("p");
++      warn.className = "gloss-loop";
++      warn.textContent = "⚠ Whisper went round on one text (“" + r.loop.text + "” ×" + r.loop.times +
++        "): this measurement says nothing about the song. Press Listen again.";
++      box.appendChild(warn);
++    }
++    var bars = document.createElement("div");
++    bars.className = "gloss-bars";
++    r.minutes.forEach(function (v, m) {
++      var cell = document.createElement("div");
++      cell.className = "gloss-bar is-" + grade(v);
++      cell.innerHTML = '<span class="gloss-fill"></span><span class="gloss-min mono"></span><span class="gloss-val mono"></span>';
++      cell.querySelector(".gloss-fill").style.height = Math.round((v || 0) * 100) + "%";
++      cell.querySelector(".gloss-min").textContent = m + ":00";
++      cell.querySelector(".gloss-val").textContent = v === null ? "—" : v.toFixed(2);
++      cell.dataset.tip = v === null ? "No words heard in this minute" : "Minute " + m + ": mean match " + v.toFixed(2) +
++        (v >= 0.6 ? " — clear" : v >= 0.4 ? " — blurred" : " — glossolalia");
++      cell.addEventListener("click", function () { if (state.hooks) state.hooks.seek(state.take, m * 60); });
++      bars.appendChild(cell);
++    });
++    box.appendChild(bars);
++
++    var sum = document.createElement("p");
++    sum.className = "gloss-sum";
++    sum.textContent = (r.reached ? "Reached lyric line " + r.reached.line + " of " + r.lines + " at " + clock(r.reached.at) : "No lyric line matched") +
++      " · returns back: " + r.backs + " · " + r.distinct + " distinct of " + r.total + " heard segments" +
++      " · " + r.model + ", GPU" + r.gpu + ", " + r.took + " s" + (r.at ? " · " + r.at : "");
++    box.appendChild(sum);
++
++    var list = document.createElement("ol");
++    list.className = "gloss-list";
++    r.segments.forEach(function (s) {
++      var li = document.createElement("li");
++      li.className = "is-" + grade(s.score);
++      li.innerHTML = '<button type="button" class="gloss-time mono"></button><span class="gloss-score mono"></span>' +
++        '<span class="gloss-heard"></span><span class="gloss-lyric"></span>';
++      li.querySelector(".gloss-time").textContent = clock(s.start);
++      li.querySelector(".gloss-time").addEventListener("click", function () { if (state.hooks) state.hooks.seek(state.take, s.start); });
++      li.querySelector(".gloss-score").textContent = s.score.toFixed(2);
++      li.querySelector(".gloss-heard").textContent = s.text;
++      li.querySelector(".gloss-lyric").textContent = s.line >= 0 ? (s.line + 1) + ". " + s.lyric : "";
++      list.appendChild(li);
++    });
++    var det = document.createElement("details");
++    det.className = "gloss-segs";
++    det.innerHTML = "<summary></summary>";
++    det.querySelector("summary").textContent = "What Whisper heard, " + r.segments.length + " segments: heard → closest lyric line";
++    det.appendChild(list);
++    box.appendChild(det);
++  }
++
++  function run(force) {
++    if (!state.take) return;
++    var token = ++state.token, started = Date.now(), take = state.take;
++    $("glossRun").disabled = true;
++    var ticker = setInterval(function () { say("Whisper is listening on Forge… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
++    say("asking heresy-lab…");
++    fetch(lab() + "/gloss?name=" + encodeURIComponent(take.name) + (force ? "&force=1" : "")).then(function (r) {
++      return r.json().then(function (body) { if (!r.ok) throw new Error(body.error || "heresy-lab answered " + r.status); return body; });
++    }).then(function (r) {
++      if (token !== state.token) return;
++      paint(r);
++      say("");
++      $("glossRun").textContent = "Listen again";
++    }).catch(function (error) {
++      if (token !== state.token) return;
++      say(error instanceof TypeError ? "heresy-lab is not answering at " + lab() + " — start it: ./lab/start-lab.sh"
++                                     : "Could not check: " + error.message, true);
++    }).then(function () { clearInterval(ticker); $("glossRun").disabled = false; });
++  }
++
++  function init(hooks) {
++    if (!$("glossPanel")) return;
++    state.hooks = hooks;
++    $("glossRun").addEventListener("click", function () { run($("glossRun").textContent === "Listen again"); });
++    // An already measured take shows at once when the drawer opens (the lab keeps a cache).
++    $("glossPanel").addEventListener("toggle", function () { if ($("glossPanel").open && !$("glossResult").childNodes.length) peek(); });
++  }
++
++  function peek() {
++    if (!state.take) return;
++    var token = state.token, name = state.take.name;
++    fetch(lab() + "/gloss?name=" + encodeURIComponent(name) + "&cached=1").then(function (r) { return r.ok ? r.json() : null; })
++      .then(function (r) { if (r && !r.error && token === state.token && state.take && state.take.name === name) { paint(r); $("glossRun").textContent = "Listen again"; } })
++      .catch(function () { /* nothing measured yet, or no lab: the button says the rest */ });
++  }
++
++  // take: { name, label }
++  function setTake(take) {
++    if (!$("glossPanel")) return;
++    if (state.take && take && state.take.name === take.name) return;
++    state.take = take;
++    state.token++;
++    $("glossResult").textContent = "";
++    $("glossRun").textContent = "Listen with Whisper";
++    say("");
++    if ($("glossPanel").open) peek();
++  }
++
++  window.HeresyGloss = { init: init, setTake: setTake };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 6380e62..98dea6b 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -284,6 +284,48 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       </div>
+     </details>
+ 
++    <!-- HERESY 1010: YuE2 Studio's songwriting assistant (heresy-assist.js), with the current song as context -->
++    <details class="drawer" id="assistDrawer">
++      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Writing room</span><span class="sum-say">The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.</span></span></summary>
++      <div class="drawer-body assist">
++        <label class="field">
++          <span class="label">What's the song about? <em>or what to change</em></span>
++          <textarea id="assistBrief" rows="4" placeholder="Build an arc for every section from the style and the lyrics; keep my words."></textarea>
++        </label>
++        <div class="assist-chips" id="assistChips"></div>
++        <div class="field-row wrap">
++          <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
++          <label class="field assist-num"><span class="label">Temperature <em>blank: the server's</em></span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
++          <label class="field assist-num"><span class="label">Max output tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="8192" /></label>
++        </div>
++        <details class="assist-prefs">
++          <summary>Your writing preferences <span class="dim" id="assistPrefsSize"></span></summary>
++          <textarea id="assistPrefs" rows="5" placeholder="Standing instructions added to every draft: language, phonetics, spelling, names, what to keep…"></textarea>
++          <p class="row-hint">Added to the built-in YuE2 songwriting instructions for every draft. Kept in this browser.</p>
++          <details class="assist-system"><summary>Read the complete songwriting instructions</summary><pre class="mono" id="assistSystem"></pre></details>
++        </details>
++        <div class="assist-go">
++          <button type="button" class="btn writer" id="assistBtn"><span aria-hidden="true">✦</span> <span id="assistLabel">Create a draft</span></button>
++          <span class="row-hint" id="assistStatus"></span>
++        </div>
++        <p class="row-hint">Your brief and the current song go to the chat server set under Engine.</p>
++        <section class="assist-draft is-hidden" id="assistDraft">
++          <div class="assist-draft-head"><strong>Your draft</strong><span class="dim mono" id="assistModel"></span></div>
++          <label class="field"><span class="label">Title</span><input type="text" id="draftTitle" /></label>
++          <label class="field"><span class="label">Style <em id="draftStyleSize"></em></span><textarea id="draftStyle" rows="4"></textarea></label>
++          <label class="field"><span class="label">Lyrics</span><textarea id="draftLyrics" rows="12" spellcheck="false"></textarea></label>
++          <details class="assist-notes" open><summary>Writing notes</summary><p id="draftNotes"></p></details>
++          <div class="assist-apply">
++            <button type="button" class="btn primary small" id="applyDraft">Apply draft</button>
++            <button type="button" class="btn ghost small" id="applyLyrics">Use lyrics</button>
++            <button type="button" class="btn ghost small" id="applyStyle">Use style</button>
++            <button type="button" class="btn ghost small is-hidden" id="undoApply">Undo</button>
++          </div>
++        </section>
++        <details class="assist-raw is-hidden" id="assistRaw"><summary>Raw response</summary><pre class="mono" id="assistRawText"></pre></details>
++      </div>
++    </details>
++
+     <form id="composeForm" class="compose" novalidate>
+       <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
+       <label class="field titlefield">
+@@ -622,6 +664,19 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+       </details>
+ 
++      <!-- HERESY 1011: Whisper against the lyrics, run on Forge by heresy-lab (heresy-gloss.js) -->
++      <details class="drawer" id="glossPanel">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
++        <div class="drawer-body gloss-body">
++          <div class="gloss-bar-row">
++            <button type="button" class="btn ghost small" id="glossRun">Listen with Whisper</button>
++            <span class="row-hint mono" id="glossState"></span>
++          </div>
++          <div id="glossResult"></div>
++          <p class="row-hint">Per minute: the mean match to the closest lyric line, 0.6 and up clear, below 0.4 glossolalia. "Reached" is the furthest line matched, not a count of lines sung. A click on a minute or a time plays from there.</p>
++        </div>
++      </details>
++
+       <!-- what the song actually is: prompt first, words under it -->
+       <div class="word-row">
+         <section class="panel" data-card-fold="prompt">
+@@ -848,6 +903,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="help.js"></script>
+ <script src="loras.js"></script>
+ <script src="vaes.js"></script>
++<script src="heresy-assist.js"></script>
++<script src="heresy-gloss.js"></script>
+ <script src="heresy-zoom.js"></script>
+ <script src="heresy-spectrum.js"></script>
+ <script src="themes.js"></script>
+-- 
+2.43.0
+

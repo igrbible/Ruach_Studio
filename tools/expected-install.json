@@ -1,0 +1,55 @@
+{
+ "kit": "v12",
+ "tree": "41c64b6e1af2b3c7f135dea18a00517907b6c16b",
+ "models": [
+  "SheetSage2-F32.gguf",
+  "YuE2-3B-BF16.gguf",
+  "YuE2-3B-Q5_K_M.gguf",
+  "YuE2-Vae-F32.gguf",
+  "YuE2-Vae-blend-F32.gguf",
+  "YuE2-Vae-legacy-F32.gguf"
+ ],
+ "sliders": 16,
+ "loras": 11,
+ "exact_sha256": {
+  "models/YuE2-3B-BF16.gguf": "0c8beac07fd2c13d95ca6f1c95b1e0d3ac816316c410ede88cb85826fe38c5c8",
+  "models/YuE2-Vae-F32.gguf": "93e49dfb1970e89ad64cacb17cf13b5d05f6bb30ef7ed3adae3050bcb728638a",
+  "models/YuE2-Vae-blend-F32.gguf": "157b07f1487e6c58d4f9cf7589a9c75be88af7ecd1b63ef5f96cb6987043bc4d",
+  "models/YuE2-Vae-legacy-F32.gguf": "b632c2e607e7f1d4c5369c8a943f7f6db55ab7dbf8c7ec35221d4d786d80afc8",
+  "sliders/acoustic-folk.gguf": "2d631c558eecba9826ed862f402d89ecd5f75d4ebb46d3076ac907f5cec78840",
+  "sliders/afrobeats.gguf": "d23acd922ee081793fb17b2abaa006fea7063963b0513e2d84c37d57ae6c2c59",
+  "sliders/country.gguf": "d8f05ca539755bf94e250c0e24065d10014b873273d8433b0c4d1442177281a5",
+  "sliders/disco-funk.gguf": "a82a124d46eed958919e6e70ed99d28e2a59d04253ac165ee73923b270e275fb",
+  "sliders/female.gguf": "7e85e3bbe6de48df9ced1c60ee8c080b45035d750ed0329d47ddf65e92bea3e7",
+  "sliders/hiphop.gguf": "15ad090a15e32aea1064cb5ea992e30c79eef5192b7bfa90e07d2d1a88aa5ae2",
+  "sliders/house.gguf": "d7e5d93bd700db440155639eb5024f55e54316bde55c08eeabb48db76820d319",
+  "sliders/indie-rock.gguf": "836d82e1883e0fa60f29e6a1af1522f1c65977a4a80ae8c168fd44cb7a5b7f6d",
+  "sliders/kpop.gguf": "cec833453a6fcd099dc2a4dc1f9d6cafae538eb0ca759657172075cfeeb26c2c",
+  "sliders/lofi.gguf": "58586891d6e0dc696fd6a71391bd84dba489a9326c6fdcaf355ff7b4ccb9e04d",
+  "sliders/male.gguf": "de7c55cc9d9b2f19c7e9e288217d76f042d231e13f3c2359681a7b930985bd6d",
+  "sliders/metal.gguf": "9b2dda3c667729fb2d81c5f36c477da38830fa67b4815918369d270548a7fe2a",
+  "sliders/pop-punk.gguf": "ba412ac7ae659e09366e3aa6ae61ef147b5860f86d2f29817ac2bfc1e2673a56",
+  "sliders/pop.gguf": "6b8cf9f10ac1553125b3c8e846a062b09d7c000b94f970eecefd134583bb5777",
+  "sliders/reggaeton.gguf": "092d95395fd50ef6575c811e9d6de041efdbffc2c6d2b24a3eddfc71c207a76b",
+  "sliders/rnb.gguf": "44e32fb965dfbeefae3220a080a43401ff0469a51da7a3233e71019042236930"
+ },
+ "quantized_structure": {
+  "models/SheetSage2-F32.gguf": {
+   "tensors": 1039,
+   "types": {
+    "F32": 1039
+   },
+   "digest": "aade1d2ba9409e6c43d107e414374b75bf52b2625d295150b0a30218cb79d375"
+  },
+  "models/YuE2-3B-Q5_K_M.gguf": {
+   "tensors": 627,
+   "types": {
+    "BF16": 1,
+    "F32": 229,
+    "Q5_K": 339,
+    "Q6_K": 58
+   },
+   "digest": "87cf893681741ee3a014c61e3b80567c7e4e2b5fc6e4531db93dd7eb67eb304c"
+  }
+ }
+}

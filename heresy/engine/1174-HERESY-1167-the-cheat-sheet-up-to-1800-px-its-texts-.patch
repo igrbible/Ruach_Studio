@@ -1,0 +1,95 @@
+From c0d83a46c2a8641907949899394a1b68287e0ee3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 12:57:14 -0600
+Subject: [PATCH 1174/1177] HERESY 1167: the cheat-sheet up to 1800 px, its
+ texts 2 pt larger, its head in parts: the warning in a line, a legend of
+ four, how the probes were made folded
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026: «Дизайн аудио шпаргалки пересмотри. Там в голове навалено сплошными потоками. Увеличь тексты в ней на
+2pt, и растяни на макс 1800px». The two paragraphs at its head (the warning and a stream of how the probes were made, what
+a click does, the marks, the seeds, the pictures) became:
+· the warning in one line, its first sentence bold;
+· a legend of four: a click on a name, ▶ A · ▶ B, ✓ and red, the pictures (painted by an image model);
+· How the probes were made, folded.
+The table 13 → 15.5 px, its home, Russian line, verdicts and history in step; the sheet 1100 → 1800 px wide.
+
+cdp-console 344/0/7, check-i18n 14/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 24 ++++++++++++++++++++++++
+ tools/console/heresy-instruments.js | 20 +++++++++++++-------
+ 2 files changed, 37 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 87dfb58..84ecbec 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4084,3 +4084,27 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ :root[data-tone="light"] .coll-card:hover,
+ :root[data-tone="light"] .coll-card.is-current { background: linear-gradient(to bottom right, #ebe3e6, rgb(235 227 230 / 0)), var(--panel); }
+ :root[data-tone="light"] .coll-card.is-sel { background: linear-gradient(to bottom right, #e5d9dd, rgb(229 217 221 / 0)), var(--panel); }
++/* HERESY 1167 (Viktor: «Дизайн аудио шпаргалки пересмотри… Увеличь тексты в ней на 2pt, и растяни на макс 1800px»): the sheet up
++   to 1800 px; every text 2 pt larger; the head a warning line, a legend of four, the rest folded */
++.hi-box { width: min(1800px, 100%); gap: 10px; padding: 16px 20px; }
++.hi-head b { font-size: 19px; }
++#hiCount { font-size: 14.5px; }
++.hi-tabb { font-size: 15px; }
++.hi-warn { font-size: 15.5px; padding: 8px 12px; line-height: 1.45; }
++.hi-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; }
++.hi-legend li { display: flex; flex-direction: column; gap: 3px; padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md);
++  background: color-mix(in oklab, var(--sunk) 70%, transparent); }
++.hi-legend b { font-size: 15px; font-weight: 600; color: var(--ink); }
++.hi-legend span { font-size: 14px; line-height: 1.4; color: var(--muted); }
++.hi-legend .hi-lg-ok { color: var(--good); }
++.hi-legend .hi-lg-no { color: var(--bad); font-style: normal; font-weight: 600; }
++.hi-more { font-size: 14.5px; color: var(--muted); }
++.hi-more summary { cursor: pointer; color: var(--ink); width: max-content; }
++.hi-more p { margin: 6px 0 2px; line-height: 1.5; max-width: 150ch; }
++.hi-tools input, .hi-tools select, .hi-tools label { font-size: 15px; }
++.hi-table { font-size: 15.5px; }
++.hi-home { font-size: 14px; }
++.hi-ru { font-size: 14.5px; }
++.hi-st { font-size: 13px; }
++.hi-his { font-size: 14.5px; }
++@media (max-width: 1000px) { .hi-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index dc4605f..06cd77a 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -239,15 +239,21 @@
+       '<div class="hi-head"><b>♪</b><span class="hi-tabs"><button type="button" class="hi-tabb" data-hi-tab="instruments">Instruments</button>' +
+       '<button type="button" class="hi-tabb" data-hi-tab="styles">Styles</button></span><span class="row-hint" id="hiCount"></span><span class="spacer"></span>' +
+       '<button type="button" class="btn ghost small" id="hiClose">Close</button></div>' +
+-      '<p class="hi-warn">⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. ' +
+-      "Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.</p>" +
+-      '<p class="row-hint">What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. ' +
+-      "Click a name to put it into the Style prompt; ▶ plays its probe; its seeds stand under it. ✓ marks what the ear heard and kept, red what YuE2 did not play when named alone. " +
++      // HERESY 1167 (Viktor: «Дизайн аудио шпаргалки пересмотри. Там в голове навалено сплошными потоками»): the head in parts:
++      // the warning in a line, a legend of four, how the probes were made folded
++      '<p class="hi-warn"><b>⚠ A name in the style is a request, not a promise.</b> What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.</p>' +
++      '<ul class="hi-legend">' +
++      '<li><b>Click a name</b><span>it goes into the Style prompt</span></li>' +
++      '<li><b>▶ A · ▶ B</b><span>its two probes, their seeds under them</span></li>' +
++      '<li><b class="hi-lg-ok">✓ heard</b><span>the ear heard it and kept it; <em class="hi-lg-no">red</em>: not played when named alone</span></li>' +
++      // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
++      '<li><b>The pictures</b><span>painted by an image model: some show an instrument not quite as it really is</span></li></ul>' +
++      '<details class="hi-more"><summary>How the probes were made</summary><p>What YuE2 was asked to play, one instrument or one style at a time, ' +
++      "in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the " +
++      "instrument is not the one asked for. " +
+       // HERESY 1162 (Viktor: «инструмент играет весомый вклад в формирование стиля композиции»; «потрескивание и шелест бумаги, как
+       // будто на заезженной пластинке — артефакт неудачного зерна»)
+-      "An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another. " +
+-      // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
+-      "The probes' pictures are painted by an image model: some show an instrument not quite as it really is.</p>" +
++      "An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.</p></details>" +
+       '<div class="hi-tools"><input type="search" id="hiSearch" placeholder="Search: name, home, sound" autocomplete="off" />' +
+       '<select id="hiFam" aria-label="Family"><option value="">every family</option>' +
+       Object.keys(DATA.families).map(function (k) { return '<option value="' + k + '">' + esc(DATA.families[k]) + "</option>"; }).join("") + "</select>" +
+-- 
+2.43.0
+

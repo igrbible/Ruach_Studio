@@ -1,0 +1,200 @@
+From db6e01afb10b62feeb5cd5465d093fd680b7d3e6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 30 Sep 2026 23:55:26 -0600
+Subject: [PATCH 1030/1177] Debuzz as a Post step, and the tree of derived
+ files under every step
+
+- Debuzz (step 3, after Artifacts): lab/debuzz.py on the take or a file of the tree, 60-100 %
+  (80 % default, Viktor's ear). A branch of the tree, its manifest carrying the frame ripple
+  in and out against the controls (1900/1940 samples), or "no frame ripple found" on a track
+  the VAE did not make.
+- Remaster takes a debuzzed file as its source too; Upscale already took any file.
+- "Made from this take" sits under the steps, not inside Stems: remaster, upscale and debuzz
+  results are seen from every step.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |   4 ++++
+ tools/console/heresy-derived.js |  39 +++++++++++++++++++++++++++++++-
+ tools/console/heresy-post.js    |   2 ++
+ tools/console/index.html        |  22 +++++++++++++++++-
+ tools/public/index.html.gz      | Bin 294679 -> 295489 bytes
+ 5 files changed, 65 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 47ee0ad..4fbc138 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2093,3 +2093,7 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .drawer.is-step.is-step-off { display: none; }
+ .drawer.is-step > summary { pointer-events: none; }
+ .drawer.is-step > summary .chev { display: none; }
++
++/* HERESY 1030: the tree under every step */
++.dv-tree-box { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-md, 8px); background: var(--panel); }
++.dv-tree-title { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 9a53b1b..0ae3111 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -11,7 +11,7 @@
+   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
+   function fileUrl(name, path) { return "/lab/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
+-  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale" };
++  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz" };
+   var MODE = { vocals: "vocals + instrumental", four: "four stems" };
+ 
+   function say(text, bad) {
+@@ -46,6 +46,14 @@
+     return parts.join(", ");
+   }
+ 
++  // HERESY 1030: the frame ripple in and out, against the controls
++  function debuzzSummary(m) {
++    var r = m.measure || {}, b = r.before || {}, a = r.after || {};
++    var from = "from " + String(m.source || "the take").replace("derived/", "") + ", " + Math.round((m.strength || 0) * 100) + " %";
++    if (!r.found) return from + " · no frame ripple found (" + (b.frame || 0).toFixed(1) + " % at 1920 against " + (b.control || 0).toFixed(1) + " % by chance)";
++    return from + " · ripple " + b.frame.toFixed(1) + " % → " + a.frame.toFixed(1) + " % (by chance " + b.control.toFixed(1) + " %)";
++  }
++
+   function paint() {
+     var host = $("derivedTree"), take = state.take;
+     if (!take) { host.innerHTML = '<p class="row-hint">Pick a take on the right.</p>'; return; }
+@@ -54,6 +62,7 @@
+     state.list.forEach(function (m) {
+       html += '<div class="dv-group"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
+         (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
++        (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
+         (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
+         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
+       (m.files || []).forEach(function (f) {
+@@ -88,6 +97,7 @@
+         paint();
+         paintSources();
+         paintUpSources();
++        paintDbSources();
+         // while Forge works on this take, look again every three seconds
+         clearTimeout(state.watch);
+         if (state.running.some(function (j) { return j.status !== "failed"; })) state.watch = setTimeout(refresh, 3000);
+@@ -132,8 +142,12 @@
+     var sel = $("rmSource");
+     if (!sel) return;
+     var keep = sel.value, stems = state.list.filter(function (m) { return m.kind === "stems"; });
++    // HERESY 1030: a debuzzed file is a source too (the stems as a set, a debuzzed one as it is)
++    var single = files().filter(function (f) { return f.kind === "debuzz"; });
+     sel.innerHTML = '<option value="">the take</option>' + stems.map(function (m) {
+       return '<option value="derived/' + esc(m.id) + '">stems: ' + esc(MODE[m.mode] || m.mode) + "</option>";
++    }).join("") + single.map(function (f) {
++      return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
+     }).join("");
+     sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
+     paintLevels();
+@@ -171,6 +185,28 @@
+       .then(function () { $("upRun").disabled = false; });
+   }
+ 
++  // ---- debuzz (HERESY 1030): the take or any file of the tree but a debuzzed or upscaled one
++  function paintDbSources() {
++    var sel = $("dbSource");
++    if (!sel) return;
++    var keep = sel.value;
++    sel.innerHTML = '<option value="">the take</option>' + files().filter(function (f) { return f.kind !== "debuzz" && f.kind !== "upscale"; }).map(function (f) {
++      return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
++    }).join("");
++    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
++  }
++  function debuzz() {
++    if (!state.take) return;
++    var q = "name=" + encodeURIComponent(state.take.name) + "&strength=" + $("dbStrength").value +
++      ($("dbSource").value ? "&source=" + encodeURIComponent($("dbSource").value) : "");
++    $("dbRun").disabled = true;
++    $("dbState").textContent = "sending to Forge…";
++    fetch("/lab/debuzz?" + q).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
++      .then(function () { $("dbState").textContent = "running on Forge: it appears in the tree when done"; refresh(); })
++      .catch(function (e) { $("dbState").textContent = "Could not: " + (e.message || e); })
++      .then(function () { $("dbRun").disabled = false; });
++  }
++
+   function remaster() {
+     if (!state.take) return;
+     var levels = {};
+@@ -196,6 +232,7 @@
+     if (!$("derivedPanel")) return;
+     state.hooks = hooks || {};
+     if ($("upRun")) $("upRun").addEventListener("click", upscale);
++    if ($("dbRun")) $("dbRun").addEventListener("click", debuzz);   // HERESY 1030
+     if ($("rmRun")) {
+       $("rmRun").addEventListener("click", remaster);
+       $("rmSource").addEventListener("change", paintLevels);
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index e1c01bd..b96e783 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -9,6 +9,7 @@
+   var STEPS = [
+     { id: "spectrumPanel", step: "spectrum", label: "Spectrum", say: "look" },
+     { id: "inspectPanel", step: "inspect", label: "Artifacts", say: "find faults" },
++    { id: "debuzzPanel", step: "debuzz", label: "Debuzz", say: "the frame buzz out" },
+     { id: "glossPanel", step: "gloss", label: "Lyrics", say: "check the words" },
+     { id: "derivedPanel", step: "stems", label: "Stems", say: "split" },
+     { id: "remasterPanel", step: "remaster", label: "Remaster", say: "the Debunker" },
+@@ -72,6 +73,7 @@
+       state.done.stems = !!kinds.stems;
+       state.done.remaster = !!kinds.remaster;
+       state.done.upscale = !!kinds.upscale;
++      state.done.debuzz = !!kinds.debuzz;
+       paint();
+     });
+     select(recall() || STEPS[0].id);
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 719f508..7c7ac72 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -815,7 +815,6 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+             <button type="button" class="btn ghost small" data-dv-split="four" data-tip="The same, then htdemucs_ft on the instrumental: + drums, bass, other, about 6 minutes for 7">Split: four stems</button>
+             <span class="row-hint mono" id="derivedState"></span>
+           </div>
+-          <div id="derivedTree"></div>
+         </div>
+       </details>
+ 
+@@ -884,6 +883,24 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+       </details>
+ 
++      <!-- HERESY 1030: the VAE's frame ripple out of the highs (lab/debuzz.py) -->
++      <details class="drawer" id="debuzzPanel">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Debuzz</span><span class="sum-say">YuE2's decoder writes sound in frames of 1920 samples, 25 a second, and its highs tremble with them: the metallic buzz. This takes out the part locked to that frame clock, above 2 kHz, the lows untouched. Before Upscale. On a track from elsewhere it finds nothing, and says so.</span></span></summary>
++        <div class="drawer-body rm-body">
++          <div class="rm-grid">
++            <label class="field"><span class="label">Source</span><select id="dbSource"><option value="">the take</option></select></label>
++            <label class="field rm-num"><span class="label">Strength</span>
++              <select id="dbStrength" data-tip="How much of the frame ripple to divide out. Viktor's ear: 100 % thinned the opening, 80 % was right.">
++                <option value="0.6">60 %</option><option value="0.7">70 %</option><option value="0.8" selected>80 %</option><option value="0.9">90 %</option><option value="1">100 %</option></select></label>
++          </div>
++          <div class="dv-actions">
++            <button type="button" class="btn primary small" id="dbRun">Debuzz</button>
++            <span class="row-hint mono" id="dbState"></span>
++          </div>
++          <p class="row-hint">About a minute for seven, on the CPU. The tree shows the ripple measured in and out: the 4–12 kHz envelope folded on 1920 samples, against 1900 and 1940 as controls (what any sound shows by chance).</p>
++        </div>
++      </details>
++
+       <!-- HERESY 1025: faults measured on Forge: held tones, the VAE's frame buzz, clicks, clipping (heresy-inspect.js) -->
+       <details class="drawer" id="inspectPanel">
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Artifacts</span><span class="sum-say">What may be wrong in the sound: a tone that will not leave, the VAE's 25-frame buzz in the highs, clicks, clipping, dropouts, stereo that fights itself. A time plays from there.</span></span></summary>
+@@ -944,6 +961,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+       </details>
+ 
++      <!-- HERESY 1030: the tree of what is made from this take, under every step (heresy-derived.js) -->
++      <section class="dv-tree-box" aria-label="Made from this take"><h3 class="dv-tree-title">Made from this take</h3><div id="derivedTree"></div></section>
++
+   </section>
+ 
+   <!-- takes -------------------------------------------------------------- -->
+-- 
+2.43.0
+

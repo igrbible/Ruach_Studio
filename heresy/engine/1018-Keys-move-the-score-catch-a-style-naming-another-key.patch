@@ -1,0 +1,414 @@
+From bddc002ed5b6a57766823640bd9bae780112cc33 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 18:20:47 -0600
+Subject: [PATCH 1018/1177] Keys: move the score, catch a style naming another
+ key; adapter rows line up
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1018.
+- heresy-transpose.js moves an ABC score to any key: every note by the same
+  semitones and a fixed number of letters, against both key signatures and
+  the accidentals that last to the end of a bar; chord symbols move too;
+  headers, inline fields, comments and decorations are left alone; it checks
+  every note it moved. Majors, minors and the church modes; nearest, up or
+  down. Checked against the Python transposer of the B♭ minor experiment:
+  the same bytes, and D minor -> B♭ minor -> D minor returns the original.
+- The score drawer shows the score's key and moves it.
+- Under the style: when the style names a key and the score is in another,
+  a warning ("the song follows the score") with "Move the score to …" and
+  "Write … in the style". Plans, Retakes and opened prompts are checked too.
+  Measured on 30.09.2026: a style agreeing with its score sang clearer.
+- Adapter rows have one shape: the name with its trigger word small under it
+  (or "✓ in style"), the sliders of the halves it has, remove. Since a row
+  lost its unused slider (1016) the old five-column grid had drifted.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css             |  20 +++-
+ tools/console/app.js              |  73 ++++++++++++-
+ tools/console/heresy-transpose.js | 167 ++++++++++++++++++++++++++++++
+ tools/console/index.html          |  14 +++
+ tools/console/loras.js            |  13 ++-
+ tools/public/index.html.gz        | Bin 260246 -> 265262 bytes
+ 6 files changed, 279 insertions(+), 8 deletions(-)
+ create mode 100644 tools/console/heresy-transpose.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 5afd492..6af6db2 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1736,7 +1736,7 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+ .lora-active { display: grid; gap: 6px; margin-bottom: 6px; }
+ .lora-active:empty { display: none; }
+ .lora-row {
+-  display: grid; grid-template-columns: minmax(90px, 1fr) minmax(120px, 1.1fr) minmax(120px, 1.1fr) auto 30px;
++  display: grid; grid-template-columns: minmax(100px, 0.85fr) minmax(150px, 1.6fr) 30px;   /* HERESY 1018: one shape for every row */
+   align-items: center; gap: 10px;
+   padding: 6px 8px 6px 12px; border: 1px solid var(--amber-dim); border-radius: var(--r-md); background: var(--field);
+ }
+@@ -1746,11 +1746,10 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+ .lora-half input[type="range"] { width: 100%; accent-color: var(--amber); }
+ .lora-half output { font: 12px var(--mono); color: var(--muted); text-align: right; }
+ .lora-half.is-off { opacity: .4; }
+-.lora-trigger { font-size: 11px; padding: 3px 8px; }
+ .lora-hint { margin-top: 8px; }
+ @media (max-width: 720px) {
+   .lora-row { grid-template-columns: minmax(0, 1fr) 30px; }
+-  .lora-row .lora-half, .lora-row .lora-trigger { grid-column: 1 / -1; }
++  .lora-row .lora-half { grid-column: auto; }
+ }
+ 
+ /* copy icon in the Prompt card's corner */
+@@ -1973,3 +1972,18 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ /* folded: the right column becomes a 40 px strip, its grip goes */
+ .workspace.lib-folded { grid-template-columns: var(--col-left, minmax(500px, 760px)) minmax(420px, 1fr) 40px !important; }
+ .workspace.lib-folded .col-grip.right { display: none; }
++
++/* ------------------------------------------------ HERESY 1018: keys */
++.transpose-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
++.transpose-row select { width: auto; padding: 4px 8px; }
++.transpose-row .row-hint { margin: 0; }
++.key-check { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--amber); }
++
++/* HERESY 1018: the adapter row — the trigger word under the name, the halves stacked */
++.lora-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
++.lora-trigger { align-self: flex-start; padding: 0; border: 0; background: none; font: 11px/1.3 var(--sans); color: var(--amber); cursor: pointer; }
++.lora-trigger:hover { text-decoration: underline; }
++.lora-trigger.is-in { color: var(--dim); cursor: default; }
++.lora-trigger.is-in:hover { text-decoration: none; }
++.lora-halves { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
++@media (max-width: 720px) { .lora-row .lora-halves { grid-column: 1 / -1; } }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 08aaf69..74d9a87 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -764,9 +764,13 @@
+         return toast("The style already has \u201c" + word + "\u201d");
+       }
+       $("style").value = word + (style.trim() ? ", " + style.trim() : "");
++      $("style").dispatchEvent(new Event("input", { bubbles: true }));   // HERESY 1018: the draft and the meters see it
+       toast("Added \u201c" + word + "\u201d to the style");
+-    }
++      YueLoras.repaint();
++    },
++    styleText: function () { return $("style").value; }   // HERESY 1018: the row says when the trigger word is in
+   });
++  $("style").addEventListener("change", function () { YueLoras.repaint(); });
+   all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", function () { YueLoras.repaint(); }); });
+   YueLoras.listInto($("loraCard"), $("loraCardNote"));   // the Engine panel's list, under the VAEs
+ 
+@@ -4824,6 +4828,73 @@
+     });
+   }
+ 
++  /* ---------------------------------------------- HERESY 1018: keys */
++  // The score's K: is the key the song follows; a style naming another key costs diction
++  // (measured 30.09.2026). The row in the score drawer moves the score; the line under the
++  // style says when the two disagree and offers either side.
++  var TR = window.HeresyTranspose, keySeen = "";
++  function setField(id, value) {
++    $(id).value = value;
++    $(id).dispatchEvent(new Event("input", { bubbles: true }));   // the draft, the meters, the heights
++  }
++  function paintKeys() {
++    if (!TR) return;
++    var abc = $("abc").value, style = $("style").value, sig = abc.length + "|" + abc.slice(0, 400) + "|" + style;
++    if (sig === keySeen) return;
++    keySeen = sig;
++    var sk = abc.trim() ? TR.scoreKey(abc) : null;
++    $("transposeRow").classList.toggle("is-hidden", !sk);
++    if (sk) {
++      $("scoreKeyNow").textContent = TR.keyLabel(sk);
++      var keep = $("transposeTo").value, opts = TR.choices(sk.mode);
++      $("transposeTo").innerHTML = opts.map(function (k) {
++        return '<option value="' + TR.keyName(k) + '">' + TR.keyLabel(k) + "</option>";
++      }).join("");
++      $("transposeTo").value = opts.some(function (k) { return TR.keyName(k) === keep; }) ? keep : TR.keyName(sk);
++    }
++    var st = TR.styleKey(style);
++    var clash = sk && st && (TR.keyName(st) !== TR.keyName({ letter: sk.letter, acc: sk.acc, mode: sk.mode === -3 ? -3 : 0 }) || st.mode !== (sk.mode === -3 ? -3 : 0));
++    $("keyCheck").classList.toggle("is-hidden", !clash);
++    if (clash) {
++      $("keyCheckText").textContent = "\u26a0 The style names " + TR.keyLabel(st) + ", the score is in " + TR.keyLabel(sk) + ". The song follows the score.";
++      $("keyToScore").textContent = "Move the score to " + TR.keyLabel(st);
++      $("keyToScore").dataset.key = TR.keyName(st);
++      $("keyToStyle").textContent = "Write " + TR.keyLabel(sk) + " in the style";
++    }
++  }
++  function moveScore(target, way) {
++    try {
++      var r = TR.transpose($("abc").value, target, way);
++      setField("abc", r.abc);
++      if (STATE.abcRendered !== undefined && $("abc").value) { /* the staff in the take card is the take's own score */ }
++      $("transposeNote").textContent = TR.keyLabel(r.from) + " \u2192 " + TR.keyLabel(r.to) + ", " + (r.semis > 0 ? "+" : "") + r.semis +
++        " semitones, " + r.notes + " notes moved";
++      toast("Score moved to " + TR.keyLabel(r.to));
++      keySeen = ""; paintKeys();
++    } catch (error) {
++      toast(error.message, "bad");
++    }
++  }
++  if (TR) {
++    $("transposeBtn").addEventListener("click", function () { moveScore($("transposeTo").value, $("transposeWay").value); });
++    $("keyToScore").addEventListener("click", function () {
++      $("scoreDrawer").open = true;
++      moveScore(this.dataset.key, "near");
++    });
++    $("keyToStyle").addEventListener("click", function () {
++      var sk = TR.scoreKey($("abc").value), style = $("style").value;
++      var m = style.match(/\b([A-G])\s?([#b\u266f\u266d])?\s?(minor|major|min\b|maj\b|m\b)/);
++      if (!sk || !m) return;
++      var label = TR.keyLabel(sk).replace(/ (Dorian|Phrygian|Lydian|Mixolydian|Locrian)$/, "");
++      setField("style", style.slice(0, m.index) + label + style.slice(m.index + m[0].length));
++      keySeen = ""; paintKeys();
++    });
++    ["abc", "style"].forEach(function (id) { $(id).addEventListener("input", paintKeys); });
++    // a score filled by a plan, a Retake or an opened prompt arrives without an input event
++    setInterval(paintKeys, 1500);
++    paintKeys();
++  }
++
+   /* ---------------------------------------------- HERESY 1014: three workspaces */
+   // Create (the form and the take, as the Kit has it), Write (the writing room with the
+   // song beside it) and Post (what is done to a finished take). The takes list stays in all
+diff --git a/tools/console/heresy-transpose.js b/tools/console/heresy-transpose.js
+new file mode 100644
+index 0000000..93f2113
+--- /dev/null
++++ b/tools/console/heresy-transpose.js
+@@ -0,0 +1,167 @@
++// HERESY 1018: move a score to another key, and catch a style that names a different one.
++//
++// Measured 30.09.2026 (~/Temp/style_test): a style whose key, meter and tempo agree with
++// the score sang clearer (0.74–0.79 on lyric recognition against 0.60), and the same song
++// moved from D minor to B♭ minor — same lyrics, same style — came out with "a different
++// texture and depth" (Viktor). In Full mode the model writes its own score and may ignore
++// the key the style asks for; a SheetSage2 transcription comes in whatever key it hears.
++// Either way the score's K: is the truth the song follows: this moves it.
++//
++// Every note is moved by the same number of semitones and spelled a fixed number of letters
++// up or down (D minor -> B♭ minor: 4 semitones and 2 letters down), against the source and
++// target key signatures and the accidentals that last to the end of a bar. Chord symbols in
++// quotes move the same way. Header lines, inline fields [K:…], comments and !decorations!
++// are left alone. The result checks itself: a note moved by anything else stops it.
++(function () {
++  "use strict";
++
++  var LETTERS = "CDEFGAB";
++  var NAT = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
++  var SHARPS = "FCGDAEB", FLATS = "BEADGCF";
++  var MAJOR_FIFTHS = { C: 0, G: 1, D: 2, A: 3, E: 4, B: 5, F: -1 };      // natural tonics
++  var MODES = { "": 0, maj: 0, major: 0, ion: 0, m: -3, min: -3, minor: -3, aeo: -3,
++                dor: -2, phr: -4, lyd: 1, mix: -1, loc: -5 };
++  var MODE_NAME = { 0: "", "-3": "m", "-2": "dor", "-4": "phr", 1: "lyd", "-1": "mix", "-5": "loc" };
++
++  // "Dm", "Bbm", "F#", "Eb major", "D dor"… -> {letter, acc, mode, fifths}
++  function parseKey(text) {
++    var m = String(text || "").trim().match(/^([A-Ga-g])\s*([#b\u266f\u266d]?)\s*([A-Za-z]*)/);
++    if (!m) return null;
++    var letter = m[1].toUpperCase(), acc = m[2] === "#" || m[2] === "\u266f" ? 1 : m[2] === "b" || m[2] === "\u266d" ? -1 : 0;
++    var modeWord = m[3].toLowerCase().slice(0, m[3].length > 3 && !/^m(aj|in)/.test(m[3].toLowerCase()) ? 3 : m[3].length);
++    if (/^major/.test(m[3].toLowerCase())) modeWord = "major";
++    else if (/^minor/.test(m[3].toLowerCase())) modeWord = "minor";
++    if (!(modeWord in MODES)) return null;
++    var fifths = MAJOR_FIFTHS[letter] + 7 * acc + MODES[modeWord];
++    if (fifths > 7 || fifths < -7) return null;
++    return { letter: letter, acc: acc, mode: MODES[modeWord], fifths: fifths };
++  }
++  function keyName(k) {
++    return k.letter + (k.acc > 0 ? "#" : k.acc < 0 ? "b" : "") + MODE_NAME[k.mode];
++  }
++  function keyLabel(k) {   // for people: B♭ minor
++    var mode = { 0: "major", "-3": "minor", "-2": "Dorian", "-4": "Phrygian", 1: "Lydian", "-1": "Mixolydian", "-5": "Locrian" }[k.mode];
++    return k.letter + (k.acc > 0 ? "\u266f" : k.acc < 0 ? "\u266d" : "") + " " + mode;
++  }
++  function signature(k) {
++    var sig = {}, n = k.fifths;
++    (n > 0 ? SHARPS.slice(0, n) : FLATS.slice(0, -n)).split("").forEach(function (l) { sig[l] = n > 0 ? 1 : -1; });
++    return sig;
++  }
++  function pitchClass(k) { return (NAT[k.letter] + k.acc + 12) % 12; }
++
++  // The score's key: the first K: header line
++  function scoreKey(abc) {
++    var lines = String(abc || "").split(/\r?\n/);
++    for (var i = 0; i < lines.length; i++) {
++      var m = lines[i].match(/^K:\s*(\S+(?:\s+(?:major|minor|maj|min|dor|phr|lyd|mix|loc)\w*)?)/i);
++      if (m) return parseKey(m[1]);
++    }
++    return null;
++  }
++
++  // The key a style names, if one: "Key: B♭ minor", "in D minor", "Bbm", "F# major"
++  function styleKey(style) {
++    var m = String(style || "").match(/\b([A-G])\s?([#b\u266f\u266d])?\s?(minor|major|min\b|maj\b|m\b)/);
++    if (!m) return null;
++    return parseKey(m[1] + (m[2] || "") + (m[3].toLowerCase().indexOf("maj") === 0 ? "" : "m"));
++  }
++
++  // The usual names for the twelve tonics of a mode, the ones with the fewest accidentals.
++  function choices(mode) {
++    var out = [];
++    for (var pc = 0; pc < 12; pc++) {
++      var best = null;
++      ["C", "D", "E", "F", "G", "A", "B"].forEach(function (l) {
++        [-1, 0, 1].forEach(function (a) {
++          if ((NAT[l] + a + 12) % 12 !== pc) return;
++          var f = MAJOR_FIFTHS[l] + 7 * a + mode;
++          if (f > 7 || f < -7) return;
++          if (!best || Math.abs(f) < Math.abs(best.fifths) || (Math.abs(f) === Math.abs(best.fifths) && a < 0))
++            best = { letter: l, acc: a, mode: mode, fifths: f };   // a tie of accidentals goes to flats: Ebm, not D#m
++        });
++      });
++      if (best) out.push(best);
++    }
++    return out;
++  }
++
++  var NOTE = /(\^\^|\^|__|_|=)?([A-Ga-g])([,']*)/y;
++  var CHORD = /"([A-G])([b#\u266d\u266f]?)([^"]*)"/y;
++  var ACC = { "^": 1, "^^": 2, "_": -1, "__": -2, "=": 0 };
++  var ACC_OUT = { 1: "^", 2: "^^", "-1": "_", "-2": "__", 0: "=" };
++
++  // direction: "near" (the smaller move), "up" or "down"
++  function transpose(abc, target, direction) {
++    var from = scoreKey(abc);
++    if (!from) throw new Error("The score has no K: line I can read");
++    var to = typeof target === "string" ? parseKey(target) : target;
++    if (!to) throw new Error("Unknown key: " + target);
++    if (to.mode !== from.mode) to = { letter: to.letter, acc: to.acc, mode: from.mode, fifths: MAJOR_FIFTHS[to.letter] + 7 * to.acc + from.mode };
++    var up = ((pitchClass(to) - pitchClass(from)) % 12 + 12) % 12;          // 0..11 semitones up
++    var semis = direction === "up" ? up : direction === "down" ? up - 12 : (up > 6 ? up - 12 : up);
++    if (semis === 0 && direction !== "near") semis = direction === "up" ? 12 : -12;
++    var steps = ((LETTERS.indexOf(to.letter) - LETTERS.indexOf(from.letter)) % 7 + 7) % 7;
++    if (semis < 0 && steps > 0) steps -= 7;
++    if (semis >= 12) steps += 7;
++    if (semis <= -12) steps -= 7;
++    var sigIn = signature(from), sigOut = signature(to), moved = 0, bad = 0;
++    var out = String(abc).split(/\r?\n/).map(function (line) {
++      if (/^K:/.test(line)) return line.replace(/^K:\s*\S+(\s+(major|minor|maj|min)\w*)?/i, "K:" + keyName(to));
++      if (/^[A-Za-z]:/.test(line) || /^%/.test(line)) return line;
++      var accIn = {}, accOut = {}, res = "", i = 0, m;
++      while (i < line.length) {
++        var ch = line.charAt(i);
++        if (ch === "%") { res += line.slice(i); break; }                           // a comment to the end of the line
++        if (ch === "|") { accIn = {}; accOut = {}; res += ch; i++; continue; }        // a bar line clears accidentals
++        if (ch === "!" || ch === "+") {                                             // a decoration
++          var end = line.indexOf(ch, i + 1);
++          if (end > i) { res += line.slice(i, end + 1); i = end + 1; continue; }
++        }
++        if (ch === "[" && /^\[[A-Za-z]:/.test(line.slice(i, i + 3))) {               // an inline field [K:…] [V:…]
++          var close = line.indexOf("]", i);
++          res += line.slice(i, close + 1); i = close + 1; continue;
++        }
++        if (ch === '"') {
++          CHORD.lastIndex = i;
++          m = CHORD.exec(line);
++          if (m) {
++            var acc = /[#\u266f]/.test(m[2]) ? 1 : /[b\u266d]/.test(m[2]) ? -1 : 0;
++            var pc = NAT[m[1]] + acc + semis, nl = LETTERS.charAt(((LETTERS.indexOf(m[1]) + steps) % 7 + 7) % 7);
++            var d = ((pc - NAT[nl]) % 12 + 18) % 12 - 6;
++            res += '"' + nl + (d === -1 ? "b" : d === 1 ? "#" : d === -2 ? "bb" : d === 2 ? "##" : "") + m[3] + '"';
++            i = CHORD.lastIndex; continue;
++          }
++          var q = line.indexOf('"', i + 1);
++          res += line.slice(i, q + 1); i = q + 1; continue;
++        }
++        NOTE.lastIndex = i;
++        m = NOTE.exec(line);
++        if (m && !(i > 0 && /[A-Za-z]/.test(line.charAt(i - 1)) && !/[A-Ga-g]/.test(line.charAt(i - 1)))) {
++          var up_ = m[2].toUpperCase(), octave = (m[2] === up_ ? 4 : 5) + (m[3].split("'").length - 1) - (m[3].split(",").length - 1);
++          var key = up_ + octave;
++          if (m[1]) accIn[key] = ACC[m[1]];
++          var alter = key in accIn ? accIn[key] : (sigIn[up_] || 0);
++          var midi = 12 * (octave + 1) + NAT[up_] + alter, want = midi + semis;
++          var li = LETTERS.indexOf(up_) + steps, nl2 = LETTERS.charAt(((li % 7) + 7) % 7), noct = octave + Math.floor(li / 7);
++          var nalter = want - (12 * (noct + 1) + NAT[nl2]);
++          var k2 = nl2 + noct, has = k2 in accOut ? accOut[k2] : (sigOut[nl2] || 0);
++          if (Math.abs(nalter) > 2) bad++;
++          var sym = nalter === has ? "" : ACC_OUT[nalter] || "";
++          if (sym) accOut[k2] = nalter;
++          var s = noct <= 4 ? nl2 : nl2.toLowerCase();
++          s += noct < 4 ? new Array(4 - noct + 1).join(",") : noct > 5 ? new Array(noct - 5 + 1).join("'") : "";
++          res += sym + s; moved++; i = NOTE.lastIndex; continue;
++        }
++        res += ch; i++;
++      }
++      return res;
++    }).join("\n");
++    if (!moved) throw new Error("No notes found to move");
++    if (bad) throw new Error(bad + " notes would need more than a double accidental: pick the other direction");
++    return { abc: out, notes: moved, semis: semis, from: from, to: to };
++  }
++
++  window.HeresyTranspose = { parseKey: parseKey, keyName: keyName, keyLabel: keyLabel, scoreKey: scoreKey,
++                             styleKey: styleKey, choices: choices, transpose: transpose };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 44ed850..9c7bdc3 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -333,6 +333,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <span class="label">Style prompt <em>language, genre, voice, instruments, tempo</em></span>
+         <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
+         <span class="row-hint size-meter" id="styleMeter"></span>
++        <span class="key-check is-hidden" id="keyCheck"><span id="keyCheckText"></span>
++          <button type="button" class="btn ghost small" id="keyToScore"></button>
++          <button type="button" class="btn ghost small" id="keyToStyle"></button></span>
+       </label>
+ 
+       <label class="field" data-fold="lyrics">
+@@ -440,6 +443,16 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+             <span class="label">Score <em>ABC notation, followed in Full plan and Melody only</em></span>
+             <textarea id="abc" rows="8" spellcheck="false" class="mono" placeholder="X:1&#10;L:1/8&#10;M:4/4&#10;K:C"></textarea>
+           </label>
++          <!-- HERESY 1018: move the score to another key (heresy-transpose.js) -->
++          <div class="transpose-row is-hidden" id="transposeRow">
++            <span class="label">Key</span><strong class="mono" id="scoreKeyNow"></strong><span aria-hidden="true">→</span>
++            <select id="transposeTo" aria-label="Target key"></select>
++            <select id="transposeWay" aria-label="Direction" data-tip="Nearest: the smaller move. Up or down: that way, for a voice that needs it">
++              <option value="near">nearest</option><option value="up">up</option><option value="down">down</option>
++            </select>
++            <button type="button" class="btn ghost small" id="transposeBtn">Transpose</button>
++            <span class="row-hint" id="transposeNote"></span>
++          </div>
+           <div class="field">
+             <span class="label">Load an example</span>
+             <div class="chiprow">
+@@ -977,6 +990,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="loras.js"></script>
+ <script src="vaes.js"></script>
+ <script src="heresy-icons.js"></script>
++<script src="heresy-transpose.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+ <script src="heresy-zoom.js"></script>
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index cf1c129..3480284 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -186,10 +186,15 @@
+     var active = S.host.querySelector(".lora-active"), chips = S.host.querySelector(".lora-chips");
+     active.innerHTML = S.choice.map(function (c) {
+       var e = entry(c.id);
+-      return '<div class="lora-row' + (e ? "" : " is-missing") + '"><span class="lora-name" data-tip="' + escape(e ? aboutTip(e) : "Not in loras/ any more") + '">' +
+-        escape(nameOf(c.id)) + "</span>" + halfControl(c, e, "ar") + halfControl(c, e, "nar") +
+-        (triggerOf(e) ? '<button type="button" class="chip lora-trigger" data-trigger="' + escape(triggerOf(e)) +
+-          '" data-tip="Add the trigger word to the style prompt">+ ' + escape(triggerOf(e)) + "</button>" : "<span></span>") +
++      // HERESY 1018: three columns the same in every row — the name (its trigger word under it,
++      // small), the sliders of the halves it has, the remove button — so the rows line up
++      var trig = triggerOf(e), inStyle = trig && S.opts.styleText && S.opts.styleText().toLowerCase().indexOf(trig.toLowerCase()) >= 0;
++      return '<div class="lora-row' + (e ? "" : " is-missing") + '"><span class="lora-who"><span class="lora-name" data-tip="' + escape(e ? aboutTip(e) : "Not in loras/ any more") + '">' +
++        escape(nameOf(c.id)) + "</span>" +
++        (trig ? (inStyle ? '<span class="lora-trigger is-in" data-tip="Its trigger word is in the style">\u2713 ' + escape(trig) + "</span>"
++                         : '<button type="button" class="lora-trigger" data-trigger="' + escape(trig) +
++                           '" data-tip="Add the trigger word to the style prompt">+ ' + escape(trig) + "</button>") : "") +
++        '</span><span class="lora-halves">' + halfControl(c, e, "ar") + halfControl(c, e, "nar") + "</span>" +
+         '<button type="button" class="icon-btn" data-remove-lora="' + escape(c.id) + '" aria-label="Remove ' + escape(nameOf(c.id)) + '">✕</button></div>';
+     }).join("");
+     // one even grid of buttons: the name, which half it steers, and a few words on what it does
+-- 
+2.43.0
+

@@ -1,0 +1,468 @@
+From 63773888404c1845f5e2722d85f2dcab952cd581 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 11:51:12 -0600
+Subject: [PATCH 1043/1177] Text profiles for readings, and a note on every
+ take
+
+- Text profiles (heresy-textprep.js): a whole text pasted into Lyrics (now up to 10,000
+  characters) is made ready to read by a profile: ordered replacement rules (literal or regular
+  expression, each with a note and an on/off tick), then the shape: superscript verse numbers out,
+  lines going on in lower case joined, [Intro] first, [Verse] at every blank line, [Interlude]
+  after a long paragraph (sections hold the pace; without them the voice speeds up). Apply and
+  Undo beside the Lyrics field, as the Key beside the Title.
+- The Write tab edits profiles: rules in a table (order, on/off, regex), the shape, a live preview
+  with a log of what each rule did. Built in: Reading - plain, and LCV - reading, the rules of
+  Viktor's VibeVoice script (cleanup, Hebrew letters for h/t/g/v sounds, the Name, soft l, stress
+  carried by other letters) as an example; anyone's own are saved on Forge (presets.json).
+- A note on a take: a field in the take card, saved as you type; shown on the Collection cards
+  and found by its search.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  17 ++
+ tools/console/app.js               |  29 +++-
+ tools/console/heresy-collection.js |  13 +-
+ tools/console/heresy-textprep.js   | 246 +++++++++++++++++++++++++++++
+ tools/console/index.html           |  34 +++-
+ tools/public/index.html.gz         | Bin 315934 -> 321825 bytes
+ 6 files changed, 334 insertions(+), 5 deletions(-)
+ create mode 100644 tools/console/heresy-textprep.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index ecd6498..d006e41 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2169,3 +2169,20 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .pb-btn:hover { opacity: .8; }
+ .pb-btn[aria-pressed="true"] { opacity: 1; filter: none; }
+ #pbFav { color: var(--amber); filter: none; font-size: 16px; }
++
++/* HERESY 1043: text profiles */
++.tp-shape { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; margin: 6px 0 10px; }
++.tp-rules-wrap { max-height: 360px; overflow: auto; border: 1px solid var(--line-soft); border-radius: var(--r-sm); }
++.tp-rules { width: 100%; border-collapse: collapse; font-size: 12.5px; }
++.tp-rules th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 400; color: var(--muted); padding: 4px; }
++.tp-rules td { padding: 2px 4px; }
++.tp-rules input[type="text"] { width: 100%; min-width: 80px; padding: 3px 6px; }
++.tp-ops button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 3px; }
++.tp-test { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
++.tp-out { white-space: pre-wrap; max-height: 300px; overflow: auto; margin: 0; padding: 8px; background: var(--sunk); border-radius: var(--r-sm); font-size: 12.5px; }
++.tp-log { white-space: pre-wrap; margin: 6px 0 0; font-size: 11.5px; color: var(--muted); }
++@media (max-width: 900px) { .tp-test { grid-template-columns: 1fr; } }
++/* HERESY 1044: notes */
++.take-note { margin: 8px 0; }
++.take-note textarea { width: 100%; }
++.coll-note { margin-top: 4px; font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 738ef74..4c71540 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2832,6 +2832,7 @@
+     if (window.HeresySpectrum) window.HeresySpectrum.setTake(spectrumTake(take));   // HERESY 1007
+     if (window.HeresyGloss) window.HeresyGloss.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1011
+     if (document.body.dataset.tab === "post") paintPost();   // HERESY 1014
++    if (typeof paintNote === "function") setTimeout(paintNote, 0);   // HERESY 1044
+     if (window.HeresyPost) window.HeresyPost.setTake({ name: take.name });   // HERESY 1029: before the tools report
+     if (window.HeresyInspect) window.HeresyInspect.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1025
+     if (window.HeresyDerived) window.HeresyDerived.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1021
+@@ -5120,10 +5121,36 @@
+     if (take) toggleFavorite(take).then(paintRate);
+   });
+ 
++  /* ---------------------------------------------- HERESY 1043: text profiles */
++  if (window.HeresyTextPrep) window.HeresyTextPrep.init({
++    toast: toast, lyrics: function () { return $("lyrics"); },
++    setLyrics: function (text) { $("lyrics").value = text; $("lyrics").dispatchEvent(new Event("input", { bubbles: true })); growLyrics(); }
++  });
++
++  /* ---------------------------------------------- HERESY 1044: a note on the take */
++  var noteTimer = 0, noteFor = "";
++  function paintNote() {
++    var HC = window.HeresyCollection, take = STATE.take;
++    if (!take || !HC) return;
++    if (noteFor !== take.name || document.activeElement !== $("takeNote")) $("takeNote").value = HC.note(take.name);
++    noteFor = take.name;
++    $("takeNoteState").textContent = "";
++  }
++  $("takeNote").addEventListener("input", function () {
++    var name = noteFor, text = this.value;
++    $("takeNoteState").textContent = "…";
++    clearTimeout(noteTimer);
++    noteTimer = setTimeout(function () {
++      if (!window.HeresyCollection || !name) return;
++      window.HeresyCollection.setNote(name, text).then(function () { if (noteFor === name) $("takeNoteState").textContent = "saved"; })
++        .catch(function (e) { $("takeNoteState").textContent = "not saved: " + e.message; });
++    }, 900);
++  });
++
+   /* ---------------------------------------------- HERESY 1041: the Collection */
+   if (window.HeresyCollection) window.HeresyCollection.init({
+     toast: toast, clock: clock, ago: ago, findTake: findTake, openTake: function (name) { openTake(name); setTab("create"); },
+-    playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, libraryChanged: function () { paintLibrary(); paintRate(); }
++    playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, libraryChanged: function () { paintLibrary(); paintRate(); paintNote(); }
+   });
+   if ($("libSearch")) $("libSearch").addEventListener("input", function () { paintLibrary(); });
+ 
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 53adf44..2a123a4 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -58,7 +58,7 @@
+       var realKinds = Object.keys(state.kinds).filter(function (k) { return k.charAt(0) !== "_"; });
+       if (realKinds.length && !state.kinds[r.kind]) return false;
+       if (anyDer && !r.derived.some(function (k) { return state.derived[k]; })) return false;
+-      return m(r.title) || m(r.name);
++      return m(r.title) || m(r.name) || (r.note && m(r.note));
+     });
+     var sort = recall(SORT_KEY) || "new";
+     rows.sort(function (a, b) {
+@@ -106,7 +106,8 @@
+         '<div class="coll-body"><div class="coll-title" data-open="' + esc(r.name) + '">' + (r.favorite ? "★ " : "") + (r.rating > 0 ? "👍 " : r.rating < 0 ? "👎 " : "") + esc(r.title) + "</div>" +
+         '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
+         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+-        r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div></div></article>";
++        r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" +
++        (r.note ? '<div class="coll-note" title="' + esc(r.note) + '">' + esc(r.note.length > 140 ? r.note.slice(0, 140) + "\u2026" : r.note) + "</div>" : "") + "</div></article>";
+     }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+     $("collNote").textContent = rows.length + " shown · " + state.rows.length + " in the library";
+     paintBulk(rows);
+@@ -326,9 +327,15 @@
+     });
+   }
+ 
++  // HERESY 1044: a note on a take (the take card edits it)
++  function note(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.note || "" : ""; }
++  function setNote(name, text) {
++    return api("/collection", { op: "note", names: [name], text: text }).then(function (d) { state.rows = d.takes || state.rows; paint(); });
++  }
++
+   // for the takes column: hidden ones stay out of it
+   function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
+ 
+   window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, matcher: matcher, landed: landed, inCurrent: inCurrent,
+-                              current: current, rating: rating, rate: rate, loaded: function () { return state.loaded; } };
++                              current: current, rating: rating, rate: rate, note: note, setNote: setNote, loaded: function () { return state.loaded; } };
+ })();
+diff --git a/tools/console/heresy-textprep.js b/tools/console/heresy-textprep.js
+new file mode 100644
+index 0000000..8ba59a2
+--- /dev/null
++++ b/tools/console/heresy-textprep.js
+@@ -0,0 +1,246 @@
++// HERESY 1043: text profiles — a whole text pasted in, made ready to be read (Viktor, 01.10.2026).
++// A profile is an ordered list of rules (a literal or a regular-expression replacement, each with a
++// note and an on/off tick) and the shape the text is given: [Intro] first, [Verse] at every blank
++// line, an [Interlude] after a long paragraph (sections hold the reading's pace; without them the
++// voice runs faster and faster), lines that go on in lower case joined to the one before, verse
++// numbers in superscript taken out, a ceiling of characters. Profiles are the user's own (the lab
++// keeps them beside the styles); two come built in: plain reading, and LCV reading — the rules of
++// Viktor's VibeVoice script (prepare_LCV_texts_for_inference.sh), as an example of what one holds.
++// They are applied by the Lyrics field (Apply, Undo) and edited in the Write tab with a live preview.
++(function () {
++  "use strict";
++
++  var SHAPE = { stripSup: true, joinLower: true, intro: true, verses: true, interlude: 600, outro: false, maxChars: 10000 };
++  var R = function (find, repl, note, re) { return { on: true, re: !!re, find: find, repl: repl, note: note || "" }; };
++  var BUILT_IN = [
++    { name: "Reading · plain", builtin: true, shape: Object.assign({}, SHAPE), rules: [
++      R("\\u00a0", " ", "no-break spaces to spaces", true),
++      R("[ \\t]+", " ", "runs of spaces to one", true),
++      R(" - ", " – ", "a hyphen between spaces is a dash") ] },
++    { name: "LCV · reading", builtin: true, shape: Object.assign({}, SHAPE), rules: [
++      // cleanup (the script's second part)
++      R("\\u00a0", " ", "no-break spaces", true), R("[ \\t]+", " ", "one space", true),
++      R("[", "", "editorial brackets out"), R("]", "", ""), R("⸂", "", "insertion marks out"), R("⸃", "", ""),
++      R(": – ", ": — ", "speech after a colon: an em dash"), R(" - ", " – ", "hyphen between spaces: en dash"),
++      // phonetics: Hebrew sounds the model knows better in Hebrew letters
++      R("ѓа·", "הа-", "the article ha-"), R("Ѓ", "ה", "ѓ is h"), R("ѓ", "ה", ""), R("Ђ", "ת", "ђ is t (tav)"), R("ђ", "ת", ""),
++      R("Ѳ", "θ", "ѳ is th"), R("ѳ", "θ", ""), R("Ґ", "ג", "ґ is g (gimel)"), R("ґ", "ג", ""), R("ѵ", "ו", "ѵ is v (vav)"),
++      R("ЙהѴה", "יְהוֹва́", "the Name, as Viktor reads it"), R("יְהוָ֗ה", "יְהוֹва́", ""),
++      R("הַמָשִׁיחַ", "הַа-Машίах", ""), R("Маши́ах", "МашЫах", ""), R("הэ", "הֶ", ""),
++      // soft l
++      R("Љу", "Лю", "љ before a vowel"), R("љу", "лю", ""), R("Љо", "Лё", ""), R("љо", "лё", ""), R("Ља", "Ля", ""), R("ља", "ля", ""),
++      R("љ(?=[גהתйЙбвгджзиклмнпрстфхцчшщэЭ”» \\p{P}])", "ль", "љ before a consonant or the end", true),
++      R("Љ(?=[גהתйЙбвгджзиклмнпрстфхцчшщэЭ”» \\p{P}])", "Ль", "", true), R("љ·", "ль·", ""),
++      R("([Бб])([эе]́н)(?=[А-Я])", "$1$2-", "Бэн- before a capital", true),
++      R("([а-я])Э́ль", "$1-Э́ль", "-Эль after a lower-case letter", true),
++      // stress the engine ignores, carried by other letters
++      R("окрови́тел", "окровῖтел", "Покровитель: stress on и"), R("Любо́в", "Любόв", ""), R("любо́в", "любόв", ""),
++      R("О́браз", "Óбраз", ""), R("о́браз", "óбраз", ""),
++      R("Азъ", "Азʼ", ""), R("АЗЪ", "Азʼ", ""), R("А́зъ", "Азʼ", ""), R("А́ЗЪ", "А́зʼ", ""),
++      R("Ши́", "шЫ", "ши under stress reads шы"), R("ши́", "шЫ", ""), R("Жи́", "жЫ", ""), R("жи́", "жЫ", "") ] }
++  ];
++
++  var TAG = /^\s*\[[^\]]+\]\s*$/;
++
++  function applyRules(text, rules, log) {
++    rules.forEach(function (r, i) {
++      if (!r.on || !r.find) return;
++      var before = text;
++      try {
++        if (r.re) text = text.replace(new RegExp(r.find, "gu"), r.repl || "");
++        else text = text.split(r.find).join(r.repl || "");
++      } catch (e) {
++        log.push("rule " + (i + 1) + " skipped: " + e.message);
++        return;
++      }
++      if (before !== text && log) {
++        var n = r.re ? (before.match(new RegExp(r.find, "gu")) || []).length : before.split(r.find).length - 1;
++        log.push("rule " + (i + 1) + (r.note ? " (" + r.note + ")" : "") + ": " + n);
++      }
++    });
++    return text;
++  }
++
++  function shapeText(text, s, log) {
++    var lines = text.replace(/\r/g, "").split("\n");
++    if (s.stripSup) lines = lines.map(function (l) { return l.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+\s*/g, ""); });
++    if (s.joinLower) {                                   // a line going on in lower case belongs to the one before
++      var out = [];
++      lines.forEach(function (l) {
++        var t = l.trim();
++        if (out.length && t && /^\p{Ll}/u.test(t) && out[out.length - 1].trim() && !TAG.test(out[out.length - 1])) out[out.length - 1] = out[out.length - 1].replace(/\s+$/, "") + " " + t;
++        else out.push(l);
++      });
++      lines = out;
++    }
++    var hasTags = lines.some(function (l) { return TAG.test(l); });
++    var paras = lines.join("\n").split(/\n\s*\n/).map(function (p) { return p.split("\n").map(function (l) { return l.trim(); }).filter(Boolean).join("\n"); }).filter(Boolean);
++    var parts = [];
++    if (s.intro && !hasTags) parts.push("[Intro]");
++    var interludes = 0;
++    paras.forEach(function (p, i) {
++      if (s.verses && !hasTags && !TAG.test(p.split("\n")[0])) parts.push("[Verse]\n" + p);
++      else parts.push(p);
++      if (s.interlude > 0 && !hasTags && p.length >= s.interlude && i < paras.length - 1) { parts.push("[Interlude]"); interludes++; }
++    });
++    if (s.outro && !hasTags) parts.push("[Outro]");
++    if (log) {
++      if (hasTags) log.push("the text has its own section tags: kept as they are");
++      else log.push(paras.length + " paragraph" + (paras.length === 1 ? "" : "s") + " as [Verse]" + (interludes ? ", " + interludes + " [Interlude] after long ones" : "") + (s.intro ? ", [Intro] first" : ""));
++    }
++    var result = parts.join("\n\n");
++    if (s.maxChars && result.length > s.maxChars && log) log.push("⚠ " + result.length + " characters: over the " + s.maxChars + " a reading holds");
++    return result;
++  }
++
++  function run(text, profile) {
++    var log = [], s = Object.assign({}, SHAPE, profile.shape || {});
++    var t = applyRules(String(text || ""), profile.rules || [], log);
++    t = shapeText(t, s, log);
++    return { text: t, log: log, chars: t.length, max: s.maxChars };
++  }
++
++  // ---- storage: the lab's presets (kind "textprofile"), the built-ins first
++  var saved = [];
++  function profiles() { return BUILT_IN.concat(saved); }
++  function find(name) { return profiles().filter(function (p) { return p.name === name; })[0]; }
++  function send(payload) {
++    return fetch("/lab/presets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
++      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); });
++  }
++  function load() {
++    return fetch("/lab/presets").then(function (r) { return r.ok ? r.json() : {}; }).then(function (d) {
++      saved = (d.textprofiles || []).map(function (x) { return Object.assign({ name: x.name }, x.request || {}); });
++      paintPickers();
++    }).catch(function () { paintPickers(); });
++  }
++
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  var hooks = null, undoText = null, editing = null;
++  function toast(t, bad) { if (hooks) hooks.toast(t, bad ? "bad" : ""); }
++
++  function paintPickers() {
++    var opts = function (cur) {
++      return '<optgroup label="built in">' + BUILT_IN.map(function (p) { return "<option" + (p.name === cur ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</optgroup>" +
++        (saved.length ? '<optgroup label="yours">' + saved.map(function (p) { return "<option" + (p.name === cur ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</optgroup>" : "");
++    };
++    if ($("tpPick")) $("tpPick").innerHTML = opts($("tpPick").value || BUILT_IN[0].name);
++    if ($("tpEdPick")) $("tpEdPick").innerHTML = opts(editing ? editing.name : BUILT_IN[0].name);
++    if ($("tpEdPick") && !editing) openEditor($("tpEdPick").value);
++  }
++
++  // ---- the Lyrics field
++  function applyToLyrics() {
++    var p = find($("tpPick").value);
++    if (!p) return;
++    var area = hooks.lyrics(), before = area.value;
++    if (!before.trim()) return toast("Paste the text into Lyrics first", true);
++    var r = run(before, p);
++    undoText = before;
++    hooks.setLyrics(r.text);
++    $("tpUndo").disabled = false;
++    $("tpNote").textContent = r.log.slice(-3).join(" · ") + " · " + r.chars + " / " + r.max;
++    toast("Text made ready with “" + p.name + "”: " + r.log.length + " step" + (r.log.length === 1 ? "" : "s") + " (Undo gives the text back)");
++  }
++
++  // ---- the editor in Write
++  function openEditor(name) {
++    var p = find(name);
++    if (!p) return;
++    editing = JSON.parse(JSON.stringify(p));
++    paintEditor();
++  }
++  function ruleRow(r, i) {
++    return '<tr data-i="' + i + '"><td><input type="checkbox" data-f="on"' + (r.on ? " checked" : "") + ' /></td>' +
++      '<td><input type="checkbox" data-f="re"' + (r.re ? " checked" : "") + ' title="regular expression" /></td>' +
++      '<td><input type="text" class="mono" data-f="find" value="' + esc(r.find) + '" /></td>' +
++      '<td><input type="text" class="mono" data-f="repl" value="' + esc(r.repl) + '" /></td>' +
++      '<td><input type="text" data-f="note" value="' + esc(r.note) + '" /></td>' +
++      '<td class="tp-ops"><button type="button" data-op="up" title="Up">↑</button><button type="button" data-op="down" title="Down">↓</button><button type="button" data-op="del" title="Remove">✕</button></td></tr>';
++  }
++  function paintEditor() {
++    if (!$("tpRules") || !editing) return;
++    var s = Object.assign({}, SHAPE, editing.shape || {});
++    $("tpShape").innerHTML =
++      '<label class="check"><input type="checkbox" data-s="intro"' + (s.intro ? " checked" : "") + " /> <span>[Intro] first</span></label>" +
++      '<label class="check"><input type="checkbox" data-s="verses"' + (s.verses ? " checked" : "") + " /> <span>[Verse] at every blank line</span></label>" +
++      '<label class="field rm-num"><span class="label">[Interlude] after a paragraph of (chars; 0 = never)</span><input type="number" min="0" step="50" data-s="interlude" value="' + s.interlude + '" /></label>' +
++      '<label class="check"><input type="checkbox" data-s="outro"' + (s.outro ? " checked" : "") + " /> <span>[Outro] last</span></label>" +
++      '<label class="check"><input type="checkbox" data-s="joinLower"' + (s.joinLower ? " checked" : "") + " /> <span>join a line that goes on in lower case</span></label>" +
++      '<label class="check"><input type="checkbox" data-s="stripSup"' + (s.stripSup ? " checked" : "") + " /> <span>take out superscript verse numbers</span></label>" +
++      '<label class="field rm-num"><span class="label">Ceiling (chars)</span><input type="number" min="1000" step="500" data-s="maxChars" value="' + s.maxChars + '" /></label>';
++    $("tpRules").innerHTML = '<tr><th>on</th><th>re</th><th>find</th><th>replace with</th><th>note</th><th></th></tr>' + (editing.rules || []).map(ruleRow).join("");
++    $("tpEdDel").disabled = !!find(editing.name) && !!find(editing.name).builtin;
++    $("tpEdName").value = editing.builtin ? editing.name + " (mine)" : editing.name;
++    preview();
++  }
++  function readEditor() {
++    var s = {};
++    Array.prototype.forEach.call($("tpShape").querySelectorAll("[data-s]"), function (el) {
++      s[el.dataset.s] = el.type === "checkbox" ? el.checked : parseInt(el.value, 10) || 0;
++    });
++    editing.shape = s;
++    editing.rules = Array.prototype.map.call($("tpRules").querySelectorAll("tr[data-i]"), function (tr) {
++      var g = function (f) { return tr.querySelector('[data-f="' + f + '"]'); };
++      return { on: g("on").checked, re: g("re").checked, find: g("find").value, repl: g("repl").value, note: g("note").value };
++    });
++  }
++  function preview() {
++    if (!$("tpTestIn")) return;
++    readEditor();
++    var r = run($("tpTestIn").value, editing);
++    $("tpTestOut").textContent = r.text;
++    $("tpTestLog").textContent = r.log.join("\n") + "\n" + r.chars + " / " + r.max + " characters";
++  }
++
++  function init(h) {
++    hooks = h;
++    if ($("tpApply")) {
++      $("tpApply").addEventListener("click", applyToLyrics);
++      $("tpUndo").addEventListener("click", function () {
++        if (undoText === null) return;
++        hooks.setLyrics(undoText); undoText = null; this.disabled = true; $("tpNote").textContent = ""; toast("The text is back as it was");
++      });
++    }
++    if ($("tpRules")) {
++      $("tpEdPick").addEventListener("change", function () { openEditor(this.value); });
++      $("tpShape").addEventListener("input", preview);
++      $("tpRules").addEventListener("input", preview);
++      $("tpRules").addEventListener("change", preview);
++      $("tpTestIn").addEventListener("input", preview);
++      $("tpRules").addEventListener("click", function (e) {
++        var b = e.target.closest("[data-op]"); if (!b) return;
++        readEditor();
++        var i = +b.closest("tr").dataset.i, rules = editing.rules;
++        if (b.dataset.op === "del") rules.splice(i, 1);
++        if (b.dataset.op === "up" && i > 0) rules.splice(i - 1, 0, rules.splice(i, 1)[0]);
++        if (b.dataset.op === "down" && i < rules.length - 1) rules.splice(i + 1, 0, rules.splice(i, 1)[0]);
++        paintEditor();
++      });
++      $("tpAddRule").addEventListener("click", function () { readEditor(); editing.rules.push(R("", "", "")); paintEditor(); });
++      $("tpEdSave").addEventListener("click", function () {
++        readEditor();
++        var name = ($("tpEdName").value || "").trim();
++        if (!name) return toast("Give the profile a name", true);
++        if (BUILT_IN.some(function (p) { return p.name === name; })) return toast("That name is a built-in profile: choose another", true);
++        send({ op: "put", kind: "textprofile", name: name, data: { shape: editing.shape, rules: editing.rules } })
++          .then(function () { editing.name = name; editing.builtin = false; toast("Text profile “" + name + "” saved on Forge"); return load(); })
++          .then(function () { $("tpEdPick").value = name; if ($("tpPick")) $("tpPick").value = name; })
++          .catch(function (e) { toast("Not saved: " + e.message, true); });
++      });
++      $("tpEdDel").addEventListener("click", function () {
++        var name = editing && editing.name;
++        if (!name || (find(name) || {}).builtin) return;
++        if (!confirm("Delete the text profile “" + name + "”?")) return;
++        send({ op: "delete", kind: "textprofile", name: name }).then(function () { editing = null; toast("Text profile deleted"); return load(); })
++          .catch(function (e) { toast(e.message, true); });
++      });
++      $("tpFromLyrics").addEventListener("click", function () { $("tpTestIn").value = hooks.lyrics().value; preview(); });
++    }
++    paintPickers();
++    load();
++  }
++
++  window.HeresyTextPrep = { init: init, run: run, profiles: profiles };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index aca9bff..c0286d4 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -365,8 +365,16 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ 
+       <label class="field" data-fold="lyrics">
+         <span class="label">Lyrics <em>section tags on their own line</em></span>
+-        <textarea id="lyrics" rows="6" data-max-rows="16" spellcheck="false" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
++        <textarea id="lyrics" rows="6" data-max-rows="16" spellcheck="false" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
+       </label>
++      <!-- HERESY 1043: a whole text made ready to read, by a profile (edited in Write) -->
++      <div class="lib-row" id="tpRow">
++        <span class="label">Text profile</span>
++        <select id="tpPick" aria-label="Text profile" data-tip="Paste a whole text into Lyrics, pick a profile, Apply: its rules (cleanup, phonetics) and its shape ([Intro], [Verse] at blank lines, [Interlude] after long paragraphs) make it ready to read. Profiles are edited in the Write tab."></select>
++        <button type="button" class="btn ghost small" id="tpApply">Apply</button>
++        <button type="button" class="btn ghost small" id="tpUndo" disabled>Undo</button>
++        <span class="row-hint mono" id="tpNote"></span>
++      </div>
+ 
+       <fieldset class="field sound" data-fold="vae">
+         <span class="label">VAE <span class="info" tabindex="-1" role="img" aria-label="About the VAE" data-tip-ref="tip-vae">i</span><em>turns the written song into sound</em></span>
+@@ -676,6 +684,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div></div>
+       </div>
+ 
++      <!-- HERESY 1044: a note of your own on this take -->
++      <label class="field take-note"><span class="label">Note <em id="takeNoteState"></em></span>
++        <textarea id="takeNote" rows="2" maxlength="4000" placeholder="A note on this take: what works, what to fix, where it goes…"></textarea></label>
+       <div class="meta-card" id="metaGrid"></div>
+       <div class="decode-switch" id="decodeSwitch"></div>
+       <div class="decode-switch" id="soundSwitch"></div>
+@@ -743,6 +754,26 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <div class="write-cur"><span class="label">Score <em>the key, meter and tempo the style must agree with</em></span><p class="mono" id="curScore"></p></div>
+         <div class="write-cur"><span class="label">Lyrics <em id="curLyricsSize"></em></span><pre id="curLyrics"></pre></div>
+       </section>
++      <!-- HERESY 1043: text profiles — rules and shape, with a live preview -->
++      <details class="drawer tp-editor" id="tpEditor">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Text profiles</span><span class="sum-say">How a pasted text is made ready to read: replacement rules in order (literal or regular expression), then the shape — [Intro], [Verse] at blank lines, [Interlude] after long paragraphs. Applied from the Lyrics field.</span></span></summary>
++        <div class="drawer-body">
++          <div class="lib-row">
++            <select id="tpEdPick" aria-label="Profile to edit"></select>
++            <input type="text" id="tpEdName" placeholder="Save as…" />
++            <button type="button" class="btn ghost small" id="tpEdSave">Save</button>
++            <button type="button" class="btn ghost small danger" id="tpEdDel">Delete</button>
++          </div>
++          <div class="tp-shape" id="tpShape"></div>
++          <div class="tp-rules-wrap"><table class="tp-rules" id="tpRules"></table></div>
++          <button type="button" class="btn ghost small" id="tpAddRule">+ Rule</button>
++          <div class="tp-test">
++            <label class="field"><span class="label">Try it <button type="button" class="btn ghost small" id="tpFromLyrics">from Lyrics</button></span>
++              <textarea id="tpTestIn" rows="6" spellcheck="false" placeholder="Paste a piece of text"></textarea></label>
++            <div class="field"><span class="label">Comes out</span><pre class="tp-out" id="tpTestOut"></pre><pre class="tp-log mono" id="tpTestLog"></pre></div>
++          </div>
++        </div>
++      </details>
+       <div class="write-room">
+     <!-- HERESY 1010: YuE2 Studio's songwriting assistant (heresy-assist.js), with the current song as context -->
+     <details class="drawer" id="assistDrawer" open>
+@@ -1250,6 +1281,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="heresy-score.js"></script>
+ <script src="heresy-presets.js"></script>
+ <script src="heresy-collection.js"></script>
++<script src="heresy-textprep.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+ <script src="heresy-inspect.js"></script>
+-- 
+2.43.0
+

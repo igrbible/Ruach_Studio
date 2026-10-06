@@ -1,0 +1,98 @@
+From c5c26e07105ee9a14b3116be9ea7c3cd8412a1d0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 01:03:21 -0600
+Subject: [PATCH 1071/1177] Train: the listener panel: draft styles per track,
+ corrected here, written into the captions
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  5 ++++
+ tools/console/heresy-train.js | 44 +++++++++++++++++++++++++++++++++++
+ 2 files changed, 49 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 914dce6..0fd5691 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2575,3 +2575,8 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .tr-calc table { border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+ .tr-calc th, .tr-calc td { padding: 2px 10px 2px 0; text-align: left; border-bottom: 1px solid var(--line-soft); }
+ .tr-calc th { color: var(--dim); font-weight: 500; }
++/* HERESY 1078: the listener in the wizard */
++.tr-listen { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: var(--r-md); }
++.tr-ltable { display: flex; flex-direction: column; gap: 3px; max-height: 360px; overflow: auto; }
++.tr-lrow { display: grid; grid-template-columns: minmax(160px, 34%) 1fr; gap: 8px; align-items: center; font-size: 12.5px; }
++.tr-lrow input { padding-top: 4px; padding-bottom: 4px; font-size: 12.5px; }
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 3d8d029..b795b08 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -46,6 +46,7 @@
+     }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
+     $("trRuns").innerHTML = d.runs.length ? d.runs.map(card).join("") : '<p class="row-hint">No runs yet.</p>';
+     gate();
++    listenPanel();
+   }
+ 
+   // ---- HERESY 1076: the VRAM gate, on measured numbers only. Every run keeps its peak (nvidia-smi on its
+@@ -122,6 +123,44 @@
+         '<button type="button" class="btn ghost small" data-watch="' + esc(r.name) + '">Watch</button></div>' +
+       "</article>";
+   }
++  // ---- HERESY 1078: the listener. Omni hears the checked set and drafts each track's style; you correct the
++  // drafts here; they go into the captions as "trigger, the track's tags. the shared line".
++  function checkedSet() { return (document.querySelector('input[name="trSet"]:checked') || {}).value; }
++  function listenPanel() {
++    var el = $("trListen"), set = checkedSet();
++    if (!el) { el = document.createElement("div"); el.id = "trListen"; el.className = "tr-listen"; $("trSets").insertAdjacentElement("afterend", el); }
++    if (!set) { el.innerHTML = ""; return; }
++    api("/train/listen?name=" + encodeURIComponent(set)).then(function (d) {
++      var ok = d.listeners.filter(function (l) { return l.present && l.fits; }), running = d.status === "running";
++      var cap0 = (d.rows[0] && d.rows[0].caption) || "", trig = (cap0.split(",")[0] || "").trim();
++      var dot = cap0.indexOf(". "), sharedNow = dot >= 0 ? cap0.slice(dot + 2) : cap0.slice(trig.length).replace(/^,\s*/, "");   // "trigger, tags. shared" or "trigger, shared"
++      var lines = d.listeners.map(function (l) { return (l.present ? (l.fits ? "\u2713 " : "\u2013 ") : "\u2717 ") + l.what + " \u00b7 " + (l.peak_mb / 1024).toFixed(1) + " GB" + (l.present ? (l.fits ? "" : " (no card big enough)") : " (not downloaded)"); });
++      el.innerHTML = '<div class="tr-bar"><b>Listener</b><span class="row-hint">drafts each track\u2019s style from what it hears; a draft, read and correct it</span><span class="spacer"></span>' +
++        '<button type="button" class="btn ghost small" id="trListenGo"' + (ok.length && !running ? "" : " disabled") + ">" + (running ? "Listening\u2026 " + d.done + " / " + d.total : "Listen to " + esc(set)) + "</button></div>" +
++        '<div class="row-hint">' + lines.map(esc).join(" \u00b7 ") + (d.styles_model ? " \u00b7 drafts here by " + esc(d.styles_model) : "") + (d.error ? ' <span class="tr-err">' + esc(d.error) + "</span>" : "") + "</div>" +
++        (d.rows.some(function (r) { return r.tags; }) ? '<div class="field-row wrap"><label class="field"><span class="label">Trigger</span><input type="text" id="trLTrigger" value="' + esc(trig) + '" /></label>' +
++          '<label class="field grow"><span class="label">Shared line <em>after the track\u2019s tags</em></span><input type="text" id="trLShared" value="' + esc(sharedNow) + '" placeholder="the album\u2019s vibe" /></label></div>' +
++          '<div class="tr-ltable">' + d.rows.map(function (r) {
++            return '<div class="tr-lrow"><span class="tr-file" title="' + esc(r.file) + '">' + esc(r.stem) + " \u00b7 " + esc(r.file) + '</span><input type="text" data-ltag="' + esc(r.stem) + '" value="' + esc(r.tags) + '" /></div>';
++          }).join("") + '</div><div class="tr-bar"><span class="spacer"></span><button type="button" class="btn primary small" id="trLApply">Write into the captions</button></div>' : "");
++      if (running) setTimeout(function () { if (checkedSet() === set) listenPanel(); }, 3000);
++    }).catch(function (e) { el.innerHTML = '<p class="tr-err">' + esc(e.message) + "</p>"; });
++  }
++  function listenGo() {
++    var set = checkedSet();
++    window.HeresyDialog.confirm("Listen to " + set + "?\n\nOmni hears 120 s of every track and drafts its style. Drafts heard before are kept aside (styles.DATE.json); the captions change only when you write them.", { ok: "Listen" })
++      .then(function (ok) { if (ok) return api("/train/listen", { dataset: set }).then(function () { toast("Listening to " + set); listenPanel(); }); })
++      .catch(function (e) { toast(e.message, true); });
++  }
++  function listenApply() {
++    var set = checkedSet(), tags = {};
++    Array.prototype.forEach.call(document.querySelectorAll("[data-ltag]"), function (i) { tags[i.dataset.ltag] = i.value; });
++    var trigger = $("trLTrigger").value.trim(), shared = $("trLShared").value.trim();
++    window.HeresyDialog.confirm("Write " + Object.keys(tags).length + " styles into the captions of " + set + "?\n\nEach first line becomes: " + (trigger ? trigger + ", " : "") + "the track\u2019s tags" + (shared ? ". " + shared.slice(0, 80) + (shared.length > 80 ? "\u2026" : "") : "") + "\nThe lyrics stay.", { ok: "Write" })
++      .then(function (ok) { if (ok) return api("/train/styles", { dataset: set, trigger: trigger, shared: shared, tags: tags }).then(function (d) { toast(d.captions + " captions written"); listenPanel(); }); })
++      .catch(function (e) { toast(e.message, true); });
++  }
++
+   function publish(name, file) {
+     api("/train/publish", { name: name, file: file }).then(function (d) { toast("In loras/: " + d.lora); load(); }).catch(function (e) { toast(e.message, true); });
+   }
+@@ -240,6 +279,11 @@
+     $("trKinds").innerHTML = Object.keys(KINDS).map(function (k) { return '<button type="button" class="coll-chip" data-kind="' + k + '">' + KINDS[k].label + "</button>"; }).join("");
+     $("trKinds").addEventListener("click", function (e) { var b = e.target.closest("[data-kind]"); if (b) setKind(b.dataset.kind); });
+     $("tr_quant").addEventListener("change", function () { if (state.data) gate(); });
++    $("trSets").addEventListener("change", function () { listenPanel(); });
++    $("view-train").addEventListener("click", function (e) {
++      if (e.target.id === "trListenGo") listenGo();
++      if (e.target.id === "trLApply") listenApply();
++    });
+     $("trRun").addEventListener("click", startRun);
+     $("trStop").addEventListener("click", function () {
+       window.HeresyDialog.confirm("Stop " + state.run + "?\n\nAI-Toolkit saves what it has on the way out; the last checkpoint goes to loras/.", { ok: "Stop", danger: true })
+-- 
+2.43.0
+

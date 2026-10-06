@@ -1,0 +1,597 @@
+From 97c89b6f4badef381cc76cfbf2662905b748302d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 15:00:59 -0600
+Subject: [PATCH 1157/1177] HERESY 1167: the second towel: the veil 7 s, the
+ Writer row whole, one artwork a take, the disliked hidden as SUNO hides them,
+ the Style heading's WARNING and ?
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026, afternoon:
+· «Пять секунд мало. на LOADING. Давай 7. Это стоит того»: the veil holds seven seconds at least (seventeen at most), its
+  line fills in seven.
+· «баг Творца>Писателя… `% ...` выскочило»: with a document in hand the Writer row cut its title («Я - бур…») and broke
+  «Сохранить в Писателе» over lines (at 1536 px the title 45 px, the button four lines). It wraps now between two groups:
+  the document whole beside its ✕, the menu and the button beside it while they fit, under it to the right when not; the
+  button's words never break.
+· «Когда пошла генерация обложки, запрещай на том же треке повторный запуск процесса»: one drawing a take at a time from
+  the page: a second ask while it draws or waits is told so and not sent (the lab kept one job a take, but the page started
+  a second poller and a second pair of toasts); the take's menu says «Drawing artwork…» / «Artwork waits for a card…»
+  then. The lab now holds a job that finds no card in its queue (the lab's own commit): the wait is said once.
+· «Как в SUNO… дизлайк прятал трек, не удаляя, а в строке сортировки и т.п. добавить чекбокс показа/скрытия треков с
+  дизлайками» («Дизлайк должен сбрасывать звезду», as it does): a disliked take leaves the Librarian and the rooms' takes
+  column, nothing deleted; one setting (yue2.showDisliked): «Show disliked» beside the Librarian's sort, «The disliked ones
+  too» in the column's ⋯ (it was the opposite, «Without the disliked», off); the 👎 chip shows them whatever it says; a
+  dislike says where the take went; a rating from anywhere (the player bar too) repaints both lists. Checked on the live
+  page with the lab's «rate» answered in the page: the library untouched (its checksum the same before and after).
+· the Style block: «Знак вопроса отрендерить жирным SVG с полной выключкой вправо… предупреждения… в ту же строку перед
+  знаком вопроса с автоматически появляющимся WARNING и при наведении тултип крупно 16pt с разъяснением ожидаемой проблемы.
+  Полосу со счётчиками… не красным, а 80% gray… в одну строку»: the cheat-sheet's button a bold ? (SVG) at the end of the
+  heading's line; before it, by itself, a WARNING when the style is unlike the model's training ones or style and lyrics
+  pass the budget, its tip at 16 pt: what is wrong point by point, and what to expect; when the score's and the song's
+  budgets alone fill the window (the budget went below zero: «of -4 148»), it says so and which knobs free it. The counter
+  one line: «Characters: N · tokens: ≈N · with the lyrics: ≈N of N», 80 % of the ink, never red or amber. A big tip that
+  fits neither above nor below its target stands beside it.
+The console test: the counter's new words, the WARNING and its tip; the kitchen's take/takes line measured after the tall
+bar settles (it passed by timing before). 14 + 1 + 17 keys in the six catalogs.
+cdp-console 334/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 38 ++++++++++++++++++++-
+ tools/console/app.js                | 53 +++++++++++++++++++++++++----
+ tools/console/help.js               | 52 +++++++++++++++++++++++++---
+ tools/console/heresy-collection.js  | 25 ++++++++++++--
+ tools/console/heresy-i18n-be.js     | 16 ++++++++-
+ tools/console/heresy-i18n-el.js     | 16 ++++++++-
+ tools/console/heresy-i18n-es.js     | 16 ++++++++-
+ tools/console/heresy-i18n-it.js     | 16 ++++++++-
+ tools/console/heresy-i18n-ru.js     | 16 ++++++++-
+ tools/console/heresy-i18n-uk.js     | 16 ++++++++-
+ tools/console/heresy-instruments.js |  8 +++--
+ tools/console/index.html            | 24 ++++++++-----
+ 12 files changed, 266 insertions(+), 30 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 443e6e4..3d927a0 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3880,6 +3880,42 @@ html.i18n-wait .boot-veil > * { visibility: hidden; }
+ .boot-words { margin: 18px 0 0; font: 500 clamp(13px, 1.15vw, 19px)/1.4 var(--heading); letter-spacing: .34em; text-transform: uppercase;
+   color: var(--muted); text-align: center; animation: boot-in 1.1s .25s ease both; }
+ .boot-line { width: min(60vw, 420px); height: 2px; border-radius: 1px; background: var(--line-a); overflow: hidden; }
+-.boot-line i { display: block; width: 0; height: 100%; background: var(--amber); animation: boot-fill 5s linear forwards; }
++.boot-line i { display: block; width: 0; height: 100%; background: var(--amber); animation: boot-fill 7s linear forwards; }
+ @keyframes boot-in { from { opacity: 0; transform: translateY(8px); } }
+ @keyframes boot-fill { to { width: 100%; } }
++
++/* HERESY 1167 (Viktor: «баг Творца>Писателя… `% ...` выскочило»): the Writer row with a document in hand cut its title to
++   «Я - бур…» and broke «Сохранить в Писателе» over lines. It wraps now between its two groups: the document keeps its whole
++   title beside its ✕ (cut only past the card's width, the cap's room kept), the menu and the button beside it while they fit,
++   under it to the right when not; the button's words never break. */
++.wr-hand { flex-wrap: wrap; row-gap: 6px; }
++.wr-hand-doc { display: none; align-items: center; min-width: 0; max-width: calc(100% - 92px); }
++.wr-hand.is-on .wr-hand-doc { display: inline-flex; }
++.wr-hand-doc .wr-hand-name { flex: 0 1 auto; min-width: 0; max-width: none; }
++.wr-hand-doc .wr-hand-x { flex: none; }
++.wr-hand-acts { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
++.wr-hand-acts .btn { white-space: nowrap; }
++
++/* HERESY 1167: the Librarian's «Show disliked» beside its sort */
++.coll-headtools .coll-showdis { white-space: nowrap; font-size: 12.5px; color: var(--muted); }
++.coll-headtools .coll-showdis input { margin: 0 4px 0 0; vertical-align: -2px; }
++
++/* HERESY 1167 (Viktor: the Style block's heading line, «Знак вопроса… жирным SVG с полной выключкой вправо… WARNING… тултип
++   крупно 16pt… Полосу со счётчиками… не красным, а 80% gray… в одну строку»): the heading a row; at its end the WARNING
++   (when there is something to say) and the cheat-sheet's ?; the counter one grey line */
++.k-style [data-fold="style"] > .label { display: flex; align-items: center; min-width: 0; }
++.k-style [data-fold="style"] > .label em, .k-style [data-fold="style"] > .label .fold-peek { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.label-end { margin-left: auto; padding-left: 10px; display: inline-flex; align-items: center; gap: 8px; flex: none; }
++.label-end .hi-open { margin: 0; padding: 0; width: 24px; height: 24px; display: inline-grid; place-items: center; border: 1.5px solid var(--amber-dim);
++  border-radius: 50%; color: var(--amber); vertical-align: 0; }
++.label-end .hi-open:hover, .label-end .hi-open:focus-visible { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
++.label-end .hi-open svg { width: 16px; height: 16px; display: block; }
++.style-warn { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border: 1px solid var(--amber); border-radius: 999px;
++  color: var(--amber); background: color-mix(in srgb, var(--amber) 9%, transparent); font: 600 10.5px/1.5 var(--sans); letter-spacing: .1em;
++  text-transform: uppercase; cursor: help; }
++.style-warn[hidden] { display: none; }
++.style-warn svg { width: 14px; height: 14px; display: block; }
++.tip.tip-big { font-size: 16pt; line-height: 1.42; max-width: min(860px, calc(100vw - 16px)); padding: 12px 16px; }
++#styleMeter.size-meter, #styleMeter.size-meter.is-warn, #styleMeter.size-meter.is-over {
++  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: none; color: color-mix(in srgb, var(--ink) 80%, var(--panel));
++}
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 690099a..14c1b3d 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -348,11 +348,22 @@
+     if (ref) tip.appendChild(document.getElementById(ref).content.cloneNode(true));
+     else tip.textContent = target.dataset.tip;
+     tip.classList.toggle("tip-rich", !!ref);
++    tip.classList.toggle("tip-big", target.dataset.tipSize === "big");   // HERESY 1167: the Style's WARNING, at 16 pt
+     tip.classList.add("is-on");
+     var box = target.getBoundingClientRect(), width = tip.offsetWidth, height = tip.offsetHeight;
+     var top = box.top - height - 8;
+     if (top < 60) top = Math.min(box.bottom + 8, window.innerHeight - height - 8);   // no room above: below
+-    tip.style.left = Math.max(8, Math.min(box.left + box.width / 2 - width / 2, window.innerWidth - width - 8)) + "px";
++    var left = Math.max(8, Math.min(box.left + box.width / 2 - width / 2, window.innerWidth - width - 8));
++    // HERESY 1167: a big tip that fits neither above nor below would cover its target (the Style's WARNING in a short
++    // window): beside it, on the side with room, as high as the window lets it
++    if (tip.classList.contains("tip-big") && top < box.bottom && top + height > box.top) {
++      var beside = box.right + 12 + width <= window.innerWidth - 8 ? box.right + 12 : box.left - 12 - width >= 8 ? box.left - 12 - width : null;
++      if (beside !== null) {
++        left = beside;
++        top = Math.max(8, Math.min(box.top + box.height / 2 - height / 2, window.innerHeight - height - 8));
++      }
++    }
++    tip.style.left = left + "px";
+     tip.style.top = Math.max(8, top) + "px";
+     tipFor = target;
+   }
+@@ -4436,12 +4447,29 @@
+   $("pbCover").addEventListener("click", function () {
+     if (STATE.playerTake && artUrl(STATE.playerTake.name)) showArt(STATE.playerTake.name);
+   });
++  // HERESY 1167 (Viktor: «Когда пошла генерация обложки, запрещай на том же треке повторный запуск процесса»): one drawing
++  // a take at a time from this page: while its artwork is drawn or waits for a card, a second ask is told so and not sent
++  // (the lab keeps one job a take anyway; the page started a second poller and a second pair of toasts). The lab now holds
++  // a job that finds no card with room in its queue: the wait is said once.
++  var ARTING = {};
+   function drawArt(name, again) {
+     var take = findTake(name), title = take ? displayTitle(take) : name;
++    if (ARTING[name]) {
++      toast(ARTING[name] === "wait" ? "Artwork for “" + title + "” already waits in the queue for a card"
++        : "Artwork for “" + title + "” is being drawn already");
++      return Promise.resolve();
++    }
++    ARTING[name] = "draw";
+     toast("Drawing artwork for “" + title + "”: a prompt from its style and words, then the picture (about half a minute)");
+     var ask = function (first) {
+       return api("/lab/art/draw?name=" + encodeURIComponent(name) + (first && again ? "&again=1" : "")).then(function (d) {
+         if (d && (d.status === "queued" || d.status === "running")) {
++          if (d.status === "queued" && d.waiting && ARTING[name] !== "wait") {
++            ARTING[name] = "wait";
++            toast("Artwork for “" + title + "” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)");
++          } else if (d.status === "running") {
++            ARTING[name] = "draw";
++          }
+           return new Promise(function (ok) { setTimeout(ok, 3000); }).then(function () { return ask(false); });
+         }
+         return d;
+@@ -4449,7 +4477,8 @@
+     };
+     return ask(true).then(function (d) {
+       return refreshArts().then(function () { toast("Artwork for “" + title + "” is ready"); return d; });
+-    }).catch(function (e) { toast("No artwork: " + e.message, "bad"); });
++    }).catch(function (e) { toast("No artwork: " + e.message, "bad"); })
++      .then(function (d) { delete ARTING[name]; return d; });
+   }
+   // HERESY 1156: the picture taken off its take (the lab keeps it in the take's artwork-removed/, and drops the MP3s made
+   // with it as their cover)
+@@ -4938,6 +4967,10 @@
+   }
+ 
+   // HERESY 1125: the Takes column's filters, kept per browser
++  // HERESY 1167 (Viktor: «как в SUNO… дизлайк прятал трек, не удаляя»): a disliked take leaves the column unless shown;
++  // one setting with the Librarian's «Show disliked» (each tells the other: ruach-disliked)
++  function showDisliked() { return recall("yue2.showDisliked") === "1"; }
++  window.addEventListener("ruach-disliked", function () { paintLibrary(); });
+   function libFilters() {
+     var f = {};
+     try { f = JSON.parse(recall("yue2.libFilters") || "{}") || {}; } catch (e) { f = {}; }
+@@ -4946,6 +4979,11 @@
+   document.addEventListener("click", function (e) {
+     var b = e.target.closest("[data-libf]");
+     if (!b) return;
++    if (b.dataset.libf === "disliked") {                 // HERESY 1167: the shared setting, not one of the column's own
++      store("yue2.showDisliked", showDisliked() ? "0" : "1");
++      window.dispatchEvent(new Event("ruach-disliked"));
++      return;
++    }
+     var f = libFilters();
+     f[b.dataset.libf] = !f[b.dataset.libf];
+     if (b.dataset.libf === "liked" && f.liked) f.noDisliked = false;
+@@ -4972,13 +5010,14 @@
+         if (!F.hidden && HC.isHidden(t.name)) return false;
+         if (!HC.inCurrent(t.name) || !(m(displayTitle(t)) || m(t.name))) return false;
+         var r = HC.rating(t.name);
+-        return !(F.liked && r <= 0) && !(F.noDisliked && r < 0) && !(F.noted && !HC.note(t.name));
++        return !(F.liked && r <= 0) && !(r < 0 && !showDisliked()) && !(F.noted && !HC.note(t.name));   // HERESY 1167
+       });
+     }
++    filtered = filtered || shown.length !== STATE.takes.length;   // HERESY 1167: the disliked out of it count too
+     $("libCount").textContent = filtered || refinedOnly ? shown.length + " / " + STATE.takes.length : String(STATE.takes.length);
+     $("refinedFilter").setAttribute("aria-pressed", refinedOnly ? "true" : "false");
+-    $("libMenuBtn").classList.toggle("has-filter", F.liked || F.noDisliked || F.noted || F.hidden);
+-    all("[data-libf]").forEach(function (b) { b.setAttribute("aria-checked", F[b.dataset.libf] ? "true" : "false"); });
++    $("libMenuBtn").classList.toggle("has-filter", F.liked || showDisliked() || F.noted || F.hidden);
++    all("[data-libf]").forEach(function (b) { b.setAttribute("aria-checked", (b.dataset.libf === "disliked" ? showDisliked() : F[b.dataset.libf]) ? "true" : "false"); });
+     $("favFilter").setAttribute("aria-pressed", STATE.favOnly ? "true" : "false");
+ 
+     // A run in progress sits at the top of the list, so it is never lost.
+@@ -6611,7 +6650,9 @@
+       // HERESY 1120: artwork, asked for. HERESY 1155 (Viktor: «Для Draw Artwork, когда есть иллюстрация, заменяй на
+       // Redraw Artwork»; «Не уходим из студии в другие окна и вкладки»): seen over the page, drawn again by name
+       take.session || !artUrl(name) ? null : { icon: "▣", label: "Open the artwork", action: function () { showArt(name); } },
+-      take.session ? null : artUrl(name)
++      take.session ? null : ARTING[name]                // HERESY 1167: one drawing a take at a time
++        ? { icon: "▣", label: ARTING[name] === "wait" ? "Artwork waits for a card…" : "Drawing artwork…", disabled: true, action: function () {} }
++        : artUrl(name)
+         ? { icon: "↻", label: "Redraw artwork", hint: "a new prompt, a new picture", action: function () { drawArt(name, true); } }
+         : { icon: "▣", label: "Draw artwork", hint: "half a minute on a GPU", action: function () { drawArt(name, false); } },
+       // HERESY 1156 (Viktor: «В меню мыши Remove current Artwork»): taken off the take, kept beside it
+diff --git a/tools/console/help.js b/tools/console/help.js
+index a0b6908..c6a634b 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -361,17 +361,58 @@
+     return w;
+   }
+ 
++  // HERESY 1167 (Viktor: «Сами предупреждения о несоответствии со стилистикой можно в ту же строку перед знаком вопроса с
++  // автоматически появляющимся WARNING и при наведении тултип крупно 16pt с разъяснением ожидаемой проблемы. Полосу со
++  // счётчиками как сейчас, но не красным, а 80% gray… в одну строку»): the counter on one line, in grey; what is wrong
++  // behind a WARNING at the end of the heading's line (before the cheat-sheet's ?), its tip large, with what to expect
++  var EXPECT = "What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. " +
++               "What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.";
++  var OVER = "What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.";
++  function warnBadge() {
++    var box = document.getElementById("style"), label = box && box.closest(".field") && box.closest(".field").querySelector(".label");
++    if (!label) return null;
++    var end = document.getElementById("styleLabelEnd");
++    if (!end) {
++      end = document.createElement("span");
++      end.className = "label-end"; end.id = "styleLabelEnd";
++      label.appendChild(end);
++    }
++    var b = document.getElementById("styleWarn");
++    if (!b) {                                             // a span: hovering shows it all; a click folds nothing (below)
++      b = document.createElement("span");
++      b.id = "styleWarn"; b.className = "style-warn"; b.tabIndex = 0; b.hidden = true;
++      b.setAttribute("data-tip-size", "big");
++      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2 2.6 20.2h18.8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>' +
++        '<path d="M12 9.6v5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1.35" fill="currentColor"/></svg><span>Warning</span>';
++      b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); });
++      end.insertBefore(b, end.firstChild);
++    }
++    var hi = document.getElementById("hiOpen");
++    if (hi && hi.parentNode !== end) end.appendChild(hi);  // the cheat-sheet's ? after it, at the line's end
++    return b;
++  }
+   function paintMeter() {
+     var style = document.getElementById("style"), lyrics = document.getElementById("lyrics"), out = document.getElementById("styleMeter");
+     if (!style || !out) return;
+     var s = estimateTokens(style.value), both = s + (lyrics ? estimateTokens(lyrics.value) : 0), budget = promptBudget();
+-    var warn = styleWarnings(style.value, lyrics ? lyrics.value : "");
+-    out.textContent = tr(style.value.length.toLocaleString(loc()) + " characters, about " + s.toLocaleString(loc()) + " tokens.") + " " +
+-      tr("Style and lyrics together: about " + both.toLocaleString(loc()) + " of " + budget.toLocaleString(loc()) + " tokens" +
+-         (both > budget ? " \u2014 too long for a full-length song and score." : ".")) +
+-      (warn.length ? "\n\u26a0 " + tr("Unlike the model's training styles:") + " " + warn.map(tr).join("; ") + "." : "");
++    var warn = styleWarnings(style.value, lyrics ? lyrics.value : ""), full = budget <= 0;   // the knobs alone fill the window
++    out.textContent = tr("Characters: " + style.value.length.toLocaleString(loc()) + " \u00b7 tokens: \u2248" + s.toLocaleString(loc()) +
++      " \u00b7 with the lyrics: \u2248" + both.toLocaleString(loc()) + " of " + Math.max(0, budget).toLocaleString(loc()));
+     out.classList.toggle("is-warn", (both > budget * 0.75 && both <= budget) || warn.length > 0);
+     out.classList.toggle("is-over", both > budget);
++    var b = warnBadge();
++    if (!b) return;
++    var said = [];
++    if (full) said.push(tr("The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style " +
++                           "and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length."));
++    else if (both > budget) said.push(tr("Style and lyrics together: about " + both.toLocaleString(loc()) + " of " + budget.toLocaleString(loc()) +
++                                         " tokens \u2014 too long for a full-length song and score."));
++    if (warn.length) said.push(tr("Unlike the model's training styles:") + "\n" + warn.map(function (x) { return "\u2022 " + tr(x); }).join("\n"));
++    b.hidden = !said.length;
++    if (!said.length) { b.removeAttribute("data-tip"); return; }
++    if (warn.length) said.push(tr(EXPECT));
++    if (both > budget) said.push(tr(OVER));
++    b.setAttribute("data-tip", said.join("\n\n"));
+   }
+ 
+   function growBox(box) {
+@@ -398,6 +439,7 @@
+     if (!sized && idea) idea.addEventListener("input", function () { growBox(idea); });
+     style.addEventListener("input", tick);
+     if (lyrics) lyrics.addEventListener("input", tick);
++    window.addEventListener("ruach-lang", function () { last = null; tick(); });   // HERESY 1167: written again in it
+     setInterval(tick, 700);     // values set by the page itself (examples, reuse, the writer) fire no input event
+     tick();
+   }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 61b9d7c..c9ee9e6 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -70,6 +70,10 @@
+   // HERESY 1166 (Viktor: «Деактивация воркспейса. Замораживаются все треки в этом представлении, никаких действий по ним,
+   // в `All Workspaces` и в поиске не отображаются. Сам деактивированный воркспейс немного засЕривается»): a take frozen with
+   // its workspace (the lab says which: in no workspace that is not frozen) shows only inside it, greyed, heard and read
++  // HERESY 1167 (Viktor: «как в SUNO… дизлайк прятал трек, не удаляя»): a disliked take leaves the lists unless this says
++  // show them (the Librarian's box, the column's ⋯: one setting); the 👎 chip shows them whatever it says
++  var DISLIKED_KEY = "yue2.showDisliked";
++  function showDis() { return recall(DISLIKED_KEY) === "1"; }
+   function frozenWs(w) { return (state.frozen || []).some(function (f) { return w === f || String(w).indexOf(f + SEP) === 0; }); }
+   function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
+   function shown() {
+@@ -81,6 +85,7 @@
+       if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
+       if (state.place === "__hidden") { if (!r.hidden) return false; }
+       else if (r.hidden) return false;
++      if (r.rating < 0 && !showDis() && !state.kinds.__disliked) return false;   // HERESY 1167
+       if (state.place && state.place.charAt(0) !== "_" && !inTree(r, state.place)) return false;   // its sections too (1161)
+       if (state.kinds.__liked && !(r.rating > 0)) return false;
+       if (state.kinds.__disliked && !(r.rating < 0)) return false;
+@@ -631,6 +636,17 @@
+     $("collSearch").addEventListener("input", function () { state.q = this.value; paint(); });
+     $("collSort").value = recall(SORT_KEY) || "new";
+     $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
++    // HERESY 1167: the disliked shown or not, one setting with the rooms' takes column (its ⋯ menu)
++    var showBox = $("collShowDisliked");
++    if (showBox) {
++      showBox.checked = showDis();
++      showBox.addEventListener("change", function () {
++        store(DISLIKED_KEY, this.checked ? "1" : "0");
++        paint();
++        window.dispatchEvent(new Event("ruach-disliked"));
++      });
++    }
++    window.addEventListener("ruach-disliked", function () { if (showBox) showBox.checked = showDis(); paint(); });
+     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) {
+       b.addEventListener("click", function () { store(VIEW_KEY, b.dataset.collView); paint(); });
+     });
+@@ -1026,10 +1042,15 @@
+     // HERESY 1107: seen at once, confirmed by the lab; a refusal takes it back (and the caller says why)
+     var r = rowOf(name), before = r ? r.rating : 0;
+     if (r) { r.rating = value; paint(); }
++    if (value < 0 && !showDis()) {                       // HERESY 1167: it leaves the lists; said where it went
++      toast("“" + (r ? r.title : name) + "” disliked: it leaves the lists; nothing is deleted (“Show disliked” brings it back)");
++    }
++    var told = function () { if (state.hooks.libraryChanged) state.hooks.libraryChanged(); };   // HERESY 1167: the column too
++    told();
+     return api("/collection", { op: "rate", names: [name], value: value }).then(function (d) {
+-      state.rows = d.takes || state.rows; paint();
++      state.rows = d.takes || state.rows; paint(); told();
+       return value;
+-    }, function (e) { if (r) { r.rating = before; paint(); } throw e; });
++    }, function (e) { if (r) { r.rating = before; paint(); told(); } throw e; });
+   }
+ 
+   // ---- HERESY 1046: the take without leaving the Librarian: a hover peek (400 ms) and a sheet on click
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 94c4ed9..809ba0b 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2568,5 +2568,19 @@ RuachI18n.add("be", {
+ "the transcriber is writing it… {#0} s": "транскрыбер запісвае яе… {0} с",
+ "not written: {0}": "не запісана: {0}",
+ "the transcriber (SheetSage2)": "транскрыбер (SheetSage2)",
+-"Loading the Sound Heresy": "Загрузка Гукавой Ерасі"
++"Loading the Sound Heresy": "Загрузка Гукавой Ерасі",
++"Artwork for “{0}” already waits in the queue for a card": "Вокладка для «{0}» ужо чакае відэакарту ў чарзе",
++"Artwork for “{0}” is being drawn already": "Вокладка для «{0}» ужо малюецца",
++"Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "Вокладка для «{0}» чакае ў чарзе відэакарту з месцам і пачнецца сама (Рухавік → Відэакарты: якая карта чым занятая)",
++"Artwork waits for a card…": "Вокладка чакае відэакарту…",
++"Drawing artwork…": "Малюецца вокладка…",
++"Show disliked": "Паказваць неўпадабаныя",
++"The disliked ones too": "І неўпадабаныя таксама",
++"A dislike hides a take from the lists, as SUNO does; nothing is deleted. Ticked, the disliked show too; the 👎 chip shows only them": "Як у SUNO, «Не падабаецца» хавае сэмпл са спісаў; нічога не выдаляецца. З галачкай неўпадабаныя бачныя таксама; кнопка 👎 паказвае толькі іх",
++"“{0}” disliked: it leaves the lists; nothing is deleted (“Show disliked” brings it back)": "«{0}» не падабаецца: сэмпл сыходзіць са спісаў, нічога не выдалена («Паказваць неўпадабаныя» верне яго)",
++"Warning": "Увага",
++"Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Сімвалаў: {0} · токенаў: ≈{1} · з тэкстам: ≈{2} з {3}",
++"What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Чаго чакаць: YuE2 вучыўся на стылях без гэтага, а рухавік перадае стыль слова ў слова. Чаго мадэль не бачыла, можа прагучаць спетымі словамі або адвесці гук ад стылю. Напісаны як афіцыйныя стылі, стыль трымаецца.",
++"What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Чаго чакаць: стыль, тэкст, партытура і песня дзеляць адно акно ў 24 576 токенаў; звыш бюджэту партытура ці песня абрываюцца.",
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджэты токенаў партытуры і песні самі займаюць усё акно ў 24 576 токенаў: стылю і тэксту нічога не застаецца. Зменшы max tokens у «Сэмплінг партытуры» ці «Сэмплінг музыкі», або «Макс. даўжыня»."
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index f9dd300..b1dfb31 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2567,5 +2567,19 @@ RuachI18n.add("el", {
+ "the transcriber is writing it… {#0} s": "ο μεταγραφέας τη γράφει… {0} δ",
+ "not written: {0}": "δεν γράφτηκε: {0}",
+ "the transcriber (SheetSage2)": "ο μεταγραφέας (SheetSage2)",
+-"Loading the Sound Heresy": "Φόρτωση της Ηχητικής Αίρεσης"
++"Loading the Sound Heresy": "Φόρτωση της Ηχητικής Αίρεσης",
++"Artwork for “{0}” already waits in the queue for a card": "Το εξώφυλλο για το «{0}» περιμένει ήδη κάρτα στην ουρά",
++"Artwork for “{0}” is being drawn already": "Το εξώφυλλο για το «{0}» ζωγραφίζεται ήδη",
++"Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "Το εξώφυλλο για το «{0}» περιμένει στην ουρά κάρτα με χώρο και ξεκινά μόνο του (Μηχανή → GPU: ποια κάρτα κάνει τι)",
++"Artwork waits for a card…": "Το εξώφυλλο περιμένει κάρτα…",
++"Drawing artwork…": "Ζωγραφίζεται εξώφυλλο…",
++"Show disliked": "Εμφάνιση όσων δεν μου αρέσουν",
++"The disliked ones too": "Και όσα δεν μου αρέσουν",
++"A dislike hides a take from the lists, as SUNO does; nothing is deleted. Ticked, the disliked show too; the 👎 chip shows only them": "Όπως στο SUNO, το «Δεν μου αρέσει» κρύβει μια λήψη από τις λίστες· τίποτα δεν διαγράφεται. Με το σημάδι φαίνονται κι αυτές· το 👎 δείχνει μόνο αυτές",
++"“{0}” disliked: it leaves the lists; nothing is deleted (“Show disliked” brings it back)": "Το «{0}» δεν μου αρέσει: φεύγει από τις λίστες, τίποτα δεν διαγράφεται (το «Εμφάνιση όσων δεν μου αρέσουν» το φέρνει πίσω)",
++"Warning": "Προσοχή",
++"Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Χαρακτήρες: {0} · tokens: ≈{1} · με τους στίχους: ≈{2} από {3}",
++"What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Τι να περιμένεις: το YuE2 εκπαιδεύτηκε σε ύφη χωρίς αυτά, και η μηχανή περνά το ύφος λέξη προς λέξη. Ό,τι δεν είδε ποτέ το μοντέλο μπορεί να βγει τραγουδισμένο σαν λόγια ή να τραβήξει τον ήχο μακριά από το ύφος. Γραμμένο όπως τα επίσημα, το ύφος κρατά.",
++"What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Τι να περιμένεις: το ύφος, οι στίχοι, η παρτιτούρα και το τραγούδι μοιράζονται ένα παράθυρο 24.576 tokens· πέρα από τον προϋπολογισμό η παρτιτούρα ή το τραγούδι κόβεται.",
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Οι προϋπολογισμοί tokens της παρτιτούρας και του τραγουδιού γεμίζουν μόνοι τους το παράθυρο των 24.576 tokens: δεν μένει τίποτα για το ύφος και τους στίχους. Μείωσε το max tokens στη «Δειγματοληψία παρτιτούρας» ή στη «Δειγματοληψία μουσικής», ή τη «Μέγιστη διάρκεια»."
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 6b6d86c..0df5121 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2567,5 +2567,19 @@ RuachI18n.add("es", {
+ "the transcriber is writing it… {#0} s": "el transcriptor la está escribiendo… {0} s",
+ "not written: {0}": "no escrita: {0}",
+ "the transcriber (SheetSage2)": "el transcriptor (SheetSage2)",
+-"Loading the Sound Heresy": "Cargando la Herejía Sonora"
++"Loading the Sound Heresy": "Cargando la Herejía Sonora",
++"Artwork for “{0}” already waits in the queue for a card": "La portada de «{0}» ya espera una GPU en la cola",
++"Artwork for “{0}” is being drawn already": "La portada de «{0}» ya se está dibujando",
++"Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "La portada de «{0}» espera en la cola una GPU con sitio y empieza sola (Motor → GPU dice qué hace cada tarjeta)",
++"Artwork waits for a card…": "La portada espera una GPU…",
++"Drawing artwork…": "Dibujando la portada…",
++"Show disliked": "Mostrar las que no me gustan",
++"The disliked ones too": "También las que no me gustan",
++"A dislike hides a take from the lists, as SUNO does; nothing is deleted. Ticked, the disliked show too; the 👎 chip shows only them": "Como en SUNO, «No me gusta» oculta una toma de las listas; no se borra nada. Marcado, también se ven; el 👎 muestra solo esas",
++"“{0}” disliked: it leaves the lists; nothing is deleted (“Show disliked” brings it back)": "«{0}» no me gusta: sale de las listas, no se borra nada («Mostrar las que no me gustan» la devuelve)",
++"Warning": "Atención",
++"Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Caracteres: {0} · tokens: ≈{1} · con la letra: ≈{2} de {3}",
++"What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Qué esperar: YuE2 aprendió de estilos sin esto, y el motor pasa el estilo palabra por palabra. Lo que el modelo nunca vio puede salir cantado como palabras o apartar el sonido del estilo. Escrito como los estilos oficiales, el estilo se sostiene.",
++"What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Qué esperar: el estilo, la letra, la partitura y la canción comparten una ventana de 24 576 tokens; pasado el presupuesto, la partitura o la canción se cortan.",
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Los presupuestos de tokens de la partitura y de la canción llenan solos la ventana de 24 576 tokens: no queda nada para el estilo y la letra. Baja max tokens en «Muestreo de la partitura» o «Muestreo de la música», o la «Duración máxima»."
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index fb5499c..0b8f1ad 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2567,5 +2567,19 @@ RuachI18n.add("it", {
+ "the transcriber is writing it… {#0} s": "il trascrittore la sta scrivendo… {0} s",
+ "not written: {0}": "non scritta: {0}",
+ "the transcriber (SheetSage2)": "il trascrittore (SheetSage2)",
+-"Loading the Sound Heresy": "Caricamento dell'Eresia Sonora"
++"Loading the Sound Heresy": "Caricamento dell'Eresia Sonora",
++"Artwork for “{0}” already waits in the queue for a card": "La copertina di «{0}» aspetta già una GPU in coda",
++"Artwork for “{0}” is being drawn already": "La copertina di «{0}» è già in disegno",
++"Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "La copertina di «{0}» aspetta in coda una GPU con spazio e parte da sola (Motore → GPU dice cosa fa ogni scheda)",
++"Artwork waits for a card…": "La copertina aspetta una GPU…",
++"Drawing artwork…": "Si disegna la copertina…",
++"Show disliked": "Mostra i Non mi piace",
++"The disliked ones too": "Anche i Non mi piace",
++"A dislike hides a take from the lists, as SUNO does; nothing is deleted. Ticked, the disliked show too; the 👎 chip shows only them": "Come in SUNO, «Non mi piace» nasconde un take dalle liste; non si cancella nulla. Spuntato, si vedono anche loro; il 👎 mostra solo quelli",
++"“{0}” disliked: it leaves the lists; nothing is deleted (“Show disliked” brings it back)": "«{0}» non mi piace: esce dalle liste, non si cancella nulla («Mostra i Non mi piace» lo riporta)",
++"Warning": "Attenzione",
++"Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Caratteri: {0} · token: ≈{1} · con il testo: ≈{2} su {3}",
++"What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Cosa aspettarsi: YuE2 ha imparato da stili senza questo, e il motore passa lo stile parola per parola. Ciò che il modello non ha mai visto può uscire cantato come parole o portare il suono lontano dallo stile. Scritto come gli stili ufficiali, lo stile tiene.",
++"What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Cosa aspettarsi: lo stile, il testo, la partitura e la canzone condividono una finestra di 24.576 token; oltre il budget la partitura o la canzone si interrompono.",
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "I budget di token della partitura e della canzone riempiono da soli la finestra di 24.576 token: non resta nulla per lo stile e il testo. Abbassa max tokens in «Campionamento della partitura» o «Campionamento della musica», o la «Durata massima»."
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index b7076bc..afa44bc 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2573,5 +2573,19 @@ RuachI18n.add("ru", {
+ "the transcriber is writing it… {#0} s": "транскрибер записывает её… {0} с",
+ "not written: {0}": "не записана: {0}",
+ "the transcriber (SheetSage2)": "транскрибер (SheetSage2)",
+-"Loading the Sound Heresy": "Загрузка Звуковой Ереси"
++"Loading the Sound Heresy": "Загрузка Звуковой Ереси",
++"Artwork for “{0}” already waits in the queue for a card": "Обложка для «{0}» уже ждёт видеокарту в очереди",
++"Artwork for “{0}” is being drawn already": "Обложка для «{0}» уже рисуется",
++"Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "Обложка для «{0}» ждёт в очереди видеокарту с местом и начнётся сама (Движок → Видеокарты: какая карта чем занята)",
++"Artwork waits for a card…": "Обложка ждёт видеокарту…",
++"Drawing artwork…": "Рисуется обложка…",
++"Show disliked": "Показывать непонравившиеся",
++"The disliked ones too": "И непонравившиеся тоже",
++"A dislike hides a take from the lists, as SUNO does; nothing is deleted. Ticked, the disliked show too; the 👎 chip shows only them": "Как в SUNO, «Не нравится» прячет семпл из списков; ничего не удаляется. С галочкой непонравившиеся видны тоже; кнопка 👎 показывает только их",
++"“{0}” disliked: it leaves the lists; nothing is deleted (“Show disliked” brings it back)": "«{0}» не нравится: семпл уходит из списков, ничего не удалено («Показывать непонравившиеся» вернёт его)",
++"Warning": "Внимание",
++"Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Символов: {0} · токенов: ≈{1} · с текстом: ≈{2} из {3}",
++"What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Чего ждать: YuE2 учился на стилях без этого, а движок передаёт стиль слово в слово. Чего модель не видела, может прозвучать спетыми словами или увести звук от стиля. Написанный как официальные стили, стиль держится.",
++"What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Чего ждать: стиль, текст, партитура и песня делят одно окно в 24 576 токенов; сверх бюджета партитура или песня обрываются.",
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджеты токенов партитуры и песни сами по себе занимают всё окно в 24 576 токенов: стилю и тексту ничего не остаётся. Уменьши max tokens в «Сэмплинг партитуры» или «Сэмплинг музыки», либо «Макс. длина»."
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index d759140..7025293 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2568,5 +2568,19 @@ RuachI18n.add("uk", {
+ "the transcriber is writing it… {#0} s": "транскрибер записує її… {0} с",
+ "not written: {0}": "не записана: {0}",
+ "the transcriber (SheetSage2)": "транскрибер (SheetSage2)",
+-"Loading the Sound Heresy": "Завантаження Звукової Єресі"
++"Loading the Sound Heresy": "Завантаження Звукової Єресі",
++"Artwork for “{0}” already waits in the queue for a card": "Обкладинка для «{0}» вже чекає на відеокарту в черзі",
++"Artwork for “{0}” is being drawn already": "Обкладинка для «{0}» вже малюється",
++"Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "Обкладинка для «{0}» чекає в черзі на відеокарту з місцем і почнеться сама (Рушій → Відеокарти: яка карта чим зайнята)",
++"Artwork waits for a card…": "Обкладинка чекає на відеокарту…",
++"Drawing artwork…": "Малюється обкладинка…",
++"Show disliked": "Показувати невподобані",
++"The disliked ones too": "І невподобані теж",
++"A dislike hides a take from the lists, as SUNO does; nothing is deleted. Ticked, the disliked show too; the 👎 chip shows only them": "Як у SUNO, «Не подобається» ховає семпл зі списків; нічого не видаляється. З галочкою невподобані видно теж; кнопка 👎 показує лише їх",
++"“{0}” disliked: it leaves the lists; nothing is deleted (“Show disliked” brings it back)": "«{0}» не подобається: семпл іде зі списків, нічого не видалено («Показувати невподобані» поверне його)",
++"Warning": "Увага",
++"Characters: {#0} · tokens: ≈{#1} · with the lyrics: ≈{#2} of {#3}": "Символів: {0} · токенів: ≈{1} · з текстом: ≈{2} з {3}",
++"What to expect: YuE2 learned from styles without these, and the engine hands the style over word for word. What the model never saw can come out sung as words, or pull the sound away from the style. Written as the official styles are, the style holds.": "Чого чекати: YuE2 вчився на стилях без цього, а рушій передає стиль слово в слово. Чого модель не бачила, може прозвучати співаними словами або відвести звук від стилю. Написаний як офіційні стилі, стиль тримається.",
++"What to expect: the style, the lyrics, the score and the song share one window of 24,576 tokens; past the budget the score or the song is cut short.": "Чого чекати: стиль, текст, партитура й пісня ділять одне вікно в 24 576 токенів; понад бюджет партитура чи пісня обриваються.",
++"The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length.": "Бюджети токенів партитури й пісні самі займають усе вікно в 24 576 токенів: стилю й тексту нічого не лишається. Зменш max tokens у «Семплінг партитури» чи «Семплінг музики», або «Макс. довжина»."
+ });
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index c6fed34..ed580e7 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -291,10 +291,14 @@
+     var label = lab && lab.querySelector(".label");
+     if (label && !$("hiOpen")) {
+       var b = document.createElement("button");
+-      b.type = "button"; b.id = "hiOpen"; b.className = "hi-open"; b.textContent = "♪";
++      // HERESY 1167 (Viktor: «Знак вопроса отрендерить жирным SVG с полной выключкой вправо»): a bold question mark at the end
++      // of the heading's line (help.js keeps the WARNING before it, in #styleLabelEnd)
++      b.type = "button"; b.id = "hiOpen"; b.className = "hi-open";
++      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.7 9.1a3.4 3.4 0 0 1 6.7.9c0 2.4-3.4 2.8-3.4 5.2" fill="none" stroke="currentColor" ' +
++        'stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="19.3" r="1.75" fill="currentColor"/></svg>';
+       b.setAttribute("data-tip", "Instruments and styles: the cheat-sheet, with the probes to hear (Alt+I)");
+       b.setAttribute("aria-label", "Instruments cheat-sheet");
+-      label.appendChild(b);
++      ($("styleLabelEnd") || label).appendChild(b);
+       b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); open(); });
+     }
+     initChips();                                // HERESY 1158
+diff --git a/tools/console/index.html b/tools/console/index.html
+index ea51dbb..daadf93 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -29,8 +29,8 @@
+ 
+ <!-- HERESY 1167 (Viktor 05.10.2026: «прятать весь сырой рендер DOM, оверлеем `Loading the Sound Heresy`, логотип Студии крупно...
+      и даже на скором локальном соединении таймаут оверлея в 5 секунд»): the page builds under this veil. It lifts once the page
+-     stands ready and five seconds have passed since the navigation; a click or a key lifts it sooner, once the page is ready;
+-     fifteen seconds lift it whatever happens. The logo is the bar's own (copied in under the top bar, its words in the page's
++     stands ready and seven seconds have passed since the navigation (Viktor: «Давай 7. Это стоит того»); a click or a key lifts it sooner, once the page is ready;
++     seventeen seconds lift it whatever happens. The logo is the bar's own (copied in under the top bar, its words in the page's
+      language once the translation runs). Not for a test browser (navigator.webdriver), ?scope=claude or ?noveil. -->
+ <div class="boot-veil" id="bootVeil" role="status">
+   <div class="boot-logo" id="bootLogo"></div>
+@@ -438,7 +438,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+   } catch (e) { /* the veil without its logo */ }
+   // ready: the page parsed and its scripts run (not the load event: the web fonts may come late on a slow road), its room
+   // set, the translation in
+-  var MIN = 5000, MAX = 15000, gone = false;
++  var MIN = 7000, MAX = 17000, gone = false;
+   function ready() { return document.readyState !== "loading" && !!document.body.dataset.tab && !html.classList.contains("i18n-wait"); }
+   function lift() {
+     if (gone) return;
+@@ -730,11 +730,16 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <!-- HERESY 1047: the Writer's document in hand; what is made now is linked to it -->
+           <div class="wr-hand" id="wrHandBox">
+             <span class="wr-hand-cap">Writer</span>
+-            <button type="button" class="wr-hand-name" id="wrHandOpen" title="Open it in the Writer"><span aria-hidden="true">✎</span> <span id="wrHandName" translate="no"></span></button>
+-            <button type="button" class="wr-hand-x" id="wrHandDrop" title="Put it down: new takes link to no document" aria-label="Put it down">✕</button>
++            <!-- HERESY 1167: the document with its ✕, and the menu with the button, each a group: the row wraps between them -->
++            <span class="wr-hand-doc">
++              <button type="button" class="wr-hand-name" id="wrHandOpen" title="Open it in the Writer"><span aria-hidden="true">✎</span> <span id="wrHandName" translate="no"></span></button>
++              <button type="button" class="wr-hand-x" id="wrHandDrop" title="Put it down: new takes link to no document" aria-label="Put it down">✕</button>
++            </span>
+             <span class="spacer"></span>
+-            <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
+-            <button type="button" class="btn ghost small" id="wrHandSave">Save to Writer…</button>
++            <span class="wr-hand-acts">
++              <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
++              <button type="button" class="btn ghost small" id="wrHandSave">Save to Writer…</button>
++            </span>
+           </div>
+           <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
+           <!-- HERESY 1019: the title and the song's key on one line -->
+@@ -1618,6 +1623,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <input type="search" id="collSearch" placeholder="Search: words, or * and ? as wildcards" autocomplete="off" />
+         <select id="collSort" aria-label="Sort"><option value="new">newest first</option><option value="old">oldest first</option>
+           <option value="title">by title</option><option value="long">longest first</option></select>
++        <!-- HERESY 1167 (Viktor: «как в SUNO… дизлайк прятал трек, не удаляя… чекбокс показа/скрытия треков с дизлайками») -->
++        <label class="check coll-showdis" data-tip="A dislike hides a take from the lists, as SUNO does; nothing is deleted. Ticked, the disliked show too; the 👎 chip shows only them"><input type="checkbox" id="collShowDisliked" /> <span>Show disliked</span></label>
+         <span class="coll-views"><button type="button" class="btn ghost small" data-coll-view="tiles">Tiles</button>
+           <button type="button" class="btn ghost small" data-coll-view="list">List</button></span>
+       </div></div>
+@@ -1706,7 +1713,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <!-- HERESY 1125: the column's filters, as the Librarian has them, in every room -->
+           <div class="menu-cap">Show</div>
+           <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="liked">Liked only</button>
+-          <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="noDisliked">Without the disliked</button>
++          <!-- HERESY 1167: a dislike hides a take (as SUNO does); this shows them, the same setting as the Librarian's box -->
++          <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="disliked">The disliked ones too</button>
+           <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="noted">With a note only</button>
+           <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="hidden">The hidden ones too</button>
+           <div class="menu-sep"></div>
+-- 
+2.43.0
+

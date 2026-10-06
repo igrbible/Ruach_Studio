@@ -1,0 +1,251 @@
+From df6e00ee397cf003839eb21ac2946fabaa0e0379 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 20:38:05 -0600
+Subject: [PATCH 1099/1177] =?UTF-8?q?The=20version=20in=20Engine=20?=
+ =?UTF-8?q?=E2=86=92=20About=20(1136);=20the=20original=20in=20the=20Refin?=
+ =?UTF-8?q?er's=20tree=20and=20Compare=20all,=20every=20version=20at=20the?=
+ =?UTF-8?q?=20same=20second=20(1138);=20Waveform=2014=20at=20least=20(1139?=
+ =?UTF-8?q?)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  31 +++++++++
+ tools/console/app.js            |   2 +
+ tools/console/heresy-daw.js     |   2 +-
+ tools/console/heresy-derived.js | 115 +++++++++++++++++++++++++++++++-
+ tools/console/index.html        |   2 +-
+ tools/public/index.html.gz      | Bin 471303 -> 473123 bytes
+ 6 files changed, 149 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 32728ec..e04b6d7 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3214,3 +3214,34 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+   background: var(--panel); box-shadow: 0 12px 30px -14px var(--shadow-lg, rgba(0,0,0,.45)); font-size: 13px; }
+ .coll-undo[hidden] { display: none; }
+ .coll-undo kbd { font: 500 10.5px/1 var(--mono); padding: 2px 4px; border-radius: 4px; border: 1px solid var(--line-a); margin-left: 4px; color: var(--dim); }
++
++/* HERESY 1136 */
++.about-version { font: 500 12px/1 var(--mono); color: var(--amber); margin-left: 6px; }
++
++/* ---------------------------------------------------------------- HERESY 1138: the original in the tree; compare every version */
++.dv-node.dv-orig { grid-template-columns: minmax(120px, 1fr) 48px minmax(220px, 2fr) auto auto; font-weight: 600; padding: 6px 0 8px; }
++.dv-orig-tag { font-style: normal; font-weight: 400; font-size: 12px; color: var(--dim); margin-left: 6px; }
++.cmp-back { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px;
++  background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(2px); }
++.cmp-box { width: min(760px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 16px 18px; border: 1px solid var(--line-strong-a);
++  border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 20px 60px var(--shadow-lg); display: flex; flex-direction: column; gap: 12px; }
++.cmp-head { display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; }
++.cmp-title { font: 600 16px/1.3 var(--sans); }
++.cmp-transport { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-md); background: color-mix(in oklab, var(--amber) 6%, transparent); }
++.cmp-play { flex: none; width: 40px; height: 40px; border: 0; background: none; color: var(--amber); cursor: pointer; display: grid; place-items: center; }
++.cmp-play .ui-ico { width: 28px; height: 28px; }
++.cmp-seek { flex: 1; accent-color: var(--amber); }
++.cmp-time, .cmp-total { font-size: 12px; color: var(--muted); min-width: 40px; text-align: center; }
++.cmp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
++.cmp-row { width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 48px; align-items: center; gap: 10px; padding: 8px 10px;
++  border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); color: var(--ink); text-align: left; cursor: pointer; }
++.cmp-row:hover { background: color-mix(in oklab, var(--amber) 5%, var(--panel)); }
++.cmp-row.is-on { border-color: var(--amber-a); background: color-mix(in oklab, var(--amber) 10%, var(--panel)); }
++.cmp-row.is-playing .cmp-name::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); margin-right: 8px;
++  vertical-align: middle; animation: status-pulse 1.2s ease-in-out infinite; }
++.cmp-n { color: var(--dim); font-size: 12px; }
++.cmp-name { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.cmp-group { font-size: 12px; color: var(--muted); white-space: nowrap; }
++.cmp-dur { font-size: 12px; color: var(--dim); text-align: right; }
++
++.cmp-box:focus { outline: none; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 277b8c0..c313601 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3862,6 +3862,8 @@
+     }).catch(function (e) { toast("No artwork: " + e.message, "bad"); });
+   }
+   window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts };
++  // HERESY 1136: the studio's version (VERSION, through the API) in Engine → About
++  api("/api/v1").then(function (d) { if (d && d.studio && $("studioVersion")) $("studioVersion").textContent = d.studio; }).catch(function () {});
+   setTimeout(refreshArts, 1200);
+ 
+   function paintCover(take) {
+diff --git a/tools/console/heresy-daw.js b/tools/console/heresy-daw.js
+index 8f7701b..36ba970 100644
+--- a/tools/console/heresy-daw.js
++++ b/tools/console/heresy-daw.js
+@@ -52,7 +52,7 @@
+         (x.id === "waveform" || x.id === "bitwig" ? '<button type="button" class="btn small ghost" data-dw-dawproject="1"' + (title ? "" : " disabled") + ' title="A DAWproject: the mix, the stems, the score as notes, the sections as markers">Export the take</button>' : "") + "</div></div>";
+     }).join("") + "</div>";
+     html += '<p class="row-hint dw-now">Now: the <b>REAPER</b> project (the mix, every stem, the score as MIDI; the lyrics and sections once the take is timed in the Refiner’s lyrics check), and <b>DAWproject</b> (the mix, every stem, the score as notes, the sections as markers: Waveform 14, Bitwig, Studio One, Cubase); both also in a take’s menu → Download. ' +
+-      "Waveform 13’s own archive comes when it has been checked in Waveform itself.</p></section>";
++      "Waveform: 14 or newer.</p></section>";
+     state.el.querySelector(".dw-box").innerHTML = html;
+   }
+   function load() {
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index b118244..559156b 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -58,7 +58,14 @@
+   function paint() {
+     var host = $("derivedTree"), take = state.take;
+     if (!take) { host.innerHTML = '<p class="row-hint">Pick a take on the right.</p>'; return; }
+-    var html = '<div class="dv-node dv-root"><span class="dv-name">' + esc(take.label || take.name) + '</span><span class="dv-meta">the take</span></div>';
++    // HERESY 1138: the take itself is a node of the tree like its branches: it plays, it downloads, and it opens the
++    // comparison of every version (the original first)
++    var orig = "/library/listen?name=" + encodeURIComponent(take.name);
++    var html = '<div class="dv-node dv-root dv-orig"><span class="dv-name">' + esc(take.label || take.name) + ' <em class="dv-orig-tag">the original</em></span>' +
++      '<span class="dv-meta mono">' + (take.seconds ? clock(take.seconds) : "") + "</span>" +
++      '<audio controls preload="none" src="' + esc(orig) + '"></audio>' +
++      '<button type="button" class="btn small primary dv-compare" data-dv-compare="0" data-tip="Every version of this take in one player: switch between them at the same second (1–9, Space)">Compare all</button>' +
++      '<a class="btn ghost small" href="/library/flac?name=' + encodeURIComponent(take.name) + '" download="' + esc((take.label || take.name) + ".flac") + '">FLAC</a></div>';
+     if (!state.list.length && !state.running.length) html += '<p class="row-hint dv-empty">Nothing made from this take yet.</p>';
+     // HERESY 1129: what runs now stands first: the tree grows upward, the newest on top
+     state.running.forEach(function (j, i) {
+@@ -77,6 +84,7 @@
+         var url = fileUrl(take.name, f.path);
+         html += '<div class="dv-node"><span class="dv-name">↳ ' + esc(f.name) + '</span><span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
+           '<audio controls preload="none" src="' + esc(url) + '"></audio>' +
++          '<button type="button" class="btn ghost small" data-dv-compare-path="' + esc(f.path) + '" data-tip="Compare it with the original and every other version, at the same second">Compare</button>' +
+           '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
+           (/vocal/i.test(f.name) ? '<button type="button" class="btn ghost small" data-dv-gloss="' + esc(f.path) + '" data-tip="Whisper on this file against the lyrics">Lyrics check</button>' : "") +
+           '<a class="btn ghost small" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + f.name + ".flac") + '">FLAC</a></div>';
+@@ -345,6 +353,12 @@
+       if (sp && state.hooks.compare) state.hooks.compare(sp.dataset.dvSpectrum);
+       if (gl && state.hooks.gloss) state.hooks.gloss(gl.dataset.dvGloss);
+     });
++    // HERESY 1138: the comparison, from the original's row or any branch's
++    $("derivedTree").addEventListener("click", function (event) {
++      var all = event.target.closest("[data-dv-compare]"), one = event.target.closest("[data-dv-compare-path]");
++      if (all) compare("");
++      if (one) compare(one.dataset.dvComparePath);
++    });
+     // HERESY 1129: a step's chips find what it made in the tree; the step open lights its own branches
+     document.addEventListener("click", function (event) {
+       var go = event.target.closest("[data-dv-go]");
+@@ -367,6 +381,105 @@
+     }, true);
+   }
+ 
++  // ---- HERESY 1138: every version of the take in one player, as SUNO switches versions: the original, then each
++  // branch of the tree (debuzz, remasters, upscales, stems), one transport; a click on another version (or its number)
++  // plays it from the same second. Each version is its own audio element, so a switch seeks only the one coming in,
++  // which starts before the one going out stops: no gap to hear, no restart.
++  function compare(startPath) {
++    var take = state.take;
++    if (!take) return;
++    if (state.hooks.pauseMain) state.hooks.pauseMain();
++    Array.prototype.forEach.call(document.querySelectorAll("#derivedTree audio"), function (a) { a.pause(); });
++    var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems" };
++    var versions = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds }];
++    ["debuzz", "remaster", "upscale", "stems"].forEach(function (kind) {
++      state.list.filter(function (m) { return m.kind === kind; }).forEach(function (m) {
++        (m.files || []).forEach(function (f) {
++          versions.push({ label: f.name, group: GROUP[kind] + (m.mode ? " · " + (MODE[m.mode] || m.mode) : "") + (m.created ? " · " + String(m.created).slice(11, 16) : ""),
++                          url: fileUrl(take.name, f.path), path: f.path, seconds: f.seconds });
++        });
++      });
++    });
++    var active = Math.max(0, versions.findIndex(function (v) { return v.path === startPath; }));
++    var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; return a; });
++    var back = document.createElement("div");
++    back.className = "cmp-back";
++    back.innerHTML = '<div class="cmp-box" role="dialog" aria-modal="true" aria-label="Compare the versions">' +
++      '<div class="cmp-head"><div><div class="cmp-title">Compare · ' + esc(take.label || take.name) + '</div>' +
++      '<div class="row-hint">' + versions.length + " versions · a click (or its number) plays it from the same second · Space plays and pauses · ← → five seconds</div></div>" +
++      '<button type="button" class="btn ghost small" data-cmp="close">Close</button></div>' +
++      '<div class="cmp-transport"><button type="button" class="cmp-play" data-cmp="play" aria-label="Play"></button>' +
++      '<span class="cmp-time mono">0:00</span><input type="range" class="cmp-seek" min="0" max="1000" value="0" aria-label="Position" /><span class="cmp-total mono">0:00</span></div>' +
++      '<ol class="cmp-list">' + versions.map(function (v, i) {
++        return '<li><button type="button" class="cmp-row" data-cmp-i="' + i + '"><span class="cmp-n mono">' + (i < 9 ? i + 1 : "") + '</span><span class="cmp-name">' + esc(v.label) + "</span>" +
++          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button></li>";
++      }).join("") + "</ol></div>";
++    document.body.appendChild(back);
++    var box = back.querySelector(".cmp-box"), seek = box.querySelector(".cmp-seek"), playBtn = box.querySelector(".cmp-play"), dragging = false;
++    var ico = function (n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : (n === "pause" ? "❚❚" : "▶"); };
++    function cur() { return audios[active]; }
++    function paint() {
++      var a = cur(), d = isFinite(a.duration) ? a.duration : (versions[active].seconds || 0);
++      playBtn.innerHTML = ico(a.paused ? "play" : "pause");
++      playBtn.setAttribute("aria-label", a.paused ? "Play" : "Pause");
++      box.querySelector(".cmp-time").textContent = clock(a.currentTime || 0);
++      box.querySelector(".cmp-total").textContent = d ? clock(d) : "0:00";
++      if (!dragging && d) seek.value = String(Math.round(1000 * (a.currentTime || 0) / d));
++      Array.prototype.forEach.call(box.querySelectorAll(".cmp-row"), function (r, i) {
++        r.classList.toggle("is-on", i === active);
++        r.classList.toggle("is-playing", i === active && !a.paused);
++      });
++    }
++    function pick(i) {
++      if (i < 0 || i >= audios.length || i === active) return;
++      var from = cur(), to = audios[i], t = from.currentTime || 0, playing = !from.paused;
++      var place = function () { try { to.currentTime = Math.min(t, isFinite(to.duration) ? Math.max(0, to.duration - 0.05) : t); } catch (e) { /* not seekable yet */ } };
++      active = i;
++      if (to.readyState >= 1) place(); else to.addEventListener("loadedmetadata", place, { once: true });
++      if (playing) {
++        to.play().then(function () { from.pause(); paint(); }, function () { from.pause(); paint(); });
++      } else { from.pause(); }
++      paint();
++    }
++    function toggle() { var a = cur(); if (a.paused) a.play().catch(function () {}); else a.pause(); paint(); }
++    function close() {
++      audios.forEach(function (a) { a.pause(); a.removeAttribute("src"); a.load(); });
++      document.removeEventListener("keydown", key, true);
++      clearInterval(tick);
++      back.remove();
++    }
++    function key(e) {
++      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); return close(); }
++      if (e.target && box.contains(e.target) && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target !== seek) return;
++      if (e.key === " ") { e.preventDefault(); return toggle(); }
++      if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); var a = cur(); a.currentTime = Math.max(0, (a.currentTime || 0) + (e.key === "ArrowRight" ? 5 : -5)); return paint(); }
++      if (/^[1-9]$/.test(e.key)) { e.preventDefault(); pick(+e.key - 1); }
++    }
++    document.addEventListener("keydown", key, true);
++    back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
++    box.addEventListener("click", function (e) {
++      var row = e.target.closest("[data-cmp-i]"), b = e.target.closest("[data-cmp]");
++      if (row) {
++        var i = +row.dataset.cmpI;
++        if (i === active) return toggle();
++        var wasPaused = cur().paused;
++        pick(i);
++        if (wasPaused) { audios[i].play().catch(function () {}); paint(); }   // a click on a version means: hear it
++        return;
++      }
++      if (b && b.dataset.cmp === "close") return close();
++      if (b && b.dataset.cmp === "play") return toggle();
++    });
++    seek.addEventListener("input", function () { dragging = true; var a = cur(), d = a.duration || versions[active].seconds || 0; box.querySelector(".cmp-time").textContent = clock(d * seek.value / 1000); });
++    seek.addEventListener("change", function () { var a = cur(), d = a.duration || versions[active].seconds || 0; if (d) a.currentTime = d * seek.value / 1000; dragging = false; paint(); });
++    audios.forEach(function (a, i) { a.addEventListener("ended", function () { if (i === active) paint(); }); });
++    var tick = setInterval(paint, 250);
++    paint();
++    box.setAttribute("tabindex", "-1");                  // the keys are the popup's now, not the field left behind it
++    box.focus();
++    cur().play().catch(function () {});
++  }
++
+   // take: { name, label }
+   function setTake(take) {
+     if (!$("derivedPanel")) return;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 8c36fa0..2ffbf94 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -552,7 +552,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <div class="about-grid">
+         <div class="about-projects">
+           <!-- HERESY 1026: the links the header used to carry live here, with what YuE2 OS adds -->
+-          <section class="about-project"><h4>Ruach Studio</h4><p class="about-what">the heresy patches 1001+ over the collection below, and the lab beside it (once "YuE2 OS")</p><ul class="about-links">
++          <section class="about-project"><h4>Ruach Studio <span class="about-version" id="studioVersion"></span></h4><p class="about-what">the heresy patches 1001+ over the collection below, and the lab beside it (once "YuE2 OS")</p><ul class="about-links">
+             <li><a href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer">The collection it forks</a><span class="about-where">github · IronWolve/yue2-kit</span></li>
+             <li><a href="https://github.com/woongzip1/UniverSR" target="_blank" rel="noopener noreferrer">Upscale: UniverSR</a><span class="about-where">github · woongzip1/UniverSR · MIT</span></li>
+             <li><a href="https://github.com/nomadkaraoke/python-audio-separator" target="_blank" rel="noopener noreferrer">Stems: audio-separator (BS-Roformer, htdemucs_ft)</a><span class="about-where">github · nomadkaraoke/python-audio-separator</span></li>
+-- 
+2.43.0
+

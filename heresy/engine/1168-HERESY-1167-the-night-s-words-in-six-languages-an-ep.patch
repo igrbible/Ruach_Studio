@@ -1,0 +1,435 @@
+From de56524bb4e45e1a5f176ffbc1cbe5f472126b47 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 01:52:45 -0600
+Subject: [PATCH 1168/1177] HERESY 1167: the night's words in six languages; an
+ epoch's two reasons each translated
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+· The catalogs (ru, uk, be, el, es, it), 53 keys:
+  – the night towel: New song asks; the 👎 filter; the Trainer's log;
+  – the LoRA picker: Sound, together; mute; out of the list; the trigger words by themselves;
+  – the Writer: the style as tags, saved briefs, Remember the key, its (i) tips, the guard on the open document;
+  – the Creator's and the Refiner's lines;
+  – and what a Russian harvest of the live page still showed in English: a stage's time left, the models' load
+    times in a run's note, the Trainer's live-row tip.
+· heresy-train.js: an epoch worth hearing first for two reasons showed the second in English on a translated page.
+  The catalog's pattern for the first reason swallowed the joined line, so each reason is now translated by itself
+  before the join.
+
+cdp-console 339/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-i18n-be.js | 55 ++++++++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-el.js | 55 ++++++++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-es.js | 55 ++++++++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-it.js | 55 ++++++++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-ru.js | 55 ++++++++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-uk.js | 55 ++++++++++++++++++++++++++++++++-
+ tools/console/heresy-train.js   |  3 +-
+ 7 files changed, 326 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 031acb0..1612a11 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2642,5 +2642,58 @@ RuachI18n.add("be", {
+ "A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Столь даўжыні песні ў секундах (прадвызначана 480; 0:10–16:00): музычная стадыя спыняецца на 25 токенах у секунду ад яе (у «Сэмплінгу» гэта «Макс. даўжыня» музыкі). Сама даўжыня бярэцца з тэксту і партытуры; гэта толькі абрывае песню, што разагналася (яна тады пазначаецца як абрэзаная).",
+ "The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "Партытура не можа скончыцца раней за гэты лік токенаў. Прадвызначана 200.\n✓ Пакінь так.",
+ "The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "Песня не можа скончыцца раней за гэты час: 25 музычных токенаў у секунду, прадвызначана 0:30 — гэта 750 токенаў.\n✓ Пакінь так.",
+-"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая доўгая песня: ідзе за «Макс. даўжынёй» у «Гуку і вывадзе», 25 музычных токенаў у секунду (8:00 — гэта 12 000).\n✓ Стаў «Макс. даўжыню» блізка да той, што патрэбна тэксту.\n⚠ Калі месца нашмат больш, чым трэба тэксту, пасля апошняга радка мадэль вяртаецца і пяе ранейшыя радкі зноў (заменана: 24 такія вяртанні пасля канца тэксту). Песня, абарваная тут, пазначаецца як абрэзаная."
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая доўгая песня: ідзе за «Макс. даўжынёй» у «Гуку і вывадзе», 25 музычных токенаў у секунду (8:00 — гэта 12 000).\n✓ Стаў «Макс. даўжыню» блізка да той, што патрэбна тэксту.\n⚠ Калі месца нашмат больш, чым трэба тэксту, пасля апошняга радка мадэль вяртаецца і пяе ранейшыя радкі зноў (заменана: 24 такія вяртанні пасля канца тэксту). Песня, абарваная тут, пазначаецца як абрэзаная.",
++"Only the disliked (a dislike hides a take everywhere else)": "Толькі неўпадабаныя («Не падабаецца» хавае сэмпл ва ўсіх іншых месцах)",
++"Start a new song?": "Пачаць новую песню?",
++"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Назва, стыль, тэкст, партытура, сіды і ўсе рэгулятары вернуцца да прадвызначаных значэнняў. Сэмплы застануцца.",
++"New song": "Новая песня",
++"(the log is empty)": "(лог пусты)",
++"Sound, together": "Гук разам",
++"All the sound strengths together. By ear (05.10.2026): two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right. Green to {0}, amber to {1}, red past it.": "Усе гукавыя сілы разам. На слых (05.10.2026): два адаптары па 1.0 на гуку, 2.0 разам, далі цяжкі бас; 0.55 разам гучала як трэба. Зялёны да {0}, жоўты да {1}, далей чырвоны.",
++"{0} is muted: left out of the run (right-click: back in it).": "{0} заглушаны: у прагон не ідзе (правы клік: вярнуць).",
++"⚠ The sound half carries {0} together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.": "⚠ На гукавой палове разам {0}: на слых 2.0 разам далі цяжкі бас (05.10.2026). Паменшы некаторыя або пацягні «Гук разам».",
++"Unmute: back in the run": "Вярнуць у строй: зноў у прагоне",
++"Mute: left out of the run, its strengths kept": "Прапусціць: не ў прагоне, сілы захоўваюцца",
++"Remove from the song": "Прыбраць з песні",
++"Take it out of the song": "Прыбраць яго з песні",
++"Add it to the song": "Дадаць у песню",
++"Remove from the list (the adapter stays in its Trainer session)": "Прыбраць са спісу (адаптар застаецца ў сваёй сесіі Трэнера)",
++"Out of the list; its checkpoint stays in the Trainer's run {0} (the Trainer puts it back)": "Прыбраны са спісу; яго чэкпоінт застаецца ў ране Трэнера {0} (Трэнер верне яго)",
++"muted": "заглушаны",
++"Right-click: back in the run": "Правы клік: вярнуць у прагон",
++"Its trigger word goes at the style’s end by itself when the song is made": "Яго слова-трыгер само стане ў канец стылю, калі песня ствараецца",
++"{0}: its trigger word “{1}” goes at the style's end when the song is made.": "{0}: яго слова-трыгер «{1}» стане ў канец стылю, калі песня ствараецца.",
++"Style as tags": "Стыль тэгамі",
++"the most important first": "самае важнае першым",
++"Into the form": "У форму",
++"the tags": "тэгі",
++"the readable style": "чытэльны стыль",
++"Saved briefs…": "Захаваныя запыты…",
++"No saved briefs yet": "Захаваных запытаў пакуль няма",
++"Save brief…": "Захаваць запыт…",
++"Write the brief first": "Спачатку напішы запыт",
++"Save the brief": "Захаваць запыт",
++"A name to find it by under the brief.": "Імя, па якім яго знайсці пад запытам.",
++"Brief saved: {0}": "Запыт захаваны: {0}",
++"Delete the brief “{0}”?": "Выдаліць запыт «{0}»?",
++"Only the saved brief goes; the text in the box stays.": "Сыходзіць толькі захаваны запыт; тэкст у полі застаецца.",
++"Brief deleted: {0}": "Запыт выдалены: {0}",
++"Remember the key": "Запомніць ключ",
++"Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file.": "Запомніць ключ у гэтым браўзеры. Інакш ён жыве толькі да закрыцця старонкі. Старонка адпраўляе яго толькі на openrouter.ai: ні ў студыю, ні ў яе файл налад.",
++"Any model of openrouter.ai/models, written provider/model. The field offers the list as you type; the quick picks fill it in.": "Любая мадэль з openrouter.ai/models у выглядзе правайдар/мадэль. Поле прапануе спіс падчас набору; хуткія выбары запаўняюць яго.",
++"The section order the model gives new lyrics. «Keep mine» leaves the lyrics' own order.": "Парадак раздзелаў, які мадэль дае новаму тэксту. «Пакінуць мой» захоўвае парадак самога тэксту.",
++"The draft's style as tags, the most important first, as an SD/SDXL prompt is written. «Into the form» chooses which of the two, the tags or the readable style, the draft puts in the Style field.": "Стыль чарнавіка тэгамі, самае важнае першым, як пішацца промпт SD/SDXL. «У форму» выбірае, што з двух — тэгі ці чытэльны стыль — чарнавік пакладзе ў поле стылю.",
++"Your saved briefs, kept by the lab (every browser sees them): picking one puts it in the box above.": "Твае захаваныя запыты, іх захоўвае лабараторыя (іх бачыць любы браўзер): выбраны становіцца ў поле вышэй.",
++"The writing room works on the song in the Creator: “{0}”.": "Пакой пісьма працуе з песняй у Творцы: «{0}».",
++"The notebook has “{0}” open. Put it into the Creator and send the request on it?": "У нататніку адкрыты «{0}». Пакласці яго ў Творцу і адправіць запыт на ім?",
++"Put it in and send": "Пакласці і адправіць",
++"Send on the Creator's song": "Адправіць на песні Творцы",
++"the song as words and knobs: style, lyrics, score and sound; Generate makes it, Takes keep it": "песня словамі і рэгулятарамі: стыль, тэкст, партытура і гук; «Згенераваць» стварае яе, «Сэмплы» захоўваюць",
++"the take in hand, heard and mended: spectrum, artifacts, stems, remaster, upscale, lyrics check": "сэмпл у руках, выслуханы і папраўлены: спектр, артэфакты, стэмы, рэмастэр, апскейл, праверка тэксту",
++"{0} left": "засталося {0}",
++"Its telemetry": "Яго тэлеметрыя",
++"language model loaded in {0} s": "моўная мадэль загружана за {0} с",
++"sound model loaded in {0} s": "гукавая мадэль загружана за {0} с",
++"VAE loaded in {0} s": "VAE загружаны за {0} с",
++"transcriber loaded in {0} s": "транскрыбер загружаны за {0} с"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index c92aa3d..f62de8b 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2641,5 +2641,58 @@ RuachI18n.add("el", {
+ "A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Ανώτατο όριο διάρκειας του τραγουδιού σε δευτερόλεπτα (προεπιλογή 480· 0:10–16:00): το μουσικό στάδιο σταματά στα 25 tokens ανά δευτερόλεπτο αυτού (στη «Δειγματοληψία» φαίνεται ως η «Μέγιστη διάρκεια» της μουσικής). Η ίδια η διάρκεια βγαίνει από τους στίχους και την παρτιτούρα· αυτό απλώς κόβει ένα τραγούδι που ξέφυγε (τότε σημειώνεται ως κομμένο).",
+ "The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "Η παρτιτούρα δεν μπορεί να τελειώσει πριν από τόσα tokens. Προεπιλογή 200.\n✓ Άφησέ το.",
+ "The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "Το τραγούδι δεν μπορεί να τελειώσει πριν από αυτό, σε χρόνο: 25 μουσικά tokens το δευτερόλεπτο, η προεπιλογή 0:30 είναι 750 tokens.\n✓ Άφησέ το.",
+-"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Το μακρύτερο τραγούδι: ακολουθεί τη «Μέγιστη διάρκεια» στο «Ήχος και έξοδος», 25 μουσικά tokens το δευτερόλεπτο (8:00 είναι 12.000).\n✓ Βάλε τη «Μέγιστη διάρκεια» κοντά σε όση χρειάζονται οι στίχοι.\n⚠ Με πολύ περισσότερο χώρο απ' όσο χρειάζονται οι στίχοι, μετά την τελευταία γραμμή το μοντέλο γυρίζει πίσω και τραγουδά ξανά προηγούμενες γραμμές (μετρημένο: 24 τέτοιες επιστροφές μετά το τέλος των στίχων). Ένα τραγούδι που κόβεται εδώ σημειώνεται ως κομμένο."
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Το μακρύτερο τραγούδι: ακολουθεί τη «Μέγιστη διάρκεια» στο «Ήχος και έξοδος», 25 μουσικά tokens το δευτερόλεπτο (8:00 είναι 12.000).\n✓ Βάλε τη «Μέγιστη διάρκεια» κοντά σε όση χρειάζονται οι στίχοι.\n⚠ Με πολύ περισσότερο χώρο απ' όσο χρειάζονται οι στίχοι, μετά την τελευταία γραμμή το μοντέλο γυρίζει πίσω και τραγουδά ξανά προηγούμενες γραμμές (μετρημένο: 24 τέτοιες επιστροφές μετά το τέλος των στίχων). Ένα τραγούδι που κόβεται εδώ σημειώνεται ως κομμένο.",
++"Only the disliked (a dislike hides a take everywhere else)": "Μόνο όσα δεν μου αρέσουν (το «Δεν μου αρέσει» κρύβει μια λήψη παντού αλλού)",
++"Start a new song?": "Νέο τραγούδι;",
++"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Ο τίτλος, το ύφος, οι στίχοι, η παρτιτούρα, οι σπόροι και κάθε ρύθμιση επιστρέφουν στις προεπιλογές. Οι λήψεις μένουν.",
++"New song": "Νέο τραγούδι",
++"(the log is empty)": "(το αρχείο καταγραφής είναι κενό)",
++"Sound, together": "Ήχος, μαζί",
++"All the sound strengths together. By ear (05.10.2026): two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right. Green to {0}, amber to {1}, red past it.": "Όλες οι ισχύεις ήχου μαζί. Στο αυτί (05.10.2026): δύο προσαρμογείς με 1.0 ήχο ο καθένας, 2.0 μαζί, έδωσαν βαρύ μπάσο· 0.55 μαζί ακούστηκε σωστά. Πράσινο έως {0}, πορτοκαλί έως {1}, κόκκινο πέρα από αυτό.",
++"{0} is muted: left out of the run (right-click: back in it).": "Το {0} είναι σε σίγαση: μένει έξω από την εκτέλεση (δεξί κλικ: πίσω μέσα).",
++"⚠ The sound half carries {0} together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.": "⚠ Το μισό του ήχου φέρει μαζί {0}: στο αυτί, 2.0 μαζί έδωσαν βαρύ μπάσο (05.10.2026). Χαμήλωσε κάποια ή σύρε το «Ήχος, μαζί».",
++"Unmute: back in the run": "Κατάργηση σίγασης: πίσω στην εκτέλεση",
++"Mute: left out of the run, its strengths kept": "Σίγαση: έξω από την εκτέλεση, οι ισχύεις του κρατιούνται",
++"Remove from the song": "Αφαίρεση από το τραγούδι",
++"Take it out of the song": "Βγάλ' το από το τραγούδι",
++"Add it to the song": "Πρόσθεσέ το στο τραγούδι",
++"Remove from the list (the adapter stays in its Trainer session)": "Αφαίρεση από τη λίστα (ο προσαρμογέας μένει στη συνεδρία του Εκπαιδευτή)",
++"Out of the list; its checkpoint stays in the Trainer's run {0} (the Trainer puts it back)": "Εκτός λίστας· το σημείο ελέγχου του μένει στην εκτέλεση {0} του Εκπαιδευτή (ο Εκπαιδευτής το επαναφέρει)",
++"muted": "σε σίγαση",
++"Right-click: back in the run": "Δεξί κλικ: πίσω στην εκτέλεση",
++"Its trigger word goes at the style’s end by itself when the song is made": "Η λέξη-κλειδί του μπαίνει μόνη της στο τέλος του ύφους όταν φτιάχνεται το τραγούδι",
++"{0}: its trigger word “{1}” goes at the style's end when the song is made.": "{0}: η λέξη-κλειδί του «{1}» μπαίνει στο τέλος του ύφους όταν φτιάχνεται το τραγούδι.",
++"Style as tags": "Ύφος σε ετικέτες",
++"the most important first": "τα σημαντικότερα πρώτα",
++"Into the form": "Στη φόρμα",
++"the tags": "τις ετικέτες",
++"the readable style": "το ευανάγνωστο ύφος",
++"Saved briefs…": "Αποθηκευμένα αιτήματα…",
++"No saved briefs yet": "Δεν υπάρχουν ακόμη αποθηκευμένα αιτήματα",
++"Save brief…": "Αποθήκευση αιτήματος…",
++"Write the brief first": "Γράψε πρώτα το αίτημα",
++"Save the brief": "Αποθήκευση του αιτήματος",
++"A name to find it by under the brief.": "Ένα όνομα για να το βρίσκεις κάτω από το αίτημα.",
++"Brief saved: {0}": "Το αίτημα αποθηκεύτηκε: {0}",
++"Delete the brief “{0}”?": "Διαγραφή του αιτήματος «{0}»;",
++"Only the saved brief goes; the text in the box stays.": "Φεύγει μόνο το αποθηκευμένο αίτημα· το κείμενο στο πλαίσιο μένει.",
++"Brief deleted: {0}": "Το αίτημα διαγράφηκε: {0}",
++"Remember the key": "Απομνημόνευση του κλειδιού",
++"Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file.": "Απομνημόνευση του κλειδιού σε αυτόν τον φυλλομετρητή. Αλλιώς ζει μόνο μέχρι να κλείσει η σελίδα. Η σελίδα το στέλνει μόνο στο openrouter.ai: ούτε στο στούντιο, ούτε στο αρχείο ρυθμίσεών του.",
++"Any model of openrouter.ai/models, written provider/model. The field offers the list as you type; the quick picks fill it in.": "Οποιοδήποτε μοντέλο του openrouter.ai/models, γραμμένο πάροχος/μοντέλο. Το πεδίο προτείνει τη λίστα καθώς πληκτρολογείς· οι γρήγορες επιλογές το συμπληρώνουν.",
++"The section order the model gives new lyrics. «Keep mine» leaves the lyrics' own order.": "Η σειρά των μερών που δίνει το μοντέλο σε νέους στίχους. Το «Κράτα τη δική μου» αφήνει τη σειρά των ίδιων των στίχων.",
++"The draft's style as tags, the most important first, as an SD/SDXL prompt is written. «Into the form» chooses which of the two, the tags or the readable style, the draft puts in the Style field.": "Το ύφος του προσχεδίου σε ετικέτες, τα σημαντικότερα πρώτα, όπως γράφεται ένα prompt SD/SDXL. Το «Στη φόρμα» διαλέγει ποιο από τα δύο, τις ετικέτες ή το ευανάγνωστο ύφος, βάζει το προσχέδιο στο πεδίο του ύφους.",
++"Your saved briefs, kept by the lab (every browser sees them): picking one puts it in the box above.": "Τα αποθηκευμένα αιτήματά σου, τα κρατά το εργαστήριο (τα βλέπει κάθε φυλλομετρητής): όποιο διαλέξεις μπαίνει στο πλαίσιο από πάνω.",
++"The writing room works on the song in the Creator: “{0}”.": "Το δωμάτιο γραφής δουλεύει με το τραγούδι στον Δημιουργό: «{0}».",
++"The notebook has “{0}” open. Put it into the Creator and send the request on it?": "Στο σημειωματάριο είναι ανοιχτό το «{0}». Να μπει στον Δημιουργό και να σταλεί το αίτημα πάνω του;",
++"Put it in and send": "Βάλ' το και στείλε",
++"Send on the Creator's song": "Αποστολή πάνω στο τραγούδι του Δημιουργού",
++"the song as words and knobs: style, lyrics, score and sound; Generate makes it, Takes keep it": "το τραγούδι σε λέξεις και ρυθμίσεις: ύφος, στίχοι, παρτιτούρα και ήχος· η «Δημιουργία» το φτιάχνει, οι «Λήψεις» το κρατούν",
++"the take in hand, heard and mended: spectrum, artifacts, stems, remaster, upscale, lyrics check": "η λήψη στα χέρια σου, ακουσμένη και διορθωμένη: φάσμα, τεχνουργήματα, stems, remaster, upscale, έλεγχος στίχων",
++"{0} left": "απομένουν {0}",
++"Its telemetry": "Η τηλεμετρία του",
++"language model loaded in {0} s": "το γλωσσικό μοντέλο φορτώθηκε σε {0} s",
++"sound model loaded in {0} s": "το μοντέλο ήχου φορτώθηκε σε {0} s",
++"VAE loaded in {0} s": "ο VAE φορτώθηκε σε {0} s",
++"transcriber loaded in {0} s": "ο μεταγραφέας φορτώθηκε σε {0} s"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index b8f329d..4d1f43b 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2641,5 +2641,58 @@ RuachI18n.add("es", {
+ "A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Un techo para la duración de la canción en segundos (480 por defecto; 0:10–16:00): la etapa de música se detiene en 25 tokens por segundo de él (en «Muestreo» aparece como la «Duración máxima» de la música). La duración en sí sale de la letra y la partitura; esto solo corta una canción desbocada (entonces se marca como truncada).",
+ "The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "La partitura no puede terminar antes de este número de tokens. Por defecto 200.\n✓ Déjalo.",
+ "The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "La canción no puede terminar antes de esto, en tiempo: 25 tokens de música por segundo, el 0:30 por defecto son 750 tokens.\n✓ Déjalo.",
+-"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canción más larga: sigue a «Duración máxima» en «Sonido y salida», 25 tokens de música por segundo (8:00 son 12.000).\n✓ Pon «Duración máxima» cerca de lo que necesita la letra.\n⚠ Con mucho más sitio del que necesita la letra, tras la última línea el modelo vuelve atrás y canta de nuevo líneas anteriores (medido: 24 vueltas así después de acabar la letra). Una canción cortada aquí se marca como truncada."
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canción más larga: sigue a «Duración máxima» en «Sonido y salida», 25 tokens de música por segundo (8:00 son 12.000).\n✓ Pon «Duración máxima» cerca de lo que necesita la letra.\n⚠ Con mucho más sitio del que necesita la letra, tras la última línea el modelo vuelve atrás y canta de nuevo líneas anteriores (medido: 24 vueltas así después de acabar la letra). Una canción cortada aquí se marca como truncada.",
++"Only the disliked (a dislike hides a take everywhere else)": "Solo las que no me gustan («No me gusta» oculta una toma en todos los demás sitios)",
++"Start a new song?": "¿Empezar una canción nueva?",
++"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "El título, el estilo, la letra, la partitura, las semillas y todos los controles vuelven a sus valores por defecto. Las tomas se quedan.",
++"New song": "Canción nueva",
++"(the log is empty)": "(el registro está vacío)",
++"Sound, together": "Sonido, en conjunto",
++"All the sound strengths together. By ear (05.10.2026): two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right. Green to {0}, amber to {1}, red past it.": "Todas las fuerzas de sonido juntas. De oído (05.10.2026): dos adaptadores a 1.0 de sonido cada uno, 2.0 en conjunto, dieron un bajo pesado; 0.55 en conjunto sonó bien. Verde hasta {0}, ámbar hasta {1}, rojo más allá.",
++"{0} is muted: left out of the run (right-click: back in it).": "{0} está silenciado: queda fuera de la ejecución (clic derecho: de vuelta).",
++"⚠ The sound half carries {0} together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.": "⚠ La mitad del sonido lleva {0} en conjunto: de oído, 2.0 en conjunto dio un bajo pesado (05.10.2026). Baja alguno, o arrastra «Sonido, en conjunto».",
++"Unmute: back in the run": "Quitar silencio: de vuelta en la ejecución",
++"Mute: left out of the run, its strengths kept": "Silenciar: fuera de la ejecución, sus fuerzas se guardan",
++"Remove from the song": "Quitar de la canción",
++"Take it out of the song": "Sacarlo de la canción",
++"Add it to the song": "Añadirlo a la canción",
++"Remove from the list (the adapter stays in its Trainer session)": "Quitar de la lista (el adaptador se queda en su sesión del Entrenador)",
++"Out of the list; its checkpoint stays in the Trainer's run {0} (the Trainer puts it back)": "Fuera de la lista; su checkpoint se queda en la ejecución {0} del Entrenador (el Entrenador lo devuelve)",
++"muted": "silenciado",
++"Right-click: back in the run": "Clic derecho: de vuelta en la ejecución",
++"Its trigger word goes at the style’s end by itself when the song is made": "Su palabra clave va sola al final del estilo cuando se hace la canción",
++"{0}: its trigger word “{1}” goes at the style's end when the song is made.": "{0}: su palabra clave «{1}» va al final del estilo cuando se hace la canción.",
++"Style as tags": "Estilo en etiquetas",
++"the most important first": "lo más importante primero",
++"Into the form": "Al formulario",
++"the tags": "las etiquetas",
++"the readable style": "el estilo legible",
++"Saved briefs…": "Peticiones guardadas…",
++"No saved briefs yet": "Todavía no hay peticiones guardadas",
++"Save brief…": "Guardar petición…",
++"Write the brief first": "Escribe primero la petición",
++"Save the brief": "Guardar la petición",
++"A name to find it by under the brief.": "Un nombre para encontrarla bajo la petición.",
++"Brief saved: {0}": "Petición guardada: {0}",
++"Delete the brief “{0}”?": "¿Borrar la petición «{0}»?",
++"Only the saved brief goes; the text in the box stays.": "Solo se va la petición guardada; el texto de la caja se queda.",
++"Brief deleted: {0}": "Petición borrada: {0}",
++"Remember the key": "Recordar la clave",
++"Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file.": "Recordar la clave en este navegador. Si no, vive solo hasta que se cierra la página. La página la envía solo a openrouter.ai: ni al estudio, ni a su archivo de ajustes.",
++"Any model of openrouter.ai/models, written provider/model. The field offers the list as you type; the quick picks fill it in.": "Cualquier modelo de openrouter.ai/models, escrito proveedor/modelo. El campo ofrece la lista al teclear; las elecciones rápidas lo rellenan.",
++"The section order the model gives new lyrics. «Keep mine» leaves the lyrics' own order.": "El orden de secciones que el modelo da a una letra nueva. «Mantener el mío» deja el orden de la propia letra.",
++"The draft's style as tags, the most important first, as an SD/SDXL prompt is written. «Into the form» chooses which of the two, the tags or the readable style, the draft puts in the Style field.": "El estilo del borrador en etiquetas, lo más importante primero, como se escribe un prompt de SD/SDXL. «Al formulario» elige cuál de los dos, las etiquetas o el estilo legible, pone el borrador en el campo de estilo.",
++"Your saved briefs, kept by the lab (every browser sees them): picking one puts it in the box above.": "Tus peticiones guardadas, las guarda el laboratorio (las ve cualquier navegador): la que elijas va a la caja de arriba.",
++"The writing room works on the song in the Creator: “{0}”.": "La sala de escritura trabaja con la canción del Creador: «{0}».",
++"The notebook has “{0}” open. Put it into the Creator and send the request on it?": "El cuaderno tiene abierto «{0}». ¿Ponerlo en el Creador y enviar la petición sobre él?",
++"Put it in and send": "Ponerlo y enviar",
++"Send on the Creator's song": "Enviar sobre la canción del Creador",
++"the song as words and knobs: style, lyrics, score and sound; Generate makes it, Takes keep it": "la canción en palabras y controles: estilo, letra, partitura y sonido; «Generar» la hace, «Tomas» la guarda",
++"the take in hand, heard and mended: spectrum, artifacts, stems, remaster, upscale, lyrics check": "la toma en mano, escuchada y arreglada: espectro, artefactos, stems, remaster, upscale, revisión de la letra",
++"{0} left": "quedan {0}",
++"Its telemetry": "Su telemetría",
++"language model loaded in {0} s": "modelo de lenguaje cargado en {0} s",
++"sound model loaded in {0} s": "modelo de sonido cargado en {0} s",
++"VAE loaded in {0} s": "VAE cargado en {0} s",
++"transcriber loaded in {0} s": "transcriptor cargado en {0} s"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index d545767..b5c38ad 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2641,5 +2641,58 @@ RuachI18n.add("it", {
+ "A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Un tetto alla durata della canzone in secondi (480 predefinito; 0:10–16:00): lo stadio musicale si ferma a 25 token al secondo di esso (in «Campionamento» appare come la «Durata massima» della musica). La durata stessa viene dal testo e dalla partitura; questo taglia soltanto una canzone fuori controllo (che viene allora segnata come troncata).",
+ "The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "La partitura non può finire prima di questo numero di token. Predefinito 200.\n✓ Lascialo.",
+ "The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "La canzone non può finire prima di questo, in tempo: 25 token musicali al secondo, lo 0:30 predefinito sono 750 token.\n✓ Lascialo.",
+-"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canzone più lunga: segue «Durata massima» in «Suono e uscita», 25 token musicali al secondo (8:00 sono 12.000).\n✓ Metti «Durata massima» vicino a quanto serve al testo.\n⚠ Con molto più spazio di quanto serve al testo, dopo l'ultima riga il modello torna indietro e canta di nuovo righe precedenti (misurato: 24 ritorni così dopo la fine del testo). Una canzone tagliata qui viene segnata come troncata."
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canzone più lunga: segue «Durata massima» in «Suono e uscita», 25 token musicali al secondo (8:00 sono 12.000).\n✓ Metti «Durata massima» vicino a quanto serve al testo.\n⚠ Con molto più spazio di quanto serve al testo, dopo l'ultima riga il modello torna indietro e canta di nuovo righe precedenti (misurato: 24 ritorni così dopo la fine del testo). Una canzone tagliata qui viene segnata come troncata.",
++"Only the disliked (a dislike hides a take everywhere else)": "Solo i Non mi piace («Non mi piace» nasconde un take in tutti gli altri posti)",
++"Start a new song?": "Iniziare una canzone nuova?",
++"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Titolo, stile, testo, partitura, seed e ogni manopola tornano ai valori predefiniti. I take restano.",
++"New song": "Nuova canzone",
++"(the log is empty)": "(il log è vuoto)",
++"Sound, together": "Suono, insieme",
++"All the sound strengths together. By ear (05.10.2026): two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right. Green to {0}, amber to {1}, red past it.": "Tutte le forze del suono insieme. A orecchio (05.10.2026): due adattatori a 1.0 di suono ciascuno, 2.0 insieme, hanno dato un basso pesante; 0.55 insieme suonava giusto. Verde fino a {0}, ambra fino a {1}, rosso oltre.",
++"{0} is muted: left out of the run (right-click: back in it).": "{0} è in muto: resta fuori dall'esecuzione (clic destro: di nuovo dentro).",
++"⚠ The sound half carries {0} together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.": "⚠ La metà del suono porta {0} insieme: a orecchio, 2.0 insieme ha dato un basso pesante (05.10.2026). Abbassane qualcuno, o trascina «Suono, insieme».",
++"Unmute: back in the run": "Riattiva: di nuovo nell'esecuzione",
++"Mute: left out of the run, its strengths kept": "Muto: fuori dall'esecuzione, le sue forze restano",
++"Remove from the song": "Togli dalla canzone",
++"Take it out of the song": "Toglilo dalla canzone",
++"Add it to the song": "Aggiungilo alla canzone",
++"Remove from the list (the adapter stays in its Trainer session)": "Togli dalla lista (l'adattatore resta nella sua sessione dell'Allenatore)",
++"Out of the list; its checkpoint stays in the Trainer's run {0} (the Trainer puts it back)": "Fuori dalla lista; il suo checkpoint resta nella corsa {0} dell'Allenatore (l'Allenatore lo rimette)",
++"muted": "in muto",
++"Right-click: back in the run": "Clic destro: di nuovo nell'esecuzione",
++"Its trigger word goes at the style’s end by itself when the song is made": "La sua parola chiave va da sola alla fine dello stile quando si fa la canzone",
++"{0}: its trigger word “{1}” goes at the style's end when the song is made.": "{0}: la sua parola chiave «{1}» va alla fine dello stile quando si fa la canzone.",
++"Style as tags": "Stile in tag",
++"the most important first": "il più importante per primo",
++"Into the form": "Nel modulo",
++"the tags": "i tag",
++"the readable style": "lo stile leggibile",
++"Saved briefs…": "Richieste salvate…",
++"No saved briefs yet": "Ancora nessuna richiesta salvata",
++"Save brief…": "Salva richiesta…",
++"Write the brief first": "Scrivi prima la richiesta",
++"Save the brief": "Salva la richiesta",
++"A name to find it by under the brief.": "Un nome per ritrovarla sotto la richiesta.",
++"Brief saved: {0}": "Richiesta salvata: {0}",
++"Delete the brief “{0}”?": "Eliminare la richiesta «{0}»?",
++"Only the saved brief goes; the text in the box stays.": "Se ne va solo la richiesta salvata; il testo nella casella resta.",
++"Brief deleted: {0}": "Richiesta eliminata: {0}",
++"Remember the key": "Ricorda la chiave",
++"Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file.": "Ricorda la chiave in questo browser. Altrimenti vive solo finché la pagina resta aperta. La pagina la invia solo a openrouter.ai: né allo studio, né al suo file di impostazioni.",
++"Any model of openrouter.ai/models, written provider/model. The field offers the list as you type; the quick picks fill it in.": "Qualsiasi modello di openrouter.ai/models, scritto fornitore/modello. Il campo propone la lista mentre scrivi; le scelte rapide lo riempiono.",
++"The section order the model gives new lyrics. «Keep mine» leaves the lyrics' own order.": "L'ordine delle sezioni che il modello dà a un testo nuovo. «Tieni il mio» lascia l'ordine del testo stesso.",
++"The draft's style as tags, the most important first, as an SD/SDXL prompt is written. «Into the form» chooses which of the two, the tags or the readable style, the draft puts in the Style field.": "Lo stile della bozza in tag, il più importante per primo, come si scrive un prompt SD/SDXL. «Nel modulo» sceglie quale dei due, i tag o lo stile leggibile, la bozza mette nel campo dello stile.",
++"Your saved briefs, kept by the lab (every browser sees them): picking one puts it in the box above.": "Le tue richieste salvate, le tiene il laboratorio (le vede ogni browser): quella che scegli va nella casella sopra.",
++"The writing room works on the song in the Creator: “{0}”.": "La stanza di scrittura lavora sulla canzone nel Creatore: «{0}».",
++"The notebook has “{0}” open. Put it into the Creator and send the request on it?": "Il quaderno ha aperto «{0}». Metterlo nel Creatore e inviare la richiesta su di esso?",
++"Put it in and send": "Mettilo e invia",
++"Send on the Creator's song": "Invia sulla canzone del Creatore",
++"the song as words and knobs: style, lyrics, score and sound; Generate makes it, Takes keep it": "la canzone in parole e manopole: stile, testo, partitura e suono; «Genera» la fa, «Take» la conserva",
++"the take in hand, heard and mended: spectrum, artifacts, stems, remaster, upscale, lyrics check": "il take in mano, ascoltato e sistemato: spettro, artefatti, stem, remaster, upscale, controllo del testo",
++"{0} left": "mancano {0}",
++"Its telemetry": "La sua telemetria",
++"language model loaded in {0} s": "modello linguistico caricato in {0} s",
++"sound model loaded in {0} s": "modello del suono caricato in {0} s",
++"VAE loaded in {0} s": "VAE caricato in {0} s",
++"transcriber loaded in {0} s": "trascrittore caricato in {0} s"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 18bb76c..0af5de3 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2647,5 +2647,58 @@ RuachI18n.add("ru", {
+ "A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Потолок длины песни в секундах (по умолчанию 480; 0:10–16:00): музыкальная стадия останавливается на 25 токенах в секунду от него (в «Сэмплинге» это «Макс. длина» музыки). Сама длина берётся из текста и партитуры; это лишь обрывает разогнавшуюся песню (она тогда помечается как обрезанная).",
+ "The score cannot end before this many tokens. Default 200. ✓ Leave it.": "Партитура не может закончиться раньше этого числа токенов. По умолчанию 200.\n✓ Оставь так.",
+ "The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens. ✓ Leave it.": "Песня не может закончиться раньше этого времени: 25 музыкальных токенов в секунду, по умолчанию 0:30 — это 750 токенов.\n✓ Оставь так.",
+-"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000). ✓ Set Max length close to the length the lyrics need. ⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая длинная песня: следует за «Макс. длиной» в «Звуке и выводе», 25 музыкальных токенов в секунду (8:00 — это 12 000).\n✓ Ставь «Макс. длину» близко к той, что нужна тексту.\n⚠ Если места намного больше, чем нужно тексту, после последней строки модель возвращается и поёт прежние строки снова (замерено: 24 таких возврата после конца текста). Песня, оборванная здесь, помечается как обрезанная."
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000). ✓ Set Max length close to the length the lyrics need. ⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая длинная песня: следует за «Макс. длиной» в «Звуке и выводе», 25 музыкальных токенов в секунду (8:00 — это 12 000).\n✓ Ставь «Макс. длину» близко к той, что нужна тексту.\n⚠ Если места намного больше, чем нужно тексту, после последней строки модель возвращается и поёт прежние строки снова (замерено: 24 таких возврата после конца текста). Песня, оборванная здесь, помечается как обрезанная.",
++"Only the disliked (a dislike hides a take everywhere else)": "Только непонравившиеся («Не нравится» прячет семпл везде в других местах)",
++"Start a new song?": "Начать новую песню?",
++"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Название, стиль, текст, партитура, сиды и все ручки вернутся к значениям по умолчанию. Семплы останутся.",
++"New song": "Новая песня",
++"(the log is empty)": "(лог пуст)",
++"Sound, together": "Звук вместе",
++"All the sound strengths together. By ear (05.10.2026): two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right. Green to {0}, amber to {1}, red past it.": "Все звуковые силы вместе. На слух (05.10.2026): два адаптера по 1.0 на звуке, 2.0 вместе, дали тяжёлый бас; 0.55 вместе звучало как надо. Зелёный до {0}, жёлтый до {1}, дальше красный.",
++"{0} is muted: left out of the run (right-click: back in it).": "{0} заглушён: в прогон не идёт (правый клик: вернуть).",
++"⚠ The sound half carries {0} together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.": "⚠ На звуковой половине вместе {0}: на слух 2.0 вместе дали тяжёлый бас (05.10.2026). Убавь некоторые или потяни «Звук вместе».",
++"Unmute: back in the run": "Вернуть в строй: снова в прогоне",
++"Mute: left out of the run, its strengths kept": "Пропустить: не в прогоне, силы сохраняются",
++"Remove from the song": "Убрать из песни",
++"Take it out of the song": "Убрать его из песни",
++"Add it to the song": "Добавить в песню",
++"Remove from the list (the adapter stays in its Trainer session)": "Убрать из списка (адаптер остаётся в своей сессии Тренера)",
++"Out of the list; its checkpoint stays in the Trainer's run {0} (the Trainer puts it back)": "Убран из списка; его чекпоинт остаётся в ране Тренера {0} (Тренер вернёт его)",
++"muted": "заглушён",
++"Right-click: back in the run": "Правый клик: вернуть в прогон",
++"Its trigger word goes at the style’s end by itself when the song is made": "Его слово-триггер само встанет в конец стиля, когда песня делается",
++"{0}: its trigger word “{1}” goes at the style's end when the song is made.": "{0}: его слово-триггер «{1}» встанет в конец стиля, когда песня делается.",
++"Style as tags": "Стиль тегами",
++"the most important first": "самое важное первым",
++"Into the form": "В форму",
++"the tags": "теги",
++"the readable style": "читаемый стиль",
++"Saved briefs…": "Сохранённые запросы…",
++"No saved briefs yet": "Сохранённых запросов пока нет",
++"Save brief…": "Сохранить запрос…",
++"Write the brief first": "Сначала напиши запрос",
++"Save the brief": "Сохранить запрос",
++"A name to find it by under the brief.": "Имя, по которому его найти под запросом.",
++"Brief saved: {0}": "Запрос сохранён: {0}",
++"Delete the brief “{0}”?": "Удалить запрос «{0}»?",
++"Only the saved brief goes; the text in the box stays.": "Уходит только сохранённый запрос; текст в поле остаётся.",
++"Brief deleted: {0}": "Запрос удалён: {0}",
++"Remember the key": "Запомнить ключ",
++"Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file.": "Запомнить ключ в этом браузере. Иначе он живёт лишь до закрытия страницы. Страница отправляет его только на openrouter.ai: ни в студию, ни в её файл настроек.",
++"Any model of openrouter.ai/models, written provider/model. The field offers the list as you type; the quick picks fill it in.": "Любая модель с openrouter.ai/models в виде провайдер/модель. Поле предлагает список по мере набора; быстрые выборы заполняют его.",
++"The section order the model gives new lyrics. «Keep mine» leaves the lyrics' own order.": "Порядок разделов, который модель даёт новому тексту. «Оставить мой» сохраняет порядок самого текста.",
++"The draft's style as tags, the most important first, as an SD/SDXL prompt is written. «Into the form» chooses which of the two, the tags or the readable style, the draft puts in the Style field.": "Стиль черновика тегами, самое важное первым, как пишется промпт SD/SDXL. «В форму» выбирает, что из двух — теги или читаемый стиль — черновик положит в поле стиля.",
++"Your saved briefs, kept by the lab (every browser sees them): picking one puts it in the box above.": "Твои сохранённые запросы, их хранит лаборатория (их видит любой браузер): выбранный встаёт в поле выше.",
++"The writing room works on the song in the Creator: “{0}”.": "Комната письма работает с песней в Творце: «{0}».",
++"The notebook has “{0}” open. Put it into the Creator and send the request on it?": "В блокноте открыт «{0}». Положить его в Творца и отправить запрос на нём?",
++"Put it in and send": "Положить и отправить",
++"Send on the Creator's song": "Отправить на песне Творца",
++"the song as words and knobs: style, lyrics, score and sound; Generate makes it, Takes keep it": "песня словами и ручками: стиль, текст, партитура и звук; «Сгенерировать» создаёт её, «Семплы» хранят",
++"the take in hand, heard and mended: spectrum, artifacts, stems, remaster, upscale, lyrics check": "семпл в руках, выслушан и поправлен: спектр, артефакты, стемы, ремастер, апскейл, проверка текста",
++"{0} left": "осталось {0}",
++"Its telemetry": "Его телеметрия",
++"language model loaded in {0} s": "языковая модель загружена за {0} с",
++"sound model loaded in {0} s": "звуковая модель загружена за {0} с",
++"VAE loaded in {0} s": "VAE загружен за {0} с",
++"transcriber loaded in {0} s": "транскрибер загружен за {0} с"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index e9a98a5..8ca29bb 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2642,5 +2642,58 @@ RuachI18n.add("uk", {
+ "A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Стеля довжини пісні в секундах (типово 480; 0:10–16:00): музична стадія зупиняється на 25 токенах на секунду від неї (у «Семплінгу» це «Макс. довжина» музики). Сама довжина береться з тексту й партитури; це лише обриває пісню, що розігналася (вона тоді позначається як обрізана).",
+ "The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "Партитура не може закінчитися раніше за це число токенів. Типово 200.\n✓ Залиш так.",
+ "The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "Пісня не може закінчитися раніше за цей час: 25 музичних токенів на секунду, типово 0:30 — це 750 токенів.\n✓ Залиш так.",
+-"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Найдовша пісня: іде за «Макс. довжиною» у «Звуці і виводі», 25 музичних токенів на секунду (8:00 — це 12 000).\n✓ Став «Макс. довжину» близько до тієї, що потрібна тексту.\n⚠ Якщо місця набагато більше, ніж потрібно тексту, після останнього рядка модель повертається й співає попередні рядки знову (заміряно: 24 таких повернення після кінця тексту). Пісня, обірвана тут, позначається як обрізана."
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Найдовша пісня: іде за «Макс. довжиною» у «Звуці і виводі», 25 музичних токенів на секунду (8:00 — це 12 000).\n✓ Став «Макс. довжину» близько до тієї, що потрібна тексту.\n⚠ Якщо місця набагато більше, ніж потрібно тексту, після останнього рядка модель повертається й співає попередні рядки знову (заміряно: 24 таких повернення після кінця тексту). Пісня, обірвана тут, позначається як обрізана.",
++"Only the disliked (a dislike hides a take everywhere else)": "Лише невподобані («Не подобається» ховає семпл у всіх інших місцях)",
++"Start a new song?": "Почати нову пісню?",
++"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Назва, стиль, текст, партитура, сіди й усі регулятори повернуться до типових значень. Семпли залишаться.",
++"New song": "Нова пісня",
++"(the log is empty)": "(лог порожній)",
++"Sound, together": "Звук разом",
++"All the sound strengths together. By ear (05.10.2026): two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right. Green to {0}, amber to {1}, red past it.": "Усі звукові сили разом. На слух (05.10.2026): два адаптери по 1.0 на звуку, 2.0 разом, дали важкий бас; 0.55 разом звучало як слід. Зелений до {0}, жовтий до {1}, далі червоний.",
++"{0} is muted: left out of the run (right-click: back in it).": "{0} приглушено: у прогін не йде (правий клік: повернути).",
++"⚠ The sound half carries {0} together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.": "⚠ На звуковій половині разом {0}: на слух 2.0 разом дали важкий бас (05.10.2026). Зменш деякі або потягни «Звук разом».",
++"Unmute: back in the run": "Повернути в стрій: знову в прогоні",
++"Mute: left out of the run, its strengths kept": "Пропустити: не в прогоні, сили зберігаються",
++"Remove from the song": "Прибрати з пісні",
++"Take it out of the song": "Прибрати його з пісні",
++"Add it to the song": "Додати до пісні",
++"Remove from the list (the adapter stays in its Trainer session)": "Прибрати зі списку (адаптер лишається у своїй сесії Тренера)",
++"Out of the list; its checkpoint stays in the Trainer's run {0} (the Trainer puts it back)": "Прибрано зі списку; його чекпоінт лишається в рані Тренера {0} (Тренер поверне його)",
++"muted": "приглушено",
++"Right-click: back in the run": "Правий клік: повернути в прогін",
++"Its trigger word goes at the style’s end by itself when the song is made": "Його слово-тригер саме стане в кінець стилю, коли пісня твориться",
++"{0}: its trigger word “{1}” goes at the style's end when the song is made.": "{0}: його слово-тригер «{1}» стане в кінець стилю, коли пісня твориться.",
++"Style as tags": "Стиль тегами",
++"the most important first": "найважливіше першим",
++"Into the form": "У форму",
++"the tags": "теги",
++"the readable style": "читабельний стиль",
++"Saved briefs…": "Збережені запити…",
++"No saved briefs yet": "Збережених запитів поки немає",
++"Save brief…": "Зберегти запит…",
++"Write the brief first": "Спершу напиши запит",
++"Save the brief": "Зберегти запит",
++"A name to find it by under the brief.": "Ім'я, за яким його знайти під запитом.",
++"Brief saved: {0}": "Запит збережено: {0}",
++"Delete the brief “{0}”?": "Видалити запит «{0}»?",
++"Only the saved brief goes; the text in the box stays.": "Іде лише збережений запит; текст у полі лишається.",
++"Brief deleted: {0}": "Запит видалено: {0}",
++"Remember the key": "Запам'ятати ключ",
++"Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file.": "Запам'ятати ключ у цьому браузері. Інакше він живе лише до закриття сторінки. Сторінка надсилає його тільки на openrouter.ai: ні в студію, ні в її файл налаштувань.",
++"Any model of openrouter.ai/models, written provider/model. The field offers the list as you type; the quick picks fill it in.": "Будь-яка модель з openrouter.ai/models у вигляді провайдер/модель. Поле пропонує список під час набору; швидкі вибори заповнюють його.",
++"The section order the model gives new lyrics. «Keep mine» leaves the lyrics' own order.": "Порядок розділів, який модель дає новому тексту. «Залишити мій» зберігає порядок самого тексту.",
++"The draft's style as tags, the most important first, as an SD/SDXL prompt is written. «Into the form» chooses which of the two, the tags or the readable style, the draft puts in the Style field.": "Стиль чернетки тегами, найважливіше першим, як пишеться промпт SD/SDXL. «У форму» обирає, що з двох — теги чи читабельний стиль — чернетка покладе в поле стилю.",
++"Your saved briefs, kept by the lab (every browser sees them): picking one puts it in the box above.": "Твої збережені запити, їх зберігає лабораторія (їх бачить будь-який браузер): вибраний стає в поле вище.",
++"The writing room works on the song in the Creator: “{0}”.": "Кімната письма працює з піснею у Творці: «{0}».",
++"The notebook has “{0}” open. Put it into the Creator and send the request on it?": "У блокноті відкрито «{0}». Покласти його у Творця й надіслати запит на ньому?",
++"Put it in and send": "Покласти й надіслати",
++"Send on the Creator's song": "Надіслати на пісні Творця",
++"the song as words and knobs: style, lyrics, score and sound; Generate makes it, Takes keep it": "пісня словами й регуляторами: стиль, текст, партитура і звук; «Згенерувати» творить її, «Семпли» зберігають",
++"the take in hand, heard and mended: spectrum, artifacts, stems, remaster, upscale, lyrics check": "семпл у руках, вислуханий і виправлений: спектр, артефакти, стеми, ремастер, апскейл, перевірка тексту",
++"{0} left": "лишилося {0}",
++"Its telemetry": "Його телеметрія",
++"language model loaded in {0} s": "мовна модель завантажена за {0} с",
++"sound model loaded in {0} s": "звукова модель завантажена за {0} с",
++"VAE loaded in {0} s": "VAE завантажено за {0} с",
++"transcriber loaded in {0} s": "транскрибер завантажено за {0} с"
+ });
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 239378c..6f57ece 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -344,7 +344,8 @@
+       .filter(function (x) { return x.flow <= lo + 0.15 * span && (x.ce == null || x.ce >= 0.3); });
+     var out = {};
+     if (!ok.length) return out;
+-    var add = function (x, why) { out[x.k.file] = (out[x.k.file] ? out[x.k.file] + "; " : "") + why + " (flow " + x.flow.toFixed(3) + (x.ce != null ? ", ar_ce " + x.ce.toFixed(2) : "") + ")"; };
++    // HERESY 1167: each reason translated by itself: joined first, a catalog pattern for the first swallowed the second
++    var add = function (x, why) { out[x.k.file] = (out[x.k.file] ? out[x.k.file] + "; " : "") + tr(why + " (flow " + x.flow.toFixed(3) + (x.ce != null ? ", ar_ce " + x.ce.toFixed(2) : "") + ")"); };
+     add(ok[0], "the first with the sound settled");
+     add(ok.reduce(function (b, x) { return x.flow < b.flow ? x : b; }, ok[0]), "the lowest sound loss");
+     add(ok[ok.length - 1], "the last before the music half knows the songs by heart");
+-- 
+2.43.0
+

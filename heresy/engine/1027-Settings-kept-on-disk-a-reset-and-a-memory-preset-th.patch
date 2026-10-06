@@ -1,0 +1,269 @@
+From b40b8bd026708596bdc169ec9c8382a3f9cc4765 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 30 Sep 2026 23:26:45 -0600
+Subject: [PATCH 1027/1177] Settings kept on disk, a reset, and a memory preset
+ that stays as chosen
+
+- heresy-settings.js mirrors the page settings (its yue2.* keys) to the lab, which keeps them
+  in the user config folder: ~/.config/yue2_os/settings.json (%APPDATA% on Windows,
+  Application Support on a Mac). Read synchronously before app.js; keys the browser lacks
+  come from the file, the newer side wins where both hold one, a browser meeting the file
+  for the first time keeps its own. Writes are merges of changed and deliberately removed
+  keys; a mass disappearance (site data cleared under a live page) sends no removals, and
+  nothing is written when the file could not be read at load. The OpenRouter key and the
+  jobs list stay in the browser.
+- Engine room: "Page settings" in the Server card, and a Reset page settings button.
+- GPU memory preset: the server keeps the knobs, not the name, and 24 and 32 GB differ by
+  Keep models loaded alone, so ticking it made F5 show 32. The choice is remembered and shown
+  while its model, context and VAE tiles hold; keep-loaded is a choice within a preset. Sizes
+  above the GPU found are marked, and Auto names what it found.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |   3 +
+ tools/console/app.js             |  43 ++++++++++++--
+ tools/console/heresy-settings.js |  95 +++++++++++++++++++++++++++++++
+ tools/console/index.html         |   4 ++
+ tools/public/index.html.gz       | Bin 278626 -> 281777 bytes
+ 5 files changed, 141 insertions(+), 4 deletions(-)
+ create mode 100644 tools/console/heresy-settings.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 15ad4e4..e2508eb 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2060,3 +2060,6 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+   background: var(--amber); color: var(--on-amber); transform: translateY(-1px); }
+ .take-id { text-transform: none; letter-spacing: 0; background: none; border: 0; padding: 0; font-size: 11.5px; color: var(--dim); cursor: copy; user-select: all; }
+ .take-id:hover, .take-id:focus-visible { color: var(--amber); }
++
++/* HERESY 1027 */
++.server-reset { margin-top: 12px; display: flex; justify-content: flex-end; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 36eb497..cb81235 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2321,7 +2321,9 @@
+       ["Context", p.context ? p.context.toLocaleString() + " tokens" : "—", ""],
+       ["Songs per pass", String(STATE.maxBatch), ""],
+       ["Transcriber", STATE.transcriber ? "loaded" : "not started with one", STATE.transcriber ? "ok" : "no"],
+-      ["Library", STATE.library ? "saved on disk" : "off (no --outputs)", STATE.library ? "ok" : "no"]
++      ["Library", STATE.library ? "saved on disk" : "off (no --outputs)", STATE.library ? "ok" : "no"],
++      ["Page settings", window.HeresySettings && window.HeresySettings.reachable() ? "on disk · yue2_os/settings.json" : "this browser only (lab is down)",   // HERESY 1027
++       window.HeresySettings && window.HeresySettings.reachable() ? "ok" : "no"]
+     ];
+     $("serverCard").innerHTML = rows.map(function (row) {
+       return "<div><dt>" + row[0] + '</dt><dd class="' + row[2] + '" title="' + escape(row[1]) + '">' + escape(row[1]) + "</dd></div>";
+@@ -2407,6 +2409,25 @@
+     return found;
+   }
+ 
++  // HERESY 1027: the server keeps the knobs, not the preset's name, and 24 and 32 GB differ by
++  // "Keep models loaded" alone: ticking it after choosing 24 made F5 show 32. The page now keeps
++  // the choice (yue2.memPreset) and shows it while model, context and VAE tiles are still its own.
++  var PRESET_KEY = "yue2.memPreset";
++  function shownPreset(settings) {
++    var picked = recall(PRESET_KEY), p = picked && MEM_PRESETS[picked];
++    if (p && p.max_seq === settings.max_seq && p.vae_core === settings.vae_core && (!presetFits(p) || p.model === settings.model)) return picked;
++    return matchPreset(settings);
++  }
++  // Sizes above the GPU found by the server are marked, and Auto says what it found.
++  function paintPresetSizes() {
++    var gpu = STATE.hardware && (STATE.hardware.gpus || [])[0], gib = gpu ? gpu.total_bytes / GIB : 0;
++    Array.prototype.forEach.call($("memPreset").options, function (o) {
++      if (o.value === "auto") { o.textContent = "Auto (detect" + (gib ? ": " + gib.toFixed(1) + " GB found" : "") + ")"; return; }
++      if (!MEM_PRESETS[o.value]) return;
++      o.textContent = o.value + " GB" + (gib && +o.value > gib + 0.6 ? " · more than this GPU" : "");
++    });
++  }
++
+   // Top-bar model choice: the backbone files the server was started with.
+   var MODEL_SIZES = { BF16: "7.2 GB", Q8_0: "3.8 GB", Q6_K: "2.9 GB", Q5_K_M: "2.6 GB" };
+ 
+@@ -2450,7 +2471,7 @@
+       $(pair[0]).value = pair[1];
+     });
+     $("setKeepLoaded").checked = !!settings.keep_loaded;
+-    $("memPreset").value = matchPreset(settings);
++    $("memPreset").value = shownPreset(settings);   // HERESY 1027
+     paintComputeHint();
+     paintStrip();
+     paintSubmitNote();
+@@ -2462,6 +2483,8 @@
+     else notes.push("Context " + rows.toLocaleString() + " rows: songs up to about " + clock(Math.max(0, rows - 2500) / FRAME_RATE) +
+                     " with a typical prompt; longer ones will not fit.");
+     notes.push($("setKeepLoaded").checked ? "Models stay in GPU memory between songs." : "Each stage leaves GPU memory when it is done.");
++    var p = MEM_PRESETS[$("memPreset").value];   // HERESY 1027: the preset, with your own keep-loaded choice
++    if (p && p.keep_loaded !== $("setKeepLoaded").checked) notes.push("(" + $("memPreset").value + " GB preset, with models " + ($("setKeepLoaded").checked ? "kept loaded" : "unloaded") + " by your choice.)");
+     $("computeHint").textContent = notes.join(" ");
+   }
+ 
+@@ -2490,7 +2513,11 @@
+   }
+ 
+   ["setMaxSeq", "setVaeCore", "setKeepLoaded", "setModel"].forEach(function (id) {
+-    $(id).addEventListener("input", function () { STATE.settingsDirty = true; paintComputeHint(); $("memPreset").value = ""; });
++    $(id).addEventListener("input", function () {
++      STATE.settingsDirty = true;
++      if (id !== "setKeepLoaded") $("memPreset").value = "";   // HERESY 1027: keep-loaded is a choice within a preset
++      paintComputeHint();
++    });
+     $(id).addEventListener("change", function () { STATE.settingsDirty = true; paintComputeHint(); });
+   });
+ 
+@@ -2516,12 +2543,19 @@
+           (p.keep_loaded ? "kept loaded" : "unloaded after each song") + ", VAE tiles " + p.vae_core + ". Press Save to apply.");
+   });
+ 
++  $("resetPageSettings").addEventListener("click", function () {   // HERESY 1027
++    if (!window.HeresySettings) return;
++    if (!confirm("Reset every page setting to its default, in this browser and on disk?\n\nThe library, the songs and the engine settings stay as they are.")) return;
++    window.HeresySettings.reset();
++  });
++
+   $("saveSettings").addEventListener("click", function () {
+     var next;
+     try { next = readSettingsForm(); } catch (error) { return toast(error.message, "bad"); }
+     var current = STATE.settings || {}, changed = {};
+     SETTING_KEYS.forEach(function (key) { if (next[key] !== undefined && next[key] !== current[key]) changed[key] = next[key]; });
+-    if (!Object.keys(changed).length) return toast("No changes to save");
++    store(PRESET_KEY, MEM_PRESETS[$("memPreset").value] ? $("memPreset").value : null);   // HERESY 1027
++    if (!Object.keys(changed).length) { paintSettings(STATE.settings || {}, true); return toast("Saved: the knobs were already so"); }
+     var button = this;
+     button.disabled = true;
+     post("/settings", changed).then(function (data) {
+@@ -2538,6 +2572,7 @@
+   function refreshHardware() {
+     return api("/hardware").then(function (hw) {
+       STATE.hardware = hw || {};
++      paintPresetSizes();   // HERESY 1027
+       STATE.noHardware = false;
+       paintHardware();
+     }).catch(function (error) {
+diff --git a/tools/console/heresy-settings.js b/tools/console/heresy-settings.js
+new file mode 100644
+index 0000000..26e987a
+--- /dev/null
++++ b/tools/console/heresy-settings.js
+@@ -0,0 +1,95 @@
++// HERESY 1027: the page's settings (its yue2.* keys in the browser's storage) mirrored to disk on
++// Forge through the lab: ~/.config/yue2_os/settings.json (%APPDATA% on Windows, Application Support
++// on a Mac). A cleared browser, a private window or another device gets them back.
++//
++// Load: before app.js reads anything, the file is read at once (a synchronous request for one
++// small local file). Keys this browser lacks come from the file. Where both hold a key, the
++// newer side wins: the file when it was written after this browser last wrote it (another
++// device, or this browser's own storage cleared), this browser otherwise.
++// Afterwards: every few seconds and when the page goes away, the keys that changed are sent,
++// with the ones removed on purpose. The file merges them; it never forgets a key it was not
++// told to. When most keys vanish at once (site data cleared under a live page), that is not a
++// choice to forget: no removals are sent. Only the Engine room's Reset empties the file.
++// The OpenRouter key and the running-jobs list stay in the browser only: the file is served to
++// anyone on the network who opens the page, and the jobs belong to one session.
++(function () {
++  "use strict";
++
++  var PREFIX = "yue2.", STAMP = "yue2.savedAt";
++  var KEEP_LOCAL = { "yue2.orKey": 1, "yue2.jobs": 1, "yue2.savedAt": 1 };
++  var URL = "/lab/settings";
++  var known = {};           // what the file holds as far as this page knows: key -> value
++  var ok = true, met = false;
++
++  function ls() { try { return window.localStorage; } catch (e) { return null; } }
++  function collect() {
++    var s = ls(), keys = {};
++    if (!s) return keys;
++    for (var i = 0; i < s.length; i++) {
++      var k = s.key(i);
++      if (k && k.indexOf(PREFIX) === 0 && !KEEP_LOCAL[k]) keys[k] = s.getItem(k);
++    }
++    return keys;
++  }
++  function send(payload, beacon) {
++    var text = JSON.stringify(payload);
++    if (beacon && navigator.sendBeacon) return Promise.resolve(navigator.sendBeacon(URL, new Blob([text], { type: "application/json" })));
++    return fetch(URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: text }).then(function (r) { ok = r.ok; return r.ok; });
++  }
++
++  // ---- 1. restore, before the page reads its settings
++  (function restore() {
++    var s = ls();
++    if (!s) return;
++    try {
++      var x = new XMLHttpRequest();
++      x.open("GET", URL, false);
++      x.send();
++      if (x.status !== 200) { ok = false; return; }
++      var disk = JSON.parse(x.responseText) || {}, keys = disk.keys || {};
++      met = true;
++      var mine = parseFloat(s.getItem(STAMP) || "0"), diskNewer = (disk.saved_at || 0) > mine, local = collect();
++      // A browser that holds settings but has never written the file (the first visit after this
++      // patch) keeps its own where both have a key: the file may hold another browser's.
++      if (!mine && Object.keys(local).length) diskNewer = false;
++      Object.keys(keys).forEach(function (k) {
++        if (k.indexOf(PREFIX) !== 0 || KEEP_LOCAL[k]) return;
++        if (!(k in local) || diskNewer) s.setItem(k, keys[k]);
++      });
++      known = keys;
++      if (keys["yue2.theme"] && (diskNewer || !("yue2.theme" in local))) document.documentElement.dataset.theme = keys["yue2.theme"];   // the head script ran first
++    } catch (e) { ok = false; }
++  })();
++
++  // ---- 2. write back what changes
++  function push(beacon) {
++    if (!met) return;       // the lab was down at load: this page's defaults must not overwrite the file
++    var now = collect(), changed = {}, removed = [];
++    Object.keys(now).forEach(function (k) { if (known[k] !== now[k]) changed[k] = now[k]; });
++    Object.keys(known).forEach(function (k) { if (!(k in now)) removed.push(k); });
++    var before = Object.keys(known).length;
++    if (removed.length > 3 && removed.length * 2 > before) removed = [];   // cleared, not chosen
++    if (!Object.keys(changed).length && !removed.length) return;
++    var at = Date.now() / 1000;
++    try { ls().setItem(STAMP, String(at)); } catch (e) { /* storage off: the file is still written */ }
++    var prev = known;
++    known = Object.assign({}, known, changed);
++    removed.forEach(function (k) { delete known[k]; });
++    send({ saved_at: at, keys: changed, removed: removed }, beacon).catch(function () { ok = false; known = prev; });
++  }
++  setTimeout(function () { push(false); }, 1500);   // a browser that has keys the file lacks writes them out
++  setInterval(function () { push(false); }, 4000);
++  window.addEventListener("pagehide", function () { push(true); });
++  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") push(true); });
++
++  // ---- 3. reset (the Engine room's button): the browser's keys and the file, then a fresh page
++  function reset() {
++    var s = ls();
++    met = false;            // nothing more from this page
++    if (s) Object.keys(collect()).concat([STAMP]).forEach(function (k) { s.removeItem(k); });
++    return send({ reset: true, saved_at: Date.now() / 1000, keys: {}, removed: [] })
++      .then(function () { location.reload(); }, function () { location.reload(); });
++  }
++
++  window.HeresySettings = { reset: reset, flush: function () { push(false); }, reachable: function () { return ok && met; } };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index e347f3c..db28cc9 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -81,6 +81,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     <div class="card">
+       <h3>Server</h3>
+       <dl class="kv" id="serverCard"></dl>
++      <!-- HERESY 1027: every page setting back to its default, in this browser and on disk -->
++      <div class="server-reset"><button type="button" class="btn ghost small" id="resetPageSettings"
++        data-tip="Theme, columns, folds, the form's draft, the player, the writing room: all back to defaults, here and in yue2_os/settings.json. The library and the engine settings stay.">Reset page settings</button></div>
+     </div>
+ 
+     <div class="card compute-card" id="computeCard">
+@@ -1103,6 +1106,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     The server writes up to <strong data-fill="max-batch">1</strong> side by side in one pass; more are
+     queued as further passes.</p>
+ </template>
++<script src="heresy-settings.js"></script>
+ <script src="examples.js"></script>
+ <script src="instrumental.js"></script>
+ <script src="help.js"></script>
+-- 
+2.43.0
+

@@ -1,0 +1,119 @@
+From df482a79ffb86db2a053e34ddaa3b8f97e9ea3d8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 23:32:21 -0600
+Subject: [PATCH 1146/1177] =?UTF-8?q?HERESY=201166:=20the=20About=20card's?=
+ =?UTF-8?q?=20link=20to=20the=20=F0=9F=92=8E=20sets'=20bucket?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The bucket holds all four published sets now (Viktor 04.10.2026: «Упаковывай
+воркспейсы 💎 в goldhub/Ruach_Studio_Instruments_Probe_WS бакет»): the link
+says «Probes, styles and voices», in the six catalogs too.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-i18n-be.js | 3 ++-
+ tools/console/heresy-i18n-el.js | 3 ++-
+ tools/console/heresy-i18n-es.js | 3 ++-
+ tools/console/heresy-i18n-it.js | 3 ++-
+ tools/console/heresy-i18n-ru.js | 3 ++-
+ tools/console/heresy-i18n-uk.js | 3 ++-
+ tools/console/index.html        | 4 ++--
+ 7 files changed, 14 insertions(+), 8 deletions(-)
+
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index ffce41e..88da1f7 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2493,5 +2493,6 @@ RuachI18n.add("be", {
+ "Full height": "На ўсю вышыню",
+ "The log the window's full height, or back": "Журнал на ўсю вышыню акна, або назад",
+ "Picture:": "Выява:",
+-"The picture's page: its author and licence": "Старонка выявы: аўтар і ліцэнзія"
++"The picture's page: its author and licence": "Старонка выявы: аўтар і ліцэнзія",
++"Probes, styles and voices": "Пробы, стылі і галасы"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 548e757..f460025 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2492,5 +2492,6 @@ RuachI18n.add("el", {
+ "Full height": "Σε όλο το ύψος",
+ "The log the window's full height, or back": "Το αρχείο σε όλο το ύψος του παραθύρου, ή πίσω",
+ "Picture:": "Εικόνα:",
+-"The picture's page: its author and licence": "Η σελίδα της εικόνας: ο δημιουργός και η άδεια"
++"The picture's page: its author and licence": "Η σελίδα της εικόνας: ο δημιουργός και η άδεια",
++"Probes, styles and voices": "Δοκιμές, ύφη και φωνές"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 02c39e5..53b8624 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2492,5 +2492,6 @@ RuachI18n.add("es", {
+ "Full height": "Altura completa",
+ "The log the window's full height, or back": "El registro a toda la altura de la ventana, o de vuelta",
+ "Picture:": "Imagen:",
+-"The picture's page: its author and licence": "La página de la imagen: su autor y su licencia"
++"The picture's page: its author and licence": "La página de la imagen: su autor y su licencia",
++"Probes, styles and voices": "Pruebas, estilos y voces"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 3b0576c..07ca88d 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2492,5 +2492,6 @@ RuachI18n.add("it", {
+ "Full height": "Altezza piena",
+ "The log the window's full height, or back": "Il registro a tutta l'altezza della finestra, o indietro",
+ "Picture:": "Immagine:",
+-"The picture's page: its author and licence": "La pagina dell'immagine: l'autore e la licenza"
++"The picture's page: its author and licence": "La pagina dell'immagine: l'autore e la licenza",
++"Probes, styles and voices": "Prove, stili e voci"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index ba68f6f..9751d9e 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2498,5 +2498,6 @@ RuachI18n.add("ru", {
+ "Full height": "Во всю высоту",
+ "The log the window's full height, or back": "Журнал во всю высоту окна, или обратно",
+ "Picture:": "Изображение:",
+-"The picture's page: its author and licence": "Страница изображения: автор и лицензия"
++"The picture's page: its author and licence": "Страница изображения: автор и лицензия",
++"Probes, styles and voices": "Пробы, стили и голоса"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 85fb414..f8e272c 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2493,5 +2493,6 @@ RuachI18n.add("uk", {
+ "Full height": "На всю висоту",
+ "The log the window's full height, or back": "Журнал на всю висоту вікна, або назад",
+ "Picture:": "Зображення:",
+-"The picture's page: its author and licence": "Сторінка зображення: автор і ліцензія"
++"The picture's page: its author and licence": "Сторінка зображення: автор і ліцензія",
++"Probes, styles and voices": "Проби, стилі й голоси"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 39f1292..df765e1 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -580,12 +580,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <li><a href="https://fontawesome.com/license/free" target="_blank" rel="noopener noreferrer">Icons: Font Awesome Free</a><span class="about-where" translate="no">CC BY 4.0</span></li>
+           </ul>
+           <!-- HERESY 1166 (Viktor: «Все наши восходящие HF репозитории добавь в колонку Ruach Studio, через пустую строку»):
+-               ours on Hugging Face, after a line's space; private until the release, the probes' bucket public already -->
++               ours on Hugging Face, after a line's space; private until the release, the 💎 sets' bucket too -->
+           <ul class="about-links about-ours">
+             <li><a href="https://huggingface.co/goldhub/Ruach_Studio_Models" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Models</span></li>
+             <li><a href="https://huggingface.co/goldhub/Ruach_Studio_LoRAs" target="_blank" rel="noopener noreferrer">LoRAs</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_LoRAs</span></li>
+             <li><a href="https://huggingface.co/datasets/goldhub/Ruach_Studio_Starter_Sets" target="_blank" rel="noopener noreferrer">Starter sets</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Starter_Sets</span></li>
+-            <li><a href="https://huggingface.co/buckets/goldhub/Ruach_Studio_Instruments_Probe_WS" target="_blank" rel="noopener noreferrer">Instrument probes</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Instruments_Probe_WS</span></li>
++            <li><a href="https://huggingface.co/buckets/goldhub/Ruach_Studio_Instruments_Probe_WS" target="_blank" rel="noopener noreferrer">Probes, styles and voices</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Instruments_Probe_WS</span></li>
+           </ul></section>
+           <section class="about-project"><h4>YuE2_WebUI</h4><p class="about-what">HTML layout inspired by Ladypoly/YuE2_WebUI</p><ul class="about-links">
+             <li><a href="https://github.com/Ladypoly/YuE2_WebUI" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where" translate="no">github · Ladypoly/YuE2_WebUI</span></li>
+-- 
+2.43.0
+

@@ -1,0 +1,645 @@
+From d324fa37029ef65594c8d74d4aa914286f0eb383 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 14:34:35 -0600
+Subject: [PATCH 1083/1177] Speed in the player, selection as in Plasma, Move
+ to, ranks said (1101); openDAW out, the way out of the studio in (1102); pins
+ and a strip that never moves the cards, search in the heading (1103)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  64 +++++++++++++-
+ tools/console/app.js               |  44 ++++++++--
+ tools/console/heresy-collection.js | 132 ++++++++++++++++++++++++++++-
+ tools/console/heresy-daw.js        |  81 ++++++++++++++++++
+ tools/console/heresy-guide.js      |   8 +-
+ tools/console/heresy-train.js      |   8 ++
+ tools/console/index.html           |  29 +++++--
+ tools/public/index.html.gz         | Bin 399494 -> 405051 bytes
+ 8 files changed, 340 insertions(+), 26 deletions(-)
+ create mode 100644 tools/console/heresy-daw.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d2d0a06..004d665 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1538,6 +1538,10 @@ textarea:hover::-webkit-scrollbar-thumb,
+ }
+ 
+ .volume { display: flex; align-items: center; gap: 7px; flex: none; }
++/* HERESY 1101: the playback speed */
++.speed-pick { flex: none; height: 28px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--r-sm, 6px); background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
++.speed-pick:hover { color: var(--ink); border-color: var(--line-strong); }
++.speed-pick.is-on { color: var(--amber); border-color: var(--amber); }
+ 
+ .icon-btn {
+   background: none;
+@@ -2135,7 +2139,24 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-cap-inline { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+ .coll-chip { padding: 3px 10px; border: 1px solid var(--line); border-radius: var(--r-pill); background: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+ .coll-chip.is-on { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
+-.coll-bulk { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--amber); border-radius: var(--r-md); background: var(--panel); }
++/* HERESY 1103 (Viktor): a strip of fixed height above the grid, so the cards never move: the pinned takes while
++   nothing is checked, the bar of the checked in their place when something is */
++.coll-slot { height: 76px; flex: none; position: sticky; top: 0; z-index: 2; background: var(--ground); }
++@media (max-width: 1750px) { .coll-slot { height: 96px; } }
++.coll-slot[hidden] { display: none; }
++.coll-bulk { height: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; align-content: center; align-items: center; padding: 8px 10px;
++  border: 1px solid var(--amber); border-radius: var(--r-md); background: var(--panel); overflow: hidden; }
++.coll-bulk select { max-width: 210px; }
++.coll-pins { height: 100%; box-sizing: border-box; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: center; }
++.coll-pins[hidden] { display: none; }
++.coll-pins-hint { grid-column: 1 / -1; margin: 0; padding: 0 4px; }
++.coll-pin { display: flex; align-items: center; gap: 10px; min-width: 0; height: 64px; box-sizing: border-box; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--amber) 35%, var(--line));
++  border-radius: var(--r-md); background: color-mix(in srgb, var(--amber) 8%, var(--panel)); }
++.coll-pin-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
++.coll-pin .coll-title-text { font-weight: 600; }
++.coll-pin .coll-meta { font-size: 12px; color: var(--muted); }
++.coll-unpin { flex: none; width: 24px; height: 24px; border: 0; border-radius: 50%; background: none; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; }
++.coll-unpin:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 8%, transparent); }
+ .coll-sep { width: 1px; height: 20px; background: var(--line); }
+ .coll-grid.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+ @media (max-width: 1400px) { .coll-grid.tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@@ -2145,6 +2166,8 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-card { position: relative; display: flex; gap: 8px; align-items: flex-start; padding: 10px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
+ .coll-grid.list .coll-card { padding: 6px 10px; align-items: center; }
+ .coll-card.is-sel { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
++/* HERESY 1101: the rubber band */
++.coll-band { position: fixed; z-index: 60; pointer-events: none; border: 1px solid var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); border-radius: 2px; }
+ .coll-card.is-hidden { opacity: .65; }
+ .coll-check { flex: none; padding-top: 2px; }
+ .coll-play { flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; background: none;
+@@ -2888,3 +2911,42 @@ body[data-tab="train"] .log-dock { bottom: 18px; }
+ /* HERESY 1098: the Librarian's heading names the collection open */
+ .coll-where { font-weight: 600; color: var(--amber); margin-left: 2px; }
+ .coll-col .col-head h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
++
++/* HERESY 1101: the trainer's way into the guide on ranks */
++.tr-howto { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--amber); font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; cursor: pointer; }
++.tr-howto:hover { text-decoration: underline; }
++#trRankSay { display: block; margin-top: 3px; font-size: 11px; }
++
++/* HERESY 1103: search, sort and the view in the Librarian's heading line */
++.coll-head { flex-wrap: wrap; row-gap: 8px; }
++.coll-headtools { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 1 1 520px; max-width: 760px; }
++.coll-headtools[hidden] { display: none; }
++.coll-headtools input[type="search"] { flex: 1 1 auto; min-width: 200px; }
++.coll-headtools select { width: auto; flex: none; }
++.coll-headtools .coll-views { display: flex; gap: 4px; flex: none; }
++
++/* HERESY 1102: the way out of the studio */
++.dw-back { position: fixed; inset: 0; z-index: 150; display: flex; align-items: center; justify-content: center; padding: 3vh 3vw;
++  background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(3px); opacity: 0; transition: opacity .16s ease; }
++.dw-back.is-on { opacity: 1; }
++.dw-back[hidden] { display: none; }
++.dw-box { width: min(1080px, 100%); max-height: 88vh; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; border: 1px solid var(--line);
++  border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 20px 60px var(--shadow-lg, rgba(0,0,0,.4)); }
++.dw-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
++.dw-head > div { display: flex; flex-direction: column; gap: 4px; }
++.dw-head b { font-size: 18px; }
++.dw-way h3 { margin: 0 0 4px; font-size: 15px; }
++.dw-links { display: flex; gap: 8px; margin-top: 8px; }
++.dw-daws { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 10px; }
++.dw-daw { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-md); }
++.dw-daw.is-on { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
++.dw-daw p { margin: 0; }
++.dw-daw .btn { align-self: flex-start; margin-top: auto; }
++.dw-daw-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
++.dw-daw-head span { font-size: 12px; color: var(--muted); }
++.dw-daw-head .dw-state { margin-left: auto; padding: 1px 7px; border: 1px solid var(--line); border-radius: var(--r-pill); }
++.dw-here { font-size: 12px; color: #3f9a4a; }
++.dw-here code { color: var(--muted); }
++.dw-install summary { cursor: pointer; font-size: 12px; color: var(--muted); }
++.dw-install p { font-size: 12px; margin-top: 4px; }
++.dw-now { margin-top: 10px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 38978a2..b9ec48e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3811,6 +3811,19 @@
+   });
+ 
+   paintVolume();
++
++  // HERESY 1101: the playback speed, kept like the volume. A new source resets playbackRate to the default rate,
++  // so both are set; the browser keeps the pitch (preservesPitch is on by default).
++  function setSpeed(v) {
++    v = Math.min(2, Math.max(0.5, parseFloat(v) || 1));
++    audio.defaultPlaybackRate = v; audio.playbackRate = v;
++    $("playSpeed").value = String(v);
++    $("playSpeed").classList.toggle("is-on", v !== 1);
++    store("yue2.speed", v === 1 ? null : String(v));
++  }
++  setSpeed(recall("yue2.speed") || 1);
++  $("playSpeed").addEventListener("change", function () { setSpeed(this.value); });
++  audio.addEventListener("loadedmetadata", function () { if (audio.playbackRate !== audio.defaultPlaybackRate) audio.playbackRate = audio.defaultPlaybackRate; });
+   // The play button's glyph, its state (the DMM theme draws icons from it) and its label for screen readers
+   function paintPlayButton(playing) {
+     $("playGlyph").textContent = playing ? "❚❚" : "▶";
+@@ -5368,14 +5381,8 @@
+ 
+   if (window.HeresyTrain) window.HeresyTrain.init({ toast: toast });   // HERESY 1063
+   if (window.HeresyGpus) window.HeresyGpus.init({ toast: toast });     // HERESY 1091
+-  // HERESY 1075: openDAW beside the studio (tools/serve-opendaw.py, the ruach-daw unit). It wants a secure origin:
+-  // http://localhost:41880 through an ssh tunnel by default; shift-click sets another address, kept with the page.
+-  if ($("dawOpen")) $("dawOpen").addEventListener("click", function (e) {
+-    var url = recall("yue2.dawUrl") || "http://localhost:41880";
+-    if (!e.shiftKey) return void window.open(url, "ruach-opendaw");
+-    window.HeresyDialog.prompt("openDAW's address\n\nIt needs a secure origin: localhost through a tunnel\n(ssh -L 41880:127.0.0.1:41880 192.168.1.10) or https.", url, { ok: "Keep it" })
+-      .then(function (v) { v = (v || "").trim(); if (v) { store("yue2.dawUrl", v); toast("openDAW at " + v); } });
+-  });
++  // HERESY 1102: the DAW button opens the way out of the studio (heresy-daw.js); openDAW is gone
++  if (window.HeresyDaw) window.HeresyDaw.init({ title: function () { return STATE.take ? displayTitle(STATE.take) : ""; } });
+   if (window.HeresyInstruments) window.HeresyInstruments.init({        // HERESY 1069: the ♪ cheat-sheet
+     toast: toast, findTake: findTake, playNow: function (t) { STATE.playZone = "collection"; playNow(t); }
+   });
+@@ -5434,6 +5441,25 @@
+           if (w) HC.act({ op: "ws-add", workspace: w, names: [name] }, "Added to “" + w + "”");
+         });
+       } }]) } : null,
++      // HERESY 1103 (Viktor): up to four takes pinned in the strip above the Librarian's grid, per workspace
++      HC && HC.pin && here === "collection" ? (function () {
++        var on = HC.pinned(name);
++        return { icon: "\ud83d\udccc", label: on ? "Unpin" : "Pin here", hint: on ? "" : "four at most", action: function () { HC.pin(name, !on); } };
++      })() : null,
++      // HERESY 1101 (Viktor): Move as well as pin; on a checked card in the Librarian, for every checked one
++      HC && HC.moveTo ? (function () {
++        var inLib = here === "collection", sel = inLib && HC.selected ? HC.selected() : [];
++        var list = sel.length > 1 && sel.indexOf(name) >= 0 ? sel : [name], place = inLib ? HC.place() : "";
++        var many = list.length > 1 ? " " + list.length : "";
++        return { icon: "⇥", label: "Move" + many + " to", hint: inLib && place && place.charAt(0) !== "_" ? "out of “" + place + "”" : "out of every other", items: ws.filter(function (w) { return !(inLib && w === place); }).map(function (w) {
++          return { label: w, action: function () { HC.moveTo(w, list, inLib); } };
++        }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
++          window.HeresyDialog.prompt("A new workspace for " + (list.length > 1 ? "the " + list.length + " checked takes" : "“" + displayTitle(take) + "”"), "", { ok: "Move there", placeholder: "its name" }).then(function (w) {
++            w = (w || "").trim();
++            if (w) HC.moveTo(w, list, inLib);
++          });
++        } }]) };
++      })() : null,
+       HC ? { icon: "◌", label: row && row.hidden ? "Show again" : "Hide from the lists", action: function () {
+         HC.act({ op: row && row.hidden ? "show" : "hide", names: [name] }, row && row.hidden ? "Shown again" : "Hidden from the lists (not deleted)");
+       } } : null,
+@@ -5459,7 +5485,7 @@
+         { label: formatExt(take.format).toUpperCase(), action: save(downloadUrl(take), audioFileName(take)) },
+         convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null,
+         take.session ? null : { sep: true },             // HERESY 1074: the take, its mix and stems, for openDAW or any DAW
+-        take.session ? null : { label: "DAWproject", hint: "mix + stems · openDAW, Bitwig, Studio One", action: function () {
++        take.session ? null : { label: "DAWproject", hint: "mix + stems · Bitwig, Studio One, Cubase", action: function () {
+           toast("Packing the DAWproject: the mix and every stem, as 24-bit WAV");
+           api("/lab/dawproject?name=" + encodeURIComponent(name)).then(function (d) {   // packed into the take; the engine hands it over
+             toast("DAWproject: " + d.tracks.join(", ") + " · " + d.bpm + " bpm, " + d.meter + " · " + (d.bytes / 1048576).toFixed(0) + " MB");
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 16496ff..85044fb 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -39,7 +39,7 @@
+ 
+   function load() {
+     return api("/catalog").then(function (d) {
+-      state.rows = d.takes || []; state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {};
++      state.rows = d.takes || []; state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
+       var names = {};
+       state.rows.forEach(function (r) { names[r.name] = 1; });
+       Object.keys(state.sel).forEach(function (n) { if (!names[n]) delete state.sel[n]; });
+@@ -108,13 +108,13 @@
+       r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</span>" +
+       '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + "</button>" +
+       '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + "</button>" +
+-      (r.note ? '<span class="coll-act coll-hasnote" title="' + esc(r.note) + '" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
++      (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
+   }
+ 
+   function paint() {
+     paintSide();
+     var trash = state.place === "__trash";
+-    $("collBar").hidden = trash; $("collTrashBar").hidden = !trash;
++    $("collBar").hidden = trash; $("collTrashBar").hidden = !trash; $("collSlot").hidden = trash; $("collHeadTools").hidden = trash;
+     if (trash) return paintTrash();
+     var rows = shown(), view = recall(VIEW_KEY) || "tiles";
+     $("collGrid").className = "coll-grid " + view;
+@@ -139,7 +139,7 @@
+         '<button type="button" class="coll-act post" data-cgo="post" title="Load into the Refiner">Refine</button>' +
+         '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' +
+         // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height
+-        (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" title="' + esc(r.note) + '" aria-label="Has a note">' + ico("note") + "</button>"
++        (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" aria-label="Has a note">' + ico("note") + "</button>"
+                 : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
+     }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+     // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
+@@ -164,9 +164,28 @@
+     paintBulk(rows);
+   }
+ 
++  // HERESY 1103: the pinned takes of the place in hand, small, in their own tone; four at most
++  function pinsHere() {
++    return ((state.pins || {})[state.place] || []).map(rowOf).filter(Boolean);
++  }
++  function paintPins() {
++    var el = $("collPins"), list = pinsHere(), now = state.hooks.playing ? state.hooks.playing() : {};
++    el.innerHTML = list.length ? list.map(function (r) {
++      var on = now.name === r.name && now.playing;
++      return '<div class="coll-pin" data-name="' + esc(r.name) + '"><button type="button" class="coll-play' + (on ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (on ? "Pause" : "Play") + '">' + ico(on ? "pause" : "play") + "</button>" +
++        '<div class="coll-pin-body"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + '</span><span class="coll-meta">' + esc(state.hooks.ago(r.created)) +
++        (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + "</span></div>" +
++        '<button type="button" class="coll-unpin" data-unpin="' + esc(r.name) + '" aria-label="Unpin" data-tip="Unpin">\u00d7</button></div>';
++    }).join("") : '<p class="row-hint coll-pins-hint">Pin up to four takes of this place here: right-click a take \u2192 Pin here.</p>';
++  }
++  function pin(name, on) {
++    return act({ op: "pin", place: state.place, on: !!on, names: [name] }, on ? "Pinned here" : "Unpinned");
++  }
+   function paintBulk(rows) {
+     var n = Object.keys(state.sel).length;
+     $("collBulk").hidden = !n;
++    $("collPins").hidden = !!n;
++    if (!n) paintPins();
+     $("collSelCount").textContent = n + " selected";
+     $("collWsMove").innerHTML = '<option value="">Move to workspace…</option>' + state.ws.filter(function (w) { return w !== state.place; }).map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
+       '<option value="__new">+ a new one…</option>';
+@@ -200,6 +219,88 @@
+ 
+   function names() { return Object.keys(state.sel); }
+ 
++  // HERESY 1101: a card checked or unchecked by a click on it (Shift: the whole range from the last one)
++  function toggleCard(name, range) {
++    var rows = shown(), i = rows.findIndex(function (r) { return r.name === name; }), on = !state.sel[name];
++    if (i < 0) return;
++    if (range && state.last !== null) {
++      var a = Math.min(state.last, i), b = Math.max(state.last, i);
++      for (var k = a; k <= b; k++) if (on) state.sel[rows[k].name] = 1; else delete state.sel[rows[k].name];
++    } else if (on) state.sel[name] = 1; else delete state.sel[name];
++    state.last = i;
++    paint();
++  }
++
++  // HERESY 1101: the rubber band. A drag that starts on the grid's empty space draws it and checks what it
++  // touches (instead of what was checked; with Ctrl, in addition); Ctrl+drag starts it on a card too. Near the
++  // top or bottom edge the page scrolls on, and the band keeps its corner in the content, not on the screen.
++  var band = { on: false, ate: false, x0: 0, y0: 0, base: null, el: null, scroller: null, raf: 0, mx: 0, my: 0 };
++  function scrollerOf(el) {
++    for (var e = el.parentElement; e && e !== document.body; e = e.parentElement) {
++      var o = getComputedStyle(e).overflowY;
++      if ((o === "auto" || o === "scroll") && e.scrollHeight > e.clientHeight) return e;
++    }
++    return document.scrollingElement || document.documentElement;
++  }
++  function bandStart(e) {
++    if (e.button !== 0 || state.place === "__trash") return;
++    var onCard = e.target.closest(".coll-card[data-name]");
++    if (onCard && !e.ctrlKey) return;
++    if (e.target.closest("button, input, a, select, textarea, .coll-title-edit") && !e.ctrlKey) return;
++    band.scroller = scrollerOf($("collGrid"));
++    band.x0 = e.clientX; band.y0 = e.clientY + band.scroller.scrollTop; band.mx = e.clientX; band.my = e.clientY;
++    band.base = e.ctrlKey ? Object.assign({}, state.sel) : {};
++    band.on = "armed";
++    e.preventDefault();                               // no text selection while dragging
++    document.addEventListener("mousemove", bandMove);
++    document.addEventListener("mouseup", bandEnd, { once: true });
++  }
++  function bandMove(e) {
++    band.mx = e.clientX; band.my = e.clientY;
++    if (band.on === "armed") {
++      if (Math.abs(e.clientX - band.x0) + Math.abs(e.clientY + band.scroller.scrollTop - band.y0) < 6) return;
++      band.on = true; hidePeek();
++      band.el = document.createElement("div"); band.el.className = "coll-band"; document.body.appendChild(band.el);
++      band.raf = requestAnimationFrame(bandTick);
++    }
++  }
++  function bandTick() {
++    if (band.on !== true) return;
++    var sc = band.scroller, top = sc === document.scrollingElement ? 0 : sc.getBoundingClientRect().top;
++    var bottom = sc === document.scrollingElement ? innerHeight : sc.getBoundingClientRect().bottom;
++    if (band.my < top + 32) sc.scrollTop -= 14; else if (band.my > bottom - 32) sc.scrollTop += 14;
++    var y0 = band.y0 - sc.scrollTop, x1 = band.mx, y1 = band.my;
++    var L = Math.min(band.x0, x1), T = Math.min(y0, y1), R = Math.max(band.x0, x1), B = Math.max(y0, y1);
++    band.el.style.cssText = "left:" + L + "px;top:" + T + "px;width:" + (R - L) + "px;height:" + (B - T) + "px";
++    var picked = Object.assign({}, band.base);
++    Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (c) {
++      var r = c.getBoundingClientRect(), hit = r.right > L && r.left < R && r.bottom > T && r.top < B;
++      if (hit) picked[c.dataset.name] = 1;
++      c.classList.toggle("is-sel", !!picked[c.dataset.name]);
++      var box = c.querySelector("[data-sel]"); if (box) box.checked = !!picked[c.dataset.name];
++    });
++    band.picked = picked;
++    band.raf = requestAnimationFrame(bandTick);
++  }
++  function bandEnd() {
++    document.removeEventListener("mousemove", bandMove);
++    cancelAnimationFrame(band.raf);
++    if (band.on === true) {
++      state.sel = band.picked || band.base; band.ate = true;
++      setTimeout(function () { band.ate = false; }, 0);   // only the click this mouseup makes
++      if (band.el) band.el.remove();
++      paint();
++    }
++    band.on = false; band.el = null; band.picked = null;
++  }
++
++  // HERESY 1101: a move into one workspace, for the menu on a card (the selection when the card is in it)
++  function moveTo(w, list, fromHere) {
++    var from = fromHere && state.place && state.place.charAt(0) !== "_" ? state.place : "", n = list.length;
++    return act({ op: "ws-move", workspace: w, from: from, names: list }, n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
++      .then(function (ok) { if (ok) { list.forEach(function (k) { delete state.sel[k]; }); paint(); } return ok; });
++  }
++
+   // the workspace in hand (the header): the list shows it, new takes land in it
+   function paintCurrent() {
+     var sel = $("wsCurrent");
+@@ -226,6 +327,7 @@
+   function act(body, done) {
+     return api("/collection", body).then(function (d) {
+       state.rows = d.takes || state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
++      state.pins = d.pins || state.pins || {};
+       if (done) toast(done);
+       paint();
+       paintCurrent();
+@@ -312,6 +414,13 @@
+     $("collGrid").addEventListener("click", function (e) {
+       var play = e.target.closest("[data-play]"), open = e.target.closest("[data-open]"), cb = e.target.closest("[data-sel]"), tcb = e.target.closest("[data-tsel]");
+       if (tcb) { if (tcb.checked) state.tsel[tcb.dataset.tsel] = 1; else delete state.tsel[tcb.dataset.tsel]; return paint(); }
++      if (band.ate) { band.ate = false; return; }             // the click that ends a rubber band is not a click
++      // HERESY 1101 (Viktor: "повадки, как в Плазме под Кедами"): once one card is checked, a click anywhere on
++      // another card that is not one of its buttons checks it too; Shift takes the range from the last one
++      var tapped = e.target.closest(".coll-card[data-name]");
++      if (tapped && names().length && !e.target.closest("button, input, a, label, [data-play], [data-ren], .coll-title-edit")) {
++        toggleCard(tapped.dataset.name, e.shiftKey); return;
++      }
+       if (play) {                                    // HERESY 1042: the same button as the player's for the take in it
+         var now = hooks.playing ? hooks.playing() : {};
+         if (now.name === play.dataset.play) { hooks.togglePlay(); return; }
+@@ -353,6 +462,18 @@
+       hooks.menu(card.dataset.name, e.clientX, e.clientY);
+     });
+     $("collGrid").addEventListener("mousedown", hidePeek);
++    $("collGrid").addEventListener("mousedown", bandStart);          // HERESY 1101: the rubber band
++    $("collPins").addEventListener("click", function (e) {          // HERESY 1103: the pinned takes
++      var b = e.target.closest("[data-play]"), o = e.target.closest("[data-open]"), u = e.target.closest("[data-unpin]");
++      if (u) return void pin(u.dataset.unpin, false);
++      if (b) { var now = hooks.playing ? hooks.playing() : {}; if (now.name === b.dataset.play) return void hooks.togglePlay(); var t = hooks.findTake(b.dataset.play); if (t) hooks.playNow(t); return; }
++      if (o) openSheet(o.dataset.open);
++    });
++    $("collPins").addEventListener("contextmenu", function (e) {
++      var c = e.target.closest(".coll-pin[data-name]");
++      if (!c || !hooks.menu) return;
++      e.preventDefault(); hooks.menu(c.dataset.name, e.clientX, e.clientY);
++    });
+     $("collSheet").addEventListener("click", function (e) {
+       if (e.target === $("collSheet") || e.target.closest("[data-sheet-close]")) return closeSheet();
+       var name = sheetName, r = rowOf(name);
+@@ -539,6 +660,7 @@
+   // the play buttons follow the player (called on play, pause, end, a new take)
+   function paintPlaying() {
+     var now = state.hooks && state.hooks.playing ? state.hooks.playing() : {};
++    if ($("collPins") && !$("collPins").hidden && state.loaded) paintPins();   // HERESY 1103
+     var sp = document.querySelector("[data-sheet-play]");
+     if (sp && sheetName) { var on0 = now.name === sheetName && now.playing; sp.innerHTML = ico(on0 ? "pause" : "play"); sp.classList.toggle("is-playing", on0); }
+     Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (card) {
+@@ -748,5 +870,7 @@
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
++                              selected: names, place: function () { return state.place; }, moveTo: moveTo,
++                              pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+ })();
+diff --git a/tools/console/heresy-daw.js b/tools/console/heresy-daw.js
+new file mode 100644
+index 0000000..9b48b6d
+--- /dev/null
++++ b/tools/console/heresy-daw.js
+@@ -0,0 +1,81 @@
++// HERESY 1102 (Viktor, 02.10.2026): the DAW button's landing. Two ways out of the studio, and only two: the mixed
++// track as it is, with no DAW's magic, or the whole take handed to the user's own DAW, where whatever happens next
++// happens outside the studio. REAPER first, Waveform second; others by pull request. The lab says which DAWs the
++// studio's own machine has (GET /lab/daw); a DAW on another computer cannot be seen from there, so the user names
++// theirs, and the choice is kept with the page.
++(function () {
++  "use strict";
++
++  var KEY = "yue2.daw";
++  var state = { el: null, data: null, hooks: {} };
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
++  function keep(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { /* a private window */ } }
++
++  // the take in hand's own download links, as its tools have them (WAV, FLAC, MP3)
++  function mixLinks() {
++    return ["dlTakeWav", "dlTakeFlac", "dlTakeMp3"].map(function (id) {
++      var a = $(id);
++      if (!a || !a.getAttribute("href") || a.hidden || a.classList.contains("is-disabled")) return "";
++      return '<a class="btn ghost small" href="' + esc(a.getAttribute("href")) + '" download="' + esc(a.getAttribute("download") || "") + '">' + esc(id.replace("dlTake", "")) + "</a>";
++    }).join("");
++  }
++  function paint() {
++    var d = state.data, mine = recall(KEY) || "", title = state.hooks.title ? state.hooks.title() : "";
++    var links = mixLinks();
++    var html = '<header class="dw-head"><div><b>Out of the studio</b><span class="row-hint">two ways: the mixed track as it is, or the whole take into your DAW, where the rest happens outside the studio</span></div>' +
++      '<button type="button" class="btn ghost small dw-close" aria-label="Close">✕</button></header>' +
++      '<section class="dw-way"><h3>The mixed track</h3><p class="row-hint">As the studio made it (and the Refiner finished it), no DAW in between.' +
++      (title ? " The take in hand: <b>" + esc(title) + "</b>" : "") + "</p>" +
++      (links ? '<div class="dw-links">' + links + "</div>" : '<p class="row-hint">Open a take first: its WAV, FLAC and MP3 come here.</p>') + "</section>" +
++      '<section class="dw-way"><h3>Into your DAW</h3><p class="row-hint">The whole take as a project of your DAW: the stems on their tracks, the score as MIDI, ' +
++      "the tempo, the sections as regions, the lyrics on the timeline. Which DAW do you use?</p>";
++    if (!d) html += '<p class="row-hint">Asking the lab…</p>';
++    else if (d.error) html += '<p class="tr-warn">The lab does not answer: ' + esc(d.error) + "</p>";
++    else html += '<div class="dw-daws">' + d.daws.map(function (x) {
++      var on = mine === x.id;
++      return '<div class="dw-daw' + (on ? " is-on" : "") + '"><div class="dw-daw-head"><b>' + esc(x.name) + "</b><span>" + esc(x.by) + "</span>" +
++        '<span class="dw-state">' + esc(x.state === "first" ? "first" : x.state === "second" ? "next" : x.state) + "</span></div>" +
++        (x.here ? '<p class="dw-here">✓ on the studio’s machine' + (x.version ? " · " + esc(x.version) : "") + "<br><code>" + esc(x.path) + "</code></p>"
++                : '<p class="row-hint">not on the studio’s machine; on your own computer it may well be</p>') +
++        '<p class="row-hint">' + esc(x.licence) + "</p>" +
++        (x.here ? "" : '<details class="dw-install"><summary>How to install it</summary><p>' + esc(x.install) + "</p></details>") +
++        '<button type="button" class="btn small' + (on ? " primary" : " ghost") + '" data-dw-pick="' + esc(x.id) + '">' + (on ? "Your DAW ✓" : "I use this one") + "</button></div>";
++    }).join("") + "</div>";
++    html += '<p class="row-hint dw-now">Now: <b>DAWproject</b> (mix and stems, for Bitwig, Studio One, Cubase) in a take’s menu → Download. ' +
++      "Coming: the <b>REAPER</b> project, then <b>Waveform</b>'s.</p></section>";
++    state.el.querySelector(".dw-box").innerHTML = html;
++  }
++  function load() {
++    return fetch("/lab/daw").then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
++      .then(function (d) { state.data = d; paint(); }, function (e) { state.data = { error: e.message }; paint(); });
++  }
++  function build() {
++    var el = document.createElement("div");
++    el.className = "dw-back"; el.hidden = true;
++    el.innerHTML = '<div class="dw-box" role="dialog" aria-modal="true" aria-label="Out of the studio"></div>';
++    document.body.appendChild(el);
++    el.addEventListener("click", function (e) {
++      var b;
++      if (e.target === el || e.target.closest(".dw-close")) return close();
++      if ((b = e.target.closest("[data-dw-pick]"))) { keep(KEY, recall(KEY) === b.dataset.dwPick ? "" : b.dataset.dwPick); paint(); }
++    });
++    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && state.el && !state.el.hidden) close(); });
++    state.el = el;
++  }
++  function open() {
++    if (!state.el) build();
++    state.el.hidden = false;
++    requestAnimationFrame(function () { state.el.classList.add("is-on"); });
++    paint(); load();
++  }
++  function close() { if (!state.el) return; state.el.classList.remove("is-on"); state.el.hidden = true; }
++
++  function init(hooks) {
++    state.hooks = hooks || {};
++    var b = $("dawOpen");
++    if (b) b.addEventListener("click", open);
++  }
++  window.HeresyDaw = { init: init, open: open, close: close };
++})();
+diff --git a/tools/console/heresy-guide.js b/tools/console/heresy-guide.js
+index 07e33fd..e86b6c6 100644
+--- a/tools/console/heresy-guide.js
++++ b/tools/console/heresy-guide.js
+@@ -102,7 +102,7 @@
+     });
+     state.el = el;
+   }
+-  function show(id) {
++  function show(id, stop) {
+     var tab = state.tabs.filter(function (t) { return t.id === id; })[0] || state.tabs[0];
+     keep(LAST, tab.id);
+     var el = state.el;
+@@ -115,14 +115,16 @@
+     var body = el.querySelector(".hg-body");
+     body.innerHTML = tab.html;
+     body.scrollTop = 0;
++    var h = stop && body.querySelector("#hg-" + slug(stop));   // HERESY 1101: straight to one stop
++    if (h) h.scrollIntoView({ block: "start" });
+   }
+-  function open(id) {
++  function open(id, stop) {
+     keep(SEEN, "1");
+     return load().then(function () {
+       if (!state.el) build();
+       state.el.hidden = false;
+       requestAnimationFrame(function () { state.el.classList.add("is-on"); });
+-      show(id || ROOM_TAB[document.body.dataset.tab] || recall(LAST) || "start");
++      show(id || ROOM_TAB[document.body.dataset.tab] || recall(LAST) || "start", stop);
+     }).catch(function (e) { console.warn("the guide could not be read:", e.message); });
+   }
+   function close() { if (!state.el) return; state.el.classList.remove("is-on"); state.el.hidden = true; }
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index b58bb7c..90fea90 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -95,7 +95,14 @@
+     if (p === "run") paintRun();
+     if (!quiet) { var el = document.querySelector('#view-train .tr-pane[data-pane="' + p + '"]'); if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+   }
++  // HERESY 1101: what a rank costs, measured on YuE2's shapes (224 matrices, 2048 wide; 1.41 B weights a half);
++  // said whenever the pills are, so a kind's preset is said too, not only a typed rank
++  function rankSay() {
++    var r = parseFloat($("tr_rank").value) || 0;
++    $("trRankSay").textContent = r ? (r * 1.04 / 16).toFixed(r < 32 ? 1 : 0) + " % of what it adapts · " + Math.round(r * 1.835) + " MB a half" + (r > 64 ? " · for large many-voice sets" : "") : "";
++  }
+   function paintPills() {
++    rankSay();
+     var d = state.data || {}, r = runOf(state.sel), included = state.rows.filter(function (x) { return x.include; }).length;
+     var set = (d.prepared || []).filter(function (p) { return p.name === state.set; })[0];
+     $("trSayRaw").textContent = state.raw ? state.raw + (state.rows.length ? " · " + included + " of " + state.rows.length : "") : "a folder of datasets/raw/";
+@@ -662,6 +669,7 @@
+       engineKnobs(); if (state.data) { warn(); gate(); paintPills(); }
+     });
+     $("tr_rank").addEventListener("input", paintPills);
++    $("trRankHow").addEventListener("click", function (e) { e.preventDefault(); if (window.HeresyGuide) window.HeresyGuide.open("lora", "Rank and the other knobs"); });
+     $("trRun").addEventListener("click", startRun);
+     setKind("style");
+     engineKnobs();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 001b1a7..eb5950e 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -64,7 +64,7 @@
+       </div>
+     </div>
+     <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
+-    <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="openDAW: the DAW beside the studio, in a new tab (a take goes there as Download → DAWproject; there File → Import → DAWproject…). Shift-click: its address">DAW</button>
++    <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform)">DAW</button>
+     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
+     <button type="button" class="btn ghost small" id="guideOpen" data-icon="question" aria-label="The guide" data-tip="The guide: every room, what each thing does (opens on the room you are in)">The guide</button>
+     <div class="menu-wrap head-more">
+@@ -254,7 +254,6 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <li><a href="https://github.com/woongzip1/UniverSR" target="_blank" rel="noopener noreferrer">Upscale: UniverSR</a><span class="about-where">github · woongzip1/UniverSR · MIT</span></li>
+             <li><a href="https://github.com/nomadkaraoke/python-audio-separator" target="_blank" rel="noopener noreferrer">Stems: audio-separator (BS-Roformer, htdemucs_ft)</a><span class="about-where">github · nomadkaraoke/python-audio-separator</span></li>
+             <li><a href="https://github.com/SYSTRAN/faster-whisper" target="_blank" rel="noopener noreferrer">Lyrics check: faster-whisper</a><span class="about-where">github · SYSTRAN/faster-whisper</span></li>
+-            <li><a href="https://github.com/andremichelle/openDAW" target="_blank" rel="noopener noreferrer">DAW (coming): openDAW</a><span class="about-where">github · andremichelle/openDAW · AGPL-3.0</span></li>
+             <li><a href="https://fontawesome.com/license/free" target="_blank" rel="noopener noreferrer">Icons: Font Awesome Free</a><span class="about-where">CC BY 4.0</span></li>
+           </ul></section>
+           <section class="about-project"><h4>YuE2</h4><p class="about-what">the music model, by the Multimodal Art Projection team</p><ul class="about-links">
+@@ -1167,7 +1166,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <label class="field"><span class="label">Base weights</span><select id="tr_quant"><option value="bf16">bf16</option><option value="int8">int8</option></select></label>
+             <label class="field"><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="20000" step="50" /></label>
+             <label class="field"><span class="label">Save every <em>epochs</em></span><input type="number" id="tr_save_epochs" min="1" max="100" step="1" value="1" /></label>
+-            <label class="field"><span class="label">Rank</span><input type="number" id="tr_rank" min="4" max="128" step="4" /></label>
++            <label class="field"><span class="label">Rank <button type="button" class="tr-howto" id="trRankHow" data-tip="Which rank, how many steps, the other knobs: the guide">How to choose ›</button></span><input type="number" id="tr_rank" min="4" max="128" step="4" /><span class="row-hint" id="trRankSay"></span></label>
+             <label class="field"><span class="label">Learning rate</span><input type="number" id="tr_lr" value="0.0001" step="0.00001" /></label>
+             <label class="field"><span class="label">AR weight <em>0 = sound only</em></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
+             <label class="field"><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
+@@ -1200,16 +1199,18 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+   <!-- HERESY 1041: the Librarian — every take, searched, filtered, grouped, acted on many at once -->
+   <section class="col coll-col is-hidden" id="view-collection">
+-    <div class="col-head"><h2>Librarian<span class="coll-where" id="collWhere"></span></h2><span class="col-note" id="collNote"></span></div>
++    <div class="col-head coll-head"><h2>Librarian<span class="coll-where" id="collWhere"></span></h2><span class="col-note" id="collNote"></span>
++      <div class="coll-headtools" id="collHeadTools">
++        <input type="search" id="collSearch" placeholder="Search: words, or * and ? as wildcards" autocomplete="off" />
++        <select id="collSort" aria-label="Sort"><option value="new">newest first</option><option value="old">oldest first</option>
++          <option value="title">by title</option><option value="long">longest first</option></select>
++        <span class="coll-views"><button type="button" class="btn ghost small" data-coll-view="tiles">Tiles</button>
++          <button type="button" class="btn ghost small" data-coll-view="list">List</button></span>
++      </div></div>
+     <div class="coll-layout">
+       <aside class="coll-side" id="collSide"></aside>
+       <div class="coll-main">
+         <div class="coll-bar" id="collBar">
+-          <input type="search" id="collSearch" placeholder="Search: words, or * and ? as wildcards" autocomplete="off" />
+-          <select id="collSort" aria-label="Sort"><option value="new">newest first</option><option value="old">oldest first</option>
+-            <option value="title">by title</option><option value="long">longest first</option></select>
+-          <span class="coll-views"><button type="button" class="btn ghost small" data-coll-view="tiles">Tiles</button>
+-            <button type="button" class="btn ghost small" data-coll-view="list">List</button></span>
+           <div class="coll-filters" id="collFilters">
+             <span class="coll-cap-inline">made</span>
+             <button type="button" class="coll-chip" data-kind="generated">generated</button>
+@@ -1236,6 +1237,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <label class="coll-inline"><span class="coll-cap-inline">Empty by itself</span>
+             <select id="collTrashDays"><option value="0">never</option><option value="7">after 7 days</option><option value="14">after 14 days</option><option value="28">after 28 days</option></select></label>
+         </div>
++        <!-- HERESY 1103: a strip of fixed height: the pinned takes, or the bar of the checked; the grid never moves -->
++        <div class="coll-slot" id="collSlot">
++        <div class="coll-pins" id="collPins"></div>
+         <div class="coll-bulk" id="collBulk" hidden>
+           <strong id="collSelCount"></strong>
+           <button type="button" class="btn ghost small" id="collSelAll">Select all shown</button>
+@@ -1253,6 +1257,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <span class="coll-sep"></span>
+           <button type="button" class="btn ghost small danger" id="collTrash">To the trash</button>
+         </div>
++        </div>
+         <div id="collGrid" class="coll-grid tiles"></div>
+         <!-- HERESY 1046: a peek on hover, a sheet on click; Create only by choice -->
+         <div class="coll-peek" id="collPeek" hidden></div>
+@@ -1326,6 +1331,11 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+   <button type="button" class="btn ghost small autoplay-btn" id="autoplay" aria-pressed="true"
+     data-tip="Play on: when a take ends, the next one down the list starts, into the history. Click to stop after each take.">↓ Play on</button>
+ 
++  <!-- HERESY 1101 (Viktor, 02.10.2026): the speed of listening, 0.5 to 2, the pitch kept -->
++  <select class="speed-pick mono" id="playSpeed" aria-label="Playback speed" data-tip="Playback speed: slower to hear a detail, faster to skim; the pitch stays">
++    <option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option>
++  </select>
++
+   <div class="volume">
+     <button class="icon-btn" id="muteBtn" aria-label="Mute"><span id="muteGlyph">🔊</span></button>
+     <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
+@@ -1486,6 +1496,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ <script src="heresy-train.js"></script>
+ <script src="heresy-gpus.js"></script>
+ <script src="heresy-guide.js"></script>
++<script src="heresy-daw.js"></script>
+ <script src="heresy-instruments.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+-- 
+2.43.0
+

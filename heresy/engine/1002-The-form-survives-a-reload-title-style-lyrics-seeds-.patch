@@ -1,0 +1,117 @@
+From cfb3b6737eef7bc585b34a3cc26960fe6ea45af6 Mon Sep 17 00:00:00 2001
+From: Prometheus2 <noreply@anthropic.com>
+Date: Wed, 30 Sep 2026 09:52:18 -0600
+Subject: [PATCH 1002/1177] The form survives a reload: title, style, lyrics,
+ seeds and knobs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Слово Виктора 30.09.2026: «С F5 браузер не помнит поля и настройки в
+интерфейсе». Страница помнила обвязку (VAE, формат, тему, колонки), но
+не саму песню: название, стиль, лирику, сиды, ручки семплирования,
+LoRA и слайдеры — всё пропадало.
+
+Снимок собирается ЗЕРКАЛОМ loadRequestIntoForm, и раскладывает его она
+же. Логика раскладки остаётся одна — та, что уже работает для Reuse и
+для открытия промпта. buildRequest для снимка не годится: он бросает
+ошибку на пустом стиле, а черновик должен сохраняться и недописанным.
+
+⛔ ДВЕ ЛОВУШКИ, ОБЕ ЗАКРЫТЫ:
+  · раскладка ПОСЛЕ /props — слайдеры фильтруются по каталогу с
+    сервера, и разложи раньше, они бы молча пропали;
+  · сохранение только ПОСЛЕ раскладки — иначе на старте пустая форма
+    затёрла бы сохранённое раньше, чем его прочли.
+
+Коды звука после Reuse в черновик не идут: это тысячи чисел, и после
+F5 их честнее взять из дубля заново.
+
+Проверено вживую: заполнены название, стиль, лирика с ударениями, два
+сида, шаги 64, длина 450, температура 0.95, окно штрафа 100 → F5 →
+вернулось всё до знака.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js       |  61 +++++++++++++++++++++++++++++++++++++
+ tools/public/index.html.gz | Bin 212335 -> 214148 bytes
+ 2 files changed, 61 insertions(+)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index adc0f43..48786cf 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4523,10 +4523,71 @@
+     setInterval(function () { if (!document.hidden) refreshHardware(); }, 5000);
+   }
+ 
++  /* ------------------------------------------------ HERESY 1002: draft */
++  // Слово Виктора 30.09.2026: «С F5 браузер не помнит поля и настройки в
++  // интерфейсе». Страница помнила обвязку (VAE, формат, тему, колонки), но не
++  // саму песню: название, стиль, лирику, сиды, ручки, LoRA — всё пропадало.
++  //
++  // Снимок собирается ЗЕРКАЛОМ loadRequestIntoForm, и раскладывает его она же:
++  // вся логика раскладки (кости сидов, режим, фильтр слайдеров по каталогу)
++  // остаётся одна — та, что уже работает для Reuse и для открытия промпта.
++  // buildRequest для снимка не годится: он бросает ошибку на пустом стиле, а
++  // черновик должен сохраняться и недописанным.
++  //
++  // ⛔ ДВЕ ЛОВУШКИ, ОБЕ ЗАКРЫТЫ:
++  //   · раскладка ПОСЛЕ /props — слайдеры фильтруются по каталогу с сервера,
++  //     разложи раньше, и они молча пропадут;
++  //   · сохранение только ПОСЛЕ раскладки — иначе на старте пустая форма
++  //     затёрла бы сохранённое раньше, чем его успели прочесть.
++  //
++  // Коды звука (semantic_tokens после Reuse) в черновик не идут: это тысячи
++  // чисел, и после F5 их честнее взять из дубля заново.
++  var DRAFT_KEY = "yue2.draft", draftTimer = null;
++  function draftSnapshot() {
++    var req = {
++      title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value,
++      lm_seed: $("lmSeed").value.trim(), seed: $("soundSeed").value.trim(), cot: currentCot(),
++      cfg_scale: $("cfg").dataset.touched && $("cfg").value.trim() !== "" ? parseFloat($("cfg").value) : -1,
++      steps: parseInt($("odeSteps").value, 10), duration: parseFloat($("maxLength").value),
++      synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
++      output_format: $("outFormat").value, mp3_bitrate: parseInt($("mp3Bitrate").value, 10),
++      peak_clip: parseInt($("peakClip").value, 10),
++      vae: selectedVae(), sliders: STATE.sliderChoice || [], loras: YueLoras.value()
++    };
++    ["abc", "semantic"].forEach(function (group) {
++      var preset = {};
++      all('input[data-group="' + group + '"]').forEach(function (input) {
++        var v = parseFloat(input.value);
++        if (isFinite(v)) preset[input.dataset.key] = v;
++      });
++      req[group + "_sampling"] = preset;
++    });
++    return req;
++  }
++  function saveDraft() {
++    if (!STATE.draftReady) return;
++    try { store(DRAFT_KEY, JSON.stringify(draftSnapshot())); } catch (error) { /* a half-built page: next input saves */ }
++  }
++  function queueDraft() { clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 400); }
++  function restoreDraft() {
++    if (STATE.draftReady) return;
++    var raw = recall(DRAFT_KEY), req = null;
++    try { req = raw ? JSON.parse(raw) : null; } catch (error) { req = null; }
++    if (req && typeof req === "object" && !Array.isArray(req)) {
++      try { loadRequestIntoForm(req); } catch (error) { console.warn("draft not restored:", error); }
++    }
++    STATE.draftReady = true;
++  }
++  // input и change — поля и ползунки; click — кости сидов, New song, Reuse:
++  // они меняют форму без события ввода. Всплытие ловим на document.
++  ["input", "change", "click"].forEach(function (type) { document.addEventListener(type, queueDraft, true); });
++  window.addEventListener("beforeunload", saveDraft);
++
+   function boot() {
+     api("/props").then(function (props) {
+       STATE.online = true;
+       applyProps(props);
++      restoreDraft();     // HERESY 1002: after the catalogs, before any save
+       restoreJobs();
+       connectLogs();
+       startPolls();
+-- 
+2.43.0
+

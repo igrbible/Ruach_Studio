@@ -1,0 +1,189 @@
+From 5631e07c1d619c7aa5bae023fef4c0e212e3b6e3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 02:21:24 -0600
+Subject: [PATCH 1073/1177] LoRA music half capped at 0.75 (score adapters
+ excepted), strengths typed on a double-click; an empty knob shows its
+ default; Create's takes carry the Collection's marks
+
+HERESY 1081 (Viktor 02.10.2026): a music half above 0.75 breaks the score after 70-200 tokens with every
+adapter but the ABC one; new LoRAs come in at 0.75 there; old takes keep their values, the hint says so.
+HERESY 1082: like, dislike, derived, workspaces and a note mark on the takes in Create, drawn by the Collection.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  7 ++++++
+ tools/console/app.js               | 20 ++++++++++++++++-
+ tools/console/heresy-collection.js | 13 ++++++++++-
+ tools/console/loras.js             | 36 ++++++++++++++++++++++++++----
+ 4 files changed, 70 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 0fd5691..c7f15d5 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2580,3 +2580,10 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .tr-ltable { display: flex; flex-direction: column; gap: 3px; max-height: 360px; overflow: auto; }
+ .tr-lrow { display: grid; grid-template-columns: minmax(160px, 34%) 1fr; gap: 8px; align-items: center; font-size: 12.5px; }
+ .tr-lrow input { padding-top: 4px; padding-bottom: 4px; font-size: 12.5px; }
++/* HERESY 1081: a strength typed exactly */
++.lora-exact { width: 64px; padding: 2px 4px; font-family: var(--mono); font-size: 12px; }
++/* HERESY 1082: the Collection's marks on Create's takes */
++.take-extra { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
++.take-extra .coll-badges { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px; }
++.take-rate { display: flex; gap: 2px; flex: none; }
++.take-rate .coll-act { padding: 2px 5px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e26b9cf..66f0f91 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -462,6 +462,17 @@
+   all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", fillCfg); });
+   fillCfg();
+ 
++  // HERESY 1081 (Viktor 02.10.2026): a knob left empty (or with no number in it) shows its default again;
++  // empty already sent nothing (the engine used its default), but the box looked broken
++  document.addEventListener("change", function (e) {
++    var input = e.target;
++    if (!input.matches || !input.matches("input[data-group][data-key]")) return;
++    if (!isFinite(parseFloat(input.value))) {
++      input.value = round(samplingDefault(input.dataset.group, input.dataset.key), 6);
++      syncShape();
++    }
++  });
++
+   $("resetSampling").addEventListener("click", function () {
+     all("input[data-group]").forEach(function (input) {
+       input.value = round(samplingDefault(input.dataset.group, input.dataset.key), 6);
+@@ -3927,13 +3938,20 @@
+         '<div class="take-title">' + escape(title) + "</div>" +
+         '<div class="take-style">' + escape(take.style || "") + "</div>" +
+         '<div class="take-foot"><span class="tag playing-tag">playing</span>' + tags + "<span>" + clock(take.seconds) + "</span><span>" +
+-        ago(take.created) + "</span></div></article>";
++        ago(take.created) + "</span></div>" + (HC && HC.cardExtras && !take.session ? HC.cardExtras(take.name) : "") + "</article>";   // HERESY 1082
+     }).join("");
+     markPlaying();
+   }
+ 
+   $("libList").addEventListener("click", function (event) {
+     if (event.target.closest("[data-dl]")) { event.stopPropagation(); return; }   // download, do not open
++    var lrate = event.target.closest("[data-lrate]");   // HERESY 1082: like and dislike from the column, as in the Collection
++    if (lrate && window.HeresyCollection) {
++      event.stopPropagation();
++      var HCr = window.HeresyCollection, v = Number(lrate.dataset.lrate);
++      HCr.rate(lrate.dataset.name, HCr.rating(lrate.dataset.name) === v ? 0 : v).then(function () { paintLibrary(); paintRate(); });
++      return;
++    }
+     var fav = event.target.closest("[data-fav]"), del = event.target.closest("[data-del]"), toPost = event.target.closest("[data-post]");
+     if (toPost) { event.stopPropagation(); openTake(toPost.dataset.post); setTab("post"); return; }   // HERESY 1048
+     if (fav) {
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 9c1e255..fbb4591 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -100,6 +100,17 @@
+   function ico(name) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(name) : ""; }   // HERESY 1051
+   function badge(text, cls) { return '<span class="coll-badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
+ 
++  // HERESY 1082: the Collection's marks for a take in Create's column: derived, workspaces, like, dislike, note
++  function cardExtras(name) {
++    var r = rowOf(name);
++    if (!r) return "";
++    return '<div class="take-extra"><span class="coll-badges">' + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
++      r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</span>" +
++      '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + "</button>" +
++      '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + "</button>" +
++      (r.note ? '<span class="coll-act coll-hasnote" title="' + esc(r.note) + '" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
++  }
++
+   function paint() {
+     paintSide();
+     var trash = state.place === "__trash";
+@@ -713,7 +724,7 @@
+   // for the takes column: hidden ones stay out of it
+   function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
+ 
+-  window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, takeLocked: takeLocked, matcher: matcher, landed: landed, inCurrent: inCurrent,
++  window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
+                               current: current, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 3480284..1957a34 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -98,6 +98,13 @@
+     return s;
+   }
+ 
++  // HERESY 1081 (Viktor 02.10.2026): a music half above 0.75 breaks the score (70-200 tokens, then it
++  // fails), with every adapter he tried; the sound half has no such limit. A score adapter (trained with
++  // a score: full or melody mode, like the ABC one) is the exception and keeps the whole range.
++  var AR_CAP = 0.75;
++  function scoreAdapter(e) { return !!e && ((e.mode && e.mode !== "direct") || /abc/i.test(e.id)); }
++  function capOf(e, half) { return half === "ar" && !scoreAdapter(e) ? AR_CAP : 2; }
++
+   function halfControl(choice, e, half) {
+     var label = half === "ar" ? "Music" : "Sound", on = has(e, half) || !e;
+     if (!on) return "";   // HERESY 1016: a file without this half shows no slider for it
+@@ -106,9 +113,9 @@
+       ? (half === "ar" ? "Strength on the music half: the score and the music tokens (0 off, 1 as trained)"
+                        : "Strength on the sound half: the acoustic stage that turns music tokens into sound (0 off, 1 as trained)")
+       : "This file has no " + label.toLowerCase() + " half") + '"><span>' + label + "</span>" +
+-      '<input type="range" min="0" max="2" step="0.025" value="' + value + '"' + (on ? "" : " disabled") +
++      '<input type="range" min="0" max="' + capOf(e, half) + '" step="0.025" value="' + value + '"' + (on ? "" : " disabled") +
+       ' data-lora="' + escape(choice.id) + '" data-half="' + half + '" aria-label="' + escape(nameOf(choice.id)) + " " + label + ' strength" />' +
+-      "<output>" + (on ? fmt(value, 2) : "—") + "</output></label>";
++      '<output data-tip="Double-click to type it">' + (on ? fmt(value, 2) : "—") + "</output></label>";
+   }
+ 
+   function hints() {
+@@ -123,7 +130,7 @@
+       if (triggerOf(e)) notes.push(name + ": put its trigger word “" + triggerOf(e) + "” in the style.");
+       if (e.mode === "direct" && cot && cot !== "off") notes.push(name + " was trained in Direct mode.");
+       if (e.mode && e.mode !== "direct" && cot === "off") notes.push(name + " was trained with a score (" + e.mode + " mode).");
+-      if (c.ar > 1) notes.push(name + ": above 1.0 on the music half, vocals often fall apart.");
++      if (c.ar > capOf(e, "ar")) notes.push(name + ": " + fmt(c.ar, 2) + " on the music half is above " + AR_CAP + ": the score tends to fail after 70-200 tokens.");
+     });
+     if (S.choice.length > 1) notes.push(S.choice.length + " stacked: their changes add up.");
+     return notes;
+@@ -167,7 +174,7 @@
+     } else {
+       var e = entry(id);
+       if (!e || e.error) return;
+-      S.choice.push({ id: id, ar: has(e, "ar") ? 1 : 0, nar: has(e, "nar") ? 1 : 0 });
++      S.choice.push({ id: id, ar: has(e, "ar") ? Math.min(1, capOf(e, "ar")) : 0, nar: has(e, "nar") ? 1 : 0 });
+     }
+     changed();
+   }
+@@ -230,6 +237,27 @@
+         S.opts.addToStyle(trigger.dataset.trigger);
+       }
+     });
++    // HERESY 1081: a double-click on a strength opens a field for it; Enter or leaving it sets, Esc leaves it be
++    host.addEventListener("dblclick", function (event) {
++      var out = event.target.closest(".lora-half output");
++      if (!out) return;
++      var range = out.previousElementSibling, max = parseFloat(range.max), field = document.createElement("input");
++      field.type = "number"; field.className = "lora-exact"; field.min = "0"; field.max = String(max); field.step = "0.005";
++      field.value = range.value;
++      out.replaceWith(field); field.focus(); field.select();
++      var done = false;
++      function finish(keep) {
++        if (done) return; done = true;
++        var v = parseFloat(field.value);
++        if (keep && isFinite(v)) {
++          v = Math.max(0, Math.min(max, v));
++          S.choice.forEach(function (c) { if (c.id === range.dataset.lora) c[range.dataset.half] = v; });
++        }
++        changed();
++      }
++      field.addEventListener("keydown", function (e) { if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); });
++      field.addEventListener("blur", function () { finish(true); });
++    });
+     host.addEventListener("input", function (event) {
+       var id = event.target.dataset.lora, half = event.target.dataset.half;
+       if (!id || !half) return;
+-- 
+2.43.0
+

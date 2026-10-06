@@ -1,0 +1,47 @@
+From 55b5cfc9888209c6adae4bd80b12bb01ac9b954f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 03:56:42 -0600
+Subject: [PATCH 1075/1177] A typed strength is visible: the field wins over
+ the global number style, its row widens while it is open (1081b)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css  | 7 ++++++-
+ tools/console/loras.js | 2 +-
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 2f508db..ee10281 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2581,7 +2581,12 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .tr-lrow { display: grid; grid-template-columns: minmax(160px, 34%) 1fr; gap: 8px; align-items: center; font-size: 12.5px; }
+ .tr-lrow input { padding-top: 4px; padding-bottom: 4px; font-size: 12.5px; }
+ /* HERESY 1081: a strength typed exactly */
+-.lora-exact { width: 64px; padding: 2px 4px; font-family: var(--mono); font-size: 12px; }
++/* HERESY 1081b: the field wins over the global number style (its 9px/11px padding and the spinner ate the 34px
++   column: Viktor saw an empty box); while it is open, its row's last column widens to hold it */
++.lora-half input.lora-exact { width: 58px; height: 22px; padding: 1px 5px; font: 12px var(--mono); text-align: right;
++  color: var(--ink); -moz-appearance: textfield; appearance: textfield; }
++.lora-half input.lora-exact::-webkit-inner-spin-button, .lora-half input.lora-exact::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
++.lora-half:has(input.lora-exact) { grid-template-columns: auto minmax(0, 1fr) 58px; }
+ /* HERESY 1082: the Collection's marks on Create's takes */
+ .take-extra { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+ .take-extra .coll-badges { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px; }
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 5774a79..daebdd3 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -261,7 +261,7 @@
+       if (!out) return;
+       var range = out.previousElementSibling, max = parseFloat(range.max), field = document.createElement("input");
+       field.type = "number"; field.className = "lora-exact"; field.min = "0"; field.max = String(max); field.step = "0.005";
+-      field.value = range.value;
++      field.value = parseFloat(range.value).toFixed(2);
+       out.replaceWith(field); field.focus(); field.select();
+       var done = false;
+       function finish(keep) {
+-- 
+2.43.0
+

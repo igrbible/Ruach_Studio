@@ -1,0 +1,76 @@
+From 3d109e1a593d72c1c76cbf2186abe7cdff4db0c3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 03:15:00 -0600
+Subject: [PATCH 1169/1177] HERESY 1167: the style meter's token estimate by
+ script, measured with YuE2's own BPE
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 05.10.2026, of a 15-minute reading: «По токенам музыкальным красное». The estimate counted every non-ASCII
+character as a token.
+
+Measured 06.10.2026 with YuE2's BPE (Qwen2's merges, through Qwen2.5-Omni's tokenizer.json), on the studio's own texts.
+It agrees with the engine's log: the Heretic lyrics 842 + its style 29 + 22 markers = the logged prefix of 893.
+
+How far off the old estimate was:
+· Russian: 1.7–2.1 times too long;
+· Ukrainian and Belarusian: 1.5–1.6;
+· Hebrew: 2.1;
+· Greek, English, Spanish, Italian: about right.
+
+Now:
+· ASCII: 3.6 characters a token;
+· Cyrillic: 0.5 tokens a letter (lyrics run dearer than prose: 0.53 on the Heretic, 0.42 on the guide);
+· Cyrillic with Ukrainian or Belarusian letters: 0.6;
+· Greek: 1;
+· Hebrew: 0.45;
+· anything else: 1, as before.
+
+The Heretic lyrics now estimate at 826 against a real 842 tokens (−2 %), where the old estimate said 1,405.
+
+cdp-console 340/0/7 (the rates checked), check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/help.js | 20 ++++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/help.js b/tools/console/help.js
+index f9ac58c..9b344dd 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -347,13 +347,25 @@
+   }
+   function mmss(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + ("0" + s % 60).slice(-2); }
+ 
+-  // An estimate without the tokenizer: English runs about 3.6 characters a token, other scripts ~1
++  // An estimate without the tokenizer: English runs about 3.6 characters a token.
++  // HERESY 1167: the other scripts measured with YuE2's own BPE on the studio's texts (06.10.2026); the old «~1 a
++  // character» made Russian 1.7–2.1 times too long, Ukrainian and Belarusian 1.5–1.6, Hebrew 2.1:
++  // · Cyrillic: 0.5 tokens a letter (lyrics run dearer than prose), 0.6 when Ukrainian or Belarusian letters show;
++  // · Greek: 1;
++  // · Hebrew: 0.45;
++  // · anything else (accents, marks, other scripts): 1, as before.
++  var UKBE = /[іїєґўІЇЄҐЎ]/;
+   function estimateTokens(text) {
+-    var ascii = 0, other = 0;
++    var ascii = 0, cyr = 0, greek = 0, hebrew = 0, other = 0;
+     for (var i = 0; i < text.length; i++) {
+-      if (text.charCodeAt(i) < 128) ascii++; else other++;
++      var c = text.charCodeAt(i);
++      if (c < 128) ascii++;
++      else if (c >= 0x400 && c <= 0x4ff) cyr++;
++      else if ((c >= 0x370 && c <= 0x3ff) || (c >= 0x1f00 && c <= 0x1fff)) greek++;
++      else if (c >= 0x590 && c <= 0x5ff) hebrew++;
++      else other++;
+     }
+-    return Math.ceil(ascii / 3.6 + other);
++    return Math.ceil(ascii / 3.6 + cyr * (UKBE.test(text) ? 0.6 : 0.5) + greek + hebrew * 0.45 + other);
+   }
+ 
+   // HERESY 1009: what the style holds that YuE2 never saw under [Tags]. Measured on the
+-- 
+2.43.0
+

@@ -1,0 +1,71 @@
+From df3c77fa50b651a81c3f50fe0340f73449ed5cde Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 16:41:18 -0600
+Subject: [PATCH 1055/1177] The tree's files from the engine itself: big ones
+ play, seeks work
+
+1061 (Viktor: only debuzz would load): the lab proxy read a whole body into
+memory (a 120 MB remaster WAV came back 502) and cut a Range a second time
+(416 on every seek). GET /library/file?name=&path=derived/... serves a file of
+a take's tree as a file, with native Range; paths outside derived/ are refused.
+The tree's players use it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-derived.js |   3 ++-
+ tools/public/index.html.gz      | Bin 348401 -> 348450 bytes
+ tools/yue-server.cpp            |  23 +++++++++++++++++++++++
+ 3 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 8477a8d..fdbe37a 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -10,7 +10,8 @@
+   function $(id) { return document.getElementById(id); }
+   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
+-  function fileUrl(name, path) { return "/lab/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
++  // HERESY 1061: from the engine itself (native Range); the lab proxy failed on big files and on seeks
++  function fileUrl(name, path) { return "/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
+   var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz" };
+   var MODE = { vocals: "vocals + instrumental", four: "four stems" };
+ 
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 8901db3..6db1471 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1928,6 +1928,29 @@ int main(int argc, char ** argv) {
+                                                                   req.get_param_value("names") != "library"));
+             res.set_file_content(path, mp3 ? "audio/mpeg" : "audio/wav");
+         });
++        // HERESY 1061: a file of a take's tree (derived/…), served by the engine itself: the lab's proxy
++        // read whole bodies into memory (a 120 MB WAV came back 502) and cut a Range twice (416 on a seek).
++        svr.Get("/library/file", [](const httplib::Request & req, httplib::Response & res) {
++            std::string name = req.get_param_value("name"), rel = req.get_param_value("path");
++            if (!library_name_ok(name) || rel.rfind("derived/", 0) != 0 || rel.find("..") != std::string::npos) {
++                res.status = 404;
++                res.set_content(json_string("error", "no such file"), "application/json");
++                return;
++            }
++            std::error_code ec;
++            auto dir  = std::filesystem::weakly_canonical(g_outputs_dir + "/" + name + "/derived", ec);
++            auto file = std::filesystem::weakly_canonical(g_outputs_dir + "/" + name + "/" + rel, ec);
++            auto d = dir.string(), f = file.string();
++            if (ec || f.rfind(d + "/", 0) != 0 || !std::filesystem::is_regular_file(file)) {
++                res.status = 404;
++                res.set_content(json_string("error", "no such file"), "application/json");
++                return;
++            }
++            std::string ext = file.extension().string();
++            const char * type = ext == ".flac" ? "audio/flac" : ext == ".wav" ? "audio/wav" : ext == ".mp3" ? "audio/mpeg"
++                              : ext == ".json" ? "application/json" : "application/octet-stream";
++            res.set_file_content(f, type);
++        });
+         // HERESY 1053: what the player plays: listen.flac when the take is a WAV (made now if it is missing
+         // or older than the WAV), the take's own file otherwise. A file response, so seeking is native.
+         svr.Get("/library/listen", [](const httplib::Request & req, httplib::Response & res) {
+-- 
+2.43.0
+

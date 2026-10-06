@@ -1,0 +1,39 @@
+From 425c50de7971c7de903cf28e23f6bc9560741f7b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 21:53:04 -0600
+Subject: [PATCH 1059/1177] Dropdowns: 6 px lower, and a focused one no longer
+ painted over
+
+1065 (Viktor): every closed dropdown 6 px lower; the open list is the
+browser's own again (drawn by the theme's color-scheme); a focused dropdown
+keeps the field's colour, its border and chevron say focus: the theme's
+focus fill had painted the whole box red in the night theme and hidden the
+accent chevron on it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   6 ++++--
+ tools/public/index.html.gz | Bin 353955 -> 354091 bytes
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3320c3d..d74e111 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2416,8 +2416,10 @@ select { appearance: none; -webkit-appearance: none; background-color: var(--fie
+   background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+   padding-right: 26px !important; border: 1px solid var(--line); border-radius: var(--r-md); color: var(--ink); cursor: pointer; }
+ select:hover { border-color: var(--hover-line, var(--line-strong)); }
+-select:focus { background-image: linear-gradient(45deg, transparent 50%, var(--amber) 50%), linear-gradient(135deg, var(--amber) 50%, transparent 50%); }
+-select option, select optgroup { background: var(--panel); color: var(--ink); }
++select:focus { background-color: var(--field); background-image: linear-gradient(45deg, transparent 50%, var(--amber) 50%), linear-gradient(135deg, var(--amber) 50%, transparent 50%); }   /* 1065: the theme's focus fill painted the whole box (and hid the accent chevron); the border and chevron say focus */
++/* HERESY 1065 (Viktor): the open list is the browser's own, drawn by the theme's color-scheme (our colours on the
++   options painted its top over in the night theme); the closed box 6 px lower */
++select { padding-top: 6px; padding-bottom: 6px; }
+ .coll-inline { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+ .coll-inline select { width: auto; padding-top: 4px; padding-bottom: 4px; }
+ 
+-- 
+2.43.0
+

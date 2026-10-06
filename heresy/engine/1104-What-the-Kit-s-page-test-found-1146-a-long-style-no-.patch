@@ -1,0 +1,150 @@
+From cce8ca257c5fa8733229b6aaa1270fa3906316dc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 00:20:29 -0600
+Subject: [PATCH 1104/1177] What the Kit's page test found (1146): a long style
+ no longer hidden after Retake, Reuse, Open and Edit and re-render (every box
+ refit when the form lands after a fetch); the score's head wraps in a narrow
+ take column; tips for the form's last ten controls, a label's tip counting as
+ its control's help
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css    |  4 ++++
+ tools/console/app.js     |  2 ++
+ tools/console/help.js    |  1 +
+ tools/console/index.html | 18 +++++++++---------
+ 4 files changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 022b416..277cccd 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3290,3 +3290,7 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+   #playbar .pb-side { margin-left: auto; gap: 6px; }
+   #playbar .time { font-size: 11.5px; white-space: nowrap; }
+ }
++
++/* HERESY 1145: the score's head wraps in a narrow take column (the Kit's page test at 1280 px: its last button, Full screen,
++   stood 54 px past the column) */
++.score-head { flex-wrap: wrap; row-gap: 6px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index c313601..d5bf37f 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1309,6 +1309,7 @@
+     syncShape();
+     paintOutput();
+     growLyrics();
++    queueComfort();   // HERESY 1145: every box's height, the style's too: Retake, Reuse and Open land after their click
+   }
+ 
+   $("openPrompt").addEventListener("click", function () { $("openFile").click(); });
+@@ -3250,6 +3251,7 @@
+       if (MODES[take.cot] && take.cot !== "off") setCot(take.cot);
+       setCodes(null);
+       growLyrics();
++      queueComfort();   // HERESY 1145: the style box's height too (this lands after the click)
+       $("scoreDrawer").open = true;
+       show("compose");
+       $("abc").focus();
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 7c28a5a..ea45293 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -279,6 +279,7 @@
+ 
+   function hasHelp(el) {
+     if (el.dataset.tip || el.dataset.tipRef) return true;
++    if (el.closest("label[data-tip]")) return true;           // HERESY 1145: a tip on the control's own label (a file button's)
+     var scope = el.closest("label.knob, label.shape-row, label.check, label.versions, .field, fieldset") || el.parentNode;
+     if (scope && scope.querySelector(".info")) return true;
+     if (el.nextElementSibling && el.nextElementSibling.classList.contains("info")) return true;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 2ffbf94..e0c8eb1 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -344,7 +344,7 @@
+   <div class="spacer"></div>
+   <!-- HERESY 1041: the workspace in hand: the takes list shows it, new takes land in it -->
+   <label class="ws-current" data-tip="The workspace in hand: the takes list shows only it, and every new take lands in it. All takes: no workspace.">
+-    <span class="ws-cap">Workspace</span><select id="wsCurrent" aria-label="Workspace"></select></label>
++    <span class="ws-cap">Workspace</span><select id="wsCurrent" aria-label="Workspace" data-tip="The workspace in hand: the takes list shows only its takes, and every new take lands in it. All Workspaces shows every take."></select></label>
+   <!-- HERESY 1121 (Viktor, 02.10): the engine's lamp, without its word, after the workspace; the rooms open the bar -->
+   <div class="engine-chip">
+     <span class="lamp" id="engineLamp"></span>
+@@ -604,7 +604,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <button type="button" class="wr-hand-name" id="wrHandOpen" title="Open it in the Writer"><span aria-hidden="true">✎</span> <span id="wrHandName"></span></button>
+       <button type="button" class="wr-hand-x" id="wrHandDrop" title="Put it down: new takes link to no document" aria-label="Put it down">✕</button>
+       <span class="spacer"></span>
+-      <select id="wrHandPick" aria-label="Load a document from the Writer"></select>
++      <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
+       <button type="button" class="btn ghost small" id="wrHandSave">Save to Writer…</button>
+     </div>
+ 
+@@ -692,7 +692,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       </label>
+       <!-- HERESY 1032: saved styles, kept on Forge (heresy-presets.js) -->
+       <div class="lib-row" id="styleLibRow">
+-        <select id="styleLib" aria-label="Saved styles"><option value="">Saved styles…</option></select>
++        <select id="styleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select>
+         <button type="button" class="btn ghost small" id="styleSave" data-tip="Keep this style under a name, on Forge: every browser sees it">Save style…</button>
+         <button type="button" class="btn ghost small" id="styleDel" disabled>Delete</button>
+       </div>
+@@ -822,7 +822,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <!-- HERESY 1018: move the score to another key (heresy-transpose.js) -->
+           <div class="transpose-row is-hidden" id="transposeRow">
+             <span class="label">Key</span><strong class="mono" id="scoreKeyNow"></strong><span aria-hidden="true">→</span>
+-            <select id="transposeTo" aria-label="Target key"></select>
++            <select id="transposeTo" aria-label="Target key" data-tip="The key to move the score in the box to: every note moves by the same interval, and the key with them. Beside it: the nearest way, or up, or down."></select>
+             <select id="transposeWay" aria-label="Direction" data-tip="Nearest: the smaller move. Up or down: that way, for a voice that needs it">
+               <option value="near">nearest</option><option value="up">up</option><option value="down">down</option>
+             </select>
+@@ -833,7 +833,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <div class="score-check" id="formScoreCheck" hidden></div>
+           <div class="transpose-row is-hidden" id="voiceShiftRow">
+             <span class="label">Voice</span>
+-            <select id="voiceShiftWho" aria-label="Which voice"><option value="Vocal">Vocal</option><option value="Ins">Ins</option></select>
++            <select id="voiceShiftWho" aria-label="Which voice" data-tip="The voice to move: Vocal (what is sung) or Ins (the instruments' melody). The other voice stays."><option value="Vocal">Vocal</option><option value="Ins">Ins</option></select>
+             <select id="voiceShift" aria-label="How far" data-tip="By steps of the scale, in the score's key: a third up moves every note to the third above it in the key, its own sharps and flats kept. The other voice and the chord symbols stay.">
+               <option value="-14">two octaves down</option><option value="-7" selected>an octave down</option><option value="-5">a sixth down</option>
+               <option value="-4">a fifth down</option><option value="-3">a fourth down</option><option value="-2">a third down</option>
+@@ -848,7 +848,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <button type="button" class="btn ghost small" id="formMarkers" disabled>Markers</button>
+             <label class="btn ghost small file-btn" data-tip="A MIDI file back into a score: one melodic line per voice (a track named vocal/voice/melody becomes Vocal, the next one Ins), on a 1/16 grid">Import…
+               <input type="file" id="midiIn" accept=".mid,.midi,audio/midi" hidden /></label>
+-            <select id="midiInKey" aria-label="Key for the imported score"><option value="">key: from the file</option><optgroup label="minor"><option>Abm</option><option>Ebm</option><option>Bbm</option><option>Fm</option><option>Cm</option><option>Gm</option><option>Dm</option><option>Am</option><option>Em</option><option>Bm</option><option>F#m</option><option>C#m</option><option>G#m</option><option>D#m</option><option>A#m</option></optgroup><optgroup label="major"><option>Cb</option><option>Gb</option><option>Db</option><option>Ab</option><option>Eb</option><option>Bb</option><option>F</option><option>C</option><option>G</option><option>D</option><option>A</option><option>E</option><option>B</option><option>F#</option><option>C#</option></optgroup></select>
++            <select id="midiInKey" aria-label="Key for the imported score" data-tip="The key the imported notes are written in: the file's own key signature, or C when it has none; or the key you pick here."><option value="">key: from the file</option><optgroup label="minor"><option>Abm</option><option>Ebm</option><option>Bbm</option><option>Fm</option><option>Cm</option><option>Gm</option><option>Dm</option><option>Am</option><option>Em</option><option>Bm</option><option>F#m</option><option>C#m</option><option>G#m</option><option>D#m</option><option>A#m</option></optgroup><optgroup label="major"><option>Cb</option><option>Gb</option><option>Db</option><option>Ab</option><option>Eb</option><option>Bb</option><option>F</option><option>C</option><option>G</option><option>D</option><option>A</option><option>E</option><option>B</option><option>F#</option><option>C#</option></optgroup></select>
+           </div>
+           <div class="field">
+             <span class="label">Load an example</span>
+@@ -1020,7 +1020,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+       <!-- HERESY 1044: a note of your own on this take -->
+       <label class="field take-note"><span class="label">Note <em id="takeNoteState"></em></span>
+-        <textarea id="takeNote" rows="2" maxlength="4000" placeholder="A note on this take: what works, what to fix, where it goes…"></textarea></label>
++        <textarea id="takeNote" rows="2" maxlength="4000" data-tip="Your note on this take, kept with it: saved as you type, and the same note in the Librarian." placeholder="A note on this take: what works, what to fix, where it goes…"></textarea></label>
+       <div class="meta-card" id="metaGrid"></div>
+       <div class="decode-switch" id="decodeSwitch"></div>
+       <div class="decode-switch" id="soundSwitch"></div>
+@@ -1609,7 +1609,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       </div>
+     </header>
+     <!-- HERESY 1041: quick search in the column; hidden takes stay out of it -->
+-    <div class="lib-search"><input type="search" id="libSearch" placeholder="Search · * and ? work" autocomplete="off" /></div>
++    <div class="lib-search"><input type="search" id="libSearch" placeholder="Search · * and ? work" autocomplete="off" data-tip="Finds takes here by title or library name: * stands for any letters, ? for one. The column's filters still apply." /></div>
+     <div class="lib-list" id="libList"></div>
+   </aside>
+ 
+@@ -1671,7 +1671,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     <button type="button" class="log-dock-tab" id="logDockTab" aria-expanded="false" data-tip="The server log, in every room: click to unfold or fold">
+       <span class="lamp" id="logDockLamp"></span><b>Server log</b><span class="net-say mono" id="netSay"></span><span class="log-dock-last mono" id="logDockLast">connecting</span></button>
+     <span class="log-dock-acts">
+-      <label class="check small-check"><input type="checkbox" id="logDockFollow" checked /> <span>Follow</span></label>
++      <label class="check small-check"><input type="checkbox" id="logDockFollow" checked data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read." /> <span>Follow</span></label>
+       <button type="button" class="btn ghost small" id="logDockCopy">Copy</button>
+       <button type="button" class="btn ghost small" id="logDockEngine" data-tip="The whole log, in Engine">Engine</button>
+     </span>
+-- 
+2.43.0
+

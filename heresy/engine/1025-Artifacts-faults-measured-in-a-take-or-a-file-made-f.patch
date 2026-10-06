@@ -1,0 +1,251 @@
+From 1bc992be19f8b79a3f8ea136277b69249b7a3e22 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 30 Sep 2026 23:13:05 -0600
+Subject: [PATCH 1025/1177] Artifacts: faults measured in a take or a file made
+ from it
+
+A new drawer in Post asks the lab (/lab/inspect, CPU, cached per source) for held tones
+named as notes (a drone is music, a 17 kHz whine is not), the VAE's frame buzz per 30 s
+(the 4-12 kHz envelope at 25..150 Hz, the 1920-sample frame), click candidates, clipping,
+dropouts, DC, stereo correlation per band and loudness. Every time plays from there.
+Choosing a take shows an earlier measurement at once (cached=1) and never starts one.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  28 ++++++++
+ tools/console/app.js            |   2 +
+ tools/console/heresy-inspect.js | 123 ++++++++++++++++++++++++++++++++
+ tools/console/index.html        |  15 ++++
+ tools/public/index.html.gz      | Bin 274062 -> 276634 bytes
+ 5 files changed, 168 insertions(+)
+ create mode 100644 tools/console/heresy-inspect.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 2ae3406..bb81573 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2021,3 +2021,31 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ /* ------------------------------------------------ HERESY 1023: import a track */
+ .imp-body { gap: 10px; }
+ #impFile { padding: 6px; }
++
++/* HERESY 1025: Artifacts */
++#inState.is-bad { color: var(--bad-line, #c47a77); }
++#inResult { display: flex; flex-direction: column; gap: 8px; }
++.in-chips { display: flex; flex-wrap: wrap; gap: 6px; }
++.in-chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 3px 9px; border-radius: 999px; background: var(--sunk); font-size: 12.5px; border-left: 3px solid var(--dim); }
++.in-chip-k { color: var(--muted); font-size: 11.5px; }
++.in-chip.is-ok { border-left-color: #3fae6a; }
++.in-chip.is-warn { border-left-color: #d9a33a; }
++.in-chip.is-bad { border-left-color: #c9543e; }
++.in-h { margin: 6px 0 0; font-size: 13px; font-weight: 600; }
++.in-h em { font-style: normal; font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 6px; }
++.in-table { border-collapse: collapse; font-size: 12.5px; }
++.in-table th { text-align: left; font-weight: 400; color: var(--muted); padding: 2px 12px 2px 0; }
++.in-table td { padding: 2px 12px 2px 0; }
++.in-tag { padding: 1px 7px; border-radius: 999px; font-size: 11.5px; background: var(--sunk); }
++.in-tag.is-ok { color: #3fae6a; }
++.in-tag.is-warn { color: #d9a33a; }
++.in-tag.is-bad { color: #c9543e; }
++.in-bars { display: flex; gap: 3px; align-items: flex-end; height: 84px; }
++.in-bar { flex: 1; min-width: 22px; height: 100%; position: relative; background: var(--sunk); border: 0; border-radius: 3px; padding: 0; cursor: pointer; }
++.in-bar > span { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 3px; background: var(--dim); }
++.in-bar.is-ok > span { background: #3fae6a; }
++.in-bar.is-warn > span { background: #d9a33a; }
++.in-bar.is-bad > span { background: #c9543e; }
++.in-bar > em { position: absolute; left: 0; right: 0; bottom: 2px; font-style: normal; font-size: 10px; text-align: center; color: var(--ink); text-shadow: 0 0 3px var(--panel); }
++.in-list { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; }
++.in-item { white-space: nowrap; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 87bf2ee..ffe7ccb 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2750,6 +2750,7 @@
+     if (window.HeresySpectrum) window.HeresySpectrum.setTake(spectrumTake(take));   // HERESY 1007
+     if (window.HeresyGloss) window.HeresyGloss.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1011
+     if (document.body.dataset.tab === "post") paintPost();   // HERESY 1014
++    if (window.HeresyInspect) window.HeresyInspect.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1025
+     if (window.HeresyDerived) window.HeresyDerived.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1021
+     setTimeout(paintCardFolds, 0);   // HERESY 1009: the peeks read the texts filled below
+     $("metaStyle").textContent = take.style;
+@@ -5248,6 +5249,7 @@
+     audio.addEventListener("loadedmetadata", go, { once: true });
+   }
+   if (window.HeresyGloss) window.HeresyGloss.init({ seek: seekTake });   // HERESY 1011
++  if (window.HeresyInspect) window.HeresyInspect.init({ seek: seekTake });   // HERESY 1025
+   if (window.HeresyDerived) window.HeresyDerived.init({   // HERESY 1021
+     compare: function (path) {
+       var f = window.HeresyDerived.files().filter(function (x) { return x.source === path; })[0];
+diff --git a/tools/console/heresy-inspect.js b/tools/console/heresy-inspect.js
+new file mode 100644
+index 0000000..980f617
+--- /dev/null
++++ b/tools/console/heresy-inspect.js
+@@ -0,0 +1,123 @@
++// HERESY 1025: artifacts of a take, or of a file made from it, measured on Forge
++// (lab/inspect_job.py): held tones (named as notes, so a drone is not taken for a fault),
++// the VAE's frame buzz (the highs trembling at 25 Hz and its multiples), click candidates,
++// clipping, dropouts, DC, stereo correlation and loudness. Every finding with a time seeks.
++(function () {
++  "use strict";
++
++  var state = { take: null, source: "", token: 0, hooks: null };
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
++  function at(t) { return '<button type="button" class="gloss-time mono" data-in-seek="' + t + '">' + clock(t) + "</button>"; }
++  function say(text, bad) { $("inState").textContent = text || ""; $("inState").classList.toggle("is-bad", !!bad); }
++  function src() { return state.source ? "&source=" + encodeURIComponent(state.source) : ""; }
++
++  function chip(label, value, level, tip) {
++    return '<span class="in-chip is-' + level + '" data-tip="' + esc(tip || "") + '"><span class="in-chip-k">' + esc(label) + "</span>" + value + "</span>";
++  }
++
++  function paint(r) {
++    var L = r.loudness || {}, fb = r.framebuzz || {}, st = r.stereo || {}, clip = r.clipping || {};
++    var tp = L.true_peak, buzz = fb.mean_db;
++    var html = '<div class="in-chips">' +
++      chip("LUFS", L.lufs != null ? L.lufs.toFixed(1) : "—", "ok", "Integrated loudness (EBU R128)") +
++      chip("LRA", L.lra != null ? L.lra.toFixed(1) + " LU" : "—", "ok", "Loudness range") +
++      chip("True peak", tp != null ? (tp > 0 ? "+" : "") + tp.toFixed(1) + " dBTP" : "—", tp > 0 ? "bad" : tp > -1 ? "warn" : "ok",
++           "Above 0 dBTP the take clips on most players; the Remaster's -1 dBTP fixes it") +
++      chip("Clipping", (clip.runs || 0) + " runs", clip.runs ? "bad" : "ok", "Runs of 3+ samples at full scale") +
++      chip("Frame buzz", buzz != null ? buzz.toFixed(1) + " dB" : "—", buzz > 10 ? "bad" : buzz > 5 ? "warn" : "ok",
++           "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs") +
++      chip("DC", (r.dc || []).map(function (v) { return v.toFixed(4); }).join(" / "), (r.dc || []).some(function (v) { return Math.abs(v) > 0.002; }) ? "warn" : "ok", "Offset of zero per channel") +
++      "</div>";
++
++    // tones
++    var tones = r.tones || [];
++    html += '<h4 class="in-h">Held tones <em>narrow peaks standing 8+ dB above their ±1/6 octave in 35%+ of the song</em></h4>';
++    html += tones.length ? '<table class="in-table"><tr><th>Hz</th><th>note</th><th>of the time</th><th>above</th><th></th></tr>' + tones.map(function (t) {
++      var kind = t.mains ? '<span class="in-tag is-bad">mains ' + esc(t.mains) + "</span>" : t.musical ? '<span class="in-tag is-ok">music</span>'
++        : '<span class="in-tag is-warn">' + (t.hz > 12000 ? "high whine" : "suspect") + "</span>";
++      return "<tr><td class=\"mono\">" + t.hz.toFixed(1) + "</td><td class=\"mono\">" + esc(t.note || "") + "</td><td>" + Math.round(t.share * 100) +
++        "%</td><td>" + t.above_db.toFixed(1) + " dB</td><td>" + kind + "</td></tr>";
++    }).join("") + "</table>" : '<p class="row-hint">None.</p>';
++
++    // frame buzz windows
++    if ((fb.windows || []).length) {
++      var max = Math.max.apply(null, fb.windows.map(function (w) { return w.mean_db; }).concat([12]));
++      html += '<h4 class="in-h">Frame buzz per 30 s <em>25–150 Hz in the highs\' envelope, dB above the neighbours</em></h4><div class="in-bars">' +
++        fb.windows.map(function (w) {
++          var lv = w.mean_db > 10 ? "bad" : w.mean_db > 5 ? "warn" : "ok";
++          return '<button type="button" class="in-bar is-' + lv + '" data-in-seek="' + w.at + '" data-tip="' + clock(w.at) + ": " + w.by_hz.map(function (v, i) { return fb.hz[i] + " Hz " + v.toFixed(1); }).join(" · ") +
++            '"><span style="height:' + Math.max(4, Math.round(Math.max(0, w.mean_db) / max * 100)) + '%"></span><em>' + clock(w.at) + "</em></button>";
++        }).join("") + "</div>";
++    }
++
++    // clicks, dropouts, stereo
++    var clicks = r.clicks || [];
++    html += '<h4 class="in-h">Click candidates <em>' + clicks.length + ' — a sharp corner in the waveform; a harp or a drum hit can look the same: listen</em></h4>' +
++      (clicks.length ? '<div class="in-list">' + clicks.map(function (c) { return '<span class="in-item">' + at(c.at) + " ×" + Math.round(c.strength) + "</span>"; }).join("") + "</div>" : "");
++    var drops = r.dropouts || [];
++    if (drops.length) html += '<h4 class="in-h">Dropouts</h4><div class="in-list">' + drops.map(function (d) { return '<span class="in-item">' + at(d.at) + " " + d.ms + " ms, −" + d.depth_db + " dB</span>"; }).join("") + "</div>";
++    if (st.bands) {
++      html += '<h4 class="in-h">Stereo <em>left–right correlation per band; below 0, the channels work against each other</em></h4><div class="in-chips">' +
++        st.bands.map(function (b) { return chip(b.band, b.correlation.toFixed(2), b.correlation < 0 ? "bad" : b.correlation < 0.3 ? "warn" : "ok", ""); }).join("") + "</div>" +
++        ((st.negative || []).length ? '<div class="in-list">' + st.negative.map(function (n) { return '<span class="in-item">' + at(n.at) + " " + n.correlation.toFixed(2) + "</span>"; }).join("") + "</div>" : "");
++    }
++    html += '<p class="row-hint">' + clock(r.seconds || 0) + " · " + (r.rate || "") + " Hz · measured in " + (r.took || "?") + " s on Forge</p>";
++    $("inResult").innerHTML = html;
++  }
++
++  function run(force) {
++    if (!state.take) return;
++    var token = ++state.token, started = Date.now();
++    $("inRun").disabled = true;
++    var ticker = setInterval(function () { say("Forge is listening for faults… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
++    function ask(first) {
++      return fetch("/lab/inspect?name=" + encodeURIComponent(state.take.name) + src() + (force && first ? "&force=1" : "")).then(function (r) {
++        return r.json().then(function (b) {
++          if (r.status === 202) return new Promise(function (res) { setTimeout(res, 2000); }).then(function () { return ask(false); });
++          if (!r.ok) throw new Error(b.error || r.status);
++          return b;
++        });
++      });
++    }
++    ask(true).then(function (r) { if (token === state.token) { paint(r); say(""); $("inRun").textContent = "Inspect again"; } })
++      .catch(function (e) { if (token === state.token) say("Could not: " + (e.message || e), true); })
++      .then(function () { clearInterval(ticker); $("inRun").disabled = false; });
++  }
++
++  function init(hooks) {
++    if (!$("inspectPanel")) return;
++    state.hooks = hooks || {};
++    $("inRun").addEventListener("click", function () { run($("inRun").textContent === "Inspect again"); });
++    $("inSource").addEventListener("change", function () { state.source = this.value; $("inResult").innerHTML = ""; $("inRun").textContent = "Inspect"; });
++    $("inResult").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-in-seek]");
++      if (b && state.hooks.seek) state.hooks.seek(state.take, parseFloat(b.dataset.inSeek));
++    });
++    window.addEventListener("heresy-derived", function (event) {
++      if (!state.take || event.detail.name !== state.take.name) return;
++      var keep = state.source, sel = $("inSource");
++      sel.innerHTML = '<option value="">the take</option>' + event.detail.files.map(function (f) {
++        return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
++      }).join("");
++      sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
++      state.source = sel.value;
++    });
++  }
++
++  function setTake(take) {
++    if (!$("inspectPanel")) return;
++    if (state.take && take && state.take.name === take.name) return;
++    state.take = take; state.source = ""; state.token++;
++    $("inSource").innerHTML = '<option value="">the take</option>';
++    $("inResult").innerHTML = ""; $("inRun").textContent = "Inspect"; say("");
++    // an earlier measurement shows at once (the lab keeps it)
++    var token = state.token;
++    fetch("/lab/inspect?cached=1&name=" + encodeURIComponent(take.name)).then(function (r) { return r.status === 200 ? r.json() : null; })
++      .then(function (r) { if (r && token === state.token && r.loudness) { paint(r); $("inRun").textContent = "Inspect again"; } })
++      .catch(function () {});
++  }
++
++  window.HeresyInspect = { init: init, setTake: setTake };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 07a69b4..df5ef5d 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -781,6 +781,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <button type="button" class="btn ghost small" data-post-open="derivedPanel">Stems</button>
+       <button type="button" class="btn ghost small" data-post-open="remasterPanel">Remaster</button>
+       <button type="button" class="btn ghost small" data-post-open="upscalePanel">Upscale</button>
++      <button type="button" class="btn ghost small" data-post-open="inspectPanel">Artifacts</button>
+     </div>
+       <!-- HERESY 1021: what is made from this take, as a tree (heresy-derived.js) -->
+       <details class="drawer" id="derivedPanel" open>
+@@ -860,6 +861,19 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+       </details>
+ 
++      <!-- HERESY 1025: faults measured on Forge: held tones, the VAE's frame buzz, clicks, clipping (heresy-inspect.js) -->
++      <details class="drawer" id="inspectPanel">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Artifacts</span><span class="sum-say">What may be wrong in the sound: a tone that will not leave, the VAE's 25-frame buzz in the highs, clicks, clipping, dropouts, stereo that fights itself. A time plays from there.</span></span></summary>
++        <div class="drawer-body rm-body">
++          <div class="dv-actions">
++            <label class="field"><span class="label">Source</span><select id="inSource"><option value="">the take</option></select></label>
++            <button type="button" class="btn primary small" id="inRun">Inspect</button>
++            <span class="row-hint mono" id="inState"></span>
++          </div>
++          <div id="inResult"></div>
++        </div>
++      </details>
++
+       <!-- HERESY 1007: the spectrum of this take, measured in the page (heresy-spectrum.js) -->
+       <details class="drawer" id="spectrumPanel" open>
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Spectrum</span><span class="sum-say">Where the sound sits: spectrogram, average spectrum, band energy. Lay another take over it to compare.</span></span></summary>
+@@ -1097,6 +1111,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="heresy-transpose.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
++<script src="heresy-inspect.js"></script>
+ <script src="heresy-derived.js"></script>
+ <script src="heresy-zoom.js"></script>
+ <script src="heresy-spectrum.js"></script>
+-- 
+2.43.0
+

@@ -1,0 +1,662 @@
+From e84a05faeb46bce3993304d4e408c779bff1c402 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 16:10:29 -0600
+Subject: [PATCH 1085/1177] The player of fosforida.quest, lighter (1106,
+ 1111); the guard of the line (1107); mass actions as in Plasma (1108); the
+ Writing room says its state (1110)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  70 +++++++++++++++++-
+ tools/console/app.js               | 108 ++++++++++++++++++++++++++--
+ tools/console/heresy-collection.js |  47 +++++++++---
+ tools/console/heresy-icons.js      |  16 +++--
+ tools/console/heresy-net.js        |  44 ++++++++++++
+ tools/console/index.html           | 110 +++++++++++++++--------------
+ tools/public/index.html.gz         | Bin 406807 -> 412757 bytes
+ 7 files changed, 320 insertions(+), 75 deletions(-)
+ create mode 100644 tools/console/heresy-net.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 895a1a9..e751def 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -8,7 +8,7 @@
+   --r-md: 7px;
+   --r-lg: 12px;
+   --r-pill: 20px;   /* HERESY 1033: chips and steps follow the corner profile too */
+-  --playbar-h: 74px;
++  --playbar-h: 124px;   /* HERESY 1106: the waveform across, the controls under it */
+ 
+   --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+   --mono: "IBM Plex Mono", "Cascadia Mono", ui-monospace, monospace;
+@@ -2962,3 +2962,71 @@ body[data-tab="train"] .log-dock { bottom: 18px; }
+ /* HERESY 1105 (Viktor): every checkbox and radio in its theme's colour, never the browser's blue: --check where a
+    theme names one (Viktor's two: dark gold), else the theme's own accent; read on the input, so the theme in force counts */
+ input[type="checkbox"], input[type="radio"] { accent-color: var(--check, var(--amber)); }
++
++/* ---------------------------------------------------------------- HERESY 1106: the player of fosforida.quest */
++#playbar { flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; padding: 8px 22px 10px; }
++#playbar #wave { display: block; width: 100%; height: 52px; flex: none; cursor: pointer; border-radius: var(--r-md); }
++#playbar .pb-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; min-height: 48px; }
++#playbar .playbar-id { display: flex; align-items: center; gap: 12px; width: auto; min-width: 0; }
++#playbar .pb-cover { flex: none; width: 46px; height: 46px; border-radius: var(--r-sm); display: grid; place-items: center;
++  background: color-mix(in srgb, var(--amber) 14%, var(--raise)); box-shadow: 0 4px 12px -6px var(--shadow-lg, rgba(0,0,0,.35)); }
++#playbar .pb-cover svg { width: 22px; height: 22px; fill: none; stroke: rgba(255,255,255,.82); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
++#playbar.is-empty .pb-cover svg { stroke: var(--dim); }
++#playbar .pb-names { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
++#playbar .pb-names strong { font-family: var(--heading); font-weight: 500; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
++#playbar .pb-sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
++#playbar .pb-ctrl { display: flex; align-items: center; gap: 10px; }
++#playbar .pb-side { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
++#playbar .pb-side .time { white-space: nowrap; }
++/* the outlines, light: thin strokes, nothing filled */
++#playbar .ui-ico, .coll-play .ui-ico, .coll-pin .ui-ico { stroke-width: 1.5; }
++#playbar .skip-btn .ui-ico { width: 20px; height: 20px; }
++#playbar .pb-tog { color: var(--dim); opacity: 1; padding: 6px; border: 0; background: none; }
++#playbar .pb-tog .ui-ico { width: 18px; height: 18px; }
++#playbar .pb-tog:hover { color: var(--ink); }
++#playbar .pb-tog.is-on { color: var(--amber); }
++#playbar #pbRepeat { position: relative; }
++#playbar #pbRepeat[data-mode="one"]::after { content: "1"; position: absolute; top: 1px; right: 0; font: 700 9px/1 var(--sans); color: var(--amber); }
++#playbar .play, #playbar .play:hover { width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--amber); background: none; color: var(--amber); box-shadow: none; }
++#playbar .play:hover { background: color-mix(in srgb, var(--amber) 10%, transparent); transform: scale(1.05); }
++#playbar .play .play-icon { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
++#playbar .play:not(.is-playing) .play-icon-play { margin-left: 3px; }
++#playbar #muteGlyph { display: grid; place-items: center; }
++#playbar #muteGlyph .ui-ico { width: 18px; height: 18px; }
++#playbar .volume #volume { width: 110px; }
++@media (max-width: 1360px) { #playbar .pb-side .speed-pick, #playbar .volume #volume { display: none; } }
++@media (max-width: 1150px) { #playbar .pb-row { grid-template-columns: auto 1fr; } #playbar .playbar-id { display: none; } }
++
++/* HERESY 1107: the line to the studio, beside the server log */
++.net-say { margin-left: 8px; padding: 0 6px; border-radius: var(--r-pill); font-size: 11px; color: var(--muted); white-space: nowrap; flex: none; }
++.net-say[data-q="good"] { color: var(--good); }
++.net-say[data-q="slow"] { color: var(--amber); }
++.net-say[data-q="bad"] { color: var(--bad); }
++
++/* HERESY 1110: the Writing room's line */
++.assist-line { margin: 0 0 10px; padding: 7px 10px; border: 1px solid var(--line); border-left-width: 3px; border-radius: var(--r-sm); font-size: 12.5px; color: var(--ink); }
++.assist-line[data-s="ready"] { border-left-color: var(--good); }
++.assist-line[data-s="warn"] { border-left-color: var(--amber); }
++.assist-line[data-s="bad"] { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 6%, transparent); }
++
++/* ---------------------------------------------------------------- HERESY 1111: the player, lighter still */
++/* no ring round play: the triangle alone, larger */
++#playbar .play, #playbar .play:hover { border: 0; background: none; box-shadow: none; width: 44px; height: 44px; }
++#playbar .play:hover { transform: scale(1.08); background: none; color: var(--amber-hi, var(--amber)); }
++#playbar .play .play-icon { width: 30px; height: 30px; stroke-width: 1.4; }
++/* the status: a dot, no words (the tip says them); larger; it pulses while it plays; 60 % see-through when it does not */
++#playbar .status-pill { width: 28px; height: 28px; padding: 0; border: 0; background: none; justify-content: center; }
++#playbar .status-pill #statusText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
++#playbar .status-pill .status-dot { width: 12px; height: 12px; }
++#playbar .status-pill:not([data-s="playing"]):not([data-s="rendering"]) { opacity: .4; }
++#playbar .status-pill[data-s="playing"] .status-dot { animation: pb-beat 1.6s ease-in-out infinite; }
++@keyframes pb-beat { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 45%, transparent); }
++                     50% { transform: scale(1.18); box-shadow: 0 0 0 6px color-mix(in srgb, var(--good) 0%, transparent); } }
++@media (prefers-reduced-motion: reduce) { #playbar .status-pill .status-dot { animation: none; } }
++/* what the eye does not need now steps back until the pointer comes */
++#playbar .pb-tog, #playbar .skip-btn, #playbar .speed-pick, #playbar .volume, #playbar .pb-rate .pb-btn, #playbar .pb-side .time { opacity: .5; transition: opacity .15s ease; }
++#playbar .pb-tog.is-on, #playbar .pb-rate .pb-btn[aria-pressed="true"] { opacity: 1; }
++#playbar .pb-tog:hover, #playbar .skip-btn:hover, #playbar .speed-pick:hover, #playbar .speed-pick:focus, #playbar .volume:hover, #playbar .volume:focus-within,
++#playbar .pb-rate:hover .pb-btn, #playbar .pb-side .time:hover, #playbar:focus-within .pb-tog:focus-visible { opacity: 1; }
++#playbar #timeTotal { cursor: pointer; }
++#playbar .speed-pick { font-variant-numeric: tabular-nums; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e333a52..f2dbea2 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -256,6 +256,12 @@
+     if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+     if (event.key === "Escape") { $("view-engine").classList.add("is-hidden"); closeMenus(); }
+     if (event.key === " " && (audio.getAttribute("src") || STATE.take) && !event.target.closest(".menu-pop")) { event.preventDefault(); togglePlay(); }
++    // HERESY 1111: seek and mute from the keyboard, outside text fields and menus
++    if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && audio.getAttribute("src") && isFinite(audio.duration) && !event.target.closest(".menu-pop, [role=menu], .col-grip")) {
++      event.preventDefault();
++      audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + (event.key === "ArrowRight" ? 1 : -1) * (event.shiftKey ? 30 : 5)));
++    }
++    if ((event.key === "m" || event.key === "M") && !event.ctrlKey && !event.metaKey && !event.altKey) $("muteBtn").click();
+   });
+ 
+   /* ------------------------------------------------------------ info tips */
+@@ -3614,6 +3620,7 @@
+     $("playbar").classList.add("is-empty");
+     $("playbarTitle").textContent = "Nothing loaded";
+     $("playbarTitle").dataset.tip = "Pick a take on the right";
++    paintCover(null);
+     $("timeNow").textContent = "0:00";
+     $("timeTotal").textContent = "0:00";
+     drawWave();
+@@ -3728,6 +3735,7 @@
+     $("playbarTitle").textContent = displayTitle(take);
+     paintRate();   // HERESY 1042
+     if (take.style) $("playbarTitle").dataset.tip = take.style; else $("playbarTitle").removeAttribute("data-tip");
++    paintCover(take);                                       // HERESY 1106: the subtitle and the cover tile
+     paintMp3();
+     $("timeTotal").textContent = clock(take.seconds);
+     loadPeaks(take);
+@@ -3793,9 +3801,20 @@
+   audio.volume = storedVolume === null ? 1 : Math.min(1, Math.max(0, parseFloat(storedVolume) || 0));
+   $("volume").value = audio.volume;
+ 
++  // HERESY 1106: the take in the player: the style's first words under the title, a tile of its own colour for a cover
++  // (until covers are drawn for takes); one hue from the name, so a take keeps its tile
++  function paintCover(take) {
++    var sub = take && take.style ? String(take.style).split(/[.\n]/)[0].trim() : "";
++    $("playbarSub").textContent = sub.length > 110 ? sub.slice(0, 108) + "…" : sub;
++    var h = 0, n = take ? take.name : "";
++    for (var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 360;
++    $("pbCover").style.background = take ? "linear-gradient(135deg, hsl(" + h + " 32% 52%), hsl(" + ((h + 48) % 360) + " 30% 30%))" : "";
++  }
+   function paintVolume() {
+     var level = audio.muted ? 0 : audio.volume;
+-    $("muteGlyph").textContent = level === 0 ? "🔇" : (level < 0.5 ? "🔉" : "🔊");
++    var HI = window.HeresyIcons;
++    if (HI && HI.ui) $("muteGlyph").innerHTML = HI.ui(level === 0 ? "vol-off" : (level < 0.5 ? "vol-lo" : "vol-hi"));
++    else $("muteGlyph").textContent = level === 0 ? "🔇" : (level < 0.5 ? "🔉" : "🔊");
+     $("volume").value = level;
+   }
+ 
+@@ -3827,14 +3846,38 @@
+   $("playSpeed").addEventListener("change", function () { setSpeed(this.value); });
+   audio.addEventListener("loadedmetadata", function () { if (audio.playbackRate !== audio.defaultPlaybackRate) audio.playbackRate = audio.defaultPlaybackRate; });
+   // The play button's glyph, its state (the DMM theme draws icons from it) and its label for screen readers
++  // HERESY 1111: the system's media keys, a headset's buttons and the desktop's media panel drive the player
++  function paintSession() {
++    if (!("mediaSession" in navigator) || !window.MediaMetadata) return;
++    var t = STATE.playerTake;
++    try {
++      navigator.mediaSession.metadata = t ? new MediaMetadata({ title: displayTitle(t), artist: "Ruach Studio",
++        album: t.style ? String(t.style).split(/[.\n]/)[0].slice(0, 80) : "" }) : null;
++      navigator.mediaSession.playbackState = t ? (isPlaying() ? "playing" : "paused") : "none";
++    } catch (e) { /* an old browser */ }
++  }
++  if ("mediaSession" in navigator) {
++    [["play", function () { audio.play().catch(function () {}); }], ["pause", function () { audio.pause(); }],
++     ["previoustrack", function () { stepTake(-1); }], ["nexttrack", function () { stepTake(1); }],
++     ["seekbackward", function (d) { audio.currentTime = Math.max(0, audio.currentTime - ((d && d.seekOffset) || 5)); }],
++     ["seekforward", function (d) { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + ((d && d.seekOffset) || 5)); }],
++     ["seekto", function (d) { if (d && isFinite(d.seekTime)) audio.currentTime = d.seekTime; }]].forEach(function (h) {
++      try { navigator.mediaSession.setActionHandler(h[0], h[1]); } catch (e) { /* not this one here */ }
++    });
++  }
+   function paintPlayButton(playing) {
+     $("playGlyph").textContent = playing ? "❚❚" : "▶";
+     $("playBtn").classList.toggle("is-playing", playing);
+     $("playBtn").setAttribute("aria-label", playing ? "Pause" : "Play");
+   }
+-  audio.addEventListener("play", function () { paintPlayButton(true); markPlaying(); });
+-  audio.addEventListener("pause", function () { paintPlayButton(false); markPlaying(); });
+-  audio.addEventListener("ended", function () { paintPlayButton(false); markPlaying(); if (playOn()) stepTake(1); });
++  audio.addEventListener("play", function () { paintPlayButton(true); markPlaying(); paintSession(); });
++  audio.addEventListener("loadedmetadata", function () { paintSession(); paintTimes(); });   // HERESY 1111
++  audio.addEventListener("pause", function () { paintPlayButton(false); markPlaying(); paintSession(); });
++  audio.addEventListener("ended", function () {
++    paintPlayButton(false); markPlaying();
++    if (repeatMode() === "one") { audio.currentTime = 0; audio.play().catch(function () {}); return; }   // HERESY 1106
++    if (playOn() || repeatMode() === "all") stepTake(1);
++  });
+ 
+   // HERESY 1009: the takes in the order the list shows them, newest on top: "next"
+   // goes down, into the history. A card that shows the playing take follows it.
+@@ -3852,6 +3895,9 @@
+   function stepTake(dir) {
+     var names = listOrder(), from = STATE.playerTake ? names.indexOf(STATE.playerTake.name) : -1;
+     var name = from < 0 ? (dir > 0 ? names[0] : null) : names[from + dir];
++    // HERESY 1106: shuffle picks any other take of the list for "next"; repeat-all goes round the list
++    if (dir > 0 && shuffleOn() && names.length > 1) { var k; do { k = Math.floor(Math.random() * names.length); } while (k === from); name = names[k]; }
++    else if (!name && repeatMode() === "all" && names.length && from >= 0) name = dir > 0 ? names[0] : names[names.length - 1];
+     var take = name ? findTake(name) : null;
+     if (!take) { if (dir > 0 && from >= 0) toast("The end of the list"); return; }
+     var follow = STATE.take && STATE.playerTake && STATE.take.name === STATE.playerTake.name;
+@@ -3860,6 +3906,18 @@
+     if (follow) openTake(take.name);
+   }
+   function playOn() { return recall("yue2.playOn") !== "off"; }
++  // HERESY 1106: shuffle and repeat (off · all · one), kept like the rest of the player
++  function shuffleOn() { return recall("yue2.shuffle") === "on"; }
++  function repeatMode() { var m = recall("yue2.repeat"); return m === "all" || m === "one" ? m : "off"; }
++  function paintShuffleRepeat() {
++    $("pbShuffle").setAttribute("aria-pressed", String(shuffleOn())); $("pbShuffle").classList.toggle("is-on", shuffleOn());
++    var m = repeatMode();
++    $("pbRepeat").dataset.mode = m; $("pbRepeat").setAttribute("aria-pressed", String(m !== "off")); $("pbRepeat").classList.toggle("is-on", m !== "off");
++    $("pbRepeat").setAttribute("aria-label", m === "one" ? "Repeat this take" : m === "all" ? "Repeat the list" : "Repeat off");
++  }
++  $("pbShuffle").addEventListener("click", function () { store("yue2.shuffle", shuffleOn() ? null : "on"); paintShuffleRepeat(); });
++  $("pbRepeat").addEventListener("click", function () { var m = repeatMode(); store("yue2.repeat", m === "off" ? "all" : m === "all" ? "one" : null); paintShuffleRepeat(); });
++  paintShuffleRepeat();
+   // HERESY 1040: play on click
+   function clickPlay() { return recall("yue2.clickPlay") !== "off"; }
+   function paintClickPlay() {
+@@ -3925,6 +3983,16 @@
+     if (STATE.take && !STATE.take.seconds) { STATE.take.seconds = audio.duration; paintTakeMeta(); }
+   });
+ 
++  // HERESY 1111: the waveform says the time under the pointer; the total turns to the time left on a click
++  STATE.waveHover = null;
++  $("wave").addEventListener("mousemove", function (event) { var r = this.getBoundingClientRect(); STATE.waveHover = (event.clientX - r.left) / r.width; drawWave(); });
++  $("wave").addEventListener("mouseleave", function () { STATE.waveHover = null; drawWave(); });
++  $("timeTotal").addEventListener("click", function () { store("yue2.timeLeft", recall("yue2.timeLeft") ? null : "1"); paintTimes(); });
++  function paintTimes() {
++    if (!isFinite(audio.duration)) return;
++    $("timeTotal").textContent = recall("yue2.timeLeft") ? "\u2212" + clock(Math.max(0, audio.duration - audio.currentTime)) : clock(audio.duration);
++  }
++  audio.addEventListener("timeupdate", function () { if (recall("yue2.timeLeft")) paintTimes(); });
+   $("wave").addEventListener("click", function (event) {
+     var rect = this.getBoundingClientRect();
+     var ratio = (event.clientX - rect.left) / rect.width;
+@@ -4023,6 +4091,15 @@
+       ctx.fillStyle = themeRGBA("ink", 1);
+       ctx.fillRect(progress * width - 0.5, 4, 1.5, height - 8);
+     }
++    // HERESY 1111: where a click would go, and when that is
++    if (STATE.waveHover != null && isFinite(audio.duration) && audio.duration > 0) {
++      var hx = Math.max(0, Math.min(1, STATE.waveHover)) * width, label = clock(STATE.waveHover * audio.duration);
++      ctx.fillStyle = themeRGBA("ink", 0.35); ctx.fillRect(hx - 0.5, 2, 1, height - 4);
++      ctx.font = '11px "IBM Plex Mono", monospace';
++      var tw = ctx.measureText(label).width + 10, tx = Math.min(width - tw - 2, Math.max(2, hx + 6));
++      ctx.fillStyle = themeRGBA("panel", 0.92); ctx.fillRect(tx, 4, tw, 16);
++      ctx.fillStyle = themeRGBA("ink", 0.9); ctx.fillText(label, tx + 5, 16);
++    }
+   }
+ 
+   window.addEventListener("resize", drawWave);
+@@ -4617,7 +4694,23 @@
+     });
+   }
+ 
++  // HERESY 1110: the Writing room's own line: which writer, where, and whether it answers
++  function paintAssistLine(status) {
++    var el = $("assistLine");
++    if (!el) return;
++    if ($("assistProvider") && $("assistProvider").value === "openrouter") {
++      el.dataset.s = "ready"; el.textContent = "Writer: OpenRouter, with your key; the brief and the song go to openrouter.ai.";
++      return;
++    }
++    status = status || CHAT.status || {};
++    var base = status.base || chatBase() || "";
++    if (!status.configured) { el.dataset.s = "bad"; el.textContent = "Writer: no chat server set. Engine → Chat server (vLLM, LM Studio, Ollama), or choose OpenRouter below."; }
++    else if (!status.available) { el.dataset.s = "bad"; el.textContent = "Writer: the chat server at " + base + " does not answer. Start it there, or choose OpenRouter below. (Checked just now; entering the Writer checks again.)"; }
++    else if (!status.use) { el.dataset.s = "warn"; el.textContent = "Writer: the chat server at " + base + " answers, but has no model loaded: load one there."; }
++    else { el.dataset.s = "ready"; el.textContent = "Writer: " + status.use + " at " + base + ", ready."; }
++  }
+   function paintChat(status) {
++    paintAssistLine(status);
+     var pill = $("chatState");
+     pill.textContent = !status.configured ? "not set" : (!status.available ? "not answering" : (status.use ? "ready" : "no model loaded"));
+     pill.dataset.s = status.use ? "ready" : (status.configured ? "bad" : "missing");
+@@ -5345,7 +5438,9 @@
+     var take = STATE.playerTake, HC = window.HeresyCollection;
+     if (!take || !HC) return;
+     var next = HC.rating(take.name) === value ? 0 : value;   // a second click takes it back
+-    HC.rate(take.name, next).then(paintRate).catch(function (e) { toast(e.message, "bad"); });
++    var sent = HC.rate(take.name, next);
++    paintRate();                                            // HERESY 1107: at once; the lab confirms
++    sent.then(paintRate).catch(function (e) { paintRate(); toast(e.message, "bad"); });
+   }
+   $("pbLike").addEventListener("click", function () { rateNow(1); });
+   $("pbDislike").addEventListener("click", function () { rateNow(-1); });
+@@ -5722,6 +5817,7 @@
+     $("view-train").classList.toggle("is-hidden", tab !== "train");             // HERESY 1063
+     if (tab === "train" && window.HeresyTrain) window.HeresyTrain.reload();
+     if (tab === "collection" && window.HeresyCollection) window.HeresyCollection.reload();
++    if (tab === "write") refreshChat().catch(function () {});   // HERESY 1110: the Writing room says its state at once
+     all("#tabs [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+     store(TAB_KEY, tab === "create" ? null : tab);
+     if (tab === "write") paintCurrentSong();
+@@ -5836,7 +5932,7 @@
+         }).catch(function () { orListed = false; });
+       }
+     };
+-    $("assistProvider").addEventListener("change", function () { paintProvider(); saveAssist(); });
++    $("assistProvider").addEventListener("change", function () { paintProvider(); saveAssist(); paintAssistLine(); });
+     $("orModel").addEventListener("change", saveAssist);
+     $("orKey").addEventListener("input", function () { if ($("orRemember").checked) store("yue2.orKey", this.value.trim() || null); });
+     $("orRemember").addEventListener("change", function () { store("yue2.orKey", this.checked ? ($("orKey").value.trim() || null) : null); });
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index b430c16..a4b4616 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -274,6 +274,7 @@
+     band.scroller = scrollerOf($("collGrid"));
+     band.x0 = e.clientX; band.y0 = e.clientY + band.scroller.scrollTop; band.mx = e.clientX; band.my = e.clientY;
+     band.base = e.ctrlKey ? Object.assign({}, state.sel) : {};
++    band.toggle = !!e.ctrlKey;                        // HERESY 1108: Ctrl toggles what the band crosses
+     band.on = "armed";
+     e.preventDefault();                               // no text selection while dragging
+     document.addEventListener("mousemove", bandMove);
+@@ -299,7 +300,7 @@
+     var picked = Object.assign({}, band.base);
+     Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (c) {
+       var r = c.getBoundingClientRect(), hit = r.right > L && r.left < R && r.bottom > T && r.top < B;
+-      if (hit) picked[c.dataset.name] = 1;
++      if (hit) { if (band.toggle && band.base[c.dataset.name]) delete picked[c.dataset.name]; else picked[c.dataset.name] = 1; }
+       c.classList.toggle("is-sel", !!picked[c.dataset.name]);
+       var box = c.querySelector("[data-sel]"); if (box) box.checked = !!picked[c.dataset.name];
+     });
+@@ -456,6 +457,9 @@
+       if (open) { openSheet(open.dataset.open); return; }   // HERESY 1046: a sheet here; Create only by choice
+       var card = e.target.closest(".coll-card[data-name]"), cname = card && card.dataset.name;   // HERESY 1048
+       var crate = e.target.closest("[data-crate]");
++      var many = cname && state.sel[cname] && names().length > 1;   // HERESY 1108: a checked card speaks for all checked
++      if (crate && many) { rateMany(names(), +crate.dataset.crate); return; }
++      if (e.target.closest("[data-cfav]") && many) { favMany(names()); return; }
+       if (crate) { var v = +crate.dataset.crate; rate(cname, rating(cname) === v ? 0 : v).then(function () { if (hooks.libraryChanged) hooks.libraryChanged(); }); return; }
+       if (e.target.closest("[data-cfav]")) {          // HERESY 1105: the card and the player follow at once
+         var ft = hooks.findTake(cname);
+@@ -548,13 +552,9 @@
+ 
+     $("collSelAll").addEventListener("click", function () { shown().forEach(function (r) { state.sel[r.name] = 1; }); paint(); });
+     $("collSelNone").addEventListener("click", function () { state.sel = {}; paint(); });
+-    $("collFav").addEventListener("click", function () {
+-      var list = names().map(hooks.findTake).filter(Boolean);
+-      var on = list.some(function (t) { return !t.favorite; });
+-      Promise.all(list.map(function (t) { return hooks.updateTake(t, { favorite: on }); }))
+-        .then(function () { toast((on ? "Favourites: " : "Not favourites: ") + list.length); return load(); })
+-        .catch(function (e) { toast(e.message, true); });
+-    });
++    $("collLike").addEventListener("click", function () { rateMany(names(), 1); });        // HERESY 1108
++    $("collDislike").addEventListener("click", function () { rateMany(names(), -1); });
++    $("collFav").addEventListener("click", function () { favMany(names()); });
+     $("collWsPick").addEventListener("change", function () {
+       var w = this.value; this.value = "";
+       if (!w) return;
+@@ -562,7 +562,12 @@
+         if (w) act({ op: "ws-add", workspace: w, names: names() }, names().length + " added to “" + w + "”");
+       });
+     });
+-    $("collWsOut").addEventListener("click", function () { act({ op: "ws-remove", workspace: state.place, names: names() }, "Taken out of “" + state.place + "”"); state.sel = {}; });
++    $("collWsOut").addEventListener("click", function () {     // HERESY 1108: more than one asks first
++      var n = names(), go = function () { act({ op: "ws-remove", workspace: state.place, names: n }, n.length + " taken out of “" + state.place + "”"); state.sel = {}; };
++      if (n.length < 2) return go();
++      ask("Take " + n.length + " takes out of “" + state.place + "”?\n\nThey stay in the library and in any other workspace; only this workspace lets them go.", { ok: "Take them out" })
++        .then(function (ok) { if (ok) go(); });
++    });
+     $("collHide").addEventListener("click", function () {
+       var show = state.place === "__hidden", n = names().length;
+       act({ op: show ? "show" : "hide", names: names() }, (show ? "Shown again: " : "Hidden from the lists (not deleted): ") + n);
+@@ -629,11 +634,33 @@
+ 
+   // HERESY 1042: likes, as SUNO has them (the player sets them)
+   function rating(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.rating || 0 : 0; }
++  // HERESY 1108: many takes rated at once; all of them rated so already: taken back to none
++  function rateMany(list, value) {
++    var rows = list.map(rowOf).filter(Boolean), all = rows.length && rows.every(function (r) { return r.rating === value; });
++    var v = all ? 0 : value, before = rows.map(function (r) { return r.rating; });
++    rows.forEach(function (r) { r.rating = v; }); paint();
++    return api("/collection", { op: "rate", names: list, value: v }).then(function (d) {
++      state.rows = d.takes || state.rows; paint();
++      toast((v > 0 ? "Liked: " : v < 0 ? "Disliked: " : "Neither liked nor disliked: ") + list.length);
++      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
++    }, function (e) { rows.forEach(function (r, i) { r.rating = before[i]; }); paint(); toast(e.message, true); });
++  }
++  function favMany(list) {
++    var takes = list.map(hk().findTake).filter(Boolean), on = takes.some(function (t) { return !t.favorite; });
++    takes.forEach(function (t) { markFavorite(t.name, on); });
++    return Promise.all(takes.map(function (t) { return hk().updateTake(t, { favorite: on }); }))
++      .then(function () { toast((on ? "Favourites: " : "Not favourites: ") + takes.length); if (state.hooks.libraryChanged) state.hooks.libraryChanged(); })
++      .catch(function (e) { toast(e.message, true); return load(); });
++  }
++  function hk() { return state.hooks; }
+   function rate(name, value) {
++    // HERESY 1107: seen at once, confirmed by the lab; a refusal takes it back (and the caller says why)
++    var r = rowOf(name), before = r ? r.rating : 0;
++    if (r) { r.rating = value; paint(); }
+     return api("/collection", { op: "rate", names: [name], value: value }).then(function (d) {
+       state.rows = d.takes || state.rows; paint();
+       return value;
+-    });
++    }, function (e) { if (r) { r.rating = before; paint(); } throw e; });
+   }
+ 
+   // ---- HERESY 1046: the take without leaving the Librarian: a hover peek (400 ms) and a sheet on click
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index d0e229a..f669a3e 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -50,10 +50,18 @@
+   // HERESY 1051: the player's own set, drawn on a 24 grid after Lucide (ISC licence, https://lucide.dev):
+   // play, pause, previous, next filled; thumbs and star as outlines that fill when pressed (.on in CSS)
+   var UI = {
+-    play: '<path class="f" d="M7 4.9v14.2a1.2 1.2 0 0 0 1.8 1l11.3-7.1a1.2 1.2 0 0 0 0-2L8.8 3.9A1.2 1.2 0 0 0 7 4.9z"/>',
+-    pause: '<rect class="f" x="6" y="4.5" width="4.2" height="15" rx="1.3"/><rect class="f" x="13.8" y="4.5" width="4.2" height="15" rx="1.3"/>',
+-    prev: '<rect class="f" x="4.5" y="5" width="2.6" height="14" rx="1"/><path class="f" d="M19.5 6.1v11.8a1 1 0 0 1-1.55.83L9.6 13a1.2 1.2 0 0 1 0-2l8.35-5.73a1 1 0 0 1 1.55.83z"/>',
+-    next: '<rect class="f" x="16.9" y="5" width="2.6" height="14" rx="1"/><path class="f" d="M4.5 6.1v11.8a1 1 0 0 0 1.55.83L14.4 13a1.2 1.2 0 0 0 0-2L6.05 5.27A1 1 0 0 0 4.5 6.1z"/>',
++    // HERESY 1106: the player's new outlines (Lucide's shapes, ISC)
++    shuffle: '<path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/>',
++    repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
++    pointer: '<path d="M14 4.1 12 6"/><path d="m5.1 8-2.9-.8"/><path d="m6 12-1.9 2"/><path d="M7.2 2.2 8 5.1"/><path d="M9.04 9.86a.5.5 0 0 1 .82-.82l9.6 9.6-4.2 1.3-2.2 3.7z"/>',
++    playon: '<path d="M3 5h12"/><path d="M3 12h9"/><path d="M3 19h6"/><path d="M17 8v12"/><path d="m13 16 4 4 4-4"/>',
++    "vol-hi": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/>',
++    "vol-lo": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/>',
++    "vol-off": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>',
++    play: '<polygon points="7 4 19 12 7 20 7 4"/>',
++    pause: '<rect x="7" y="5" width="3.2" height="14" rx="1"/><rect x="13.8" y="5" width="3.2" height="14" rx="1"/>',
++    prev: '<polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>',
++    next: '<polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>',
+     like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+     dislike: '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+     note: '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><path d="M7 12h7M7 16h5"/>',
+diff --git a/tools/console/heresy-net.js b/tools/console/heresy-net.js
+new file mode 100644
+index 0000000..5ca756c
+--- /dev/null
++++ b/tools/console/heresy-net.js
+@@ -0,0 +1,44 @@
++// HERESY 1107 (Viktor, 02.10.2026): the guard of the line. The studio may run on this very machine (127.0.0.1)
++// or far away (a laptop on a phone's connection, through a VPN, to the studio's server). The guard measures the
++// round trip to the studio every 20 s (the engine's /health, the median of the last five), says it beside the
++// server log ("Forge · 85 ms"), and lets the page lean on it: a mark (like, dislike, favourite, pin) shows at once
++// and the studio's answer only confirms it (or takes it back, said); far, patience before a silence is called a
++// failure is three times as long (HeresyNet.patience).
++(function () {
++  "use strict";
++  var LOCAL = /^(127\.|localhost$|\[::1\]$|::1$)/.test(location.hostname);
++  var S = { samples: [], rtt: null, down: false, far: !LOCAL };
++  function $(id) { return document.getElementById(id); }
++  function median(a) { var s = a.slice().sort(function (x, y) { return x - y; }); return s[Math.floor(s.length / 2)]; }
++  function paint() {
++    var el = $("netSay");
++    if (!el) return;
++    var where = LOCAL ? "here" : "Forge";
++    if (S.down) { el.textContent = where + " · no answer"; el.dataset.q = "bad"; }
++    else if (S.rtt == null) { el.textContent = where + " · …"; el.dataset.q = ""; }
++    else { el.textContent = where + " · " + Math.round(S.rtt) + " ms"; el.dataset.q = S.rtt < 60 ? "good" : S.rtt < 250 ? "slow" : "bad"; }
++    el.dataset.tip = "The line to the studio: the round trip, the middle of the last five (every 20 s). " +
++      (S.far ? "Far: marks show at once and the studio confirms them; the page waits longer before it calls a silence a failure."
++             : "Near: the studio answers at once.");
++  }
++  function ping() {
++    var t0 = performance.now();
++    return fetch("/health?_=" + Date.now(), { cache: "no-store" }).then(function (r) {
++      return r.text().then(function () {
++        S.samples.push(performance.now() - t0);
++        if (S.samples.length > 5) S.samples.shift();
++        S.rtt = median(S.samples); S.down = false;
++        S.far = !LOCAL || S.rtt > 25;
++        paint();
++      });
++    }).catch(function () { S.down = true; paint(); });
++  }
++  function patience(ms) { return S.far ? ms * 3 : ms; }
++  window.HeresyNet = { far: function () { return S.far; }, rtt: function () { return S.rtt; }, patience: patience, ping: ping };
++  function start() {
++    paint(); ping();
++    setInterval(function () { if (!document.hidden) ping(); }, 20000);
++    document.addEventListener("visibilitychange", function () { if (!document.hidden) ping(); });
++  }
++  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index eb5950e..469b718 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -830,31 +830,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <div class="write-cur"><span class="label">Score <em>the key, meter and tempo the style must agree with</em></span><p class="mono" id="curScore"></p></div>
+         <div class="write-cur"><span class="label">Lyrics <em id="curLyricsSize"></em></span><pre id="curLyrics"></pre></div>
+       </section>
+-      <!-- HERESY 1043: text profiles — rules and shape, with a live preview -->
+-      <details class="drawer tp-editor" id="tpEditor">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Text profiles</span><span class="sum-say">How a pasted text is made ready to read: replacement rules in order (literal or regular expression), then the shape — [Intro], [Verse] at blank lines, [Interlude] after long paragraphs. Applied from the Lyrics field.</span></span></summary>
+-        <div class="drawer-body">
+-          <div class="lib-row">
+-            <select id="tpEdPick" aria-label="Profile to edit"></select>
+-            <input type="text" id="tpEdName" placeholder="Save as…" />
+-            <button type="button" class="btn ghost small" id="tpEdSave">Save</button>
+-            <button type="button" class="btn ghost small danger" id="tpEdDel">Delete</button>
+-          </div>
+-          <div class="tp-shape" id="tpShape"></div>
+-          <div class="tp-rules-wrap"><table class="tp-rules" id="tpRules"></table></div>
+-          <button type="button" class="btn ghost small" id="tpAddRule">+ Rule</button>
+-          <div class="tp-test">
+-            <label class="field"><span class="label">Try it <button type="button" class="btn ghost small" id="tpFromLyrics">from Lyrics</button></span>
+-              <textarea id="tpTestIn" rows="6" spellcheck="false" placeholder="Paste a piece of text"></textarea></label>
+-            <div class="field"><span class="label">Comes out</span><pre class="tp-out" id="tpTestOut"></pre><pre class="tp-log mono" id="tpTestLog"></pre></div>
+-          </div>
+-        </div>
+-      </details>
+       <div class="write-room">
+     <!-- HERESY 1010: YuE2 Studio's songwriting assistant (heresy-assist.js), with the current song as context -->
+     <details class="drawer" id="assistDrawer" open>
+       <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Writing room</span><span class="sum-say">The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.</span></span></summary>
+       <div class="drawer-body assist">
++        <p class="assist-line" id="assistLine" data-s="">Asking the chat server…</p>   <!-- HERESY 1110 -->
+         <label class="field">
+           <span class="label">What's the song about? <em>or what to change</em></span>
+           <textarea id="assistBrief" rows="4" placeholder="Build an arc for every section from the style and the lyrics; keep my words."></textarea>
+@@ -912,6 +893,26 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <details class="assist-raw is-hidden" id="assistRaw"><summary>Raw response</summary><pre class="mono" id="assistRawText"></pre></details>
+       </div>
+     </details>
++      <!-- HERESY 1043: text profiles — rules and shape, with a live preview -->
++      <details class="drawer tp-editor" id="tpEditor">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Text profiles</span><span class="sum-say">How a pasted text is made ready to read: replacement rules in order (literal or regular expression), then the shape — [Intro], [Verse] at blank lines, [Interlude] after long paragraphs. Applied from the Lyrics field.</span></span></summary>
++        <div class="drawer-body">
++          <div class="lib-row">
++            <select id="tpEdPick" aria-label="Profile to edit"></select>
++            <input type="text" id="tpEdName" placeholder="Save as…" />
++            <button type="button" class="btn ghost small" id="tpEdSave">Save</button>
++            <button type="button" class="btn ghost small danger" id="tpEdDel">Delete</button>
++          </div>
++          <div class="tp-shape" id="tpShape"></div>
++          <div class="tp-rules-wrap"><table class="tp-rules" id="tpRules"></table></div>
++          <button type="button" class="btn ghost small" id="tpAddRule">+ Rule</button>
++          <div class="tp-test">
++            <label class="field"><span class="label">Try it <button type="button" class="btn ghost small" id="tpFromLyrics">from Lyrics</button></span>
++              <textarea id="tpTestIn" rows="6" spellcheck="false" placeholder="Paste a piece of text"></textarea></label>
++            <div class="field"><span class="label">Comes out</span><pre class="tp-out" id="tpTestOut"></pre><pre class="tp-log mono" id="tpTestLog"></pre></div>
++          </div>
++        </div>
++      </details>
+ 
+       </div>
+     </div>
+@@ -1245,7 +1246,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <button type="button" class="btn ghost small" id="collSelAll">Select all shown</button>
+           <button type="button" class="btn ghost small" id="collSelNone">Clear</button>
+           <span class="coll-sep"></span>
+-          <button type="button" class="btn ghost small" id="collFav">★</button>
++          <button type="button" class="btn ghost small" id="collLike" aria-label="Like the checked" data-tip="Like every checked take (all liked already: taken back)">👍</button>
++          <button type="button" class="btn ghost small" id="collDislike" aria-label="Dislike the checked" data-tip="Dislike every checked take (all disliked already: taken back)">👎</button>
++          <button type="button" class="btn ghost small" id="collFav" aria-label="Favourite the checked" data-tip="Favourite every checked take (all favourites already: taken back)">★</button>
+           <select id="collWsPick" aria-label="Add to workspace"></select>
+           <select id="collWsMove" aria-label="Move to workspace" title="Into that workspace and out of this one (out of every other when you are in All Workspaces)"></select>
+           <button type="button" class="btn ghost small" id="collWsOut">Take out of this workspace</button>
+@@ -1303,46 +1306,44 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+ <!-- ---------------------------------------------------------------- playbar -->
+ <footer class="playbar is-empty" id="playbar">
++  <!-- HERESY 1106 (Viktor): the player of fosforida.quest, ours inside: the waveform across, then the take, the controls, the rest -->
++  <canvas id="wave" height="52"></canvas>
++  <div class="pb-row">
+   <div class="playbar-id">
+-    <strong id="playbarTitle" data-tip="Pick a take on the right">Nothing loaded</strong>
+-    <!-- HERESY 1042: like, dislike and favourite for what plays, as SUNO has them -->
++    <div class="pb-cover" id="pbCover" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
++    <div class="pb-names"><strong id="playbarTitle" data-tip="Pick a take on the right">Nothing loaded</strong><span class="pb-sub" id="playbarSub"></span></div>
+     <span class="pb-rate" id="pbRate" hidden>
+       <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-tip="Like" data-ui="like">👍</button>
+       <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-tip="Dislike" data-ui="dislike">👎</button>
+       <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-tip="Keep as a favourite" data-ui="star">☆</button>
+     </span>
+   </div>
+-
+-  <!-- HERESY 1009: previous and next take in the list, and play-on down the list -->
+-  <button type="button" class="icon-btn skip-btn" id="prevTake" aria-label="Previous take" data-tip="The take above in the list" data-ui="prev">⏮</button>
+-  <button class="play" id="playBtn" aria-label="Play"><span id="playGlyph">▶</span>
+-    <!-- drawn play and pause icons, shown by the DMM theme -->
+-    <svg class="play-icon play-icon-play" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" /></svg>
+-    <svg class="play-icon play-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1" /><rect x="6" y="4" width="4" height="16" rx="1" /></svg></button>
+-
+-  <button type="button" class="icon-btn skip-btn" id="nextTake" aria-label="Next take" data-tip="The take below in the list" data-ui="next">⏭</button>
+-  <span class="mono time" id="timeNow">0:00</span>
+-  <canvas id="wave" height="40"></canvas>
+-  <span class="mono time dim" id="timeTotal">0:00</span>
+-
+-  <!-- HERESY 1040: a click in the list plays the take at once (on by default), or only opens it -->
+-  <button type="button" class="btn ghost small autoplay-btn" id="clickPlay" aria-pressed="true"
+-    data-tip="Play on click: a click on a take in the list plays it at once. Off: a click only opens it, and what plays keeps playing.">▶ on click</button>
+-  <button type="button" class="btn ghost small autoplay-btn" id="autoplay" aria-pressed="true"
+-    data-tip="Play on: when a take ends, the next one down the list starts, into the history. Click to stop after each take.">↓ Play on</button>
+-
+-  <!-- HERESY 1101 (Viktor, 02.10.2026): the speed of listening, 0.5 to 2, the pitch kept -->
+-  <select class="speed-pick mono" id="playSpeed" aria-label="Playback speed" data-tip="Playback speed: slower to hear a detail, faster to skim; the pitch stays">
+-    <option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option>
+-  </select>
+-
+-  <div class="volume">
+-    <button class="icon-btn" id="muteBtn" aria-label="Mute"><span id="muteGlyph">🔊</span></button>
+-    <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
++  <div class="pb-ctrl">
++    <button type="button" class="icon-btn pb-tog" id="pbShuffle" aria-pressed="false" aria-label="Shuffle" data-tip="Shuffle: the next take is any of the list, not the one below" data-ui="shuffle">⤮</button>
++    <button type="button" class="icon-btn skip-btn" id="prevTake" aria-label="Previous take" data-tip="The take above in the list" data-ui="prev">⏮</button>
++    <button class="play" id="playBtn" aria-label="Play"><span id="playGlyph">▶</span>
++      <svg class="play-icon play-icon-play" viewBox="0 0 24 24" aria-hidden="true"><polygon points="7 4 19 12 7 20 7 4" /></svg>
++      <svg class="play-icon play-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.2" height="14" rx="1" /><rect x="13.8" y="5" width="3.2" height="14" rx="1" /></svg></button>
++    <button type="button" class="icon-btn skip-btn" id="nextTake" aria-label="Next take" data-tip="The take below in the list" data-ui="next">⏭</button>
++    <button type="button" class="icon-btn pb-tog" id="pbRepeat" aria-pressed="false" data-mode="off" aria-label="Repeat" data-tip="Repeat: off · the list again from the top · this take again and again" data-ui="repeat">⟳</button>
++  </div>
++  <div class="pb-side">
++    <span class="mono time"><span id="timeNow">0:00</span> <span class="dim">/</span> <span class="dim" id="timeTotal" data-tip="Click: the time left, or the whole length">0:00</span></span>
++    <!-- HERESY 1040: a click in the list plays the take at once (on by default), or only opens it -->
++    <button type="button" class="icon-btn pb-tog autoplay-btn" id="clickPlay" aria-pressed="true" aria-label="Play on click"
++      data-tip="Play on click: a click on a take in the list plays it at once. Off: a click only opens it, and what plays keeps playing." data-ui="pointer">▶</button>
++    <button type="button" class="icon-btn pb-tog autoplay-btn" id="autoplay" aria-pressed="true" aria-label="Play on"
++      data-tip="Play on: when a take ends, the next one down the list starts, into the history. Click to stop after each take." data-ui="playon">↓</button>
++    <select class="speed-pick mono" id="playSpeed" aria-label="Playback speed" data-tip="Playback speed: slower to hear a detail, faster to skim; the pitch stays">
++    <option value="0.5">0.50×</option><option value="0.75">0.75×</option><option value="1" selected>1.00×</option><option value="1.25">1.25×</option><option value="1.5">1.50×</option><option value="1.75">1.75×</option><option value="2">2.00×</option>
++    </select>
++    <div class="volume">
++      <button class="icon-btn" id="muteBtn" aria-label="Mute"><span id="muteGlyph">🔊</span></button>
++      <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
++    </div>
++    <button type="button" class="status-pill" id="statusPill" data-s="idle" data-tip="Nothing is being made or played"><span class="status-dot" aria-hidden="true"></span><span id="statusText" aria-live="polite">Idle</span></button>
++  </div>
+   </div>
+-
+-  <button type="button" class="status-pill" id="statusPill" data-s="idle" data-tip="Nothing is being made or played"><span class="status-dot" aria-hidden="true"></span><span id="statusText" aria-live="polite">Idle</span></button>
+-
+   <audio id="audio" preload="auto"></audio>
+ </footer>
+ 
+@@ -1351,7 +1352,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ <aside class="log-dock is-folded" id="logDock" aria-label="Server log">
+   <div class="log-dock-head">
+     <button type="button" class="log-dock-tab" id="logDockTab" aria-expanded="false" data-tip="The server log, in every room: click to unfold or fold">
+-      <span class="lamp" id="logDockLamp"></span><b>Server log</b><span class="log-dock-last mono" id="logDockLast">connecting</span></button>
++      <span class="lamp" id="logDockLamp"></span><b>Server log</b><span class="net-say mono" id="netSay"></span><span class="log-dock-last mono" id="logDockLast">connecting</span></button>
+     <span class="log-dock-acts">
+       <label class="check small-check"><input type="checkbox" id="logDockFollow" checked /> <span>Follow</span></label>
+       <button type="button" class="btn ghost small" id="logDockCopy">Copy</button>
+@@ -1497,6 +1498,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ <script src="heresy-gpus.js"></script>
+ <script src="heresy-guide.js"></script>
+ <script src="heresy-daw.js"></script>
++<script src="heresy-net.js"></script>
+ <script src="heresy-instruments.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+-- 
+2.43.0
+

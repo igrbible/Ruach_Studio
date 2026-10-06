@@ -1,0 +1,192 @@
+From f571f1fdb1752b117d2dbb47c8fb85ff781a954c Mon Sep 17 00:00:00 2001
+From: Prometheus2 <noreply@anthropic.com>
+Date: Wed, 30 Sep 2026 09:38:45 -0600
+Subject: [PATCH 1001/1177] Limits for eight-minute songs: engine and page in
+ step
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Слово Виктора 30.09.2026: «8 минут мне нужно… По ABC 4096 мало, я
+убедился. 6144 — норм. 8192 — слишком много для ctx модели в 24K».
+И: «лимиты нужно поднимать наравне с кодом движка».
+
+  партитура (ABC)   max_tokens  4096 → 6144
+  звук (semantic)   max_tokens  9000 → 12000   = 8:00 при 25 кадрах
+  длина             duration    360  → 480
+
+⛔ ПОЧЕМУ В ДВИЖКЕ, А НЕ ТОЛЬКО НА СТРАНИЦЕ. Страница берёт дефолты
+сперва из /props сервера, и лишь без него — свои (app.js: «/props
+replaces them»). Сервер отдаёт их из sampling.h и request.cpp. Правка
+одной страницы не изменила бы ничего: замер /props до правки —
+4096 / 9000 / 360. Страничные фолбэки подняты вровень, чтобы не
+расходились.
+
+⛔ БЮДЖЕТ ПРОМПТА СЧИТАЕТСЯ ИЗ ЖИВЫХ РУЧЕК. В help.js стояло
+«24576 - 4096 - 9000 - 80» — константой, из старых лимитов. С новыми
+на стиль и лирику остаётся 6352 токена, а не 11400: счётчик обещал
+бы вдвое больше места и предупреждал бы слишком поздно. Теперь бюджет
+читается из текущих значений ручек max_tokens, и звук зажимается
+длиной песни — ровно так, как его зажимает движок (pipeline.h:464).
+Проверено пятью случаями, включая пустые поля.
+
+Подсказки (i) поправлены: «default 4096, ample for a long song» было
+неправдой — 4096 обрезало длинные партитуры.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/request.cpp            |   2 +-
+ src/request.h              |   2 +-
+ src/sampling.h             |   7 +++++--
+ tools/console/app.js       |   6 +++---
+ tools/console/help.js      |  38 +++++++++++++++++++++++++------------
+ tools/public/index.html.gz | Bin 212010 -> 212335 bytes
+ 6 files changed, 36 insertions(+), 19 deletions(-)
+
+diff --git a/src/request.cpp b/src/request.cpp
+index 34c631e..46861bf 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -23,7 +23,7 @@ void request_init(Yue2Request * r) {
+     r->abc    = "";
+     r->cot    = "full";
+ 
+-    r->duration         = 360.0f;
++    r->duration         = 480.0f;  // HERESY 1001: 8:00 = 12000 токенов звука
+     r->lm_seed          = -1;
+     r->seed             = -1;
+     r->steps            = 32;
+diff --git a/src/request.h b/src/request.h
+index 7ec5c3d..fb15274 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -40,7 +40,7 @@ struct Yue2Request {
+ 
+     // target length in seconds, the budget the semantic stage stops at. The
+     // preset of the stage caps it, so the shorter of the two wins.
+-    float duration;  // 360
++    float duration;  // 480 (HERESY 1001)
+ 
+     // generation. Two seeds: the token draw consumes lm_seed as a Philox key,
+     // the acoustic noise consumes seed as an mt19937 seed. Splitting them is
+diff --git a/src/sampling.h b/src/sampling.h
+index 3d59e92..72b4840 100644
+--- a/src/sampling.h
++++ b/src/sampling.h
+@@ -43,8 +43,11 @@ static bool yue2_sampling_valid(const Yue2Sampling & s, const char * stage) {
+ }
+ 
+ // Checkpoint native defaults (YuE2-3B/yue2_generation_config.json)
+-static const Yue2Sampling YUE2_ABC_SAMPLING      = { 0.7f, 0.9f, 30, 1.005f, 100, 32, 4096 };
+-static const Yue2Sampling YUE2_SEMANTIC_SAMPLING = { 1.0f, 0.95f, 100, 1.2f, 50, 200, 9000 };
++// HERESY 1001: max_tokens 4096 → 6144 (партитура), 9000 → 12000 (звук, 8:00).
++// 6144 + 12000 + ~80 служебных оставляют ~6350 токенов на стиль и лирику в
++// окне 24576. 8192 на партитуру съело бы лирику — проверено Виктором.
++static const Yue2Sampling YUE2_ABC_SAMPLING      = { 0.7f, 0.9f, 30, 1.005f, 100, 32, 6144 };
++static const Yue2Sampling YUE2_SEMANTIC_SAMPLING = { 1.0f, 0.95f, 100, 1.2f, 50, 200, 12000 };
+ 
+ struct Yue2Candidate {
+     int   id;
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 9af7fd9..adc0f43 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -79,9 +79,9 @@
+ 
+   // The fallbacks are the protocol's own values; /props replaces them.
+   var PROTOCOL_DEFAULTS = {
+-    cot: "full", duration: 360, steps: 32, peak_clip: 10, mp3_bitrate: 128, output_format: "mp3",
+-    abc_sampling: { temperature: 0.7, top_p: 0.9, top_k: 30, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 32, max_tokens: 4096 },
+-    semantic_sampling: { temperature: 1.0, top_p: 0.95, top_k: 100, repetition_penalty: 1.2, penalty_window: 50, min_tokens: 200, max_tokens: 9000 }
++    cot: "full", duration: 480, steps: 32, peak_clip: 10, mp3_bitrate: 128, output_format: "mp3",
++    abc_sampling: { temperature: 0.7, top_p: 0.9, top_k: 30, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 32, max_tokens: 6144 },
++    semantic_sampling: { temperature: 1.0, top_p: 0.95, top_k: 100, repetition_penalty: 1.2, penalty_window: 50, min_tokens: 200, max_tokens: 12000 }
+   };
+ 
+   var FRAME_RATE = 25;    // music tokens per second of audio
+diff --git a/tools/console/help.js b/tools/console/help.js
+index e6baff1..be63b50 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -57,7 +57,7 @@
+     shapeStyle: "Sets Guidance (CFG) from 0.85 to 1.15. Higher follows the style and lyrics more strongly; " +
+       "any setting except the middle runs the music stage at half speed.",
+     odeSteps: ODE,
+-    maxLength: "A ceiling on the song's length in seconds (360 by default): the music stage stops at 25 tokens per second of this. " +
++    maxLength: "A ceiling on the song's length in seconds (480 by default): the music stage stops at 25 tokens per second of this. " +
+       "The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).",
+     variations: "Renders the same music up to 9 times with different sound seeds (seed, seed + 1, …) in one pass. " +
+       "The music is written once, so this is a cheap way to pick the best-sounding render of a song you like.",
+@@ -153,7 +153,7 @@
+         "The planner rarely loops, so leave it.",
+       penalty_window: "How many recent tokens the repetition penalty looks back over (default 100).",
+       min_tokens: "The score cannot end before this many tokens (default 32).",
+-      max_tokens: "The longest score, in tokens (default 4096, ample for a long song). A score cut off here cannot be used."
++      max_tokens: "The longest score, in tokens (default 6144: 4096 cut long scores short; 8192 leaves the lyrics too little room). A score cut off here cannot be used."
+     },
+     semantic: {
+       temperature: "Randomness of the music (default 1.0). Lower (0.9–0.95) gives a steadier delivery and helps when words come out garbled; " +
+@@ -164,7 +164,7 @@
+         "to avoid getting stuck in loops; much higher makes it restless.",
+       penalty_window: "How many recent music tokens the repetition penalty looks back over (default 50; the C++ server allows up to 100).",
+       min_tokens: "The song cannot end before this many music tokens. There are 25 per second, so the default 200 is 8 seconds.",
+-      max_tokens: "The longest song, in music tokens: 25 per second, so the default 9000 is 6:00. A song cut off here is marked truncated."
++      max_tokens: "The longest song, in music tokens: 25 per second, so the default 12000 is 8:00. A song cut off here is marked truncated."
+     }
+   };
+ 
+@@ -241,9 +241,23 @@
+   }
+ 
+   // ------------------------------------------------------------ prompt size
+-  // What fits: 24,576 context tokens minus the longest score (4,096) and song (9,000) and the
+-  // instruction and markers; the rest is shared by style and lyrics.
+-  var PROMPT_BUDGET = 24576 - 4096 - 9000 - 80;
++  // What fits: 24,576 context tokens minus the longest score and song and the instruction and
++  // markers; the rest is shared by style and lyrics.
++  // HERESY 1001: read from the live knobs, not from constants. The old line was
++  // 24576 - 4096 - 9000 - 80 while the engine defaults moved on, so the meter promised
++  // style and lyrics nearly twice the room they had, and warned too late. The song budget
++  // is also capped by the requested length (25 tokens a second), exactly as the engine caps it.
++  function knobTokens(group, fallback) {
++    var el = document.querySelector('input[data-group="' + group + '"][data-key="max_tokens"]');
++    var v = el ? parseInt(el.value, 10) : NaN;
++    return isFinite(v) && v > 0 ? v : fallback;
++  }
++  function promptBudget() {
++    var song = knobTokens("semantic", 12000), len = document.getElementById("maxLength");
++    var secs = len ? parseFloat(len.value) : NaN;
++    if (isFinite(secs) && secs > 0) song = Math.min(song, Math.round(secs * 25));
++    return 24576 - knobTokens("abc", 6144) - song - 80;
++  }
+ 
+   // An estimate without the tokenizer: English runs about 3.6 characters a token, other scripts ~1
+   function estimateTokens(text) {
+@@ -257,12 +271,12 @@
+   function paintMeter() {
+     var style = document.getElementById("style"), lyrics = document.getElementById("lyrics"), out = document.getElementById("styleMeter");
+     if (!style || !out) return;
+-    var s = estimateTokens(style.value), both = s + (lyrics ? estimateTokens(lyrics.value) : 0);
++    var s = estimateTokens(style.value), both = s + (lyrics ? estimateTokens(lyrics.value) : 0), budget = promptBudget();
+     out.textContent = style.value.length.toLocaleString() + " characters, about " + s.toLocaleString() + " tokens. " +
+-      "Style and lyrics together: about " + both.toLocaleString() + " of " + PROMPT_BUDGET.toLocaleString() + " tokens" +
+-      (both > PROMPT_BUDGET ? " \u2014 too long for a full-length song and score." : ".");
+-    out.classList.toggle("is-warn", both > PROMPT_BUDGET * 0.75 && both <= PROMPT_BUDGET);
+-    out.classList.toggle("is-over", both > PROMPT_BUDGET);
++      "Style and lyrics together: about " + both.toLocaleString() + " of " + budget.toLocaleString() + " tokens" +
++      (both > budget ? " \u2014 too long for a full-length song and score." : ".");
++    out.classList.toggle("is-warn", both > budget * 0.75 && both <= budget);
++    out.classList.toggle("is-over", both > budget);
+   }
+ 
+   function growBox(box) {
+@@ -308,5 +322,5 @@
+   else start();
+ 
+   root.YueHelp = { decorate: decorate, missing: missing, text: HELP, knobs: KNOBS, estimateTokens: estimateTokens,
+-    promptBudget: PROMPT_BUDGET };
++    promptBudget: promptBudget };
+ })(window);
+-- 
+2.43.0
+

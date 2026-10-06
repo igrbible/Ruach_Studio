@@ -1,0 +1,182 @@
+From 4232d0eff3e907da0d9586d7bd203d787005cdfa Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 12:39:14 -0600
+Subject: [PATCH 1153/1177] HERESY 1167: the Writer's runs on the 27B and on
+ DeepSeek flash, and what they showed
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026: «подыму vLLM… и прогонишь Писателя снова по всем возможным цепочкам и вариациям»; «Возьми так же для
+проб openrouter, deepseek flash». Fourteen steps (a draft, applied, reviewed, its style; a duet; a reading; the shofar; a
+probed style; a child's voice; «orchestral»; a cover against a score; three one-line ideas), checked against the charter.
+
+- The Creator's idea writer: its prompt was the Kit's own and knew nothing of the probes: it now gets the charter's
+  knowledge (the findings, the instruments heard and not, the adapters, the styles, the voices).
+- The idea writer said «did not return usable JSON» with the 27B: asked with the brief's JSON schema, that model on
+  vLLM answers {"{"title":… (measured with and without the knowledge). A broken answer is read leniently now, and when
+  that fails, the request goes once more without the schema.
+- The Writer: a model that thinks before it answers spent all 8192 tokens on thinking (no draft): once, the request
+  goes again with twice the room, up to 32768 (the cover adaptation then passed every check).
+- The charter: a duet names each part's voice at its section's start, as his lyrics do («(Male Vocal)»); a reading's
+  notes must say a real reader's adapter is needed (a 27B draft had left it out); a probed style used in a draft is
+  named in the notes as not yet judged by ear.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js           | 54 +++++++++++++++++++++++++++++-----
+ tools/console/heresy-assist.js | 22 +++++++++-----
+ 2 files changed, 61 insertions(+), 15 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 1b15bd3..6358262 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5397,6 +5397,24 @@
+     return lines.join("\n");
+   }
+ 
++  // HERESY 1167: a brief out of an answer that is not clean JSON (guided decoding on vLLM gave {"{"title":… with the 27B):
++  // the first object inside it that parses and has a title, a style or lyrics; null when there is none
++  function looseBrief(text) {
++    var s = stripThinking(String(text || ""));
++    try { return JSON.parse(s); } catch (error) { /* read it leniently below */ }
++    var ends = [];
++    for (var j = s.length - 1; j >= 0 && ends.length < 6; j--) if (s.charAt(j) === "}") ends.push(j);
++    for (var i = s.indexOf("{"), tries = 0; i >= 0 && tries < 40; i = s.indexOf("{", i + 1), tries++) {
++      for (var k = 0; k < ends.length; k++) {
++        if (ends[k] <= i) continue;
++        try {
++          var o = JSON.parse(s.slice(i, ends[k] + 1));
++          if (o && typeof o === "object" && (o.title || o.style || o.lyrics)) return o;
++        } catch (error) { /* the next end */ }
++      }
++    }
++    return null;
++  }
+   function stripThinking(text) {
+     var open = "<think>", close = "</think>";
+     while (text.indexOf(open) >= 0 && text.indexOf(close) > text.indexOf(open)) {
+@@ -5616,12 +5634,17 @@
+     var ticker = setInterval(function () {
+       $("museStatus").textContent = "writing… " + Math.round((Date.now() - started) / 1000) + "s";
+     }, 1000);
+-    var messages = [{ role: "system", content: MUSE_SYSTEM },
++    // HERESY 1167 (Viktor: «И в LLM ты уже дописал в устав всё то, что мы получили по нашим пробам?»): what the Writer's
++    // charter knows of this engine, after the idea writer's own rules (a brief here has no notes: what would go there stays out)
++    var known = window.HeresyAssist && window.HeresyAssist.knowledge ? window.HeresyAssist.knowledge() : "";
++    var messages = [{ role: "system", content: MUSE_SYSTEM + (known ? "\n\nWHAT THIS STUDIO KNOWS OF ITS ENGINE\n" +
++                      "(A brief here has only title, style and lyrics: whatever the notes below would say goes nowhere; keep to the rules.)\n" +
++                      known : "") },
+                     { role: "user", content: "Idea: " + idea + structureRequest($("structure").value) }];
+-    var retried = false, finishReason = null;
++    var retried = false, finishReason = null, schema = MUSE_SCHEMA;
+ 
+     function ask(history) {
+-      return chatComplete(history, model, 4096, MUSE_SCHEMA).then(function (response) {
++      return chatComplete(history, model, 4096, schema).then(function (response) {
+         var choice = (response.choices || [])[0] || {};
+         finishReason = choice.finish_reason || finishReason;
+         return (choice.message || {}).content || "";
+@@ -5635,9 +5658,16 @@
+       model = status.use;
+       return ask(messages);
+     }).then(function (content) {
+-      var parsed;
+-      try { parsed = JSON.parse(stripThinking(content)); }
+-      catch (error) { throw new Error("The writer did not return usable JSON. Try again, or load another model."); }
++      var parsed = looseBrief(content);
++      if (parsed) return { parsed: parsed, content: content };
++      schema = null;                     // HERESY 1167: a broken guided answer: once more, the same request free
++      return ask(messages).then(function (content2) {
++        var parsed2 = looseBrief(content2);
++        if (!parsed2) throw new Error("The writer did not return usable JSON. Try again, or load another model.");
++        return { parsed: parsed2, content: content2 };
++      });
++    }).then(function (got) {
++      var parsed = got.parsed, content = got.content;
+       // Section tags are what YuE2 reads as structure. Smaller writers drop them,
+       // so check and give the model one corrective pass before accepting the brief.
+       var note = null;
+@@ -5649,7 +5679,8 @@
+       if (!note) return parsed;
+       retried = true;
+       return ask(messages.concat([{ role: "assistant", content: content }, { role: "user", content: note }])).then(function (content2) {
+-        var parsed2 = JSON.parse(stripThinking(content2));
++        var parsed2 = looseBrief(content2);
++        if (!parsed2) return parsed;
+         var better = hasSections(parsed2.lyrics || "") &&
+           findCliches(parsed2.lyrics || "").length <= findCliches(parsed.lyrics || "").length;
+         return better ? parsed2 : parsed;
+@@ -6929,6 +6960,15 @@
+           model = status.use;
+           return chatComplete(messages, model, max, null, temperature);
+         });
++      // HERESY 1167: a model that thinks before it answers (Qwen on vLLM, DeepSeek on OpenRouter) can spend the whole
++      // output on its thinking and give no draft: once, the same request with twice the room (up to 32768)
++      ask = ask.then(function (response) {
++        var choice = (response.choices || [])[0] || {};
++        if (choice.finish_reason !== "length" || A.parse(stripThinking(((choice.message || {}).content) || "")) || max >= 32768) return response;
++        max = Math.min(32768, max * 2);
++        return $("assistProvider").value === "openrouter" ? openRouterComplete(messages, max, temperature)
++          : chatComplete(messages, model, max, null, temperature);
++      });
+       ask.then(function (response) {
+         var choice = (response.choices || [])[0] || {};
+         var text = stripThinking(((choice.message || {}).content) || "");
+diff --git a/tools/console/heresy-assist.js b/tools/console/heresy-assist.js
+index 41bf98c..c0aa2ca 100644
+--- a/tools/console/heresy-assist.js
++++ b/tools/console/heresy-assist.js
+@@ -48,7 +48,9 @@
+     "\"Orchestral\" before an instrument's name brings a whole orchestra and loses the instrument (asked for orchestral",
+     "crash cymbals, it played an orchestra): name the instrument alone when it must be heard.",
+     "Give the lyrics as much text as the length needs, about two words a second: a text that runs out is sung or read",
+-    "again from the top, or the voice goes on with words of its own (56 voice probes on two lines, 05.10.2026)."
++    "again from the top, or the voice goes on with words of its own (56 voice probes on two lines, 05.10.2026).",
++    "In a duet or a dialogue, name each part's voice on the first line of its section, in round brackets, the way this",
++    "studio's own lyrics do: (Male Vocal), (Female Vocal), (Male and Female Vocal, together); and say the duet in the style."
+   ].join("\n");
+ 
+   var TASKS = [
+@@ -111,8 +113,8 @@
+       // HERESY 1167 (Viktor 05.10.2026: «Сразу гони их в 💎 Musical Styles без моей прослушки»)
+       (probed.length ? "\n\nSTYLES PROBED, NOT YET HEARD BY EAR\n" +
+       "Two-minute probes of these stand among the kept styles, made from each genre's usual words, but no ear has judged\n" +
+-      "them yet. Use them as ordinary genre words; prefer a heard style when it fits the brief, and say in notes when the\n" +
+-      "draft leans on one of these:\n" + probed.join(";\n") + "." : "");
++      "them yet. Use them as ordinary genre words and prefer a heard style when it fits the brief. When the style you write\n" +
++      "names one of these, the notes must say so: its probe is kept, its sound not yet judged by ear:\n" + probed.join(";\n") + "." : "");
+   }
+   function voices() {
+     var H = window.HeresyInstruments, all = H && H.voices ? H.voices() : [];
+@@ -138,10 +140,11 @@
+       "quiet low drone behind keeps it a voice-centric mix.\n" +
+       "Lyrics then hold the text to be read, enough of it for the length (about two words a second).\n" +
+       // HERESY 1167 (Viktor 05.10.2026: «Нужны адаптеры реальных чтецких голосов, потому что YuE2 всё равно так или иначе
+-      // на музыку их ложит»)
+-      "A clean reading over a musical accompaniment needs a real reader's voice adapter (a LoRA of a reader): without one\n" +
+-      "YuE2 lays any voice onto music, one way or another. Say so in notes when a brief asks for a reading, and that the\n" +
+-      "result is subject to close prompt tuning, seed excavation and the listener's evaluation.";
++      // на музыку их ложит»): the recipe's last step, a thing the notes must carry (a 27B draft left it out when it stood apart)
++      "And the last step of every reading, never left out: the notes must say plainly that a clean reading over music\n" +
++      "needs a real reader's voice adapter (a LoRA of a reader), which this studio does not have yet; without one YuE2 lays\n" +
++      "the voice onto music, one way or another; and that the result is subject to close prompt tuning, seed excavation\n" +
++      "and the listener's evaluation.";
+   }
+ 
+   function system(preferences) {
+@@ -174,5 +177,8 @@
+     }
+   }
+ 
+-  window.HeresyAssist = { SONGWRITER: SONGWRITER, TASKS: TASKS, CHIPS: CHIPS, system: system, user: user, parse: parse, abcHeader: abcHeader };
++  // HERESY 1167: what this studio knows of its engine, for the Creator's idea writer too (its own prompt is the Kit's)
++  function knowledge() { return HERESY_ADDENDUM + heard() + unheard() + adapters() + styles() + voices(); }
++  window.HeresyAssist = { SONGWRITER: SONGWRITER, TASKS: TASKS, CHIPS: CHIPS, system: system, user: user, parse: parse, abcHeader: abcHeader,
++                          knowledge: knowledge };
+ })();
+-- 
+2.43.0
+

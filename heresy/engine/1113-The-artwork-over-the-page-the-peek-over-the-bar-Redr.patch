@@ -1,0 +1,321 @@
+From e8c65bf2fafe0e2f316c6b666dd8305dbbc4bc30 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 12:29:28 -0600
+Subject: [PATCH 1113/1177] =?UTF-8?q?The=20artwork=20over=20the=20page;=20?=
+ =?UTF-8?q?the=20peek=20over=20the=20bar;=20Redraw=20artwork=20(1155):=20t?=
+ =?UTF-8?q?he=20card's=20picture,=20the=20player's=20square=20and=20Open?=
+ =?UTF-8?q?=20the=20artwork=20show=20the=20whole=20picture=20over=20the=20?=
+ =?UTF-8?q?studio,=20the=20player=20free=20below=20it=20(=E2=80=B9=20?=
+ =?UTF-8?q?=E2=80=BA=20and=20the=20arrows=20walk=20the=20cards'=20pictures?=
+ =?UTF-8?q?,=20=E2=96=B6=20plays=20the=20take,=20Esc=20closes),=20never=20?=
+ =?UTF-8?q?a=20new=20tab;=20the=20take's=20menu=20says=20Draw=20artwork,?=
+ =?UTF-8?q?=20or=20Open=20the=20artwork=20and=20Redraw=20artwork=20once=20?=
+ =?UTF-8?q?there=20is=20one;=20the=20page=20asks=20every=2020=20s=20which?=
+ =?UTF-8?q?=20takes=20have=20pictures=20and=20puts=20new=20ones=20on=20the?=
+ =?UTF-8?q?=20cards=20in=20place;=20the=20peek=20from=20the=20window's=20t?=
+ =?UTF-8?q?op=20over=20the=20bar,=20no=20lower=20than=20where=20the=20card?=
+ =?UTF-8?q?s=20begin,=20the=20style=20in=20three=20lines,=20a=20run=20of?=
+ =?UTF-8?q?=20bare=20section=20tags=20on=20one=20line?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  34 ++++++++++
+ tools/console/app.js               | 101 ++++++++++++++++++++++++++---
+ tools/console/heresy-collection.js |  53 ++++++++++++---
+ 3 files changed, 170 insertions(+), 18 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 4eb3df4..7622acf 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2247,6 +2247,14 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .peek-style { color: var(--ink); }
+ .peek-lyrics { margin: 2px 0 0; white-space: pre-wrap; font: inherit; color: var(--ink); line-height: 1.35; }
+ .peek-note { font-style: italic; color: var(--muted); }
++/* HERESY 1155: over the bar and short (its height set from where the cards begin): the style in three lines, the note
++   in two; what does not fit fades out at the foot */
++.coll-peek { padding: 10px 14px; }
++.coll-peek .peek-cap { margin-top: 6px; }
++.coll-peek .peek-style { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
++.coll-peek .peek-note { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
++.coll-peek::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 14px; border-radius: 0 0 var(--r-md) var(--r-md);
++  background: linear-gradient(transparent, var(--panel)); }
+ .coll-sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(2px); padding: 16px; }
+ .coll-sheet[hidden], .coll-peek[hidden] { display: none; }
+ .coll-sheet-body { width: min(980px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 18px 20px; border: 1px solid var(--line-strong-a); border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 20px 60px var(--shadow-lg); display: flex; flex-direction: column; gap: 10px; }
+@@ -3170,9 +3178,35 @@ html.i18n-wait body { visibility: hidden; }
+ .coll-art { position: absolute; top: 10px; right: 10px; width: 46px; height: 46px; border-radius: 8px; background-size: cover;
+   background-position: center; box-shadow: 0 2px 8px -3px var(--shadow-lg, rgba(0,0,0,.35)); cursor: zoom-in; transition: transform .12s; }
+ .coll-art:hover { transform: scale(1.06); }
++button.coll-art { border: 0; padding: 0; background-color: var(--line-a); background-repeat: no-repeat; }   /* HERESY 1155: a button, not a link */
+ .coll-card.has-art .coll-body { padding-right: 54px; }
+ .coll-grid.list .coll-art { position: static; width: 28px; height: 28px; border-radius: 5px; flex: none; }
+ .coll-grid.list .coll-card.has-art .coll-body { padding-right: 0; }
++#playbar .pb-cover.has-art { cursor: zoom-in; }
++
++/* HERESY 1155 (Viktor: «Сделай оверлеем. Не уходим из студии в другие окна и вкладки»): the whole picture over the page,
++   the player left free below it; ‹ › at the sides when there are more to walk */
++.hd-back.art-back { bottom: var(--playbar-h, 60px); z-index: 110; background: rgba(8, 7, 6, .78); backdrop-filter: blur(5px); }
++.art-fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; outline: none; }
++.art-img { display: block; width: min(768px, calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px)); aspect-ratio: 1;
++  height: auto; object-fit: cover; border-radius: var(--r-lg); background: #1b1916; box-shadow: 0 24px 70px rgba(0, 0, 0, .6);
++  user-select: none; }
++.art-cap { display: flex; align-items: center; gap: 10px; width: min(768px, calc(100vw - 140px), calc(100vh - var(--playbar-h, 60px) - 96px));
++  color: #f1ece4; font-size: 14px; }
++.art-title { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.art-count { flex: none; color: rgba(241, 236, 228, .6); font-size: 12px; font-variant-numeric: tabular-nums; }
++.art-back .pb-btn { flex: none; color: #f1ece4; }
++.art-back .pb-btn:hover { color: #fff; background: rgba(255, 255, 255, .12); }
++.art-step { position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 72px; border: 0; border-radius: 12px;
++  background: rgba(255, 255, 255, .07); color: #f1ece4; font: 300 40px/1 var(--sans); cursor: pointer; }
++.art-step:hover { background: rgba(255, 255, 255, .18); }
++.art-step[hidden] { display: none; }
++.art-prev { left: 18px; }
++.art-next { right: 18px; }
++@media (max-width: 600px) {
++  .art-img, .art-cap { width: min(768px, calc(100vw - 32px), calc(100vh - var(--playbar-h, 60px) - 96px)); }
++  .art-step { top: auto; bottom: 10px; transform: none; width: 40px; height: 44px; font-size: 30px; }
++}
+ 
+ /* HERESY 1124 (Viktor, 02.10): the datasheet's style and lyrics reach down to where the parameters end; the lyrics
+    take the room that is left and scroll inside it (its height 0 + grow: the parameters, not the words, set the row) */
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 19ffd15..8eaef09 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3873,15 +3873,98 @@
+   // prompt from the take's style and words (Qwen3-4B), the picture (an SDXL finetune). Asked for, never on its own.
+   STATE.arts = {};
+   function artUrl(name) { var v = name && STATE.arts[name]; return v ? "/lab/art?name=" + encodeURIComponent(name) + "&v=" + v : ""; }
++  // HERESY 1155: asked again every 20 s while the page is in sight, so pictures drawn meanwhile (a batch, the API,
++  // another browser) reach the cards and the menu says Redraw; nothing is repainted when nothing changed
++  var artsSeen = "";
+   function refreshArts() {
+     return api("/lab/arts").then(function (d) {
+-      STATE.arts = (d && d.arts) || {};
++      var arts = (d && d.arts) || {}, seen = JSON.stringify(arts);
++      if (seen === artsSeen) return;
++      artsSeen = seen;
++      STATE.arts = arts;
+       paintCover(STATE.playerTake);
+       paintSession();
+       var HC = window.HeresyCollection;
+-      if (HC && HC.repaint && document.body.dataset.tab === "collection") HC.repaint();
++      if (HC && HC.paintArts) HC.paintArts();          // on the cards in place: a rename being typed survives
++      if (window.HeresyInstruments && window.HeresyInstruments.paintArts) window.HeresyInstruments.paintArts();
+     }).catch(function () { /* the lab is away: no artwork shown, nothing else changes */ });
+   }
++  setInterval(function () { if (document.visibilityState === "visible") refreshArts(); }, 20000);
++
++  // HERESY 1155 (Viktor, 03.10.2026: «Клик открывает в новой вкладке. Сделай оверлеем. Не уходим из студии в другие окна
++  // и вкладки, если не нужно»): the artwork over the page, the player left free below it. ‹ › and the arrow keys walk
++  // the takes given (the cards shown, the sheet's instruments), ▶ plays the one shown; Esc, × or a click beside the
++  // picture closes. Space still plays and pauses the player.
++  var artView = null;
++  function showArt(name, names) {
++    var list = (names && names.length ? names : [name]).filter(function (n) { return !!artUrl(n); });
++    if (!list.length) return;
++    var at = Math.max(0, list.indexOf(name));
++    if (artView) artView.close(true);
++    var back = document.createElement("div"), before = document.activeElement;
++    back.className = "hd-back art-back";
++    back.innerHTML = '<figure class="art-fig" role="dialog" aria-modal="true" aria-label="The artwork" tabindex="-1">' +
++      '<img class="art-img" alt="" draggable="false" />' +
++      '<figcaption class="art-cap"><button type="button" class="pb-btn art-play" aria-label="Play"></button>' +
++      '<span class="art-title"></span><span class="art-count"></span>' +
++      '<button type="button" class="pb-btn art-close" aria-label="Close" data-tip="Close (Esc)">✕</button></figcaption></figure>' +
++      '<button type="button" class="art-step art-prev" aria-label="Previous" data-tip="Previous (←)">‹</button>' +
++      '<button type="button" class="art-step art-next" aria-label="Next" data-tip="Next (→)">›</button>';
++    document.body.appendChild(back);
++    var img = back.querySelector(".art-img");
++    function shown() { return list[at]; }
++    function paintPlay() {
++      var mine = STATE.playerTake && STATE.playerTake.name === shown() && !audio.paused;
++      var b = back.querySelector(".art-play");
++      b.textContent = mine ? "❚❚" : "▶";
++      b.setAttribute("aria-label", mine ? "Pause" : "Play");
++    }
++    function paint() {
++      var n = shown(), take = findTake(n);
++      img.src = artUrl(n);
++      img.alt = take ? displayTitle(take) : n;
++      back.querySelector(".art-title").textContent = take ? displayTitle(take) : n;
++      back.querySelector(".art-count").textContent = list.length > 1 ? (at + 1) + " / " + list.length : "";
++      back.querySelector(".art-play").hidden = !take;
++      Array.prototype.forEach.call(back.querySelectorAll(".art-step"), function (b) { b.hidden = list.length < 2; });
++      [at - 1, at + 1].forEach(function (i) { var u = artUrl(list[(i + list.length) % list.length]); if (u) new Image().src = u; });
++      paintPlay();
++    }
++    function step(d) { at = (at + d + list.length) % list.length; paint(); }
++    function close(now) {
++      document.removeEventListener("keydown", key, true);
++      audio.removeEventListener("play", paintPlay); audio.removeEventListener("pause", paintPlay);
++      artView = null;
++      back.classList.add("is-leaving");
++      setTimeout(function () { back.remove(); }, now ? 0 : 120);
++      if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
++    }
++    function key(e) {
++      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
++      else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.ctrlKey && !e.altKey) {
++        e.preventDefault(); e.stopPropagation();
++        if (list.length > 1) step(e.key === "ArrowRight" ? 1 : -1);
++      }
++    }
++    document.addEventListener("keydown", key, true);
++    audio.addEventListener("play", paintPlay); audio.addEventListener("pause", paintPlay);
++    back.addEventListener("click", function (e) {
++      if (e.target === back || e.target.closest(".art-close")) return close();
++      if (e.target.closest(".art-prev")) return step(-1);
++      if (e.target.closest(".art-next")) return step(1);
++      if (e.target.closest(".art-play")) {
++        var take = findTake(shown());
++        if (!take) return;
++        if (STATE.playerTake && STATE.playerTake.name === take.name) togglePlay(); else playNow(take);
++      }
++    });
++    artView = { close: close };
++    paint();
++    requestAnimationFrame(function () { back.classList.add("is-on"); back.querySelector(".art-fig").focus({ preventScroll: true }); });
++  }
++  $("pbCover").addEventListener("click", function () {
++    if (STATE.playerTake && artUrl(STATE.playerTake.name)) showArt(STATE.playerTake.name);
++  });
+   function drawArt(name, again) {
+     var take = findTake(name), title = take ? displayTitle(take) : name;
+     toast("Drawing artwork for “" + title + "”: a prompt from its style and words, then the picture (about half a minute)");
+@@ -3897,7 +3980,7 @@
+       return refreshArts().then(function () { toast("Artwork for “" + title + "” is ready"); return d; });
+     }).catch(function (e) { toast("No artwork: " + e.message, "bad"); });
+   }
+-  window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts };
++  window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts, show: showArt };
+   // HERESY 1136: the studio's version (VERSION, through the API) in Engine → About
+   api("/api/v1").then(function (d) { if (d && d.studio && $("studioVersion")) $("studioVersion").textContent = d.studio; }).catch(function () {});
+   setTimeout(refreshArts, 1200);
+@@ -5856,12 +5939,12 @@
+           .then(function (t) { if (t !== null) return renameTake(name, t).then(function (ok) { if (ok && HC) HC.reload(); }); })
+           .catch(function (e) { toast(e.message, "bad"); });
+       } },
+-      take.session ? null : (function () {                       // HERESY 1120: artwork, asked for
+-        return artUrl(name) ? { icon: "▣", label: "Artwork", items: [
+-          { label: "Open the artwork", action: function () { window.open(artUrl(name), "_blank", "noopener"); } },
+-          { label: "Draw it again", hint: "a new prompt, a new picture", action: function () { drawArt(name, true); } }
+-        ] } : { icon: "▣", label: "Draw artwork", hint: "half a minute on a GPU", action: function () { drawArt(name, false); } };
+-      })(),
++      // HERESY 1120: artwork, asked for. HERESY 1155 (Viktor: «Для Draw Artwork, когда есть иллюстрация, заменяй на
++      // Redraw Artwork»; «Не уходим из студии в другие окна и вкладки»): seen over the page, drawn again by name
++      take.session || !artUrl(name) ? null : { icon: "▣", label: "Open the artwork", action: function () { showArt(name); } },
++      take.session ? null : artUrl(name)
++        ? { icon: "↻", label: "Redraw artwork", hint: "a new prompt, a new picture", action: function () { drawArt(name, true); } }
++        : { icon: "▣", label: "Draw artwork", hint: "half a minute on a GPU", action: function () { drawArt(name, false); } },
+       { sep: true },
+       HC ? { icon: "▦", label: "Workspaces", items: ws.map(function (w) {
+         var on = inWs.indexOf(w) >= 0;
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 5d2308c..797cea8 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -161,7 +161,8 @@
+         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+         r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" +
+         "</div>" +
+-        (art ? '<a class="coll-art" href="' + esc(art) + '" target="_blank" rel="noopener" style="background-image:url(&quot;' + esc(art) + '&quot;)" data-tip="The artwork: open it whole" aria-label="The artwork"></a>' : "") +
++        // HERESY 1155 (Viktor: «Не уходим из студии в другие окна и вкладки, если не нужно»): the whole picture over the page
++        (art ? '<button type="button" class="coll-art" data-art="' + esc(r.name) + '" style="background-image:url(&quot;' + esc(art) + '&quot;)" data-tip="The artwork: see it whole" aria-label="The artwork"></button>' : "") +
+         // HERESY 1048: like, dislike, favourite, Post and the menu, on the card itself
+         '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + '</button>' +
+         '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + '</button>' +
+@@ -528,6 +529,11 @@
+       var play = e.target.closest("[data-play]"), open = e.target.closest("[data-open]"), cb = e.target.closest("[data-sel]"), tcb = e.target.closest("[data-tsel]");
+       if (tcb) { if (tcb.checked) state.tsel[tcb.dataset.tsel] = 1; else delete state.tsel[tcb.dataset.tsel]; return paint(); }
+       if (band.ate) { band.ate = false; return; }             // the click that ends a rubber band is not a click
++      var artb = e.target.closest("[data-art]");             // HERESY 1155: ‹ › walk the pictures of the cards shown
++      if (artb && window.HeresyArt && window.HeresyArt.show) {
++        window.HeresyArt.show(artb.dataset.art, Array.prototype.map.call($("collGrid").querySelectorAll("[data-art]"), function (b) { return b.dataset.art; }));
++        return;
++      }
+       // HERESY 1101 (Viktor: "повадки, как в Плазме под Кедами"): once one card is checked, a click anywhere on
+       // another card that is not one of its buttons checks it too; Shift takes the range from the last one
+       var tapped = e.target.closest(".coll-card[data-name]");
+@@ -780,9 +786,18 @@
+     return state.hooks.getRequest(t).then(function (r) { reqCache[name] = r; return r; });
+   }
+   function rowOf(name) { return state.rows.filter(function (r) { return r.name === name; })[0]; }
+-  function lyricsHead(text, lines) {
+-    var all = String(text || "").split("\n"), head = all.slice(0, lines).join("\n");
+-    return all.length > lines ? head + "\n\u2026" : head;
++  // HERESY 1155 (Viktor: \u00ab\u0422\u0443\u043b\u0442\u0438\u043f \u043f\u043e\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u043f\u0435\u0440\u0432\u044b\u0439 \u0440\u044f\u0434 \u043a\u0430\u0440\u0442\u043e\u0447\u0435\u043a\u2026 \u0434\u0430\u0432\u0430\u0439 \u043c\u0435\u043d\u044c\u0448\u0435 \u0435\u0433\u043e \u043f\u043e \u0432\u044b\u0441\u043e\u0442\u0435\u00bb): the peek's words without
++  // empty lines, a run of bare section tags on one line ([Intro] [Verse] [Chorus]: an instrumental's whole text)
++  function lyricsTight(text, lines) {
++    var out = [];
++    String(text || "").split("\n").forEach(function (l) {
++      l = l.trim();
++      if (!l) return;
++      var tag = /^\[[^\]]*\]$/.test(l), last = out.length ? out[out.length - 1] : null;
++      if (tag && last && last.tag) last.text += " " + l; else out.push({ text: l, tag: tag });
++    });
++    var head = out.slice(0, lines).map(function (o) { return o.text; }).join("\n");
++    return out.length > lines ? head + "\n\u2026" : head;
+   }
+   function showPeek(card) {
+     var name = card.dataset.name, r = rowOf(name);
+@@ -794,18 +809,38 @@
+       box.innerHTML = '<div class="peek-title">' + esc(r.title) + '</div><div class="coll-meta">' + esc(state.hooks.ago(r.created)) +
+         (r.seconds ? " \u00b7 " + state.hooks.clock(r.seconds) : "") + (req.cot ? " \u00b7 " + esc(req.cot) : "") + "</div>" +
+         (style ? '<div class="peek-cap">Style</div><div class="peek-style">' + esc(style.length > 200 ? style.slice(0, 200) + "\u2026" : style) + "</div>" : "") +
+-        (req.lyrics ? '<div class="peek-cap">Lyrics</div><pre class="peek-lyrics">' + esc(lyricsHead(req.lyrics, 20)) + "</pre>" : "") +
++        (req.lyrics ? '<div class="peek-cap">Lyrics</div><pre class="peek-lyrics">' + esc(lyricsTight(req.lyrics, 6)) + "</pre>" : "") +
+         (r.note ? '<div class="peek-cap">Note</div><div class="peek-note">' + esc(r.note) + "</div>" : "");
+       // HERESY 1151 (Viktor: «попап тултип при наведении на карточку перенести в фиксированный правый верхний угол? Так
+-      // никому мешать не будет»): the window's top right corner, under the bar, never over the cards beside the one hovered
+-      var bar = document.querySelector(".topbar");
++      // никому мешать не будет»): the window's top right corner. HERESY 1155 (Viktor: «тултип смести прямо поверх бара,
++      // он же временный… меньше по высоте»): over the bar itself, and no lower than where the cards begin
++      var grid = $("collGrid"), sc = scrollerOf(grid), top = 8;
++      var floor = Math.max(grid.getBoundingClientRect().top, sc === document.scrollingElement || sc === document.documentElement ? 0 : sc.getBoundingClientRect().top);
+       box.style.left = "auto";
+       box.style.right = "16px";
+-      box.style.top = Math.round((bar ? bar.getBoundingClientRect().bottom : 52) + 10) + "px";
++      box.style.top = top + "px";
++      box.style.maxHeight = Math.round(Math.max(170, floor - 8 - top)) + "px";
+       box.hidden = false;
+     }).catch(function () {});
+   }
+   function hidePeek() { clearTimeout(peekTimer); peekFor = ""; if ($("collPeek")) $("collPeek").hidden = true; }
++  // HERESY 1155: artwork drawn meanwhile (a batch, the API, another browser) put on the cards shown, in place: nothing
++  // else repainted, so a rename being typed or a rubber band being drawn is left alone
++  function paintArts() {
++    if (!window.HeresyArt) return;
++    Array.prototype.forEach.call($("collGrid").querySelectorAll(".coll-card[data-name]"), function (card) {
++      var name = card.dataset.name, art = window.HeresyArt.url(name), b = card.querySelector(".coll-art");
++      card.classList.toggle("has-art", !!art);
++      if (!art) { if (b) b.remove(); return; }
++      if (!b) {
++        b = document.createElement("button");
++        b.type = "button"; b.className = "coll-art"; b.dataset.art = name;
++        b.dataset.tip = "The artwork: see it whole"; b.setAttribute("aria-label", "The artwork");
++        card.insertBefore(b, card.querySelector(".coll-acts"));
++      }
++      b.style.backgroundImage = 'url("' + art + '")';
++    });
++  }
+ 
+   var sheetName = "", sheetNoteTimer = 0;
+   function openSheet(name) {
+@@ -1112,7 +1147,7 @@
+   // for the takes column: hidden ones stay out of it
+   function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
+ 
+-  window.HeresyCollection = { init: init, reload: load, repaint: paint, isHidden: isHidden, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
++  window.HeresyCollection = { init: init, reload: load, repaint: paint, paintArts: paintArts, isHidden: isHidden, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
+                               current: current, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+-- 
+2.43.0
+

@@ -1,0 +1,154 @@
+From 4f23de10afc229ad8f122b161992dbdca97de8cc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 13:46:20 -0600
+Subject: [PATCH 1050/1177] The player hears FLAC: listen.flac written at save,
+ served with native seeking
+
+1053 (Viktor): a WAV take gets listen.flac beside audio.wav when it is saved
+(the built-in lossless encoder, about 74 % of the bytes at 24 bit); a take
+older than that gets it at its first listen. GET /library/listen serves it as
+a file, so Range and seeking are the server's own; an MP3 take, or a take
+whose FLAC cannot be made, is served as it is. The page plays /library/listen
+and downloads /library/audio (the WAV, as before); a server without the
+route falls back to the WAV for the session.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js       |  18 +++++++++--
+ tools/public/index.html.gz | Bin 338450 -> 338695 bytes
+ tools/yue-server.cpp       |  59 +++++++++++++++++++++++++++++++++++++
+ 3 files changed, 75 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index b62bb69..fe0ab1d 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2709,9 +2709,14 @@
+     return bare ? bare.charAt(0).toUpperCase() + bare.slice(1) : "Untitled";
+   }
+ 
++  // HERESY 1053: the player hears the take's listen.flac (lossless, ~70 % of the bytes; the engine writes
++  // it at save, or at the first listen); downloads keep the WAV. A server without the route: the WAV.
+   function takeAudioUrl(take) {
+-    return take.session ? take.url : "/library/audio?name=" + encodeURIComponent(take.name);
++    if (take.session) return take.url;
++    if (!STATE.listenOff) return "/library/listen?name=" + encodeURIComponent(take.name);
++    return "/library/audio?name=" + encodeURIComponent(take.name);
+   }
++  function wavUrl(take) { return take.session ? take.url : "/library/audio?name=" + encodeURIComponent(take.name); }
+ 
+   function formatExt(format) { return format === "mp3" ? "mp3" : "wav"; }
+ 
+@@ -2725,7 +2730,7 @@
+   }
+   function namesParam() { return libraryNames() ? "&names=library" : ""; }
+   function audioFileName(take) { return fileTitle(take) + "." + formatExt(take.format); }
+-  function downloadUrl(take) { return take.session ? take.url : takeAudioUrl(take) + namesParam(); }
++  function downloadUrl(take) { return take.session ? take.url : wavUrl(take) + namesParam(); }
+ 
+   // MP3 copies for sharing: made on the server at the bitrate chosen on the song page
+   function mp3Rate() {
+@@ -3692,6 +3697,15 @@
+   $("nextTake").addEventListener("click", function () { stepTake(1); });
+   paintPlayOn();
+   audio.addEventListener("emptied", markPlaying);
++  audio.addEventListener("error", function () {          // HERESY 1053: an older server, no FLAC: the WAV, as before
++    var src = audio.getAttribute("src") || "";
++    if (src.indexOf("/library/listen?") !== 0 || !STATE.playerTake) return;
++    STATE.listenOff = true;
++    var at = audio.currentTime, take = STATE.playerTake;
++    audio.src = wavUrl(take);
++    try { audio.currentTime = at; } catch (e) { /* not seekable yet */ }
++    toast("No FLAC route on this server: the player plays the WAVs this session", "bad");
++  });
+ 
+   // The card of the song that is playing says so (the list redraws often, so this runs after it too)
+   function markPlaying() {
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 2a42a5a..8901db3 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -707,6 +707,31 @@ static std::string audio_file_of(const std::string & dir) {
+     return dir + "/audio.wav";
+ }
+ 
++// HERESY 1053 (Viktor): the player hears listen.flac, written beside audio.wav when the take is saved
++// (lossless, about 70 % of the bytes at 24 bit); a take older than that gets it at its first listen.
++// Downloads, the lab and the trash keep working on audio.wav, as before.
++static bool write_listen_flac(const std::string & dir, const std::string & wav, const std::string & title,
++                              const std::string & lyrics) {
++    std::string err;
++    int         bits = 0;
++    std::string flac = flac_encode_wav(wav, title, lyrics, err, &bits);
++    if (flac.empty() || !write_file(dir + "/listen.flac", flac)) {
++        fprintf(stderr, "[Library] no listen.flac in %s: %s\n", dir.c_str(), err.empty() ? "cannot write" : err.c_str());
++        return false;
++    }
++    return true;
++}
++
++static bool listen_flac_fresh(const std::string & dir) {
++    std::error_code ec;
++    auto            f = std::filesystem::last_write_time(dir + "/listen.flac", ec);
++    if (ec) {
++        return false;
++    }
++    auto w = std::filesystem::last_write_time(dir + "/audio.wav", ec);
++    return !ec && f >= w;
++}
++
+ // One library entry: meta.json plus the prompt fields of request.json
+ static yyjson_mut_val * library_entry(yyjson_mut_doc * out, const std::string & name) {
+     std::string  dir      = g_outputs_dir + "/" + name;
+@@ -866,6 +891,9 @@ static std::string library_save(const Yue2Request & replay,
+         fprintf(stderr, "[Library] cannot write %s\n", dir.c_str());
+         return "";
+     }
++    if (!is_mp3) {
++        write_listen_flac(dir, audio, replay.title, replay.lyrics);   // HERESY 1053; a failure only costs the WAV's bytes
++    }
+     fprintf(stderr, "[Library] Saved %s\n", name.c_str());
+     return name;
+ }
+@@ -1900,6 +1928,37 @@ int main(int argc, char ** argv) {
+                                                                   req.get_param_value("names") != "library"));
+             res.set_file_content(path, mp3 ? "audio/mpeg" : "audio/wav");
+         });
++        // HERESY 1053: what the player plays: listen.flac when the take is a WAV (made now if it is missing
++        // or older than the WAV), the take's own file otherwise. A file response, so seeking is native.
++        svr.Get("/library/listen", [](const httplib::Request & req, httplib::Response & res) {
++            std::string name = req.get_param_value("name");
++            if (!library_name_ok(name)) {
++                res.status = 404;
++                res.set_content(json_string("error", "no such take"), "application/json");
++                return;
++            }
++            std::string dir  = g_outputs_dir + "/" + name;
++            std::string path = audio_file_of(dir);
++            bool        mp3  = path.size() > 4 && path.substr(path.size() - 4) == ".mp3";
++            if (!mp3 && std::filesystem::is_regular_file(path)) {
++                static std::mutex mtx_listen;                 // one encode at a time; a second asker finds it made
++                std::lock_guard<std::mutex> lock(mtx_listen);
++                if (!listen_flac_fresh(dir)) {
++                    std::string wav, title, lyrics;
++                    {
++                        std::lock_guard<std::mutex> lib(mtx_library);
++                        wav = read_file(path);
++                        take_title_lyrics(dir, name, title, lyrics);
++                    }
++                    write_listen_flac(dir, wav, title, lyrics);
++                }
++                if (listen_flac_fresh(dir)) {
++                    res.set_file_content(dir + "/listen.flac", "audio/flac");
++                    return;
++                }
++            }
++            res.set_file_content(path, mp3 ? "audio/mpeg" : "audio/wav");
++        });
+         // Waveform peaks for the player, read from the audio once and cached
+         svr.Get("/library/peaks", [](const httplib::Request & req, httplib::Response & res) {
+             std::string name = req.get_param_value("name");
+-- 
+2.43.0
+

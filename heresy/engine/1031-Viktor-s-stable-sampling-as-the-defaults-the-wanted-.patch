@@ -1,0 +1,254 @@
+From 0ccb0a81fbdcab4b4274b07c93b317cd9623aab4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 30 Sep 2026 23:55:26 -0600
+Subject: [PATCH 1031/1177] Viktor's stable sampling as the defaults; the
+ wanted key follows a new plan
+
+- Engine and page: score planner 0.95 / 0.95 / 50, music 0.9 / 0.95 / 100 with penalty 1.3
+  over 100 tokens, guidance 1.6 in every mode (the release: 0.7 / 0.9 / 30, 1.0 / 0.95 / 100,
+  1.2 over 50, guidance 1.0, 1.01 in Direct). The shape sliders are re-centred on them; the
+  tips name the new default and the release one. A take whose request left guidance to the
+  engine says "default", not a number it cannot know.
+- The wanted key (1019) moved a score only when the form had none: a new plan over an old
+  score stayed in its own key (Viktor: B-flat minor wanted, E minor came). A score is new when
+  its notes are; a transposition or a hand edit of K: is not. A move from the score drawer
+  becomes the wanted key, so the watcher does not undo it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/prompt.h               |   8 ++++++--
+ src/request.h              |   4 ++--
+ src/sampling.h             |   6 ++++--
+ tools/console/app.js       |  36 +++++++++++++++++++++-----------
+ tools/console/help.js      |  41 +++++++++++++++++++------------------
+ tools/public/index.html.gz | Bin 295489 -> 295996 bytes
+ 6 files changed, 57 insertions(+), 38 deletions(-)
+
+diff --git a/src/prompt.h b/src/prompt.h
+index 6f11f42..fa9630d 100644
+--- a/src/prompt.h
++++ b/src/prompt.h
+@@ -131,7 +131,11 @@ static std::vector<int> yue2_build_negative_ids(Tokenize bpe_encode, Yue2Cot cot
+     return ids;
+ }
+ 
+-// Guidance the protocol applies when the request leaves cfg_scale unset
++// Guidance the protocol applies when the request leaves cfg_scale unset.
++// HERESY 1031: 1.6 in every mode, Viktor's stable set (01.10.2026). The release had 1.01 in off
++// mode and 1.0 (a single branch) otherwise; 1.6 keeps a second, unconditioned branch: half
++// the speed of the music stage and 2.8 GB more cache a version at the full context.
+ static float yue2_default_guidance(Yue2Cot cot) {
+-    return cot == YUE2_COT_OFF ? 1.01f : 1.0f;
++    (void) cot;
++    return 1.6f;
+ }
+diff --git a/src/request.h b/src/request.h
+index 2b8b0e7..10e390f 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -77,8 +77,8 @@ struct Yue2Request {
+     std::string semantic_tokens;  // ""
+ 
+     // classifier free guidance on the semantic stage. Negative applies the
+-    // protocol default, which is 1.01 in off mode and 1.0 otherwise, and a
+-    // scale of exactly 1.0 keeps a single branch.
++    // default (HERESY 1031: 1.6 in every mode; the release had 1.01 in off mode
++    // and 1.0 otherwise), and a scale of exactly 1.0 keeps a single branch.
+     float cfg_scale;  // -1
+ 
+     // output normalization percentile control, the peak being the
+diff --git a/src/sampling.h b/src/sampling.h
+index 72b4840..36fdb6e 100644
+--- a/src/sampling.h
++++ b/src/sampling.h
+@@ -46,8 +46,10 @@ static bool yue2_sampling_valid(const Yue2Sampling & s, const char * stage) {
+ // HERESY 1001: max_tokens 4096 → 6144 (партитура), 9000 → 12000 (звук, 8:00).
+ // 6144 + 12000 + ~80 служебных оставляют ~6350 токенов на стиль и лирику в
+ // окне 24576. 8192 на партитуру съело бы лирику — проверено Виктором.
+-static const Yue2Sampling YUE2_ABC_SAMPLING      = { 0.7f, 0.9f, 30, 1.005f, 100, 32, 6144 };
+-static const Yue2Sampling YUE2_SEMANTIC_SAMPLING = { 1.0f, 0.95f, 100, 1.2f, 50, 200, 12000 };
++// HERESY 1031: Viktor's stable set (01.10.2026, the steadiest takes so far). The release had
++// ABC 0.7 / 0.9 / 30 and semantic 1.0 / 0.95 / 100 / 1.2 / window 50.
++static const Yue2Sampling YUE2_ABC_SAMPLING      = { 0.95f, 0.95f, 50, 1.005f, 100, 32, 6144 };
++static const Yue2Sampling YUE2_SEMANTIC_SAMPLING = { 0.9f, 0.95f, 100, 1.3f, 100, 200, 12000 };
+ 
+ struct Yue2Candidate {
+     int   id;
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f0d517f..8b1fb13 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -80,8 +80,9 @@
+   // The fallbacks are the protocol's own values; /props replaces them.
+   var PROTOCOL_DEFAULTS = {
+     cot: "full", duration: 480, steps: 32, peak_clip: 10, mp3_bitrate: 128, output_format: "mp3",
+-    abc_sampling: { temperature: 0.7, top_p: 0.9, top_k: 30, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 32, max_tokens: 6144 },
+-    semantic_sampling: { temperature: 1.0, top_p: 0.95, top_k: 100, repetition_penalty: 1.2, penalty_window: 50, min_tokens: 200, max_tokens: 12000 }
++    // HERESY 1031: Viktor's stable set, as the engine now has it
++    abc_sampling: { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 32, max_tokens: 6144 },
++    semantic_sampling: { temperature: 0.9, top_p: 0.95, top_k: 100, repetition_penalty: 1.3, penalty_window: 100, min_tokens: 200, max_tokens: 12000 }
+   };
+ 
+   var FRAME_RATE = 25;    // music tokens per second of audio
+@@ -437,7 +438,7 @@
+ 
+   // Guidance shows the value the engine actually uses for the chosen planning
+   // mode (1.0 for full and melody, 1.01 for direct) until you type your own.
+-  function defaultCfg(cot) { return cot === "off" ? 1.01 : 1.0; }
++  function defaultCfg(cot) { return 1.6; }   // HERESY 1031: the engine's default in every mode (the release: 1.01 off, 1.0 else)
+   function currentCot() {
+     var checked = document.querySelector('input[name="cot"]:checked');
+     return checked ? checked.value : "full";
+@@ -473,11 +474,12 @@
+   // Five-step shortcuts over the sampling knobs, using the reference studio's
+   // published mappings. Position 2 is the engine default.
+   var SHAPES = {
++    // HERESY 1031: re-centred on Viktor's stable set (the middle is the default)
+     shapeComposition: { group: "abc", keys: ["temperature", "top_p", "top_k"],
+-      steps: [[0.55, 0.82, 16], [0.6, 0.86, 24], [0.7, 0.9, 30], [0.85, 0.94, 45], [1.0, 0.97, 64]] },
++      steps: [[0.7, 0.9, 30], [0.85, 0.92, 40], [0.95, 0.95, 50], [1.05, 0.96, 64], [1.15, 0.97, 80]] },
+     shapePerformance: { group: "semantic", keys: ["temperature", "top_p", "top_k"],
+-      steps: [[0.8, 0.88, 50], [0.9, 0.92, 75], [1.0, 0.95, 100], [1.1, 0.97, 140], [1.2, 0.99, 200]] },
+-    shapeStyle: { cfg: [0.85, 0.95, null, 1.05, 1.15] }
++      steps: [[0.75, 0.9, 60], [0.85, 0.93, 80], [0.9, 0.95, 100], [1.0, 0.95, 100], [1.1, 0.97, 140]] },
++    shapeStyle: { cfg: [1.2, 1.4, null, 1.8, 2.0] }
+   };
+   var SHAPE_LABELS = ["lowest", "low", "default", "high", "highest"];
+ 
+@@ -2853,11 +2855,13 @@
+   }
+ 
+   function styleInfo(take) {
+-    var auto = !(typeof take.cfg_scale === "number" && take.cfg_scale >= 0), fallback = take.cot === "off" ? 1.01 : 1.0;
+-    var value = auto ? fallback : round(take.cfg_scale, 3);
+-    var pos = value === fallback ? 2 : SHAPES.shapeStyle.cfg.indexOf(value);
++    // HERESY 1031: "default" is whatever the engine had when the take was made (1.0 / 1.01 in the
++    // release, 1.6 since); the saved request only says -1, so no number is claimed for it
++    var auto = !(typeof take.cfg_scale === "number" && take.cfg_scale >= 0);
++    var value = auto ? null : round(take.cfg_scale, 3);
++    var pos = auto || value === defaultCfg(take.cot) ? 2 : SHAPES.shapeStyle.cfg.indexOf(value);
+     // the guidance value only shows when it matches no position (a hover says it either way)
+-    var note = "guidance " + (auto ? "default " + (take.cot === "off" ? "1.01" : "1.0") : value);
++    var note = "guidance " + (auto ? "default (the engine's at the time)" : value);
+     return { pos: pos, note: note, text: pos >= 0 ? SHAPE_LABELS[pos] : "custom " + value };
+   }
+ 
+@@ -4942,6 +4946,7 @@
+   function moveScore(target, way) {
+     try {
+       var r = TR.transpose($("abc").value, target, way);
++      store(WANT_KEY, TR.keyName({ letter: r.to.letter, acc: r.to.acc, mode: r.to.mode === -3 ? -3 : 0 }));   // HERESY 1028: the key chosen last is the one wanted
+       setField("abc", r.abc);
+       if (STATE.abcRendered !== undefined && $("abc").value) { /* the staff in the take card is the take's own score */ }
+       $("transposeNote").textContent = TR.keyLabel(r.from) + " \u2192 " + TR.keyLabel(r.to) + ", " + (r.semis > 0 ? "+" : "") + r.semis +
+@@ -4983,13 +4988,20 @@
+     });
+     // a score that arrives (plan, Retake, open, transcription) moves to the wanted key once
+     var lastAbc = $("abc").value;
++    // HERESY 1028: "arrives" was "the form had no score before", so a new plan over an old score
++    // stayed in its own key (Viktor: B♭m wanted, Em came). A score is new when its notes are
++    // other than before, not when the form was empty: a hand edit of the K: line is not new.
++    var notesOf = function (abc) {
++      return String(abc).split(/\r?\n/).filter(function (l) { return l && !/^([A-Za-z]:|%)/.test(l); }).slice(0, 6).join("\n")
++        .replace(/[\^_=]/g, "").replace(/[A-Ga-g][,']*/g, "n");   // the shape, not the pitches: a transposition is not new
++    };
+     setInterval(function () {
+       var abc = $("abc").value;
+       if (abc === lastAbc) return;
+-      var had = !!TR.scoreKey(lastAbc);
++      var fresh = !TR.scoreKey(lastAbc) || notesOf(abc) !== notesOf(lastAbc);
+       lastAbc = abc;
+       var want = recall(WANT_KEY), sk = TR.scoreKey(abc);
+-      if (!had && sk && want && TR.keyName({ letter: sk.letter, acc: sk.acc, mode: sk.mode === -3 ? -3 : 0 }) !== want) {
++      if (fresh && sk && want && TR.keyName({ letter: sk.letter, acc: sk.acc, mode: sk.mode === -3 ? -3 : 0 }) !== want) {
+         moveScore(want, "near");
+         lastAbc = $("abc").value;
+         toast("The new score moved to " + TR.keyLabel(TR.parseKey(want)) + ", as wanted");
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 4fcd1db..7c28a5a 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -52,20 +52,20 @@
+     versions: "Renders this prompt several times, each extra version with a fresh seed. " +
+       "Picking the best of several is the most reliable way to a better song: the model card's own benchmark compared best-of-2 and best-of-8 picks.",
+     cfg: "Classifier-free guidance, for the music stage only (the score planner never uses it). " +
+-      "The release defaults are 1.0 in Full and Melody mode and 1.01 in Direct.\n" +
++      "Default 1.6 in every mode: Viktor's stable set (01.10.2026). The release had 1.0 in Full and Melody mode and 1.01 in Direct.\n" +
+       "Above 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. " +
+       "Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. " +
+-      "No best value is published; 1.1 to 1.3 are the usual experiments.\n" +
+-      "✓ 1.2–1.5 for steadier words; the cover configs on r/StableDiffusion go from 1.2 to 2.0, set per song.\n" +
++      "1.0 switches guidance off: one pass, the release's sound.\n" +
++      "✓ 1.4–1.8 for steadier words; the cover configs on r/StableDiffusion go from 1.2 to 2.0, set per song.\n" +
+       "⚠ Above 2 the timbre hardens and artifacts appear. The memory is the cache: guidance keeps a second, " +
+       "unconditioned pass beside every version, 2.8 GB more each at the full context.",
+     shapeComposition: "Moves the score planner's temperature, top-p and top-k together. Left: familiar, safe melodies and chord changes; " +
+-      "right: surprising ones. The middle is the tuned default. No effect in Direct mode or with a supplied score (nothing is planned).\n" +
+-      "⚠ \"highest\" (1.0 · 0.97 · 64) can break bars.",
++      "right: surprising ones. The middle is the default (0.95 · 0.95 · 50); \"lowest\" is the release (0.7 · 0.9 · 30). No effect in Direct mode or with a supplied score (nothing is planned).\n" +
++      "⚠ \"highest\" (1.15 · 0.97 · 80) can break bars.",
+     shapePerformance: "Moves the music stage's temperature, top-p and top-k together. Left: a steadier delivery that sticks to the prompt; " +
+-      "right: looser and more adventurous, with more garbled words. The middle is the tuned default.\n" +
+-      "✓ \"low\" (0.9 · 0.92 · 75) for songs where the words matter.\n" +
+-      "⚠ \"high\" (1.1 · 0.97 · 140) and \"highest\" (1.2 · 0.99 · 200): measured glossolalia on a 7-minute song.",
++      "right: looser and more adventurous, with more garbled words. The middle is the default (0.9 · 0.95 · 100); \"high\" is the release (1.0 · 0.95 · 100).\n" +
++      "✓ \"low\" (0.85 · 0.93 · 80) for songs where the words matter most.\n" +
++      "⚠ \"highest\" (1.1 · 0.97 · 140): measured glossolalia on a 7-minute song.",
+     shapeStyle: "Sets Guidance (CFG) from 0.85 to 1.15. Higher follows the style and lyrics more strongly; " +
+       "any setting except the middle runs the music stage at half speed.",
+     odeSteps: ODE,
+@@ -168,15 +168,15 @@
+   // Where a range comes from a measurement or a published config, the tip says so.
+   var KNOBS = {
+     abc: {
+-      temperature: "Randomness of the score planner. Default 0.7.\n" +
+-        "✓ 0.6–0.8 for a song with a firm structure; 0.85–0.95 when the melodies sound stock.\n" +
++      temperature: "Randomness of the score planner. Default 0.95 (Viktor's stable set; the release had 0.7).\n" +
++        "✓ 0.9–1.0 for melodies that do not sound stock; 0.6–0.8 for a song with a rigid structure.\n" +
+         "⚠ Above 1.0 bars break and sections go missing, and a broken score cannot be used. " +
+         "0 is greedy: the same phrase over and over.",
+-      top_p: "Keeps only the most likely next notes, up to this share of the total chance. Default 0.9.\n" +
+-        "✓ 0.85–0.95.\n" +
++      top_p: "Keeps only the most likely next notes, up to this share of the total chance. Default 0.95 (the release had 0.9).\n" +
++        "✓ 0.9–0.95.\n" +
+         "⚠ Below 0.7 the melody turns monotone. 1.0 switches it off and lets rare, broken tokens through.",
+-      top_k: "Keeps only this many of the most likely next notes. Default 30.\n" +
+-        "✓ 20–50.\n" +
++      top_k: "Keeps only this many of the most likely next notes. Default 50 (the release had 30).\n" +
++        "✓ 30–64.\n" +
+         "⚠ Above about 80, odd durations and broken bars come through. Below 10 it is nearly greedy; 1 is greedy.",
+       repetition_penalty: "Makes notes used in the recent window less likely. Default 1.005, almost off.\n" +
+         "✓ Leave it at 1.0–1.01.\n" +
+@@ -193,8 +193,8 @@
+         "8192 leaves the song too little room. A score cut off here cannot be used."
+     },
+     semantic: {
+-      temperature: "Randomness of the music: how the words are sung. Default 1.0.\n" +
+-        "✓ 0.85–0.95 for clear words. The cover configs on r/StableDiffusion keep it at 0.80–0.95, below the default.\n" +
++      temperature: "Randomness of the music: how the words are sung. Default 0.9 (Viktor's stable set; the release had 1.0).\n" +
++        "✓ 0.85–0.95 for clear words. The cover configs on r/StableDiffusion keep it at 0.80–0.95.\n" +
+         "⚠ Above 1.0 the words blur into glossolalia, most of all after the fourth minute " +
+         "(measured on a 7-minute song: 1.1 lost 16 of 109 lines). Below 0.8 the delivery flattens and starts to loop. 0 is greedy and loops.",
+       top_p: "Keeps only the most likely next music tokens, up to this share of the total chance. Default 0.95.\n" +
+@@ -204,12 +204,13 @@
+       top_k: "Keeps only this many of the most likely next music tokens. Default 100.\n" +
+         "✓ 50–100.\n" +
+         "⚠ Above about 150 rare tokens come through as garbled syllables; 200 is the \"highest\" Performance card.",
+-      repetition_penalty: "Makes music tokens used in the recent window less likely. Default 1.2.\n" +
+-        "✓ 1.1–1.2. The music needs about this much to stay out of loops.\n" +
++      repetition_penalty: "Makes music tokens used in the recent window less likely. Default 1.3 with the window at 100 " +
++        "(Viktor's stable set; the release had 1.2 over 50).\n" +
++        "✓ 1.2–1.3. The music needs about this much to stay out of loops.\n" +
+         "⚠ Below 1.1 a line gets sung again and again. Above 1.3 the delivery turns restless and syllables drop out.",
+       penalty_window: "How many recent music tokens the repetition penalty looks back over. " +
+-        "25 tokens are one second: the default 50 is 2 seconds, the ceiling 100 is 4 seconds.\n" +
+-        "✓ 100 for long songs: it also catches loops longer than a short phrase.\n" +
++        "25 tokens are one second: the default 100 is 4 seconds, which is also the ceiling (the release had 50, 2 seconds).\n" +
++        "✓ 100: it also catches loops longer than a short phrase.\n" +
+         "⚠ It prevents loops; it does not cure words breaking down in the middle of a song. For that, lower the temperature.",
+       min_tokens: "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds.\n" +
+         "✓ Leave it.",
+-- 
+2.43.0
+

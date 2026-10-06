@@ -1,0 +1,268 @@
+From cdf5f0bbb383a40d039caa1bfc0908284f59cec3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 09:57:18 -0600
+Subject: [PATCH 1079/1177] =?UTF-8?q?Which=20card=20does=20what=20(1091):?=
+ =?UTF-8?q?=20Engine=20=E2=86=92=20GPUs,=20synthesis=20waits=20while=20a?=
+ =?UTF-8?q?=20run=20trains=20on=20the=20studio's=20card,=20the=20Train=20d?=
+ =?UTF-8?q?ialog=20says=20when=20it=20may;=20the=20cursor=20reading=20keep?=
+ =?UTF-8?q?s=20the=20chart's=20height?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  14 ++++-
+ tools/console/app.js          |   8 ++-
+ tools/console/heresy-gpus.js  | 111 ++++++++++++++++++++++++++++++++++
+ tools/console/heresy-train.js |  14 +++--
+ tools/console/index.html      |  12 ++++
+ tools/public/index.html.gz    | Bin 393462 -> 396201 bytes
+ 6 files changed, 153 insertions(+), 6 deletions(-)
+ create mode 100644 tools/console/heresy-gpus.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 9af01e0..3b102a5 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2744,7 +2744,10 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .tr-chart { margin: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line-soft, var(--line)); border-radius: var(--r-md); background: var(--ground); }
+ .tr-chart figcaption { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 12.5px; }
+ .tr-chart figcaption .mono { font-size: 11px; color: var(--muted); }
+-.tr-read { margin-left: auto; color: var(--amber) !important; }
++/* the reading has a line of its own, reserved even while empty: the block keeps its height under the mouse */
++.tr-read { display: block; flex-basis: 100%; height: 16px; line-height: 16px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
++  color: var(--amber) !important; }
++.tr-read.is-hint { color: var(--dim) !important; font-family: var(--sans); font-size: 11px; }
+ .tr-plot { position: relative; padding-left: 44px; }
+ .tr-ylab { position: absolute; left: 0; top: 0; bottom: 0; width: 40px; font-size: 10px; color: var(--dim); }
+ .tr-ylab span { position: absolute; right: 2px; transform: translateY(-50%); }
+@@ -2780,3 +2783,12 @@ body[data-tab="train"] .workspace { height: calc(100vh - 52px - 8px); }
+ .tr-chart[data-key="ar_ce"] .tr-cmpkey .k-this { border-top-color: var(--amber); }
+ .tr-cmpkey .k-cmp { border-top: 2px dashed #4fa3c7; }
+ .tr-cmp { width: auto; max-width: 260px; padding: 4px 26px 4px 8px; font-size: 12px; }
++
++/* HERESY 1091: which card does what */
++.gpu-table { width: 100%; border-collapse: collapse; font-size: 13px; }
++.gpu-table th { text-align: left; font-weight: 500; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); padding: 4px 10px 6px 0; }
++.gpu-table td { padding: 7px 10px 7px 0; border-top: 1px solid var(--line-soft, var(--line)); vertical-align: middle; }
++.gpu-table td:nth-child(2), .gpu-table td:nth-child(3), .gpu-table td:nth-child(4), .gpu-table th:nth-child(2), .gpu-table th:nth-child(3), .gpu-table th:nth-child(4) { text-align: center; width: 90px; }
++.gpu-table td.mono { font-size: 11.5px; color: var(--muted); }
++.gpu-table input { accent-color: var(--amber); width: 16px; height: 16px; }
++.gpu-card .btn[hidden] { display: none !important; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 578412b..c1bb489 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1560,7 +1560,12 @@
+   }
+ 
+   function submitJob(body, meta) {
+-    return post("/synth", body).then(function (data) {
++    // HERESY 1091: no synthesis on the studio's card while a run trains on it (the lab knows; it says why)
++    var free = window.HeresyGpus ? window.HeresyGpus.guard() : Promise.resolve(true);
++    return free.then(function (ok) {
++      if (!ok) throw new Error("The synthesis waits: the studio\u2019s card is training");
++      return post("/synth", body);
++    }).then(function (data) {
+       var job = registerJob(data.id, meta, body);
+       paintAllRuns();
+       return job;
+@@ -5306,6 +5311,7 @@
+   });
+ 
+   if (window.HeresyTrain) window.HeresyTrain.init({ toast: toast });   // HERESY 1063
++  if (window.HeresyGpus) window.HeresyGpus.init({ toast: toast });     // HERESY 1091
+   // HERESY 1075: openDAW beside the studio (tools/serve-opendaw.py, the ruach-daw unit). It wants a secure origin:
+   // http://localhost:41880 through an ssh tunnel by default; shift-click sets another address, kept with the page.
+   if ($("dawOpen")) $("dawOpen").addEventListener("click", function (e) {
+diff --git a/tools/console/heresy-gpus.js b/tools/console/heresy-gpus.js
+new file mode 100644
+index 0000000..9d3e416
+--- /dev/null
++++ b/tools/console/heresy-gpus.js
+@@ -0,0 +1,111 @@
++// HERESY 1091 (Viktor, 02.10.2026): which card does what, and synthesis kept off a card that is training.
++// Engine → GPUs: every card with its memory and what runs on it now; the studio on one card (start.sh takes it
++// at its next start: a button restarts it when it is idle), training on the cards given to it, the lab's other
++// jobs (listener, Whisper, stems, remaster, upscale) on theirs. Saved in user/gpus.json by the lab.
++// guard(): before a synthesis, asked of the lab; while a run trains on the studio's own card the synthesis
++// waits, and the page says why and what to do instead.
++(function () {
++  "use strict";
++
++  var state = { data: null, hooks: null };
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function gb(mb) { return (mb / 1024).toFixed(1) + " GB"; }
++  function lab(path, body) {
++    var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
++    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
++  }
++  function toast(t, kind) { if (state.hooks) state.hooks.toast(t, kind); }
++
++  function paint() {
++    var host = $("gpuRoles");
++    if (!host) return;
++    lab("/gpus").then(function (d) {
++      state.data = d;
++      var r = d.roles, studioNow = d.studio_now;
++      if (!Array.isArray(d.cards) || !d.cards.length) { host.innerHTML = '<p class="row-hint">' + esc((d.cards && d.cards.error) || "No card found") + "</p>"; return; }
++      host.innerHTML = '<table class="gpu-table"><tr><th>card</th><th data-tip="The card the studio’s synthesis runs on: one">studio</th>' +
++        '<th data-tip="Cards a training run may take">training</th><th data-tip="The listener, Whisper, stems, remaster, upscale">lab jobs</th><th>now</th></tr>' +
++        d.cards.map(function (c) {
++          var i = c.index, now = [];
++          if (studioNow === i) now.push("the studio");
++          if (d.training[String(i)]) now.push("training " + d.training[String(i)]);
++          return "<tr><td><b>GPU" + i + "</b> <span class=\"row-hint\">" + esc(c.name.replace(/^NVIDIA GeForce /, "")) + " · " + gb(c.total_mb) + "</span></td>" +
++            '<td><input type="radio" name="gpuStudio" value="' + i + '"' + (r.studio === i ? " checked" : "") + " /></td>" +
++            '<td><input type="checkbox" data-role="train" value="' + i + '"' + (r.train.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
++            '<td><input type="checkbox" data-role="jobs" value="' + i + '"' + (r.jobs.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
++            '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td></tr>";
++        }).join("") + "</table>";
++      hint();
++    }).catch(function (e) { host.innerHTML = '<p class="tr-err">The lab does not answer: ' + esc(e.message) + "</p>"; });
++  }
++  function chosen() {
++    var pick = function (role) { return Array.prototype.map.call(document.querySelectorAll('#gpuRoles input[data-role="' + role + '"]:checked'), function (x) { return +x.value; }); };
++    var s = document.querySelector('#gpuRoles input[name="gpuStudio"]:checked');
++    return { studio: s ? +s.value : 0, train: pick("train"), jobs: pick("jobs") };
++  }
++  function hint() {
++    var d = state.data, c = chosen(), say = [];
++    if (!d) return;
++    if (c.train.indexOf(c.studio) >= 0) say.push("Training may take GPU" + c.studio + ", the studio’s card: while it does, synthesis waits.");
++    else say.push("Training never takes GPU" + c.studio + ": synthesis and training go on side by side.");
++    if (d.studio_now != null && d.studio_now !== d.roles.studio) say.push("Saved: the studio on GPU" + d.roles.studio + "; it still runs on GPU" + d.studio_now + " until it restarts.");
++    $("gpuHint").textContent = say.join(" ");
++    var b = $("gpuRestart");
++    b.hidden = !(d.studio_now != null && d.studio_now !== d.roles.studio);
++    b.textContent = "Restart the studio on GPU" + d.roles.studio;
++  }
++  function save() {
++    var c = chosen();
++    if (!c.train.length || !c.jobs.length) return toast("Give training and the lab’s jobs one card at least", "bad");
++    lab("/gpus", c).then(function (d) {
++      state.data = d; hint();
++      toast(d.studio_now != null && d.studio_now !== d.roles.studio ? "Saved: the studio moves to GPU" + d.roles.studio + " when it restarts" : "Saved", "good");
++      paint();
++    }).catch(function (e) { toast(e.message, "bad"); });
++  }
++  function restart() {
++    var to = state.data && state.data.roles.studio;
++    window.HeresyDialog.confirm("Restart the studio on GPU" + to + "?\n\nThe models load again on the new card at the next song; the page reconnects by itself. Nothing is rendering now.", { ok: "Restart" })
++      .then(function (ok) {
++        if (!ok) return;
++        return lab("/studio/restart", {}).then(function () {
++          toast("The studio restarts on GPU" + to + "…");
++          var tries = 0;
++          (function wait() {
++            setTimeout(function () {
++              fetch("/hardware").then(function (r) { if (!r.ok) throw new Error(); toast("The studio is back on GPU" + to, "good"); paint(); })
++                .catch(function () { if (++tries < 60) wait(); });
++            }, 2000);
++          })();
++        });
++      }).catch(function (e) { toast(e.message, "bad"); });
++  }
++
++  // before a synthesis: true when it may start. A lab that does not answer does not block the studio (it cannot
++  // know), and says so in the console only.
++  function guard() {
++    return lab("/gpus").then(function (d) {
++      if (!d.studio_training) return true;
++      var g = d.studio_now != null ? d.studio_now : d.roles.studio;
++      return window.HeresyDialog.confirm("GPU" + g + " is training " + d.studio_training + "\n\nIt is the studio’s own card: a synthesis now would fight the training for its memory, and one of them would fail. " +
++        "The synthesis waits until the run ends, or until you stop it (Train). To create while training, give training another card: Engine → GPUs.",
++        { ok: "Open Train", cancel: "Wait" }).then(function (go) {
++        if (go) { var t = document.querySelector('#tabs [data-tab="train"]'); if (t) t.click(); }
++        return false;
++      });
++    }).catch(function (e) { console.warn("the GPU guard could not ask the lab:", e.message); return true; });
++  }
++
++  function init(hooks) {
++    state.hooks = hooks || null;
++    if (!$("gpuRoles")) return;
++    $("gpuSave").addEventListener("click", save);
++    $("gpuRestart").addEventListener("click", restart);
++    $("gpuRoles").addEventListener("change", hint);
++    var open = $("engineToggle");
++    if (open) open.addEventListener("click", function () { setTimeout(paint, 60); });
++    paint();
++  }
++  window.HeresyGpus = { init: init, paint: paint, guard: guard };
++})();
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 06d6137..4d30a4d 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -290,7 +290,7 @@
+     }).join("");
+     var labels = [hi, (hi + lo) / 2, lo].map(function (v, i) { return '<span style="top:' + [2, 46, 90][i] + '%">' + v.toFixed(v < 10 ? 3 : 2) + "</span>"; }).join("");
+     return '<figure class="tr-chart" data-key="' + key + '" data-last="' + last + '" data-lo="' + lo + '" data-hi="' + hi + '">' +
+-      '<figcaption><b>' + title + '</b><span class="mono">' + s.first.toFixed(3) + " → " + s.last.toFixed(3) + " · min " + s.min.toFixed(3) + '</span><span class="tr-read mono"></span></figcaption>' +
++      '<figcaption><b>' + title + '</b><span class="mono">' + s.first.toFixed(3) + " → " + s.last.toFixed(3) + " · min " + s.min.toFixed(3) + '</span><span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
+       '<div class="tr-plot"><div class="tr-ylab mono">' + labels + "</div>" +
+       '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + ticks +
+         '<path class="raw" d="' + path(c) + '"/>' + (oc.length > 1 ? '<path class="cmp" d="' + path(ema(oc, 0.08)) + '"/>' : "") +
+@@ -380,6 +380,7 @@
+       var x = (600 * best[0] / +g.dataset.last).toFixed(1), line = g.querySelector("line.cur");
+       line.setAttribute("x1", x); line.setAttribute("x2", x);
+       var avg = ema(cc, 0.08).filter(function (p) { return p[0] === pt[0]; })[0];
++      g.querySelector(".tr-read").classList.remove("is-hint");
+       g.querySelector(".tr-read").textContent = "step " + pt[0] + (r.tracks ? " · e" + (pt[0] / r.tracks).toFixed(1) : "") + " · " + pt[1].toFixed(3) + (avg ? " (avg " + avg[1].toFixed(3) + ")" : "");
+     });
+     return sm;
+@@ -497,9 +498,14 @@
+     if (runOf(spec.name)) return toast("A run named " + spec.name + " is there already: give this one its own name", true);
+     var tracks = ((state.data.prepared || []).filter(function (p) { return p.name === set; })[0] || {}).tracks || 1;
+     var ep = Math.ceil(spec.steps / tracks);
+-    confirmBox("Train " + spec.name + "?\n\n" + ep * tracks + " steps (" + ep + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight + ", " + spec.quant + " weights, " +
+-      (spec.engine === "ruach" ? "the studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept. It takes a GPU of its own for hours" +
+-      (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights."), { ok: "Train" }).then(function (ok) {
++    // HERESY 1091: said when the run may take the studio's own card (synthesis then waits while it trains)
++    api("/gpus").catch(function () { return null; }).then(function (g) {
++      var shared = g && g.roles && g.roles.train.indexOf(g.roles.studio) >= 0;
++      return confirmBox("Train " + spec.name + "?\n\n" + ep * tracks + " steps (" + ep + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight + ", " + spec.quant + " weights, " +
++        (spec.engine === "ruach" ? "the studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept. It takes a GPU of its own for hours" +
++        (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights.") +
++        (shared ? "\n\nTraining may take GPU" + g.roles.studio + ", the studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card)." : ""), { ok: "Train" });
++    }).then(function (ok) {
+       if (!ok) return;
+       return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
+     }).catch(function (e) { toast(e.message, true); });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 1ad3e98..4fd3210 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -127,6 +127,17 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       </div>
+     </div>
+ 
++    <!-- HERESY 1091: which card does what (heresy-gpus.js, lab/gpu_roles.py, user/gpus.json) -->
++    <div class="card wide gpu-card" id="gpuCard">
++      <div class="lora-card-head"><h3>GPUs</h3><span class="lora-card-note">which card does what: the studio, training, the lab&#39;s jobs</span></div>
++      <div id="gpuRoles"><p class="row-hint">Asking the lab&hellip;</p></div>
++      <p class="row-hint" id="gpuHint"></p>
++      <div class="card-actions">
++        <button type="button" class="btn ghost small" id="gpuRestart" hidden>Restart the studio</button>
++        <button type="button" class="btn primary small" id="gpuSave">Save</button>
++      </div>
++    </div>
++
+     <div class="card wide lora-card">
+       <div class="lora-card-head"><h3>VAEs</h3>
+         <span class="lora-card-note" id="vaeCardNote"></span></div>
+@@ -1444,6 +1455,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="heresy-menu.js"></script>
+ <script src="heresy-writer.js"></script>
+ <script src="heresy-train.js"></script>
++<script src="heresy-gpus.js"></script>
+ <script src="heresy-instruments.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+-- 
+2.43.0
+

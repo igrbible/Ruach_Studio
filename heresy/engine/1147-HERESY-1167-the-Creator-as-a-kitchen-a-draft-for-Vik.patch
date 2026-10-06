@@ -1,0 +1,1012 @@
+From 35926c42d19b9306d7fec27aaf98992dcfedcea9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 00:58:12 -0600
+Subject: [PATCH 1147/1177] HERESY 1167: the Creator as a kitchen (a draft for
+ Viktor's eye)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026: «Левую промптинг генерации на 2/3 слева как основную,
+разделить её на две колонки по 1/3, всё пересмотреть и реорганизовать.
+Статистику/карту трека реально нужно на 1/3 ширины справа… [дубли] во втором
+фрейме 1/3 ширины вниз этого фрейма под-фреймом. И для экономии пространства
+карточки сделать более компактными… Каждую секцию отчётливо обособить, может
+даже едва заметным карточным абажуром. Схлопнутые блоки… более контрастно».
+
+- The form regrouped into two columns of cards, no field changed: the words
+  (the song with the Writer's document, the style, the lyrics) and the machine
+  (the profile, the plan and the seeds, the sound, the adapters, the drawers).
+- From 1600 px the two stand side by side over two thirds of the room; the
+  last third is the take over its takes, a line between them to drag (Home or
+  a double-click for the default, arrows; kept as a share of the height), the
+  takes in compact cards of two lines, folded to one bar under the take.
+- Below 1600 px the three columns and their grips as before, the cards in one.
+- Closed reads as closed: folded parts, closed drawers and the new «Add a LoRA»
+  line (every adapter not in use behind it, remembered open or closed) stand on
+  a firmer ground with the chevron in the accent; the drawers two by two.
+- A tip reached by the keyboard stays while the pointer only passes (the
+  kitchen scrolls under a still pointer when a field takes the focus).
+- Three keys in the six catalogs.
+
+On the branch creator-1167, served on :41994 for his eye; the live page is not
+touched. The page suite 329/0 (the grips at 1599 px, the kitchen at 1920),
+languages 14/0, player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 135 ++++++++
+ tools/console/app.js            |  54 ++-
+ tools/console/heresy-i18n-be.js |   5 +-
+ tools/console/heresy-i18n-el.js |   5 +-
+ tools/console/heresy-i18n-es.js |   5 +-
+ tools/console/heresy-i18n-it.js |   5 +-
+ tools/console/heresy-i18n-ru.js |   5 +-
+ tools/console/heresy-i18n-uk.js |   5 +-
+ tools/console/index.html        | 593 ++++++++++++++++----------------
+ tools/console/loras.js          |  11 +-
+ 10 files changed, 526 insertions(+), 297 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 053fc1f..0b4b243 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3628,3 +3628,138 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ /* HERESY 1165: the overlay's play is the cards' hollow one, light on the overlay's dark in either theme */
+ .art-cap .coll-play { width: 34px; height: 34px; color: #f1ece4; }
+ .art-cap .coll-play:hover, .art-cap .coll-play.is-playing { color: #fff; }
++
++/* ============================================================= the Creator's kitchen (HERESY 1167)
++   Viktor 05.10.2026: «Левую промптинг генерации на 2/3 слева как основную, разделить её на две колонки по 1/3, всё
++   пересмотреть и реорганизовать. Статистику/карту трека реально нужно на 1/3 ширины справа… [дубли] во втором фрейме
++   1/3 ширины вниз этого фрейма под-фреймом. И для экономии пространства карточки сделать более компактными… Каждую
++   секцию отчётливо обособить, может даже едва заметным карточным абажуром. Схлопнутые блоки тоже нужно как-то более
++   контрастно изобразить». At every width the form is two columns of cards, the words and the machine; from 1600 px
++   they stand side by side over two thirds of the room, and the right third holds the take over its takes. */
++
++/* each part of the form on a ground of its own, barely raised: the lampshade */
++.compose { gap: 14px; }
++.k-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
++.k-card {
++  display: flex; flex-direction: column; gap: 14px; min-width: 0;
++  padding: 14px 16px 16px;
++  border-radius: var(--r-lg);
++  background: color-mix(in srgb, var(--panel) 55%, var(--ground));
++  border: 1px solid var(--line-soft);
++  box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-md) 45%, transparent), 0 12px 26px -22px var(--shadow-lg);
++}
++.k-card > .field-row, .k-card > .field { margin: 0; }
++/* the drawers are cards themselves: their group wears no second frame */
++.k-card.k-more { padding: 0; gap: 10px; background: none; border: 0; box-shadow: none; }
++.k-song .wr-hand { margin: 0; }
++
++/* closed reads as closed: a folded part and a closed drawer stand on a firmer ground, with a firm line and the
++   chevron in the accent, so what is hidden is never missed */
++:is(#view-compose, #view-take) .drawer:not([open]) {
++  background: var(--raise);
++  border-color: color-mix(in srgb, var(--line) 55%, var(--line-strong));
++}
++:is(#view-compose, #view-take) .drawer:not([open]) > summary .sum-name { font-weight: 600; }
++:is(#view-compose, #view-take) .drawer:not([open]):hover { border-color: var(--amber-dim); }
++:is(#view-compose, #view-take) .drawer > summary .chev { border-left-color: var(--amber); }
++.compose [data-fold].is-folded > .label {
++  padding: 9px 12px; border-radius: var(--r-md);
++  background: var(--raise);
++  border: 1px solid color-mix(in srgb, var(--line) 55%, var(--line-strong));
++  color: var(--ink);
++}
++.compose [data-fold].is-folded > .label:hover { border-color: var(--amber-dim); }
++.compose [data-fold] > .label .fold-chev { border-left-color: var(--amber); }
++
++/* from 1600 px: the words | the machine over two thirds; the take over its takes in the last third */
++@media (min-width: 1600px) {
++  body[data-tab="create"] .workspace {
++    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
++    grid-template-rows: var(--k-take, clamp(480px, 56%, 760px)) minmax(0, 1fr);   /* the take needs ~600 px, its takes the rest */
++  }
++  body[data-tab="create"] #view-compose { grid-column: 1; grid-row: 1 / 3; }
++  body[data-tab="create"] #view-take { grid-column: 2; grid-row: 1; }
++  body[data-tab="create"] .library { grid-column: 2; grid-row: 2; }
++  body[data-tab="create"] .col-grip { display: none; }
++  body[data-tab="create"] .compose {
++    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(min-content, 1fr) auto;
++    gap: 14px 16px; align-items: start; flex: 1 0 auto;   /* a short kitchen still has its bar at the bottom */
++  }
++  /* the bar stays in sight at the column's foot; its ground reaches into the column's margins by a shadow, so its
++     buttons keep to the kitchen's right edge */
++  body[data-tab="create"] .compose > .submit-bar {
++    grid-column: 1 / -1; position: sticky; bottom: -60px; z-index: 4;
++    margin: 0 0 -60px; padding: 12px 0 14px;
++    background: var(--ground);
++    box-shadow: -22px 0 0 0 var(--ground), 22px 0 0 0 var(--ground);
++  }
++
++  /* the line between the take and its takes: drag it, double-click for the default, arrows move it */
++  .k-split { display: none; }
++  body[data-tab="create"] .k-split {
++    display: block; grid-column: 2; grid-row: 2; align-self: start; position: relative;
++    height: 11px; margin-top: -6px; z-index: 7; cursor: row-resize; touch-action: none; outline: none;
++  }
++  body[data-tab="create"] .k-split::after {
++    content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 3px; border-radius: 2px;
++    background: transparent; transition: background .15s;
++  }
++  body[data-tab="create"] .k-split:hover::after, body[data-tab="create"] .k-split:focus-visible::after,
++  body[data-tab="create"] .k-split.is-dragging::after { background: var(--amber); }
++  body.is-resizing-rows, body.is-resizing-rows * { cursor: row-resize !important; user-select: none !important; }
++
++  /* folded, the takes are one bar under the take, and the take has the third to itself */
++  body[data-tab="create"] .workspace.lib-folded { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important; grid-template-rows: minmax(0, 1fr) auto; }
++  body[data-tab="create"] .workspace.lib-folded .k-split { display: none; }
++  body[data-tab="create"] .library.is-folded .lib-unfold {
++    writing-mode: horizontal-tb; flex-direction: row; justify-content: flex-start; gap: 10px;
++    width: 100%; height: 40px; padding: 0 16px;
++  }
++  body[data-tab="create"] .library.is-folded .lib-unfold-name { writing-mode: horizontal-tb; }
++
++  /* the takes in compact cards: the title, then its marks, length and time beside its workspace and its votes */
++  body[data-tab="create"] .library .lib-list { gap: 2px; padding: 6px 8px; }
++  body[data-tab="create"] .library .take {
++    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 8px; row-gap: 3px;
++    padding: 7px 10px;
++  }
++  body[data-tab="create"] .library .take-title { grid-column: 1 / -1; margin: 0; font-size: 13px; }
++  body[data-tab="create"] .library .take-style { display: none; }
++  body[data-tab="create"] .library .take-foot { grid-column: 1; grid-row: 2; margin: 0; flex-wrap: nowrap; white-space: nowrap; }
++  body[data-tab="create"] .library .take-extra { display: contents; }
++  body[data-tab="create"] .library .take-extra .coll-badges { grid-column: 2; grid-row: 2; margin: 0; flex-wrap: nowrap; overflow: hidden; }
++  body[data-tab="create"] .library .take-extra .coll-badge { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
++  body[data-tab="create"] .library .take-rate { grid-column: 3; grid-row: 2; }
++  body[data-tab="create"] .library .take.is-running-row .take-style { display: block; grid-column: 1 / -1; -webkit-line-clamp: 1; }
++}
++
++/* the adapters not in use, behind one line (loras.js): closed, it reads as closed */
++.lora-lib > summary {
++  display: flex; align-items: center; gap: 9px; padding: 8px 12px; cursor: pointer; list-style: none;
++  border-radius: var(--r-md); background: var(--raise); color: var(--ink); font-size: 12.5px; font-weight: 600;
++  border: 1px solid color-mix(in srgb, var(--line) 55%, var(--line-strong));
++}
++.lora-lib > summary::-webkit-details-marker { display: none; }
++.lora-lib > summary:hover { border-color: var(--amber-dim); }
++.lora-lib > summary .chev { border-left-color: var(--amber); }
++.lora-lib[open] > summary .chev { transform: rotate(90deg); }
++.lora-lib[open] > summary { margin-bottom: 8px; background: transparent; border-color: var(--line-soft); }
++.lora-lib-count { color: var(--dim); font-weight: 400; font-size: 11.5px; }
++.lora-lib-count:empty { display: none; }
++
++/* the profile's line in one row: its menu gives way to its three buttons */
++.k-plan #setupLibRow { flex-wrap: nowrap; margin: 0; }
++.k-plan #setupLibRow select { flex: 1 1 160px; min-width: 0; max-width: 300px; }
++
++@media (min-width: 1600px) {
++  /* the four drawers two by two; an open one takes the whole width */
++  body[data-tab="create"] .k-card.k-more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
++  body[data-tab="create"] .k-more .drawer[open] { grid-column: 1 / -1; }
++}
++
++@media (min-width: 1600px) {
++  /* the take's tools tighter in its third: smaller buttons, closer rows */
++  body[data-tab="create"] #view-take .take-tools { gap: 8px 14px; }
++  body[data-tab="create"] #view-take .take-tools .btn.small { padding: 4px 9px; font-size: 11.5px; }
++  body[data-tab="create"] #view-take .tool-row { gap: 5px; }
++}
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 3935806..5bad738 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -364,7 +364,7 @@
+   document.addEventListener("mouseover", function (event) {
+     var target = tipTarget(event.target);
+     if (target && target !== tipFor) showTip(target);
+-    else if (!target && tipFor) hideTip();
++    else if (!target && tipFor && tipFor !== document.activeElement) hideTip();   // HERESY 1167: a focused one stays
+   });
+   document.addEventListener("focusin", function (event) {
+     var target = tipTarget(event.target);
+@@ -5784,6 +5784,58 @@
+   else window.addEventListener("resize", applyCols);
+   applyCols();
+ 
++  // ------------------------------------------------------------ the take over its takes (HERESY 1167)
++  // From 1600 px the Creator's last third is the take over its takes (Viktor 05.10.2026: «во втором фрейме 1/3 ширины
++  // вниз этого фрейма под-фреймом»). The line between them is dragged up or down (140 px left to each at least);
++  // double-click or Home gives the default back, arrows move a focused line. Kept as a share of the room's height,
++  // this browser's own ("yue2.kSplit"), so a taller window gives both more.
++  var kSplit = $("kSplit");
++  function kTake() { return Math.round($("view-take").getBoundingClientRect().height); }
++  function setSplit(px) {
++    var h = workspace.getBoundingClientRect().height;
++    if (px === null || !h) { workspace.style.removeProperty("--k-take"); return; }
++    workspace.style.setProperty("--k-take", (Math.max(140, Math.min(px, h - 140)) / h * 100).toFixed(2) + "%");
++  }
++  function applySplit() {
++    var share = parseFloat(recall("yue2.kSplit") || "");
++    if (isFinite(share) && share > 0 && share < 100) workspace.style.setProperty("--k-take", share + "%");
++    else workspace.style.removeProperty("--k-take");
++  }
++  function saveSplit() {
++    var h = workspace.getBoundingClientRect().height;
++    store("yue2.kSplit", h ? (kTake() / h * 100).toFixed(2) : null);
++  }
++  kSplit.addEventListener("pointerdown", function (event) {
++    if (event.button !== 0) return;
++    var startY = event.clientY, from = kTake();
++    kSplit.setPointerCapture(event.pointerId);
++    kSplit.classList.add("is-dragging");
++    document.body.classList.add("is-resizing-rows");
++    function move(e) { setSplit(from + (e.clientY - startY)); }
++    function done(e) {
++      kSplit.removeEventListener("pointermove", move);
++      kSplit.removeEventListener("pointerup", done);
++      kSplit.removeEventListener("pointercancel", done);
++      kSplit.classList.remove("is-dragging");
++      document.body.classList.remove("is-resizing-rows");
++      if (e.clientY !== startY) saveSplit();
++    }
++    kSplit.addEventListener("pointermove", move);
++    kSplit.addEventListener("pointerup", done);
++    kSplit.addEventListener("pointercancel", done);
++  });
++  kSplit.addEventListener("dblclick", function () { store("yue2.kSplit", null); applySplit(); });
++  kSplit.addEventListener("keydown", function (event) {
++    var step = event.shiftKey ? 64 : 16;
++    if (event.key === "ArrowUp") setSplit(kTake() - step);
++    else if (event.key === "ArrowDown") setSplit(kTake() + step);
++    else if (event.key === "Home") { event.preventDefault(); store("yue2.kSplit", null); applySplit(); return; }
++    else return;
++    event.preventDefault();
++    saveSplit();
++  });
++  applySplit();
++
+   // ------------------------------------------------------------- appearance
+   // The Engine page's Appearance card: the theme (the same choice as the top bar's swatches), options that
+   // work with any theme, and the fonts below. The options are this browser's ("yue2.look"); the <head>
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 88da1f7..d23c404 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2494,5 +2494,8 @@ RuachI18n.add("be", {
+ "The log the window's full height, or back": "Журнал на ўсю вышыню акна, або назад",
+ "Picture:": "Выява:",
+ "The picture's page: its author and licence": "Старонка выявы: аўтар і ліцэнзія",
+-"Probes, styles and voices": "Пробы, стылі і галасы"
++"Probes, styles and voices": "Пробы, стылі і галасы",
++"Add a LoRA": "Дадаць LoRA",
++"Takes list height": "Вышыня спіса сэмплаў",
++"Drag to resize · double-click for the default height": "Цягні, каб змяніць памер · падвойны пстрык — вышыня па змаўчанні"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index f460025..cd1d05f 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2493,5 +2493,8 @@ RuachI18n.add("el", {
+ "The log the window's full height, or back": "Το αρχείο σε όλο το ύψος του παραθύρου, ή πίσω",
+ "Picture:": "Εικόνα:",
+ "The picture's page: its author and licence": "Η σελίδα της εικόνας: ο δημιουργός και η άδεια",
+-"Probes, styles and voices": "Δοκιμές, ύφη και φωνές"
++"Probes, styles and voices": "Δοκιμές, ύφη και φωνές",
++"Add a LoRA": "Προσθήκη LoRA",
++"Takes list height": "Ύψος της λίστας λήψεων",
++"Drag to resize · double-click for the default height": "Σύρε για αλλαγή μεγέθους · διπλό κλικ για το προεπιλεγμένο ύψος"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 53b8624..65b8252 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2493,5 +2493,8 @@ RuachI18n.add("es", {
+ "The log the window's full height, or back": "El registro a toda la altura de la ventana, o de vuelta",
+ "Picture:": "Imagen:",
+ "The picture's page: its author and licence": "La página de la imagen: su autor y su licencia",
+-"Probes, styles and voices": "Pruebas, estilos y voces"
++"Probes, styles and voices": "Pruebas, estilos y voces",
++"Add a LoRA": "Añadir una LoRA",
++"Takes list height": "Altura de la lista de tomas",
++"Drag to resize · double-click for the default height": "Arrastra para cambiar el tamaño · doble clic para la altura por defecto"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 07ca88d..12f033a 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2493,5 +2493,8 @@ RuachI18n.add("it", {
+ "The log the window's full height, or back": "Il registro a tutta l'altezza della finestra, o indietro",
+ "Picture:": "Immagine:",
+ "The picture's page: its author and licence": "La pagina dell'immagine: l'autore e la licenza",
+-"Probes, styles and voices": "Prove, stili e voci"
++"Probes, styles and voices": "Prove, stili e voci",
++"Add a LoRA": "Aggiungi una LoRA",
++"Takes list height": "Altezza dell'elenco dei take",
++"Drag to resize · double-click for the default height": "Trascina per ridimensionare · doppio clic per l'altezza predefinita"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 9751d9e..da1e218 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2499,5 +2499,8 @@ RuachI18n.add("ru", {
+ "The log the window's full height, or back": "Журнал во всю высоту окна, или обратно",
+ "Picture:": "Изображение:",
+ "The picture's page: its author and licence": "Страница изображения: автор и лицензия",
+-"Probes, styles and voices": "Пробы, стили и голоса"
++"Probes, styles and voices": "Пробы, стили и голоса",
++"Add a LoRA": "Добавить LoRA",
++"Takes list height": "Высота списка семплов",
++"Drag to resize · double-click for the default height": "Тяни, чтобы изменить размер · двойной щелчок — высота по умолчанию"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index f8e272c..58f8a69 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2494,5 +2494,8 @@ RuachI18n.add("uk", {
+ "The log the window's full height, or back": "Журнал на всю висоту вікна, або назад",
+ "Picture:": "Зображення:",
+ "The picture's page: its author and licence": "Сторінка зображення: автор і ліцензія",
+-"Probes, styles and voices": "Проби, стилі й голоси"
++"Probes, styles and voices": "Проби, стилі й голоси",
++"Add a LoRA": "Додати LoRA",
++"Takes list height": "Висота списку семплів",
++"Drag to resize · double-click for the default height": "Тягни, щоб змінити розмір · подвійне клацання — типова висота"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index df765e1..0a60eb7 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -629,16 +629,6 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <div class="spacer"></div>
+       <button type="button" class="btn ghost small" id="newSong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.">＋ New song</button>
+     </div>
+-    <!-- HERESY 1047: the Writer's document in hand; what is made now is linked to it -->
+-    <div class="wr-hand" id="wrHandBox">
+-      <span class="wr-hand-cap">Writer</span>
+-      <button type="button" class="wr-hand-name" id="wrHandOpen" title="Open it in the Writer"><span aria-hidden="true">✎</span> <span id="wrHandName" translate="no"></span></button>
+-      <button type="button" class="wr-hand-x" id="wrHandDrop" title="Put it down: new takes link to no document" aria-label="Put it down">✕</button>
+-      <span class="spacer"></span>
+-      <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
+-      <button type="button" class="btn ghost small" id="wrHandSave">Save to Writer…</button>
+-    </div>
+-
+     <!-- HERESY 1016: the Kit's idea writer is retired (its code stays dormant); its structure
+          templates live on in the Write tab's writing room -->
+     <details class="drawer" id="museDrawer" hidden>
+@@ -678,298 +668,320 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     </details>
+ 
+     <form id="composeForm" class="compose" novalidate>
+-      <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
+-      <!-- HERESY 1019: the title and the song's key on one line -->
+-      <div class="field-row title-row">
+-        <label class="field titlefield grow">
+-          <span class="label">Title</span>
+-          <input type="text" id="title" placeholder="Song title" autocomplete="off" maxlength="80" />
+-        </label>
+-        <label class="field keyfield">
+-          <span class="label">Key</span>
+-          <select id="songKey" data-tip="The key the song is in: the score's K:. With a score in the form, a choice moves it there; without one, the choice waits and moves the score that comes (a plan, a Retake, a transcription)."></select>
+-        </label>
+-      </div>
+-      <div class="field-row seedrow">
+-        <label class="field seedfield">
+-          <span class="label">Music seed <span class="info" tabindex="-1" role="img" aria-label="About the two seeds" data-tip-ref="tip-seeds"></span></span>
+-          <div class="seed-wrap">
+-            <input type="text" id="lmSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
+-            <button type="button" class="dice" id="rollLmSeed" aria-label="Put in a random music seed">
+-              <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
+-            </button>
++      <!-- HERESY 1167: two columns of cards. The words: what is sung. The machine: how it is made. Each part a card
++           of its own; from 1600 px the two stand side by side (2/3 of the room), under them one another. -->
++      <div class="k-col k-words">
++        <section class="k-card k-song">
++          <!-- HERESY 1047: the Writer's document in hand; what is made now is linked to it -->
++          <div class="wr-hand" id="wrHandBox">
++            <span class="wr-hand-cap">Writer</span>
++            <button type="button" class="wr-hand-name" id="wrHandOpen" title="Open it in the Writer"><span aria-hidden="true">✎</span> <span id="wrHandName" translate="no"></span></button>
++            <button type="button" class="wr-hand-x" id="wrHandDrop" title="Put it down: new takes link to no document" aria-label="Put it down">✕</button>
++            <span class="spacer"></span>
++            <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
++            <button type="button" class="btn ghost small" id="wrHandSave">Save to Writer…</button>
+           </div>
+-        </label>
+-        <label class="field seedfield">
+-          <span class="label">Sound seed</span>
+-          <div class="seed-wrap">
+-            <input type="text" id="soundSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
+-            <button type="button" class="dice" id="rollSoundSeed" aria-label="Put in a random sound seed">
+-              <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
+-            </button>
++          <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
++          <!-- HERESY 1019: the title and the song's key on one line -->
++          <div class="field-row title-row">
++            <label class="field titlefield grow">
++              <span class="label">Title</span>
++              <input type="text" id="title" placeholder="Song title" autocomplete="off" maxlength="80" />
++            </label>
++            <label class="field keyfield">
++              <span class="label">Key</span>
++              <select id="songKey" data-tip="The key the song is in: the score's K:. With a score in the form, a choice moves it there; without one, the choice waits and moves the score that comes (a plan, a Retake, a transcription)."></select>
++            </label>
+           </div>
+-        </label>
+-      </div>
+-
+-      <!-- HERESY 1006: data-fold blocks fold on a click on their heading; the text areas grow with
+-           their text up to data-max-rows, then scroll. Lyrics sit right under the style. -->
+-      <label class="field" data-fold="style">
+-        <span class="label">Style prompt <em>language, genre, voice, instruments, tempo</em></span>
+-        <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
+-        <span class="row-hint size-meter" id="styleMeter"></span>
+-        <span class="key-check is-hidden" id="keyCheck"><span id="keyCheckText"></span>
+-          <button type="button" class="btn ghost small" id="keyToScore"></button>
+-          <button type="button" class="btn ghost small" id="keyToStyle"></button></span>
+-      </label>
+-      <!-- HERESY 1032: saved styles, kept on Forge (heresy-presets.js) -->
+-      <div class="lib-row" id="styleLibRow">
+-        <select id="styleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select>
+-        <button type="button" class="btn ghost small" id="styleSave" data-tip="Keep this style under a name, on Forge: every browser sees it">Save style…</button>
+-        <button type="button" class="btn ghost small" id="styleDel" disabled>Delete</button>
+-      </div>
+-
+-      <label class="field" data-fold="lyrics">
+-        <span class="label">Lyrics <em>section tags on their own line</em></span>
+-        <textarea id="lyrics" rows="6" data-max-rows="16" spellcheck="false" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
+-      </label>
+-      <!-- HERESY 1043: a whole text made ready to read, by a profile (edited in Write) -->
+-      <div class="lib-row" id="tpRow">
+-        <span class="label">Text profile</span>
+-        <select id="tpPick" aria-label="Text profile" data-tip="Paste a whole text into Lyrics, pick a profile, Apply: its rules (cleanup, phonetics) and its shape ([Intro], [Verse] at blank lines, [Interlude] after long paragraphs) make it ready to read. Profiles are edited in the Write tab."></select>
+-        <button type="button" class="btn ghost small" id="tpApply">Apply</button>
+-        <button type="button" class="btn ghost small" id="tpUndo" disabled>Undo</button>
+-        <span class="row-hint mono" id="tpNote"></span>
+-      </div>
+-
+-      <fieldset class="field sound" data-fold="vae">
+-        <span class="label">VAE <span class="info" tabindex="-1" role="img" aria-label="About the VAE" data-tip-ref="tip-vae"></span><em>turns the written song into sound</em></span>
+-        <div class="toggles" id="decoders"></div>
+-      </fieldset>
+-
+-      <fieldset class="field sound" data-fold="sliders">
+-        <span class="label">Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About the sliders" data-tip-ref="tip-sliders"></span><em>voice and genre while the music is written; 0 is off, 1 is full</em></span>
+-        <div class="slider-active" id="sliderActive"></div>
+-        <div class="slider-chips" id="sliderChips"></div>
+-        <p class="row-hint" id="sliderHint"></p>
+-      </fieldset>
+-
+-      <fieldset class="field sound" data-fold="loras">
+-        <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras"></span><em>a strength for the music half and for the sound half</em></span>
+-        <div id="loraPicker"></div>
+-      </fieldset>
+-
+-      <!-- HERESY 1032: profiles: every knob but the texts. Music 8:00 and Speech 15:00 are built in -->
+-      <div class="lib-row" id="setupLibRow">
+-        <span class="label">Profile</span>
+-        <select id="setupLib" aria-label="Profiles" data-tip="A profile sets the mode, length, sampling, guidance, steps, VAE, sliders, LoRAs and output; the texts and seeds stay"></select>
+-        <button type="button" class="btn ghost small" id="setupApply">Apply</button>
+-        <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save profile…</button>
+-        <button type="button" class="btn ghost small" id="setupDel" disabled>Delete</button>
+-      </div>
+-
+-      <fieldset class="field">
+-        <span class="label">Planning mode</span>
+-        <div class="modes" id="modes">
+-          <label class="mode">
+-            <input type="radio" name="cot" value="full" checked />
+-            <span class="mode-body">
+-              <strong>Full plan</strong>
+-              <small>Melody and chords written first, then rendered. Best for new songs.</small>
+-            </span>
+-          </label>
+-          <label class="mode">
+-            <input type="radio" name="cot" value="melody" />
+-            <span class="mode-body">
+-              <strong>Melody only</strong>
+-              <small>Melody plan, free accompaniment. Recommended for covers.</small>
+-            </span>
++        </section>
++        <section class="k-card k-style">
++          <!-- HERESY 1006: data-fold blocks fold on a click on their heading; the text areas grow with
++               their text up to data-max-rows, then scroll. Lyrics sit right under the style. -->
++          <label class="field" data-fold="style">
++            <span class="label">Style prompt <em>language, genre, voice, instruments, tempo</em></span>
++            <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
++            <span class="row-hint size-meter" id="styleMeter"></span>
++            <span class="key-check is-hidden" id="keyCheck"><span id="keyCheckText"></span>
++              <button type="button" class="btn ghost small" id="keyToScore"></button>
++              <button type="button" class="btn ghost small" id="keyToStyle"></button></span>
+           </label>
+-          <label class="mode">
+-            <input type="radio" name="cot" value="off" />
+-            <span class="mode-body">
+-              <strong>Direct</strong>
+-              <small>Straight from lyrics and style, no editable score.</small>
+-            </span>
++          <!-- HERESY 1032: saved styles, kept on Forge (heresy-presets.js) -->
++          <div class="lib-row" id="styleLibRow">
++            <select id="styleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select>
++            <button type="button" class="btn ghost small" id="styleSave" data-tip="Keep this style under a name, on Forge: every browser sees it">Save style…</button>
++            <button type="button" class="btn ghost small" id="styleDel" disabled>Delete</button>
++          </div>
++        </section>
++        <section class="k-card k-lyrics">
++          <label class="field" data-fold="lyrics">
++            <span class="label">Lyrics <em>section tags on their own line</em></span>
++            <textarea id="lyrics" rows="6" data-max-rows="16" spellcheck="false" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
+           </label>
+-        </div>
+-        <label class="check instrumental-check"><input type="checkbox" id="instrumental" />
+-          <span><strong>Instrumental</strong> · no vocals, the official YuE2 recipe</span>
+-          <span class="info" tabindex="-1" role="img" aria-label="About instrumental songs" data-tip-ref="tip-instrumental"></span></label>
+-      </fieldset>
+-
+-      <div class="codes-note is-hidden" id="codesNote">
+-        <div>
+-          <strong>Music codes loaded</strong>
+-          <span id="codesNoteText"></span>
+-        </div>
+-        <button type="button" class="btn ghost small" id="dropCodes" title="Forget the codes: Generate writes new music from the prompt">Drop codes</button>
++          <!-- HERESY 1043: a whole text made ready to read, by a profile (edited in Write) -->
++          <div class="lib-row" id="tpRow">
++            <span class="label">Text profile</span>
++            <select id="tpPick" aria-label="Text profile" data-tip="Paste a whole text into Lyrics, pick a profile, Apply: its rules (cleanup, phonetics) and its shape ([Intro], [Verse] at blank lines, [Interlude] after long paragraphs) make it ready to read. Profiles are edited in the Write tab."></select>
++            <button type="button" class="btn ghost small" id="tpApply">Apply</button>
++            <button type="button" class="btn ghost small" id="tpUndo" disabled>Undo</button>
++            <span class="row-hint mono" id="tpNote"></span>
++          </div>
++        </section>
+       </div>
+-
+-      <details class="drawer" id="coverDrawer">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Cover or remix</span><span class="sum-say">Reuse a melody and change the style.</span></span></summary>
+-        <div class="drawer-body cover-body">
+-          <!-- two ways in, the same shape: a heading with its short note, one control per line, the button on the left -->
+-          <section class="cover-part">
+-            <h4 class="mini">From a recording <span class="info" tabindex="-1" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe"></span>
+-              <em>its tune only, not the words or the singer</em></h4>
+-            <label class="field"><span class="label">Recording</span>
+-              <input type="file" id="coverFile" accept=".wav,.mp3,.flac,.m4a,.ogg,.opus,.aac" /></label>
+-            <label class="field"><span class="label">Transcribe</span>
+-              <select id="coverTask">
+-                <option value="melody-full">Lead melody (voice + instruments)</option>
+-                <option value="melody-vocal">Vocal melody only</option>
+-                <option value="full">Melody and chords</option>
+-              </select></label>
+-            <div class="cover-act">
+-              <button type="button" class="btn ghost" id="coverListen" aria-pressed="false" disabled
+-                      data-tip="Listen to the chosen recording here; the player at the bottom pauses while it plays">▶ Listen</button>
+-              <button type="button" class="btn ghost" id="coverFromAudio">Transcribe</button>
+-              <p class="cover-status" id="coverAudioStatus"></p>
++      <div class="k-col k-machine">
++        <section class="k-card k-plan">
++          <!-- HERESY 1032: profiles: every knob but the texts. Music 8:00 and Speech 15:00 are built in -->
++          <div class="lib-row" id="setupLibRow">
++            <span class="label">Profile</span>
++            <select id="setupLib" aria-label="Profiles" data-tip="A profile sets the mode, length, sampling, guidance, steps, VAE, sliders, LoRAs and output; the texts and seeds stay"></select>
++            <button type="button" class="btn ghost small" id="setupApply">Apply</button>
++            <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save profile…</button>
++            <button type="button" class="btn ghost small" id="setupDel" disabled>Delete</button>
++          </div>
++          <fieldset class="field">
++            <span class="label">Planning mode</span>
++            <div class="modes" id="modes">
++              <label class="mode">
++                <input type="radio" name="cot" value="full" checked />
++                <span class="mode-body">
++                  <strong>Full plan</strong>
++                  <small>Melody and chords written first, then rendered. Best for new songs.</small>
++                </span>
++              </label>
++              <label class="mode">
++                <input type="radio" name="cot" value="melody" />
++                <span class="mode-body">
++                  <strong>Melody only</strong>
++                  <small>Melody plan, free accompaniment. Recommended for covers.</small>
++                </span>
++              </label>
++              <label class="mode">
++                <input type="radio" name="cot" value="off" />
++                <span class="mode-body">
++                  <strong>Direct</strong>
++                  <small>Straight from lyrics and style, no editable score.</small>
++                </span>
++              </label>
+             </div>
+-          </section>
+-          <section class="cover-part">
+-            <h4 class="mini">From one of your takes <span class="info" tabindex="-1" role="img" aria-label="About covers from a take"
+-                data-tip="Take the melody from a song you already made and render it somewhere else entirely: a ballad as a techno track, a German song in English. The run switches to Melody only."></span>
+-              <em>its melody, in a new style</em></h4>
+-            <label class="field"><span class="label">Melody from</span>
+-              <select id="coverTake"></select></label>
+-            <label class="check"><input type="checkbox" id="coverMelodyOnly" checked />
+-              <span>Drop the chord symbols, so the new style can rebuild the harmony</span></label>
+-            <div class="cover-act">
+-              <button type="button" class="btn ghost" id="coverFromTake">Use this melody</button>
+-              <p class="cover-status" id="coverStatus"></p>
++            <label class="check instrumental-check"><input type="checkbox" id="instrumental" />
++              <span><strong>Instrumental</strong> · no vocals, the official YuE2 recipe</span>
++              <span class="info" tabindex="-1" role="img" aria-label="About instrumental songs" data-tip-ref="tip-instrumental"></span></label>
++          </fieldset>
++
++          <div class="codes-note is-hidden" id="codesNote">
++            <div>
++              <strong>Music codes loaded</strong>
++              <span id="codesNoteText"></span>
+             </div>
+-          </section>
+-        </div>
+-      </details>
+-
+-      <details class="drawer" id="scoreDrawer">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Supply your own score</span><span class="sum-say">Bring an ABC score, for covers and edits.</span></span></summary>
+-        <div class="drawer-body score-body">
+-          <label class="field">
+-            <span class="label">Score <em>ABC notation, followed in Full plan and Melody only</em></span>
+-            <textarea id="abc" rows="8" spellcheck="false" class="mono" placeholder="X:1&#10;L:1/8&#10;M:4/4&#10;K:C"></textarea>
+-          </label>
+-          <!-- HERESY 1018: move the score to another key (heresy-transpose.js) -->
+-          <div class="transpose-row is-hidden" id="transposeRow">
+-            <span class="label">Key</span><strong class="mono" id="scoreKeyNow"></strong><span aria-hidden="true">→</span>
+-            <select id="transposeTo" aria-label="Target key" data-tip="The key to move the score in the box to: every note moves by the same interval, and the key with them. Beside it: the nearest way, or up, or down."></select>
+-            <select id="transposeWay" aria-label="Direction" data-tip="Nearest: the smaller move. Up or down: that way, for a voice that needs it">
+-              <option value="near">nearest</option><option value="up">up</option><option value="down">down</option>
+-            </select>
+-            <button type="button" class="btn ghost small" id="transposeBtn">Transpose</button>
+-            <span class="row-hint" id="transposeNote"></span>
++            <button type="button" class="btn ghost small" id="dropCodes" title="Forget the codes: Generate writes new music from the prompt">Drop codes</button>
+           </div>
+-          <!-- HERESY 1028: the check, one voice moved, MIDI out and in -->
+-          <div class="score-check" id="formScoreCheck" hidden></div>
+-          <div class="transpose-row is-hidden" id="voiceShiftRow">
+-            <span class="label">Voice</span>
+-            <select id="voiceShiftWho" aria-label="Which voice" data-tip="The voice to move: Vocal (what is sung) or Ins (the instruments' melody). The other voice stays."><option value="Vocal">Vocal</option><option value="Ins">Ins</option></select>
+-            <select id="voiceShift" aria-label="How far" data-tip="By steps of the scale, in the score's key: a third up moves every note to the third above it in the key, its own sharps and flats kept. The other voice and the chord symbols stay.">
+-              <option value="-14">two octaves down</option><option value="-7" selected>an octave down</option><option value="-5">a sixth down</option>
+-              <option value="-4">a fifth down</option><option value="-3">a fourth down</option><option value="-2">a third down</option>
+-              <option value="2">a third up</option><option value="3">a fourth up</option><option value="4">a fifth up</option>
+-              <option value="5">a sixth up</option><option value="7">an octave up</option><option value="14">two octaves up</option></select>
+-            <button type="button" class="btn ghost small" id="voiceShiftBtn">Move</button>
+-            <span class="row-hint" id="voiceShiftNote"></span>
+-          </div>
+-          <div class="transpose-row">
+-            <span class="label">MIDI</span>
+-            <button type="button" class="btn ghost small" id="formMidi" disabled>Export</button>
+-            <button type="button" class="btn ghost small" id="formMarkers" disabled>Markers</button>
+-            <label class="btn ghost small file-btn" data-tip="A MIDI file back into a score: one melodic line per voice (a track named vocal/voice/melody becomes Vocal, the next one Ins), on a 1/16 grid">Import…
+-              <input type="file" id="midiIn" accept=".mid,.midi,audio/midi" hidden /></label>
+-            <select id="midiInKey" aria-label="Key for the imported score" data-tip="The key the imported notes are written in: the file's own key signature, or C when it has none; or the key you pick here."><option value="">key: from the file</option><optgroup label="minor"><option>Abm</option><option>Ebm</option><option>Bbm</option><option>Fm</option><option>Cm</option><option>Gm</option><option>Dm</option><option>Am</option><option>Em</option><option>Bm</option><option>F#m</option><option>C#m</option><option>G#m</option><option>D#m</option><option>A#m</option></optgroup><optgroup label="major"><option>Cb</option><option>Gb</option><option>Db</option><option>Ab</option><option>Eb</option><option>Bb</option><option>F</option><option>C</option><option>G</option><option>D</option><option>A</option><option>E</option><option>B</option><option>F#</option><option>C#</option></optgroup></select>
++          <div class="field-row seedrow">
++            <label class="field seedfield">
++              <span class="label">Music seed <span class="info" tabindex="-1" role="img" aria-label="About the two seeds" data-tip-ref="tip-seeds"></span></span>
++              <div class="seed-wrap">
++                <input type="text" id="lmSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
++                <button type="button" class="dice" id="rollLmSeed" aria-label="Put in a random music seed">
++                  <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
++                </button>
++              </div>
++            </label>
++            <label class="field seedfield">
++              <span class="label">Sound seed</span>
++              <div class="seed-wrap">
++                <input type="text" id="soundSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
++                <button type="button" class="dice" id="rollSoundSeed" aria-label="Put in a random sound seed">
++                  <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
++                </button>
++              </div>
++            </label>
+           </div>
+-          <div class="field">
+-            <span class="label">Load an example</span>
+-            <div class="chiprow">
+-              <button type="button" class="chip" data-abc="melody">Melody only</button>
+-              <button type="button" class="chip" data-abc="score">Melody and chords</button>
+-              <button type="button" class="chip" data-abc="jazz">Jazz chords</button>
++        </section>
++        <section class="k-card k-sound">
++          <fieldset class="field sound" data-fold="vae">
++            <span class="label">VAE <span class="info" tabindex="-1" role="img" aria-label="About the VAE" data-tip-ref="tip-vae"></span><em>turns the written song into sound</em></span>
++            <div class="toggles" id="decoders"></div>
++          </fieldset>
++
++          <fieldset class="field sound" data-fold="sliders">
++            <span class="label">Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About the sliders" data-tip-ref="tip-sliders"></span><em>voice and genre while the music is written; 0 is off, 1 is full</em></span>
++            <div class="slider-active" id="sliderActive"></div>
++            <div class="slider-chips" id="sliderChips"></div>
++            <p class="row-hint" id="sliderHint"></p>
++          </fieldset>
++        </section>
++        <section class="k-card k-loras">
++          <fieldset class="field sound" data-fold="loras">
++            <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras"></span><em>a strength for the music half and for the sound half</em></span>
++            <div id="loraPicker"></div>
++          </fieldset>
++        </section>
++        <section class="k-card k-more">
++          <details class="drawer" id="coverDrawer">
++            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Cover or remix</span><span class="sum-say">Reuse a melody and change the style.</span></span></summary>
++            <div class="drawer-body cover-body">
++              <!-- two ways in, the same shape: a heading with its short note, one control per line, the button on the left -->
++              <section class="cover-part">
++                <h4 class="mini">From a recording <span class="info" tabindex="-1" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe"></span>
++                  <em>its tune only, not the words or the singer</em></h4>
++                <label class="field"><span class="label">Recording</span>
++                  <input type="file" id="coverFile" accept=".wav,.mp3,.flac,.m4a,.ogg,.opus,.aac" /></label>
++                <label class="field"><span class="label">Transcribe</span>
++                  <select id="coverTask">
++                    <option value="melody-full">Lead melody (voice + instruments)</option>
++                    <option value="melody-vocal">Vocal melody only</option>
++                    <option value="full">Melody and chords</option>
++                  </select></label>
++                <div class="cover-act">
++                  <button type="button" class="btn ghost" id="coverListen" aria-pressed="false" disabled
++                          data-tip="Listen to the chosen recording here; the player at the bottom pauses while it plays">▶ Listen</button>
++                  <button type="button" class="btn ghost" id="coverFromAudio">Transcribe</button>
++                  <p class="cover-status" id="coverAudioStatus"></p>
++                </div>
++              </section>
++              <section class="cover-part">
++                <h4 class="mini">From one of your takes <span class="info" tabindex="-1" role="img" aria-label="About covers from a take"
++                    data-tip="Take the melody from a song you already made and render it somewhere else entirely: a ballad as a techno track, a German song in English. The run switches to Melody only."></span>
++                  <em>its melody, in a new style</em></h4>
++                <label class="field"><span class="label">Melody from</span>
++                  <select id="coverTake"></select></label>
++                <label class="check"><input type="checkbox" id="coverMelodyOnly" checked />
++                  <span>Drop the chord symbols, so the new style can rebuild the harmony</span></label>
++                <div class="cover-act">
++                  <button type="button" class="btn ghost" id="coverFromTake">Use this melody</button>
++                  <p class="cover-status" id="coverStatus"></p>
++                </div>
++              </section>
+             </div>
+-          </div>
+-          <div class="drawer-act">
+-            <button type="button" class="btn ghost" id="abcInstrumental" data-tip="Move the vocal melody of this score to the instrument (the official instrumental recipe) and tick Instrumental">Make instrumental</button>
+-            <button type="button" class="btn ghost danger" id="abcRemove" data-abc="">Remove score</button>
+-          </div>
+-        </div>
+-      </details>
+-
+-      <details class="drawer" id="advDrawer">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sampling</span><span class="sum-say">The defaults are tuned; change them to experiment.</span></span></summary>
+-        <div class="drawer-body">
+-          <div class="shape" id="shape">
+-            <label class="shape-row"><span class="shape-name">Composition<em>familiar ↔ unexpected melody and chords</em></span>
+-              <input type="range" id="shapeComposition" min="0" max="4" step="1" value="2" /><output id="shapeCompositionOut">default</output></label>
+-            <label class="shape-row"><span class="shape-name">Performance<em>controlled ↔ adventurous delivery</em></span>
+-              <input type="range" id="shapePerformance" min="0" max="4" step="1" value="2" /><output id="shapePerformanceOut">default</output></label>
+-            <label class="shape-row"><span class="shape-name">Style influence<em>loose ↔ focused on your style and lyrics</em></span>
+-              <input type="range" id="shapeStyle" min="0" max="4" step="1" value="2" /><output id="shapeStyleOut">default</output></label>
+-            <div class="shape-foot"><span class="row-hint">Shortcuts that set the knobs below; the middle is the tuned default.
+-              Composition does nothing in Direct mode or with a supplied score.</span>
+-              <button type="button" class="btn ghost small" id="shapeReset">Reset sliders</button></div>
+-          </div>
+-          <div class="sampler-grid">
+-            <div class="sampler">
+-              <h4><span class="dot patina"></span> Score planner</h4>
+-              <div class="knobs" data-group="abc"></div>
++          </details>
++
++          <details class="drawer" id="scoreDrawer">
++            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Supply your own score</span><span class="sum-say">Bring an ABC score, for covers and edits.</span></span></summary>
++            <div class="drawer-body score-body">
++              <label class="field">
++                <span class="label">Score <em>ABC notation, followed in Full plan and Melody only</em></span>
++                <textarea id="abc" rows="8" spellcheck="false" class="mono" placeholder="X:1&#10;L:1/8&#10;M:4/4&#10;K:C"></textarea>
++              </label>
++              <!-- HERESY 1018: move the score to another key (heresy-transpose.js) -->
++              <div class="transpose-row is-hidden" id="transposeRow">
++                <span class="label">Key</span><strong class="mono" id="scoreKeyNow"></strong><span aria-hidden="true">→</span>
++                <select id="transposeTo" aria-label="Target key" data-tip="The key to move the score in the box to: every note moves by the same interval, and the key with them. Beside it: the nearest way, or up, or down."></select>
++                <select id="transposeWay" aria-label="Direction" data-tip="Nearest: the smaller move. Up or down: that way, for a voice that needs it">
++                  <option value="near">nearest</option><option value="up">up</option><option value="down">down</option>
++                </select>
++                <button type="button" class="btn ghost small" id="transposeBtn">Transpose</button>
++                <span class="row-hint" id="transposeNote"></span>
++              </div>
++              <!-- HERESY 1028: the check, one voice moved, MIDI out and in -->
++              <div class="score-check" id="formScoreCheck" hidden></div>
++              <div class="transpose-row is-hidden" id="voiceShiftRow">
++                <span class="label">Voice</span>
++                <select id="voiceShiftWho" aria-label="Which voice" data-tip="The voice to move: Vocal (what is sung) or Ins (the instruments' melody). The other voice stays."><option value="Vocal">Vocal</option><option value="Ins">Ins</option></select>
++                <select id="voiceShift" aria-label="How far" data-tip="By steps of the scale, in the score's key: a third up moves every note to the third above it in the key, its own sharps and flats kept. The other voice and the chord symbols stay.">
++                  <option value="-14">two octaves down</option><option value="-7" selected>an octave down</option><option value="-5">a sixth down</option>
++                  <option value="-4">a fifth down</option><option value="-3">a fourth down</option><option value="-2">a third down</option>
++                  <option value="2">a third up</option><option value="3">a fourth up</option><option value="4">a fifth up</option>
++                  <option value="5">a sixth up</option><option value="7">an octave up</option><option value="14">two octaves up</option></select>
++                <button type="button" class="btn ghost small" id="voiceShiftBtn">Move</button>
++                <span class="row-hint" id="voiceShiftNote"></span>
++              </div>
++              <div class="transpose-row">
++                <span class="label">MIDI</span>
++                <button type="button" class="btn ghost small" id="formMidi" disabled>Export</button>
++                <button type="button" class="btn ghost small" id="formMarkers" disabled>Markers</button>
++                <label class="btn ghost small file-btn" data-tip="A MIDI file back into a score: one melodic line per voice (a track named vocal/voice/melody becomes Vocal, the next one Ins), on a 1/16 grid">Import…
++                  <input type="file" id="midiIn" accept=".mid,.midi,audio/midi" hidden /></label>
++                <select id="midiInKey" aria-label="Key for the imported score" data-tip="The key the imported notes are written in: the file's own key signature, or C when it has none; or the key you pick here."><option value="">key: from the file</option><optgroup label="minor"><option>Abm</option><option>Ebm</option><option>Bbm</option><option>Fm</option><option>Cm</option><option>Gm</option><option>Dm</option><option>Am</option><option>Em</option><option>Bm</option><option>F#m</option><option>C#m</option><option>G#m</option><option>D#m</option><option>A#m</option></optgroup><optgroup label="major"><option>Cb</option><option>Gb</option><option>Db</option><option>Ab</option><option>Eb</option><option>Bb</option><option>F</option><option>C</option><option>G</option><option>D</option><option>A</option><option>E</option><option>B</option><option>F#</option><option>C#</option></optgroup></select>
++              </div>
++              <div class="field">
++                <span class="label">Load an example</span>
++                <div class="chiprow">
++                  <button type="button" class="chip" data-abc="melody">Melody only</button>
++                  <button type="button" class="chip" data-abc="score">Melody and chords</button>
++                  <button type="button" class="chip" data-abc="jazz">Jazz chords</button>
++                </div>
++              </div>
++              <div class="drawer-act">
++                <button type="button" class="btn ghost" id="abcInstrumental" data-tip="Move the vocal melody of this score to the instrument (the official instrumental recipe) and tick Instrumental">Make instrumental</button>
++                <button type="button" class="btn ghost danger" id="abcRemove" data-abc="">Remove score</button>
++              </div>
+             </div>
+-            <div class="sampler">
+-              <h4><span class="dot amber"></span> Music tokens</h4>
+-              <div class="knobs" data-group="semantic"></div>
++          </details>
++
++          <details class="drawer" id="advDrawer">
++            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sampling</span><span class="sum-say">The defaults are tuned; change them to experiment.</span></span></summary>
++            <div class="drawer-body">
++              <div class="shape" id="shape">
++                <label class="shape-row"><span class="shape-name">Composition<em>familiar ↔ unexpected melody and chords</em></span>
++                  <input type="range" id="shapeComposition" min="0" max="4" step="1" value="2" /><output id="shapeCompositionOut">default</output></label>
++                <label class="shape-row"><span class="shape-name">Performance<em>controlled ↔ adventurous delivery</em></span>
++                  <input type="range" id="shapePerformance" min="0" max="4" step="1" value="2" /><output id="shapePerformanceOut">default</output></label>
++                <label class="shape-row"><span class="shape-name">Style influence<em>loose ↔ focused on your style and lyrics</em></span>
++                  <input type="range" id="shapeStyle" min="0" max="4" step="1" value="2" /><output id="shapeStyleOut">default</output></label>
++                <div class="shape-foot"><span class="row-hint">Shortcuts that set the knobs below; the middle is the tuned default.
++                  Composition does nothing in Direct mode or with a supplied score.</span>
++                  <button type="button" class="btn ghost small" id="shapeReset">Reset sliders</button></div>
++              </div>
++              <div class="sampler-grid">
++                <div class="sampler">
++                  <h4><span class="dot patina"></span> Score planner</h4>
++                  <div class="knobs" data-group="abc"></div>
++                </div>
++                <div class="sampler">
++                  <h4><span class="dot amber"></span> Music tokens</h4>
++                  <div class="knobs" data-group="semantic"></div>
++                </div>
++              </div>
++              <div class="field-row">
++                <label class="field">
++                  <span class="label">Guidance (CFG)</span>
++                  <input type="number" id="cfg" step="0.01" placeholder="default" />
++                </label>
++                <div class="field grow reset-cell">
++                  <button type="button" class="btn ghost" id="resetSampling">Reset sampling</button>
++                </div>
++              </div>
+             </div>
+-          </div>
+-          <div class="field-row">
+-            <label class="field">
+-              <span class="label">Guidance (CFG)</span>
+-              <input type="number" id="cfg" step="0.01" placeholder="default" />
+-            </label>
+-            <div class="field grow reset-cell">
+-              <button type="button" class="btn ghost" id="resetSampling">Reset sampling</button>
++          </details>
++
++          <details class="drawer" id="outDrawer">
++            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sound and output</span><span class="sum-say" id="outSummary">WAV 24-bit</span></span></summary>
++            <div class="drawer-body">
++              <div class="out-grid">
++                <label class="field"><span class="label">ODE steps <em>sound solver</em></span>
++                  <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
++                <label class="field"><span class="label">Solver <em>sound ODE</em></span>
++                  <select id="odeSolver">
++                    <option value="midpoint">Midpoint · release</option>
++                    <option value="multistep">Multistep · 1 call/step</option>
++                    <option value="heun">Heun</option>
++                    <option value="euler">Euler · draft</option>
++                  </select></label>
++                <label class="field"><span class="label">Max length <em>seconds</em></span>
++                  <input type="number" id="maxLength" step="10" /></label>
++                <label class="field"><span class="label">Sound variations <em>1–9</em></span>
++                  <input type="number" id="variations" step="1" max="9" value="1" /></label>
++                <label class="field"><span class="label">Format <span class="info" tabindex="-1" role="img" aria-label="About the output format" data-tip-ref="tip-output"></span></span>
++                  <select id="outFormat">
++                    <option value="wav24">WAV 24-bit</option>
++                    <option value="wav16">WAV 16-bit</option>
++                    <option value="wav32">WAV 32-bit float</option>
++                    <option value="mp3">MP3</option>
++                  </select></label>
++                <label class="field" id="bitrateField"><span class="label">MP3 bitrate <em>kbps</em></span>
++                  <select id="mp3Bitrate">
++                    <option value="96">96</option><option value="128">128</option><option value="160">160</option>
++                    <option value="192">192</option><option value="256">256</option><option value="320">320</option>
++                  </select></label>
++                <label class="field"><span class="label">Peak clip <em>per million</em></span>
++                  <input type="number" id="peakClip" step="1" /></label>
++              </div>
++              <div class="field-row">
++                <p class="row-hint grow" id="outHint"></p>
++                <button type="button" class="btn ghost small" id="resetOutput">Reset output</button>
++              </div>
+             </div>
+-          </div>
+-        </div>
+-      </details>
+-
+-      <details class="drawer" id="outDrawer">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sound and output</span><span class="sum-say" id="outSummary">WAV 24-bit</span></span></summary>
+-        <div class="drawer-body">
+-          <div class="out-grid">
+-            <label class="field"><span class="label">ODE steps <em>sound solver</em></span>
+-              <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
+-            <label class="field"><span class="label">Solver <em>sound ODE</em></span>
+-              <select id="odeSolver">
+-                <option value="midpoint">Midpoint · release</option>
+-                <option value="multistep">Multistep · 1 call/step</option>
+-                <option value="heun">Heun</option>
+-                <option value="euler">Euler · draft</option>
+-              </select></label>
+-            <label class="field"><span class="label">Max length <em>seconds</em></span>
+-              <input type="number" id="maxLength" step="10" /></label>
+-            <label class="field"><span class="label">Sound variations <em>1–9</em></span>
+-              <input type="number" id="variations" step="1" max="9" value="1" /></label>
+-            <label class="field"><span class="label">Format <span class="info" tabindex="-1" role="img" aria-label="About the output format" data-tip-ref="tip-output"></span></span>
+-              <select id="outFormat">
+-                <option value="wav24">WAV 24-bit</option>
+-                <option value="wav16">WAV 16-bit</option>
+-                <option value="wav32">WAV 32-bit float</option>
+-                <option value="mp3">MP3</option>
+-              </select></label>
+-            <label class="field" id="bitrateField"><span class="label">MP3 bitrate <em>kbps</em></span>
+-              <select id="mp3Bitrate">
+-                <option value="96">96</option><option value="128">128</option><option value="160">160</option>
+-                <option value="192">192</option><option value="256">256</option><option value="320">320</option>
+-              </select></label>
+-            <label class="field"><span class="label">Peak clip <em>per million</em></span>
+-              <input type="number" id="peakClip" step="1" /></label>
+-          </div>
+-          <div class="field-row">
+-            <p class="row-hint grow" id="outHint"></p>
+-            <button type="button" class="btn ghost small" id="resetOutput">Reset output</button>
+-          </div>
+-        </div>
+-      </details>
++          </details>
++        </section>
++      </div>
+ 
+       <!-- how many takes and the two actions (one size) together on the right; a note under them only when it matters -->
+       <div class="submit-bar">
+@@ -1652,6 +1664,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+        aria-label="Compose column width" title="Drag to resize · double-click for the default width"></div>
+   <div class="col-grip right" id="gripRight" role="separator" aria-orientation="vertical" aria-controls="library" tabindex="0"
+        aria-label="Takes list width" title="Drag to resize · double-click for the default width"></div>
++  <!-- HERESY 1167: from 1600 px the Creator's last third is the take over its takes; this line between them -->
++  <div class="k-split" id="kSplit" role="separator" aria-orientation="horizontal" aria-controls="library" tabindex="0"
++       aria-label="Takes list height" title="Drag to resize · double-click for the default height"></div>
+ </div>
+ 
+ 
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index a69cf17..fbe7699 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -328,6 +328,7 @@
+         '<span class="lora-pick-tag">' + escape(tag) + "</span></button>";
+     }).join("");
+     S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
++    S.host.querySelector(".lora-lib-count").textContent = S.catalog.length ? String(S.catalog.length) : "";   // HERESY 1167
+   }
+ 
+   function changed() {
+@@ -338,7 +339,15 @@
+   function mount(host, opts) {
+     S.host = host;
+     S.opts = opts || {};
+-    host.innerHTML = '<div class="lora-active"></div><div class="lora-chips"></div><p class="row-hint lora-hint"></p>';
++    // HERESY 1167: the adapters not in use behind one line, open or closed as it was left; the ones in use stay above it
++    host.innerHTML = '<div class="lora-active"></div><details class="lora-lib"><summary><span class="chev" aria-hidden="true"></span>' +
++      '<span class="lora-lib-name">Add a LoRA</span><span class="lora-lib-count mono"></span></summary>' +
++      '<div class="lora-chips"></div></details><p class="row-hint lora-hint"></p>';
++    var lib = host.querySelector(".lora-lib");
++    try { lib.open = root.localStorage.getItem("yue2.loraLib") === "open"; } catch (e) { /* no storage: closed */ }
++    lib.addEventListener("toggle", function () {
++      try { root.localStorage.setItem("yue2.loraLib", lib.open ? "open" : "closed"); } catch (e) { /* no storage */ }
++    });
+     host.addEventListener("click", function (event) {
+       var chip = event.target.closest("[data-lora-chip]"), remove = event.target.closest("[data-remove-lora]");
+       var trigger = event.target.closest("[data-trigger]");
+-- 
+2.43.0
+

@@ -1,0 +1,130 @@
+From 33b3d1371479f5f18d995f5b788113fccdb8b3c2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 09:37:39 -0600
+Subject: [PATCH 1149/1177] =?UTF-8?q?HERESY=201167:=20the=20take=20frame?=
+ =?UTF-8?q?=20at=20rest=20says=20=C2=ABSmithery=20is=20Idle=C2=BB?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026: «`Nothing playing` весьма несуразно, потому как фрейм
+показывает либо активную генерацию, либо выбранный трек в комнате Творца.
+Давай переименуем как `Smithery is Idle` и в других языках». The frame's title
+when nothing is made or chosen; the six catalogs: Кузница отдыхает · Кузня
+відпочиває · Кузня адпачывае · Το σιδηρουργείο ησυχάζει · La forja descansa ·
+La fucina riposa.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            | 2 +-
+ tools/console/heresy-i18n-be.js | 3 ++-
+ tools/console/heresy-i18n-el.js | 3 ++-
+ tools/console/heresy-i18n-es.js | 3 ++-
+ tools/console/heresy-i18n-it.js | 3 ++-
+ tools/console/heresy-i18n-ru.js | 3 ++-
+ tools/console/heresy-i18n-uk.js | 3 ++-
+ tools/console/index.html        | 2 +-
+ 8 files changed, 14 insertions(+), 8 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 5bad738..53f39a8 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4033,7 +4033,7 @@
+     STATE.take = null;
+     $("takeBody").classList.add("is-hidden");
+     $("takeEmpty").classList.remove("is-hidden");
+-    $("takeTitle").textContent = "Nothing playing";
++    $("takeTitle").textContent = "Smithery is Idle";   // HERESY 1167: the frame shows a run or a chosen take
+     $("takeTitle").setAttribute("translate", "yes");
+     $("takeEyebrow").textContent = "no run yet";
+     $("takeActions").innerHTML = "";
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index d23c404..536e102 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2497,5 +2497,6 @@ RuachI18n.add("be", {
+ "Probes, styles and voices": "Пробы, стылі і галасы",
+ "Add a LoRA": "Дадаць LoRA",
+ "Takes list height": "Вышыня спіса сэмплаў",
+-"Drag to resize · double-click for the default height": "Цягні, каб змяніць памер · падвойны пстрык — вышыня па змаўчанні"
++"Drag to resize · double-click for the default height": "Цягні, каб змяніць памер · падвойны пстрык — вышыня па змаўчанні",
++"Smithery is Idle": "Кузня адпачывае"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index cd1d05f..3c07e93 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2496,5 +2496,6 @@ RuachI18n.add("el", {
+ "Probes, styles and voices": "Δοκιμές, ύφη και φωνές",
+ "Add a LoRA": "Προσθήκη LoRA",
+ "Takes list height": "Ύψος της λίστας λήψεων",
+-"Drag to resize · double-click for the default height": "Σύρε για αλλαγή μεγέθους · διπλό κλικ για το προεπιλεγμένο ύψος"
++"Drag to resize · double-click for the default height": "Σύρε για αλλαγή μεγέθους · διπλό κλικ για το προεπιλεγμένο ύψος",
++"Smithery is Idle": "Το σιδηρουργείο ησυχάζει"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 65b8252..f4967b1 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2496,5 +2496,6 @@ RuachI18n.add("es", {
+ "Probes, styles and voices": "Pruebas, estilos y voces",
+ "Add a LoRA": "Añadir una LoRA",
+ "Takes list height": "Altura de la lista de tomas",
+-"Drag to resize · double-click for the default height": "Arrastra para cambiar el tamaño · doble clic para la altura por defecto"
++"Drag to resize · double-click for the default height": "Arrastra para cambiar el tamaño · doble clic para la altura por defecto",
++"Smithery is Idle": "La forja descansa"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 12f033a..f4fffa4 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2496,5 +2496,6 @@ RuachI18n.add("it", {
+ "Probes, styles and voices": "Prove, stili e voci",
+ "Add a LoRA": "Aggiungi una LoRA",
+ "Takes list height": "Altezza dell'elenco dei take",
+-"Drag to resize · double-click for the default height": "Trascina per ridimensionare · doppio clic per l'altezza predefinita"
++"Drag to resize · double-click for the default height": "Trascina per ridimensionare · doppio clic per l'altezza predefinita",
++"Smithery is Idle": "La fucina riposa"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index da1e218..552e824 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2502,5 +2502,6 @@ RuachI18n.add("ru", {
+ "Probes, styles and voices": "Пробы, стили и голоса",
+ "Add a LoRA": "Добавить LoRA",
+ "Takes list height": "Высота списка семплов",
+-"Drag to resize · double-click for the default height": "Тяни, чтобы изменить размер · двойной щелчок — высота по умолчанию"
++"Drag to resize · double-click for the default height": "Тяни, чтобы изменить размер · двойной щелчок — высота по умолчанию",
++"Smithery is Idle": "Кузница отдыхает"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 58f8a69..35c687c 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2497,5 +2497,6 @@ RuachI18n.add("uk", {
+ "Probes, styles and voices": "Проби, стилі й голоси",
+ "Add a LoRA": "Додати LoRA",
+ "Takes list height": "Висота списку семплів",
+-"Drag to resize · double-click for the default height": "Тягни, щоб змінити розмір · подвійне клацання — типова висота"
++"Drag to resize · double-click for the default height": "Тягни, щоб змінити розмір · подвійне клацання — типова висота",
++"Smithery is Idle": "Кузня відпочиває"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 0a60eb7..1479838 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1002,7 +1002,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+   <!-- take / run --------------------------------------------------------- -->
+   <section class="col take-col" id="view-take">
+     <div class="col-head">
+-      <h2 id="takeTitle">Nothing playing</h2>
++      <h2 id="takeTitle">Smithery is Idle</h2>
+       <button type="button" class="btn primary small is-hidden" id="playHere" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too.">▶ Play this song</button>
+       <span class="col-note" id="takeEyebrow">no run yet</span>
+       <div class="spacer"></div>
+-- 
+2.43.0
+

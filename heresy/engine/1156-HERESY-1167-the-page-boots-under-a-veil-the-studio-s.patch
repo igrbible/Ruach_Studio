@@ -1,0 +1,266 @@
+From fbba155ce8241bc1bcc0182644b04ced8f9e2676 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 13:58:24 -0600
+Subject: [PATCH 1156/1177] =?UTF-8?q?HERESY=201167:=20the=20page=20boots?=
+ =?UTF-8?q?=20under=20a=20veil:=20the=20studio's=20logo=20large,=20=C2=ABL?=
+ =?UTF-8?q?oading=20the=20Sound=20Heresy=C2=BB,=20five=20seconds=20at=20le?=
+ =?UTF-8?q?ast?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026: «При долгой странице показывает старую трёхколоночную Кузню Творца, а затем только актуальный дизайн и
+комнату. Можно ли прятать весь сырой рендер DOM, оверлеем `Loading the Sound Heresy`, логотип Студии крупно... и даже на
+скором локальном соединении таймаут оверлея в 5 секунд?»
+
+· the head script puts html.booting on before the first paint; the veil is the body's first element, over everything, in
+  the theme's ground, the page under it not scrollable;
+· the logo is the bar's own, copied into the veil right under the top bar (ids renamed, as the About card's copy) and
+  copied again with the page's language by the translator; while the translation holds the page (i18n-wait) only the
+  ground shows, so no English flashes before Russian;
+· the words under it, letter-spaced, and a line that fills in five seconds;
+· it lifts (a half-second fade) once the page is parsed with its scripts run, its room set and the translation in, and
+  five seconds have passed since the navigation; a click or a key lifts it sooner once the page is ready; fifteen seconds
+  lift it whatever happens; the readiness is not the load event, as the web fonts may come late on a slow road;
+· never for a test browser (navigator.webdriver), ?scope=claude or ?noveil; ?veil brings it to one: the console test checks
+  it covers the page as it boots and lifts after five seconds. The words in the six catalogs.
+cdp-console 333/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 21 ++++++++++++
+ tools/console/heresy-i18n-be.js |  3 +-
+ tools/console/heresy-i18n-el.js |  3 +-
+ tools/console/heresy-i18n-es.js |  3 +-
+ tools/console/heresy-i18n-it.js |  3 +-
+ tools/console/heresy-i18n-ru.js |  3 +-
+ tools/console/heresy-i18n-uk.js |  3 +-
+ tools/console/heresy-i18n.js    | 26 ++++++++-------
+ tools/console/index.html        | 57 ++++++++++++++++++++++++++++++++-
+ 9 files changed, 103 insertions(+), 19 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d0b1e9e..443e6e4 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3862,3 +3862,24 @@ body { transition: --bar-h .22s ease; }
+   body[data-tab="create"] .k-vsplit.is-dragging::after { background: var(--amber); }
+   body[data-tab="create"] .workspace.k-wide .compose { grid-template-columns: minmax(0, 1fr); }
+ }
++
++/* HERESY 1167 (Viktor: «прятать весь сырой рендер DOM, оверлеем `Loading the Sound Heresy`, логотип Студии крупно»): the veil
++   over the page while it boots (index.html: on before the first paint, lifted by the script under the top bar). While the
++   translation holds the page (html.i18n-wait) only its ground shows, so no English flashes before the page's language. */
++.boot-veil { display: none; }
++html.booting { overflow: hidden; }
++html.booting .boot-veil {
++  position: fixed; inset: 0; z-index: 10000; visibility: visible;
++  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; padding: 0 16px;
++  background: var(--ground); color: var(--ink); transition: opacity .5s ease;
++}
++html.booting.veil-lift .boot-veil { opacity: 0; pointer-events: none; }
++html.i18n-wait .boot-veil > * { visibility: hidden; }
++.boot-logo { width: min(86vw, 1100px); animation: boot-in 1.1s ease both; }
++.boot-mark { display: block; width: 100%; height: auto; overflow: visible; }
++.boot-words { margin: 18px 0 0; font: 500 clamp(13px, 1.15vw, 19px)/1.4 var(--heading); letter-spacing: .34em; text-transform: uppercase;
++  color: var(--muted); text-align: center; animation: boot-in 1.1s .25s ease both; }
++.boot-line { width: min(60vw, 420px); height: 2px; border-radius: 1px; background: var(--line-a); overflow: hidden; }
++.boot-line i { display: block; width: 0; height: 100%; background: var(--amber); animation: boot-fill 5s linear forwards; }
++@keyframes boot-in { from { opacity: 0; transform: translateY(8px); } }
++@keyframes boot-fill { to { width: 100%; } }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 6e61f9c..94c4ed9 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2567,5 +2567,6 @@ RuachI18n.add("be", {
+ "written from its sound by the transcriber (SheetSage2), now": "запісана па гуку — транскрыбер (SheetSage2), толькі што",
+ "the transcriber is writing it… {#0} s": "транскрыбер запісвае яе… {0} с",
+ "not written: {0}": "не запісана: {0}",
+-"the transcriber (SheetSage2)": "транскрыбер (SheetSage2)"
++"the transcriber (SheetSage2)": "транскрыбер (SheetSage2)",
++"Loading the Sound Heresy": "Загрузка Гукавой Ерасі"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 6a3a1f7..f9dd300 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2566,5 +2566,6 @@ RuachI18n.add("el", {
+ "written from its sound by the transcriber (SheetSage2), now": "γράφτηκε από τον ήχο της — ο μεταγραφέας (SheetSage2), μόλις τώρα",
+ "the transcriber is writing it… {#0} s": "ο μεταγραφέας τη γράφει… {0} δ",
+ "not written: {0}": "δεν γράφτηκε: {0}",
+-"the transcriber (SheetSage2)": "ο μεταγραφέας (SheetSage2)"
++"the transcriber (SheetSage2)": "ο μεταγραφέας (SheetSage2)",
++"Loading the Sound Heresy": "Φόρτωση της Ηχητικής Αίρεσης"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 2ac8653..6b6d86c 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2566,5 +2566,6 @@ RuachI18n.add("es", {
+ "written from its sound by the transcriber (SheetSage2), now": "escrita a partir de su sonido — el transcriptor (SheetSage2), ahora mismo",
+ "the transcriber is writing it… {#0} s": "el transcriptor la está escribiendo… {0} s",
+ "not written: {0}": "no escrita: {0}",
+-"the transcriber (SheetSage2)": "el transcriptor (SheetSage2)"
++"the transcriber (SheetSage2)": "el transcriptor (SheetSage2)",
++"Loading the Sound Heresy": "Cargando la Herejía Sonora"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index c835a73..fb5499c 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2566,5 +2566,6 @@ RuachI18n.add("it", {
+ "written from its sound by the transcriber (SheetSage2), now": "scritta dal suo suono — il trascrittore (SheetSage2), proprio ora",
+ "the transcriber is writing it… {#0} s": "il trascrittore la sta scrivendo… {0} s",
+ "not written: {0}": "non scritta: {0}",
+-"the transcriber (SheetSage2)": "il trascrittore (SheetSage2)"
++"the transcriber (SheetSage2)": "il trascrittore (SheetSage2)",
++"Loading the Sound Heresy": "Caricamento dell'Eresia Sonora"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 65209c9..b7076bc 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2572,5 +2572,6 @@ RuachI18n.add("ru", {
+ "written from its sound by the transcriber (SheetSage2), now": "записана по звуку — транскрибер (SheetSage2), только что",
+ "the transcriber is writing it… {#0} s": "транскрибер записывает её… {0} с",
+ "not written: {0}": "не записана: {0}",
+-"the transcriber (SheetSage2)": "транскрибер (SheetSage2)"
++"the transcriber (SheetSage2)": "транскрибер (SheetSage2)",
++"Loading the Sound Heresy": "Загрузка Звуковой Ереси"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index a723292..d759140 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2567,5 +2567,6 @@ RuachI18n.add("uk", {
+ "written from its sound by the transcriber (SheetSage2), now": "записана за звуком — транскрибер (SheetSage2), щойно",
+ "the transcriber is writing it… {#0} s": "транскрибер записує її… {0} с",
+ "not written: {0}": "не записана: {0}",
+-"the transcriber (SheetSage2)": "транскрибер (SheetSage2)"
++"the transcriber (SheetSage2)": "транскрибер (SheetSage2)",
++"Loading the Sound Heresy": "Завантаження Звукової Єресі"
+ });
+diff --git a/tools/console/heresy-i18n.js b/tools/console/heresy-i18n.js
+index c6fd5ce..ae0d891 100644
+--- a/tools/console/heresy-i18n.js
++++ b/tools/console/heresy-i18n.js
+@@ -220,21 +220,23 @@
+   }
+   // HERESY 1166 (Viktor: «В Engine логотип заменить»): the About card shows the bar's own logo, its words in the page's
+   // language, a copy made again whenever they change; its ids renamed, so the bar's logo hidden (the compact one showing)
+-  // takes none of the copy's gradients with it
++  // takes none of the copy's gradients with it. HERESY 1167: the veil's too, while the page boots under it (index.html)
+   function copyLogo(svg, name) {
+-    var spot = document.getElementById("aboutLogo");
+-    if (!spot) return;
+-    var c = svg.cloneNode(true);
+-    c.classList.remove("brand-full");
+-    c.classList.add("about-mark");
+-    Array.prototype.forEach.call(c.querySelectorAll("[id]"), function (el) { el.id = el.id + "-about"; });
+-    Array.prototype.forEach.call(c.querySelectorAll("*"), function (el) {
+-      Array.prototype.forEach.call(el.attributes, function (a) {
+-        if (a.value.indexOf("#rl") >= 0) el.setAttribute(a.name, a.value.replace(/#(rl[A-Za-z]+)/g, "#$1-about"));
++    [["aboutLogo", "about-mark", "-about"], ["bootLogo", "boot-mark", "-boot"]].forEach(function (s) {
++      var spot = document.getElementById(s[0]);
++      if (!spot) return;
++      var c = svg.cloneNode(true);
++      c.classList.remove("brand-full");
++      c.classList.add(s[1]);
++      Array.prototype.forEach.call(c.querySelectorAll("[id]"), function (el) { el.id = el.id + s[2]; });
++      Array.prototype.forEach.call(c.querySelectorAll("*"), function (el) {
++        Array.prototype.forEach.call(el.attributes, function (a) {
++          if (a.value.indexOf("#rl") >= 0) el.setAttribute(a.name, a.value.replace(/#(rl[A-Za-z]+)/g, "#$1" + s[2]));
++        });
+       });
++      spot.replaceChildren(c);
++      if (name) spot.setAttribute("aria-label", name);
+     });
+-    spot.replaceChildren(c);
+-    if (name) spot.setAttribute("aria-label", name);
+   }
+ 
+   // HERESY 1166: numbers and dates in the page's language, not the browser's (24 576 in Russian, 24,576 in English); a
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 0f6c547..ea51dbb 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -17,12 +17,27 @@
+   for (var i = 0; i < o.length; i++) if (typeof L[o[i]] === "string") document.documentElement.dataset[o[i]] = L[o[i]];
+   var lang = localStorage.getItem("yue2.lang");                 // HERESY 1148: no English flash before the translation
+   if (lang && lang !== "en") { document.documentElement.classList.add("i18n-wait");
+-    setTimeout(function () { document.documentElement.classList.remove("i18n-wait"); }, 2500); } } catch (e) {}</script>
++    setTimeout(function () { document.documentElement.classList.remove("i18n-wait"); }, 2500); } } catch (e) {}
++  // HERESY 1167: the page builds under the veil (below, at the top of the body); never for a test browser or a probe
++  // (?veil brings it to one: its own check)
++  if (/[?&]veil\b/.test(location.search) || (!navigator.webdriver && !/[?&](scope=claude|noveil)\b/.test(location.search)))
++    document.documentElement.classList.add("booting");</script>
+ <link rel="stylesheet" href="app.css" />
+ <link rel="stylesheet" href="themes.css" />
+ </head>
+ <body>
+ 
++<!-- HERESY 1167 (Viktor 05.10.2026: «прятать весь сырой рендер DOM, оверлеем `Loading the Sound Heresy`, логотип Студии крупно...
++     и даже на скором локальном соединении таймаут оверлея в 5 секунд»): the page builds under this veil. It lifts once the page
++     stands ready and five seconds have passed since the navigation; a click or a key lifts it sooner, once the page is ready;
++     fifteen seconds lift it whatever happens. The logo is the bar's own (copied in under the top bar, its words in the page's
++     language once the translation runs). Not for a test browser (navigator.webdriver), ?scope=claude or ?noveil. -->
++<div class="boot-veil" id="bootVeil" role="status">
++  <div class="boot-logo" id="bootLogo"></div>
++  <p class="boot-words">Loading the Sound Heresy</p>
++  <div class="boot-line" aria-hidden="true"><i></i></div>
++</div>
++
+ <!-- ---------------------------------------------------------------- topbar -->
+ <header class="topbar">
+   <div class="brand">
+@@ -403,6 +418,46 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     </div>
+   </div>
+ </header>
++<script>/* HERESY 1167: the bar's logo into the veil at once (its ids renamed, as the About card's copy), and the veil's lifting */
++(function () {
++  var html = document.documentElement;
++  if (!html.classList.contains("booting")) return;
++  try {
++    var svg = document.querySelector(".brand .brand-full"), spot = document.getElementById("bootLogo");
++    if (svg && spot && !spot.firstChild) {
++      var c = svg.cloneNode(true);
++      c.classList.remove("brand-full"); c.classList.add("boot-mark");
++      Array.prototype.forEach.call(c.querySelectorAll("[id]"), function (el) { el.id = el.id + "-boot"; });
++      Array.prototype.forEach.call(c.querySelectorAll("*"), function (el) {
++        Array.prototype.forEach.call(el.attributes, function (a) {
++          if (a.value.indexOf("#rl") >= 0) el.setAttribute(a.name, a.value.replace(/#(rl[A-Za-z]+)/g, "#$1-boot"));
++        });
++      });
++      spot.appendChild(c);
++    }
++  } catch (e) { /* the veil without its logo */ }
++  // ready: the page parsed and its scripts run (not the load event: the web fonts may come late on a slow road), its room
++  // set, the translation in
++  var MIN = 5000, MAX = 15000, gone = false;
++  function ready() { return document.readyState !== "loading" && !!document.body.dataset.tab && !html.classList.contains("i18n-wait"); }
++  function lift() {
++    if (gone) return;
++    gone = true;
++    window.removeEventListener("pointerdown", sooner, true);
++    window.removeEventListener("keydown", sooner, true);
++    html.classList.add("veil-lift");
++    setTimeout(function () { html.classList.remove("booting", "veil-lift"); var v = document.getElementById("bootVeil"); if (v) v.remove(); }, 520);
++  }
++  (function tick() { var age = performance.now(); if (age >= MAX || (age >= MIN && ready())) lift(); else setTimeout(tick, 100); })();
++  function sooner(event) {
++    if (gone || !ready()) return;
++    event.preventDefault(); event.stopPropagation();
++    lift();
++  }
++  window.addEventListener("pointerdown", sooner, true);
++  window.addEventListener("keydown", sooner, true);
++})();
++</script>
+ 
+ <!-- ---------------------------------------------------------------- engine -->
+ <section class="engine-panel is-hidden" id="view-engine">
+-- 
+2.43.0
+

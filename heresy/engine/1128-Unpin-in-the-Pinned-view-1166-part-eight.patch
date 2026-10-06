@@ -1,0 +1,74 @@
+From 06374ce844d846a484afde9561538ccb7c14585e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 01:21:14 -0600
+Subject: [PATCH 1128/1177] Unpin in the Pinned view (1166, part eight)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor: «Unpin исчез после появления обложки в карточке, что закреплена. И в меню нет Unpin»;
+«Анпинить можно только в воркспейсе, где прикреплено». Not the artwork: a take pinned in one
+workspace and moved into another kept its pin in the first, and the Pinned view, being no
+workspace, had no Pin or Unpin in its menu, so nothing there could take it out.
+
+The Pinned view's menu says Unpin for a take pinned anywhere, and takes it out of every strip
+it stands in (HeresyCollection.pinPlaces, unpinAll). The lab no longer leaves such a pin behind
+(lab 1166).
+
+Checked in the page with the lab's answers given by the test itself (nothing reached the lab):
+the menu in the Pinned view has Unpin and no Pin here; Unpin sends pin off for the workspace it
+stood in, and the card leaves the view. cdp-console 316/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js               |  3 +++
+ tools/console/heresy-collection.js | 11 +++++++++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 03457a2..a9abb50 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -6207,6 +6207,9 @@
+         var on = HC.pinned(name);
+         return { icon: "\ud83d\udccc", label: on ? "Unpin" : "Pin here", hint: on ? "" : "four at most", action: function () { HC.pin(name, !on); } };
+       })() : null,
++      // HERESY 1166: in the Pinned view, Unpin takes it out of every strip it stands in
++      HC && HC.unpinAll && here === "collection" && HC.place() === "__pinned" && HC.pinPlaces(name).length ?
++        { icon: "\ud83d\udccc", label: "Unpin", action: function () { HC.unpinAll(name); } } : null,
+       HC ? { icon: "◌", label: row && row.hidden ? "Show again" : "Hide from the lists", action: function () {
+         HC.act({ op: row && row.hidden ? "show" : "hide", names: [name] }, row && row.hidden ? "Shown again" : "Hidden from the lists (not deleted)");
+       } } : null,
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 4115b94..e88f448 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -256,6 +256,16 @@
+     Object.keys(state.pins || {}).forEach(function (k) { (state.pins[k] || []).forEach(function (n) { all[n] = 1; }); });
+     return all;
+   }
++  // HERESY 1166 (Viktor: «И в меню нет Unpin»): the Pinned view is no workspace, so its menu had no Unpin; there a take
++  // comes out of every strip it stands in
++  function pinPlaces(name) {
++    return Object.keys(state.pins || {}).filter(function (k) { return (state.pins[k] || []).indexOf(name) >= 0; });
++  }
++  function unpinAll(name) {
++    return pinPlaces(name).reduce(function (p, k) {
++      return p.then(function (ok) { return ok && act({ op: "pin", place: k, on: false, names: [name] }, null, true); });
++    }, Promise.resolve(true)).then(function (ok) { if (ok) toast("Unpinned"); return ok; });
++  }
+   function pin(name, on) {
+     // HERESY 1105: seen at once, then said by the lab (a far lab answers a second later); a refusal puts it back
+     var key = state.place, before = ((state.pins || {})[key] || []).slice();
+@@ -1316,6 +1326,7 @@
+                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
+                               markFavorite: markFavorite,
+                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
++                              pinPlaces: pinPlaces, unpinAll: unpinAll,
+                               undoable: undoable, untrash: untrash,
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+ })();
+-- 
+2.43.0
+

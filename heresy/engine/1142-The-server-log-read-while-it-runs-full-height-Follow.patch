@@ -1,0 +1,213 @@
+From 0fdb7badd8d0fa5634f5a4701487cf402a2ca4de Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 22:43:38 -0600
+Subject: [PATCH 1142/1177] The server log read while it runs: full height,
+ Follow let go by a scroll up (1166, part twenty-one)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «В консоль Server log добавь пожалуйста, когда уже распахнуто до этого
+состояния, кнопочку полной распашки консоли на всю высоту, и чекбокс автопрокрутки по дефолту, —
+не возможно во время активности прокрутить и глянуть, что до этого».
+
+The unfolded dock's ⤢ gives the log the window's full height, from under the bar to the player
+(⤡ back; kept as chosen; asked while folded, it unfolds). Follow stays on by default; a scroll up by
+hand (the wheel, a key, the scroll bar, a finger) lets go of it: it unticks and the log stays where
+you read; back at the newest line it ticks again. While you read, the lines under your eye stay
+put: the oldest go only past five times the count, and the view moves back by what went. The same
+in Engine's log. The button's words in the seven languages.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  7 +++++++
+ tools/console/app.js            | 37 +++++++++++++++++++++++++++++++--
+ tools/console/heresy-i18n-be.js |  4 +++-
+ tools/console/heresy-i18n-el.js |  4 +++-
+ tools/console/heresy-i18n-es.js |  4 +++-
+ tools/console/heresy-i18n-it.js |  4 +++-
+ tools/console/heresy-i18n-ru.js |  4 +++-
+ tools/console/heresy-i18n-uk.js |  4 +++-
+ tools/console/index.html        |  3 +++
+ 9 files changed, 63 insertions(+), 8 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 52daaec..9466666 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3086,6 +3086,13 @@ body[data-tab="train"] .log-dock { bottom: 18px; }
+ .log-dock-body { height: calc(10 * 1.5 * 11px + 16px); overflow: auto; padding: 8px 12px; border-top: 1px solid var(--line-soft, var(--line));
+   background: var(--sunk); font-size: 11px; line-height: 1.5; color: var(--muted); }
+ .log-dock.is-folded { width: min(420px, calc(100vw - 32px)); }
++/* HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, from under the
++   bar down to the player, a little wider */
++.log-dock.is-tall { width: min(860px, calc(100vw - 32px)); }
++.log-dock.is-tall .log-dock-body { height: calc(100vh - 52px - var(--playbar-h, 60px) - 74px); }
++body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - 52px - 92px); }
++.log-dock.is-folded .log-dock-tall { display: none; }
++.log-dock-tall { min-width: 30px; font-size: 14px; }
+ .log-dock.is-folded .log-dock-body, .log-dock.is-folded .log-dock-acts { display: none; }
+ @media (max-width: 1150px) { .log-dock { bottom: 10px; } }
+ 
+diff --git a/tools/console/app.js b/tools/console/app.js
+index d865996..08be720 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2455,8 +2455,12 @@
+     if (dock) {
+       var dockFollow = $("logDockFollow").checked;
+       Array.prototype.forEach.call(fragment.childNodes, function (row) { dock.appendChild(row.cloneNode(true)); });
+-      while (dock.childElementCount > LOG_KEEP) dock.removeChild(dock.firstChild);
++      // HERESY 1166 (Viktor: «не возможно во время активности прокрутить и глянуть, что до этого»): while you read, the
++      // lines under your eye stay put: the oldest go only past five times the count, and the view moves back by them
++      var gone = 0, keep = dockFollow ? LOG_KEEP : LOG_KEEP * 5;
++      while (dock.childElementCount > keep) { gone += dock.firstChild.offsetHeight || 0; dock.removeChild(dock.firstChild); }
+       if (dockFollow) dock.scrollTop = dock.scrollHeight;
++      else if (gone) dock.scrollTop = Math.max(0, dock.scrollTop - gone);
+       var lastLine = pending[pending.length - 1];
+       if (lastLine) {
+         $("logDockLast").textContent = (lastLine.text || " ").slice(0, 160);
+@@ -2464,8 +2468,10 @@
+       }
+     }
+     body.appendChild(fragment);
+-    while (body.childElementCount > LOG_KEEP) body.removeChild(body.firstChild);
++    var cut = 0, keepBody = follow ? LOG_KEEP : LOG_KEEP * 5;       // HERESY 1166: the same in Engine's log
++    while (body.childElementCount > keepBody) { cut += body.firstChild.offsetHeight || 0; body.removeChild(body.firstChild); }
+     if (follow) body.scrollTop = body.scrollHeight;
++    else if (cut) body.scrollTop = Math.max(0, body.scrollTop - cut);
+   }
+ 
+   function scrollLogToEnd() { if ($("logFollow").checked) $("logBody").scrollTop = $("logBody").scrollHeight; }
+@@ -2494,8 +2500,35 @@
+       setTimeout(function () { var b = $("logBody"); if (b) b.scrollIntoView({ block: "center" }); }, 120);
+     });
+     $("logDockFollow").addEventListener("change", function () { if (this.checked) $("logDockBody").scrollTop = $("logDockBody").scrollHeight; });
++    // HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, kept as chosen;
++    // asked while folded, it unfolds too
++    function tall(on) {
++      dock.classList.toggle("is-tall", on);
++      $("logDockTall").setAttribute("aria-pressed", on ? "true" : "false");
++      $("logDockTall").textContent = on ? "\u2921" : "\u2922";
++      store("yue2.logDockTall", on ? "1" : null);
++      if (on && dock.classList.contains("is-folded")) fold(false);
++      if ($("logDockFollow").checked) $("logDockBody").scrollTop = $("logDockBody").scrollHeight;
++    }
++    tall(recall("yue2.logDockTall") === "1" && !dock.classList.contains("is-folded"));
++    $("logDockTall").addEventListener("click", function () { tall(!dock.classList.contains("is-tall")); });
+   })();
+   $("logFollow").addEventListener("change", scrollLogToEnd);
++  // HERESY 1166 (Viktor: «не возможно во время активности прокрутить и глянуть, что до этого»): Follow is on by default, and a
++  // scroll up by hand (the wheel, a key, the scroll bar, a finger) lets go of it: it unticks and the log stays where you
++  // read; back at the newest line it ticks again. A scroll the page makes itself (following) is not a hand.
++  [["logDockBody", "logDockFollow"], ["logBody", "logFollow"]].forEach(function (pair) {
++    var body = $(pair[0]), box = $(pair[1]), hand = 0;
++    if (!body || !box) return;
++    var mark = function () { hand = Date.now(); };
++    ["wheel", "touchmove", "mousedown"].forEach(function (type) { body.addEventListener(type, mark, { passive: true }); });
++    body.addEventListener("keydown", function (e) { if (/^(ArrowUp|ArrowDown|PageUp|PageDown|Home|End)$/.test(e.key)) mark(); });
++    body.addEventListener("scroll", function () {
++      if (Date.now() - hand > 800) return;
++      var atEnd = body.scrollHeight - body.scrollTop - body.clientHeight < 24;
++      if (atEnd !== box.checked) box.checked = atEnd;
++    }, { passive: true });
++  });
+ 
+   /* ------------------------------------------------------------ run chain */
+ 
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 38ea1f3..92fafb7 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2489,5 +2489,7 @@ RuachI18n.add("be", {
+ "start": "пачатак",
+ "end": "канец",
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Цягні кропку ўгару — успышка, уніз — згасанне, уздоўж песні — зрух; двайная пстрычка дадае кропку, двайная пстрычка па кропцы прыбірае яе. Сіла ўверсе — гэта верх крывой.",
+-"curved": "па крывой"
++"curved": "па крывой",
++"Full height": "На ўсю вышыню",
++"The log the window's full height, or back": "Журнал на ўсю вышыню акна, або назад"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 8bba898..c739ef4 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2488,5 +2488,7 @@ RuachI18n.add("el", {
+ "start": "αρχή",
+ "end": "τέλος",
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Σύρε ένα σημείο πάνω για έκλαμψη, κάτω για σβήσιμο, κατά μήκος του τραγουδιού για μετακίνηση· διπλό κλικ προσθέτει σημείο, διπλό κλικ σε σημείο το αφαιρεί. Η ένταση από πάνω είναι η κορυφή της καμπύλης.",
+-"curved": "με καμπύλη"
++"curved": "με καμπύλη",
++"Full height": "Σε όλο το ύψος",
++"The log the window's full height, or back": "Το αρχείο σε όλο το ύψος του παραθύρου, ή πίσω"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index f61c51e..87b4bdc 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2488,5 +2488,7 @@ RuachI18n.add("es", {
+ "start": "inicio",
+ "end": "final",
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Arrastra un punto hacia arriba para un destello, hacia abajo para un desvanecimiento, a lo largo de la canción para moverlo; doble clic añade un punto, doble clic en un punto lo quita. La fuerza de arriba es la cima de la curva.",
+-"curved": "con curva"
++"curved": "con curva",
++"Full height": "Altura completa",
++"The log the window's full height, or back": "El registro a toda la altura de la ventana, o de vuelta"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 91e1a0f..695cd77 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2488,5 +2488,7 @@ RuachI18n.add("it", {
+ "start": "inizio",
+ "end": "fine",
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Trascina un punto in alto per un lampo, in basso per una dissolvenza, lungo la canzone per spostarlo; doppio clic aggiunge un punto, doppio clic su un punto lo toglie. La forza sopra è la cima della curva.",
+-"curved": "con curva"
++"curved": "con curva",
++"Full height": "Altezza piena",
++"The log the window's full height, or back": "Il registro a tutta l'altezza della finestra, o indietro"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 5fba89c..dcfa83d 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2494,5 +2494,7 @@ RuachI18n.add("ru", {
+ "start": "начало",
+ "end": "конец",
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Тяни точку вверх — вспышка, вниз — затухание, вдоль песни — сдвиг; двойной щелчок добавляет точку, двойной щелчок по точке убирает её. Сила наверху — это верх кривой.",
+-"curved": "по кривой"
++"curved": "по кривой",
++"Full height": "Во всю высоту",
++"The log the window's full height, or back": "Журнал во всю высоту окна, или обратно"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 5d98946..e94a083 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2489,5 +2489,7 @@ RuachI18n.add("uk", {
+ "start": "початок",
+ "end": "кінець",
+ "Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, double-click a point to take it out. The strength above is the top of the curve.": "Тягни точку вгору — спалах, униз — згасання, уздовж пісні — зсув; подвійне клацання додає точку, подвійне клацання по точці прибирає її. Сила вгорі — це верх кривої.",
+-"curved": "за кривою"
++"curved": "за кривою",
++"Full height": "На всю висоту",
++"The log the window's full height, or back": "Журнал на всю висоту вікна, або назад"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index a2daea9..39f1292 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1706,6 +1706,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <span class="lamp" id="logDockLamp"></span><b>Server log</b><span class="net-say mono" id="netSay"></span><span class="log-dock-last mono" id="logDockLast">connecting</span></button>
+     <span class="log-dock-acts">
+       <label class="check small-check"><input type="checkbox" id="logDockFollow" checked data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read." /> <span>Follow</span></label>
++      <!-- HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, or back -->
++      <button type="button" class="btn ghost small log-dock-tall" id="logDockTall" aria-pressed="false" aria-label="Full height"
++        data-tip="The log the window's full height, or back">⤢</button>
+       <button type="button" class="btn ghost small" id="logDockCopy">Copy</button>
+       <button type="button" class="btn ghost small" id="logDockEngine" data-tip="The whole log, in Engine">Engine</button>
+     </span>
+-- 
+2.43.0
+

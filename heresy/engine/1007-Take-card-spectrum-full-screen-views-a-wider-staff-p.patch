@@ -1,0 +1,962 @@
+From f1a46a593e09a29e445252378af2806e6a4b7b8a Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 14:20:52 -0600
+Subject: [PATCH 1007/1177] Take card: spectrum, full-screen views, a wider
+ staff printed on Letter
+
+HERESY 1007.
+- Spectrum drawer in the take card (heresy-spectrum.js): our Audio Spectral
+  Comparator v3 ported to the page with the same method. Mono at 44.1 kHz;
+  STFT Hann 2048 hop 2048 with scipy's scaling, floor -80 dB, log or linear
+  frequency, the heresy_spectrum palette; Welch average spectrum with the
+  SUB..AIR zones; band energy with deltas. Another take can be laid over it.
+  The take comes as FLAC; the download is counted and every phase is timed.
+  A click on the spectrogram plays the take from there; a playhead follows.
+- Full-screen viewer (heresy-zoom.js): Ctrl+wheel zooms around the pointer,
+  wheel and drag scroll, + - 0 Esc. Raster pictures are drawn again at every
+  zoom; the staff SVG simply comes out larger.
+- The staff engraves at 1050 wide instead of 700, and prints on US Letter,
+  portrait or landscape, one system per SVG so no page breaks inside one.
+- The spectrum's scale buttons have their own class: the kit's score tabs
+  handler takes every .stab on the page.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |  44 +++
+ tools/console/app.js             | 108 ++++++-
+ tools/console/heresy-spectrum.js | 513 +++++++++++++++++++++++++++++++
+ tools/console/heresy-zoom.js     | 150 +++++++++
+ tools/console/index.html         |  40 +++
+ tools/public/index.html.gz       | Bin 219768 -> 233080 bytes
+ 6 files changed, 854 insertions(+), 1 deletion(-)
+ create mode 100644 tools/console/heresy-spectrum.js
+ create mode 100644 tools/console/heresy-zoom.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3473433..db40254 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1822,3 +1822,47 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+ /* a seed box with a seed in it: its dice clears it */
+ .dice.is-set { color: var(--amber); }
+ 
++
++/* ------------------------------------------ HERESY 1007: spectrum, full screen */
++/* The spectrum draws on its own warm dark ground (the palette of our comparator),
++   whatever the theme, so the colours mean the same everywhere. */
++.spectrum-body { gap: 10px; }
++.spec-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
++.spec-bar .score-tabs { flex: none; }
++.spec-scale {
++  padding: 4px 11px; background: none; border: 0; border-radius: 3px;
++  color: var(--dim); font-size: 11.5px; cursor: pointer;
++}
++.spec-scale.is-active { background: var(--raise); color: var(--ink); }
++.spec-compare { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); min-width: 0; }
++.spec-compare select { width: auto; max-width: 340px; padding: 4px 8px; font-size: 12px; }
++.spec-state { font-size: 11.5px; color: var(--dim); }
++.spec-state.is-bad { color: var(--bad-line, #c47a77); }
++.spec-stage { position: relative; border-radius: var(--r-md); overflow: hidden; background: #1a1410; }
++.spec-stage canvas { display: block; width: 100%; }
++#specA { cursor: pointer; }
++.spec-head { position: absolute; width: 2px; margin-left: -1px; background: #ffffff; box-shadow: 0 0 6px #ffffffaa; pointer-events: none; }
++.spec-expand {
++  position: absolute; top: 4px; right: 6px; width: 26px; height: 22px;
++  border: 1px solid #3a2e20; border-radius: 4px; background: #1e1812cc; color: #e8d5a0;
++  font-size: 14px; line-height: 1; cursor: pointer; opacity: .75;
++}
++.spec-expand:hover, .spec-expand:focus-visible { opacity: 1; border-color: #e8d5a0; }
++
++/* the full-screen viewer (heresy-zoom.js) */
++html.hz-open { overflow: hidden; }
++.hz-view { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; background: #0f0c09f2; }
++.hz-view[hidden] { display: none; }
++.hz-bar {
++  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
++  background: var(--panel); border-bottom: 1px solid var(--line); color: var(--ink);
++}
++.hz-title { font-weight: 600; font-size: 13.5px; }
++.hz-hint { font-size: 11.5px; color: var(--dim); margin-right: 6px; }
++.hz-level { min-width: 48px; text-align: center; font-size: 12px; }
++.hz-scroll { flex: 1; overflow: auto; padding: 12px; cursor: grab; }
++.hz-scroll.is-dragging { cursor: grabbing; }
++.hz-stage { width: max-content; }
++.hz-stage > * { display: block; position: static !important; }
++.hz-paper { background: var(--paper); padding: 0; }
++@media (max-width: 720px) { .hz-hint { display: none; } }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index a0ccfee..6f67844 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2695,6 +2695,7 @@
+     paintTakeDownloads();
+ 
+     paintTakeMeta();
++    if (window.HeresySpectrum) window.HeresySpectrum.setTake(spectrumTake(take));   // HERESY 1007
+     $("metaStyle").textContent = take.style;
+     var parent = take.parent ? findTake(take.parent) : null;
+     $("metaCover").textContent = take.parent ? "Re-rendered from \u201c" + (parent ? displayTitle(parent) : take.parent) + "\u201d" : "";
+@@ -2896,7 +2897,7 @@
+     try {
+       window.ABCJS.renderAbc("scoreStaff", abc, {
+         responsive: "resize",
+-        staffwidth: 700,
++        staffwidth: 1050,   // HERESY 1007: 700 → 1050, landscape, so full screen at 1920 is not small
+         paddingtop: 4,
+         paddingbottom: 10,
+         foregroundColor: getComputedStyle(document.documentElement).getPropertyValue("--paper-ink").trim() || "#2a2318"
+@@ -4715,6 +4716,111 @@
+     });
+   }
+ 
++  /* ------------------------------ HERESY 1007: spectrum and full-screen views */
++  // Takes of one song share a title, so the label carries the take's day and time.
++  function takeLabel(take) {
++    var when = String(take.name || "").match(/^\d{4}(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)/);
++    return displayTitle(take) + (when ? " · " + when[2] + "." + when[1] + " " + when[3] + ":" + when[4] + ":" + when[5] : "");
++  }
++  function spectrumTake(take) {
++    return { name: take.name, url: takeAudioUrl(take), label: takeLabel(take),
++             flac: take.session ? "" : "/library/flac?name=" + encodeURIComponent(take.name) };
++  }
++  if (window.HeresySpectrum) {
++    window.HeresySpectrum.init({
++      others: function (shown) {
++        return STATE.takes.filter(function (t) { return t.name !== shown.name; })
++          .map(function (t) { return { url: takeAudioUrl(t), label: takeLabel(t) }; });
++      },
++      byUrl: function (url) {
++        var take = STATE.takes.filter(function (t) { return takeAudioUrl(t) === url; })[0];
++        return take ? spectrumTake(take) : null;
++      },
++      // where the player is in this take, or null when it holds another one
++      time: function (shown) {
++        return STATE.playerTake && STATE.playerTake.name === shown.name && audio.getAttribute("src") ? audio.currentTime : null;
++      },
++      // a click on the spectrogram plays this take from there
++      seek: function (shown, seconds) {
++        var take = findTake(shown.name);
++        if (!take) return;
++        var go = function () {
++          try { audio.currentTime = seconds; } catch (error) { /* not seekable yet */ }
++          audio.play().catch(function () {});
++        };
++        if (STATE.playerTake && STATE.playerTake.name === take.name && audio.getAttribute("src")) { go(); return; }
++        loadPlayer(take, false);
++        audio.addEventListener("loadedmetadata", go, { once: true });
++      }
++    });
++  }
++
++  // The staff over the whole screen: the engraved SVG, larger, never blurred.
++  function openStaff() {
++    var svg = $("scoreStaff").querySelector("svg");
++    if (!svg || !window.HeresyZoom) return;
++    var vb = svg.viewBox && svg.viewBox.baseVal, box = svg.getBoundingClientRect();
++    var aspect = vb && vb.width ? vb.height / vb.width : box.height / Math.max(1, box.width);
++    window.HeresyZoom.open({
++      title: ($("takeTitle").textContent || "Score") + " — staff",
++      aspect: aspect,
++      vector: true,
++      render: function (w, h) {
++        var copy = svg.cloneNode(true);
++        copy.removeAttribute("style");   // abcjs "responsive" pins its SVG absolute at the top
++        if (!(vb && vb.width)) copy.setAttribute("viewBox", "0 0 " + box.width + " " + box.height);
++        copy.setAttribute("width", w);
++        copy.setAttribute("height", h);
++        copy.style.maxWidth = "none";
++        copy.classList.add("hz-paper");
++        return copy;
++      }
++    });
++  }
++  $("staffFull").addEventListener("click", openStaff);
++
++  // The staff paged for print on US Letter, portrait or landscape: each system is its
++  // own SVG (abcjs oneSvgPerLine), and a page never breaks inside a system. The
++  // browser's print dialog saves it as PDF.
++  var LETTER = { portrait: { width: 720, size: "letter portrait" }, landscape: { width: 960, size: "letter landscape" } };
++  function printStaff(orientation) {
++    var abc = STATE.abcRendered, page = LETTER[orientation] || LETTER.portrait;
++    if (!abc || !window.ABCJS) { toast("No score to print"); return; }
++    var host = document.createElement("div");
++    host.style.cssText = "position:absolute;left:-10000px;top:0;width:" + page.width + "px";
++    document.body.appendChild(host);
++    try {
++      window.ABCJS.renderAbc(host, abc, { oneSvgPerLine: true, staffwidth: page.width - 30,
++        paddingtop: 6, paddingbottom: 6, paddingleft: 10, paddingright: 10, foregroundColor: "#000000" });
++    } catch (error) {
++      host.remove();
++      toast("This score could not be engraved for print", "bad");
++      return;
++    }
++    var systems = Array.prototype.map.call(host.querySelectorAll("svg"), function (svg) {
++      svg.removeAttribute("style");
++      svg.setAttribute("width", "100%");
++      svg.removeAttribute("height");
++      return '<div class="sys">' + svg.outerHTML + "</div>";
++    }).join("\n");
++    host.remove();
++    var title = ($("takeTitle").textContent || "Score").replace(/[<&>]/g, function (c) { return { "<": "&lt;", "&": "&amp;", ">": "&gt;" }[c]; });
++    var win = window.open("", "_blank");
++    if (!win) { toast("The browser blocked the print window: allow pop-ups for this page", "bad"); return; }
++    win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title><style>' +
++      '@page { size: ' + page.size + '; margin: 0.5in; }' +
++      'html, body { margin: 0; background: #fff; color: #000; font: 12px/1.4 "IBM Plex Sans", sans-serif; }' +
++      'h1 { font: 600 16px/1.3 "IBM Plex Sans", sans-serif; margin: 0 0 10px; }' +
++      '.sys { break-inside: avoid; page-break-inside: avoid; margin: 0 0 4px; }' +
++      '.sys svg { display: block; width: 100%; height: auto; }' +
++      '@media screen { body { width: ' + page.width + 'px; margin: 24px auto; } }' +
++      '</style></head><body><h1>' + title + '</h1>' + systems +
++      '<script>window.onload = function () { setTimeout(function () { window.print(); }, 250); };<\/script></body></html>');
++    win.document.close();
++  }
++  $("staffPrint").addEventListener("click", function () { printStaff($("staffPrintOrient").value); });
++  $("scoreStaff").addEventListener("dblclick", openStaff);
++
+   buildKnobs();
+   syncShape();
+   paintOutputDefaults();
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+new file mode 100644
+index 0000000..9342595
+--- /dev/null
++++ b/tools/console/heresy-spectrum.js
+@@ -0,0 +1,513 @@
++// HERESY 1007: the spectrum of a take, in the take card.
++//
++// A port of our Audio Spectral Comparator v3 (audio_spectrum_compare.py, HERETICAL
++// TANDEM, Music_Post_Processing_venv_3.12) to the browser, with the same method:
++//   mono, resampled to 44.1 kHz by the browser's decoder;
++//   spectrogram: STFT, Hann 2048, hop 2048, scipy's scaling, 20·log10, floor -80 dB,
++//                linear or log frequency, the heresy_spectrum palette;
++//   average spectrum: Welch, Hann 4096, half overlap, density scaling, 10·log10;
++//   band energy: the mean Welch power in SUB LOW MID HI-MID HIGH AIR.
++// A second take can be laid over the first, as the script compares two tracks.
++// Nothing leaves the page: the take's audio is fetched from the server and measured here.
++(function () {
++  "use strict";
++
++  var SR = 44100;
++  var STOPS = ["#0a0014", "#0d1040", "#0a2878", "#0860a8", "#08a0a0", "#10b868", "#48c828",
++               "#a0d810", "#e8c810", "#f08810", "#e83820", "#ff6090", "#ffffff"];
++  var BG = "#1a1410", BG_PLOT = "#1e1812", TEXT = "#e8d5a0", GRID = "#3a2e20";
++  var COLOR_A = "#ff8c28", COLOR_B = "#28c8ff", UP = "#28ff68", DOWN = "#ff4060";
++  var BAND_A = ["#e83838", "#ff6828", "#ffa828", "#ffe028", "#a0e828", "#28e8a0"];
++  var BAND_B = ["#a82828", "#c84818", "#c87818", "#c8a018", "#70a818", "#18a870"];
++  var BANDS = [["SUB", "20–80", 20, 80], ["LOW", "80–300", 80, 300], ["MID", "300–2K", 300, 2000],
++               ["HI-MID", "2K–6K", 2000, 6000], ["HIGH", "6K–12K", 6000, 12000], ["AIR", "12K–20K", 12000, 20000]];
++  var ZONE = ["#ff2020", "#ff6820", "#ffe028", "#28e868", "#2888ff", "#c828ff"];
++
++  // ---------------------------------------------------------------- palette
++  var LUT = (function () {
++    var rgb = STOPS.map(function (h) { return [1, 3, 5].map(function (i) { return parseInt(h.substr(i, 2), 16); }); });
++    var lut = new Uint8ClampedArray(256 * 3);
++    for (var i = 0; i < 256; i++) {
++      var x = i / 255 * (rgb.length - 1), k = Math.min(rgb.length - 2, Math.floor(x)), f = x - k;
++      for (var c = 0; c < 3; c++) lut[i * 3 + c] = rgb[k][c] + (rgb[k + 1][c] - rgb[k][c]) * f;
++    }
++    return lut;
++  })();
++
++  // -------------------------------------------------------------------- FFT
++  // In-place radix-2 complex FFT; the plans are cached per size.
++  var plans = {};
++  function plan(n) {
++    if (plans[n]) return plans[n];
++    var bits = Math.log2(n), rev = new Uint32Array(n), cos = new Float64Array(n / 2), sin = new Float64Array(n / 2);
++    for (var i = 0; i < n; i++) {
++      var r = 0;
++      for (var b = 0; b < bits; b++) r |= ((i >> b) & 1) << (bits - 1 - b);
++      rev[i] = r;
++    }
++    for (var j = 0; j < n / 2; j++) { cos[j] = Math.cos(2 * Math.PI * j / n); sin[j] = -Math.sin(2 * Math.PI * j / n); }
++    return (plans[n] = { rev: rev, cos: cos, sin: sin });
++  }
++  function fft(re, im) {
++    var n = re.length, p = plan(n), i, j, t;
++    for (i = 0; i < n; i++) {
++      j = p.rev[i];
++      if (j > i) { t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
++    }
++    for (var size = 2; size <= n; size <<= 1) {
++      var half = size >> 1, step = n / size;
++      for (var start = 0; start < n; start += size) {
++        for (var k = 0; k < half; k++) {
++          var a = start + k, b2 = a + half, c = p.cos[k * step], s = p.sin[k * step];
++          var xr = re[b2] * c - im[b2] * s, xi = re[b2] * s + im[b2] * c;
++          re[b2] = re[a] - xr; im[b2] = im[a] - xi;
++          re[a] += xr; im[a] += xi;
++        }
++      }
++    }
++  }
++  function hann(n) {   // periodic, as scipy.signal.get_window("hann", n)
++    var w = new Float64Array(n);
++    for (var i = 0; i < n; i++) w[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / n);
++    return w;
++  }
++
++  // --------------------------------------------------------------- analysis
++  // scipy.signal.stft(audio, sr, nperseg=2048, noverlap=0): Hann, the signal padded by
++  // half a window at both ends, each frame scaled by 1/sum(window).
++  function spectrogram(x) {
++    var n = 2048, hop = 2048, w = hann(n), wsum = 0, i;
++    for (i = 0; i < n; i++) wsum += w[i];
++    var pad = n / 2, frames = Math.floor((x.length + 2 * pad - n) / hop) + 1, bins = n / 2 + 1;
++    var db = new Float32Array(frames * bins), re = new Float64Array(n), im = new Float64Array(n);
++    for (var f = 0; f < frames; f++) {
++      var at = f * hop - pad;
++      for (i = 0; i < n; i++) {
++        var s = at + i;
++        re[i] = s >= 0 && s < x.length ? x[s] * w[i] : 0;
++        im[i] = 0;
++      }
++      fft(re, im);
++      for (var k = 0; k < bins; k++) {
++        var mag = Math.sqrt(re[k] * re[k] + im[k] * im[k]) / wsum;
++        db[f * bins + k] = 20 * Math.log10(mag + 1e-10);
++      }
++    }
++    return { db: db, frames: frames, bins: bins, hop: hop };
++  }
++  // scipy.signal.welch(audio, sr, nperseg=4096): Hann, half overlap, density scaling, one-sided.
++  function welch(x) {
++    var n = 4096, hop = 2048, w = hann(n), s2 = 0, i, k;
++    for (i = 0; i < n; i++) s2 += w[i] * w[i];
++    var bins = n / 2 + 1, acc = new Float64Array(bins), count = 0, re = new Float64Array(n), im = new Float64Array(n);
++    for (var at = 0; at + n <= x.length; at += hop) {
++      var mean = 0;
++      for (i = 0; i < n; i++) mean += x[at + i];
++      mean /= n;                                   // scipy detrends each segment ("constant")
++      for (i = 0; i < n; i++) { re[i] = (x[at + i] - mean) * w[i]; im[i] = 0; }
++      fft(re, im);
++      for (k = 0; k < bins; k++) acc[k] += re[k] * re[k] + im[k] * im[k];
++      count++;
++    }
++    var power = new Float64Array(bins), freqs = new Float64Array(bins);
++    for (k = 0; k < bins; k++) {
++      var p = count ? acc[k] / count / (SR * s2) : 0;
++      if (k > 0 && k < bins - 1) p *= 2;
++      power[k] = p;
++      freqs[k] = k * SR / n;
++    }
++    var avg = new Float64Array(bins);
++    for (k = 0; k < bins; k++) avg[k] = 10 * Math.log10(power[k] + 1e-10);
++    var bands = BANDS.map(function (band) {
++      var sum = 0, m = 0;
++      for (var j = 0; j < bins; j++) if (freqs[j] >= band[2] && freqs[j] < band[3]) { sum += power[j]; m++; }
++      return m ? 10 * Math.log10(sum / m + 1e-10) : -100;
++    });
++    return { freqs: freqs, avg: avg, bands: bands };
++  }
++
++  function decode(buffer) {
++    var ctx = new OfflineAudioContext(1, 2, SR);   // the decoder resamples to the context's rate
++    return new Promise(function (resolve, reject) { ctx.decodeAudioData(buffer, resolve, reject); }).then(function (audio) {
++      var n = audio.length, mono = new Float32Array(n), ch = audio.numberOfChannels;
++      for (var c = 0; c < ch; c++) {
++        var d = audio.getChannelData(c);
++        for (var i = 0; i < n; i++) mono[i] += d[i] / ch;
++      }
++      return mono;
++    });
++  }
++
++  // Read a response with a running count, so a long download is never a silent wait.
++  function readAll(r, say) {
++    var total = parseInt(r.headers.get("content-length"), 10) || 0;
++    if (!r.body || !r.body.getReader) return r.arrayBuffer();
++    var reader = r.body.getReader(), parts = [], got = 0, t0 = performance.now();
++    return (function pump() {
++      return reader.read().then(function (step) {
++        if (step.done) {
++          var out = new Uint8Array(got), at = 0;
++          parts.forEach(function (p) { out.set(p, at); at += p.length; });
++          return out.buffer;
++        }
++        parts.push(step.value);
++        got += step.value.length;
++        var secs = (performance.now() - t0) / 1000;
++        say("fetching " + (got / 1e6).toFixed(0) + (total ? " of " + (total / 1e6).toFixed(0) : "") + " MB · " +
++            (got / 1e6 / Math.max(0.1, secs)).toFixed(1) + " MB/s");
++        return pump();
++      });
++    })();
++  }
++
++  // One analysis per audio address, the last four kept: a 7-minute take is about 40 MB of spectrogram.
++  // The take comes as FLAC when the server offers it (the same samples, about 40% fewer bytes),
++  // else as it is. Every phase is timed; the times go to the status line.
++  var cache = [];
++  function analyse(take, say) {
++    var key = take.url;
++    for (var i = 0; i < cache.length; i++) if (cache[i].url === key) return cache[i].promise;
++    var times = {}, t = performance.now();
++    function lap(name) { var now = performance.now(); times[name] = (now - t) / 1000; t = now; }
++    var bytes = 0;
++    say("fetching…");
++    var get = function (url) {
++      return fetch(url).then(function (r) {
++        if (!r.ok) throw new Error("the server answered " + r.status);
++        return readAll(r, say);
++      });
++    };
++    var promise = (take.flac ? get(take.flac).catch(function () { return get(take.url); }) : get(take.url)).then(function (buffer) {
++      bytes = buffer.byteLength;
++      lap("fetch");
++      say("decoding " + (bytes / 1e6).toFixed(0) + " MB…");
++      return decode(buffer);
++    }).then(function (mono) {
++      lap("decode");
++      say("measuring…");
++      return new Promise(function (resolve) {
++        setTimeout(function () {   // let the words above paint before the page is busy
++          var peak = 0;
++          for (var i = 0; i < mono.length; i++) { var a = Math.abs(mono[i]); if (a > peak) peak = a; }
++          var result = { seconds: mono.length / SR, peak: peak, spec: spectrogram(mono) };
++          lap("stft");
++          var w = welch(mono);
++          lap("welch");
++          result.freqs = w.freqs; result.avg = w.avg; result.bands = w.bands;
++          result.times = times; result.bytes = bytes;
++          resolve(result);
++        }, 30);
++      });
++    });
++    cache.unshift({ url: key, promise: promise });
++    if (cache.length > 4) cache.length = 4;
++    promise.catch(function () { cache = cache.filter(function (c) { return c.promise !== promise; }); });
++    return promise;
++  }
++
++  // ---------------------------------------------------------------- drawing
++  // cssWidth given: a picture for the full-screen viewer; otherwise as wide as its place in the card.
++  function canvasFor(el, cssHeight, cssWidth) {
++    var dpr = window.devicePixelRatio || 1, width = cssWidth || Math.max(320, el.clientWidth || el.parentNode.clientWidth);
++    el.width = Math.round(width * dpr);
++    el.height = Math.round(cssHeight * dpr);
++    el.style.height = cssHeight + "px";
++    var g = el.getContext("2d");
++    g.setTransform(dpr, 0, 0, dpr, 0, 0);
++    g.fillStyle = BG;
++    g.fillRect(0, 0, width, cssHeight);
++    g.font = "11px 'IBM Plex Mono', monospace";
++    return { g: g, w: width, h: cssHeight, dpr: dpr };
++  }
++  function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
++  function khz(f) { return f >= 1000 ? (f / 1000) + "K" : String(f); }
++
++  var PAD = { l: 44, r: 10, t: 22, b: 20 };
++  // The frequency drawn at a height fraction y (0 bottom, 1 top), linear or log from 20 Hz.
++  function freqAt(y, scale, nyq) {
++    return scale === "log" ? 20 * Math.pow(nyq / 20, y) : 20 + (nyq - 20) * y;
++  }
++  function yOf(f, scale, nyq) {
++    return scale === "log" ? Math.log(f / 20) / Math.log(nyq / 20) : (f - 20) / (nyq - 20);
++  }
++
++  function drawSpectrogram(el, data, label, color, scale, range, w, h) {
++    var c = canvasFor(el, h || 250, w), g = c.g, pw = c.w - PAD.l - PAD.r, ph = c.h - PAD.t - PAD.b;
++    var s = data.spec, nyq = SR / 2, dpr = c.dpr;
++    var W = Math.round(pw * dpr), H = Math.round(ph * dpr), img = g.createImageData(W, H), px = img.data;
++    var lo = range[0], span = Math.max(1e-6, range[1] - range[0]);
++    // the bin under each pixel row, found once
++    var rowBin = new Float64Array(H);
++    for (var y = 0; y < H; y++) rowBin[y] = freqAt(1 - (y + 0.5) / H, scale, nyq) / nyq * (s.bins - 1);
++    for (var x = 0; x < W; x++) {
++      // a pixel column spans several frames: take the loudest, so short hits stay visible
++      var f0 = Math.floor(x / W * s.frames), f1 = Math.max(f0 + 1, Math.floor((x + 1) / W * s.frames));
++      for (y = 0; y < H; y++) {
++        var b = rowBin[y], k = Math.floor(b), t = b - k, v = -1e9;
++        for (var f = f0; f < f1 && f < s.frames; f++) {
++          var base = f * s.bins, a = s.db[base + k], z = k + 1 < s.bins ? s.db[base + k + 1] : a;
++          var here = a + (z - a) * t;
++          if (here > v) v = here;
++        }
++        var i = Math.max(0, Math.min(255, Math.round((v - lo) / span * 255))), o = (y * W + x) * 4;
++        px[o] = LUT[i * 3]; px[o + 1] = LUT[i * 3 + 1]; px[o + 2] = LUT[i * 3 + 2]; px[o + 3] = 255;
++      }
++    }
++    g.putImageData(img, Math.round(PAD.l * dpr), Math.round(PAD.t * dpr));
++    // axes
++    g.fillStyle = TEXT; g.strokeStyle = GRID; g.lineWidth = 1;
++    g.textAlign = "right"; g.textBaseline = "middle";
++    var ticks = scale === "log" ? [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000] : [0, 2500, 5000, 7500, 10000, 12500, 15000, 17500, 20000];
++    ticks.forEach(function (f) {
++      if (f < 20 || f > nyq) return;
++      var yy = PAD.t + ph * (1 - yOf(f, scale, nyq));
++      g.fillText(khz(f), PAD.l - 5, yy);
++      g.globalAlpha = 0.35; g.beginPath(); g.moveTo(PAD.l, yy + 0.5); g.lineTo(PAD.l + pw, yy + 0.5); g.stroke(); g.globalAlpha = 1;
++    });
++    g.textAlign = "center"; g.textBaseline = "top";
++    var every = data.seconds > 360 ? 60 : data.seconds > 120 ? 30 : 10;
++    for (var t = 0; t <= data.seconds; t += every) g.fillText(clock(t), PAD.l + pw * t / data.seconds, PAD.t + ph + 4);
++    g.textAlign = "left"; g.textBaseline = "top"; g.font = "600 12px 'IBM Plex Sans', sans-serif"; g.fillStyle = color;
++    g.fillText(label + " — spectrogram (" + (scale === "log" ? "log" : "linear") + ")", PAD.l, 4);
++    return { x: PAD.l, w: pw, seconds: data.seconds };
++  }
++
++  function drawAverage(el, sets, w, h) {
++    var c = canvasFor(el, h || 230, w), g = c.g, pw = c.w - PAD.l - PAD.r, ph = c.h - PAD.t - PAD.b;
++    var lf = Math.log(20), span = Math.log(20000) - lf;
++    function X(f) { return PAD.l + pw * (Math.log(f) - lf) / span; }
++    var top = -1e9;
++    sets.forEach(function (s) { for (var k = 0; k < s.data.freqs.length; k++) if (s.data.freqs[k] >= 20 && s.data.avg[k] > top) top = s.data.avg[k]; });
++    top = Math.ceil((top + 3) / 10) * 10;
++    var bottom = top - 100;
++    function Y(v) { return PAD.t + ph * (top - Math.max(bottom, v)) / (top - bottom); }
++    g.fillStyle = BG_PLOT; g.fillRect(PAD.l, PAD.t, pw, ph);
++    BANDS.forEach(function (band, i) {
++      g.fillStyle = ZONE[i]; g.globalAlpha = 0.07;
++      g.fillRect(X(band[2]), PAD.t, X(band[3]) - X(band[2]), ph);
++      g.globalAlpha = 0.8; g.font = "600 10px 'IBM Plex Sans', sans-serif"; g.textAlign = "center"; g.textBaseline = "top";
++      g.fillText(band[0], X(Math.sqrt(band[2] * band[3])), PAD.t + 3);
++      g.globalAlpha = 1;
++    });
++    g.font = "11px 'IBM Plex Mono', monospace"; g.strokeStyle = GRID; g.fillStyle = TEXT;
++    for (var v = top; v >= bottom; v -= 20) {
++      g.textAlign = "right"; g.textBaseline = "middle"; g.fillText(v + "", PAD.l - 5, Y(v));
++      g.globalAlpha = 0.5; g.beginPath(); g.moveTo(PAD.l, Y(v) + 0.5); g.lineTo(PAD.l + pw, Y(v) + 0.5); g.stroke(); g.globalAlpha = 1;
++    }
++    g.textAlign = "center"; g.textBaseline = "top";
++    [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].forEach(function (f) { g.fillText(khz(f), X(f), PAD.t + ph + 4); });
++    sets.forEach(function (s) {
++      var d = s.data, path = new Path2D(), first = true, lastX = PAD.l;
++      for (var k = 1; k < d.freqs.length; k++) {
++        var f = d.freqs[k];
++        if (f < 20 || f > 20000) continue;
++        if (first) { path.moveTo(X(f), Y(d.avg[k])); first = false; } else path.lineTo(X(f), Y(d.avg[k]));
++        lastX = X(f);
++      }
++      var fill = new Path2D(path);
++      fill.lineTo(lastX, PAD.t + ph); fill.lineTo(X(Math.max(20, d.freqs[1])), PAD.t + ph); fill.closePath();
++      g.fillStyle = s.color; g.globalAlpha = 0.12; g.fill(fill); g.globalAlpha = 0.95;
++      g.strokeStyle = s.color; g.lineWidth = 1.5; g.stroke(path); g.globalAlpha = 1; g.lineWidth = 1;
++    });
++    g.textAlign = "left"; g.textBaseline = "top"; g.font = "600 12px 'IBM Plex Sans', sans-serif"; g.fillStyle = TEXT;
++    g.fillText("Average power spectrum (Welch, dB)", PAD.l, 4);
++    if (sets.length > 1) legend(g, sets, c.w - PAD.r - 6, PAD.t + 16);   // inside the plot, clear of the title
++  }
++
++  function drawBands(el, sets, w, h) {
++    var c = canvasFor(el, h || 210, w), g = c.g, pw = c.w - PAD.l - PAD.r, ph = c.h - PAD.t - PAD.b - 26;
++    var all = [];
++    sets.forEach(function (s) { all = all.concat(s.data.bands); });
++    var top = Math.ceil((Math.max.apply(null, all) + 6) / 10) * 10, bottom = Math.floor((Math.min.apply(null, all) - 12) / 10) * 10;
++    function Y(v) { return PAD.t + ph * (top - v) / (top - bottom); }
++    g.fillStyle = BG_PLOT; g.fillRect(PAD.l, PAD.t, pw, ph);
++    g.strokeStyle = GRID; g.fillStyle = TEXT; g.font = "11px 'IBM Plex Mono', monospace";
++    for (var v = top; v >= bottom; v -= 10) {
++      g.textAlign = "right"; g.textBaseline = "middle"; g.fillText(v + "", PAD.l - 5, Y(v));
++      g.globalAlpha = 0.5; g.beginPath(); g.moveTo(PAD.l, Y(v) + 0.5); g.lineTo(PAD.l + pw, Y(v) + 0.5); g.stroke(); g.globalAlpha = 1;
++    }
++    var group = pw / BANDS.length, bar = Math.min(46, group * 0.36);
++    BANDS.forEach(function (band, i) {
++      var cx = PAD.l + group * (i + 0.5);
++      sets.forEach(function (s, j) {
++        var val = s.data.bands[i], x = sets.length === 1 ? cx - bar / 2 : cx + (j === 0 ? -bar - 2 : 2);
++        g.fillStyle = (j === 0 ? BAND_A : BAND_B)[i]; g.globalAlpha = 0.88;
++        g.fillRect(x, Y(val), bar, PAD.t + ph - Y(val)); g.globalAlpha = 1;
++        g.fillStyle = TEXT; g.font = "600 11px 'IBM Plex Mono', monospace"; g.textAlign = "center"; g.textBaseline = "bottom";
++        g.fillText(val.toFixed(1), x + bar / 2, Y(val) - 2);
++      });
++      g.font = "600 11px 'IBM Plex Sans', sans-serif"; g.fillStyle = TEXT; g.textBaseline = "top";
++      g.fillText(band[0], cx, PAD.t + ph + 4);
++      g.font = "10px 'IBM Plex Mono', monospace"; g.globalAlpha = 0.7; g.fillText(band[1], cx, PAD.t + ph + 18); g.globalAlpha = 1;
++      if (sets.length === 2) {
++        var delta = sets[1].data.bands[i] - sets[0].data.bands[i];
++        g.fillStyle = delta > 0 ? UP : DOWN; g.font = "600 11px 'IBM Plex Mono', monospace";
++        g.fillText("Δ " + (delta > 0 ? "+" : "") + delta.toFixed(1), cx, PAD.t + ph + 32);
++      }
++    });
++    g.textAlign = "left"; g.textBaseline = "top"; g.font = "600 12px 'IBM Plex Sans', sans-serif"; g.fillStyle = TEXT;
++    g.fillText("Frequency band energy (dB)" + (sets.length === 2 ? " · Δ = second minus first" : ""), PAD.l, 4);
++    if (sets.length > 1) legend(g, sets, c.w - PAD.r - 6, PAD.t + 16);   // inside the plot, clear of the title
++  }
++
++  function legend(g, sets, right, y) {
++    g.font = "600 11px 'IBM Plex Sans', sans-serif"; g.textAlign = "right"; g.textBaseline = "top";
++    var x = right;
++    sets.slice().reverse().forEach(function (s) {
++      var text = s.label.length > 38 ? s.label.slice(0, 37) + "…" : s.label;
++      g.fillStyle = s.color; g.fillText(text, x, y);
++      x -= g.measureText(text).width + 10;
++      g.fillRect(x, y + 3, 7, 7);
++      x -= 14;
++    });
++  }
++
++  // ------------------------------------------------------------------ panel
++  var panel, state = { take: null, other: "", scale: "log", hooks: null, marks: [], drawn: 0, painters: {} };
++  function $(id) { return document.getElementById(id); }
++  function say(text, bad) {
++    var el = $("specState");
++    el.textContent = text || "";
++    el.classList.toggle("is-bad", !!bad);
++  }
++
++  function paintCompare() {
++    var sel = $("specCompare"), list = state.hooks ? state.hooks.others(state.take) : [];
++    var keep = state.other;
++    sel.innerHTML = "";
++    var none = document.createElement("option");
++    none.value = ""; none.textContent = "nothing — this take alone";
++    sel.appendChild(none);
++    list.forEach(function (o) {
++      var opt = document.createElement("option");
++      opt.value = o.url; opt.textContent = o.label;
++      sel.appendChild(opt);
++    });
++    sel.value = list.some(function (o) { return o.url === keep; }) ? keep : "";
++    state.other = sel.value;
++  }
++
++  function render() {
++    if (!panel || !panel.open || !state.take) return;
++    var take = state.take, token = ++state.drawn;
++    var wantB = state.other;
++    var jobs = [analyse(take, say)];
++    if (wantB) jobs.push(analyse(state.hooks.byUrl(wantB) || { url: wantB }, say));
++    Promise.all(jobs).then(function (res) {
++      if (token !== state.drawn) return;      // another take or setting since
++      var a = res[0], b = res[1] || null;
++      var labelB = wantB ? ($("specCompare").selectedOptions[0] || {}).textContent || "second" : "";
++      var lo = -80, hi = -1e9;
++      [a, b].forEach(function (d) { if (d) for (var i = 0; i < d.spec.db.length; i += 7) if (d.spec.db[i] > hi) hi = d.spec.db[i]; });
++      var range = [Math.max(lo, -80), Math.max(hi, -40)];
++      var sets = [{ data: a, label: take.label, color: COLOR_A }], scale = state.scale;
++      if (b) sets.push({ data: b, label: labelB, color: COLOR_B });
++      state.painters = {
++        specA: { title: take.label + " — spectrogram", seek: true,
++                 paint: function (el, w, h) { return drawSpectrogram(el, a, take.label, COLOR_A, scale, range, w, h); } },
++        specAvg: { title: "Average power spectrum", paint: function (el, w, h) { drawAverage(el, sets, w, h); } },
++        specBands: { title: "Frequency band energy", paint: function (el, w, h) { drawBands(el, sets, w, h); } }
++      };
++      if (b) state.painters.specB = { title: labelB + " — spectrogram",
++        paint: function (el, w, h) { return drawSpectrogram(el, b, labelB, COLOR_B, scale, range, w, h); } };
++      $("specStageB").hidden = !b;
++      state.marks = [state.painters.specA.paint($("specA"))];
++      if (b) state.painters.specB.paint($("specB"));
++      state.painters.specAvg.paint($("specAvg"));
++      state.painters.specBands.paint($("specBands"));
++      var tm = a.times || {}, f1 = function (x) { return (x || 0).toFixed(1); };
++      say(clock(a.seconds) + " · peak " + (20 * Math.log10(a.peak + 1e-12)).toFixed(1) + " dBFS" +
++          (b ? " · second " + clock(b.seconds) + ", peak " + (20 * Math.log10(b.peak + 1e-12)).toFixed(1) + " dBFS" : "") +
++          " · " + (a.bytes / 1e6).toFixed(0) + " MB in " + f1(tm.fetch) + " s, decoded " + f1(tm.decode) +
++          " s, measured " + f1((tm.stft || 0) + (tm.welch || 0)) + " s");
++      tick();
++    }).catch(function (error) {
++      if (token === state.drawn) say("Could not measure: " + (error && error.message || error), true);
++    });
++  }
++
++  // The playhead: a line over the first spectrogram while this take is in the player.
++  var ticking = false;
++  function tick() {
++    if (ticking) return;
++    ticking = true;
++    (function frame() {
++      var head = $("specHead"), mark = state.marks[0];
++      var t = panel && panel.open && mark && state.hooks ? state.hooks.time(state.take) : null;
++      if (t === null || t === undefined) { head.hidden = true; ticking = false; return; }
++      head.hidden = false;
++      head.style.left = (mark.x + mark.w * Math.min(1, t / mark.seconds)) + "px";
++      head.style.top = PAD.t + "px";
++      head.style.height = (250 - PAD.t - PAD.b) + "px";
++      setTimeout(frame, 100);
++    })();
++  }
++
++  function seekFrom(event) {
++    var mark = state.marks[0];
++    if (!mark || !state.hooks) return;
++    var box = $("specA").getBoundingClientRect(), x = event.clientX - box.left - mark.x;
++    if (x < 0 || x > mark.w) return;
++    state.hooks.seek(state.take, x / mark.w * mark.seconds);
++    tick();
++  }
++
++  // One picture over the whole screen, drawn again at every zoom (heresy-zoom.js).
++  function expand(id) {
++    var painter = state.painters[id];
++    if (!painter || !window.HeresyZoom) return;
++    var take = state.take, mark = null;
++    window.HeresyZoom.open({
++      title: painter.title,
++      fill: true,
++      maxPixels: 16000,                           // the browsers' canvas side limit, with room
++      render: function (w, h) {
++        var el = document.createElement("canvas");
++        el.style.width = w + "px";
++        mark = painter.paint(el, w, h) || null;
++        return el;
++      },
++      onClick: painter.seek ? function (x, y, w) {
++        if (!mark || !state.hooks) return;
++        var scaleX = w / (mark.x * 2 + mark.w + (PAD.r - PAD.l));   // the drawn size against the shown size
++        var t = (x / scaleX - mark.x) / mark.w * mark.seconds;
++        if (t >= 0 && t <= mark.seconds) state.hooks.seek(take, t);
++      } : null
++    });
++  }
++
++  function init(hooks) {
++    panel = $("spectrumPanel");
++    if (!panel) return;
++    state.hooks = hooks;
++    panel.addEventListener("toggle", function () { if (panel.open) { paintCompare(); render(); } });
++    $("specCompare").addEventListener("change", function () { state.other = this.value; render(); });
++    Array.prototype.forEach.call(panel.querySelectorAll("[data-spec-scale]"), function (btn) {
++      btn.addEventListener("click", function () {
++        state.scale = btn.dataset.specScale;
++        Array.prototype.forEach.call(panel.querySelectorAll("[data-spec-scale]"), function (b) { b.classList.toggle("is-active", b === btn); });
++        render();
++      });
++    });
++    $("specA").addEventListener("click", seekFrom);
++    Array.prototype.forEach.call(panel.querySelectorAll("[data-expand]"), function (btn) {
++      btn.addEventListener("click", function () { expand(btn.dataset.expand); });
++      $(btn.dataset.expand).addEventListener("dblclick", function () { expand(btn.dataset.expand); });
++    });
++    var resizeTimer;
++    window.addEventListener("resize", function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 250); });
++  }
++
++  // take: { name, url, flac (optional), label }
++  function setTake(take) {
++    if (!panel) return;
++    var same = state.take && take && state.take.url === take.url;
++    state.take = take;
++    if (same) return;
++    state.marks = [];
++    say(panel.open ? "" : "");
++    if (panel.open) { paintCompare(); render(); }
++  }
++
++  window.HeresySpectrum = { init: init, setTake: setTake };
++})();
+diff --git a/tools/console/heresy-zoom.js b/tools/console/heresy-zoom.js
+new file mode 100644
+index 0000000..9c47052
+--- /dev/null
++++ b/tools/console/heresy-zoom.js
+@@ -0,0 +1,150 @@
++// HERESY 1007: a picture opened over the whole screen, to zoom and to scroll.
++//
++// Used by the spectrum (heresy-spectrum.js) and the staff of the score. The caller
++// gives a render(width, height) that returns a fresh element of that size, so a
++// raster picture is drawn again at every zoom instead of being stretched, and a
++// vector one simply comes out larger.
++//
++//   Ctrl + wheel     zoom around the pointer        wheel, Shift + wheel   scroll
++//   drag             scroll                          + − 0                  zoom in, out, fit
++//   Esc or ✕         close
++(function () {
++  "use strict";
++
++  var view = null, cur = null, renderTimer = 0;
++
++  function build() {
++    view = document.createElement("div");
++    view.className = "hz-view";
++    view.hidden = true;
++    view.innerHTML =
++      '<div class="hz-bar">' +
++        '<span class="hz-title"></span><div class="spacer"></div>' +
++        '<span class="hz-hint">Ctrl + wheel: zoom · drag or wheel: scroll · 0: fit · Esc: close</span>' +
++        '<button type="button" class="btn ghost small" data-hz="out" aria-label="Zoom out">−</button>' +
++        '<span class="hz-level mono">100%</span>' +
++        '<button type="button" class="btn ghost small" data-hz="in" aria-label="Zoom in">+</button>' +
++        '<button type="button" class="btn ghost small" data-hz="fit">Fit</button>' +
++        '<button type="button" class="btn ghost small" data-hz="close" aria-label="Close">✕</button>' +
++      '</div>' +
++      '<div class="hz-scroll"><div class="hz-stage"></div></div>';
++    document.body.appendChild(view);
++    view.querySelector('[data-hz="in"]').addEventListener("click", function () { zoomAt(cur.scale * 1.25); });
++    view.querySelector('[data-hz="out"]').addEventListener("click", function () { zoomAt(cur.scale / 1.25); });
++    view.querySelector('[data-hz="fit"]').addEventListener("click", function () { zoomAt(1); });
++    view.querySelector('[data-hz="close"]').addEventListener("click", close);
++
++    var scroller = view.querySelector(".hz-scroll");
++    scroller.addEventListener("wheel", function (event) {
++      if (!event.ctrlKey) return;               // plain wheel scrolls, as everywhere
++      event.preventDefault();
++      var box = scroller.getBoundingClientRect();
++      zoomAt(cur.scale * Math.pow(1.0015, -event.deltaY), event.clientX - box.left, event.clientY - box.top);
++    }, { passive: false });
++
++    // Drag to scroll; a press that barely moves stays a click for the picture.
++    var drag = null;
++    scroller.addEventListener("mousedown", function (event) {
++      if (event.button !== 0) return;
++      drag = { x: event.clientX, y: event.clientY, left: scroller.scrollLeft, top: scroller.scrollTop, moved: false };
++      event.preventDefault();
++    });
++    window.addEventListener("mousemove", function (event) {
++      if (!drag) return;
++      var dx = event.clientX - drag.x, dy = event.clientY - drag.y;
++      if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
++      scroller.scrollLeft = drag.left - dx;
++      scroller.scrollTop = drag.top - dy;
++      scroller.classList.toggle("is-dragging", drag.moved);
++    });
++    window.addEventListener("mouseup", function (event) {
++      if (!drag) return;
++      var was = drag;
++      drag = null;
++      scroller.classList.remove("is-dragging");
++      if (!was.moved && cur && cur.onClick) {
++        var el = view.querySelector(".hz-stage").firstChild, box = el && el.getBoundingClientRect();
++        if (box) cur.onClick(event.clientX - box.left, event.clientY - box.top, box.width, box.height);
++      }
++    });
++    document.addEventListener("keydown", function (event) {
++      if (view.hidden) return;
++      if (event.key === "Escape") { close(); event.preventDefault(); }
++      else if (event.key === "+" || event.key === "=") zoomAt(cur.scale * 1.25);
++      else if (event.key === "-") zoomAt(cur.scale / 1.25);
++      else if (event.key === "0") zoomAt(1);
++    });
++    window.addEventListener("resize", function () { if (!view.hidden) zoomAt(cur.scale); });
++  }
++
++  // The size at zoom 1: the picture fitted to the viewer, by width (and by height when asked).
++  function fitSize() {
++    var scroller = view.querySelector(".hz-scroll");
++    // a viewer not laid out yet (a background tab) has no size: the window's stands in
++    var w = Math.max(320, (scroller.clientWidth || window.innerWidth || 1280) - 24);
++    var h = Math.max(200, (scroller.clientHeight || (window.innerHeight || 800) - 50) - 24);
++    if (cur.fill) return { w: w, h: h };
++    return { w: w, h: Math.round(w * cur.aspect) };
++  }
++
++  function size(scale) {
++    var fit = fitSize(), dpr = window.devicePixelRatio || 1;
++    var most = cur.maxPixels ? Math.min(cur.maxPixels / (fit.w * dpr), cur.maxPixels / (fit.h * dpr)) : 40;
++    scale = Math.max(1, Math.min(scale, most, 40));
++    return { scale: scale, w: Math.round(fit.w * scale), h: Math.round(fit.h * scale) };
++  }
++
++  // Zoom to a scale, keeping the point under the pointer (or the middle) where it is.
++  function zoomAt(scale, px, py) {
++    var scroller = view.querySelector(".hz-scroll"), stage = view.querySelector(".hz-stage");
++    var old = size(cur.scale), next = size(scale);
++    if (px === undefined) { px = scroller.clientWidth / 2; py = scroller.clientHeight / 2; }
++    var fx = (scroller.scrollLeft + px) / Math.max(1, old.w), fy = (scroller.scrollTop + py) / Math.max(1, old.h);
++    cur.scale = next.scale;
++    view.querySelector(".hz-level").textContent = Math.round(next.scale * 100) + "%";
++    var el = stage.firstChild;
++    if (el) { el.style.width = next.w + "px"; el.style.height = next.h + "px"; }   // at once, stretched
++    scroller.scrollLeft = fx * next.w - px;
++    scroller.scrollTop = fy * next.h - py;
++    clearTimeout(renderTimer);
++    renderTimer = setTimeout(function () { draw(next); }, cur.vector ? 0 : 140);   // then drawn sharp
++  }
++
++  function draw(sz) {
++    var stage = view.querySelector(".hz-stage");
++    var el = cur.render(sz.w, sz.h);
++    if (!el) return;
++    el.style.width = sz.w + "px";
++    el.style.height = sz.h + "px";
++    stage.textContent = "";
++    stage.appendChild(el);
++  }
++
++  // opts: { title, render(w, h) → element, aspect (height / width) or fill: true,
++  //         vector: true for SVG, maxPixels: the longest canvas side allowed, onClick(x, y, w, h) }
++  function open(opts) {
++    if (!view) build();
++    cur = { title: opts.title, render: opts.render, aspect: opts.aspect || 0.5, fill: !!opts.fill,
++            vector: !!opts.vector, maxPixels: opts.maxPixels || 0, onClick: opts.onClick || null, scale: 1 };
++    view.querySelector(".hz-title").textContent = opts.title || "";
++    view.hidden = false;
++    document.documentElement.classList.add("hz-open");
++    var scroller = view.querySelector(".hz-scroll");
++    scroller.scrollLeft = 0;
++    scroller.scrollTop = 0;
++    view.querySelector(".hz-level").textContent = "100%";
++    draw(size(1));
++  }
++
++  function close() {
++    if (!view || view.hidden) return;
++    view.hidden = true;
++    view.querySelector(".hz-stage").textContent = "";
++    document.documentElement.classList.remove("hz-open");
++    cur = null;
++  }
++
++  function isOpen() { return !!(view && !view.hidden); }
++
++  window.HeresyZoom = { open: open, close: close, isOpen: isOpen };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 1ae3c05..9911e76 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -589,6 +589,39 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <div class="decode-switch" id="decodeSwitch"></div>
+       <div class="decode-switch" id="soundSwitch"></div>
+ 
++      <!-- HERESY 1007: the spectrum of this take, measured in the page (heresy-spectrum.js) -->
++      <details class="drawer" id="spectrumPanel">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Spectrum</span><span class="sum-say">Where the sound sits: spectrogram, average spectrum, band energy. Lay another take over it to compare.</span></span></summary>
++        <div class="drawer-body spectrum-body">
++          <div class="spec-bar">
++            <div class="score-tabs">
++              <button type="button" class="spec-scale is-active" data-spec-scale="log">Log</button>
++              <button type="button" class="spec-scale" data-spec-scale="linear">Linear</button>
++            </div>
++            <label class="spec-compare"><span>Compare with</span><select id="specCompare"></select></label>
++            <span class="spec-state mono" id="specState"></span>
++          </div>
++          <!-- each picture opens over the whole screen (⤢ or a double click), to zoom and scroll -->
++          <div class="spec-stage">
++            <canvas id="specA"></canvas>
++            <div class="spec-head" id="specHead" hidden></div>
++            <button type="button" class="spec-expand" data-expand="specA" data-tip="Full screen: zoom and scroll (or double-click the picture). A click plays from there when this take is in the player.">⤢</button>
++          </div>
++          <div class="spec-stage" id="specStageB" hidden>
++            <canvas id="specB"></canvas>
++            <button type="button" class="spec-expand" data-expand="specB" data-tip="Full screen: zoom and scroll">⤢</button>
++          </div>
++          <div class="spec-stage">
++            <canvas id="specAvg"></canvas>
++            <button type="button" class="spec-expand" data-expand="specAvg" data-tip="Full screen: zoom and scroll">⤢</button>
++          </div>
++          <div class="spec-stage">
++            <canvas id="specBands"></canvas>
++            <button type="button" class="spec-expand" data-expand="specBands" data-tip="Full screen: zoom and scroll">⤢</button>
++          </div>
++        </div>
++      </details>
++
+       <!-- what the song actually is: prompt first, words under it -->
+       <div class="word-row">
+         <section class="panel">
+@@ -621,6 +654,11 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+               <button class="stab" data-score="abc">ABC</button>
+             </div>
+             <div class="spacer"></div>
++            <span class="split-btn"><button type="button" class="btn ghost small" id="staffPrint" data-tip="Print the staff on US Letter, a page never breaking inside a system; in the print dialog choose Save as PDF">Print / PDF</button>
++              <select class="mp3-rate" id="staffPrintOrient" aria-label="Letter orientation" data-tip="US Letter: portrait or landscape">
++                <option value="portrait">Letter ▯</option><option value="landscape">Letter ▭</option>
++              </select></span>
++            <button type="button" class="btn ghost small" id="staffFull" data-tip="The staff over the whole screen: zoom and scroll (or double-click the staff)">⤢ Full screen</button>
+             <button class="btn ghost small" id="reuseScore">Edit and re-render</button>
+           </div>
+           <div class="paper" id="scoreStaff"></div>
+@@ -804,6 +842,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="help.js"></script>
+ <script src="loras.js"></script>
+ <script src="vaes.js"></script>
++<script src="heresy-zoom.js"></script>
++<script src="heresy-spectrum.js"></script>
+ <script src="themes.js"></script>
+ <script src="app.js"></script>
+ </body>
+-- 
+2.43.0
+

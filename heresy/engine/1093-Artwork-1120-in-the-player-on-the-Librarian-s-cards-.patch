@@ -1,0 +1,194 @@
+From f1948c7950ce5c725f3dee75fc93ddb8ce20cb0e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 18:57:02 -0600
+Subject: [PATCH 1093/1177] Artwork (1120): in the player, on the Librarian's
+ cards, in the media panel, in the take menu; the MP3 download carries it as
+ its front cover (APIC), made again when the artwork is newer
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |   9 ++++++
+ tools/console/app.js               |  47 +++++++++++++++++++++++++++--
+ tools/console/heresy-collection.js |   8 +++--
+ tools/public/index.html.gz         | Bin 466821 -> 468092 bytes
+ tools/yue-server.cpp               |  14 +++++++--
+ 5 files changed, 71 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index e22456f..6ed0aca 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3121,3 +3121,12 @@ input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+ .topbar .engine-chip + .spacer { display: none; }   /* the workspace and its lamp stay by the buttons, clear of the logo */
+ .topbar .engine-chip strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+ .topbar .engine-chip .lamp { width: 10px; height: 10px; }
++
++/* ---------------------------------------------------------------- HERESY 1120: artwork
++   The player's square shows the take's artwork when it has one; a Librarian card wears it under its play button. */
++#playbar .pb-cover.has-art svg { display: none; }
++.coll-play.has-art { width: 44px; height: 44px; border-radius: 8px; background-size: cover; background-position: center; color: #fff;
++  box-shadow: 0 2px 8px -3px var(--shadow-lg, rgba(0,0,0,.35)); }
++.coll-play.has-art .ui-ico { filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); opacity: .9; }
++.coll-play.has-art:hover { transform: scale(1.05); color: #fff; }
++.coll-play.has-art.is-playing { color: #fff; outline: 2px solid var(--amber-a); outline-offset: 1px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index fd8428e..f7d49ab 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3809,12 +3809,46 @@
+ 
+   // HERESY 1106: the take in the player: the style's first words under the title, a tile of its own colour for a cover
+   // (until covers are drawn for takes); one hue from the name, so a take keeps its tile
++  // HERESY 1120: artwork for takes (Viktor: «просто иконка в плеере, в карточке и в mp3 файле»). The lab draws it: a
++  // prompt from the take's style and words (Qwen3-4B), the picture (an SDXL finetune). Asked for, never on its own.
++  STATE.arts = {};
++  function artUrl(name) { var v = name && STATE.arts[name]; return v ? "/lab/art?name=" + encodeURIComponent(name) + "&v=" + v : ""; }
++  function refreshArts() {
++    return api("/lab/arts").then(function (d) {
++      STATE.arts = (d && d.arts) || {};
++      paintCover(STATE.playerTake);
++      paintSession();
++      var HC = window.HeresyCollection;
++      if (HC && HC.repaint && document.body.dataset.tab === "collection") HC.repaint();
++    }).catch(function () { /* the lab is away: no artwork shown, nothing else changes */ });
++  }
++  function drawArt(name, again) {
++    var take = findTake(name), title = take ? displayTitle(take) : name;
++    toast("Drawing artwork for “" + title + "”: a prompt from its style and words, then the picture (about half a minute)");
++    var ask = function (first) {
++      return api("/lab/art/draw?name=" + encodeURIComponent(name) + (first && again ? "&again=1" : "")).then(function (d) {
++        if (d && (d.status === "queued" || d.status === "running")) {
++          return new Promise(function (ok) { setTimeout(ok, 3000); }).then(function () { return ask(false); });
++        }
++        return d;
++      });
++    };
++    return ask(true).then(function (d) {
++      return refreshArts().then(function () { toast("Artwork for “" + title + "” is ready"); return d; });
++    }).catch(function (e) { toast("No artwork: " + e.message, "bad"); });
++  }
++  window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts };
++  setTimeout(refreshArts, 1200);
++
+   function paintCover(take) {
+     var sub = take && take.style ? String(take.style).split(/[.\n]/)[0].trim() : "";
+     $("playbarSub").textContent = sub.length > 110 ? sub.slice(0, 108) + "…" : sub;
+     var h = 0, n = take ? take.name : "";
+     for (var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 360;
+     $("pbCover").style.background = take ? "linear-gradient(135deg, hsl(" + h + " 32% 52%), hsl(" + ((h + 48) % 360) + " 30% 30%))" : "";
++    var art = take ? artUrl(take.name) : "";                     // HERESY 1120: the artwork, when the take has one
++    $("pbCover").classList.toggle("has-art", !!art);
++    if (art) $("pbCover").style.background = "center / cover no-repeat url(\"" + art + "\")";
+   }
+   function paintVolume() {
+     var level = audio.muted ? 0 : audio.volume;
+@@ -3857,8 +3891,10 @@
+     if (!("mediaSession" in navigator) || !window.MediaMetadata) return;
+     var t = STATE.playerTake;
+     try {
++      var art = t ? artUrl(t.name) : "";
+       navigator.mediaSession.metadata = t ? new MediaMetadata({ title: displayTitle(t), artist: "Ruach Studio",
+-        album: t.style ? String(t.style).split(/[.\n]/)[0].slice(0, 80) : "" }) : null;
++        album: t.style ? String(t.style).split(/[.\n]/)[0].slice(0, 80) : "",
++        artwork: art ? [{ src: location.origin + art, sizes: "768x768", type: "image/jpeg" }] : [] }) : null;
+       navigator.mediaSession.playbackState = t ? (isPlaying() ? "playing" : "paused") : "none";
+     } catch (e) { /* an old browser */ }
+   }
+@@ -5689,6 +5725,12 @@
+           .then(function (t) { if (t !== null) return renameTake(name, t).then(function (ok) { if (ok && HC) HC.reload(); }); })
+           .catch(function (e) { toast(e.message, "bad"); });
+       } },
++      take.session ? null : (function () {                       // HERESY 1120: artwork, asked for
++        return artUrl(name) ? { icon: "▣", label: "Artwork", items: [
++          { label: "Open the artwork", action: function () { window.open(artUrl(name), "_blank", "noopener"); } },
++          { label: "Draw it again", hint: "a new prompt, a new picture", action: function () { drawArt(name, true); } }
++        ] } : { icon: "▣", label: "Draw artwork", hint: "half a minute on a GPU", action: function () { drawArt(name, false); } };
++      })(),
+       { sep: true },
+       HC ? { icon: "▦", label: "Workspaces", items: ws.map(function (w) {
+         var on = inWs.indexOf(w) >= 0;
+@@ -5741,7 +5783,8 @@
+       ] },
+       { icon: "⤓", label: "Download", items: [
+         { label: formatExt(take.format).toUpperCase(), action: save(downloadUrl(take), audioFileName(take)) },
+-        convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null,
++        convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", hint: artUrl(name) ? "with its artwork" : "", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null,
++        artUrl(name) ? { label: "Artwork · JPEG", action: save(artUrl(name), fileTitle(take) + ".jpg") } : null,
+         take.session ? null : { sep: true },             // HERESY 1074: the take, its mix and stems, for openDAW or any DAW
+         take.session ? null : { label: "REAPER project", hint: "mix, stems, score, lyrics", action: function () {   // HERESY 1104
+           reaperProject(take).catch(function (e) { toast("No REAPER project: " + e.message, "bad"); });
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index a4b4616..752b8d6 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -128,7 +128,11 @@
+       var mine = now.name === r.name;
+       return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + '" data-name="' + esc(r.name) + '">' +
+         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+-        '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
++        (function () {                                  // HERESY 1120: the take's artwork under its play button
++          var art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";
++          return '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + (art ? " has-art" : "") + '" data-play="' + esc(r.name) + '"' +
++            (art ? ' style="background-image:url(&quot;' + esc(art) + '&quot;)"' : "") + ' aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>";
++        })() +
+         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
+         '<button type="button" class="coll-ren" data-ren="' + esc(r.name) + '" title="Rename" aria-label="Rename">✎</button></div>' +
+         '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
+@@ -934,7 +938,7 @@
+   // for the takes column: hidden ones stay out of it
+   function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
+ 
+-  window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
++  window.HeresyCollection = { init: init, reload: load, repaint: paint, isHidden: isHidden, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
+                               current: current, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 044dc0d..9f8a993 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1192,12 +1192,17 @@ static std::string id3_frame(const char * id, const std::string & payload) {
+     return std::string(id, 4) + id3_synchsafe(payload.size()) + std::string(2, '\0') + payload;
+ }
+ 
+-static std::string id3_tag(const std::string & title, const std::string & lyrics) {
++static std::string id3_tag(const std::string & title, const std::string & lyrics, const std::string & jpeg = "") {
+     std::string frames = id3_frame("TIT2", std::string(1, '\x03') + title);
+     if (!lyrics.empty()) {
+         // encoding, language, empty content descriptor, text
+         frames += id3_frame("USLT", std::string(1, '\x03') + "eng" + std::string(1, '\0') + lyrics);
+     }
++    if (!jpeg.empty()) {
++        // HERESY 1120: the take's artwork as the front cover: encoding (Latin-1), MIME, picture type 3, empty description
++        frames += id3_frame("APIC", std::string(1, '\0') + "image/jpeg" + std::string(1, '\0') + std::string(1, '\x03') +
++                                    std::string(1, '\0') + jpeg);
++    }
+     return std::string("ID3\x04\x00\x00", 6) + id3_synchsafe(frames.size()) + frames;
+ }
+ 
+@@ -2130,8 +2135,11 @@ int main(int argc, char ** argv) {
+                 cache = dir + "/audio-" + std::to_string(kbps) + "k.mp3";
+                 std::lock_guard<std::mutex> lock(mtx_library);
+                 std::error_code ec;
++                std::string art = dir + "/artwork.jpg";     // HERESY 1120: a newer artwork makes the MP3 again
+                 bool fresh = std::filesystem::is_regular_file(cache) &&
+-                             std::filesystem::last_write_time(cache, ec) >= std::filesystem::last_write_time(source, ec) && !ec;
++                             std::filesystem::last_write_time(cache, ec) >= std::filesystem::last_write_time(source, ec) && !ec &&
++                             (!std::filesystem::is_regular_file(art) ||
++                              std::filesystem::last_write_time(cache, ec) >= std::filesystem::last_write_time(art, ec));
+                 if (!fresh) {
+                     std::string wav = read_file(source);
+                     int         T = 0, sr = 0;
+@@ -2151,7 +2159,7 @@ int main(int argc, char ** argv) {
+                     }
+                     std::string title, lyrics;
+                     take_title_lyrics(dir, name, title, lyrics);
+-                    write_file(cache, id3_tag(title, lyrics) + mp3);
++                    write_file(cache, id3_tag(title, lyrics, std::filesystem::is_regular_file(art) ? read_file(art) : std::string()) + mp3);
+                     fprintf(stderr, "[Library] MP3 %d kbps for %s\n", kbps, name.c_str());
+                 }
+             }
+-- 
+2.43.0
+

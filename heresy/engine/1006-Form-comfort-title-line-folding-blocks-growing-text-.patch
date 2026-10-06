@@ -1,0 +1,297 @@
+From 478e3912dbe4ca1afb542d933df306a44c6542fc Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 13:58:51 -0600
+Subject: [PATCH 1006/1177] Form comfort: title line, folding blocks, growing
+ text, changed knobs, clef icon
+
+HERESY 1006.
+- The title has its own line at full width; the two seeds share the next one.
+- Lyrics sit right under the style prompt.
+- Style, Lyrics, VAE, Sliders and LoRAs fold on a click on their heading; a
+  folded text block shows its first words. Kept per browser.
+- Style grows with its text up to 8 lines, lyrics up to 16, then they scroll.
+  The kit's growLyrics now measures through the same fitText.
+- A number, range or solver moved off its default gets an amber frame. The
+  default is the value attribute the page already writes as the step base.
+- Favicon: a treble clef with A4 on the staff, glyphs from Noto Music (OFL).
+- vLLM lists only what it serves: the native model probes of the other
+  runners are skipped there, and the console has no more 404s from them.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |  22 +++++++
+ tools/console/app.js       | 115 +++++++++++++++++++++++++++++++++++--
+ tools/console/index.html   |  35 ++++++-----
+ tools/public/index.html.gz | Bin 215693 -> 219768 bytes
+ 4 files changed, 153 insertions(+), 19 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index bd63022..3473433 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -691,6 +691,28 @@ body.is-resizing, body.is-resizing * { cursor: col-resize !important; user-selec
+ .grow { flex: 1; }
+ .titlefield { min-width: 200px; }
+ .seedfield { width: 212px; flex: none; }   /* room for a 19-digit seed */
++/* HERESY 1006: the title has its own line; the two seeds share the next one half and half */
++.seedrow .seedfield { flex: 1 1 0; width: auto; min-width: 190px; }
++.seedrow { flex-wrap: wrap; row-gap: 12px; }
++
++/* HERESY 1006: blocks that fold on a click on their heading (the state is kept per browser).
++   Folded, only the heading stays, with a peek at the text for Style and Lyrics. */
++[data-fold] > .label { cursor: pointer; user-select: none; }
++[data-fold] > .label .fold-chev { display: inline-block; margin-right: 7px; vertical-align: 1px; transform: rotate(90deg); }
++[data-fold].is-folded > .label .fold-chev { transform: none; }
++[data-fold] > .label:hover { color: var(--ink); }
++[data-fold].is-folded > :not(.label) { display: none; }
++.fold-peek { display: none; }
++[data-fold].is-folded .fold-peek {
++  display: inline; margin-left: 8px; font-style: normal; text-transform: none; letter-spacing: 0; color: var(--dim);
++}
++
++/* HERESY 1006: a knob moved off its default is marked, so a changed setting is never missed */
++.compose input.is-changed, .compose select.is-changed {
++  border-color: var(--amber);
++  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--amber) 45%, transparent);
++  background-color: color-mix(in srgb, var(--amber) 8%, transparent);
++}
+ .row-hint { margin: -6px 0 0; font-size: 11.5px; color: var(--dim); max-width: 68ch; }
+ 
+ .label {
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f1335d2..a0ccfee 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -774,10 +774,10 @@
+   paintStructureHint();
+ 
+   // A 10-row box hides the bridge below the fold, which reads as truncated lyrics.
++  // HERESY 1006: it grows to data-max-rows (16) and then scrolls, through the same
++  // fitText as the style box; every caller here keeps working unchanged.
+   function growLyrics() {
+-    var box = $("lyrics");
+-    box.style.height = "auto";
+-    box.style.height = Math.min(760, Math.max(180, box.scrollHeight + 4)) + "px";
++    fitText($("lyrics"));
+   }
+   $("lyrics").addEventListener("input", growLyrics);
+ 
+@@ -4051,11 +4051,16 @@
+     var status = { configured: true, available: false, models: [], loaded: null, use: null, base: base };
+     return chatCall(base + "/models", undefined, 3000).then(function (data) {
+       status.available = true;
+-      status.models = ((data && data.data) || []).map(function (m) { return m.id || ""; });
++      var list = (data && data.data) || [];
++      status.models = list.map(function (m) { return m.id || ""; });
++      // HERESY 1006: vLLM lists only what it serves, so every model it names is loaded.
++      // Asking it the other runners' native paths only fills the console with 404s.
++      status.vllm = list.length > 0 && list.every(function (m) { return m.owned_by === "vllm"; });
+     }).catch(function (error) {
+       status.error = error.status ? error.message : unreachable(base);
+       throw status;
+     }).then(function () {
++      if (status.vllm) { status.loaded = status.models.slice(); return; }
+       // Runners that list every downloaded model report which one is in memory
+       // on a native endpoint; asking for any other would make them load it.
+       return chatCall(root + "/api/v0/models", undefined, 3000).then(function (data) {
+@@ -4586,11 +4591,112 @@
+   ["input", "change", "click"].forEach(function (type) { document.addEventListener(type, queueDraft, true); });
+   window.addEventListener("beforeunload", saveDraft);
+ 
++  /* ------------------------------------------ HERESY 1006: form comfort */
++  // A knob off its default is marked. The default is the value attribute: the page
++  // already writes each knob's default there as its step base, so no second table
++  // is kept. Only numbers, ranges and the solver: text and seeds have no default.
++  var MARKED = 'input[type="number"], input[type="range"], select#odeSolver';
++  function isChanged(el) {
++    if (el.tagName === "SELECT") {
++      var base = 0;
++      for (var i = 0; i < el.options.length; i++) if (el.options[i].defaultSelected) { base = i; break; }
++      return el.selectedIndex !== base;
++    }
++    var now = el.value.trim(), def = el.defaultValue.trim();
++    if (!now || !def) return false;           // empty means "the default" to the server
++    return parseFloat(now) !== parseFloat(def);
++  }
++  function markChanged() {
++    Array.prototype.forEach.call($("composeForm").querySelectorAll(MARKED), function (el) {
++      el.classList.toggle("is-changed", isChanged(el));
++    });
++  }
++
++  // Style and lyrics grow with their text up to data-max-rows lines, then scroll.
++  function fitText(area) {
++    if (!area.offsetParent) return;           // folded or hidden: measured when shown
++    var cs = getComputedStyle(area), line = parseFloat(cs.lineHeight) || 20;
++    var pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
++    var edge = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
++    var outer = cs.boxSizing === "border-box" ? pad + edge : 0;
++    var inner = cs.boxSizing === "border-box" ? edge : -pad;
++    var min = area.rows * line + outer, max = (parseInt(area.dataset.maxRows, 10) || 8) * line + outer;
++    area.style.height = "auto";
++    var want = area.scrollHeight + inner;
++    area.style.height = Math.min(max, Math.max(min, want)) + "px";
++    area.style.overflowY = want > max ? "auto" : "hidden";
++  }
++
++  // Blocks with data-fold fold on a click on their heading, as the song boxes do in
++  // SUNO. The state is a per-browser convenience; folded text shows its first words.
++  var FOLD_KEY = "yue2.fold";
++  var folds = {};
++  try { folds = JSON.parse(recall(FOLD_KEY) || "{}") || {}; } catch (error) { folds = {}; }
++  function peekOf(block) {
++    var area = block.querySelector("textarea");
++    if (!area) return "";
++    var text = area.value.trim();
++    if (!text) return "empty";
++    var first = text.split("\n")[0].replace(/\s+/g, " ");
++    if (first.length > 72) first = first.slice(0, 72) + "…";
++    return block.dataset.fold === "lyrics" ? text.split("\n").length + " lines · " + first : first;
++  }
++  function paintFold(block) {
++    var on = !!folds[block.dataset.fold], label = block.querySelector(":scope > .label");
++    block.classList.toggle("is-folded", on);
++    label.setAttribute("aria-expanded", on ? "false" : "true");
++    if (on) label.querySelector(".fold-peek").textContent = peekOf(block);
++  }
++  all("[data-fold]").forEach(function (block) {
++    var label = block.querySelector(":scope > .label");
++    if (!label) return;
++    var chev = document.createElement("span");
++    chev.className = "chev fold-chev";
++    chev.setAttribute("aria-hidden", "true");
++    label.insertBefore(chev, label.firstChild);
++    var peek = document.createElement("em");
++    peek.className = "fold-peek";
++    label.appendChild(peek);
++    label.setAttribute("role", "button");
++    label.tabIndex = 0;
++    function flip(event) {
++      if (event.target.closest(".info, .kind-badge")) return;   // their own tips stay theirs
++      event.preventDefault();                                   // a label would focus its field
++      folds[block.dataset.fold] = !folds[block.dataset.fold];
++      store(FOLD_KEY, JSON.stringify(folds));
++      paintFold(block);
++      queueComfort();
++    }
++    label.addEventListener("click", flip);
++    label.addEventListener("keydown", function (event) {
++      if (event.key === "Enter" || event.key === " ") flip(event);
++    });
++    paintFold(block);
++  });
++
++  var comfortQueued = false;
++  function refreshComfort() {
++    comfortQueued = false;
++    markChanged();
++    all("textarea[data-max-rows]").forEach(fitText);
++    all("[data-fold].is-folded").forEach(paintFold);
++  }
++  // After every handler of the same event has run: Reuse, Reset and the shape
++  // sliders change the form without an input event of their own.
++  function queueComfort() {
++    if (comfortQueued) return;
++    comfortQueued = true;
++    setTimeout(refreshComfort, 0);   // not rAF: a background tab never runs it
++  }
++  ["input", "change", "click"].forEach(function (type) { document.addEventListener(type, queueComfort, true); });
++  window.addEventListener("resize", queueComfort);
++
+   function boot() {
+     api("/props").then(function (props) {
+       STATE.online = true;
+       applyProps(props);
+       restoreDraft();     // HERESY 1002: after the catalogs, before any save
++      queueComfort();     // HERESY 1006: marks and heights for what the draft brought back
+       restoreJobs();
+       connectLogs();
+       startPolls();
+@@ -4615,5 +4721,6 @@
+   paintSliders();
+   paintLibrary();
+   paintEngine();
++  queueComfort();   // HERESY 1006
+   boot();
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 239b3da..1ae3c05 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -4,6 +4,8 @@
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+ <title>YuE2 Console · cpp</title>
++<!-- HERESY 1006: a treble clef with A4, the second space. Glyphs from Noto Music (SIL OFL 1.1). -->
++<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0yMzUgLTEzNTAgMTc3MCAxNzcwIj4KPHN0eWxlPi5ze3N0cm9rZTojOGE4MTcyO3N0cm9rZS13aWR0aDo0NH0uZ3tmaWxsOiNjODg5MmV9QG1lZGlhIChwcmVmZXJzLWNvbG9yLXNjaGVtZTpkYXJrKXsuc3tzdHJva2U6I2EzOWE4YX0uZ3tmaWxsOiNlOGIwNGF9fTwvc3R5bGU+CjxnIHRyYW5zZm9ybT0ic2NhbGUoMSAtMSkiPjxnIGNsYXNzPSJzIj48bGluZSB4MT0iLTQwIiB4Mj0iMTM0MCIgeTE9IjAiIHkyPSIwIi8+PGxpbmUgeDE9Ii00MCIgeDI9IjEzNDAiIHkxPSIyNTAiIHkyPSIyNTAiLz48bGluZSB4MT0iLTQwIiB4Mj0iMTM0MCIgeTE9IjUwMCIgeTI9IjUwMCIvPjxsaW5lIHgxPSItNDAiIHgyPSIxMzQwIiB5MT0iNzUwIiB5Mj0iNzUwIi8+PGxpbmUgeDE9Ii00MCIgeDI9IjEzNDAiIHkxPSIxMDAwIiB5Mj0iMTAwMCIvPjwvZz48cGF0aCBjbGFzcz0iZyIgZD0iTTMxNCA4MDFRMzAwIDg1NCAyOTEuMCA5MDYuMFEyODIgOTU4IDI4MiAxMDEyUTI4MiAxMDU5IDI4OC41IDExMDAuNVEyOTUgMTE0MiAzMDcgMTE3N1EzMjAgMTIxNyAzNDEuMCAxMjUyLjVRMzYyIDEyODggMzg1LjUgMTMxMS4wUTQwOSAxMzM0IDQyNyAxMzM0UTQ1MSAxMzM0IDQ5MyAxMjQ5UTUxNCAxMjA2IDUyNC4wIDExNTYuMFE1MzQgMTEwNiA1MzQgMTA0OVE1MzQgOTc4IDUxNS4wIDkwNy41UTQ5NiA4MzcgNDU5LjUgNzc1LjBRNDIzIDcxMyAzNzIgNjY2TDQwNyA0OThRNDIyIDUwMCA0MzIuMCA1MDEuMFE0NDIgNTAyIDQ0NyA1MDJRNTA4IDUwMiA1NTYuMCA0NjcuNVE2MDQgNDMzIDYzMi41IDM3Ny4wUTY2MSAzMjEgNjYxIDI1NFE2NjEgMTc3IDYyMS41IDExNS41UTU4MiA1NCA1MDMgMjVRNTA4IDggNTMyIC0xMTdRNTM4IC0xNDcgNTQxLjAgLTE2NC41UTU0NCAtMTgyIDU0NS4wIC0xOTUuMFE1NDYgLTIwOCA1NDYgLTIyNVE1NDYgLTI3NSA1MjEuNSAtMzE0LjVRNDk3IC0zNTQgNDU1LjUgLTM3Ni4wUTQxNCAtMzk4IDM2MyAtMzk4UTMxMSAtMzk4IDI3MS4wIC0zNzguNVEyMzEgLTM1OSAyMDguMCAtMzI0LjVRMTg1IC0yOTAgMTg1IC0yNDVRMTg1IC0xOTcgMjExLjUgLTE2NS4wUTIzOCAtMTMzIDI4NyAtMTMzUTMyOSAtMTMzIDM1NS41IC0xNjMuNVEzODIgLTE5NCAzODIgLTIzNlEzODIgLTI3MiAzNTcuMCAtMjk5LjBRMzMyIC0zMjYgMjkyIC0zMjZIMjgyUTMwOCAtMzY1IDM2NCAtMzY1UTQzMyAtMzY1IDQ3Mi4wIC0zMjAuMFE1MTEgLTI3NSA1MTEgLTIwNVE1MTEgLTE4OCA1MDcuMCAtMTU5LjVRNTAzIC0xMzEgNDkzIC05MVE0ODMgLTUxIDQ3Ny41IC0yNS4wUTQ3MiAxIDQ3MCAxMlE0MzYgMiAzOTAgMlEzMDQgMiAyMjIgNTJRMTQyIDEwMiA5Ni4wIDE4NC4wUTUwIDI2NiA1MCAzNjFRNTAgNDUxIDkxIDUzMFExMzIgNjA5IDE5Mi41IDY3NS4wUTI1MyA3NDEgMzE0IDgwMVpNMzQxIDgyNlEzNjQgODM4IDM5MC4wIDg3MC41UTQxNiA5MDMgNDQwLjAgOTQ1LjBRNDY0IDk4NyA0NzkuMCAxMDI5LjVRNDk0IDEwNzIgNDk0IDExMDZRNDk0IDExNDIgNDgzLjAgMTE2My4wUTQ3MiAxMTg0IDQ0NSAxMTg0UTQyMSAxMTg0IDM5OC41IDExNjIuMFEzNzYgMTE0MCAzNTguNSAxMTAzLjVRMzQxIDEwNjcgMzMxLjAgMTAyMi4wUTMyMSA5NzcgMzIxIDkzMFEzMjEgODk4IDMyNy41IDg3Mi4wUTMzNCA4NDYgMzQxIDgyNlpNMzk4IDM3OVEzNzEgMzczIDM0Ny4wIDM1My41UTMyMyAzMzQgMzA4LjUgMzA2LjVRMjk0IDI3OSAyOTQgMjQ4UTI5NCAyMjMgMzA3LjAgMTk2LjVRMzIwIDE3MCAzMzkgMTU0UTM1MiAxNDIgMzY1IDEzNlEzODAgMTI5IDM4MCAxMjNRMzgwIDEyMCAzNzAgMTE3UTMzMiAxMjYgMzAxLjUgMTUxLjBRMjcxIDE3NiAyNTMuNSAyMTEuNVEyMzYgMjQ3IDIzNiAyODdRMjM2IDMzMCAyNTMuNSAzNzAuMFEyNzEgNDEwIDMwMi41IDQ0Mi4wUTMzNCA0NzQgMzc0IDQ5MEwzNDUgNjQxUTIyOSA1NDcgMTc0LjUgNDU2LjVRMTIwIDM2NiAxMjAgMjc3UTEyMCAyMTIgMTU0LjAgMTU2LjBRMTg4IDEwMCAyNDcuMCA2NS41UTMwNiAzMSAzODAgMzFRNDAwIDMxIDQyMC41IDM1LjBRNDQxIDM5IDQ2NCA0NVpNNDk1IDU1UTU5MyA5NyA1OTMgMjI3UTU5MyAyNzAgNTcxLjAgMzA1LjVRNTQ5IDM0MSA1MTIuMCAzNjIuMFE0NzUgMzgzIDQyOSAzODNaIi8+PHBhdGggY2xhc3M9ImciIHRyYW5zZm9ybT0idHJhbnNsYXRlKDgwMCAyNDEpIiBkPSJNNTAgMTM1UTUwIDE3MiA3Ny4wIDIwMC4wUTEwNCAyMjggMTUwLjUgMjQ0LjBRMTk3IDI2MCAyNTMgMjYwUTMxMCAyNjAgMzU4LjAgMjQ0LjVRNDA2IDIyOSA0MzUuMCAyMDEuMFE0NjQgMTczIDQ2NCAxMzVRNDY0IDk2IDQzNi4wIDY3LjVRNDA4IDM5IDM2MS41IDIzLjVRMzE1IDggMjU5IDhRMjAzIDggMTU1LjUgMjMuMFExMDggMzggNzkuMCA2Ni41UTUwIDk1IDUwIDEzNVpNMjgwIDI4UTMxNCAyOCAzMjYuNSA1My4wUTMzOSA3OCAzMzkgMTEyUTMzOSAxNDcgMzI0LjUgMTc2LjBRMzEwIDIwNSAyODYuMCAyMjIuNVEyNjIgMjQwIDIzMiAyNDBRMTk4IDI0MCAxODYuNSAyMTUuMFExNzUgMTkwIDE3NSAxNTZRMTc1IDEyMiAxODkuMCA5My4wUTIwMyA2NCAyMjYuNSA0Ni4wUTI1MCAyOCAyODAgMjhaIi8+PC9nPjwvc3ZnPg==" />
+ <link rel="preconnect" href="https://fonts.googleapis.com" />
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+ <!-- the fonts never hold up the first paint: loaded as a print sheet, switched on when they arrive -->
+@@ -283,11 +285,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     </details>
+ 
+     <form id="composeForm" class="compose" novalidate>
+-      <div class="field-row wrap">
+-        <label class="field grow titlefield">
+-          <span class="label">Title</span>
+-          <input type="text" id="title" placeholder="Song title" autocomplete="off" />
+-        </label>
++      <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
++      <label class="field titlefield">
++        <span class="label">Title</span>
++        <input type="text" id="title" placeholder="Song title" autocomplete="off" />
++      </label>
++      <div class="field-row seedrow">
+         <label class="field seedfield">
+           <span class="label">Music seed <span class="info" tabindex="0" role="img" aria-label="About the two seeds" data-tip-ref="tip-seeds">i</span></span>
+           <div class="seed-wrap">
+@@ -308,34 +311,36 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </label>
+       </div>
+ 
+-      <label class="field">
++      <!-- HERESY 1006: data-fold blocks fold on a click on their heading; the text areas grow with
++           their text up to data-max-rows, then scroll. Lyrics sit right under the style. -->
++      <label class="field" data-fold="style">
+         <span class="label">Style prompt <em>language, genre, voice, instruments, tempo</em></span>
+-        <textarea id="style" rows="3" placeholder="Language, genre, voice, instruments, tempo"></textarea>
++        <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
+         <span class="row-hint size-meter" id="styleMeter"></span>
+       </label>
+ 
+-      <fieldset class="field sound">
++      <label class="field" data-fold="lyrics">
++        <span class="label">Lyrics <em>section tags on their own line</em></span>
++        <textarea id="lyrics" rows="6" data-max-rows="16" spellcheck="false" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
++      </label>
++
++      <fieldset class="field sound" data-fold="vae">
+         <span class="label">VAE <span class="info" tabindex="0" role="img" aria-label="About the VAE" data-tip-ref="tip-vae">i</span><em>turns the written song into sound</em></span>
+         <div class="toggles" id="decoders"></div>
+       </fieldset>
+ 
+-      <fieldset class="field sound">
++      <fieldset class="field sound" data-fold="sliders">
+         <span class="label">Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="0" role="img" aria-label="About the sliders" data-tip-ref="tip-sliders">i</span><em>voice and genre while the music is written; 0 is off, 1 is full</em></span>
+         <div class="slider-active" id="sliderActive"></div>
+         <div class="slider-chips" id="sliderChips"></div>
+         <p class="row-hint" id="sliderHint"></p>
+       </fieldset>
+ 
+-      <fieldset class="field sound">
++      <fieldset class="field sound" data-fold="loras">
+         <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="0" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras">i</span><em>a strength for the music half and for the sound half</em></span>
+         <div id="loraPicker"></div>
+       </fieldset>
+ 
+-      <label class="field">
+-        <span class="label">Lyrics <em>section tags on their own line</em></span>
+-        <textarea id="lyrics" rows="14" spellcheck="false" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
+-      </label>
+-
+       <fieldset class="field">
+         <span class="label">Planning mode</span>
+         <div class="modes" id="modes">
+-- 
+2.43.0
+

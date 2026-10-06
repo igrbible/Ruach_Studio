@@ -1,0 +1,263 @@
+From be1360476d275c48c936197c3d7b67424e83af3e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 02:09:20 -0600
+Subject: [PATCH 1132/1177] The Engine page left from the bar; unsaved GPU
+ roles asked first (1166, part twelve)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «Когда страничка Engine выведена в фокус, единственная возможность уйти с неё,
+либо кнопка `Назад к сочинению`, либо F5. Добавь кликание по бару Студии, и гашение попапа
+странички. Также, если в GPU что-то изменил, но не сохранил, требовать в попап диалоге действие -
+сохранить/игнорировать».
+
+- Every way out of the Engine page goes through leaveEngine(): a room in the bar (that room
+  opens), the logo, Back to composing, Esc, the Engine button itself.
+- GPU roles changed and not saved: a dialog that only its two buttons answer (HeresyDialog's new
+  must: Esc and a click beside it do nothing): Save (the page goes only when the lab took it) or
+  Ignore (the boxes back as the lab keeps them, at once: HeresyGpus.reset, then read afresh).
+- The dialog's words in the six catalogs (2,435 keys each).
+
+Checked headless in Russian, the lab's GPU roles never written (the test blocked every POST): a
+room tab leaves a clean page at once; with one box turned over, a room tab, the logo and Esc each
+bring the dialog, Esc and a click beside it leave it standing, Ignore leaves the page and puts the
+boxes back. cdp-console 317/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            | 29 ++++++++++++++++++++++++-----
+ tools/console/heresy-dialog.js  |  7 ++++---
+ tools/console/heresy-gpus.js    | 27 ++++++++++++++++++++++-----
+ tools/console/heresy-i18n-be.js |  5 ++++-
+ tools/console/heresy-i18n-el.js |  5 ++++-
+ tools/console/heresy-i18n-es.js |  5 ++++-
+ tools/console/heresy-i18n-it.js |  5 ++++-
+ tools/console/heresy-i18n-ru.js |  5 ++++-
+ tools/console/heresy-i18n-uk.js |  5 ++++-
+ 9 files changed, 74 insertions(+), 19 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 5f25c1b..6716221 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -209,10 +209,26 @@
+   /* Compose and the running take share the screen, so the only thing that
+      shows and hides is the engine panel. */
+ 
++  // HERESY 1166 (Viktor: «Когда страничка Engine выведена в фокус, единственная возможность уйти с неё, либо кнопка «Назад к
++  // сочинению», либо F5. Добавь кликание по бару Студии… если в GPU что-то изменил, но не сохранил, требовать в попап диалоге
++  // действие — сохранить/игнорировать»): every way out of the Engine page (a room in the bar, the logo, Back, Esc, its own
++  // button) goes through here; GPU roles changed and not saved are saved or put back first, the dialog answered by one of
++  // the two. True when the page is gone.
++  function leaveEngine() {
++    var v = $("view-engine"), G = window.HeresyGpus;
++    if (v.classList.contains("is-hidden")) return Promise.resolve(true);
++    var ask = G && G.unsaved && G.unsaved()
++      ? window.HeresyDialog.confirm("The GPU roles changed and are not saved\n\nSave them, or leave the cards as they were.",
++          { ok: "Save", cancel: "Ignore", must: true }).then(function (save) { if (save) return G.save(); G.reset(); return true; })
++      : Promise.resolve(true);
++    return ask.then(function (ok) { if (ok) v.classList.add("is-hidden"); return ok; });
++  }
++
+   function show(view) {
+     if (view === "engine") {
+-      $("view-engine").classList.toggle("is-hidden");
+-      if (!$("view-engine").classList.contains("is-hidden")) scrollLogToEnd();
++      if (!$("view-engine").classList.contains("is-hidden")) return void leaveEngine();
++      $("view-engine").classList.remove("is-hidden");
++      scrollLogToEnd();
+     } else if (view === "take") {
+       $("view-engine").classList.add("is-hidden");
+       drawWave();
+@@ -221,7 +237,9 @@
+   }
+ 
+   $("engineToggle").addEventListener("click", function () { show("engine"); });
+-  $("engineBack").addEventListener("click", function () { $("view-engine").classList.add("is-hidden"); });
++  $("engineBack").addEventListener("click", function () { leaveEngine(); });
++  var brandMark = document.querySelector(".brand");                  // HERESY 1166: the logo in the bar leaves it too
++  if (brandMark) brandMark.addEventListener("click", function () { leaveEngine(); });
+ 
+   function closeMenus() {
+     all(".menu-pop").forEach(function (menu) { menu.classList.add("is-hidden"); });
+@@ -305,7 +323,7 @@
+     if (event.defaultPrevented) return;   // a list card already used the key
+     if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.code === "KeyA" && !typingField(event.target)) { event.preventDefault(); return; }
+     if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+-    if (event.key === "Escape") { $("view-engine").classList.add("is-hidden"); closeMenus(); }
++    if (event.key === "Escape") { leaveEngine(); closeMenus(); }
+     if (event.key === " " && (audio.getAttribute("src") || STATE.take) && !event.target.closest(".menu-pop")) { event.preventDefault(); togglePlay(); }
+     // HERESY 1111: seek and mute from the keyboard, outside text fields and menus
+     if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && audio.getAttribute("src") && isFinite(audio.duration) && !event.target.closest(".menu-pop, [role=menu], .col-grip")) {
+@@ -6478,7 +6496,8 @@
+     if (tab === "create") drawWave();
+     window.dispatchEvent(new Event("resize"));   // pictures measure their new width
+   }
+-  all("#tabs [data-tab]").forEach(function (b) { b.addEventListener("click", function () { setTab(b.dataset.tab); }); });
++  // HERESY 1166: a room in the bar leaves the Engine page for that room (asked first when the GPU roles are not saved)
++  all("#tabs [data-tab]").forEach(function (b) { b.addEventListener("click", function () { leaveEngine().then(function (ok) { if (ok) setTab(b.dataset.tab); }); }); });
+ 
+   // HERESY 1023: import a track from elsewhere. The body goes up as it is, with a progress line
+   // (XMLHttpRequest: fetch reports no upload progress); then the lyrics, if any; then the new
+diff --git a/tools/console/heresy-dialog.js b/tools/console/heresy-dialog.js
+index 07df17b..deeb2c1 100644
+--- a/tools/console/heresy-dialog.js
++++ b/tools/console/heresy-dialog.js
+@@ -1,5 +1,6 @@
+ // HERESY 1057 (Viktor): the studio's own dialogs instead of the browser's confirm() and prompt().
+-// HeresyDialog.confirm(text, {ok, cancel, danger}) -> Promise<boolean>
++// HeresyDialog.confirm(text, {ok, cancel, danger, must}) -> Promise<boolean>; must: one of the two buttons and nothing else
++// answers (Esc and a click beside the box do not), for a choice the page cannot make for you (HERESY 1166)
+ // HeresyDialog.prompt(text, value, {ok, placeholder, max}) -> Promise<string|null>
+ // The first paragraph of the text is the title, the rest the explanation. Enter answers yes (or
+ // gives the field), Esc answers no; a click beside the box is no as well. One dialog at a time.
+@@ -31,11 +32,11 @@
+         resolve(kind === "prompt" ? (yes ? input.value : null) : !!yes);
+       }
+       function key(e) {
+-        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(false); }
++        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (!opts.must) done(false); }
+         else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); done(true); }
+       }
+       document.addEventListener("keydown", key, true);
+-      back.addEventListener("mousedown", function (e) { if (e.target === back) done(false); });
++      back.addEventListener("mousedown", function (e) { if (e.target === back && !opts.must) done(false); });
+       back.querySelector(".hd-yes").addEventListener("click", function () { done(true); });
+       var no = back.querySelector(".hd-no");
+       if (no) no.addEventListener("click", function () { done(false); });
+diff --git a/tools/console/heresy-gpus.js b/tools/console/heresy-gpus.js
+index 02d5712..5966f58 100644
+--- a/tools/console/heresy-gpus.js
++++ b/tools/console/heresy-gpus.js
+@@ -72,14 +72,31 @@
+     b.hidden = !(d.studio_now != null && d.studio_now !== d.roles.studio);
+     b.textContent = "Restart the studio on GPU" + d.roles.studio;
+   }
+-  function save() {
++  function save() {      // true when the lab took it (HERESY 1166: the Engine page waits on it before it goes)
+     var c = chosen();
+-    if (!c.train.length || !c.jobs.length) return toast("Give training and the lab’s jobs one card at least", "bad");
+-    lab("/gpus", c).then(function (d) {
++    if (!c.train.length || !c.jobs.length) { toast("Give training and the lab’s jobs one card at least", "bad"); return Promise.resolve(false); }
++    return lab("/gpus", c).then(function (d) {
+       state.data = d; hint();
+       toast(d.studio_now != null && d.studio_now !== d.roles.studio ? "Saved: the studio moves to GPU" + d.roles.studio + " when it restarts" : "Saved", "good");
+       paint();
+-    }).catch(function (e) { toast(e.message, "bad"); });
++      return true;
++    }).catch(function (e) { toast(e.message, "bad"); return false; });
++  }
++  // HERESY 1166: the boxes put back as the lab keeps them, at once (a change ignored), then read afresh
++  function reset() {
++    var r = state.data && state.data.roles;
++    if (r) Array.prototype.forEach.call(document.querySelectorAll("#gpuRoles input"), function (x) {
++      x.checked = x.name === "gpuStudio" ? +x.value === r.studio : (r[x.dataset.role] || []).indexOf(+x.value) >= 0;
++    });
++    hint();
++    paint();
++  }
++  // HERESY 1166: the roles on the page differ from the ones the lab keeps: a change not saved yet
++  function unsaved() {
++    var d = state.data;
++    if (!d || !d.roles || !document.querySelector("#gpuRoles input")) return false;
++    var c = chosen(), r = d.roles, same = function (a, b) { return a.slice().sort().join() === (b || []).slice().sort().join(); };
++    return c.studio !== r.studio || !same(c.train, r.train) || !same(c.jobs, r.jobs);
+   }
+   function restart() {
+     var to = state.data && state.data.roles.studio;
+@@ -124,5 +141,5 @@
+     if (open) open.addEventListener("click", function () { setTimeout(paint, 60); });
+     paint();
+   }
+-  window.HeresyGpus = { init: init, paint: paint, guard: guard };
++  window.HeresyGpus = { init: init, paint: paint, guard: guard, unsaved: unsaved, save: save, reset: reset };
+ })();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 5555957..71256ca 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2435,5 +2435,8 @@ RuachI18n.add("be", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Меладычны дэт-метал, музычная палова (чэкпойнт кроку 600). Упішы яе трыгер deathmetal у стыль. Картка не раіць сілу: пачні з 1.0 і зменшы, калі вакал развальваецца.",
+ "Instrument probes": "Пробы інструментаў",
+ "Trained here": "Натрэніраваныя тут",
+-"From Hugging Face": "З Hugging Face"
++"From Hugging Face": "З Hugging Face",
++"The GPU roles changed and are not saved": "Ролі відэакарт зменены і не захаваны",
++"Save them, or leave the cards as they were.": "Захавай іх або пакінь карты як былі.",
++"Ignore": "Ігнараваць"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 920871c..e225d8d 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2434,5 +2434,8 @@ RuachI18n.add("el", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Μελωδικό death metal, μουσικό μισό (το checkpoint του βήματος 600). Βάλε τη λέξη ενεργοποίησής της deathmetal στο ύφος. Η κάρτα δεν δίνει συμβουλή έντασης: ξεκίνα από 1.0 και χαμήλωσέ τη αν τα φωνητικά διαλύονται.",
+ "Instrument probes": "Δοκιμές οργάνων",
+ "Trained here": "Εκπαιδευμένοι εδώ",
+-"From Hugging Face": "Από το Hugging Face"
++"From Hugging Face": "Από το Hugging Face",
++"The GPU roles changed and are not saved": "Οι ρόλοι των GPU άλλαξαν και δεν αποθηκεύτηκαν",
++"Save them, or leave the cards as they were.": "Αποθήκευσέ τους ή άφησε τις κάρτες όπως ήταν.",
++"Ignore": "Αγνόηση"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 9b6e15b..155f66d 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2434,5 +2434,8 @@ RuachI18n.add("es", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Death metal melódico, mitad musical (el checkpoint del paso 600). Pon su activador deathmetal en el estilo. La ficha no da consejo de intensidad: empieza en 1.0 y bájala si las voces se desmoronan.",
+ "Instrument probes": "Pruebas de instrumentos",
+ "Trained here": "Entrenados aquí",
+-"From Hugging Face": "De Hugging Face"
++"From Hugging Face": "De Hugging Face",
++"The GPU roles changed and are not saved": "Los papeles de las GPU cambiaron y no se han guardado",
++"Save them, or leave the cards as they were.": "Guárdalos o deja las tarjetas como estaban.",
++"Ignore": "Ignorar"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index d69cde1..c832a66 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2434,5 +2434,8 @@ RuachI18n.add("it", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Death metal melodico, metà musicale (il checkpoint del passo 600). Metti il suo trigger deathmetal nello stile. La scheda non dà consigli sull'intensità: parti da 1.0 e abbassala se la voce crolla.",
+ "Instrument probes": "Prove degli strumenti",
+ "Trained here": "Addestrati qui",
+-"From Hugging Face": "Da Hugging Face"
++"From Hugging Face": "Da Hugging Face",
++"The GPU roles changed and are not saved": "I ruoli delle GPU sono cambiati e non sono salvati",
++"Save them, or leave the cards as they were.": "Salvali, oppure lascia le schede come erano.",
++"Ignore": "Ignora"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 797a7a8..5927b14 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2440,5 +2440,8 @@ RuachI18n.add("ru", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Мелодичный дэт-метал, музыкальная половина (чекпоинт шага 600). Впиши её триггер deathmetal в стиль. Карточка не советует силу: начни с 1.0 и убавь, если вокал разваливается.",
+ "Instrument probes": "Пробы инструментов",
+ "Trained here": "Обучены здесь",
+-"From Hugging Face": "С Hugging Face"
++"From Hugging Face": "С Hugging Face",
++"The GPU roles changed and are not saved": "Роли видеокарт изменены и не сохранены",
++"Save them, or leave the cards as they were.": "Сохрани их или оставь карты как были.",
++"Ignore": "Игнорировать"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 19b72d2..4c112a1 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2435,5 +2435,8 @@ RuachI18n.add("uk", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Мелодійний дет-метал, музична половина (чекпоінт кроку 600). Впиши її тригер deathmetal у стиль. Картка не радить силу: почни з 1.0 і зменш, якщо вокал розвалюється.",
+ "Instrument probes": "Проби інструментів",
+ "Trained here": "Натреновані тут",
+-"From Hugging Face": "З Hugging Face"
++"From Hugging Face": "З Hugging Face",
++"The GPU roles changed and are not saved": "Ролі відеокарт змінено й не збережено",
++"Save them, or leave the cards as they were.": "Збережи їх або лиши карти як були.",
++"Ignore": "Ігнорувати"
+ });
+-- 
+2.43.0
+

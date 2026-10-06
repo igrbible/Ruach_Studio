@@ -1,0 +1,243 @@
+From d4dd3b117404fc1a721690fed4805199c6198ddd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 30 Sep 2026 23:41:09 -0600
+Subject: [PATCH 1029/1177] Post as numbered steps: one tool at a time, the
+ ones done for the take ticked
+
+Spectrum, Artifacts, Lyrics, Stems, Remaster, Upscale in a row, in the order the work goes
+(Viktor: the stack of drawers was hard to use). The chosen step shows alone and is
+remembered; the take card buttons open Post at their step. A step is ticked once done for
+the take in hand: the tools report it (heresy-step), and the tree of derived files tells
+which of stems, remaster and upscale exist. Import stays above the steps: it makes the take.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |  19 +++++++
+ tools/console/app.js             |   3 ++
+ tools/console/heresy-gloss.js    |   1 +
+ tools/console/heresy-inspect.js  |   1 +
+ tools/console/heresy-post.js     |  88 +++++++++++++++++++++++++++++++
+ tools/console/heresy-spectrum.js |   1 +
+ tools/console/index.html         |  11 ++--
+ tools/public/index.html.gz       | Bin 293139 -> 294679 bytes
+ 8 files changed, 116 insertions(+), 8 deletions(-)
+ create mode 100644 tools/console/heresy-post.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 111b49d..47ee0ad 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2074,3 +2074,22 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .sc-table td { padding: 1px 14px 1px 0; }
+ .sc-ratio strong { font-weight: 600; }
+ .file-btn { cursor: pointer; }
++
++/* HERESY 1029: Post as numbered steps */
++.post-steps { display: flex; align-items: stretch; gap: 4px; flex-wrap: wrap; margin: 4px 0 10px; }
++.ps-step { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 7px; border: 1px solid var(--line); border-radius: 999px;
++  background: var(--panel); color: var(--ink); cursor: pointer; font: inherit; text-align: left; }
++.ps-step:hover { border-color: var(--line-strong); }
++.ps-mark { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font: 600 12px/1 var(--mono);
++  border: 1.5px solid var(--dim); color: var(--dim); }
++.ps-text { display: flex; flex-direction: column; line-height: 1.1; }
++.ps-name { font-size: 13px; font-weight: 600; }
++.ps-say { font-size: 11px; color: var(--muted); }
++.ps-arrow { align-self: center; color: var(--dim); font-size: 16px; }
++.ps-step.is-done .ps-mark { background: var(--good); border-color: var(--good); color: var(--panel); }
++.ps-step.is-active { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
++.ps-step.is-active .ps-mark { border-color: var(--amber); color: var(--amber); }
++.ps-step.is-active.is-done .ps-mark { background: var(--good); border-color: var(--good); color: var(--panel); }
++.drawer.is-step.is-step-off { display: none; }
++.drawer.is-step > summary { pointer-events: none; }
++.drawer.is-step > summary .chev { display: none; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 139be6c..f0d517f 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2785,6 +2785,7 @@
+     if (window.HeresySpectrum) window.HeresySpectrum.setTake(spectrumTake(take));   // HERESY 1007
+     if (window.HeresyGloss) window.HeresyGloss.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1011
+     if (document.body.dataset.tab === "post") paintPost();   // HERESY 1014
++    if (window.HeresyPost) window.HeresyPost.setTake({ name: take.name });   // HERESY 1029: before the tools report
+     if (window.HeresyInspect) window.HeresyInspect.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1025
+     if (window.HeresyDerived) window.HeresyDerived.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1021
+     setTimeout(paintCardFolds, 0);   // HERESY 1009: the peeks read the texts filled below
+@@ -5094,6 +5095,7 @@
+     b.addEventListener("click", function () {
+       var panel = $(b.dataset.postOpen);
+       setTab("post");
++      if (window.HeresyPost && window.HeresyPost.has(b.dataset.postOpen)) { window.HeresyPost.select(b.dataset.postOpen); return; }   // HERESY 1029
+       if (panel) { panel.open = true; panel.scrollIntoView({ behavior: "smooth", block: "start" }); }
+     });
+   });
+@@ -5324,6 +5326,7 @@
+   }
+   if (window.HeresyGloss) window.HeresyGloss.init({ seek: seekTake });   // HERESY 1011
+   if (window.HeresyInspect) window.HeresyInspect.init({ seek: seekTake });   // HERESY 1025
++  if (window.HeresyPost) window.HeresyPost.init();   // HERESY 1029
+   if (window.HeresyDerived) window.HeresyDerived.init({   // HERESY 1021
+     compare: function (path) {
+       var f = window.HeresyDerived.files().filter(function (x) { return x.source === path; })[0];
+diff --git a/tools/console/heresy-gloss.js b/tools/console/heresy-gloss.js
+index 4cc4fdc..e80c2d3 100644
+--- a/tools/console/heresy-gloss.js
++++ b/tools/console/heresy-gloss.js
+@@ -25,6 +25,7 @@
+   }
+ 
+   function paint(r) {
++    if (state.take) window.dispatchEvent(new CustomEvent("heresy-step", { detail: { name: state.take.name, step: "gloss" } }));   // HERESY 1029
+     var box = $("glossResult");
+     box.textContent = "";
+     if (r.loop) {
+diff --git a/tools/console/heresy-inspect.js b/tools/console/heresy-inspect.js
+index 980f617..ea8121c 100644
+--- a/tools/console/heresy-inspect.js
++++ b/tools/console/heresy-inspect.js
+@@ -65,6 +65,7 @@
+     }
+     html += '<p class="row-hint">' + clock(r.seconds || 0) + " · " + (r.rate || "") + " Hz · measured in " + (r.took || "?") + " s on Forge</p>";
+     $("inResult").innerHTML = html;
++    if (state.take) window.dispatchEvent(new CustomEvent("heresy-step", { detail: { name: state.take.name, step: "inspect" } }));   // HERESY 1029
+   }
+ 
+   function run(force) {
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+new file mode 100644
+index 0000000..e1c01bd
+--- /dev/null
++++ b/tools/console/heresy-post.js
+@@ -0,0 +1,88 @@
++// HERESY 1029: Post as numbered steps in a row instead of a stack of drawers (Viktor, 01.10.2026):
++// one tool on screen at a time, in the order the work goes, and a step lights up once it has
++// been done for the take in hand: measured, checked, split, remastered, upscaled.
++// The tools tell it themselves with a "heresy-step" event {name, step}; the tree of files made
++// from the take ("heresy-derived") tells which of stems, remaster and upscale exist.
++(function () {
++  "use strict";
++
++  var STEPS = [
++    { id: "spectrumPanel", step: "spectrum", label: "Spectrum", say: "look" },
++    { id: "inspectPanel", step: "inspect", label: "Artifacts", say: "find faults" },
++    { id: "glossPanel", step: "gloss", label: "Lyrics", say: "check the words" },
++    { id: "derivedPanel", step: "stems", label: "Stems", say: "split" },
++    { id: "remasterPanel", step: "remaster", label: "Remaster", say: "the Debunker" },
++    { id: "upscalePanel", step: "upscale", label: "Upscale", say: "redraw the top" }
++  ];
++  var KEY = "yue2.postStep";
++  var state = { take: null, done: {}, current: "" };
++  function $(id) { return document.getElementById(id); }
++  function recall() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
++  function store(v) { try { localStorage.setItem(KEY, v); } catch (e) { /* private mode */ } }
++
++  function paint() {
++    var bar = $("postSteps");
++    if (!bar) return;
++    Array.prototype.forEach.call(bar.querySelectorAll("[data-step-panel]"), function (b) {
++      var s = STEPS.filter(function (x) { return x.id === b.dataset.stepPanel; })[0];
++      var done = !!state.done[s.step];
++      b.classList.toggle("is-active", s.id === state.current);
++      b.classList.toggle("is-done", done);
++      b.setAttribute("aria-selected", s.id === state.current ? "true" : "false");
++      b.querySelector(".ps-mark").textContent = done ? "✓" : String(STEPS.indexOf(s) + 1);
++    });
++  }
++
++  function select(id) {
++    if (!STEPS.some(function (s) { return s.id === id; })) id = STEPS[0].id;
++    state.current = id;
++    store(id);
++    STEPS.forEach(function (s) {
++      var p = $(s.id);
++      if (!p) return;
++      p.classList.toggle("is-step-off", s.id !== id);
++      if (s.id === id && !p.open) p.open = true;           // its own toggle draws it
++    });
++    paint();
++    window.dispatchEvent(new Event("resize"));             // a picture shown measures its new width
++  }
++
++  function init() {
++    var bar = $("postSteps");
++    if (!bar) return;
++    bar.innerHTML = STEPS.map(function (s, i) {
++      return (i ? '<span class="ps-arrow" aria-hidden="true">›</span>' : "") +
++        '<button type="button" role="tab" class="ps-step" data-step-panel="' + s.id + '"><span class="ps-mark">' + (i + 1) +
++        '</span><span class="ps-text"><span class="ps-name">' + s.label + '</span><span class="ps-say">' + s.say + "</span></span></button>";
++    }).join("");
++    bar.addEventListener("click", function (e) {
++      var b = e.target.closest("[data-step-panel]");
++      if (b) select(b.dataset.stepPanel);
++    });
++    STEPS.forEach(function (s) { var p = $(s.id); if (p) p.classList.add("is-step"); });
++    window.addEventListener("heresy-step", function (e) {
++      if (!state.take || e.detail.name !== state.take.name) return;
++      state.done[e.detail.step] = true;
++      paint();
++    });
++    window.addEventListener("heresy-derived", function (e) {
++      if (!state.take || e.detail.name !== state.take.name) return;
++      var kinds = {};
++      e.detail.files.forEach(function (f) { kinds[f.kind] = true; });
++      state.done.stems = !!kinds.stems;
++      state.done.remaster = !!kinds.remaster;
++      state.done.upscale = !!kinds.upscale;
++      paint();
++    });
++    select(recall() || STEPS[0].id);
++  }
++
++  function setTake(take) {
++    if (state.take && take && state.take.name === take.name) return;
++    state.take = take;
++    state.done = {};
++    paint();
++  }
++
++  window.HeresyPost = { init: init, setTake: setTake, select: select, has: function (id) { return STEPS.some(function (s) { return s.id === id; }); } };
++})();
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+index dfd4951..6806c14 100644
+--- a/tools/console/heresy-spectrum.js
++++ b/tools/console/heresy-spectrum.js
+@@ -489,6 +489,7 @@
+             : " · measured here: " + (a.bytes / 1e6).toFixed(0) + " MB in " + f1(tm.fetch) + " s, decoded " + f1(tm.decode) +
+               " s, measured " + f1((tm.stft || 0) + (tm.welch || 0)) + " s"));
+       tick();
++      window.dispatchEvent(new CustomEvent("heresy-step", { detail: { name: take.name, step: "spectrum" } }));   // HERESY 1029
+     }).catch(function (error) {
+       if (token === state.drawn) say("Could not measure: " + (error && error.message || error), true);
+     });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 76e6772..719f508 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -804,14 +804,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       </div>
+     </details>
+ 
+-    <div class="post-tools" id="postTools">
+-      <button type="button" class="btn ghost small" data-post-open="spectrumPanel">Spectrum</button>
+-      <button type="button" class="btn ghost small" data-post-open="glossPanel">Lyrics check</button>
+-      <button type="button" class="btn ghost small" data-post-open="derivedPanel">Stems</button>
+-      <button type="button" class="btn ghost small" data-post-open="remasterPanel">Remaster</button>
+-      <button type="button" class="btn ghost small" data-post-open="upscalePanel">Upscale</button>
+-      <button type="button" class="btn ghost small" data-post-open="inspectPanel">Artifacts</button>
+-    </div>
++    <!-- HERESY 1029: the tools as numbered steps; the one chosen shows, done ones are ticked (heresy-post.js) -->
++    <nav class="post-steps" id="postSteps" role="tablist" aria-label="Post steps"></nav>
+       <!-- HERESY 1021: what is made from this take, as a tree (heresy-derived.js) -->
+       <details class="drawer" id="derivedPanel" open>
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Stems</span><span class="sum-say">Split on Forge: BS-Roformer for the voice, htdemucs_ft for drums, bass and the rest. Each file plays, goes into the spectrum and the lyrics check.</span></span></summary>
+@@ -1145,6 +1139,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="heresy-gloss.js"></script>
+ <script src="heresy-inspect.js"></script>
+ <script src="heresy-derived.js"></script>
++<script src="heresy-post.js"></script>
+ <script src="heresy-zoom.js"></script>
+ <script src="heresy-spectrum.js"></script>
+ <script src="themes.js"></script>
+-- 
+2.43.0
+

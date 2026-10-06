@@ -1,0 +1,237 @@
+From c652189654dfb9d247759e4625b455581d3ce1c1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 13:40:04 -0600
+Subject: [PATCH 1175/1177] HERESY 1167: a song's tools beside New song; the
+ browser's language at the first visit; the DAW panel across its width; a
+ patient peek; the Librarian's search that narrows, finds sections and takes
+ Ctrl+F
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026:
+· «из выпадающего меню перенести в Creator прямо к кнопке New... все три пункта LOAD/SAVE/EXAMPLE… И Clear the form - тоже
+  нахер с бара»: Open, Save, Example and Clear beside New song in the Creator's head; the bar keeps the language, day or
+  night, the DAW, Unload and ☰.
+· «авто обнаружение языка браузера при первом посещении или сброшенных куках»: with no language kept, the browser's own
+  languages in their order, the first the page has; English otherwise.
+· «В Out of the Studio (DAW) у тебя жёсткие переносы строк. И здесь +2pt на тексты. Три колонки DAW - расширь их по всей
+  ширине»: the panel 1240 px, its texts across it and 2 pt larger, the three DAWs in three equal columns.
+· «Попап справа вверху можно растянуть на 200px. Дать ему задержку в пропадании на 1200ms… а при наведении разворачивать
+  вниз»: the peek is 580 px wide.
+  – It stays while the pointer crosses other cards on its way to it (a card rested on for 400 ms takes its place).
+  – It goes 1200 ms after the pointer leaves the cards.
+  – Entered, it opens downward: the whole style and the whole lyrics.
+· «В топовом воркспейсе… поиск их не видит»: the search filtered every take already (drawn or not). Now it also reads the
+  takes' workspaces and sections. Ctrl+F in the Librarian goes to its search (the browser's own sees only the cards drawn).
+· «Search box - дай ему авто сжимку до разумных размеров»: a long workspace name no longer wraps the head. The numbers give
+  way first (three times faster, into two lines), and the search narrows to 260 px at most. One line from 1400 px.
+
+cdp-console 344/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 29 +++++++++++++++++++++++++++++
+ tools/console/heresy-collection.js | 23 ++++++++++++++++-------
+ tools/console/heresy-i18n.js       | 12 +++++++++++-
+ tools/console/index.html           | 30 +++++++++++++++++-------------
+ 4 files changed, 73 insertions(+), 21 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 84ecbec..58f06bc 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4108,3 +4108,32 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .hi-st { font-size: 13px; }
+ .hi-his { font-size: 14.5px; }
+ @media (max-width: 1000px) { .hi-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
++/* HERESY 1167: a song's own tools beside New song (Open, Save, Example, Clear), their menus under them */
++.compose-tools { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
++.compose-tools .menu-wrap { position: relative; }
++.compose-tools .menu-pop { left: auto; right: 0; top: calc(100% + 4px); }
++/* HERESY 1167 (Viktor: «В Out of the Studio (DAW) у тебя жёсткие переносы строк. И здесь +2pt на тексты. Три колонки DAW -
++   расширь их по всей ширине»): the panel's texts across its width, 2 pt larger; the three DAWs in three columns */
++.dw-box { width: min(1240px, 100%); font-size: 15.5px; }
++.dw-box p, .dw-box .row-hint, .dw-head > div > * { max-width: none; }
++.dw-box .row-hint { font-size: 15px; }
++.dw-head b { font-size: 21px; }
++.dw-way h3 { font-size: 17.5px; }
++.dw-daws { grid-template-columns: repeat(3, minmax(0, 1fr)); }
++.dw-daw-head span, .dw-here, .dw-install summary, .dw-install p { font-size: 14.5px; }
++@media (max-width: 900px) { .dw-daws { grid-template-columns: minmax(0, 1fr); } }
++/* HERESY 1167 (Viktor: «Попап справа вверху можно растянуть на 200px… при наведении разворачивать вниз»): the peek 200 px
++   wider, reachable (it takes the pointer), and hovered it opens downward: the whole style, the whole lyrics */
++.coll-peek { width: 580px; pointer-events: auto; }
++.coll-peek .peek-lyrics-full { display: none; margin: 2px 0 0; white-space: pre-wrap; font: inherit; color: var(--ink); line-height: 1.35; }
++.coll-peek:hover { max-height: calc(100vh - 120px) !important; overflow: auto; }
++.coll-peek:hover .peek-lyrics { display: none; }
++.coll-peek:hover .peek-lyrics-full { display: block; }
++.coll-peek:hover .peek-style { display: block; -webkit-line-clamp: unset; }
++/* HERESY 1167 (Viktor: «Search box - дай ему авто сжимку до разумных размеров. Смотри, что творится»): a long workspace name
++   wrapped the head to a second line; now the numbers give way first (into two or three lines), the search narrows down to
++   220 px, and the head stays one line from 1400 px */
++@media (min-width: 1400px) { .coll-head { flex-wrap: nowrap; } }
++.coll-head #collNote { flex: 0 3 680px; min-width: 240px; }
++.coll-headtools { flex: 0 1 auto; min-width: 0; }
++.coll-headtools input[type="search"] { flex: 0 1 466px; width: 466px; min-width: 260px; }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index cf6beac..285db0b 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -122,7 +122,8 @@
+       var realKinds = Object.keys(state.kinds).filter(function (k) { return k.charAt(0) !== "_"; });
+       if (realKinds.length && !state.kinds[r.kind]) return false;
+       if (anyDer && !r.derived.some(function (k) { return state.derived[k]; })) return false;
+-      return m(r.title) || m(r.name) || (r.note && m(r.note));
++      // HERESY 1167: a take's workspaces and sections are searched too (a section's name finds its takes)
++      return m(r.title) || m(r.name) || (r.note && m(r.note)) || r.workspaces.some(function (w) { return m(w); });
+     });
+     var sort = recall(SORT_KEY) || "new";
+     rows.sort(function (a, b) {
+@@ -927,13 +928,18 @@
+       }
+     });
+     // HERESY 1046: peek on hover, sheet on click
++    // HERESY 1167 (Viktor: «задержку в пропадании на 1200ms, чтобы успеть мышкой перескочить, а при наведении разворачивать
++    // вниз»): the peek shown stays while the pointer crosses other cards on its way to it (a card rested on for 400 ms takes
++    // its place); it goes 1200 ms after the pointer leaves the cards; entered, it stays and opens downward
+     $("collGrid").addEventListener("mouseover", function (e) {
+       var card = e.target.closest(".coll-card[data-name]");
+       if (!card || card.dataset.name === peekFor) return;
+-      clearTimeout(peekTimer); hidePeek();
++      clearTimeout(peekTimer); clearTimeout(peekHide);
+       peekTimer = setTimeout(function () { showPeek(card); }, 400);
+     });
+-    $("collGrid").addEventListener("mouseleave", hidePeek);
++    $("collGrid").addEventListener("mouseleave", function () { clearTimeout(peekTimer); clearTimeout(peekHide); peekHide = setTimeout(hidePeek, 1200); });
++    $("collPeek").addEventListener("mouseenter", function () { clearTimeout(peekTimer); clearTimeout(peekHide); });
++    $("collPeek").addEventListener("mouseleave", function () { clearTimeout(peekHide); peekHide = setTimeout(hidePeek, 300); });
+     $("collGrid").addEventListener("contextmenu", function (e) {   // HERESY 1048: the studio's own menu
+       var card = e.target.closest(".coll-card[data-name]");
+       if (!card || !hooks.menu) return;
+@@ -1005,6 +1011,8 @@
+       var t = e.target, typing = t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+       if (typing || document.querySelector(".hd-back, .ds-back, .hm-pop:not([hidden])") || !$("collDialog").hidden || !$("collSheet").hidden) return;
+       var mod = e.ctrlKey || e.metaKey, k = (e.key || "").toLowerCase();
++      // HERESY 1167: the browser's own find sees only the cards drawn; the Librarian's search sees every take
++      if (mod && k === "f") { e.preventDefault(); $("collSearch").focus(); $("collSearch").select(); return; }
+       if (mod && k === "a" && state.place !== "__trash") { e.preventDefault(); shown().forEach(function (r) { if (!r.frozen) state.sel[r.name] = 1; }); paint(); }
+       else if (mod && k === "z" && undoState.fn) { e.preventDefault(); undoLast(); }
+       else if (e.key === "Escape" && names().length) { state.sel = {}; paint(); }
+@@ -1169,7 +1177,7 @@
+   }
+ 
+   // ---- HERESY 1046: the take without leaving the Librarian: a hover peek (400 ms) and a sheet on click
+-  var reqCache = {}, peekTimer = 0, peekFor = "";
++  var reqCache = {}, peekTimer = 0, peekHide = 0, peekFor = "";
+   function requestOf(name) {
+     if (reqCache[name]) return Promise.resolve(reqCache[name]);
+     var t = state.hooks.findTake(name);
+@@ -1199,8 +1207,9 @@
+       var box = $("collPeek"), style = String(req.style || "");
+       box.innerHTML = '<div class="peek-title">' + esc(r.title) + '</div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created)) + "</span>" +
+         (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (req.cot ? " \u00b7 <span>" + esc(cotWord(req.cot)) + "</span>" : "") + "</div>" +
+-        (style ? '<div class="peek-cap">Style</div><div class="peek-style">' + esc(style.length > 200 ? style.slice(0, 200) + "\u2026" : style) + "</div>" : "") +
+-        (req.lyrics ? '<div class="peek-cap">Lyrics</div><pre class="peek-lyrics">' + esc(lyricsTight(req.lyrics, 6)) + "</pre>" : "") +
++        (style ? '<div class="peek-cap">Style</div><div class="peek-style">' + esc(style) + "</div>" : "") +   // HERESY 1167: whole (three lines until hovered)
++        (req.lyrics ? '<div class="peek-cap">Lyrics</div><pre class="peek-lyrics">' + esc(lyricsTight(req.lyrics, 6)) + "</pre>" +
++          '<pre class="peek-lyrics-full">' + esc(String(req.lyrics).trim().slice(0, 6000)) + "</pre>" : "") +   // HERESY 1167: whole, when hovered
+         (r.note ? '<div class="peek-cap">Note</div><div class="peek-note">' + esc(r.note) + "</div>" : "");
+       // HERESY 1151 (Viktor: «попап тултип при наведении на карточку перенести в фиксированный правый верхний угол? Так
+       // никому мешать не будет»): the window's top right corner. HERESY 1155 (Viktor: «тултип смести прямо поверх бара,
+@@ -1214,7 +1223,7 @@
+       box.hidden = false;
+     }).catch(function () {});
+   }
+-  function hidePeek() { clearTimeout(peekTimer); peekFor = ""; if ($("collPeek")) $("collPeek").hidden = true; }
++  function hidePeek() { clearTimeout(peekTimer); clearTimeout(peekHide); peekFor = ""; if ($("collPeek")) $("collPeek").hidden = true; }
+   // HERESY 1155: artwork drawn meanwhile (a batch, the API, another browser) put on the cards shown, in place: nothing
+   // else repainted, so a rename being typed or a rubber band being drawn is left alone
+   function paintArts() {
+diff --git a/tools/console/heresy-i18n.js b/tools/console/heresy-i18n.js
+index ae0d891..5ac395b 100644
+--- a/tools/console/heresy-i18n.js
++++ b/tools/console/heresy-i18n.js
+@@ -54,6 +54,16 @@
+   function known(code) { return LANGS.some(function (l) { return l.code === code; }); }
+   function norm(s) { return String(s).replace(/\s+/g, " ").trim(); }   // the page source's line breaks and indents do not count
+   function recall() { try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; } }
++  // HERESY 1167 (Viktor: «авто обнаружение языка браузера при первом посещении или сброшенных куках»): no language kept
++  // (a first visit, a cleared browser): the browser's own languages in their order, the first the page has; else English
++  function detect() {
++    var want = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"];
++    for (var i = 0; i < want.length; i++) {
++      var code = String(want[i] || "").toLowerCase().split("-")[0];
++      if (LANGS.some(function (l) { return l.code === code; })) return code;
++    }
++    return "en";
++  }
+ 
+   // ---- the catalogs
+   function add(code, table) {
+@@ -308,5 +318,5 @@
+   function misses() { return MISS ? Array.from(MISS.entries()) : []; }   // [English, where it was seen first]
+ 
+   window.RuachI18n = { add: add, t: t, set: set, en: en, enAttr: enAttr, lang: function () { return lang; }, langs: LANGS, look: look, paintLogo: paintLogo,
+-                       collect: collect, misses: misses, locales: locales, borrowed: borrowed, start: function () { menu(); apply(recall() || "en"); } };
++                       collect: collect, misses: misses, locales: locales, borrowed: borrowed, start: function () { menu(); apply(recall() || detect()); } };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 74ca9f2..785914f 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -390,7 +390,6 @@
+     <button type="button" class="btn ghost small lang-btn" id="langButton" aria-haspopup="true" aria-label="Language" data-tip="The language of the page">EN</button>
+     <button type="button" class="btn ghost small day-night" id="dayNight" aria-label="Day, night or as the system">☀</button>
+     <!-- HERESY 1167 (Viktor: «кнопку GUIDE убрать… а также перенести туда с бара SAVE»): Save and the guide live in ☰ -->
+-    <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
+     <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform, Bitwig)">DAW</button>
+     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
+     <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now (tinted red while a model is loaded)" disabled>Unload model</button>
+@@ -404,18 +403,6 @@ Q8_0 · 3.8 GB · near lossless
+ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <div class="head-more-items">
+           <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
+-          <button class="btn ghost small" id="openPrompt" data-icon="open" data-tip="Open a prompt saved as JSON or YAML">Open</button>
+-          <div class="menu-wrap">
+-            <button class="btn ghost small" id="savePrompt" data-icon="save" data-tip="Save the form as a prompt file" aria-haspopup="true" aria-expanded="false">Save</button>
+-            <div class="menu-pop is-hidden" id="saveMenu" role="menu">
+-              <button type="button" role="menuitem" data-save="json">Prompt as JSON</button>
+-              <button type="button" role="menuitem" data-save="yaml">Prompt as YAML</button>
+-            </div>
+-          </div>
+-          <div class="menu-wrap">
+-      <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
+-      <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
+-    </div>
+           <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
+           <button type="button" class="btn ghost small" id="guideOpenMenu" data-icon="question" data-tip="The guide: every room, what each thing does">The guide</button>
+         </div>
+@@ -710,6 +697,23 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <!-- HERESY 1167 (Viktor: «двумя строчками можно красиво вместить описание этой комнаты») -->
+       <span class="col-note col-note-two">the song as words and knobs: style, lyrics, score and sound; Generate makes it, Takes keep it</span>
+       <div class="spacer"></div>
++      <!-- HERESY 1167 (Viktor: «перенести в Creator прямо к кнопке New... все три пункта LOAD/SAVE/EXAMPLE… И Clear the form -
++           тоже нахер с бара»): a song's own tools beside New song -->
++      <div class="compose-tools">
++        <button class="btn ghost small" id="openPrompt" data-icon="open" data-tip="Open a prompt saved as JSON or YAML">Open</button>
++        <div class="menu-wrap">
++        <button class="btn ghost small" id="savePrompt" data-icon="save" data-tip="Save the form as a prompt file" aria-haspopup="true" aria-expanded="false">Save</button>
++        <div class="menu-pop is-hidden" id="saveMenu" role="menu">
++        <button type="button" role="menuitem" data-save="json">Prompt as JSON</button>
++        <button type="button" role="menuitem" data-save="yaml">Prompt as YAML</button>
++        </div>
++        </div>
++        <div class="menu-wrap">
++        <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
++        <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
++        </div>
++        <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
++      </div>
+       <button type="button" class="btn ghost small" id="newSong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.">＋ New song</button>
+     </div>
+     <!-- HERESY 1016: the Kit's idea writer is retired (its code stays dormant); its structure
+-- 
+2.43.0
+

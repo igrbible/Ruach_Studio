@@ -1,0 +1,140 @@
+From 7121c0d277d145be54b38eca1ea9674a77dd5854 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 22:02:45 -0600
+Subject: [PATCH 1163/1177] HERESY 1167: Cancel run from wherever you are,
+ Direct by default, Guidance on one line
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+· Viktor: «Пропала кнопка отмены генерации в Full Mode»; «В Direct тоже нет кнопки отмены генерации». Cancel run lived only
+  in the run's own view, gone the moment another take was opened (listening while the run renders). Now also a ✕ on the
+  run's row in the Takes column and a ✕ beside «Back to …» in the take's head; one cancel behind all three (its queued
+  versions go with it).
+· «Да, Direct по умолчанию»: the form starts in Direct, and Clear and New song bring it back to Direct.
+· «Guidance (CFG) выстрой в одну строку с полем ввода»: its name and its box on one line, as the knobs.
+
+cdp-console 334/0/7 (the checks about Full choose Full), check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css    |  7 ++++++-
+ tools/console/app.js     | 19 +++++++++++++++----
+ tools/console/index.html |  6 ++++--
+ 3 files changed, 25 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 13ded02..a3b78e9 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3970,4 +3970,9 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .field.field-inline { flex-direction: row; align-items: center; gap: 9px; }
+ .field.field-inline > .label { margin: 0; white-space: nowrap; }
+ .field.field-inline > input { width: 84px; flex: none; text-align: right; font-family: var(--mono); }
+-
++/* HERESY 1167: the run's ✕ in the Takes column (always shown on a running row) and beside «Back to …» */
++.take.is-running-row .take-cancel { opacity: 1; right: 8px; }
++.take.is-running-row .take-cancel:hover { color: var(--bad); border-color: var(--bad-line); }
++.take.is-running-row .take-title { padding-right: 34px; }
++.run-cancel { flex: none; min-width: 30px; padding-left: 8px; padding-right: 8px; color: var(--dim); }
++.run-cancel:hover { color: var(--bad); border-color: var(--bad-line); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index dace48a..91379f1 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1304,7 +1304,7 @@
+   // A new song: everything about the song back to its default; the VAE, output and theme choices stay
+   function newSong() {
+     ["title", "style", "lyrics", "abc", "lmSeed", "soundSeed", "cfg"].forEach(function (id) { $(id).value = ""; });
+-    setCot("full");
++    setCot("off");                                    // HERESY 1167 (Viktor: «Да, Direct по умолчанию»)
+     $("instrumental").checked = false;
+     all("input[data-group]").forEach(function (input) {
+       input.value = round(samplingDefault(input.dataset.group, input.dataset.key), 6);
+@@ -2734,6 +2734,7 @@
+   function paintRunReturn() {
+     var away = !!(STATE.running && STATE.take);
+     $("backToRun").classList.toggle("is-hidden", !away);
++    $("cancelAway").classList.toggle("is-hidden", !away);   // HERESY 1167
+     if (away) $("backToRunLabel").textContent = "Back to " + STATE.running.title;
+   }
+ 
+@@ -2901,8 +2902,11 @@
+     show("take");
+   });
+ 
+-  $("cancelRun").addEventListener("click", function () {
+-    var job = STATE.job;
++  // HERESY 1167 (Viktor: «Пропала кнопка отмены генерации»): one cancel for the run's view, its row in the Takes column and
++  // the ✕ beside «Back to …»
++  $("cancelRun").addEventListener("click", function () { cancelJob(STATE.job); });
++  $("cancelAway").addEventListener("click", function () { cancelJob(STATE.running); });
++  function cancelJob(job) {
+     if (!job || !isLive(job)) return;
+     // Queued versions of the same song go with it.
+     var doomed = STATE.jobs.filter(function (j) {
+@@ -2915,7 +2919,7 @@
+                               : "Cancelling after the current step");
+       pollJobs();
+     });
+-  });
++  }
+ 
+   /* --------------------------------------------------------------- engine */
+ 
+@@ -5214,6 +5218,7 @@
+       var what = job.kind === "replay" ? (job.what || "re-rendering") + " — click for the take"
+         : (job.status === "queued" ? "queued — click to watch" : "generating now — click to watch");
+       return '<article class="take is-running-row" data-run="' + escape(job.id) + '" tabindex="0">' +
++        '<button type="button" class="take-del take-cancel" data-cancel-run="' + escape(job.id) + '" title="Cancel run" aria-label="Cancel run">✕</button>' +   // HERESY 1167
+         '<div class="take-title">' + escape(job.title) + "</div>" +
+         '<div class="take-style">' + escape(what) + "</div>" +
+         '<div class="take-foot"><span class="tag full">' + (job.status === "queued" ? "queued" : "running") + "</span>" +
+@@ -5264,6 +5269,12 @@
+         function (e) { paintLibrary(); paintRate(); toast(e.message, "bad"); });   // HERESY 1167: a refusal said, not swallowed
+       return;
+     }
++    var crun = event.target.closest("[data-cancel-run]");   // HERESY 1167: the run's own ✕ in the column
++    if (crun) {
++      event.stopPropagation();
++      cancelJob(STATE.jobs.filter(function (j) { return j.id === crun.dataset.cancelRun; })[0]);
++      return;
++    }
+     var lfav = event.target.closest("[data-lfav]");     // HERESY 1167 (Viktor: «И нет звёздочки»): the star beside the thumbs
+     if (lfav) {
+       event.stopPropagation();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 0dd4a22..dfbdf4b 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -822,7 +822,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <span class="label">Planning mode</span>
+             <div class="modes" id="modes">
+               <label class="mode">
+-                <input type="radio" name="cot" value="full" checked />
++                <input type="radio" name="cot" value="full" />
+                 <span class="mode-body">
+                   <strong>Full plan</strong>
+                   <small>Melody and chords written first, then rendered. Best for new songs.</small>
+@@ -836,7 +836,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+                 </span>
+               </label>
+               <label class="mode">
+-                <input type="radio" name="cot" value="off" />
++                <input type="radio" name="cot" value="off" checked />   <!-- HERESY 1167: Direct by default -->
+                 <span class="mode-body">
+                   <strong>Direct</strong>
+                   <small>Straight from lyrics and style, no editable score.</small>
+@@ -1091,6 +1091,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <button class="btn ghost small run-return is-hidden" id="backToRun">
+         <span class="run-dot" aria-hidden="true"></span> <span id="backToRunLabel">Back to the run</span>
+       </button>
++      <!-- HERESY 1167 (Viktor: «Пропала кнопка отмены генерации»): the run cancelled from wherever you are -->
++      <button type="button" class="btn ghost small run-cancel is-hidden" id="cancelAway" aria-label="Cancel run" data-tip="Cancel run">✕</button>
+       <div class="head-actions" id="takeActions"></div>
+     </div>
+ 
+-- 
+2.43.0
+

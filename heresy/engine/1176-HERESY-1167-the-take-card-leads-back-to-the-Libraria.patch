@@ -1,0 +1,402 @@
+From 2433b55d419a479bf92392ab52ff6ca2affcd652 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 14:51:23 -0600
+Subject: [PATCH 1176/1177] HERESY 1167: the take card leads back to the
+ Librarian; the column pins a take into its own strip; the engine unloads idle
+ models by itself; a tip after a click no longer stays
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026:
+· «Играет трек в плеере. Жму на мигалку, открывает в Творце "медицинскую карту". А как обратно из неё перейти в
+  Библиотеку на этот же трек?… У меня полторы тысячи треков сейчас, и я потерялся»: an icon beside ☆ ✎ 🗑 on the take's
+  card: the Librarian opens with the take in sight, flashed (the column's menu had it, the card had not);
+· «в Takes на мышечное меню.... `Pin in it's (sub)workspace` добавить, если лимит по пинам не достигнут. У нас четыре пина на
+  воркспейс»: Pin in “…” in the rooms' column: the workspace in hand when the take is in it, else its section under it,
+  else its first own (never frozen, never Sourced for Regeneration); offered while the strip has room; Unpin when pinned;
+· «таймер вбить для `Models auto unload`. Дефолт 60 минут. И в Engine ползунок от 15 минут до 4 часов, с инкрементом в 15
+  минут. И чекбокс - мгновенная выгрузка моделей (15 секунд grace)»: two engine settings (unload_after_min 15..240 by 15,
+  60 by default; unload_at_once, 15 s); the worker looks every 5 s while idle, between jobs only, once per idle spell, and
+  frees the models and the cache; Engine's Compute card has the slider and the check;
+· «Попап переключения режима темы не исчезает, только если где-то кликнуть»: my slip of this morning: «a focused one stays»
+  kept the tip of every button clicked with the mouse (Chrome focuses it); now only a tip reached by the keyboard is
+  kept, and a press of the mouse puts the tip away.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  5 ++
+ tools/console/app.js               | 60 ++++++++++++++++++++----
+ tools/console/heresy-collection.js | 22 ++++++++-
+ tools/console/index.html           | 10 ++++
+ tools/yue-server.cpp               | 74 ++++++++++++++++++++++++++++--
+ 5 files changed, 157 insertions(+), 14 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 58f06bc..7f9d66d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4137,3 +4137,8 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .coll-head #collNote { flex: 0 3 680px; min-width: 240px; }
+ .coll-headtools { flex: 0 1 auto; min-width: 0; }
+ .coll-headtools input[type="search"] { flex: 0 1 466px; width: 466px; min-width: 260px; }
++/* HERESY 1167: Engine's Models auto unload: the slider across, At once beside it */
++.eg-unload-row { display: flex; align-items: center; gap: 14px; }
++.eg-unload-row input[type="range"] { flex: 1; min-width: 120px; }
++.eg-unload-row input[type="range"].is-aside { opacity: .4; }
++.eg-unload-row .check { white-space: nowrap; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 22901b5..7be9aa9 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -339,7 +339,7 @@
+   tip.className = "tip";
+   tip.setAttribute("role", "tooltip");
+   document.body.appendChild(tip);
+-  var tipFor = null;
++  var tipFor = null, tipKept = false;   // HERESY 1167: kept = reached by the keyboard, it stays while focused
+ 
+   function showTip(target) {
+     var ref = target.dataset.tipRef;
+@@ -367,7 +367,7 @@
+     tipFor = target;
+   }
+ 
+-  function hideTip() { tip.classList.remove("is-on"); tipFor = null; }
++  function hideTip() { tip.classList.remove("is-on"); tipFor = null; tipKept = false; }
+ 
+   function tipTarget(node) { return node && node.closest ? node.closest("[data-tip], [data-tip-ref]") : null; }
+ 
+@@ -382,14 +382,24 @@
+     tipNext = target;
+     if (target) {
+       var wait = parseInt(target.dataset.tipDelay, 10);
+-      tipWait = setTimeout(function () { if (tipNext === target && target.isConnected) showTip(target); }, isFinite(wait) ? wait : 400);
++      tipWait = setTimeout(function () { if (tipNext === target && target.isConnected) { showTip(target); tipKept = false; } }, isFinite(wait) ? wait : 400);
+     }
+-    if (!target && tipFor && tipFor !== document.activeElement) hideTip();   // HERESY 1167: a focused one stays
+-    else if (target && tipFor && tipFor !== target && tipFor !== document.activeElement) hideTip();
++    if (!target && tipFor && !tipKept) hideTip();   // HERESY 1167: one reached by the keyboard stays
++    else if (target && tipFor && tipFor !== target && !tipKept) hideTip();
+   });
++  // HERESY 1167 (Viktor: «Попап переключения режима темы не исчезает, только если где-то кликнуть»): Chrome focuses a button
++  // clicked with the mouse too, so focus alone does not say the keyboard came; a press of the mouse puts the tip away
++  // (what it said is done) and the focus it gives shows none
++  var pointerAt = 0;
++  document.addEventListener("pointerdown", function () {
++    pointerAt = Date.now();
++    clearTimeout(tipWait);
++    if (tipFor) hideTip();
++  }, true);
+   document.addEventListener("focusin", function (event) {
+     var target = tipTarget(event.target);
+-    if (target) showTip(target); else if (tipFor) hideTip();
++    if (Date.now() - pointerAt < 800) return;   // the mouse gave this focus
++    if (target) { showTip(target); tipKept = true; } else if (tipFor) hideTip();
+   });
+   document.addEventListener("focusout", hideTip);
+   // A scroll moves the target away from its tip; one reached by the keyboard keeps it. A box that scrolls
+@@ -3255,7 +3265,7 @@
+     return null;
+   }
+   function gpuGib() { var gpu = STATE.hardware && (STATE.hardware.gpus || [])[0]; return gpu ? gpu.total_bytes / GIB : 0; }
+-  var SETTING_KEYS = ["model", "keep_loaded", "max_seq", "vae_core"];
++  var SETTING_KEYS = ["model", "keep_loaded", "max_seq", "vae_core", "unload_after_min", "unload_at_once"];   // HERESY 1167: the idle unload
+   var GIB = 1073741824;
+ 
+   function fullContext() { return (STATE.settings && STATE.settings.max_seq_full) || (STATE.props && STATE.props.context) || 24576; }
+@@ -3320,12 +3330,26 @@
+       $(pair[0]).value = pair[1];
+     });
+     $("setKeepLoaded").checked = !!settings.keep_loaded;
++    // HERESY 1167: the idle unload (an engine without it: the knobs stay off)
++    var hasUnload = settings.unload_after_min !== undefined;
++    $("setUnloadAfter").value = settings.unload_after_min || 60;
++    $("setUnloadAtOnce").checked = !!settings.unload_at_once;
++    $("setUnloadAfter").disabled = $("setUnloadAtOnce").disabled = !hasUnload;
++    paintUnload();
+     $("memPreset").value = shownPreset(settings);   // HERESY 1027
+     paintComputeHint();
+     paintStrip();
+     paintSubmitNote();
+   }
+ 
++  // HERESY 1167 (Viktor: «Models auto unload. Дефолт 60 минут… от 15 минут до 4 часов… мгновенная выгрузка (15 секунд
++  // grace)»): the time said beside its name; At once leaves the slider aside
++  function paintUnload() {
++    var m = Number($("setUnloadAfter").value) || 60, h = Math.floor(m / 60), r = m % 60, once = $("setUnloadAtOnce").checked;
++    $("setUnloadSay").textContent = tr(once ? "15 s after a song" : "after " + (h ? h + " h" + (r ? " " + r + " min" : "") : r + " min") + " idle");
++    $("setUnloadAfter").classList.toggle("is-aside", once);
++  }
++
+   function paintComputeHint() {
+     var rows = parseInt($("setMaxSeq").value, 10), notes = [];
+     if (rows === 0 || isNaN(rows)) notes.push("Context: the whole " + fullContext().toLocaleString(loc()) + " rows, room for any song.");
+@@ -3342,6 +3366,7 @@
+     }
+     if (!Number.isInteger(vaeCore) || vaeCore < 64 || vaeCore > 4096) throw new Error("VAE tile frames must be between 64 and 4,096");
+     var out = { keep_loaded: $("setKeepLoaded").checked, max_seq: maxSeq, vae_core: vaeCore };
++    if (!$("setUnloadAfter").disabled) { out.unload_after_min = Number($("setUnloadAfter").value); out.unload_at_once = $("setUnloadAtOnce").checked; }   // HERESY 1167
+     if ($("setModel").value) out.model = $("setModel").value;
+     return out;
+   }
+@@ -3359,10 +3384,12 @@
+     });
+   }
+ 
+-  ["setMaxSeq", "setVaeCore", "setKeepLoaded", "setModel"].forEach(function (id) {
++  ["setMaxSeq", "setVaeCore", "setKeepLoaded", "setModel", "setUnloadAfter", "setUnloadAtOnce"].forEach(function (id) {
+     $(id).addEventListener("input", function () {
+       STATE.settingsDirty = true;
+-      if (id !== "setKeepLoaded") $("memPreset").value = "manual";   // HERESY 1071: a knob moved by hand is Manual
++      // HERESY 1071: a knob moved by hand is Manual (the memory's knobs; keeping and unloading are no size)
++      if (id !== "setKeepLoaded" && id.indexOf("setUnload") !== 0) $("memPreset").value = "manual";
++      if (id.indexOf("setUnload") === 0) paintUnload();   // HERESY 1167
+       paintComputeHint();
+     });
+     $(id).addEventListener("change", function () { STATE.settingsDirty = true; paintComputeHint(); });
+@@ -3682,6 +3709,12 @@
+       '<button type="button" class="btn ghost small icon-act' + (take.favorite ? " is-on" : "") + '" id="favTake" aria-pressed="' +
+       (take.favorite ? "true" : "false") + '" aria-label="Favourite" data-tip="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '">' +
+       (take.favorite ? "★" : "☆") + "</button>" +
++      // HERESY 1167 (Viktor: «Жму на мигалку, открывает в Творце "медицинскую карту". А как обратно из неё перейти в
++      // Библиотеку на этот же трек?»): the Librarian with this take in sight, flashed
++      (window.HeresyCollection && window.HeresyCollection.reveal && !take.session
++        ? '<button type="button" class="btn ghost small icon-act" id="libTake" aria-label="Show in the Librarian" data-tip="Show this take in the Librarian: its card found, in sight and flashed">' +
++          '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
++          '<path d="M4 4h3.2v16H4zM9.2 6.5h3.2V20H9.2zM14.4 7.4l3-.8 3.5 13-3 .8zM2.5 20.5h19"/></svg></button>' : "") +
+       '<button type="button" class="btn ghost small icon-act" id="renameTake" aria-label="Rename" data-tip="Rename this take">✎</button>' +
+       '<button type="button" class="btn ghost small icon-act danger" id="deleteTake" aria-label="Delete take" data-tip="Delete this take (asks first)">' +
+       '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+@@ -4073,6 +4106,7 @@
+     if (!take) return;
+     if (event.target.closest("#favTake")) toggleFavorite(take);
+     if (event.target.closest("#renameTake")) startRename();
++    if (event.target.closest("#libTake") && window.HeresyCollection) { setTab("collection"); window.HeresyCollection.reveal(take.name); }   // HERESY 1167
+     if (event.target.closest("#deleteTake")) deleteTake(take);
+   });
+ 
+@@ -6954,6 +6988,14 @@
+         var on = HC.pinned(name);
+         return { icon: "\ud83d\udccc", label: on ? "Unpin" : "Pin here", hint: on ? "" : "four at most", action: function () { HC.pin(name, !on); } };
+       })() : null,
++      // HERESY 1167 (Viktor: «в Takes на мышечное меню.... `Pin in it's (sub)workspace` добавить, если лимит по пинам не
++      // достигнут. У нас четыре пина на воркспейс»): from a room's column, into the strip of the workspace the take lives in
++      HC && HC.pinTarget && here !== "collection" ? (function () {
++        var t = HC.pinTarget(name);
++        if (!t || (!t.pinned && t.count >= t.max)) return null;
++        return { icon: "\ud83d\udccc", label: (t.pinned ? "Unpin from \u201c" : "Pin in \u201c") + t.place + "\u201d",
++                 hint: t.pinned ? "" : (t.max - t.count) + " of " + t.max + " free", action: function () { HC.pinIn(name, t.place, !t.pinned); } };
++      })() : null,
+       // HERESY 1166: in the Pinned view, Unpin takes it out of every strip it stands in
+       HC && HC.unpinAll && here === "collection" && HC.place() === "__pinned" && HC.pinPlaces(name).length ?
+         { icon: "\ud83d\udccc", label: "Unpin", action: function () { HC.unpinAll(name); } } : null,
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 285db0b..705f57b 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -391,6 +391,26 @@
+       return ok;
+     });
+   }
++  // HERESY 1167 (Viktor: «в Takes на мышечное меню… `Pin in it's (sub)workspace` добавить, если лимит по пинам не
++  // достигнут»): the strip a take is pinned into from a room's column: the workspace in hand when the take is in it, else
++  // its section under the one in hand, else its first own; never a frozen one, never «Sourced for Regeneration»
++  var PINS_MAX = 4;   // the lab's PINS_MAX, Viktor's number
++  function pinTarget(name) {
++    var r = rowOf(name);
++    if (!r) return null;
++    var cur = current(), own = (r.workspaces || []).filter(function (w) { return !frozenWs(w) && workable(w) === w; });
++    var place = own.indexOf(cur) >= 0 ? cur : own.filter(function (w) { return cur && w.indexOf(cur + SEP) === 0; })[0] || own[0];
++    if (!place) return null;
++    var have = (state.pins || {})[place] || [];
++    return { place: place, pinned: have.indexOf(name) >= 0, count: have.length, max: PINS_MAX };
++  }
++  function pinIn(name, place, on) {
++    var before = ((state.pins || {})[place] || []).slice();
++    return act({ op: "pin", place: place, on: !!on, names: [name] }, (on ? "Pinned in \u201c" : "Unpinned from \u201c") + place + "\u201d").then(function (ok) {
++      if (!ok) { state.pins = state.pins || {}; state.pins[place] = before; paint(); }
++      return ok;
++    });
++  }
+   function paintBulk(rows) {
+     var n = Object.keys(state.sel).length;
+     $("collBulk").hidden = !n;
+@@ -1602,7 +1622,7 @@
+                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
+                               markFavorite: markFavorite,
+                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
+-                              pinPlaces: pinPlaces, unpinAll: unpinAll,
++                              pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
+                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166
+                               undoable: undoable, untrash: untrash,
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 785914f..d2cc505 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -506,6 +506,16 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <label class="check"><input type="checkbox" id="setKeepLoaded" /> <span>Keep models loaded between songs</span></label>
+         <span class="info" tabindex="-1" role="img" aria-label="About keeping models loaded" data-tip-ref="tip-keep"></span>
+       </div>
++      <!-- HERESY 1167 (Viktor: «таймер вбить для `Models auto unload`. Дефолт 60 минут. И в Engine ползунок от 15 минут до 4
++           часов, с инкрементом в 15 минут. И чекбокс - мгновенная выгрузка моделей (15 секунд grace)») -->
++      <div class="field eg-unload">
++        <span class="label">Models auto unload <em id="setUnloadSay">after 1 h idle</em></span>
++        <div class="eg-unload-row">
++          <input type="range" id="setUnloadAfter" min="15" max="240" step="15" value="60" aria-label="Unload idle models after"
++            data-tip="How long the models stay in GPU memory with nothing to do: 15 minutes to 4 hours, by 15. Then the engine unloads them, and the next song loads them again." />
++          <label class="check" data-tip="The models leave GPU memory 15 s after a song: time enough to send the next one while they are still loaded"><input type="checkbox" id="setUnloadAtOnce" /> <span>At once (15 s)</span></label>
++        </div>
++      </div>
+       <p class="row-hint" id="computeHint"></p>
+       <div class="card-actions">
+         <button class="btn primary small" id="saveSettings">Save</button>
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index e9fee8d..a6016ed 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -207,9 +207,20 @@ static const int                                             MAX_JOBS = 32;
+ static std::mutex           mtx_active;
+ static std::shared_ptr<Job> g_active_job;
+ 
++// HERESY 1167 (Viktor: «таймер вбить для `Models auto unload`. Дефолт 60 минут»): when the last job began or ended, on the
++// steady clock, and whether this idle spell has had its unload yet
++static std::atomic<int64_t> g_idle_since{ 0 };
++static std::atomic<bool>    g_idle_unloaded{ false };
++
++static int64_t steady_seconds() {
++    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
++}
++
+ static void active_job_set(std::shared_ptr<Job> job) {
+     std::lock_guard<std::mutex> lock(mtx_active);
+     g_active_job = std::move(job);
++    g_idle_since.store(steady_seconds());
++    g_idle_unloaded.store(false);
+ }
+ 
+ static void active_job_cancel() {
+@@ -517,6 +528,8 @@ static std::mutex                        mtx_work;
+ static std::condition_variable           cv_work;
+ static bool                              g_work_stop = false;
+ 
++static void idle_unload_check();   // HERESY 1167: below, with the settings
++
+ static void work_push(std::function<void()> fn) {
+     {
+         std::lock_guard<std::mutex> lock(mtx_work);
+@@ -530,7 +543,12 @@ static void worker_main() {
+         std::function<void()> job;
+         {
+             std::unique_lock<std::mutex> lock(mtx_work);
+-            cv_work.wait(lock, [] { return g_work_stop || !g_work_queue.empty(); });
++            // HERESY 1167: idle, the worker looks every 5 s whether the models have stayed past their time
++            if (!cv_work.wait_for(lock, std::chrono::seconds(5), [] { return g_work_stop || !g_work_queue.empty(); })) {
++                lock.unlock();
++                idle_unload_check();
++                continue;
++            }
+             if (g_work_stop && g_work_queue.empty()) {
+                 return;
+             }
+@@ -562,6 +580,8 @@ struct EngineSettings {
+     bool        keep_loaded;  // every module stays in VRAM between songs
+     int         max_seq;      // KV cache rows, 0 = the whole context
+     int         vae_core;     // VAE tile core frames
++    int         unload_after_min;  // HERESY 1167: idle minutes before the models leave VRAM, 15..240 by 15
++    bool        unload_at_once;    // HERESY 1167: or 15 s after a song
+ };
+ 
+ static EngineSettings      g_settings;
+@@ -973,6 +993,8 @@ static std::string settings_json(const EngineSettings & st) {
+     }
+     yyjson_mut_obj_add_val(doc, root, "models", models);
+     yyjson_mut_obj_add_bool(doc, root, "keep_loaded", st.keep_loaded);
++    yyjson_mut_obj_add_int(doc, root, "unload_after_min", st.unload_after_min);
++    yyjson_mut_obj_add_bool(doc, root, "unload_at_once", st.unload_at_once);
+     yyjson_mut_obj_add_int(doc, root, "max_seq", st.max_seq);
+     yyjson_mut_obj_add_int(doc, root, "max_seq_full", YUE2_CONTEXT);
+     yyjson_mut_obj_add_int(doc, root, "vae_core", st.vae_core);
+@@ -1014,6 +1036,18 @@ static bool settings_parse(const std::string & body, EngineSettings * st, std::s
+     if ((v = yyjson_obj_get(root, "keep_loaded")) && yyjson_is_bool(v)) {
+         st->keep_loaded = yyjson_get_bool(v);
+     }
++    if ((v = yyjson_obj_get(root, "unload_after_min")) && yyjson_is_int(v)) {
++        int n = (int) yyjson_get_int(v);
++        if (n >= 15 && n <= 240 && n % 15 == 0) {
++            st->unload_after_min = n;
++        } else {
++            *why = "the models' idle time must be 15 to 240 minutes, by 15";
++            ok   = false;
++        }
++    }
++    if ((v = yyjson_obj_get(root, "unload_at_once")) && yyjson_is_bool(v)) {
++        st->unload_at_once = yyjson_get_bool(v);
++    }
+     if ((v = yyjson_obj_get(root, "max_seq")) && yyjson_is_int(v)) {
+         int n = (int) yyjson_get_int(v);
+         if (n == 0 || (n >= 4096 && n <= YUE2_CONTEXT)) {
+@@ -1069,6 +1103,37 @@ static void settings_apply(const EngineSettings & next) {
+     }
+ }
+ 
++// HERESY 1167 (Viktor: «Models auto unload… ползунок от 15 минут до 4 часов… мгновенная выгрузка моделей (15 секунд
++// grace)»): on the worker, between jobs: what has stayed in GPU memory through the idle time set in Engine leaves it, the
++// cache with it, once per idle spell; the next song loads them again
++static void idle_unload_check() {
++    int64_t limit;
++    {
++        std::lock_guard<std::mutex> lock(mtx_settings);
++        limit = g_settings.unload_at_once ? 15 : (int64_t) g_settings.unload_after_min * 60;
++    }
++    {
++        std::lock_guard<std::mutex> lock(mtx_active);
++        if (g_active_job) {
++            return;
++        }
++    }
++    int64_t idle = steady_seconds() - g_idle_since.load();
++    if (g_idle_unloaded.load() || idle < limit) {
++        return;
++    }
++    g_idle_unloaded.store(true);
++    size_t held = store_vram_bytes(g_pipeline.store);
++    if (held == 0) {
++        return;
++    }
++    size_t freed = store_unload_idle(g_pipeline.store);
++    qw3lm_kv_free(&g_pipeline.kv);
++    refresh_loaded();
++    fprintf(stderr, "[Server] Idle %lld s: the models left GPU memory (%.0f MB)\n", (long long) idle,
++            (double) freed / (1024.0 * 1024.0));
++}
++
+ static std::string hardware_json() {
+     yyjson_mut_doc * doc  = yyjson_mut_doc_new(NULL);
+     yyjson_mut_val * root = yyjson_mut_obj(doc);
+@@ -1674,7 +1739,7 @@ int main(int argc, char ** argv) {
+     LogCapture log_capture;
+ 
+     // Local addition: engine settings, from --settings over the boot flags
+-    g_settings = { g_models.empty() ? "" : g_models[0].first, g_keep_loaded, params.max_seq, params.vae_core };
++    g_settings = { g_models.empty() ? "" : g_models[0].first, g_keep_loaded, params.max_seq, params.vae_core, 60, false };
+     if (!g_settings_path.empty() && std::filesystem::is_regular_file(g_settings_path)) {
+         std::string why;
+         if (!settings_parse(read_file(g_settings_path), &g_settings, &why)) {
+@@ -1688,8 +1753,9 @@ int main(int argc, char ** argv) {
+         g_keep_loaded   = g_settings.keep_loaded;
+         params.max_seq  = g_settings.max_seq;
+         params.vae_core = g_settings.vae_core;
+-        fprintf(stderr, "[Server] Settings: model %s, keep loaded %s, context %d, VAE tiles %d\n",
+-                g_settings.model.c_str(), g_keep_loaded ? "yes" : "no", params.max_seq, params.vae_core);
++        fprintf(stderr, "[Server] Settings: model %s, keep loaded %s, context %d, VAE tiles %d, idle unload %s\n",
++                g_settings.model.c_str(), g_keep_loaded ? "yes" : "no", params.max_seq, params.vae_core,
++                g_settings.unload_at_once ? "at once (15 s)" : (std::to_string(g_settings.unload_after_min) + " min").c_str());
+     }
+ 
+     // Model loads go through the store: STRICT by default (one half of the
+-- 
+2.43.0
+

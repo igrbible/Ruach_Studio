@@ -1,0 +1,127 @@
+From aa16da26991481a153557c99f095c577b81e7596 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 18:28:33 -0600
+Subject: [PATCH 1020/1177] Spectrum measured on Forge; sharp pictures on first
+ draw
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1020.
+- The spectrum is computed by heresy-lab (lab/spectrum_job.py: the same
+  method as the comparator, in numpy, at the file's own 48 kHz) and fetched
+  through /lab/spectrum as an 8 MB gzipped block — the spectrogram in 0.5 dB
+  steps, the Welch average, the bands — instead of the whole take (80–120 MB
+  of FLAC or WAV over a phone line). 202 while Forge measures; cached after.
+  Measured on a 7-minute take: 36 s before, 9.6 s the first time, 5.5 s from
+  the cache. When the lab is not there the page measures by itself as before.
+- The pictures are shown before they are measured: hidden (1016) they
+  measured 0, were drawn at 320 px and stretched, blurring the text.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-spectrum.js |  65 +++++++++++++++++++++++++++++--
+ tools/public/index.html.gz       | Bin 265931 -> 266895 bytes
+ 2 files changed, 61 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+index ff13ef9..0536913 100644
+--- a/tools/console/heresy-spectrum.js
++++ b/tools/console/heresy-spectrum.js
+@@ -164,7 +164,61 @@
+   // The take comes as FLAC when the server offers it (the same samples, about 40% fewer bytes),
+   // else as it is. Every phase is timed; the times go to the status line.
+   var cache = [];
++  // HERESY 1020: the spectrum computed on Forge by heresy-lab (lab/spectrum_job.py, the same
++  // method in numpy), fetched through the Kit at /lab/spectrum: ~8 MB gzipped instead of the
++  // whole take. 202 while it is computed. Its layout: "HSP1", uint32 header length, header
++  // JSON, uint8 spectrogram (0.5 dB steps from -120 dB), float32 Welch average, float32 bands.
++  function fromLab(name, say) {
++    var started = performance.now();
++    function ask() {
++      return fetch("/lab/spectrum?name=" + encodeURIComponent(name)).then(function (r) {
++        if (r.status === 202) {
++          say("Forge is measuring\u2026 " + Math.round((performance.now() - started) / 1000) + "s");
++          return new Promise(function (resolve) { setTimeout(resolve, 1000); }).then(ask);
++        }
++        if (!r.ok) throw new Error("heresy-lab answered " + r.status);
++        return readAll(r, say);
++      });
++    }
++    return ask().then(function (buf) {
++      var fetched = (performance.now() - started) / 1000, bytes = buf.byteLength;
++      say("unpacking\u2026");
++      var ds = new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip")));
++      return ds.arrayBuffer().then(function (raw) {
++        var dv = new DataView(raw), magic = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
++        if (magic !== "HSP1") throw new Error("not a spectrum");
++        var hl = dv.getUint32(4, true), h = JSON.parse(new TextDecoder().decode(new Uint8Array(raw, 8, hl))), o = 8 + hl;
++        var n = h.frames * h.bins, q = new Uint8Array(raw, o, n), db = new Float32Array(n);
++        for (var i = 0; i < n; i++) db[i] = h.db0 + q[i] * h.dbStep;
++        o += n;
++        var avg = new Float32Array(raw.slice(o, o + 4 * h.welchBins)); o += 4 * h.welchBins;
++        var bands = Array.prototype.slice.call(new Float32Array(raw.slice(o, o + 24)));
++        var freqs = new Float64Array(h.welchBins);
++        for (var k = 0; k < h.welchBins; k++) freqs[k] = k * h.sr / h.welchN;
++        return { seconds: h.seconds, peak: h.peak, sr: h.sr, spec: { db: db, frames: h.frames, bins: h.bins, hop: h.hop },
++                 freqs: freqs, avg: avg, bands: bands, bytes: bytes, where: "Forge",
++                 times: { fetch: fetched, decode: 0, stft: 0, welch: 0 } };
++      });
++    });
++  }
++
+   function analyse(take, say) {
++    var key0 = take.url;
++    for (var j = 0; j < cache.length; j++) if (cache[j].url === key0) return cache[j].promise;
++    if (take.name && window.DecompressionStream) {
++      var viaLab = fromLab(take.name, say).catch(function (error) {
++        say("Forge could not (" + error.message + "): measuring here\u2026");
++        cache = cache.filter(function (c) { return c.url !== key0; });
++        return analyseHere(take, say);
++      });
++      cache.unshift({ url: key0, promise: viaLab });
++      if (cache.length > 4) cache.length = 4;
++      return viaLab;
++    }
++    return analyseHere(take, say);
++  }
++
++  function analyseHere(take, say) {
+     var key = take.url;
+     for (var i = 0; i < cache.length; i++) if (cache[i].url === key) return cache[i].promise;
+     var times = {}, t = performance.now();
+@@ -233,7 +287,7 @@
+ 
+   function drawSpectrogram(el, data, label, color, scale, range, w, h) {
+     var c = canvasFor(el, h || 250, w), g = c.g, pw = c.w - PAD.l - PAD.r, ph = c.h - PAD.t - PAD.b;
+-    var s = data.spec, nyq = SR / 2, dpr = c.dpr;
++    var s = data.spec, nyq = (data.sr || SR) / 2, dpr = c.dpr;   // HERESY 1020: Forge's spectrum keeps 48 kHz
+     var W = Math.round(pw * dpr), H = Math.round(ph * dpr), img = g.createImageData(W, H), px = img.data;
+     var lo = range[0], span = Math.max(1e-6, range[1] - range[0]);
+     // the bin under each pixel row, found once
+@@ -412,16 +466,19 @@
+       if (b) state.painters.specB = { title: labelB + " — spectrogram",
+         paint: function (el, w, h) { return drawSpectrogram(el, b, labelB, COLOR_B, scale, range, w, h); } };
+       $("specStageB").hidden = !b;
++      // shown before they are measured: a hidden canvas measures 0 and would be drawn at 320 px
++      // and stretched (HERESY 1020 — the 1016 hiding had this backwards)
++      panel.classList.add("is-drawn");
+       state.marks = [state.painters.specA.paint($("specA"))];
+       if (b) state.painters.specB.paint($("specB"));
+       state.painters.specAvg.paint($("specAvg"));
+       state.painters.specBands.paint($("specBands"));
+-      panel.classList.add("is-drawn");   // HERESY 1016: the pictures show once there is something on them
+       var tm = a.times || {}, f1 = function (x) { return (x || 0).toFixed(1); };
+       say(clock(a.seconds) + " · peak " + (20 * Math.log10(a.peak + 1e-12)).toFixed(1) + " dBFS" +
+           (b ? " · second " + clock(b.seconds) + ", peak " + (20 * Math.log10(b.peak + 1e-12)).toFixed(1) + " dBFS" : "") +
+-          " · " + (a.bytes / 1e6).toFixed(0) + " MB in " + f1(tm.fetch) + " s, decoded " + f1(tm.decode) +
+-          " s, measured " + f1((tm.stft || 0) + (tm.welch || 0)) + " s");
++          (a.where === "Forge" ? " · measured on Forge, " + (a.bytes / 1e6).toFixed(1) + " MB in " + f1(tm.fetch) + " s"
++            : " · measured here: " + (a.bytes / 1e6).toFixed(0) + " MB in " + f1(tm.fetch) + " s, decoded " + f1(tm.decode) +
++              " s, measured " + f1((tm.stft || 0) + (tm.welch || 0)) + " s"));
+       tick();
+     }).catch(function (error) {
+       if (token === state.drawn) say("Could not measure: " + (error && error.message || error), true);
+-- 
+2.43.0
+

@@ -1,0 +1,127 @@
+From 383dd65e069c02b538eac9671dbc9728468eb36e Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 18:23:40 -0600
+Subject: [PATCH 1019/1177] The song's key beside the title
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1019. A narrow Key list on the title's line (minor and major keys, the
+usual spellings). With a score in the form it shows the score's key, and a
+choice moves the score there. With no score yet the choice waits (a dashed
+frame): the next score that arrives — a plan, a Retake, a transcription — is
+moved to it once, with a word saying so. In Full mode the model writes its
+own score and may ignore a key named in the style; this makes the key the
+song is in a choice of the user's.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   6 +++++
+ tools/console/app.js       |  44 +++++++++++++++++++++++++++++++++++++
+ tools/console/index.html   |  15 +++++++++----
+ tools/public/index.html.gz | Bin 265262 -> 265931 bytes
+ 4 files changed, 61 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6af6db2..d3505e5 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1987,3 +1987,9 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .lora-trigger.is-in:hover { text-decoration: none; }
+ .lora-halves { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+ @media (max-width: 720px) { .lora-row .lora-halves { grid-column: 1 / -1; } }
++
++/* ------------------------------------------------ HERESY 1019: the key beside the title */
++.title-row { flex-wrap: nowrap; align-items: flex-start; }
++.keyfield { flex: none; width: 128px; }
++.keyfield select { padding-left: 9px; padding-right: 4px; }
++#songKey.is-wanted { border-style: dashed; color: var(--amber); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 74d9a87..067b81e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4871,11 +4871,55 @@
+         " semitones, " + r.notes + " notes moved";
+       toast("Score moved to " + TR.keyLabel(r.to));
+       keySeen = ""; paintKeys();
++      if (window.HeresyTranspose) paintSongKey();
+     } catch (error) {
+       toast(error.message, "bad");
+     }
+   }
++  // HERESY 1019: the Key list beside the title. It shows the score's key; a choice moves the
++  // score, or, with no score yet, waits ("wanted") and moves the next score that arrives.
++  var WANT_KEY = "yue2.wantKey";
++  function paintSongKey() {
++    var sel = $("songKey"), sk = TR.scoreKey($("abc").value), want = recall(WANT_KEY) || "";
++    if (!sel.options.length) {
++      var groups = [[-3, "minor"], [0, "major"]].map(function (g) {
++        return '<optgroup label="' + g[1] + '">' + TR.choices(g[0]).map(function (k) {
++          return '<option value="' + TR.keyName(k) + '">' + TR.keyLabel(k).replace(" minor", "m").replace(" major", "") + "</option>";
++        }).join("") + "</optgroup>";
++      });
++      sel.innerHTML = '<option value="">as written</option>' + groups.join("");
++    }
++    var shown = sk ? TR.keyName({ letter: sk.letter, acc: sk.acc, mode: sk.mode === -3 ? -3 : 0 }) : want;
++    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === shown; }) ? shown : "";
++    sel.classList.toggle("is-wanted", !sk && !!want);
++    sel.dataset.tip = sk ? "The score is in " + TR.keyLabel(sk) + ". Pick another key to move it there."
++      : want ? "Wanted: " + TR.keyLabel(TR.parseKey(want)) + ". The next score in the form (a plan, a Retake, a transcription) moves there."
++      : "No score yet. Pick a key and the next score that arrives moves there.";
++  }
+   if (TR) {
++    $("songKey").addEventListener("change", function () {
++      var key = this.value, sk = TR.scoreKey($("abc").value);
++      store(WANT_KEY, key || null);
++      if (sk && key) moveScore(key, "near");
++      else if (key) toast("The next score will move to " + TR.keyLabel(TR.parseKey(key)));
++      paintSongKey();
++    });
++    // a score that arrives (plan, Retake, open, transcription) moves to the wanted key once
++    var lastAbc = $("abc").value;
++    setInterval(function () {
++      var abc = $("abc").value;
++      if (abc === lastAbc) return;
++      var had = !!TR.scoreKey(lastAbc);
++      lastAbc = abc;
++      var want = recall(WANT_KEY), sk = TR.scoreKey(abc);
++      if (!had && sk && want && TR.keyName({ letter: sk.letter, acc: sk.acc, mode: sk.mode === -3 ? -3 : 0 }) !== want) {
++        moveScore(want, "near");
++        lastAbc = $("abc").value;
++        toast("The new score moved to " + TR.keyLabel(TR.parseKey(want)) + ", as wanted");
++      }
++      paintSongKey();
++    }, 1200);
++    paintSongKey();
+     $("transposeBtn").addEventListener("click", function () { moveScore($("transposeTo").value, $("transposeWay").value); });
+     $("keyToScore").addEventListener("click", function () {
+       $("scoreDrawer").open = true;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 9c7bdc3..c8f8f02 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -302,10 +302,17 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ 
+     <form id="composeForm" class="compose" novalidate>
+       <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
+-      <label class="field titlefield">
+-        <span class="label">Title</span>
+-        <input type="text" id="title" placeholder="Song title" autocomplete="off" />
+-      </label>
++      <!-- HERESY 1019: the title and the song's key on one line -->
++      <div class="field-row title-row">
++        <label class="field titlefield grow">
++          <span class="label">Title</span>
++          <input type="text" id="title" placeholder="Song title" autocomplete="off" />
++        </label>
++        <label class="field keyfield">
++          <span class="label">Key</span>
++          <select id="songKey" data-tip="The key the song is in: the score's K:. With a score in the form, a choice moves it there; without one, the choice waits and moves the score that comes (a plan, a Retake, a transcription)."></select>
++        </label>
++      </div>
+       <div class="field-row seedrow">
+         <label class="field seedfield">
+           <span class="label">Music seed <span class="info" tabindex="-1" role="img" aria-label="About the two seeds" data-tip-ref="tip-seeds">i</span></span>
+-- 
+2.43.0
+

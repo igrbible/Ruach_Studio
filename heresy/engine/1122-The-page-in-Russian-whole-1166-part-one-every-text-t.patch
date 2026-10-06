@@ -1,0 +1,2116 @@
+From e1d54d7e27dfd64c55cfb4bd19ad73e6103e4a3e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 3 Oct 2026 20:40:01 -0600
+Subject: [PATCH 1122/1177] The page in Russian, whole (1166, part one): every
+ text the code makes, its pieces translated
+
+The code's toasts, dialogs, menus, hints and tips were English in a Russian page: 1,307 new Russian keys
+(heresy-i18n-ru.js, a block of its own after the old catalog), found by a scan of the code (toasts, dialogs, menu
+labels, texts and tips set by code, the words inside HTML strings) and by harvesting the real page in Russian
+(every room, menu, sheet, dialog, overlay and pane); the harvest went from 1,107 untranslated texts to 175, the rest
+being names, formats, units and the cheat-sheet's own notes.
+
+What the code glued from words, names and numbers is made translatable: tr() pieces where it is made (the run's line,
+its seeds and stages, the take's eyebrow, the engine's detail, the output and slider and memory hints, the style meter,
+the Writer's brief, the lyrics check's and the timing's summaries, the Trainer's says, gate and Train dialog, the GPU
+hint), or spans of their own (the Librarian's summary, the cheat-sheet's counts, the Trainer's cards, picks and facts,
+the Writer's list); drawn again when the language changes. Names stay as typed (translate="no"): take titles in the
+take view and the player, the take ID, the workspaces in a take's menu (HeresyMenu raw items) and in the delete
+dialog's select, the about list's places, the datasheet's head and its sliders' and LoRAs' names, model files, run
+notes. The core sorts its patterns by their fixed text, so a longer pattern wins over a shorter one. Two homonyms
+parted in English: the inspection's "pitch" (was "note"), the Train dialog's "Start training".
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js                |  103 ++-
+ tools/console/help.js               |   12 +-
+ tools/console/heresy-collection.js  |   16 +-
+ tools/console/heresy-gloss.js       |   16 +-
+ tools/console/heresy-gpus.js        |    5 +-
+ tools/console/heresy-i18n-ru.js     | 1312 +++++++++++++++++++++++++++
+ tools/console/heresy-i18n.js        |    5 +-
+ tools/console/heresy-inspect.js     |    2 +-
+ tools/console/heresy-instruments.js |    7 +-
+ tools/console/heresy-menu.js        |    5 +-
+ tools/console/heresy-train.js       |   59 +-
+ tools/console/heresy-writer.js      |    4 +-
+ tools/console/index.html            |    4 +-
+ 13 files changed, 1462 insertions(+), 88 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 0f52b55..f22c4e0 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -147,6 +147,21 @@
+     }, kind === "bad" ? 13000 : 9200);   // HERESY 1026: five seconds more to read
+   }
+ 
++  // HERESY 1166: a text the code glues from words, names and numbers is translated piece by piece where it is made (the
++  // page's translator matches whole texts); what is drawn so is drawn again when the language changes (below)
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  window.addEventListener("ruach-lang", function () {
++    try {
++      paintAllRuns();
++      if (STATE.take) paintTakeHead();
++      paintCardFolds();
++      paintOutput();
++      paintSliders();
++      paintComputeHint();
++      all("[data-fold]").forEach(function (block) { if (block.querySelector(":scope > .label > .fold-peek")) paintFold(block); });
++    } catch (e) { /* the page not built yet: it paints in the language anyway */ }
++  });
++
+   var toasted = {};
+   function toastOnce(key, message, kind) {
+     if (toasted[key]) return;
+@@ -688,13 +703,13 @@
+     if (isFinite(steps) && steps !== outDefault("steps")) parts.push(steps + " steps");
+     if (isFinite(length) && length !== outDefault("duration")) parts.push("up to " + clock(length));
+     if (variations > 1) parts.push(variations + " sounds each");
+-    $("outSummary").textContent = parts.join(" · ");
++    $("outSummary").textContent = parts.map(tr).join(" · ");   // HERESY 1166
+     var notes = [];
+     notes.push("Songs end on their own; max length only caps them (the music tokens stop at " +
+       clock(samplingDefault("semantic", "max_tokens") / FRAME_RATE) + ").");
+     if (format === "wav32") notes.push("WAV 32 is raw float: peak clip is ignored.");
+     if (variations > 1) notes.push("Each song renders " + variations + " times with sound seeds seed, seed + 1\u2026; the music is written once.");
+-    $("outHint").textContent = notes.join(" ");
++    $("outHint").textContent = notes.map(tr).join(" ");
+   }
+ 
+   function saveOutputChoice() {
+@@ -801,7 +816,7 @@
+     STATE.sliderChoice.forEach(function (c) { chosen[c.id] = c; });
+     $("sliderSource").innerHTML = (url
+       ? '<a class="tile-link" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer" data-tip="' +
+-        escape("Open its model card (new tab): " + url) + '"><span>' + escape(src.repo || url) + "</span>\u2197</a>" : "") +
++        escape("Open its model card (new tab): " + url) + '"><span translate="no">' + escape(src.repo || url) + "</span>\u2197</a>" : "") +
+       (src.about ? '<span class="info" tabindex="-1" role="img" aria-label="About the sliders" data-tip="' + escape(src.about) + '"></span>' : "");
+     $("sliderCard").innerHTML = list.map(function (e) {
+       var on = chosen[e.id], ok = e.installed !== false;
+@@ -830,8 +845,8 @@
+       var name = labels[choice.id] || choice.id;
+       return '<div class="slider-row"><span class="slider-name">' + escape(name) + "</span>" +
+         '<input type="range" min="0" max="1" step="0.05" value="' + choice.strength + '" data-strength="' + escape(choice.id) +
+-        '" aria-label="' + escape(name) + ' strength" /><output>' + choice.strength.toFixed(2) + "</output>" +
+-        '<button type="button" class="icon-btn" data-remove="' + escape(choice.id) + '" aria-label="Remove ' + escape(name) + '">✕</button></div>';
++        '" aria-label="' + escape(tr(name + " strength")) + '" /><output>' + choice.strength.toFixed(2) + "</output>" +
++        '<button type="button" class="icon-btn" data-remove="' + escape(choice.id) + '" aria-label="' + escape(tr("Remove " + name)) + '">✕</button></div>';
+     }).join("");
+     var notes = [];
+     if (!STATE.sliderChoice.length) {
+@@ -842,7 +857,7 @@
+       if (on.female && on.male) notes.push("Female and Male together pull in opposite directions.");
+       if (STATE.codes) notes.push("Ignored while music codes are loaded: that music is already written.");
+     }
+-    $("sliderHint").textContent = notes.join(" ");
++    $("sliderHint").textContent = notes.map(tr).join(" ");   // HERESY 1166
+   }
+ 
+   $("sliderChips").addEventListener("click", function (event) {
+@@ -2369,16 +2384,16 @@
+ 
+   function runDescription(job) {
+     var r = job.request, parts = [];
+-    if (job.kind === "replay") return job.what || "same music, rendered again";
++    if (job.kind === "replay") return tr(job.what || "same music, rendered again");
+     if (job.kind === "external") parts.push("started elsewhere");
+-    if (r.plan) return (job.kind === "external" ? "started elsewhere · " : "") + "score only";
++    if (r.plan) return (job.kind === "external" ? tr("started elsewhere") + " · " : "") + tr("score only");
+     if (r.replay) parts.push("from saved codes");
+     if (r.songs > 1) parts.push(r.songs + " songs");
+     if (r.variations > 1) parts.push(r.variations + " sounds each");
+     parts.push(vaeLabel(r.vae) + " VAE");
+     if (FORMAT_LABELS[r.format]) parts.push(FORMAT_LABELS[r.format]);
+     if (job.versioned && job.count) parts.push("versions " + (job.index + 1) + (job.count > 1 ? "\u2013" + (job.index + job.count) : ""));
+-    return parts.join(" · ");
++    return parts.map(tr).join(" · ");              // HERESY 1166
+   }
+ 
+   function runSeeds(job) {
+@@ -2387,7 +2402,7 @@
+     if (job.kind === "transcribe") return "";
+     if (lm && /^\d+$/.test(lm)) parts.push("music seed " + lm + (songs > 1 ? " \u2026 +" + (songs - 1) : ""));
+     if (sound && /^\d+$/.test(sound) && !job.request.plan) parts.push("sound seed " + sound + (variations > 1 ? " \u2026 +" + (variations - 1) : ""));
+-    return parts.join(" · ");
++    return parts.map(tr).join(" · ");              // HERESY 1166
+   }
+ 
+   function stageRead(job, s) {
+@@ -2438,13 +2453,13 @@
+   }
+ 
+   function stageNote(job, s) {
+-    if (s.state === "skipped") return s.skipNote || "Skipped in this mode";
++    if (s.state === "skipped") return tr(s.skipNote || "Skipped in this mode");
+     var extra = [];
+     if (s.key === "tokens" && job.notes.sliders && s.state !== "waiting") extra.push("sliders: " + job.notes.sliders);
+     if (s.state === "running" && job.notes.load) extra.push(job.notes.load);
+     if (s.key === "sound" && s.music) extra.push(clock(s.music) + " of music" + (s.chunks > 1 ? " in " + s.chunks + " chunks" : ""));
+     if (s.truncated) extra.push("hit the token cap");
+-    return s.note + (extra.length ? " · " + extra.join(" · ") : "");
++    return [s.note].concat(extra).map(tr).join(" · ");   // HERESY 1166
+   }
+ 
+   function paintRun() {
+@@ -2463,6 +2478,7 @@
+       else if (job.status === "saving") eyebrow = "writing the files";
+       $("takeEyebrow").textContent = eyebrow;
+       $("takeTitle").textContent = job.title;
++      $("takeTitle").setAttribute("translate", "no");   // HERESY 1166: a title is the user's
+     }
+     var error = job.status === "failed" ? job.error : "";
+     $("runError").classList.toggle("is-hidden", !error);
+@@ -2574,7 +2590,7 @@
+     lamp.dataset.s = s;
+     lamp.classList.toggle("is-gpu", s === "busy" || s === "working" || (s === "loading" && !!live));
+     $("engineState").textContent = state;
+-    $("engineDetail").textContent = detail;
++    $("engineDetail").textContent = String(detail || "").split(" \u00b7 ").map(tr).join(" \u00b7 ");   // HERESY 1166
+     // HERESY 1165: its words, and what runs and waits, are the queue panel's (below), no longer a tip
+     if (typeof QP !== "undefined" && QP) { QP.state = state; QP.detail = detail; paintQueue(); }
+   }
+@@ -2844,7 +2860,7 @@
+   function paintModelPick(settings) {
+     var pick = $("modelPick"), models = (settings && settings.models) || [];
+     pick.innerHTML = models.length ? models.map(function (m) {
+-      return '<option value="' + escape(m) + '">' + escape(m) + (MODEL_SIZES[m] ? " · " + MODEL_SIZES[m] : "") + "</option>";   // HERESY 1017
++      return '<option value="' + escape(m) + '" translate="no">' + escape(m) + (MODEL_SIZES[m] ? " · " + MODEL_SIZES[m] : "") + "</option>";   // HERESY 1017; 1166 a file's name
+     }).join("") : '<option value="">Model: as started</option>';
+     pick.value = (settings && settings.model) || "";
+     pick.disabled = models.length < 2;
+@@ -2893,7 +2909,7 @@
+     else notes.push("Context " + rows.toLocaleString() + " rows: songs up to about " + clock(Math.max(0, rows - 2500) / FRAME_RATE) +
+                     " with a typical prompt; longer ones will not fit.");
+     notes.push($("setKeepLoaded").checked ? "Models stay in GPU memory between songs." : "Each stage leaves GPU memory when it is done.");
+-    $("computeHint").textContent = notes.join(" ");
++    $("computeHint").textContent = notes.map(tr).join(" ");   // HERESY 1166
+   }
+ 
+   function readSettingsForm() {
+@@ -3231,11 +3247,12 @@
+     var eyebrow = [ago(take.created)];
+     if (take.seconds) eyebrow.push(clock(take.seconds) + " long");
+     if (take.render_seconds) eyebrow.push("made in " + clock(take.render_seconds));
+-    $("takeEyebrow").textContent = eyebrow.join(" · ");
++    $("takeEyebrow").textContent = eyebrow.map(tr).join(" · ");   // HERESY 1166
+     // HERESY 1026: the take's ID, the folder name on disk; a click copies it
+-    $("takeEyebrow").insertAdjacentHTML("beforeend", ' · <button type="button" class="take-id mono" data-tip="The take\'s ID (its folder in outputs/). Click to copy.">' +
+-      escape(take.name) + "</button>");
++    $("takeEyebrow").insertAdjacentHTML("beforeend", ' · <button type="button" class="take-id mono" data-tip="The take\'s ID (its folder in outputs/). Click to copy."><span translate="no">' +
++      escape(take.name) + "</span></button>");   // HERESY 1166: the name kept, the tip translated
+     $("takeTitle").textContent = displayTitle(take);
++    $("takeTitle").setAttribute("translate", "no");
+     // Favourite, Rename and Delete as small icons on the title line (Delete asks first)
+     $("takeActions").innerHTML =
+       '<button type="button" class="btn ghost small icon-act' + (take.favorite ? " is-on" : "") + '" id="favTake" aria-pressed="' +
+@@ -3301,7 +3318,7 @@
+     };
+     var addonList = function (key, text, items) {   // items: [name, amount html]
+       var rows = items.length ? items.map(function (it) {
+-        return '<span class="name">' + escape(it[0]) + '</span><span class="amt">' + it[1] + "</span>";
++        return '<span class="name" translate="no">' + escape(it[0]) + '</span><span class="amt">' + it[1] + "</span>";
+       }).join("") : '<span class="none">none</span>';
+       return column(key, '<div class="meta-rows addons">' + rows + "</div>", ' data-field="' + key + '" data-value="' + escape(text) + '"');
+     };
+@@ -3355,8 +3372,8 @@
+     };
+     var item = function (name, url) {
+       var u = web(url);
+-      return "<li>" + (u ? '<a href="' + escape(u) + '" target="_blank" rel="noopener noreferrer">' + escape(name) + '</a><span class="about-where">' +
+-        escape(where(u)) + "</span>" : '<span class="about-name">' + escape(name) + "</span>") + "</li>";
++      return "<li>" + (u ? '<a href="' + escape(u) + '" target="_blank" rel="noopener noreferrer">' + escape(name) + '</a><span class="about-where" translate="no">' +
++        escape(where(u)) + "</span>" : '<span class="about-name" translate="no">' + escape(name) + "</span>") + "</li>";   // HERESY 1166: names
+     };
+     var list = function (title, items) {
+       return "<section><h4>" + title + '</h4><ul class="about-links">' + (items.length ? items.join("") : '<li class="about-none">none listed</li>') + "</ul></section>";
+@@ -3742,6 +3759,7 @@
+     if (STATE.playerTake && STATE.playerTake.name === entry.name) {
+       STATE.playerTake = entry;
+       $("playbarTitle").textContent = displayTitle(entry);
++      $("playbarTitle").setAttribute("translate", "no");   // HERESY 1166: a title and its style are the user's
+     }
+     paintLibrary();
+     paintCoverTakes();
+@@ -3814,6 +3832,7 @@
+     $("takeBody").classList.add("is-hidden");
+     $("takeEmpty").classList.remove("is-hidden");
+     $("takeTitle").textContent = "Nothing playing";
++    $("takeTitle").setAttribute("translate", "yes");
+     $("takeEyebrow").textContent = "no run yet";
+     $("takeActions").innerHTML = "";
+     paintRunReturn();
+@@ -3827,6 +3846,7 @@
+     STATE.peaks = null;
+     $("playbar").classList.add("is-empty");
+     $("playbarTitle").textContent = "Nothing loaded";
++    $("playbarTitle").setAttribute("translate", "yes");
+     $("playbarTitle").dataset.tip = "Pick a take on the right";
+     paintCover(null);
+     $("timeNow").textContent = "0:00";
+@@ -3965,6 +3985,7 @@
+     $("playbar").classList.remove("is-empty");
+     // just the name; its style prompt on hover (downloads are on the song page)
+     $("playbarTitle").textContent = displayTitle(take);
++    $("playbarTitle").setAttribute("translate", "no");
+     paintRate();   // HERESY 1042
+     if (take.style) $("playbarTitle").dataset.tip = take.style; else $("playbarTitle").removeAttribute("data-tip");
+     paintCover(take);                                       // HERESY 1106: the subtitle and the cover tile
+@@ -4074,7 +4095,7 @@
+     var back = document.createElement("div"), before = document.activeElement;
+     back.className = "hd-back art-back";
+     back.innerHTML = '<figure class="art-fig" role="dialog" aria-modal="true" aria-label="The artwork" tabindex="-1">' +
+-      '<img class="art-img" alt="" draggable="false" />' +
++      '<img class="art-img" alt="" draggable="false" translate="no" />' +
+       '<figcaption class="art-cap"><button type="button" class="coll-play art-play" aria-label="Play"></button>' +
+       '<span class="art-title"></span><span class="art-count"></span>' +
+       '<button type="button" class="pb-btn art-close" aria-label="Close" data-tip="Close (Esc)">✕</button></figcaption>' +
+@@ -5413,10 +5434,10 @@
+       setCodes(null);
+       var cliches = findCliches(lyrics), cut = finishReason === "length";
+       var sections = lyrics.split(/\r?\n/).filter(function (l) { return l.trim().charAt(0) === "["; }).length;
+-      $("museStatus").textContent = model + " · " + Math.round((Date.now() - started) / 100) / 10 + "s · " + sung.length + " lines · " +
+-        sections + " sections" + (retried ? " · rewritten once" : "") +
+-        (cliches.length ? " · stock phrases left: " + cliches.join(", ") : "") +
+-        (cut ? " · CUT OFF at the token limit" : "") + " · model left as it was";
++      // HERESY 1166: the model's name as it is, the rest translated piece by piece
++      $("museStatus").textContent = [model].concat([Math.round((Date.now() - started) / 100) / 10 + "s", sung.length + " lines", sections + " sections",
++        retried ? "rewritten once" : "", cliches.length ? "stock phrases left: " + cliches.join(", ") : "",
++        cut ? "CUT OFF at the token limit" : "", "model left as it was"].filter(Boolean).map(tr)).join(" · ");
+       $("museStatus").classList.toggle("bad", cut);
+       toast("Brief written: " + title, "good");
+       if ($("autoRun").checked) {
+@@ -5845,20 +5866,27 @@
+   var FOLD_KEY = "yue2.fold";
+   var folds = {};
+   try { folds = JSON.parse(recall(FOLD_KEY) || "{}") || {}; } catch (error) { folds = {}; }
++  // HERESY 1166: a peek is [the words that translate, what the user wrote], drawn by setPeek
+   function peekOf(block) {
+     var area = block.querySelector("textarea");
+-    if (!area) return "";
++    if (!area) return ["", ""];
+     var text = area.value.trim();
+-    if (!text) return "empty";
++    if (!text) return ["empty", ""];
+     var first = text.split("\n")[0].replace(/\s+/g, " ");
+     if (first.length > 72) first = first.slice(0, 72) + "…";
+-    return block.dataset.fold === "lyrics" ? text.split("\n").length + " lines · " + first : first;
++    return block.dataset.fold === "lyrics" ? [text.split("\n").length + " lines", first] : ["", first];
++  }
++  function setPeek(el, p) {
++    el.textContent = "";
++    if (p[0]) el.appendChild(document.createTextNode(p[0]));
++    if (p[0] && p[1]) el.appendChild(document.createTextNode(" \u00b7 "));
++    if (p[1]) { var own = document.createElement("span"); own.setAttribute("translate", "no"); own.textContent = p[1]; el.appendChild(own); }
+   }
+   function paintFold(block) {
+     var on = !!folds[block.dataset.fold], label = block.querySelector(":scope > .label");
+     block.classList.toggle("is-folded", on);
+     label.setAttribute("aria-expanded", on ? "false" : "true");
+-    if (on) label.querySelector(".fold-peek").textContent = peekOf(block);
++    if (on) setPeek(label.querySelector(".fold-peek"), peekOf(block));
+   }
+   all("[data-fold]").forEach(function (block) {
+     var label = block.querySelector(":scope > .label");
+@@ -6151,7 +6179,7 @@
+       { sep: true },
+       HC ? { icon: "▦", label: "Workspaces", items: ws.map(function (w) {
+         var on = inWs.indexOf(w) >= 0;
+-        return { label: w, checked: on, action: function () { HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: [name] }, on ? "Taken out of “" + w + "”" : "Added to “" + w + "”"); } };
++        return { label: w, raw: true, checked: on, action: function () { HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: [name] }, on ? "Taken out of “" + w + "”" : "Added to “" + w + "”"); } };
+       }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
+         window.HeresyDialog.prompt("A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name" }).then(function (w) {
+           w = (w || "").trim();
+@@ -6165,7 +6193,7 @@
+         var list = sel.length > 1 && sel.indexOf(name) >= 0 ? sel : [name], place = inLib ? HC.place() : "";
+         var many = list.length > 1 ? " " + list.length : "";
+         return { icon: "⇥", label: "Move" + many + " to", hint: inLib && place && place.charAt(0) !== "_" ? "out of “" + place + "”" : "out of every other", items: ws.filter(function (w) { return !(inLib && w === place); }).map(function (w) {
+-          return { label: w, action: function () { HC.moveTo(w, list, inLib); } };
++          return { label: w, raw: true, action: function () { HC.moveTo(w, list, inLib); } };
+         }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
+           window.HeresyDialog.prompt("A new workspace for " + (list.length > 1 ? "the " + list.length + " checked takes" : "“" + displayTitle(take) + "”"), "", { ok: "Move there", placeholder: "its name" }).then(function (w) {
+             w = (w || "").trim();
+@@ -6409,9 +6437,12 @@
+   function paintCurrentSong() {
+     var style = $("style").value.trim(), lyrics = $("lyrics").value.trim(), abc = $("abc").value.trim() || STATE.abcRendered || "";
+     $("curTitle").textContent = $("title").value.trim() || "untitled";
++    $("curTitle").setAttribute("translate", $("title").value.trim() ? "no" : "yes");   // HERESY 1166: the user's own words
+     $("curStyle").textContent = style || "no style yet";
++    $("curStyle").setAttribute("translate", style ? "no" : "yes");
+     $("curStyleSize").textContent = style ? style.length + " characters" : "";
+     $("curLyrics").textContent = lyrics || "no lyrics yet";
++    $("curLyrics").setAttribute("translate", lyrics ? "no" : "yes");
+     $("curLyricsSize").textContent = lyrics ? lyrics.split(/\r?\n/).filter(function (l) { return l.trim(); }).length + " lines" : "";
+     var h = window.HeresyAssist ? window.HeresyAssist.abcHeader(abc) : {};
+     $("curScore").textContent = h.K || h.M || h.Q ? "K:" + (h.K || "?") + "  M:" + (h.M || "?") + "  Q:" + (h.Q || "?")
+@@ -6660,19 +6691,19 @@
+   try { Object.assign(cardFolds, JSON.parse(recall(CARD_FOLD_KEY) || "{}")); } catch (error) { /* the defaults */ }
+   function cardPeek(which) {
+     var text = (which === "prompt" ? $("metaStyle").textContent : $("metaLyrics").textContent).trim();
+-    if (!text) return "";
++    if (!text) return ["", ""];
+     var first = text.split("\n").filter(function (l) { return l.trim() && l.trim().charAt(0) !== "["; })[0] || "";
+     first = first.replace(/\s+/g, " ");
+     if (first.length > 70) first = first.slice(0, 70) + "…";
+-    return which === "lyrics" ? text.split("\n").filter(function (l) { return l.trim(); }).length + " lines · " + first
+-                              : text.length + " characters · " + first;
++    return which === "lyrics" ? [text.split("\n").filter(function (l) { return l.trim(); }).length + " lines", first]
++                              : [text.length + " characters", first];
+   }
+   function paintCardFolds() {
+     all("[data-card-fold]").forEach(function (panel) {
+       var which = panel.dataset.cardFold, on = !!cardFolds[which];
+       panel.classList.toggle("is-folded", on);
+       panel.querySelector("h3").setAttribute("aria-expanded", on ? "false" : "true");
+-      panel.querySelector(".fold-peek").textContent = on ? cardPeek(which) : "";
++      if (on) setPeek(panel.querySelector(".fold-peek"), cardPeek(which)); else panel.querySelector(".fold-peek").textContent = "";
+     });
+   }
+   all("[data-card-fold]").forEach(function (panel) {
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 10568f8..d985f53 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -10,6 +10,10 @@
+ (function (root) {
+   "use strict";
+ 
++  // HERESY 1166: the meter's sentences translated whole where they are made, and made again in a new language
++  function tr(s) { return root.RuachI18n ? root.RuachI18n.t(s) : s; }
++  root.addEventListener("ruach-lang", function () { paintMeter(); });
++
+   var ODE = "How many steps the sound solver takes to turn the music tokens into audio (flow matching, midpoint method). " +
+     "32 is the release setting; 160 is the ceiling.\n" +
+     "Each step runs the sound model twice over the whole song, so 64 steps make this stage take twice as long as 32; " +
+@@ -361,10 +365,10 @@
+     if (!style || !out) return;
+     var s = estimateTokens(style.value), both = s + (lyrics ? estimateTokens(lyrics.value) : 0), budget = promptBudget();
+     var warn = styleWarnings(style.value, lyrics ? lyrics.value : "");
+-    out.textContent = style.value.length.toLocaleString() + " characters, about " + s.toLocaleString() + " tokens. " +
+-      "Style and lyrics together: about " + both.toLocaleString() + " of " + budget.toLocaleString() + " tokens" +
+-      (both > budget ? " \u2014 too long for a full-length song and score." : ".") +
+-      (warn.length ? "\n\u26a0 Unlike the model's training styles: " + warn.join("; ") + "." : "");
++    out.textContent = tr(style.value.length.toLocaleString() + " characters, about " + s.toLocaleString() + " tokens.") + " " +
++      tr("Style and lyrics together: about " + both.toLocaleString() + " of " + budget.toLocaleString() + " tokens" +
++         (both > budget ? " \u2014 too long for a full-length song and score." : ".")) +
++      (warn.length ? "\n\u26a0 " + tr("Unlike the model's training styles:") + " " + warn.map(tr).join("; ") + "." : "");
+     out.classList.toggle("is-warn", (both > budget * 0.75 && both <= budget) || warn.length > 0);
+     out.classList.toggle("is-over", both > budget);
+   }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index a654ed0..4115b94 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -220,11 +220,15 @@
+     var count = function (f) { return inPlace.filter(f).length; }, kinds = {};
+     inPlace.forEach(function (r) { kinds[r.kind] = (kinds[r.kind] || 0) + 1; });
+     var parts = [inPlace.length + " take" + (inPlace.length === 1 ? "" : "s") + (rows.length !== inPlace.length ? " (" + rows.length + " shown)" : ""), hm(secs)];
++    var kindsSaid = Object.keys(kinds).sort(function (a, b) { return kinds[b] - kinds[a]; }).map(function (k) { return kinds[k] + " " + (KINDS[k] || k); });
+     var liked = count(function (r) { return r.rating > 0; }), disliked = count(function (r) { return r.rating < 0; }), fav = count(function (r) { return r.favorite; }), notes = count(function (r) { return r.note; });
+     if (liked) parts.push(liked + " liked"); if (disliked) parts.push(disliked + " disliked"); if (fav) parts.push(fav + " \u2605"); if (notes) parts.push(notes + " with a note");
+-    parts.push(Object.keys(kinds).sort(function (a, b) { return kinds[b] - kinds[a]; }).map(function (k) { return kinds[k] + " " + (KINDS[k] || k); }).join(", "));
++    parts.push(kindsSaid);
+     parts.push(state.rows.length + " in the library");
+-    $("collNote").textContent = parts.filter(Boolean).join(" \u00b7 ");
++    // HERESY 1166: every piece its own text, so each translates (the kinds of take as a list of their own)
++    $("collNote").innerHTML = parts.filter(function (p) { return p && p.length; }).map(function (p) {
++      return Array.isArray(p) ? p.map(function (k) { return "<span>" + esc(k) + "</span>"; }).join(", ") : "<span>" + esc(p) + "</span>";
++    }).join(" \u00b7 ");
+     paintBulk(rows);
+   }
+ 
+@@ -283,7 +287,7 @@
+     var clock = state.hooks.clock;
+     $("collTrashDays").value = String(state.trashDays || 0);
+     $("collWhere").innerHTML = " \u203a <span>Trash</span>";   // HERESY 1165: the word its own text
+-    $("collNote").textContent = state.trash.length + " in the trash · " + (state.trash.reduce(function (s, i) { return s + i.bytes; }, 0) / 1e9).toFixed(2) + " GB";
++    $("collNote").innerHTML = "<span>" + state.trash.length + " in the trash</span> · <span>" + (state.trash.reduce(function (s, i) { return s + i.bytes; }, 0) / 1e9).toFixed(2) + " GB</span>";   // HERESY 1166
+     $("collGrid").className = "coll-grid list";
+     var nsel = Object.keys(state.tsel).length;             // HERESY 1058: the button says what it will do
+     $("collEmpty").textContent = nsel ? "Delete " + nsel + " for good" : "Wipe out the trash";
+@@ -1082,7 +1086,7 @@
+       '<p class="row-hint">' + takes.length + " take" + (takes.length === 1 ? "" : "s") + " in it. What becomes of them?</p>" +
+       '<label class="coll-opt"><input type="radio" name="wsDel" value="only" checked /><span><b>Only the workspace goes.</b> Its takes stay in the library, unsorted: in All Workspaces, and in any other workspace they belong to.</span></label>' +
+       '<label class="coll-opt"><input type="radio" name="wsDel" value="move" /><span><b>Its takes move into</b> <select id="wsDelTo">' +
+-        others.map(function (x) { return "<option>" + esc(x) + "</option>"; }).join("") + '<option value="__new">+ a new workspace\u2026</option></select>, then the workspace goes.</span></label>' +
++        others.map(function (x) { return '<option translate="no">' + esc(x) + "</option>"; }).join("") + '<option value="__new">+ a new workspace\u2026</option></select>, then the workspace goes.</span></label>' +
+       '<label class="coll-opt is-danger"><input type="radio" name="wsDel" value="trash" /><span><b>The workspace goes with its takes.</b> The takes go to the trash, which gives them back until it is emptied.</span></label>' +
+       (shared.length ? '<label class="check coll-opt-sub"><input type="checkbox" id="wsDelSpare" checked /> <span>Spare the ' + shared.length + " take" + (shared.length === 1 ? "" : "s") + " that also belong to another workspace</span></label>" : "") +
+       '<div class="dv-actions sheet-acts"><span class="spacer"></span><button type="button" class="btn ghost small" data-dlg-close="1">Cancel</button>' +
+@@ -1116,7 +1120,7 @@
+   var MODES = { off: "Direct", plan: "Plan", full: "Full" };
+   function kv(k, v) { return v === undefined || v === null || v === "" ? "" : '<div class="ds-kv"><span>' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }
+   // HERESY 1128: a long name (a LoRA's path) wraps under its value instead of pushing it out; the whole id on hover
+-  function kvFull(k, v, full) { return '<div class="ds-kv ds-kv-long" title="' + esc(full || k) + '"><span>' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }
++  function kvFull(k, v, full) { return '<div class="ds-kv ds-kv-long" title="' + esc(full || k) + '"><span translate="no">' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }   // 1166: a slider's or a LoRA's name
+   function samplingTable(title, s) {
+     if (!s) return "";
+     var names = { temperature: "temperature", top_p: "top-p", top_k: "top-k", repetition_penalty: "repetition penalty", penalty_window: "penalty window", min_tokens: "min tokens", max_tokens: "max tokens" };
+@@ -1140,7 +1144,7 @@
+                     cfg_scale: 1, output_format: 1, title: 1, vae: 1, sliders: 1, loras: 1, parent: 1, plan_only: 1, mp3_bitrate: 1, peak_clip: 1, lm_batch_size: 1, synth_batch_size: 1 };
+       var rest = Object.keys(q).filter(function (k) { return !known[k] && (typeof q[k] !== "object" || q[k] === null); });
+       back.querySelector(".ds-box").innerHTML =
+-        '<div class="ds-head"><div><div class="sheet-title">' + esc(r.title || t.title || name) + '</div><div class="coll-meta mono">' + esc(name) + "</div>" +
++        '<div class="ds-head"><div><div class="sheet-title" translate="no">' + esc(r.title || t.title || name) + '</div><div class="coll-meta mono" translate="no">' + esc(name) + "</div>" +
+         '<div class="coll-meta"><span>' + esc(h.ago(t.created)) + "</span>" + (t.seconds ? " \u00b7 <span>" + h.clock(t.seconds) + "</span>" : "") + (t.render_seconds ? " \u00b7 <span>made in " + h.clock(t.render_seconds) + "</span>" : "") +
+         (t.model ? " \u00b7 <span translate=\"no\">" + esc(t.model) + "</span>" : "") + (t.truncated ? " \u00b7 <span>hit the token cap</span>" : "") + (q.parent ? " \u00b7 <span>from " + esc(q.parent) + "</span>" : "") + "</div></div>" +
+         '<span class="spacer"></span><button type="button" class="btn ghost small" data-ds="json">Copy request JSON</button>' +
+diff --git a/tools/console/heresy-gloss.js b/tools/console/heresy-gloss.js
+index 312775b..3e7bd62 100644
+--- a/tools/console/heresy-gloss.js
++++ b/tools/console/heresy-gloss.js
+@@ -18,6 +18,12 @@
+   function lab() { return "/lab"; }
+   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
+   function grade(v) { return v === null || v === undefined ? "none" : v >= 0.6 ? "ok" : v >= 0.4 ? "weak" : "bad"; }
++  // HERESY 1166: the summary lines translated piece by piece; the last results drawn again when the language changes
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  var last = { gloss: null, timing: null };
++  window.addEventListener("ruach-lang", function () {
++    try { if (last.gloss && state.take) paint(last.gloss); if (last.timing && state.take) ktPaint(last.timing); } catch (e) { /* gone */ }
++  });
+ 
+   function say(text, bad) {
+     $("glossState").textContent = text || "";
+@@ -25,6 +31,7 @@
+   }
+ 
+   function paint(r) {
++    last.gloss = r;
+     if (state.take) window.dispatchEvent(new CustomEvent("heresy-step", { detail: { name: state.take.name, step: "gloss" } }));   // HERESY 1029
+     var box = $("glossResult");
+     box.textContent = "";
+@@ -53,9 +60,9 @@
+ 
+     var sum = document.createElement("p");
+     sum.className = "gloss-sum";
+-    sum.textContent = (r.reached ? "Reached lyric line " + r.reached.line + " of " + r.lines + " at " + clock(r.reached.at) : "No lyric line matched") +
+-      " · returns back: " + r.backs + " · " + r.distinct + " distinct of " + r.total + " heard segments" +
+-      " · " + r.model + ", GPU" + r.gpu + ", " + r.took + " s" + (r.at ? " · " + r.at : "");
++    sum.textContent = [tr(r.reached ? "Reached lyric line " + r.reached.line + " of " + r.lines + " at " + clock(r.reached.at) : "No lyric line matched"),
++      tr("returns back: " + r.backs), tr(r.distinct + " distinct of " + r.total + " heard segments"),
++      r.model + ", GPU" + r.gpu + ", " + r.took + " s"].concat(r.at ? [r.at] : []).join(" · ");
+     box.appendChild(sum);
+ 
+     var list = document.createElement("ol");
+@@ -125,7 +132,8 @@
+     $("ktLrc").href = base + "&fmt=lrc"; $("ktLrc").download = file + ".lrc";
+     $("ktSrt").href = base + "&fmt=srt"; $("ktSrt").download = file + ".srt";
+     var guessed = r.rows.filter(function (x) { return x.guessed; }).length;
+-    $("ktState").textContent = r.rows.length + " lines · " + Math.round(r.heard * 100) + " % on heard words" + (guessed ? " · " + guessed + " guessed" : "") + " · " + r.language;
++    last.timing = r;
++    $("ktState").textContent = [r.rows.length + " lines", Math.round(r.heard * 100) + " % on heard words", guessed ? guessed + " guessed" : ""].filter(Boolean).map(tr).concat([r.language]).join(" · ");
+     $("ktRun").textContent = "Time again";
+     $("ktRows").innerHTML = r.rows.map(function (x) {
+       return '<li class="' + (x.guessed ? "is-guessed" : "") + '"><button type="button" class="kt-t mono" data-kt="' + x.start + '">' + ktClock(x.start) + "</button><span>" +
+diff --git a/tools/console/heresy-gpus.js b/tools/console/heresy-gpus.js
+index 5be9408..02d5712 100644
+--- a/tools/console/heresy-gpus.js
++++ b/tools/console/heresy-gpus.js
+@@ -16,6 +16,9 @@
+     return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
+   }
+   function toast(t, kind) { if (state.hooks) state.hooks.toast(t, kind); }
++  // HERESY 1166: the hint's sentences translated each, and again when the language changes
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  window.addEventListener("ruach-lang", function () { if (state.data) hint(); });
+ 
+   function paint() {
+     var host = $("gpuRoles");
+@@ -64,7 +67,7 @@
+     if (c.train.indexOf(c.studio) >= 0) say.push("Training may take GPU" + c.studio + ", the studio’s card: while it does, synthesis waits.");
+     else say.push("Training never takes GPU" + c.studio + ": synthesis and training go on side by side.");
+     if (d.studio_now != null && d.studio_now !== d.roles.studio) say.push("Saved: the studio on GPU" + d.roles.studio + "; it still runs on GPU" + d.studio_now + " until it restarts.");
+-    $("gpuHint").textContent = say.join(" ");
++    $("gpuHint").textContent = say.map(tr).join(" ");
+     var b = $("gpuRestart");
+     b.hidden = !(d.studio_now != null && d.studio_now !== d.roles.studio);
+     b.textContent = "Restart the studio on GPU" + d.roles.studio;
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 6b16413..902c1ff 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1046,3 +1046,1315 @@ RuachI18n.add("ru", {
+ "≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.": "≈ Догадка: художник не знает этот инструмент, и критик не нашёл его ни на одной из нарисованных картинок.",
+ "⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "⚠ Имя в стиле — просьба, а не обещание. Что играют ▶ A и ▶ B, то YuE2 и даёт на это имя, примерно в девяти случаях из десяти. Бывают великолепные пробы, A и B согласны, но инструмент не тот, что просили: верь уху, а не имени."
+ });
++
++// HERESY 1166: the rest of the page, the code's toasts, dialogs and menus, and the texts it glues from pieces
++// (patterns; plural forms as { one, few, many, other }). Made by build_cat.py from cat/ru_1166_*.py.
++RuachI18n.add("ru", {
++"Night": "Ночь",
++"Day": "День",
++"As the system: night now": "Как в системе: сейчас ночь",
++"As the system: day now": "Как в системе: сейчас день",
++"{0}. Click: day → night → as the system. Day {1}, night {2}: pick another in the list to change either.": "{0}. Клик: день → ночь → как в системе. Днём — {1}, ночью — {2}: выбери другую в списке, чтобы сменить любую.",
++"Scroll & Brick": "Свиток и кирпич",
++"Scroll by Lamplight": "Свиток при лампе",
++"Nord": "Nord",
++"Dracula": "Dracula",
++"Gruvbox": "Gruvbox",
++"Add {0} to favorites": "{0}: в избранное",
++"Remove {0} from favorites": "{0}: убрать из избранного",
++"{#0} of {#1}": "{0} из {1}",
++"{0} is kept within {1}–{2}": "{0}: держится в пределах {1}–{2}",
++"Min tokens may not pass Max tokens": "Минимум токенов не может быть больше максимума",
++"Open: click to lock it again": "Открыто: клик — снова запереть",
++"Sampling reset to defaults": "Сэмплинг сброшен к стандартным значениям",
++"custom": "своё",
++"custom: {0}": "своё: {0}",
++"custom {0}": "своё {0}",
++"lowest": "наименьшее",
++"low": "низкое",
++"highest": "наивысшее",
++"guidance {0}": "ведение {0}",
++"guidance default (the engine's at the time)": "ведение стандартное (каким было у движка в тот момент)",
++"temperature {0} · top-p {1} · top-k {2}": "температура {0} · top-p {1} · top-k {2}",
++"Sliders reset to the tuned defaults": "Слайдеры сброшены к настроенным значениям",
++"Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Вывод сброшен: WAV 24 бит, шагов: {0}, без ограничения длины ниже стандартного",
++"ODE steps must be a whole number, 1 or more": "Шаги ODE: целое число, 1 или больше",
++"Max length must be a number of seconds above 0": "Макс. длина: число секунд больше 0",
++"Sound variations must be between 1 and 9": "Звуковых вариаций: от 1 до 9",
++"Peak clip must be a whole number, 0 or more": "Срез пиков: целое число, 0 или больше",
++"MP3 {#0} kbps": "MP3 {0} кбит/с",
++"{#0} steps": { "one": "{0} шаг", "few": "{0} шага", "many": "{0} шагов", "other": "{0} шага" },
++"up to {0}": "до {0}",
++"{#0} sounds each": { "one": "по {0} звучанию", "few": "по {0} звучания", "many": "по {0} звучаний", "other": "по {0} звучания" },
++"Songs end on their own; max length only caps them (the music tokens stop at {0}).": "Песни заканчиваются сами; макс. длина лишь ограничивает их (музыкальные токены останавливаются на {0}).",
++"WAV 32 is raw float: peak clip is ignored.": "WAV 32 — сырая плавающая точка: срез пиков не действует.",
++"Each song renders {#0} times with sound seeds seed, seed + 1…; the music is written once.": { "one": "Каждая песня звучит {0} раз со звуковыми сидами seed, seed + 1…; музыка пишется один раз.", "few": "Каждая песня звучит {0} раза со звуковыми сидами seed, seed + 1…; музыка пишется один раз.", "many": "Каждая песня звучит {0} раз со звуковыми сидами seed, seed + 1…; музыка пишется один раз.", "other": "Каждая песня звучит {0} раза со звуковыми сидами seed, seed + 1…; музыка пишется один раз." },
++"in the song form ·": "в форме песни ·",
++"{#0} voice and genre sliders · {#1} in the song form": "Слайдеров голоса и жанра: {0} · в форме песни: {1}",
++"{#0} voice and genre sliders · none in the song form": "Слайдеров голоса и жанра: {0} · в форме песни ни одного",
++"No sliders on this server (start it with --sliders).": "На этом сервере нет слайдеров (запусти его с --sliders).",
++"{#0} active; experimental, and stacking is untested by the authors.": "Включено: {0}; это эксперимент, и наложение авторы не проверяли.",
++"They were trained in Direct mode; here they steer the music, not the score.": "Их обучали в режиме «Напрямую»; здесь они направляют музыку, а не партитуру.",
++"Female and Male together pull in opposite directions.": "Female и Male вместе тянут в противоположные стороны.",
++"Ignored while music codes are loaded: that music is already written.": "Не действуют, пока загружены музыкальные коды: эта музыка уже написана.",
++"{0} strength": "{0}: сила",
++"Remove {0}": "Убрать {0}",
++"The style already has “{0}”": "В стиле уже есть «{0}»",
++"Added “{0}” to the style": "«{0}» добавлено в стиль",
++"Codes dropped: Generate writes new music from the prompt": "Коды сброшены: «Создать» напишет новую музыку по промпту",
++"{0} Now: {1}": "{0} Сейчас: {1}",
++"New song: the form is back to its defaults (your VAE, output and theme choices stay)": "Новая песня: форма вернулась к стандартным значениям (выбранные VAE, вывод и тема остаются)",
++"Example loaded: {0} (with its score) · Direct mode": "Пример загружен: {0} (с партитурой) · режим «Напрямую»",
++"Example loaded: {0} (with its score)": "Пример загружен: {0} (с партитурой)",
++"Example loaded: {0} · Direct mode": "Пример загружен: {0} · режим «Напрямую»",
++"Example loaded: {0}": "Пример загружен: {0}",
++"No examples were built into this page": "В эту страницу не встроено ни одного примера",
++"Score removed": "Партитура убрана",
++"Score loaded — melody mode suits covers best": "Партитура загружена — для каверов лучше всего режим мелодии",
++"{0} must be a whole number, or blank for random": "{0}: целое число или пусто для случайного",
++"{0} must be below 2^63": "{0}: меньше 2^63",
++"Invisible control characters were taken out of the title (they can reorder or hide text)": "Из названия убраны невидимые управляющие символы (они могут переставлять или прятать текст)",
++"Direct mode ignores a supplied score — pick full or melody": "Режим «Напрямую» не берёт свою партитуру — выбери полный план или мелодию",
++"Write a style prompt or lyrics first": "Сначала напиши промпт стиля или текст",
++"Guidance must be a number, 0 or more": "Ведение: число, 0 или больше",
++"A style prompt is required": "Нужен промпт стиля",
++"Instrumental: planning the score first, then the vocal line moves to the instrument and it renders": "Инструментал: сперва планируется партитура, потом вокальная линия уходит в инструмент, и звучит",
++"The planned score could not be made instrumental: {0}": "Запланированную партитуру не удалось сделать инструментальной: {0}",
++"Score planned; {0}. Rendering the instrumental.": "Партитура запланирована; {0}. Звучит инструментал.",
++"Plan or paste a score first; this moves its vocal melody to the instrument": "Сначала запланируй или вставь партитуру; это переносит её вокальную мелодию в инструмент",
++"{#0} vocal notes moved to the instrument; Instrumental is on for Generate": { "one": "{0} вокальная нота перенесена в инструмент; «Инструментал» включён для «Создать»", "few": "{0} вокальные ноты перенесены в инструмент; «Инструментал» включён для «Создать»", "many": "{0} вокальных нот перенесено в инструмент; «Инструментал» включён для «Создать»", "other": "{0} вокальные ноты перенесены в инструмент; «Инструментал» включён для «Создать»" },
++"Cannot convert this score: {0}": "Эту партитуру не перевести: {0}",
++"Loaded codes already fix the music; clear them to make an instrumental": "Загруженные коды уже закрепляют музыку; убери их, чтобы сделать инструментал",
++"Instrumental: {0}": "Инструментал: {0}",
++"Cannot make this score instrumental: {0}": "Эту партитуру не сделать инструментальной: {0}",
++"Loaded codes render one song; use Sound variations for more takes of it": "Загруженные коды звучат одной песней; для новых семплов из неё — «Звуковые вариации»",
++"Queued {#0} versions of {1} in {#2} passes of up to {#3}": "В очереди версий {1}: {0}, за проходов: {2}, до {3} за раз",
++"Queued {#0} versions of {1}": "В очереди версий {1}: {0}",
++"Queued: {0}": "В очереди: {0}",
++"Planning writes a score: choose Full plan or Melody only": "Планирование пишет партитуру: выбери «Полный план» или «Только мелодия»",
++"A style prompt and lyrics are both required": "Нужны и промпт стиля, и текст",
++"Planning the score for {0}": "Планируется партитура для {0}",
++"not a prompt": "это не промпт",
++"Prompt loaded from {0}": "Промпт загружен из {0}",
++"Could not read {0} as a prompt ({1})": "{0} не читается как промпт ({1})",
++"unexpected indentation on line {0}": "неожиданный отступ в строке {0}",
++"could not read line {0}": "не прочитать строку {0}",
++"Sound": "Звук",
++"Decode": "Декодирование",
++"25 per second of music": "25 на секунду музыки",
++"25 per second of music · {#0} songs side by side": "25 на секунду музыки · песен рядом: {0}",
++"Flow matching, {#0} steps": { "one": "Flow matching, {0} шаг", "few": "Flow matching, {0} шага", "many": "Flow matching, {0} шагов", "other": "Flow matching, {0} шага" },
++"Flow matching, {#0} steps · {#1} variations": "Flow matching, шагов: {0} · вариаций: {1}",
++"VAE: {0}": "VAE: {0}",
++"Skipped in this mode": "В этом режиме пропускается",
++"sliders: {0}": "слайдеры: {0}",
++"{0} of music": "{0} музыки",
++"{0} of music in {#1} chunks": "{0} музыки, кусков: {1}",
++"hit the token cap": "упёрлось в предел токенов",
++"Direct mode writes no score": "Режим «Напрямую» не пишет партитуру",
++"The synthesis waits: the studio’s card is training": "Синтез ждёт: на карте студии идёт тренировка",
++"same music, rendered again": "та же музыка, звучит заново",
++"started elsewhere": "запущено в другом месте",
++"score only": "только партитура",
++"from saved codes": "из сохранённых кодов",
++"{#0} songs": { "one": "{0} песня", "few": "{0} песни", "many": "{0} песен", "other": "{0} песни" },
++"{0} VAE": "VAE {0}",
++"versions {#0}–{#1}": "версии {0}–{1}",
++"versions {#0}": "версия {0}",
++"music seed {0}": "музыкальный сид {0}",
++"music seed {0} … +{#1}": "музыкальный сид {0} … +{1}",
++"sound seed {0}": "звуковой сид {0}",
++"sound seed {0} … +{#1}": "звуковой сид {0} … +{1}",
++"waiting behind {0}": "ждёт за {0}",
++"waiting for the server": "ждёт сервер",
++"writing the files": "пишет файлы",
++"Back to {0}": "Назад к {0}",
++"Making {0}. Click to watch it": "Создаётся {0}. Клик — смотреть",
++"Waiting to start: {0}. Click to watch it": "Ждёт начала: {0}. Клик — смотреть",
++"Playing {0}. Click to open it": "Играет {0}. Клик — открыть",
++"{0} is paused. Click to open it": "{0} на паузе. Клик — открыть",
++"A run from elsewhere": "Запуск из другого места",
++"Broken score": "Сломанная партитура",
++"Babel in the score: the run stopped before the music": "Вавилон в партитуре: запуск остановлен до музыки",
++"The music half (AR) wrote a score that is not one:": "Музыкальная половина (AR) написала партитуру, которая партитурой не является:",
++". Music built on it is noise, so the engine stopped here and nothing was spent on the sound.": ". Музыка на ней — шум, поэтому движок остановился здесь, и на звук ничего не потрачено.",
++"What weighed on the music half in this run:": "Что давило на музыкальную половину в этом запуске:",
++"What weighed on the music half in this run ({#0} adapters, together": "Что давило на музыкальную половину в этом запуске (адаптеров: {0}, вместе",
++", past the shared ceiling {0}: each may sit in its green and the sum still break the score):": ", выше общего потолка {0}: каждый может стоять в своём зелёном, а сумма всё равно ломает партитуру):",
++": stacked, their changes add up):": ": наложенные, их изменения складываются):",
++"adapter": "адаптер",
++"Most often this is strength past the ceiling: bring the music strengths into the green, take an adapter off the music half (its sound half can stay), or generate in Direct mode, which writes no score at all.": "Чаще всего это сила выше потолка: верни музыкальные силы в зелёное, сними адаптер с музыкальной половины (его звуковая половина может остаться) или создавай в режиме «Напрямую», который партитуру вовсе не пишет.",
++"No adapter weighed on the music half: the score sampling may be too hot (temperature, top-k). Reset sampling, or try another seed.": "На музыкальную половину не давил ни один адаптер: сэмплинг партитуры, возможно, слишком горячий (температура, top-k). Сбрось сэмплинг или попробуй другой сид.",
++"What it wrote ({#0} characters)": { "one": "Что она написала ({0} символ)", "few": "Что она написала ({0} символа)", "many": "Что она написала ({0} символов)", "other": "Что она написала ({0} символа)" },
++"Music strengths into the green": "Музыкальные силы — в зелёное",
++"Understood": "Понятно",
++"{#0} music strengths brought into the green": { "one": "{0} музыкальная сила возвращена в зелёное", "few": "{0} музыкальные силы возвращены в зелёное", "many": "{0} музыкальных сил возвращено в зелёное", "other": "{0} музыкальные силы возвращены в зелёное" },
++"{#0} music strength brought into the green": { "one": "{0} музыкальная сила возвращена в зелёное", "few": "{0} музыкальные силы возвращены в зелёное", "many": "{0} музыкальных сил возвращено в зелёное", "other": "{0} музыкальные силы возвращены в зелёное" },
++"Nothing was past the green": "Ничего не было выше зелёного",
++"Cancelled: {0}": "Отменено: {0}",
++"Song complete — {0} ({#1} takes). What you are playing keeps playing; ▶ Play this song when you are ready.": "Песня готова — {0} (семплов: {1}). То, что играет, продолжает играть; ▶ включи эту песню, когда будешь готов.",
++"Song complete — {0} ({#1} takes)": "Песня готова — {0} (семплов: {1})",
++"Song complete — {0}. What you are playing keeps playing; ▶ Play this song when you are ready.": "Песня готова — {0}. То, что играет, продолжает играть; ▶ включи эту песню, когда будешь готов.",
++"Song complete — {0}": "Песня готова — {0}",
++"The plan finished without a score": "План закончился без партитуры",
++"Score planned. Check its sections under Supply your own score; Generate now renders exactly this score.": "Партитура запланирована. Проверь её разделы в «Своей партитуре»; теперь «Создать» озвучит именно её.",
++"Could not fetch the planned score: {0}": "Не удалось получить запланированную партитуру: {0}",
++"{0} ready — {1}": "{0} готово — {1}",
++"New version": "Новая версия",
++"Could not fetch the finished song ({0})": "Не удалось получить готовую песню ({0})",
++"reconnecting": "переподключение",
++"… (+{#0} characters)": { "one": "… (+{0} символ)", "few": "… (+{0} символа)", "many": "… (+{0} символов)", "other": "… (+{0} символа)" },
++"Server log copied ({#0} lines)": { "one": "Лог сервера скопирован ({0} строка)", "few": "Лог сервера скопирован ({0} строки)", "many": "Лог сервера скопирован ({0} строк)", "other": "Лог сервера скопирован ({0} строки)" },
++"The browser refused clipboard access": "Браузер не дал доступа к буферу обмена",
++"Cancelling this run and {#0} queued versions": { "one": "Отменяется этот запуск и {0} версия в очереди", "few": "Отменяется этот запуск и {0} версии в очереди", "many": "Отменяется этот запуск и {0} версий в очереди", "other": "Отменяется этот запуск и {0} версии в очереди" },
++"Cancelling this run and {#0} queued version": { "one": "Отменяется этот запуск и {0} версия в очереди", "few": "Отменяется этот запуск и {0} версии в очереди", "many": "Отменяется этот запуск и {0} версий в очереди", "other": "Отменяется этот запуск и {0} версии в очереди" },
++"Cancelling after the current step": "Отмена после текущего шага",
++"tokens · {0}": "токены · {0}",
++"tokens": "токены",
++"Not reached": "Не дошло",
++"What runs and what waits": "Что идёт и что ждёт",
++"Nothing runs and nothing waits.": "Ничего не идёт и ничего не ждёт.",
++"taken off": "снято",
++"Taken off the queue": "Снято с очереди",
++"Take it off the queue": "Снять с очереди",
++"Press again to take it off": "Нажми ещё раз, чтобы снять",
++"Take it off?": "Снять?",
++"A waiting one comes off its queue with its ✕, pressed twice. What runs stops where it is shown: a song in its run, a training in the Trainer.": "Ждущее снимается с очереди своим ✕, нажатым дважды. Идущее останавливается там, где показано: песня — в своём запуске, тренировка — в Тренере.",
++"Song": "Песня",
++"Score plan": "План партитуры",
++"Transcription": "Транскрипция",
++"Regenerate": "Перегенерировать",
++"waits": "ждёт",
++"waits for a card": "ждёт карту",
++"Starting": "Начинается",
++"Saving": "Сохраняется",
++"artwork (SDXL)": "обложка (SDXL)",
++"stems (BS-Roformer, htdemucs)": "стемы (BS-Roformer, htdemucs)",
++"upscale (UniverSR)": "апскейл (UniverSR)",
++"lyrics timing (Whisper)": "тайминг текста (Whisper)",
++"lyrics check (Whisper)": "проверка текста (Whisper)",
++"spectrum": "спектр",
++"inspection": "инспекция",
++"LoRA training": "тренировка LoRA",
++"listener (Omni)": "слушатель (Omni)",
++"Server offline": "Сервер недоступен",
++"retrying every few seconds": "повтор каждые несколько секунд",
++"Transcribing": "Транскрибирует",
++"Planning": "Планирует",
++"Generating": "Создаёт",
++"{#0} queued": "в очереди: {0}",
++"{#0} run waiting": { "one": "{0} запуск ждёт", "few": "{0} запуска ждут", "many": "{0} запусков ждут", "other": "{0} запуска ждут" },
++"{#0} runs waiting": { "one": "{0} запуск ждёт", "few": "{0} запуска ждут", "many": "{0} запусков ждут", "other": "{0} запуска ждут" },
++"a run from another page": "запуск с другой страницы",
++"{0} resident": "{0} в памяти",
++"{#0} jobs on the cards": { "one": "{0} дело на картах", "few": "{0} дела на картах", "many": "{0} дел на картах", "other": "{0} дела на картах" },
++"The server runs without a transcriber: start it with --transcriber to cover a recording.": "Сервер запущен без транскрибера: запусти его с --transcriber, чтобы делать кавер с записи.",
++"Auto (detect)": "Авто (определить)",
++"Auto ({0} GB found: context {1}, VAE tiles {2})": "Авто (найдено {0} ГБ: контекст {1}, тайлы VAE {2})",
++"Auto ({0} GB found: whole context, VAE tiles {1})": "Авто (найдено {0} ГБ: весь контекст, тайлы VAE {1})",
++"Auto ({0} GB found: too small for YuE2)": "Авто (найдено {0} ГБ: мало для YuE2)",
++"Model: as started": "Модель: как при запуске",
++"as started": "как при запуске",
++"{0} (release weights)": "{0} (веса релиза)",
++"{0} (quantized)": "{0} (квантованная)",
++"Model {0} — it loads with the next song": "Модель {0} — загрузится со следующей песней",
++"Model {0} — it applies before the next song": "Модель {0} — применится перед следующей песней",
++"Context size must be 0 (the whole {#0}) or between 4,096 and {#1}": "Размер контекста: 0 (весь, {0}) или от 4 096 до {1}",
++"VAE tile frames must be between 64 and 4,096": "Кадры тайла VAE: от 64 до 4 096",
++"{#0} GB is too small for YuE2: set the knobs by hand": "{0} ГБ мало для YuE2: выставь ручки вручную",
++"No GPU detected: set the knobs by hand": "GPU не найден: выставь ручки вручную",
++"Auto for {#0} GB: context {1}, VAE tiles {2}; the backbone and keeping models loaded stay your choice. Press Save to apply.": "Авто для {0} ГБ: контекст {1}, тайлы VAE {2}; основа и удержание моделей в памяти остаются на твой выбор. Нажми «Сохранить», чтобы применить.",
++"Auto for {#0} GB: whole context, VAE tiles {1}; the backbone and keeping models loaded stay your choice. Press Save to apply.": "Авто для {0} ГБ: весь контекст, тайлы VAE {1}; основа и удержание моделей в памяти остаются на твой выбор. Нажми «Сохранить», чтобы применить.",
++"Reset every page setting to its default, in this browser and on disk?": "Сбросить все настройки страницы к стандартным — в этом браузере и на диске?",
++"The library, the songs and the engine settings stay as they are.": "Библиотека, песни и настройки движка останутся как есть.",
++"Reset": "Сбросить",
++"Saved: the knobs were already so": "Сохранено: ручки уже стояли так",
++"Saved and applied": "Сохранено и применено",
++"Saved and applied — the next song loads {0}": "Сохранено и применено — следующая песня загрузит {0}",
++"Saved — the server is busy; it applies before the next song": "Сохранено — сервер занят; применится перед следующей песней",
++"Context: the whole {0} rows, room for any song.": "Контекст: весь, {0} строк, место для любой песни.",
++"Context {0} rows: songs up to about {1} with a typical prompt; longer ones will not fit.": "Контекст {0} строк: песни примерно до {1} с обычным промптом; длиннее не поместятся.",
++"Models stay in GPU memory between songs.": "Модели остаются в памяти GPU между песнями.",
++"Each stage leaves GPU memory when it is done.": "Каждая стадия покидает память GPU, когда закончит.",
++"This server has no engine settings; its start-up flags decide.": "У этого сервера нет настроек движка; решают его флаги запуска.",
++"{0} · backbone {1} · context {2} · batch {3}": "{0} · основа {1} · контекст {2} · пакет {3}",
++"backbone {0} · context {1} · batch {2}": "основа {0} · контекст {1} · пакет {2}",
++"whole": "весь",
++"The server is busy; it unloads when the running song is done": "Сервер занят; выгрузится, когда закончится текущая песня",
++"Model unloaded — {#0} MB freed (VRAM {1} GB -> {2} GB)": "Модель выгружена — освобождено {0} МБ (VRAM {1} ГБ -> {2} ГБ)",
++"Model unloaded — {#0} MB freed": "Модель выгружена — освобождено {0} МБ",
++"Unload model: {0} GB in the card’s memory now; drop it now": "Выгрузить модель: сейчас в памяти карты {0} ГБ; освободить сейчас",
++"Unload model: {0} GB in the card’s memory now (busy: it waits)": "Выгрузить модель: сейчас в памяти карты {0} ГБ (занято: подождёт)",
++"MP3 downloads now at {0} kbps": "MP3 теперь скачивается в {0} кбит/с",
++"This take's request is gone with the page reload": "Запрос этого семпла пропал вместе с перезагрузкой страницы",
++"Could not read the take's request ({0})": "Не удалось прочитать запрос семпла ({0})",
++"Re-rendered from “{0}”": "Перерисован из «{0}»",
++"{0} long": "длина {0}",
++"made in {0}": "сделан за {0}",
++"{#0} min ago": "{0} мин назад",
++"{#0} h ago": "{0} ч назад",
++"{#0} d ago": "{0} дн назад",
++"The take's ID (its folder in outputs/). Click to copy.": "ID семпла (его папка в outputs/). Клик — скопировать.",
++"Rename this take": "Переименовать этот семпл",
++"Delete this take (asks first)": "Удалить этот семпл (сперва спросит)",
++"Remove from favourites": "Убрать из избранного",
++"none": "нет",
++"none listed": "не указано",
++"The {0} is copied": "{0}: скопировано",
++"music seed": "музыкальный сид",
++"sound seed": "звуковой сид",
++"Copy the music seed": "Скопировать музыкальный сид",
++"Copy the sound seed": "Скопировать звуковой сид",
++"This take has no prompt": "У этого семпла нет промпта",
++"Prompt copied": "Промпт скопирован",
++"Lyrics copied": "Текст скопирован",
++"Score copied into the form — edit it, then generate": "Партитура скопирована в форму — поправь её и создавай",
++"Retake: this take is in the form with its music codes, so Generate renders that music again. Drop the codes to write new music.": "Новый семпл: этот семпл в форме со своими музыкальными кодами, поэтому «Создать» озвучит ту же музыку снова. Сбрось коды, чтобы написать новую.",
++"Reuse: prompt, lyrics and settings are in the form, with no score, seeds or music codes. Generate writes a new song from them.": "Взять за основу: промпт, текст и настройки в форме, без партитуры, сидов и музыкальных кодов. «Создать» напишет по ним новую песню.",
++"Rendering {0} again with a new sound seed…": "{0} звучит заново с новым звуковым сидом…",
++"Regenerate from a moment": "Перегенерировать с момента",
++"Keep {0} up to which moment (m:ss)? The music is written anew from there.": "До какого момента оставить {0} (м:сс)? Дальше музыка пишется заново.",
++"A moment between 0:01 and {0}": "Момент между 0:01 и {0}",
++"This take's request carries no music codes to keep": "В запросе этого семпла нет музыкальных кодов, которые можно оставить",
++"Writing {0} anew from {1}; everything before stays": "{0} пишется заново с {1}; всё, что раньше, остаётся",
++"Listening… {#0} s": "Слушает… {0} с",
++"No line of the text was heard in this take": "В этом семпле не услышано ни одной строки текста",
++"Where the text ends cannot be told with confidence here ({0} of {1} lines heard in order, the last at line {2}): nothing trimmed. Whisper hears some languages badly.": "Где кончается текст, здесь уверенно не сказать (по порядку услышано {0} из {1} строк, последняя — строка {2}): ничего не обрезано. Некоторые языки Whisper слышит плохо.",
++"The text runs to the end ({0} of {1}): nothing to trim": "Текст идёт до конца ({0} из {1}): обрезать нечего",
++"The text ends at {0} of {1} ({2} of {3} lines heard in order).": "Текст кончается на {0} из {1} (по порядку услышано {2} из {3} строк).",
++"Render this take again, cut at {0}? The same performance; only the sound stage runs.": "Озвучить этот семпл заново с обрезкой на {0}? То же исполнение; работает только звуковая стадия.",
++"Trim it": "Обрезать",
++"Rendering {0} cut at {1}…": "{0} звучит с обрезкой на {1}…",
++"Open a take first": "Сначала открой семпл",
++"VAE": "VAE",
++"Rendering": "Звучит",
++"Rendering…": "Звучит…",
++"Rendering {0} with the {1} VAE…": "{0} звучит с VAE «{1}»…",
++"This take's request carries no music codes, so it cannot be re-rendered": "В запросе этого семпла нет музыкальных кодов, перерисовать его нельзя",
++"Render this take again with this VAE (seconds, same music) {0}": "Озвучить этот семпл заново с этим VAE (секунды, та же музыка) {0}",
++"Playing this version {0}": "Играет эта версия {0}",
++"+ {0}": "+ {0}",
++"Kept as a favourite: {0}": "В избранном: {0}",
++"Removed from favourites: {0}": "Убрано из избранного: {0}",
++"Renamed to {0} (hidden characters taken out)": "Переименовано в {0} (скрытые символы убраны)",
++"Renamed to {0}": "Переименовано в {0}",
++"New title": "Новое название",
++"“{0}” is in a workspace that locks its takes: unlock it first (right-click on the workspace)": "«{0}» в пространстве, которое запирает свои семплы: сперва отопри его (правый клик по пространству)",
++"Delete “{0}” and its files?": "Удалить «{0}» и его файлы?",
++"This is for good. To keep a way back, move it to the trash from its menu (right-click).": "Это навсегда. Чтобы оставить путь назад, перемести его в корзину из его меню (правый клик).",
++"Take deleted": "Семпл удалён",
++"Downloads carry the date: 20260927-183418-song-title.wav": "Файлы скачиваются с датой: 20260927-183418-song-title.wav",
++"Downloads are named after the song: Song Title.wav": "Файлы скачиваются под именем песни: Song Title.wav",
++"Every take is a favourite; nothing to delete": "Все семплы в избранном; удалять нечего",
++"The library is empty": "Библиотека пуста",
++"Delete {#0} take that is not a favourite, with their files?": { "one": "Удалить {0} семпл не из избранного вместе с файлами?", "few": "Удалить {0} семпла не из избранного вместе с файлами?", "many": "Удалить {0} семплов не из избранного вместе с файлами?", "other": "Удалить {0} семпла не из избранного вместе с файлами?" },
++"Delete {#0} takes that are not a favourite, with their files?": { "one": "Удалить {0} семпл не из избранного вместе с файлами?", "few": "Удалить {0} семпла не из избранного вместе с файлами?", "many": "Удалить {0} семплов не из избранного вместе с файлами?", "other": "Удалить {0} семпла не из избранного вместе с файлами?" },
++"{#0} favourite stays. This is for good.": { "one": "{0} избранный остаётся. Это навсегда.", "few": "{0} избранных остаются. Это навсегда.", "many": "{0} избранных остаются. Это навсегда.", "other": "{0} избранных остаются. Это навсегда." },
++"{#0} favourites stay. This is for good.": { "one": "{0} избранный остаётся. Это навсегда.", "few": "{0} избранных остаются. Это навсегда.", "many": "{0} избранных остаются. Это навсегда.", "other": "{0} избранных остаются. Это навсегда." },
++"Deleted {#0} take; {#1} favourite kept": "Удалено семплов: {0}; избранных оставлено: {1}",
++"Deleted {#0} take; {#1} favourites kept": "Удалено семплов: {0}; избранных оставлено: {1}",
++"Deleted {#0} takes; {#1} favourite kept": "Удалено семплов: {0}; избранных оставлено: {1}",
++"Deleted {#0} takes; {#1} favourites kept": "Удалено семплов: {0}; избранных оставлено: {1}",
++"The browser waits for a click before it plays: press ▶": "Браузер ждёт клика, прежде чем играть: нажми ▶",
++"The connection dropped while the song was loading: press ▶ again": "Связь оборвалась, пока песня грузилась: нажми ▶ ещё раз",
++"Your browser would not play this file": "Твой браузер не стал играть этот файл",
++"It did not start: {0}": "Не запустилось: {0}",
++"Copied: {0}": "Скопировано: {0}",
++"Selected: press Ctrl+C": "Выделено: нажми Ctrl+C",
++"The end of the list": "Конец списка",
++"Repeat this take": "Повторять этот семпл",
++"Repeat the list": "Повторять список",
++"No FLAC route on this server: the player plays the WAVs this session": "На этом сервере нет пути к FLAC: в этой сессии плеер играет WAV",
++"kept in this tab": "хранится в этой вкладке",
++"no peaks": "нет пиков",
++"no decoder": "нет декодера",
++"Paused": "На паузе",
++"Playing": "Играет",
++"The artwork": "Обложка",
++"Close": "Закрыть",
++"Close (Esc)": "Закрыть (Esc)",
++"Previous": "Назад",
++"Previous (←)": "Назад (←)",
++"Next": "Вперёд",
++"Next (→)": "Вперёд (→)",
++"Pause": "Пауза",
++"Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Рисуется обложка для «{0}»: промпт из стиля и слов, потом картинка (около полуминуты)",
++"Artwork for “{0}” is ready": "Обложка для «{0}» готова",
++"No artwork: {0}": "Обложки нет: {0}",
++"The artwork is off “{0}”: kept beside the take, in artwork-removed/": "Обложка снята с «{0}»: хранится рядом с семплом, в artwork-removed/",
++"Not removed: {0}": "Не снято: {0}",
++"Tap ☆ on a take to keep it here.": "Нажми ☆ на семпле, чтобы держать его здесь.",
++"No favourites yet.": "Избранного пока нет.",
++"Songs made in this tab stay until it reloads.": "Песни, сделанные в этой вкладке, живут до её перезагрузки.",
++"The server keeps no library (start it with --outputs).": "Сервер не ведёт библиотеку (запусти его с --outputs).",
++"Re-rendered from another take: same music": "Перерисован из другого семпла: та же музыка",
++"re-render": "перерисовка",
++"no take has a score yet": "ни у одного семпла пока нет партитуры",
++"No take has a score to cover yet": "Пока ни у одного семпла нет партитуры для кавера",
++"That take carries no score": "У этого семпла нет партитуры",
++"This browser cannot convert .{0}; use WAV or MP3": "Этот браузер не умеет переводить .{0}; возьми WAV или MP3",
++"Could not read {0} in the browser ({1}). Convert it to WAV or MP3.": "Браузер не прочитал {0} ({1}). Переведи в WAV или MP3.",
++"This browser cannot play {0}; it can still be transcribed": "Этот браузер не играет {0}; транскрибировать всё равно можно",
++"The server runs without a transcriber (start it with --transcriber)": "Сервер запущен без транскрибера (запусти его с --transcriber)",
++"Choose a recording first": "Сначала выбери запись",
++"Reading {0}…": "Читается {0}…",
++"Waiting for the server (it is busy with {0})…": "Ждём сервер (он занят: {0})…",
++"Waiting for the server…": "Ждём сервер…",
++"Transcribing {0}… {#1}s": "Транскрибируется {0}… {1} с",
++"Transcribing {0}…": "Транскрибируется {0}…",
++"Transcribing {0}: the score comes into the form for a cover": "Транскрибируется {0}: партитура придёт в форму для кавера",
++"The transcriber returned no score": "Транскрибер не вернул партитуры",
++"Done: {0} → score loaded (Full plan, chords kept).": "Готово: {0} → партитура загружена (полный план, аккорды сохранены).",
++"Done: {0} → score loaded (Melody only, vocal line).": "Готово: {0} → партитура загружена (только мелодия, вокальная линия).",
++"Done: {0} → score loaded (Melody only).": "Готово: {0} → партитура загружена (только мелодия).",
++"Writer: the chat server at {0} answers, but has no model loaded: load one there.": "Писатель: чат-сервер на {0} отвечает, но модель в нём не загружена: загрузи её там.",
++"Writer: {0} at {1}, ready.": "Писатель: {0} на {1}, готов.",
++"not answering": "не отвечает",
++"Loaded now: {0}. This page uses it as is and never loads, switches or unloads a model.": "Загружено сейчас: {0}. Эта страница берёт её как есть и никогда не загружает, не меняет и не выгружает модель.",
++"The server answers but reports no loaded model. Load one there first.": "Сервер отвечает, но загруженной модели не сообщает. Сначала загрузи её там.",
++"loaded on the chat server": "загружена на чат-сервере",
++"none yet ·": "пока нет ·",
++"none yet · the chat server is not answering": "пока нет · чат-сервер не отвечает",
++"The chat server is not answering — check its address under Engine. Click to check again.": "Чат-сервер не отвечает — проверь его адрес в «Движке». Клик — проверить снова.",
++"{0}. Click to check again.": "{0}. Клик — проверить снова.",
++"The browser could not reach {0}. Either the chat server is not running, or it refuses requests from this page (CORS): turn CORS on in its settings, or open this page from the same machine name.": "Браузер не достучался до {0}. Либо чат-сервер не запущен, либо отказывает запросам этой страницы (CORS): включи CORS в его настройках или открой эту страницу с того же имени машины.",
++"Writer: the chat server at {0} does not answer. Start it there, or choose OpenRouter below. (Checked just now; entering the Writer checks again.)": "Писатель: чат-сервер на {0} не отвечает. Запусти его там или выбери OpenRouter ниже. (Проверено только что; вход в Писателя проверяет снова.)",
++"Type the chat server's address first": "Сначала впиши адрес чат-сервера",
++"No model is loaded in the chat server; load one there (this page never loads one)": "В чат-сервере не загружена модель; загрузи её там (эта страница сама ничего не загружает)",
++"Chat server OK: {0} answered “{1}” in {#2} s": "Чат-сервер в порядке: {0} ответил «{1}» за {2} с",
++"Describe the song in a line first": "Сначала опиши песню одной строкой",
++"Writing, then generating…": "Пишет, потом создаёт…",
++"Writing…": "Пишет…",
++"asking the chat server": "спрашивает чат-сервер",
++"writing… {#0}s": "пишет… {0} с",
++"Set the chat server address under Engine first": "Сначала задай адрес чат-сервера в «Движке»",
++"No model is loaded in the chat server. Load one there; this page never loads or switches models.": "В чат-сервере не загружена модель. Загрузи её там; эта страница не загружает и не меняет моделей.",
++"The writer did not return usable JSON. Try again, or load another model.": "Писатель не вернул пригодного JSON. Попробуй ещё раз или загрузи другую модель.",
++"{0}s": "{0} с",
++"{#0} lines": { "one": "{0} строка", "few": "{0} строки", "many": "{0} строк", "other": "{0} строки" },
++"{#0} sections": { "one": "{0} раздел", "few": "{0} раздела", "many": "{0} разделов", "other": "{0} раздела" },
++"rewritten once": "переписано один раз",
++"stock phrases left: {0}": "остались штампы: {0}",
++"CUT OFF at the token limit": "ОБРЕЗАНО на пределе токенов",
++"model left as it was": "модель оставлена как была",
++"Brief written: {0}": "Бриф написан: {0}",
++"Page error: {0} — reload if things stop responding": "Ошибка страницы: {0} — перезагрузи, если что-то перестанет откликаться",
++"The look options and fonts are back to the app's own (the theme stays)": "Вид и шрифты вернулись к собственным студии (тема остаётся)",
++"{#0} fonts listed": { "one": "Перечислен {0} шрифт", "few": "Перечислено {0} шрифта", "many": "Перечислено {0} шрифтов", "other": "Перечислено {0} шрифта" },
++"The browser did not list the fonts: {0}": "Браузер не перечислил шрифты: {0}",
++"{#0} fonts found on this computer; List all my fonts shows every one.": { "one": "На этом компьютере найден {0} шрифт; «Перечислить все мои шрифты» покажет каждый.", "few": "На этом компьютере найдено {0} шрифта; «Перечислить все мои шрифты» покажет каждый.", "many": "На этом компьютере найдено {0} шрифтов; «Перечислить все мои шрифты» покажет каждый.", "other": "На этом компьютере найдено {0} шрифта; «Перечислить все мои шрифты» покажет каждый." },
++"{#0} fonts found on this computer.": { "one": "На этом компьютере найден {0} шрифт.", "few": "На этом компьютере найдено {0} шрифта.", "many": "На этом компьютере найдено {0} шрифтов.", "other": "На этом компьютере найдено {0} шрифта." },
++"{0} (default)": "{0} (стандартный)",
++"Could not read the song library: {0}": "Не удалось прочитать библиотеку песен: {0}",
++"Could not reach the server: {0}": "Не удалось достучаться до сервера: {0}",
++"The score could not be read as MIDI ({0}): the project goes without it": "Партитура не читается как MIDI ({0}): проект уйдёт без неё",
++"open a take of the library first": "сначала открой семпл из библиотеки",
++"Packing the DAWproject: the mix and every stem as 24-bit WAV, the score as notes, the sections as markers": "Собирается DAWproject: микс и каждый стем в WAV 24 бит, партитура нотами, разделы маркерами",
++"DAWproject: {0} · {1} bpm, {2} · {#3} MB · {4}": "DAWproject: {0} · {1} BPM, {2} · {3} МБ · {4}",
++"DAWproject: {0} · {1} bpm, {2} · {#3} MB": "DAWproject: {0} · {1} BPM, {2} · {3} МБ",
++"Packing the REAPER project: the mix, every stem, the score, the lyrics": "Собирается проект REAPER: микс, каждый стем, партитура, текст",
++"REAPER: {0} · {1} bpm, {2} · {#3} MB · {4}": "REAPER: {0} · {1} BPM, {2} · {3} МБ · {4}",
++"REAPER: {0} · {1} bpm, {2} · {#3} MB": "REAPER: {0} · {1} BPM, {2} · {3} МБ",
++"no take in hand": "в руках нет семпла",
++"No DAWproject: {0}": "DAWproject не собран: {0}",
++"No REAPER project: {0}": "Проект REAPER не собран: {0}",
++"{#0} takes": { "one": "{0} семпл", "few": "{0} семпла", "many": "{0} семплов", "other": "{0} семпла" },
++"{#0} take": { "one": "{0} семпл", "few": "{0} семпла", "many": "{0} семплов", "other": "{0} семпла" },
++"Regenerating {0} with new seeds: the new ones take the old one's places, the old kept in “{1}” · not {#2}: {3}": "{0} перегенерируются с новыми зёрнами: новые встают на места старых, старые хранятся в «{1}» · не вышло: {2}: {3}",
++"Regenerating {0} with new seeds: the new ones take the old one's places, the old kept in “{1}”": "{0} перегенерируются с новыми зёрнами: новые встают на места старых, старые хранятся в «{1}»",
++"Regenerating {0} with new seeds: the new one takes the old one's places, the old kept in “{1}” · not {#2}: {3}": "{0} перегенерируется с новым зерном: новый встаёт на места старого, старый хранится в «{1}» · не вышло: {2}: {3}",
++"Regenerating {0} with new seeds: the new one takes the old one's places, the old kept in “{1}”": "{0} перегенерируется с новым зерном: новый встаёт на места старого, старый хранится в «{1}»",
++"Not regenerated: {0}": "Не перегенерировано: {0}",
++"Sourced for Regeneration": "Источник регенерации",
++"{0} copied": "{0}: скопировано",
++"Not copied: {0}": "Не скопировано: {0}",
++"Open in the Creator": "Открыть в Творце",
++"Open in the Refiner": "Открыть в Огранщике",
++"Open in the Librarian": "Открыть в Библиотекаре",
++"Open the sheet": "Открыть лист",
++"Open the datasheet": "Открыть паспорт",
++"all it was made with": "всё, из чего сделан",
++"Note…": "Заметка…",
++"A note on “{0}”": "Заметка к «{0}»",
++"Empty removes it.": "Пустая — удаляет её.",
++"Keep the note": "Оставить заметку",
++"Rename…": "Переименовать…",
++"Rename the take": "Переименовать семпл",
++"Up to {0} characters; invisible controls are taken out.": "До {0} символов; невидимые управляющие знаки убираются.",
++"Rename": "Переименовать",
++"Workspaces": "Пространства",
++"Move to": "Переместить в",
++"New workspace…": "Новое пространство…",
++"A new workspace for “{0}”": "Новое пространство для «{0}»",
++"A new workspace for the {#0} checked takes": "Новое пространство для отмеченных семплов: {0}",
++"Make it": "Создать",
++"its name": "его имя",
++"Move there": "Переместить туда",
++"New document from this take": "Новый документ из этого семпла",
++"In the Writer: “{0}”": "В Писателе: «{0}»",
++"Link to the document in hand": "Связать с документом в руках",
++"Linked to “{0}”": "Связано с «{0}»",
++"Take id": "ID семпла",
++"MP3 · {0} kbps": "MP3 · {0} кбит/с",
++"with its artwork": "с обложкой",
++"Artwork · JPEG": "Обложка · JPEG",
++"REAPER project": "Проект REAPER",
++"DAWproject": "DAWproject",
++"Export to DAW": "Экспорт в DAW",
++"Pin here": "Закрепить здесь",
++"Hide from the lists": "Скрыть из списков",
++"Move to the trash…": "В корзину…",
++"Nothing is deleted: the trash in the Librarian gives it back until it is emptied.": "Ничего не удаляется: корзина в Библиотекаре вернёт его, пока её не очистят.",
++"Moved to the trash": "Перемещено в корзину",
++"saved": "сохранено",
++"not saved: {0}": "не сохранено: {0}",
++"⚠ The style names {0}, the score is in {1}. The song follows the score.": "⚠ Стиль называет {0}, а партитура в {1}. Песня идёт за партитурой.",
++"Move the score to {0}": "Перенести партитуру в {0}",
++"Write {0} in the style": "Написать {0} в стиле",
++"{0} → {1}, +{2} semitones, {#3} notes moved": "{0} → {1}, +{2} полутона, нот перенесено: {3}",
++"{0} → {1}, {2} semitones, {#3} notes moved": "{0} → {1}, {2} полутона, нот перенесено: {3}",
++"Score moved to {0}": "Партитура перенесена в {0}",
++"The score is in {0}. Pick another key to move it there.": "Партитура в {0}. Выбери другую тональность, чтобы перенести её туда.",
++"Wanted: {0}. The next score in the form (a plan, a Retake, a transcription) moves there.": "Нужна: {0}. Следующая партитура в форме (план, новый семпл, транскрипция) перенесётся туда.",
++"The next score will move to {0}": "Следующая партитура перенесётся в {0}",
++"The new score moved to {0}, as wanted": "Новая партитура перенесена в {0}, как нужно",
++"{#0} characters": { "one": "{0} символ", "few": "{0} символа", "many": "{0} символов", "other": "{0} символа" },
++"· {#0} characters": { "one": "· {0} символ", "few": "· {0} символа", "many": "· {0} символов", "other": "· {0} символа" },
++"untitled": "без названия",
++"no style yet": "стиля пока нет",
++"no lyrics yet": "текста пока нет",
++"no score in the form: in Full mode the model writes one": "в форме нет партитуры: в полном режиме модель напишет её сама",
++"empty": "пусто",
++"Pick a file first": "Сначала выбери файл",
++"uploading {#0}% · {#1} of {#2} MB · {#3} MB/s": "загрузка {0}% · {1} из {2} МБ · {3} МБ/с",
++"converting on Forge…": "перевод на Forge…",
++"the upload broke off": "загрузка оборвалась",
++"Could not import: {0}": "Не удалось импортировать: {0}",
++"imported: {0} · {1}": "импортировано: {0} · {1}",
++"Put your OpenRouter API key in first": "Сначала вставь свой ключ API OpenRouter",
++"Name an OpenRouter model first": "Сначала назови модель OpenRouter",
++"OpenRouter: {0}": "OpenRouter: {0}",
++"Describe the song or the changes you want": "Опиши песню или изменения, которых хочешь",
++"writing with {0}… {#1}s": "пишет с {0}… {1} с",
++"No model is loaded in the chat server": "В чат-сервере не загружена модель",
++"Draft applied": "Черновик применён",
++"Style applied": "Стиль применён",
++"Lyrics applied": "Текст применён",
++"Back to what you had": "Вернулось то, что было",
++"No score to print": "Нет партитуры для печати",
++"This score could not be engraved for print": "Эту партитуру не удалось гравировать для печати",
++"The browser blocked the print window: allow pop-ups for this page": "Браузер заблокировал окно печати: разреши всплывающие окна для этой страницы",
++"The Librarian lives in Forge's lab, which does not answer: {0}": "Библиотекарь живёт в лаборатории Forge, а она не отвечает: {0}",
++"The Librarian lives in Forge's lab, which does not answer:": "Библиотекарь живёт в лаборатории Forge, а она не отвечает:",
++"Rename, delete, lock, a section…": "Переименовать, удалить, запереть, раздел…",
++"the workspace is locked against deletion": "пространство заперто от удаления",
++"its takes are locked against deletion": "его семплы заперты от удаления",
++"+ New workspace": "+ Новое пространство",
++"+ New workspace…": "+ Новое пространство…",
++"+ a new workspace…": "+ новое пространство…",
++"Out of sight": "С глаз долой",
++"Hidden": "Скрытые",
++"📌 Pinned": "📌 Закреплённые",
++"Pinned": "Закреплённые",
++"Not in a workspace": "Вне пространств",
++"Has a note": "Есть заметка",
++"Select": "Выбрать",
++"More (or right-click the card)": "Ещё (или правый клик по карточке)",
++"Nothing here": "Здесь ничего нет",
++"Nothing here for “{0}”.": "Здесь ничего нет по «{0}».",
++"Nothing here.": "Здесь ничего нет.",
++"Unpin": "Открепить",
++"Show again": "Показать снова",
++"{#0} in the trash": { "one": "{0} в корзине", "few": "{0} в корзине", "many": "{0} в корзине", "other": "{0} в корзине" },
++"{#0} in the trash · {1}": "в корзине: {0} · {1}",
++"{0} GB": "{0} ГБ",
++"{0} MB": "{0} МБ",
++"Delete {#0} for good": "Удалить навсегда: {0}",
++"in the trash since {0}": "в корзине с {0}",
++"The trash is empty.": "Корзина пуста.",
++"All Workspaces": "Все пространства",
++"Ctrl+Z": "Ctrl+Z",
++"Undone": "Отменено",
++"Not undone: {0}": "Не отменено: {0}",
++"they are no longer in the trash": "их больше нет в корзине",
++"Packing {#0} takes as {1} with what is made from them…": "Упаковка семплов: {0}, в {1}, с тем, что из них сделано…",
++"Packing {#0} takes as {1}…": "Упаковка семплов: {0}, в {1}…",
++"Packing {#0} take as {1} with what is made from them…": "Упаковка семплов: {0}, в {1}, с тем, что из них сделано…",
++"Packing {#0} take as {1}…": "Упаковка семплов: {0}, в {1}…",
++"ZIP ready: {0} ({#1} MB). The browser saves it where you tell it.": "ZIP готов: {0} ({1} МБ). Браузер сохранит его, куда скажешь.",
++"A new workspace": "Новое пространство",
++"Move them there": "Переместить их туда",
++"Add them there": "Добавить их туда",
++"Take them out": "Вынуть их",
++"Tick what to give back": "Отметь, что вернуть",
++"{#0} back in the library": "Вернулось в библиотеку: {0}",
++"{#0} deleted for good": "Удалено навсегда: {0}",
++"Every": "Все",
++"It is in hand at once: the list shows it, new takes land in it.": "Оно сразу в руках: список показывает его, новые семплы ложатся в него.",
++"Workspace “{0}” in hand: the list shows it, new takes land in it": "Пространство «{0}» в руках: список показывает его, новые семплы ложатся в него",
++"All Workspaces in the list; new takes in no workspace": "В списке все пространства; новые семплы — вне пространств",
++"Favourites: {#0}": "В избранном: {0}",
++"Not favourites: {#0}": "Не в избранном: {0}",
++"not in the library": "нет в библиотеке",
++"Click to rename": "Клик — переименовать",
++"made from it:": "сделано из него:",
++"made from it: {0}": "сделано из него: {0}",
++"New takes land here": "Новые семплы ложатся сюда",
++"A new section of “{0}”": "Новый раздел в «{0}»",
++"Delete…": "Удалить…",
++"Lock Workspace Deletion": "Запереть удаление пространства",
++"Lock Tracks Deletion": "Запереть удаление семплов",
++"There is a workspace “{0}” already": "Пространство «{0}» уже есть",
++"Workspace renamed": "Пространство переименовано",
++"Delete the workspace “{0}”": "Удалить пространство «{0}»",
++"Delete the workspace “{0}” and its {#1} sections": "Удалить пространство «{0}» и его разделы: {1}",
++"Delete the workspace “{0}” and its {#1} section": "Удалить пространство «{0}» и его разделы: {1}",
++"{#0} takes in it. What becomes of them?": { "one": "В нём {0} семпл. Что с ним станет?", "few": "В нём {0} семпла. Что с ними станет?", "many": "В нём {0} семплов. Что с ними станет?", "other": "В нём {0} семпла. Что с ними станет?" },
++"{#0} take in it. What becomes of them?": { "one": "В нём {0} семпл. Что с ним станет?", "few": "В нём {0} семпла. Что с ними станет?", "many": "В нём {0} семплов. Что с ними станет?", "other": "В нём {0} семпла. Что с ними станет?" },
++"Only the workspace goes.": "Уходит только пространство.",
++"Its takes stay in the library, unsorted: in All Workspaces, and in any other workspace they belong to.": "Его семплы остаются в библиотеке, без разбора: во «Всех пространствах» и в любом другом пространстве, где они есть.",
++"Its takes move into": "Его семплы переходят в",
++", then the workspace goes.": ", потом пространство уходит.",
++"The workspace goes with its takes.": "Пространство уходит вместе с семплами.",
++"The takes go to the trash, which gives them back until it is emptied.": "Семплы уходят в корзину, которая вернёт их, пока её не очистят.",
++"Spare the {#0} takes that also belong to another workspace": "Пощадить семплы, что есть и в другом пространстве: {0}",
++"Spare the {#0} take that also belongs to another workspace": "Пощадить семплы, что есть и в другом пространстве: {0}",
++"Cancel": "Отмена",
++"Delete the workspace": "Удалить пространство",
++"OK": "ОК",
++"Not in the library": "Нет в библиотеке",
++"Reading the take…": "Читается семпл…",
++"from {0}": "из {0}",
++"Copy request JSON": "Скопировать JSON запроса",
++"{#0} chars": { "one": "{0} символ", "few": "{0} символа", "many": "{0} символов", "other": "{0} символа" },
++"A Direct take writes no score.": "Семпл «Напрямую» не пишет партитуру.",
++"Write it from the sound": "Записать её по звуку",
++"Seeds": "Сиды",
++"Score sampling": "Сэмплинг партитуры",
++"Music sampling": "Сэмплинг музыки",
++"Sliders and LoRAs": "Слайдеры и LoRA",
++"The rest": "Остальное",
++"sliders": "слайдеры",
++"LoRAs": "LoRA",
++"mode": "режим",
++"length asked": "заказанная длина",
++"format": "формат",
++"peak clip": "срез пиков",
++"music codes": "музыкальные коды",
++"kept from the parent": "оставлено от родителя",
++"{#0} codes ({1})": "кодов: {0} ({1})",
++"guidance": "ведение",
++"steps": "шаги",
++"solver": "решатель",
++"batch": "пакет",
++"music {0}": "музыка {0}",
++"sound {0}": "звук {0}",
++"music {0} · sound {1}": "музыка {0} · звук {1}",
++"temperature": "температура",
++"top-p": "top-p",
++"top-k": "top-k",
++"repetition penalty": "штраф за повтор",
++"penalty window": "окно штрафа",
++"min tokens": "мин. токенов",
++"max tokens": "макс. токенов",
++"score_guard": "score_guard",
++"The engraver did not load: the ABC below is the score.": "Гравёр не загрузился: партитура — это ABC ниже.",
++"the transcriber wrote nothing": "транскрибер ничего не написал",
++"The request is on the clipboard (music codes left out)": "Запрос в буфере обмена (музыкальные коды не вошли)",
++"{#0} takes ({#1} shown)": { "one": "{0} семпл (показано {1})", "few": "{0} семпла (показано {1})", "many": "{0} семплов (показано {1})", "other": "{0} семпла (показано {1})" },
++"{#0} take ({#1} shown)": { "one": "{0} семпл (показано {1})", "few": "{0} семпла (показано {1})", "many": "{0} семплов (показано {1})", "other": "{0} семпла (показано {1})" },
++"{#0} h {#1} min": "{0} ч {1} мин",
++"{#0} min": "{0} мин",
++"{#0} liked": "нравится: {0}",
++"{#0} disliked": "не нравится: {0}",
++"{#0} ★": "★ {0}",
++"{#0} with a note": "с заметкой: {0}",
++"{#0} generated": "создано: {0}",
++"{#0} imported": "импортировано: {0}",
++"{#0} regenerated": "пересоздано: {0}",
++"{#0} re-rendered": "перерисовано: {0}",
++"{#0} in the library": "в библиотеке: {0}",
++"{#0} selected": "Выбрано: {0}",
++"Pin up to four takes of this place here: right-click a take → Pin here.": "Закрепи здесь до четырёх семплов этого места: правый клик по семплу → «Закрепить здесь».",
++"The workspaces column: drag to widen, Enter to fold": "Колонка пространств: тяни, чтобы расширить, Enter — свернуть",
++"four at most": "не больше четырёх",
++"Out of the studio": "Наружу из студии",
++"two ways: the mixed track as it is, or the whole take into your DAW, where the rest happens outside the studio": "два пути: сведённый трек как есть или весь семпл в твою DAW, где остальное происходит вне студии",
++"The mixed track": "Сведённый трек",
++"As the studio made it (and the Refiner finished it), no DAW in between.": "Как его сделала студия (и доделал Огранщик), без DAW посередине.",
++"As the studio made it (and the Refiner finished it), no DAW in between. The take in hand:": "Как его сделала студия (и доделал Огранщик), без DAW посередине. Семпл в руках:",
++"Open a take, play one, or check one in the Librarian: its WAV, FLAC and MP3 come here.": "Открой семпл, включи его или отметь в Библиотекаре: его WAV, FLAC и MP3 появятся здесь.",
++"Into your DAW": "В твою DAW",
++"experimental": "экспериментально",
++"It works and was checked, but it still needs crash tests on other machines and projects, and more work": "Оно действует и проверено, но ему ещё нужны краш-тесты на других машинах и проектах и доводка",
++"The whole take as a project of your DAW: the stems on their tracks, the score as MIDI, the tempo, the sections as regions, the lyrics on the timeline. Which DAW do you use?": "Весь семпл как проект твоей DAW: стемы на своих дорожках, партитура как MIDI, темп, разделы как регионы, текст на таймлайне. Какой DAW ты пользуешься?",
++"Asking the lab…": "Спрашиваем лабораторию…",
++"The lab does not answer: {0}": "Лаборатория не отвечает: {0}",
++"✓ on the studio’s machine": "✓ на машине студии",
++"✓ on the studio’s machine · {0}": "✓ на машине студии · {0}",
++"not on the studio’s machine; on your own computer it may well be": "не на машине студии; на твоём компьютере вполне может быть",
++"How to install it": "Как установить",
++"Your DAW ✓": "Твоя DAW ✓",
++"I use this one": "Я пользуюсь этой",
++"Export the take": "Экспортировать семпл",
++"A DAWproject: the mix, the stems, the score as notes, the sections as markers": "DAWproject: микс, стемы, партитура нотами, разделы маркерами",
++"first": "первая",
++"next": "следующая",
++"Now: the": "Сейчас:",
++"project (the mix, every stem, the score as MIDI; the lyrics and sections once the take is timed in the Refiner’s lyrics check), and": "— проект (микс, каждый стем, партитура как MIDI; текст и разделы — когда семпл размечен по времени в проверке текста у Огранщика), и",
++"(the mix, every stem, the score as notes, the sections as markers: Waveform 14, Bitwig, Studio One, Cubase); both also in a take’s menu → Download. Waveform: 14 or newer.": "(микс, каждый стем, партитура нотами, разделы маркерами: Waveform 14, Bitwig, Studio One, Cubase); оба есть и в меню семпла → «Скачать». Waveform: 14 или новее.",
++"Packing…": "Упаковка…",
++"60 days of evaluation with every function, then a licence: $60 for personal use or a small business": "60 дней пробы со всеми функциями, потом лицензия: $60 для личного пользования или малого дела",
++"Waveform Free 14 or newer: free, no track or export limits; it opens the studio's DAWproject (File > Import Other > Import a DAWproject file). Waveform 13 is not supported": "Waveform Free 14 или новее: бесплатно, без ограничений на дорожки и экспорт; открывает DAWproject студии (File > Import Other > Import a DAWproject file). Waveform 13 не поддерживается",
++"30 days without limits after signing up, then Essentials $99, Producer $199 or Studio $399 (bitwig.com, 03.10.2026); opens the studio's DAWproject: the mix, the stems, the score as notes, the sections as markers": "30 дней без ограничений после регистрации, потом Essentials $99, Producer $199 или Studio $399 (bitwig.com, 03.10.2026); открывает DAWproject студии: микс, стемы, партитура нотами, разделы маркерами",
++"reaper.fm/download.php → the Linux x86_64 tarball → unpack it and run ./install-reaper.sh (it goes to /opt/REAPER)": "reaper.fm/download.php → архив Linux x86_64 → распакуй и запусти ./install-reaper.sh (ставится в /opt/REAPER)",
++"tracktion.com/products/waveform-free → the .deb of Waveform 14 for Linux → sudo apt install ./waveform14_*.deb": "tracktion.com/products/waveform-free → .deb Waveform 14 для Linux → sudo apt install ./waveform14_*.deb",
++"bitwig.com/download: the Ubuntu .deb (sudo apt install ./bitwig-studio-*.deb) or the Flatpak": "bitwig.com/download: .deb для Ubuntu (sudo apt install ./bitwig-studio-*.deb) или Flatpak",
++"Pick a take on the right.": "Выбери семпл справа.",
++"the original": "оригинал",
++"The original": "Оригинал",
++"Every version of this take in one player: switch between them at the same second (1–9, Space)": "Все версии этого семпла в одном плеере: переключайся между ними на той же секунде (1–9, пробел)",
++"Compare all": "Сравнить все",
++"Nothing made from this take yet.": "Из этого семпла пока ничего не сделано.",
++"Compare it with the original and every other version, at the same second": "Сравнить с оригиналом и всеми версиями, на той же секунде",
++"Compare": "Сравнить",
++"Lay this file over the take in the spectrum": "Наложить этот файл на семпл в спектре",
++"Whisper on this file against the lyrics": "Whisper на этом файле против текста",
++"waiting for Forge… {0}": "ждём Forge… {0}",
++"running… {0}": "идёт… {0}",
++"{#0} s": "{0} с",
++"{0} · about {1} left": "{0} · осталось около {1}",
++"{0} · longer than usual": "{0} · дольше обычного",
++"Made here": "Сделано здесь",
++"nothing yet for this take": "для этого семпла пока ничего",
++"Levels, dB": "Уровни, дБ",
++"blank: the preset decides": "пусто: решает пресет",
++"preset": "пресет",
++"sending to Forge…": "отправка на Forge…",
++"Could not: {0}": "Не вышло: {0}",
++"Compare the versions": "Сравнить версии",
++"Compare · {0}": "Сравнение · {0}",
++"{#0} versions · a click (or its number) plays it from the same second · Space plays and pauses · ← → five seconds": "Версий: {0} · клик (или её номер) играет с той же секунды · пробел — играть и пауза · ← → пять секунд",
++"Position": "Позиция",
++"✓ {0}": "✓ {0}",
++"… {0}": "… {0}",
++"✕ {0}": "✕ {0}",
++"· {0}": "· {0}",
++"done": "готово",
++"done: the remaster is in the tree": "готово: ремастер в дереве",
++"{0} · what was made before stays": "{0} · сделанное раньше остаётся",
++"failed": "сбой",
++"✨ Enjoy the magic… {#0} / {#1} · {2}": "✨ Наслаждайся магией… {0} / {1} · {2}",
++"✨ Enjoy the magic… {#0} / {#1}": "✨ Наслаждайся магией… {0} / {1}",
++"the Debunker": "Debunker",
++"{0} Hz · no loudnorm": "{0} Гц · без loudnorm",
++"432 Hz": "432 Гц",
++"⚠ Whisper went round on one text (“{0}” ×{1}): this measurement says nothing about the song. Press Listen again.": "⚠ Whisper закружился на одном тексте («{0}» ×{1}): этот замер ничего не говорит о песне. Нажми «Слушать снова».",
++"No words heard in this minute": "В эту минуту слов не услышано",
++"Minute {0}: mean match {1} — clear": "Минута {0}: среднее совпадение {1} — чисто",
++"Minute {0}: mean match {1} — blurred": "Минута {0}: среднее совпадение {1} — размыто",
++"Minute {0}: mean match {1} — glossolalia": "Минута {0}: среднее совпадение {1} — глоссолалия",
++"Reached lyric line {0} of {1} at {2}": "Дошло до строки текста {0} из {1} на {2}",
++"No lyric line matched": "Ни одна строка текста не совпала",
++"returns back: {0}": "возвратов назад: {0}",
++"{#0} distinct of {#1} heard segments": "различных: {0} из {1} услышанных отрезков",
++"What Whisper heard, {#0} segments: heard → closest lyric line": "Что услышал Whisper, отрезков: {0}: услышанное → ближайшая строка текста",
++"Listen again": "Слушать снова",
++"{#0} % on heard words": "{0} % по услышанным словам",
++"{#0} guessed": "угадано: {0}",
++"Time again": "Разметить снова",
++"waiting for the GPU · {#0} s": "ждём GPU · {0} с",
++"Whisper listens · {#0} s": "Whisper слушает · {0} с",
++"waiting for the GPU": "ждём GPU",
++"Whisper listens": "Whisper слушает",
++"card": "карта",
++"studio": "студия",
++"training": "тренировка",
++"lab jobs": "дела лаборатории",
++"now": "сейчас",
++"the guard": "страж",
++"The card the studio’s synthesis runs on: one": "Карта, на которой идёт синтез студии: одна",
++"Cards a training run may take": "Карты, которые может занять тренировка",
++"The listener, Whisper, stems, remaster, upscale": "Слушатель, Whisper, стемы, ремастер, апскейл",
++"What the GPU guard says of the card this moment: open to the studio’s work, or closed by another program’s service (more than 2 GiB); the desktop’s small ones do not close it": "Что страж GPU говорит о карте в этот миг: открыта для дел студии или закрыта сервисом другой программы (больше 2 ГиБ); мелкие программы рабочего стола её не закрывают",
++"GPU": "GPU",
++"open · {0} free": "открыта · свободно {0}",
++"closed: {0}": "закрыта: {0}",
++"not read": "не прочитано",
++"No card found": "Карт не найдено",
++"The desktop’s own on it: {0}": "На ней свои программы рабочего стола: {0}",
++"Nothing of anyone else’s on it": "Ничего чужого на ней нет",
++"Restart the studio on GPU{0}": "Перезапустить студию на GPU{0}",
++"Give training and the lab’s jobs one card at least": "Дай тренировке и делам лаборатории хотя бы одну карту",
++"Saved: the studio moves to GPU{0} when it restarts": "Сохранено: студия перейдёт на GPU{0} при перезапуске",
++"Saved": "Сохранено",
++"Restart the studio on GPU{0}?": "Перезапустить студию на GPU{0}?",
++"The models load again on the new card at the next song; the page reconnects by itself. Nothing is rendering now.": "Модели снова загрузятся на новую карту со следующей песней; страница переподключится сама. Сейчас ничего не звучит.",
++"Restart": "Перезапустить",
++"The studio restarts on GPU{0}…": "Студия перезапускается на GPU{0}…",
++"The studio is back on GPU{0}": "Студия снова на GPU{0}",
++"GPU{0} is training {1}": "GPU{0} тренирует {1}",
++"It is the studio’s own card: a synthesis now would fight the training for its memory, and one of them would fail. The synthesis waits until the run ends, or until you stop it (Train). To create while training, give training another card: Engine → GPUs.": "Это собственная карта студии: синтез сейчас боролся бы с тренировкой за её память, и кто-то из них упал бы. Синтез ждёт, пока ран не кончится или пока ты его не остановишь (Тренер). Чтобы творить во время тренировки, дай тренировке другую карту: Движок → GPU.",
++"Open Train": "Открыть Тренера",
++"Wait": "Подождать",
++"Training may take GPU{0}, the studio’s card: while it does, synthesis waits.": "Тренировка может занять GPU{0}, карту студии: пока она занята, синтез ждёт.",
++"Training never takes GPU{0}: synthesis and training go on side by side.": "Тренировка никогда не берёт GPU{0}: синтез и тренировка идут рядом.",
++"Saved: the studio on GPU{0}; it still runs on GPU{1} until it restarts.": "Сохранено: студия на GPU{0}; до перезапуска она ещё идёт на GPU{1}.",
++"GPU{0}": "GPU{0}",
++"Limit": "Предел",
++"Close the guide": "Закрыть руководство",
++"In this part": "В этой части",
++"Held tones": "Тянущиеся тоны",
++"narrow peaks standing 8+ dB above their ±1/6 octave in 35%+ of the song": "узкие пики на 8+ дБ выше своей ±1/6 октавы в 35%+ песни",
++"Hz": "Гц",
++"pitch": "высота",
++"of the time": "доля времени",
++"above": "выше",
++"mains {0}": "сеть {0}",
++"high whine": "высокий писк",
++"suspect": "подозрительно",
++"{0} dB": "{0} дБ",
++"None.": "Нет.",
++"Frame buzz per 30 s": "Кадровый гул на 30 с",
++"25–150 Hz in the highs' envelope, dB above the neighbours": "25–150 Гц в огибающей верхов, дБ над соседями",
++"Click candidates": "Кандидаты в щелчки",
++"{#0} — a sharp corner in the waveform; a harp or a drum hit can look the same: listen": "{0} — острый угол в волне; арфа или удар барабана выглядят так же: послушай",
++"Dropouts": "Провалы",
++"{0} {1} ms, −{2} dB": "{0} {1} мс, −{2} дБ",
++"Stereo": "Стерео",
++"left–right correlation per band; below 0, the channels work against each other": "корреляция левого и правого по полосам; ниже 0 каналы идут друг против друга",
++"{0} · {1} Hz · measured in {2} s on Forge": "{0} · {1} Гц · измерено за {2} с на Forge",
++"Inspect again": "Проверить снова",
++"{0} · no answer": "{0} · нет ответа",
++"{0} · {#1} ms": "{0} · {1} мс",
++"The line to the studio: the round trip, the middle of the last five (every 20 s). Far: marks show at once and the studio confirms them; the page waits longer before it calls a silence a failure.": "Линия до студии: время туда-обратно, середина последних пяти (каждые 20 с). Далеко: отметки видны сразу, а студия подтверждает их потом; страница дольше ждёт, прежде чем назвать молчание сбоем.",
++"The library is on Forge's lab, which does not answer: only the built-in profiles for now": "Библиотека в лаборатории Forge, а она не отвечает: пока только встроенные профили",
++"Replace the style in the form with “{0}”?": "Заменить стиль в форме на «{0}»?",
++"Replace": "Заменить",
++"Style “{0}” in the form": "Стиль «{0}» в форме",
++"The style field is empty": "Поле стиля пусто",
++"Save the style": "Сохранить стиль",
++"A name to find it by under the style field.": "Имя, по которому его найти под полем стиля.",
++"“{0}” exists. Replace it?": "«{0}» уже есть. Заменить?",
++"Style “{0}” saved on Forge": "Стиль «{0}» сохранён на Forge",
++"Not saved: {0}": "Не сохранено: {0}",
++"Delete the saved style “{0}”?": "Удалить сохранённый стиль «{0}»?",
++"Style “{0}” deleted": "Стиль «{0}» удалён",
++"Not deleted: {0}": "Не удалено: {0}",
++"Profile “{0}” applied; the texts and seeds stay": "Профиль «{0}» применён; тексты и сиды остаются",
++"Not applied: {0}": "Не применено: {0}",
++"The form does not read: {0}": "Форма не читается: {0}",
++"Save the profile": "Сохранить профиль",
++"Every knob of the form but the texts and seeds.": "Все ручки формы, кроме текстов и сидов.",
++"Profile “{0}” saved on Forge": "Профиль «{0}» сохранён на Forge",
++"Delete the saved profile “{0}”?": "Удалить сохранённый профиль «{0}»?",
++"Profile “{0}” deleted": "Профиль «{0}» удалён",
++"✗ Not the native YuE2 score: {0}": "✗ Не родная партитура YuE2: {0}",
++"The engine may still read it, but the check, MIDI and the voice shift need the dialect YuE2 and SheetSage2 write.": "Движок, может быть, её и прочтёт, но проверке, MIDI и переносу голоса нужен диалект, на котором пишут YuE2 и SheetSage2.",
++"✓ Native YuE2 score · {0} · {1} BPM · {2} · {#3} bars · {4} · {#5} sections": "✓ Родная партитура YuE2 · {0} · {1} BPM · {2} · тактов: {3} · {4} · разделов: {5}",
++"notes": "ноты",
++"a minute": "в минуту",
++"range": "диапазон",
++"sounding": "звучит",
++"chords": "аккорды",
++"Ins : Vocal =": "Ins : Vocal =",
++"· no vocal notes": "· вокальных нот нет",
++"· the instruments carry most notes": "· большинство нот у инструментов",
++"· the voice carries most notes": "· большинство нот у голоса",
++"· voice and instruments about even": "· голос и инструменты примерно поровну",
++"No MIDI: {0}": "MIDI нет: {0}",
++"This score has no section comments (% verse …)": "В этой партитуре нет комментариев разделов (% verse …)",
++"No markers: {0}": "Маркеров нет: {0}",
++"{0}: {1} written notes moved (tied ones count apart), now {2}–{3}": "{0}: перенесено записанных нот: {1} (связанные считаются отдельно), теперь {2}–{3}",
++"{0} moved {1}": "{0} перенесено {1}",
++"Replace the score in the form with {0}?": "Заменить партитуру в форме на {0}?",
++"Score from {0}: Vocal {1} ({2} notes), Ins {3} ({4}), {5}, {6} BPM": "Партитура из {0}: Vocal {1} (нот: {2}), Ins {3} ({4}), {5}, {6} BPM",
++"This MIDI could not become a score: {0}": "Этот MIDI не стал партитурой: {0}",
++"heresy-lab is not running": "heresy-lab не запущена",
++"heresy-lab answered {0}": "heresy-lab ответила {0}",
++"not a spectrum": "это не спектр",
++"the server answered {0}": "сервер ответил {0}",
++"nothing — this take alone": "ничего — только этот семпл",
++"Average power spectrum": "Средний спектр мощности",
++"Frequency band energy": "Энергия частотных полос",
++"Paste the text into Lyrics first": "Сначала вставь текст в «Текст»",
++"Text made ready with “{0}”: {#1} step (Undo gives the text back)": { "one": "Текст подготовлен профилем «{0}»: {1} шаг («Отменить» вернёт текст)", "few": "Текст подготовлен профилем «{0}»: {1} шага («Отменить» вернёт текст)", "many": "Текст подготовлен профилем «{0}»: {1} шагов («Отменить» вернёт текст)", "other": "Текст подготовлен профилем «{0}»: {1} шага («Отменить» вернёт текст)" },
++"Text made ready with “{0}”: {#1} steps (Undo gives the text back)": { "one": "Текст подготовлен профилем «{0}»: {1} шаг («Отменить» вернёт текст)", "few": "Текст подготовлен профилем «{0}»: {1} шага («Отменить» вернёт текст)", "many": "Текст подготовлен профилем «{0}»: {1} шагов («Отменить» вернёт текст)", "other": "Текст подготовлен профилем «{0}»: {1} шага («Отменить» вернёт текст)" },
++"{0} {1} / {2} characters": "{0} {1} / {2} символов",
++"The text is back as it was": "Текст вернулся как был",
++"Give the profile a name": "Дай профилю имя",
++"That name is a built-in profile: choose another": "Это имя встроенного профиля: выбери другое",
++"Text profile “{0}” saved on Forge": "Профиль текста «{0}» сохранён на Forge",
++"Delete the text profile “{0}”?": "Удалить профиль текста «{0}»?",
++"Text profile deleted": "Профиль текста удалён",
++"The score has no K: line I can read": "В партитуре нет читаемой строки K:",
++"Unknown key: {0}": "Неизвестная тональность: {0}",
++"No notes found to move": "Нот для переноса не найдено",
++"{0} notes would need more than a double accidental: pick the other direction": "Нотам ({0}) понадобилось бы больше двойного знака: выбери другое направление",
++"none yet — “From the Creator” takes them as the form has them now": "пока нет — «Из Творца» возьмёт их такими, какие они в форме сейчас",
++"The notebook lives in Forge's lab, which does not answer: {0}": "Тетрадь живёт в лаборатории Forge, а она не отвечает: {0}",
++"In hand in the Creator": "В руках в Творце",
++"Version of {0} — {1}. Read only.": "Версия от {0} — {1}. Только чтение.",
++"Version of {0}. Read only.": "Версия от {0}. Только чтение.",
++"In hand in the Creator ✎": "В руках в Творце ✎",
++"{#0} lines · {#1} chars": "строк: {0} · символов: {1}",
++"{0} · {#1} lines · style {#2}": "{0} · строк: {1} · стиль {2}",
++"Edit": "Править",
++"No notes.": "Заметок нет.",
++"None yet. Load this document into the Creator: whatever is made while it is in hand lands here.": "Пока нет. Загрузи этот документ в Творца: всё, что сделано, пока он в руках, ложится сюда.",
++"A version is kept at every save after a pause, and whenever you keep one.": "Версия хранится при каждом сохранении после паузы и всякий раз, когда ты её оставляешь.",
++"saving…": "сохранение…",
++"unsaved": "не сохранено",
++"saved {0}": "сохранено {0}",
++"{0} · {#1} take": { "one": "{0} · {1} семпл", "few": "{0} · {1} семпла", "many": "{0} · {1} семплов", "other": "{0} · {1} семпла" },
++"{#0} v": "{0} в.",
++"Nothing for “{0}”.": "Ничего по «{0}».",
++"No documents yet. ＋ New, or “Save to Writer” in the Creator.": "Документов пока нет. ＋ Новый или «Сохранить в Писателе» в Творце.",
++"The notebook did not save: {0}": "Тетрадь не сохранилась: {0}",
++"Saved to “{0}” (the version before is kept)": "Сохранено в «{0}» (прежняя версия хранится)",
++"Saved to “{0}”": "Сохранено в «{0}»",
++"A new document in the Writer: “{0}” (the version before is kept)": "Новый документ в Писателе: «{0}» (прежняя версия хранится)",
++"A new document in the Writer: “{0}”": "Новый документ в Писателе: «{0}»",
++"Put “{0}” into the Creator?": "Положить «{0}» в Творца?",
++"The title, style and lyrics there now are replaced (they belong to another document in the Writer, which keeps them).": "Название, стиль и текст, что там сейчас, заменятся (они принадлежат другому документу в Писателе, который их хранит).",
++"The title, style and lyrics there now are replaced. They are in no document: “Save to Writer” first, if they matter.": "Название, стиль и текст, что там сейчас, заменятся. Они ни в каком документе: сначала «Сохранить в Писателе», если они важны.",
++"Put it in the Creator": "Положить в Творца",
++"“{0}” is in the Creator; what is made from it is linked to it": "«{0}» в Творце; всё, что из него сделано, связано с ним",
++"Save to Writer": "Сохранить в Писателе",
++"Save the song as it is now into “{0}” (the version before is kept)": "Сохранить песню, как она есть, в «{0}» (прежняя версия хранится)",
++"Keep the song as it is now (title, style, lyrics and every knob) as a document in the Writer": "Сохранить песню как есть (название, стиль, текст и все ручки) документом в Писателе",
++"From the Writer…": "Из Писателя…",
++"PARAMS taken from the Creator (the version before is kept)": "PARAMS взяты из Творца (прежняя версия хранится)",
++"A few words to know it by (or none).": "Пара слов, чтобы узнать её (или ничего).",
++"Keep it": "Оставить",
++"the chorus works now": "припев теперь звучит",
++"Version kept": "Версия сохранена",
++"Delete “{0}” from the notebook?": "Удалить «{0}» из тетради?",
++"It goes to writer/.trash on Forge, with its versions; the takes stay in the library.": "Он уйдёт в writer/.trash на Forge вместе с версиями; семплы останутся в библиотеке.",
++"Deleted (kept in writer/.trash)": "Удалено (хранится в writer/.trash)",
++"Version restored (the one before it is kept too)": "Версия восстановлена (предыдущая тоже хранится)",
++"Nothing in hand: new takes link to no document": "В руках ничего: новые семплы ни к какому документу не привязываются",
++"line one": "первая строка",
++"Ctrl + wheel: zoom · drag or wheel: scroll · 0: fit · Esc: close": "Ctrl + колесо: масштаб · тяни или колесо: прокрутка · 0: вписать · Esc: закрыть",
++"Zoom out": "Уменьшить",
++"Zoom in": "Увеличить",
++"Fit": "Вписать",
++"music half": "музыкальная половина",
++"music + sound halves": "музыкальная + звуковая половины",
++"music + sound": "музыка + звук",
++"cannot load: {0}": "не загружается: {0}",
++"Cannot load: {0}": "Не загружается: {0}",
++"rank {0}": "ранг {0}",
++"rank {0}, {1} layout, {2} MB": "ранг {0}, раскладка {1}, {2} МБ",
++"fused": "слитая",
++"unfused": "раздельная",
++"Trigger word: {0}": "Слово-триггер: {0}",
++"Trained in {0} mode": "Обучена в режиме «{0}»",
++"{0} mode": "режим «{0}»",
++"direct": "напрямую",
++"trigger": "триггер",
++"Music": "Музыка",
++"Music, together": "Музыка вместе",
++"All the music strengths together. Measured on this studio's takes: the score came out whole up to {0} in every run, broken from 2.5 in every run. Green to {1}, amber to {2}, red past it.": "Все музыкальные силы вместе. Замерено на семплах этой студии: партитура выходила целой до {0} в каждом запуске и сломанной от 2.5 в каждом. Зелёный до {1}, жёлтый до {2}, дальше красный.",
++"Strength on the music half: the score and the music tokens (0 off, 1 as trained)": "Сила на музыкальной половине: партитура и музыкальные токены (0 выкл, 1 как обучено)",
++"Strength on the sound half: the acoustic stage that turns music tokens into sound (0 off, 1 as trained)": "Сила на звуковой половине: акустическая стадия, что превращает музыкальные токены в звук (0 выкл, 1 как обучено)",
++"green to {0}, amber to {1}, red beyond": "зелёный до {0}, жёлтый до {1}, дальше красный",
++"This file has no music half": "У этого файла нет музыкальной половины",
++"This file has no sound half": "У этого файла нет звуковой половины",
++"{0} Music strength": "{0}: сила музыки",
++"{0} Sound strength": "{0}: сила звука",
++"Double-click to type it": "Двойной клик — ввести",
++"Its trigger word is in the style": "Его слово-триггер есть в стиле",
++"Add the trigger word to the style prompt": "Добавить слово-триггер в промпт стиля",
++"Not in loras/ any more": "Больше нет в loras/",
++"No .safetensors files in the app's loras/ folder.": "В папке loras/ нет файлов .safetensors.",
++"No LoRAs found. Put .safetensors files (or folders, or links to them) in the app's loras/ folder.": "LoRA не найдены. Положи файлы .safetensors (или папки, или ссылки на них) в папку loras/.",
++"{0} is no longer in loras/ and will be left out.": "{0} больше нет в loras/, она не войдёт.",
++"{0}: put its trigger word “{1}” in the style.": "{0}: впиши её слово-триггер «{1}» в стиль.",
++"{0} was trained in Direct mode.": "{0} обучена в режиме «Напрямую».",
++"{0} was trained with a score ({1} mode).": "{0} обучена с партитурой (режим «{1}»).",
++"⚠ {0}: {1} on the music half is past its limit {2}: the score tends to fail after 70-200 tokens.": "⚠ {0}: {1} на музыкальной половине — выше её предела {2}: партитура обычно ломается после 70–200 токенов.",
++"⚠ {0}: {1} on the sound half is past its limit {2}.": "⚠ {0}: {1} на звуковой половине — выше её предела {2}.",
++"⚠ {0} plans instrumental scores: at {1} with words to sing, the score loses its vocal line (measured at 1.00: 1 note in 127 vocal bars, the music looping). Keep it low, 0.3–0.5, for a sung song.": "⚠ {0} планирует инструментальные партитуры: на {1} со словами для пения партитура теряет вокальную линию (замер на 1.00: 1 нота на 127 вокальных тактов, музыка зацикливается). Для песни с пением держи низко, 0.3–0.5.",
++"{#0} stacked: their changes add up.": "Наложено: {0}; их изменения складываются.",
++"⚠ The music half carries {0} together, past the shared ceiling {1}: runs this heavy wrote broken scores every time (measured). Lower some, or take one off the music half.": "⚠ Музыкальная половина несёт вместе {0}, выше общего потолка {1}: такие тяжёлые запуски каждый раз писали сломанные партитуры (замерено). Убавь какие-то или сними одну с музыкальной половины.",
++"{#0} in loras/": "в loras/: {0}",
++"{#0} in the song form": "в форме песни: {0}",
++"none in the song form": "в форме песни ни одной",
++"in the song form · {0}": "в форме песни · {0}",
++"About {0}": "О «{0}»",
++"no vocals, planned sections": "без вокала, запланированные разделы",
++"riffs, structure, drive": "риффы, структура, драйв",
++"distorted, mechanical tone": "искажённый, механический тон",
++"orchestral structure, drama": "оркестровая структура, драма",
++"big orchestra and choir tone": "звук большого оркестра и хора",
++"hushed bedroom pop": "тихий бедрум-поп",
++"hazy dream pop": "туманный дрим-поп",
++"engine default": "стандарт движка",
++"not downloaded": "не скачан",
++"Weights: {0}": "Веса: {0}",
++"About the {0} VAE": "О VAE «{0}»",
++"{#0} decoders": { "one": "{0} декодер", "few": "{0} декодера", "many": "{0} декодеров", "other": "{0} декодера" },
++"{#0} decoder": { "one": "{0} декодер", "few": "{0} декодера", "many": "{0} декодеров", "other": "{0} декодера" },
++"{0} picked in the form": "{0} выбран в форме",
++"a finished song can add another from its page": "готовая песня может добавить ещё один со своей страницы",
++"The current official decoder, and the default. The cleanest, best-sounding one: start here.": "Нынешний официальный декодер, он же стандартный. Самый чистый и лучше всех звучащий: начинай с него.",
++"The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "Прежний официальный декодер. Опубликованные оценки бенчмарков сделаны с ним. Менее чистый, чем Стандартный; кому-то он слышится музыкальнее. Тот же энкодер, отличается только декодер.",
++"A community weight mix of the two official decoders: 2/3 Standard + 1/3 Legacy. Not newly trained. It sits between the clean Standard and the more musical Legacy; the real-audio LoRA's authors suggest it.": "Смесь весов двух официальных декодеров от сообщества: 2/3 Стандартного + 1/3 Прежнего. Заново не обучалась. Стоит между чистым Стандартным и более музыкальным Прежним; её советуют авторы real-audio LoRA.",
++"one singer's timbre": "тембр одного певца",
++"diction of a language; exact lyrics, many voices": "дикция языка; точный текст, много голосов",
++"all of it; a large, varied catalogue": "всё вместе; большой, разнообразный каталог",
++"{0} % of what it adapts · {#1} MB a half": "{0} % от того, что он подстраивает · {1} МБ на половину",
++"{0} % of what it adapts · {#1} MB a half · for large many-voice sets": "{0} % от того, что он подстраивает · {1} МБ на половину · для больших многоголосых наборов",
++"{#0} tracks": { "one": "{0} дорожка", "few": "{0} дорожки", "many": "{0} дорожек", "other": "{0} дорожки" },
++"{#0} captions": { "one": "{0} подпись", "few": "{0} подписи", "many": "{0} подписей", "other": "{0} подписи" },
++"the cards could not be read": "карты не прочитать",
++"{0} needed {1} on one card (measured); the largest here has {2}: choose int8 weights.": "{0} нужно {1} на одной карте (замерено); у самой большой здесь {2}: выбери веса int8.",
++"{0} needed {1} on one card (measured); the largest here has {2}.": "{0} нужно {1} на одной карте (замерено); у самой большой здесь {2}.",
++"{0} · {1} at the peak (measured).": "{0} · {1} на пике (замерено).",
++"Free enough now: {0}": "Сейчас хватает свободного: {0}",
++"No card has that free now ({0})": "Ни у одной карты сейчас столько не свободно ({0})",
++"{0} · not measured yet for this trainer: the first run measures its peak": "{0} · для этого тренера ещё не замерено: первый ран замерит свой пик",
++"running": "идёт",
++"stopping": "останавливается",
++"stopped": "остановлен",
++"queued": "в очереди",
++"Running": "Идёт",
++"Complete": "Готово",
++"Failed": "Сбой",
++"Cancelled": "Отменено",
++"archived": "в архиве",
++"Ruach trainer": "тренер Ruach",
++"In loras/, ready in the Creator": "В loras/, готово в Творце",
++"deleted {0}": "удалён {0}",
++"{#0} adapters with it": "адаптеров с ним: {0}",
++"Restore": "Восстановить",
++"Delete for good": "Удалить навсегда",
++"Nothing trains now.": "Сейчас ничего не тренируется.",
++"Nothing archived.": "В архиве пусто.",
++"No runs yet: steps 1 to 3.": "Ранов пока нет: шаги с 1 по 3.",
++"Run actions": "Действия рана",
++"The log": "Лог",
++"Stop": "Остановить",
++"Stop…": "Остановить…",
++"Compare with another run": "Сравнить с другим раном",
++"Another run’s curves, dashed, on the same steps": "Кривые другого рана, пунктиром, на тех же шагах",
++"Compare with…": "Сравнить с…",
++"{0} · same set": "{0} · тот же набор",
++"{0} % · step {1} / {2} · epoch {3} / {4}": "{0} % · шаг {1} / {2} · эпоха {3} / {4}",
++"{0} % · step {1} / {2}": "{0} % · шаг {1} / {2}",
++"speed": "скорость",
++"took": "заняло",
++"left": "осталось",
++"flow now": "flow сейчас",
++"ar_ce now": "ar_ce сейчас",
++"ar_kl now": "ar_kl сейчас",
++"VRAM peak": "пик VRAM",
++"{0} s/step": "{0} с/шаг",
++"the sound half's loss, averaged over the last 25 steps": "потеря звуковой половины, среднее за последние 25 шагов",
++"the music half's loss, averaged over the last 25 steps": "потеря музыкальной половины, среднее за последние 25 шагов",
++"how far the music half has moved from the base model": "насколько музыкальная половина ушла от базовой модели",
++"the card's peak while it ran": "пик карты за время рана",
++"ar_ce {0}: the music half is learning the songs by heart; an earlier epoch may be the better adapter.": "ar_ce {0}: музыкальная половина заучивает песни наизусть; более ранняя эпоха может оказаться лучшим адаптером.",
++"Sound half · flow loss (NAR)": "Звуковая половина · потеря flow (NAR)",
++"All together · loss": "Всё вместе · потеря",
++"Music half · ar_ce (AR)": "Музыкальная половина · ar_ce (AR)",
++"How well the sound half predicts the noise it has to take away. Lower is better. It jumps from step to step with the random noise level of each step: read the bold line, the running average.": "Насколько хорошо звуковая половина предсказывает шум, который ей надо убрать. Ниже — лучше. Скачет от шага к шагу вместе со случайным уровнем шума каждого шага: читай жирную линию, скользящее среднее.",
++"How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.": "Насколько хорошо музыкальная половина предсказывает собственные токены песни. Ниже — лучше; близко к 0 она знает песни наизусть, и тогда лучший адаптер — более ранняя эпоха.",
++"(its average, dashed)": "(её среднее, пунктиром)",
++"over the curve: the step, its epoch, the value there": "над кривой: шаг, его эпоха, значение там",
++"No run chosen: pick one in the column on the right, or start one in step 3.": "Ран не выбран: выбери его в колонке справа или начни в шаге 3.",
++"Epochs · {#0} saved · {1}": "Эпохи · сохранено: {0} · {1}",
++"pick one: into the Creator’s LoRAs, out of them, or as a file ·": "выбери одну: в LoRA Творца, из них или файлом ·",
++"worth hearing first, read off the curves (a guess: the ear decides) · ✓ in loras/": "стоит послушать первыми, по кривым (догадка: решает ухо) · ✓ в loras/",
++"final": "финал",
++"step {#0}": "шаг {0}",
++"in loras/": "в loras/",
++"worth hearing first: {0}": "стоит послушать первой: {0}",
++"the first with the sound settled ({0})": "первая с устоявшимся звуком ({0})",
++"the lowest sound loss ({0})": "наименьшая потеря звука ({0})",
++"the last before the music half knows the songs by heart ({0})": "последняя, пока музыкальная половина не выучила песни наизусть ({0})",
++"the first with the sound settled": "первая с устоявшимся звуком",
++"the lowest sound loss": "наименьшая потеря звука",
++"the last before the music half knows the songs by heart": "последняя, пока музыкальная половина не выучила песни наизусть",
++"Epoch {#0}": "Эпоха {0}",
++"The final file": "Последний файл",
++"in the Creator as": "в Творце как",
++"Out of loras/": "Из loras/",
++"Into loras/ → the Creator": "В loras/ → в Творца",
++"What it was given": "Что ему дали",
++"set": "набор",
++"rank": "ранг",
++"window": "окно",
++"started": "начат",
++"speed ×{0}": "скорость ×{0}",
++"separated": "разделено",
++"{0} is archived": "{0} в архиве",
++"{0} is back from the archive": "{0} вернулся из архива",
++"Stop {0}?": "Остановить {0}?",
++"{0} saves what it has learned on the way out; the epochs saved so far stay.": "{0} на выходе сохранит выученное; уже сохранённые эпохи останутся.",
++"The studio’s trainer": "Тренер студии",
++"the studio’s trainer": "тренер студии",
++"Stopping {0}": "Останавливается {0}",
++"Delete {0}?": "Удалить {0}?",
++"Its folder ({#0} checkpoints, {1}) goes to the trash: the Trash filter here brings it back, or deletes it for good.": "Его папка (чекпоинтов: {0}, {1}) уходит в корзину: фильтр «Корзина» здесь вернёт её или удалит навсегда.",
++"And its {#0} adapters in loras/?": { "one": "И его {0} адаптер в loras/?", "few": "И его {0} адаптера в loras/?", "many": "И его {0} адаптеров в loras/?", "other": "И его {0} адаптера в loras/?" },
++"And its {#0} adapter in loras/?": { "one": "И его {0} адаптер в loras/?", "few": "И его {0} адаптера в loras/?", "many": "И его {0} адаптеров в loras/?", "other": "И его {0} адаптера в loras/?" },
++"{0} They are in the Creator’s LoRAs now. Take them out with the run (into the trash beside it), or keep them usable in the Creator.": "{0} Сейчас они в LoRA Творца. Вынуть их вместе с раном (в корзину рядом с ним) или оставить доступными в Творце?",
++"Keep them": "Оставить их",
++"{0} is in the trash with {#1} adapters": "{0} в корзине вместе с адаптерами: {1}",
++"{0} is in the trash with {#1} adapter": "{0} в корзине вместе с адаптерами: {1}",
++"{0} is in the trash": "{0} в корзине",
++"{0} is back with its adapters": "{0} вернулся вместе с адаптерами",
++"{0} is back": "{0} вернулся",
++"Delete {0} for good?": "Удалить {0} навсегда?",
++"{0} freed. This cannot be undone.": "Освобождается {0}. Этого не отменить.",
++"{0} is gone: {1} freed": "{0} удалён: освобождено {1}",
++"In loras/: {0} — ready in the Creator": "В loras/: {0} — готово в Творце",
++"Take {0} out of loras/?": "Вынуть {0} из loras/?",
++"It leaves Create’s LoRAs; the checkpoint stays in the run, and a click puts it back.": "Она уходит из LoRA Творца; чекпоинт остаётся в ране, и клик вернёт её.",
++"Take it out": "Вынуть",
++"{0} is out of loras/": "{0} вынута из loras/",
++"Put a folder of songs into": "Положи папку с песнями в",
++", then press Reload.": ", потом нажми «Обновить».",
++"Reading the folder…": "Читается папка…",
++"{#0} of {#1} in · {2} · {#3} with lyrics": "взято {0} из {1} · {2} · с текстом: {3}",
++"{0} · long: the music half trains on the whole song": "{0} · длинная: музыкальная половина учится на всей песне",
++"{0} · long: the music half trains on the whole song · no lyrics": "{0} · длинная: музыкальная половина учится на всей песне · без текста",
++"{0} · under 0:30": "{0} · короче 0:30",
++"{0} · under 0:30 · no lyrics": "{0} · короче 0:30 · без текста",
++"{0} · no lyrics": "{0} · без текста",
++"Lyrics ✓": "Текст ✓",
++"lyrics from {0}": "текст из {0}",
++"lyrics from {0} · hints (not in the caption): {1}": "текст из {0} · подсказки (не в подписи): {1}",
++"a style of its own (empty: the shared one)": "свой стиль (пусто: общий)",
++"The starter sets could not be listed: {0}": "Стартовые наборы не удалось перечислить: {0}",
++"{0}. Downloading means accepting them.": "{0}. Скачивание означает согласие с ними.",
++"✓ in datasets/raw/": "✓ в datasets/raw/",
++"{0} of {1}…": "{0} из {1}…",
++"Download · {0}": "Скачать · {0}",
++"Download {0}?": "Скачать {0}?",
++"{0}, {#1} tracks, {2} from Hugging Face ({3}) into datasets/raw/{4}. {5}.": "{0}, дорожек: {1}, {2} с Hugging Face ({3}) в datasets/raw/{4}. {5}.",
++"Download, terms accepted": "Скачать, условия приняты",
++"Pick a raw folder first": "Сначала выбери сырую папку",
++"Write the shared style line: what is heard, in the words you will generate with": "Напиши общую строку стиля: что слышно, теми словами, какими будешь создавать",
++"making… {0} / {1}": "делается… {0} / {1}",
++"made: datasets/prepared/{0}": "сделано: datasets/prepared/{0}",
++"failed: {0}": "сбой: {0}",
++"The set {0} is made": "Набор {0} сделан",
++"No set made yet: step 2.": "Набор пока не сделан: шаг 2.",
++"Pick a set (made in step 2)": "Выбери набор (сделанный в шаге 2)",
++"A run named {0} is there already: give this one its own name": "Ран с именем {0} уже есть: дай этому своё имя",
++"Train {0}?": "Тренировать {0}?",
++"{#0} steps ({#1} epochs of {#2} tracks) on {3}, rank {4}, AR weight {5}, {6} weights, {7}; a checkpoint every {8}, all kept.": "Шагов: {0} (эпох: {1}, по {2} дорожек) на {3}, ранг {4}, вес AR {5}, веса {6}, {7}; чекпоинт каждые {8}, все хранятся.",
++"{#0} epochs": { "one": "{0} эпоху", "few": "{0} эпохи", "many": "{0} эпох", "other": "{0} эпохи" },
++"epoch": "эпоху",
++"It takes a GPU of its own for hours; a set without its latent cache gets one first (a second or two a track).": "Он занимает свою GPU на часы; набор без латентного кэша сперва получает его (секунда-две на дорожку).",
++"It takes a GPU of its own for hours; the first run also fetches Comfy-Org’s YuE2 weights.": "Он занимает свою GPU на часы; первый ран ещё и скачивает веса YuE2 от Comfy-Org.",
++"Training may take GPU{0}, the studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card).": "Тренировка может занять GPU{0}, собственную карту студии: тогда синтез ждёт конца рана (Движок → GPU даст тренировке другую карту).",
++"Start training": "Начать тренировку",
++"Training {0}": "Тренируется {0}",
++"Listener": "Слушатель",
++"drafts each track’s style from what it hears; a draft, read and correct it": "набрасывает стиль каждой дорожки по услышанному; это черновик, прочти и поправь",
++"Trigger": "Триггер",
++"Shared line": "Общая строка",
++"after the track’s tags": "после тегов дорожки",
++"the album’s vibe": "настроение альбома",
++"Write into the captions": "Записать в подписи",
++"Listening… {0} / {1}": "Слушает… {0} / {1}",
++"Listen to {0}": "Слушать {0}",
++"Listen to {0}?": "Слушать {0}?",
++"Omni hears 120 s of every track and drafts its style. Drafts heard before are kept aside (styles.DATE.json); the captions change only when you write them.": "Omni слушает по 120 с каждой дорожки и набрасывает её стиль. Прежние наброски откладываются в сторону (styles.DATE.json); подписи меняются, только когда ты их запишешь.",
++"Listen": "Слушать",
++"Listening to {0}": "Слушается {0}",
++"Write {#0} styles into the captions of {1}?": "Записать стили ({0}) в подписи набора {1}?",
++"Each first line becomes: {0} The lyrics stay.": "Каждая первая строка станет такой: {0} Текст остаётся.",
++"Write": "Записать",
++"{#0} captions written": { "one": "Записана {0} подпись", "few": "Записано {0} подписи", "many": "Записано {0} подписей", "other": "Записано {0} подписи" },
++"drafts here by {0}": "наброски здесь — {0}",
++"The studio’s trainer is missing {0}:": "Тренеру студии не хватает: {0}:",
++"Comfy-Org's YuE2 {0} weights": "весов YuE2 {0} от Comfy-Org",
++"the realaudio tokenizer head": "головы токенизатора realaudio",
++"and": "и",
++"AI-Toolkit is not found at": "AI-Toolkit не найден в",
++": clone ostris/ai-toolkit there (or set AITK_ROOT for the lab), or train with the studio’s own trainer.": ": склонируй туда ostris/ai-toolkit (или задай AITK_ROOT для лаборатории) либо тренируй собственным тренером студии.",
++"The realaudio tokenizer is missing from": "Токенизатора realaudio нет в",
++"{#0} characters, about {#1} tokens.": "Символов: {0}, токенов: около {1}.",
++"Style and lyrics together: about {#0} of {#1} tokens.": "Стиль и текст вместе: около {0} из {1} токенов.",
++"Style and lyrics together: about {#0} of {#1} tokens — too long for a full-length song and score.": "Стиль и текст вместе: около {0} из {1} токенов — слишком длинно для полной песни с партитурой.",
++"Unlike the model's training styles:": "Не похоже на стили, на которых училась модель:",
++"longer than 1,600 characters (the official examples stop at 999)": "длиннее 1 600 символов (официальные примеры кончаются на 999)",
++"{#0} Unicode arrow (→): write -> instead": "Unicode-стрелок (→): {0}: пиши -> вместо них",
++"{#0} Unicode arrows (→): write -> instead": "Unicode-стрелок (→): {0}: пиши -> вместо них",
++"dynamics marks (never in the official styles)": "знаки динамики (в официальных стилях их нет)",
++"{#0} \"Label:\" fields (5 of 110 official styles use any)": "полей «Label:»: {0} (такие есть в 5 из 110 официальных стилей)",
++"{#0} bracket line in the lyrics with a \"Label:\", an arrow or a p/f mark (none in the official examples)": "строк в скобках в тексте с «Label:», стрелкой или знаком p/f: {0} (в официальных примерах таких нет)",
++"{#0} bracket lines in the lyrics with a \"Label:\", an arrow or a p/f mark (none in the official examples)": "строк в скобках в тексте с «Label:», стрелкой или знаком p/f: {0} (в официальных примерах таких нет)",
++"{#0} instruments": { "one": "{0} инструмент", "few": "{0} инструмента", "many": "{0} инструментов", "other": "{0} инструмента" },
++"{#0} heard": "услышано: {0}",
++"{#0} questioned": "под вопросом: {0}",
++"{#0} not identified": "не опознано: {0}",
++"{#0} not judged yet": "ещё не оценено: {0}",
++"the Librarian does not answer: no probes to play": "Библиотекарь не отвечает: проб для прослушивания нет",
++"{#0} styles": { "one": "{0} стиль", "few": "{0} стиля", "many": "{0} стилей", "other": "{0} стиля" },
++"{#0} style": { "one": "{0} стиль", "few": "{0} стиля", "many": "{0} стилей", "other": "{0} стиля" },
++"what a probe gave instead of its instrument": "что проба дала вместо своего инструмента",
++"Nothing matches.": "Ничего не подходит.",
++"⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten.": "⚠ Имя в стиле — просьба, а не обещание. То, что играют ▶ A и ▶ B, YuE2 даёт на неё примерно девять раз из десяти.",
++"Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "Некоторые пробы великолепны, A и B согласны, а инструмент не тот, о котором просили: верь уху, а не имени.",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B.": "Что YuE2 просили сыграть — по одному инструменту или стилю, пробами по две минуты (первые — по минуте), с двумя сидами каждая, A и B.",
++"An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Инструмент лепит стиль всей вещи: назвав его, сдвигаешь и аранжировку. Треск или шорох бумаги, как на заезженной пластинке, — неудачный сид: сделай заново на другом.",
++"Search: name, home, sound": "Поиск: имя, родина, звук",
++"Family": "Семейство",
++"every family": "все семейства",
++"plucked strings": "щипковые",
++"bowed strings": "смычковые",
++"keys": "клавишные",
++"woodwinds": "деревянные духовые",
++"brass and horns": "медные и рога",
++"reeds and bagpipes": "язычковые и волынки",
++"drums": "барабаны",
++"tuned percussion": "звуковысотная перкуссия",
++"small percussion": "мелкая перкуссия",
++"synths and electronics": "синтезаторы и электроника",
++"voice-like": "голосоподобные",
++"ensembles": "ансамбли",
++"other": "другое",
++"heard only": "только услышанные",
++"Instruments and styles: the cheat-sheet, with the probes to hear (Alt+I)": "Инструменты и стили: шпаргалка с пробами на слух (Alt+I)",
++"A guess: the painter does not know it": "Догадка: художник его не знает",
++"A guess: the painter does not know this instrument, and the critic did not find it in the picture. See it whole": "Догадка: художник не знает этого инструмента, и критик не нашёл его на картинке. Посмотреть целиком",
++"Its picture": "Его картинка",
++"Music seed and sound seed: the same two numbers make the same music again": "Музыкальный и звуковой сид: те же два числа снова дают ту же музыку",
++"NOT IDENTIFIED IN YUE2 · FOR EXPERIMENTS WITH SOPHISTICATED PROMPTING": "НЕ ОПОЗНАН В YUE2 · ДЛЯ ОПЫТОВ С ИЗОЩРЁННЫМ ПРОМПТИНГОМ",
++"ancient Israel": "древний Израиль",
++"everywhere": "повсюду",
++"Near East, medieval Europe": "Ближний Восток, средневековая Европа",
++"Middle East": "Ближний Восток",
++"Persia": "Персия",
++"Ukraine": "Украина",
++"Ukraine, Eastern Europe": "Украина, Восточная Европа",
++"India": "Индия",
++"China": "Китай",
++"Spain": "Испания",
++"USA": "США",
++"America": "Америка",
++"Italy": "Италия",
++"Russia": "Россия",
++"Japan": "Япония",
++"Europe": "Европа",
++"Russia, Slavic lands": "Россия, славянские земли",
++"Russia, Ukraine": "Россия, Украина",
++"Hawaii": "Гавайи",
++"Ireland, Scotland": "Ирландия, Шотландия",
++"Greece": "Греция",
++"Turkey": "Турция",
++"Alps, Central Europe": "Альпы, Центральная Европа",
++"ancient Near East, Greece": "древний Ближний Восток, Греция",
++"Ireland, America": "Ирландия, Америка",
++"Sweden": "Швеция",
++"Middle East, North Africa": "Ближний Восток, Северная Африка",
++"Turkey, Black Sea": "Турция, Причерноморье",
++"Mongolia": "Монголия",
++"Tuva": "Тува",
++"India, Europe": "Индия, Европа",
++"Germany": "Германия",
++"Persia, Turkey": "Персия, Турция",
++"Balkans": "Балканы",
++"Andes, Romania": "Анды, Румыния",
++"Ireland": "Ирландия",
++"Israel": "Израиль",
++"Carpathians": "Карпаты",
++"Australia": "Австралия",
++"Alps": "Альпы",
++"Pacific, India": "Тихий океан, Индия",
++"military": "военный",
++"Armenia": "Армения",
++"Turkey, Balkans": "Турция, Балканы",
++"Scotland, Europe": "Шотландия, Европа",
++"Europe, USA": "Европа, США",
++"Germany, USA": "Германия, США",
++"Renaissance Europe": "Европа эпохи Возрождения",
++"medieval Europe": "средневековая Европа",
++"ancient Greece": "древняя Греция",
++"Near East": "Ближний Восток",
++"Peru": "Перу",
++"West Africa": "Западная Африка",
++"Cuba": "Куба",
++"Persia, Kurdistan": "Персия, Курдистан",
++"Nigeria": "Нигерия",
++"Siberia": "Сибирь",
++"England": "Англия",
++"East Asia": "Восточная Азия",
++"Africa, Central America": "Африка, Центральная Америка",
++"Africa": "Африка",
++"Switzerland": "Швейцария",
++"Trinidad": "Тринидад",
++"Tibet, Nepal": "Тибет, Непал",
++"Yakutia (Sakha), Siberia": "Якутия (Саха), Сибирь",
++"ancient Egypt": "древний Египет",
++"South America": "Южная Америка",
++"game consoles": "игровые приставки",
++"Tuva, Mongolia": "Тува, Монголия",
++"Mediterranean": "Средиземноморье",
++"Dramatic ballad": "Драматическая баллада",
++"Romantic ballad": "Романтическая баллада",
++"Mediterranean spiritual fusion": "Средиземноморский духовный фьюжн",
++"Celestial meditation": "Небесная медитация",
++"Scythian military march": "Скифский военный марш",
++"Shamanic ritual trance": "Шаманский ритуальный транс",
++"Pagan ceremonial rock": "Языческий обрядовый рок",
++"Shamanic Scythian ballad": "Шаманская скифская баллада",
++"Major (Ionian)": "Мажор (ионийский)",
++"Natural minor (Aeolian)": "Натуральный минор (эолийский)",
++"Harmonic minor": "Гармонический минор",
++"Melodic minor": "Мелодический минор",
++"Dorian": "Дорийский",
++"Phrygian": "Фригийский",
++"Phrygian dominant (Hijaz)": "Фригийский доминантовый (хиджаз)",
++"Lydian": "Лидийский",
++"Lydian ♭6": "Лидийский ♭6",
++"Mixolydian": "Миксолидийский",
++"Locrian": "Локрийский",
++"Double harmonic (Byzantine)": "Двойной гармонический (византийский)",
++"Harmonic major": "Гармонический мажор",
++"Summer cicadas": "Летние цикады",
++"Orchestral": "Оркестровый",
++"VRAM": "VRAM",
++"{0} kHz": "{0} кГц",
++"{0} GB · {#1} modules": { "one": "{0} ГБ · {1} модуль", "few": "{0} ГБ · {1} модуля", "many": "{0} ГБ · {1} модулей", "other": "{0} ГБ · {1} модуля" },
++"running a job": "выполняет задание",
++"{0} GB used · the studio": "занято {0} ГБ · студия",
++"{0} GB used": "занято {0} ГБ",
++"on disk · user/settings.json": "на диске · user/settings.json",
++"{0} → {1} · min {2}": "{0} → {1} · мин {2}",
++"hit token cap": "упёрлось в предел токенов",
++"Guidance (CFG)": "Ведение (CFG)",
++"True peak, dB": "Истинный пик, дБ",
++"kbps": "кбит/с",
++"Shape": "Форма",
++"mix and score (stems: split them in the Refiner)": "микс и партитура (стемы: раздели их в Огранщике)",
++"mix and score (stems: split them in the Refiner) · Waveform 14, Bitwig, Studio One, Cubase": "микс и партитура (стемы: раздели их в Огранщике) · Waveform 14, Bitwig, Studio One, Cubase",
++"A run is in progress; the next song is queued behind it.": "Идёт запуск; следующая песня стоит в очереди за ним.",
++"Your note on this take, kept with it: saved as you type, and the same note in the Librarian.": "Твоя заметка к этому семплу, хранится с ним: сохраняется по мере набора, та же заметка и в Библиотекаре.",
++"Top-p": "Top-p",
++"Top-k": "Top-k",
++"melody only": "только мелодия",
++"full plan": "полный план",
++"from": "из",
++"Unload model frees it now; the next song loads it again.": "«Выгрузить модель» освобождает её сейчас; следующая песня загрузит снова.",
++"This server does not report its hardware.": "Этот сервер не сообщает о своём железе.",
++"Taken out of “{0}”": "Вынуто из «{0}»",
++"Added to “{0}”": "Добавлено в «{0}»",
++"fetching…": "загрузка…",
++"fetching {0} of {1} MB · {2} MB/s": "загрузка {0} из {1} МБ · {2} МБ/с",
++"fetching {0} MB · {1} MB/s": "загрузка {0} МБ · {1} МБ/с",
++"Forge is measuring… {0}s": "Forge измеряет… {0} с",
++"the line dropped; asking Forge again ({0})…": "связь оборвалась; спрашиваем Forge снова ({0})…",
++"unpacking…": "распаковка…",
++"heresy-lab is not running: measuring here…": "heresy-lab не запущена: измеряем здесь…",
++"decoding {0} MB…": "декодирование {0} МБ…",
++"measuring…": "измерение…",
++"Could not measure: {0}": "Измерить не удалось: {0}",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Click a name to put it into the Style prompt; ▶ plays its probe; its seeds stand under it. ✓ marks what the ear heard and kept, red what YuE2 did not play when named alone. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Что YuE2 просили сыграть — по одному инструменту или стилю, пробами по две минуты (первые — по минуте), с двумя сидами каждая, A и B. Клик по имени кладёт его в промпт стиля; ▶ играет его пробу; её сиды стоят под ней. ✓ отмечает то, что ухо услышало и оставило, красным — то, чего YuE2 не сыграла, когда её назвали одну. Инструмент лепит стиль всей вещи: назвав его, сдвигаешь и аранжировку. Треск или шорох бумаги, как на заезженной пластинке, — неудачный сид: сделай заново на другом."
++});
+diff --git a/tools/console/heresy-i18n.js b/tools/console/heresy-i18n.js
+index 50ffa8d..c7a6990 100644
+--- a/tools/console/heresy-i18n.js
++++ b/tools/console/heresy-i18n.js
+@@ -63,11 +63,14 @@
+           .replace(/\\\{(\d)\\\}/g, "(?<p$1>[\\s\\S]+?)") + "$";
+         // the longest fixed piece of the key: a text without it cannot match, so most texts skip the expression
+         var lit = en.split(/\{#?\d\}/).sort(function (a, b) { return b.length - a.length; })[0];
+-        pat.push({ re: new RegExp(re), lit: lit, out: table[raw] });
++        pat.push({ re: new RegExp(re), lit: lit, fixed: en.replace(/\{#?\d\}/g, "").length, out: table[raw] });
+       } else {
+         cat[en] = typeof table[raw] === "string" ? table[raw] : (table[raw] || {}).other || "";   // forms need a number
+       }
+     });
++    // HERESY 1166: the pattern with more fixed words first, so "Song complete — {0}" does not take a text that has its
++    // own longer pattern ("Song complete — {0} ({#1} takes)")
++    pat.sort(function (a, b) { return b.fixed - a.fixed; });
+   }
+   // HERESY 1165: a translation given as its language's plural forms; the count is the first number among the parts
+   var RULES = {};
+diff --git a/tools/console/heresy-inspect.js b/tools/console/heresy-inspect.js
+index 6933cd6..a706c31 100644
+--- a/tools/console/heresy-inspect.js
++++ b/tools/console/heresy-inspect.js
+@@ -34,7 +34,7 @@
+     // tones
+     var tones = r.tones || [];
+     html += '<h4 class="in-h">Held tones <em>narrow peaks standing 8+ dB above their ±1/6 octave in 35%+ of the song</em></h4>';
+-    html += tones.length ? '<table class="in-table"><tr><th>Hz</th><th>note</th><th>of the time</th><th>above</th><th></th></tr>' + tones.map(function (t) {
++    html += tones.length ? '<table class="in-table"><tr><th>Hz</th><th>pitch</th><th>of the time</th><th>above</th><th></th></tr>' + tones.map(function (t) {
+       var kind = t.mains ? '<span class="in-tag is-bad">mains ' + esc(t.mains) + "</span>" : t.musical ? '<span class="in-tag is-ok">music</span>'
+         : '<span class="in-tag is-warn">' + (t.hz > 12000 ? "high whine" : "suspect") + "</span>";
+       return "<tr><td class=\"mono\">" + t.hz.toFixed(1) + "</td><td class=\"mono\">" + esc(t.note || "") + "</td><td>" + Math.round(t.share * 100) +
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 30901fe..4fb30f4 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -142,7 +142,7 @@
+       if (list.length) html += '<tr class="hi-fam"><th colspan="4">' + esc(groups[g]) + " <em>" + list.length + "</em></th></tr>" + list.map(styleRow).join("");
+     });
+     $("hiTable").innerHTML = html || '<tr><td class="row-hint">Nothing matches.</td></tr>';
+-    $("hiCount").textContent = (DATA.styles || []).length + " style" + ((DATA.styles || []).length === 1 ? "" : "s") + " \u00b7 what a probe gave instead of its instrument";
++    $("hiCount").innerHTML = "<span>" + (DATA.styles || []).length + " style" + ((DATA.styles || []).length === 1 ? "" : "s") + "</span> \u00b7 <span>what a probe gave instead of its instrument</span>";   // HERESY 1166
+   }
+   function paint() {
+     Array.prototype.forEach.call(document.querySelectorAll("[data-hi-tab]"), function (b) { b.classList.toggle("is-on", b.dataset.hiTab === state.tab); });
+@@ -162,8 +162,9 @@
+     $("hiTable").innerHTML = html || '<tr><td class="row-hint">Nothing matches.</td></tr>';
+     var n = { heard: 0, flag: 0, no: 0, wait: 0 };
+     DATA.instruments.forEach(function (i) { n[status(i).key]++; });
+-    $("hiCount").textContent = DATA.instruments.length + " instruments \u00b7 " + n.heard + " heard \u00b7 " + n.flag + " questioned \u00b7 " + n.no + " not identified \u00b7 " + n.wait + " not judged yet" +
+-      (state.loaded ? "" : " \u00b7 the Librarian does not answer: no probes to play");
++    // HERESY 1166: every count its own text, so each translates
++    $("hiCount").innerHTML = [DATA.instruments.length + " instruments", n.heard + " heard", n.flag + " questioned", n.no + " not identified", n.wait + " not judged yet",
++      state.loaded ? "" : "the Librarian does not answer: no probes to play"].filter(Boolean).map(function (p) { return "<span>" + esc(p) + "</span>"; }).join(" \u00b7 ");
+   }
+ 
+   function build() {
+diff --git a/tools/console/heresy-menu.js b/tools/console/heresy-menu.js
+index 1003118..8edd338 100644
+--- a/tools/console/heresy-menu.js
++++ b/tools/console/heresy-menu.js
+@@ -1,7 +1,8 @@
+ // HERESY 1048: the studio's own right-click menu (Viktor, 01.10.2026): the actions on a clip live
+ // here, so the cards stay small and the list of actions can grow. HeresyMenu.open(x, y, items):
+ // an item is {label, icon, hint, checked, danger, disabled, action} or {sep: true} or
+-// {label, items: [...]} for a submenu (opens on hover or →). Arrows, Enter, Esc and ← work;
++// {label, items: [...]} for a submenu (opens on hover or →); raw: true keeps the label as typed (a name: HERESY 1166,
++// the page's translator leaves it). Arrows, Enter, Esc and ← work;
+ // a click outside, a scroll of what it was opened over, or a resize closes it.
+ (function () {
+   "use strict";
+@@ -24,7 +25,7 @@
+       if (it.head) return '<div class="hm-head">' + esc(it.head) + "</div>";
+       return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + '" role="menuitem" data-i="' + i + '"' +
+         (it.disabled ? " disabled" : "") + (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + ">" +
+-        '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label">' + esc(it.label) + "</span>" +
++        '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label"' + (it.raw ? ' translate="no"' : "") + ">" + esc(it.label) + "</span>" +
+         (it.items ? '<span class="hm-more">›</span>' : it.hint ? '<span class="hm-hint">' + esc(it.hint) + "</span>" : "") + "</button>";
+     }).join("");
+     document.body.appendChild(el);
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 090536b..2b721c6 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -108,11 +108,12 @@
+     rankSay();
+     var d = state.data || {}, r = runOf(state.sel), included = state.rows.filter(function (x) { return x.include; }).length;
+     var set = (d.prepared || []).filter(function (p) { return p.name === state.set; })[0];
+-    $("trSayRaw").textContent = state.raw ? state.raw + (state.rows.length ? " · " + included + " of " + state.rows.length : "") : "a folder of datasets/raw/";
+-    $("trSaySet").textContent = set ? set.name + " · " + set.tracks + " tracks" : "a caption for every track";
+-    $("trSayTrain").textContent = KINDS[state.kind].label.toLowerCase() + " · rank " + ($("tr_rank").value || "?") + " · " + $("tr_quant").value +
++    // HERESY 1166: the names as typed, the words translated piece by piece
++    $("trSayRaw").textContent = state.raw ? state.raw + (state.rows.length ? " · " + tr(included + " of " + state.rows.length) : "") : tr("a folder of datasets/raw/");
++    $("trSaySet").textContent = set ? set.name + " · " + tr(set.tracks + " tracks") : tr("a caption for every track");
++    $("trSayTrain").textContent = tr(KINDS[state.kind].label.toLowerCase()) + " · " + tr("rank " + ($("tr_rank").value || "?")) + " · " + $("tr_quant").value +
+       ($("tr_engine").value === "ruach" ? "" : " · AI-Toolkit");
+-    $("trSayRun").textContent = r ? r.name + (isLive(r) && r.steps ? " · " + Math.floor(100 * (r.step || 0) / r.steps) + " %" : " · " + r.status) : "a run: its curves and epochs";
++    $("trSayRun").textContent = r ? r.name + (isLive(r) && r.steps ? " · " + Math.floor(100 * (r.step || 0) / r.steps) + " %" : " · " + tr(r.status)) : tr("a run: its curves and epochs");
+     var done = { raw: !!state.raw, set: !!set, train: runs().some(function (x) { return x.dataset === state.set; }), run: !!(r && r.status === "done") };
+     Array.prototype.forEach.call(document.querySelectorAll("#trPills .ps-step"), function (b) {
+       b.classList.toggle("is-active", b.dataset.pane === state.pane);
+@@ -178,7 +179,7 @@
+     if (state.filter === "trash") {
+       var t = state.trash.filter(function (x) { return !q || (x.name + " " + (x.dataset || "") + " " + (x.kind || "")).toLowerCase().indexOf(q) >= 0; });
+       html = t.length ? t.map(function (x) {
+-        return '<article class="tr-rcard is-trash"><div class="tr-rtitle">' + esc(x.name) + '</div><div class="tr-rsub">' + esc([x.kind, x.dataset].filter(Boolean).join(" · ")) +
++        return '<article class="tr-rcard is-trash"><div class="tr-rtitle" translate="no">' + esc(x.name) + '</div><div class="tr-rsub">' + rsub([x.kind, x.dataset]) +
+           "</div>" + '<div class="take-foot"><span>' + gb(x.bytes) + "</span><span>deleted " + esc(ago(x.trashed)) + "</span>" + (x.loras.length ? "<span>" + x.loras.length + " adapters with it</span>" : "") + "</div>" +
+           '<div class="tr-racts"><button type="button" class="btn ghost small" data-restore="' + esc(x.id) + '">Restore</button>' +
+           '<button type="button" class="btn ghost small danger" data-purge="' + esc(x.id) + '" data-size="' + x.bytes + '" data-name="' + esc(x.name) + '">Delete for good</button></div></article>';
+@@ -193,12 +194,16 @@
+     $("trUnfoldCount").textContent = n;
+     $("trLayout").classList.toggle("is-folded", state.folded);
+   }
++  // HERESY 1166: a run's kind, its set (a name, kept) and its tracks, each its own text
++  function rsub(p) {
++    return p.map(function (x, i) { return x ? "<span" + (i === 1 ? ' translate="no"' : "") + ">" + esc(x) + "</span>" : ""; }).filter(Boolean).join(" · ");
++  }
+   function card(r) {
+     var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, live = isLive(r);
+     var ep = r.tracks ? "e" + Math.floor((r.step || 0) / r.tracks) + "/" + Math.round(epochs(r)) : (r.step || 0) + "/" + (r.steps || "?");
+     return '<article class="tr-rcard' + (live ? " is-running" : "") + (r.name === state.sel ? " is-selected" : "") + (r.archived ? " is-archived" : "") + '" data-open="' + esc(r.name) + '" tabindex="0">' +
+-      '<div class="tr-rtitle">' + esc(r.name) + "</div>" +
+-      '<div class="tr-rsub">' + esc([r.kind, r.dataset, r.tracks ? r.tracks + " tracks" : ""].filter(Boolean).join(" · ")) + "</div>" +
++      '<div class="tr-rtitle" translate="no">' + esc(r.name) + "</div>" +
++      '<div class="tr-rsub">' + rsub([r.kind, r.dataset, r.tracks ? r.tracks + " tracks" : ""]) + "</div>" +
+       spark(r) +
+       (live || (r.status !== "done" && pct > 0) ? '<div class="tr-rbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' : "") +
+       '<div class="take-foot"><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
+@@ -346,7 +351,7 @@
+     var tile = function (k, v, hint) { return '<div class="tr-tile"' + (hint ? ' data-tip="' + esc(hint) + '"' : "") + "><span>" + k + "</span><b>" + v + "</b></div>"; };
+     var pick = cks.filter(function (c) { return c.file === state.epoch; })[0], cand = candidates(r);
+     el.innerHTML =
+-      '<div class="tr-rhead"><div class="tr-rname"><b>' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
++      '<div class="tr-rhead"><div class="tr-rname"><b translate="no">' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
+         (r.kind ? '<span class="tag">' + esc(r.kind) + "</span>" : "") + '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach trainer" : "AI-Toolkit") + "</span>" +
+         (r.archived ? '<span class="tag">archived</span>' : "") + "</div>" +
+         '<div class="tr-racts"><select class="tr-cmp" id="trCmp" aria-label="Compare with another run" data-tip="Another run\u2019s curves, dashed, on the same steps">' +
+@@ -356,7 +361,7 @@
+           (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
+           '<a class="btn ghost small" href="/lab/train/log?name=' + encodeURIComponent(r.name) + '" target="_blank" rel="noopener">The log</a>' +
+           '<button type="button" class="btn ghost small" data-menu="' + esc(r.name) + '" aria-label="More">⋯</button></div></div>' +
+-      (r.note ? '<p class="row-hint tr-note">' + esc(r.note) + "</p>" : "") +
++      (r.note ? '<p class="row-hint tr-note" translate="no">' + esc(r.note) + "</p>" : "") +
+       '<div class="tr-prog' + (live ? " is-live" : "") + '"><div class="tr-pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+         '<span class="mono">' + pct.toFixed(1) + " % · step " + (r.step || 0) + " / " + (r.steps || "?") + (r.tracks ? " · epoch " + ((r.step || 0) / r.tracks).toFixed(1) + " / " + Math.round(epochs(r)) : "") + "</span></div>" +
+       '<div class="tr-tiles">' +
+@@ -383,8 +388,8 @@
+           var why = cand[c.file];
+           return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
+         }).join("") + "</div>" +
+-        (pick ? '<div class="tr-eact"><span><b>' + (pick.epoch != null ? "Epoch " + Math.round(pick.epoch) : "The final file") + "</b> · step " + pick.step + " · " + esc(when(pick.saved)) + " · " + gb(pick.bytes) +
+-            (pick.lora ? ' · in the Creator as <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") +
++        (pick ? '<div class="tr-eact"><span><b>' + (pick.epoch != null ? "Epoch " + Math.round(pick.epoch) : "The final file") + "</b> · <span>step " + pick.step + "</span> · <span>" + esc(when(pick.saved)) + "</span> · <span>" + gb(pick.bytes) + "</span>" +   // HERESY 1166
++            (pick.lora ? ' · <span>in the Creator as</span> <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") +
+             (cand[pick.file] ? ' · <span class="tr-candsay">worth hearing first: ' + esc(cand[pick.file]) + "</span>" : "") + "</span>" +
+             '<span class="spacer"></span>' +
+             (pick.lora ? '<button type="button" class="btn ghost small" data-unpub="' + esc(pick.lora.split("/").pop()) + '">Out of loras/</button>'
+@@ -392,10 +397,10 @@
+             '<a class="btn ghost small" download href="/lab/train/file?name=' + encodeURIComponent(r.name) + "&file=" + encodeURIComponent(pick.file) + '">Download</a></div>' : "") +
+         "</div>" : "") +
+       '<details class="tr-facts"><summary>What it was given</summary><div class="tr-fgrid">' +
+-        "<span><em>set</em> " + esc(r.dataset) + (r.tracks ? " · " + r.tracks + " tracks" : "") + "</span>" +
++        "<span><em>set</em> <span translate=\"no\">" + esc(r.dataset) + "</span>" + (r.tracks ? " · <span>" + r.tracks + " tracks</span>" : "") + "</span>" +   // HERESY 1166
+         "<span><em>rank</em> " + esc(o.rank) + " · lr " + esc(o.lr) + "</span>" +
+-        "<span><em>music half</em> AR " + esc(o.ar_loss_weight) + " · KL " + esc(o.ar_kl_weight) + " · speed ×" + esc(o.ar_lr_multiplier) + "</span>" +
+-        "<span><em>mode</em> " + esc(o.cot) + " · " + esc(o.quant) + (o.do_separation ? " · separated" : "") + "</span>" +
++        "<span><em>music half</em> AR " + esc(o.ar_loss_weight) + " · KL " + esc(o.ar_kl_weight) + " · <span>speed ×" + esc(o.ar_lr_multiplier) + "</span></span>" +
++        "<span><em>mode</em> <span>" + esc(o.cot) + "</span> · " + esc(o.quant) + (o.do_separation ? " · <span>separated</span>" : "") + "</span>" +
+         "<span><em>window</em> " + Math.round((o.train_window_frames || 0) / 25) + " s</span>" +
+         "<span><em>started</em> " + esc(when(r.started)) + "</span>" +
+       "</div></details>";
+@@ -436,8 +441,8 @@
+   function paintRaw() {
+     var d = state.data;
+     $("trRaw").innerHTML = d.raw.length ? d.raw.map(function (r) {
+-      return '<button type="button" class="tr-pick' + (state.raw === r.name ? " is-on" : "") + '" data-raw="' + esc(r.name) + '"><b>' + esc(r.name) + "</b><span>" +
+-        r.tracks + " tracks · " + gb(r.bytes) + (r.captions ? " · " + r.captions + " captions" : "") + "</span></button>";
++      return '<button type="button" class="tr-pick' + (state.raw === r.name ? " is-on" : "") + '" data-raw="' + esc(r.name) + '"><b translate="no">' + esc(r.name) + "</b><span>" +   // HERESY 1166
++        "<span>" + r.tracks + " tracks</span> · <span>" + gb(r.bytes) + "</span>" + (r.captions ? " · <span>" + r.captions + " captions</span>" : "") + "</span></button>";
+     }).join("") : '<p class="row-hint">Put a folder of songs into <code>datasets/raw/</code>, then press Reload.</p>';
+   }
+   function pickRaw(name) {
+@@ -528,8 +533,8 @@
+     var d = state.data;
+     if (state.set && !(d.prepared || []).some(function (p) { return p.name === state.set; })) state.set = "";
+     $("trSets").innerHTML = d.prepared.length ? d.prepared.map(function (p) {
+-      return '<label class="tr-setpick' + (p.name === state.set ? " is-on" : "") + '"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + (p.name === state.set ? " checked" : "") + " /><b>" + esc(p.name) + "</b><span>" +
+-        p.tracks + " tracks · " + clock(p.seconds) + " · from " + esc(p.from) + " · " + esc(p.made) + "</span></label>";
++      return '<label class="tr-setpick' + (p.name === state.set ? " is-on" : "") + '"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + (p.name === state.set ? " checked" : "") + ' /><b translate="no">' + esc(p.name) + "</b><span>" +   // HERESY 1166
++        "<span>" + p.tracks + " tracks</span> · <span>" + clock(p.seconds) + "</span> · <span>from</span> <span translate=\"no\">" + esc(p.from) + "</span> · <span>" + esc(p.made) + "</span></span></label>";
+     }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
+   }
+   function setKind(k) {
+@@ -552,10 +557,11 @@
+     var free = cards.filter(function (c) { return need && c.free_mb >= need; });
+     var shut = need && big.total_mb && big.total_mb < need, say;
+     $("trRun").disabled = !!shut;
+-    if (!Array.isArray(d.gpus)) say = '<span class="tr-err">' + esc(d.gpus && d.gpus.error || "the cards could not be read") + "</span>";
+-    else if (shut) say = '<span class="tr-err">' + quant + " needed " + gbm(need) + " on one card (measured); the largest here has " + gbm(big.total_mb) + (quant === "bf16" ? ": choose int8 weights" : "") + ".</span>";
+-    else if (need) say = quant + " · " + gbm(need) + " at the peak (measured). " + (free.length ? "Free enough now: " + free.map(function (c) { return "GPU" + c.index; }).join(", ") : "No card has that free now (" + cards.map(function (c) { return "GPU" + c.index + " " + gbm(c.free_mb); }).join(", ") + ")");
+-    else say = quant + " · not measured yet for this trainer: the first run measures its peak";
++    // HERESY 1166: each sentence translated whole where it is made
++    if (!Array.isArray(d.gpus)) say = '<span class="tr-err">' + esc(tr(d.gpus && d.gpus.error || "the cards could not be read")) + "</span>";
++    else if (shut) say = '<span class="tr-err">' + esc(tr(quant + " needed " + gbm(need) + " on one card (measured); the largest here has " + gbm(big.total_mb) + (quant === "bf16" ? ": choose int8 weights" : "") + ".")) + "</span>";
++    else if (need) say = esc(tr(quant + " · " + gbm(need) + " at the peak (measured).")) + " " + esc(free.length ? tr("Free enough now: " + free.map(function (c) { return "GPU" + c.index; }).join(", ")) : tr("No card has that free now (" + cards.map(function (c) { return "GPU" + c.index + " " + gbm(c.free_mb); }).join(", ") + ")"));
++    else say = esc(tr(quant + " · not measured yet for this trainer: the first run measures its peak"));
+     $("trRunSay").innerHTML = say;
+   }
+   function engineKnobs() {
+@@ -575,10 +581,11 @@
+     // HERESY 1091: said when the run may take the studio's own card (synthesis then waits while it trains)
+     api("/gpus").catch(function () { return null; }).then(function (g) {
+       var shared = g && g.roles && g.roles.train.indexOf(g.roles.studio) >= 0;
+-      return confirmBox("Train " + spec.name + "?\n\n" + ep * tracks + " steps (" + ep + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight + ", " + spec.quant + " weights, " +
+-        (spec.engine === "ruach" ? "the studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept. It takes a GPU of its own for hours" +
+-        (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights.") +
+-        (shared ? "\n\nTraining may take GPU" + g.roles.studio + ", the studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card)." : ""), { ok: "Train" });
++      // HERESY 1166: its sentences translated each where they are made
++      return confirmBox(tr("Train " + spec.name + "?") + "\n\n" + tr(ep * tracks + " steps (" + ep + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight + ", " + spec.quant + " weights, " +
++        (spec.engine === "ruach" ? "the studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept.") + " " +
++        tr("It takes a GPU of its own for hours" + (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights.")) +
++        (shared ? "\n\n" + tr("Training may take GPU" + g.roles.studio + ", the studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card).") : ""), { ok: "Start training" });   // 1166: "Train" is the step's name
+     }).then(function (ok) {
+       if (!ok) return;
+       return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index ceef3d2..3267d86 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -105,8 +105,8 @@
+       return '<button type="button" class="wr-item' + (on ? " is-on" : "") + '" data-doc="' + esc(d.id) + '">' +
+         '<span class="wr-item-title">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in the Creator">✎</span> ' : "") + esc(d.title) + "</span>" +
+         '<span class="wr-item-ex">' + esc(d.excerpt || d.style || "") + "</span>" +
+-        '<span class="wr-item-meta">' + esc(when(d.updated)) + (d.takes ? " · " + d.takes + " take" + (d.takes > 1 ? "s" : "") : "") +
+-        (d.versions ? " · " + d.versions + " v" : "") + "</span></button>";
++        '<span class="wr-item-meta"><span>' + esc(when(d.updated)) + "</span>" + (d.takes ? " · <span>" + d.takes + " take" + (d.takes > 1 ? "s" : "") + "</span>" : "") +   // HERESY 1166
++        (d.versions ? " · <span>" + d.versions + " v</span>" : "") + "</span></button>";
+     }).join("") : '<p class="row-hint wr-empty">' + (state.docs.length ? "Nothing for “" + esc(state.q) + "”." : "No documents yet. ＋ New, or “Save to Writer” in the Creator.") + "</p>";
+   }
+ 
+diff --git a/tools/console/index.html b/tools/console/index.html
+index d711a72..37cd095 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -553,7 +553,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     <!-- credits: upstream project names, not paths (build-page.sh's folder-name guard skips this block) -->
+     <div class="card wide about-card" id="aboutCard">
+       <div class="about-head">
+-        <span class="about-logo" role="img" aria-label="Ruach Studio"><svg class="brand-dove" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><g class="brand-staff"><path d="M3 50 C 17 45, 27 55, 41 50 S 58 46, 61 48"/><path d="M3 54.5 C 17 49.5, 27 59.5, 41 54.5 S 58 50.5, 61 52.5"/><path d="M3 59 C 17 54, 27 64, 41 59 S 58 55, 61 57"/></g><g class="brand-bird"><path d="M29 30 C 24 25.5, 15 19, 4 9.5 C 7.6 10.2, 9.8 11.2, 11 12.8 C 11.6 11.6, 13.6 11.8, 14.8 13.6 C 15.6 12.6, 17.6 13.0, 18.6 14.8 C 19.6 14.0, 21.6 14.6, 22.4 16.6 C 23.6 16.0, 25.4 17.0, 26.0 19.0 C 27.4 21.2, 28.6 25.0, 29 30 Z"/><path d="M35.0 30 C 40.0 25.5, 49.0 19, 60.0 9.5 C 56.4 10.2, 54.2 11.2, 53.0 12.8 C 52.4 11.6, 50.4 11.8, 49.2 13.6 C 48.4 12.6, 46.4 13.0, 45.4 14.8 C 44.4 14.0, 42.4 14.6, 41.6 16.6 C 40.4 16.0, 38.6 17.0, 38.0 19.0 C 36.6 21.2, 35.4 25.0, 35.0 30 Z"/><path d="M27.4 8 L 36.6 8 L 35 13 L 33.6 9.8 L 32 14 L 30.4 9.8 L 29 13 Z"/><path d="M32 11 C 36.6 12.5, 37.6 19, 37.2 26 C 37.0 33, 35.4 38.6, 32 42.6 C 28.6 38.6, 27.0 33, 26.8 26 C 26.4 19, 27.4 12.5, 32 11 Z"/><circle cx="32" cy="44.2" r="3.6"/><path d="M30.8 47.2 L 32 50.2 L 33.2 47.2 Z"/></g></svg><span class="about-name">Ruach <b>Studio</b><small>a local studio for YuE2 · HERETICAL TANDEM</small></span></span>
++        <span class="about-logo" role="img" aria-label="Ruach Studio"><svg class="brand-dove" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><g class="brand-staff"><path d="M3 50 C 17 45, 27 55, 41 50 S 58 46, 61 48"/><path d="M3 54.5 C 17 49.5, 27 59.5, 41 54.5 S 58 50.5, 61 52.5"/><path d="M3 59 C 17 54, 27 64, 41 59 S 58 55, 61 57"/></g><g class="brand-bird"><path d="M29 30 C 24 25.5, 15 19, 4 9.5 C 7.6 10.2, 9.8 11.2, 11 12.8 C 11.6 11.6, 13.6 11.8, 14.8 13.6 C 15.6 12.6, 17.6 13.0, 18.6 14.8 C 19.6 14.0, 21.6 14.6, 22.4 16.6 C 23.6 16.0, 25.4 17.0, 26.0 19.0 C 27.4 21.2, 28.6 25.0, 29 30 Z"/><path d="M35.0 30 C 40.0 25.5, 49.0 19, 60.0 9.5 C 56.4 10.2, 54.2 11.2, 53.0 12.8 C 52.4 11.6, 50.4 11.8, 49.2 13.6 C 48.4 12.6, 46.4 13.0, 45.4 14.8 C 44.4 14.0, 42.4 14.6, 41.6 16.6 C 40.4 16.0, 38.6 17.0, 38.0 19.0 C 36.6 21.2, 35.4 25.0, 35.0 30 Z"/><path d="M27.4 8 L 36.6 8 L 35 13 L 33.6 9.8 L 32 14 L 30.4 9.8 L 29 13 Z"/><path d="M32 11 C 36.6 12.5, 37.6 19, 37.2 26 C 37.0 33, 35.4 38.6, 32 42.6 C 28.6 38.6, 27.0 33, 26.8 26 C 26.4 19, 27.4 12.5, 32 11 Z"/><circle cx="32" cy="44.2" r="3.6"/><path d="M30.8 47.2 L 32 50.2 L 33.2 47.2 Z"/></g></svg><span class="about-name" translate="no">Ruach <b>Studio</b><small>a local studio for YuE2 · HERETICAL TANDEM</small></span></span>
+         <h3>About</h3>
+         <p class="about-credit"><a class="about-kit" href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer"
+           data-tip="This collection's own repository: the install kit, its patches and its releases">Customized Collection</a> by <strong>SeattleSysop</strong>
+@@ -611,7 +611,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     <!-- HERESY 1047: the Writer's document in hand; what is made now is linked to it -->
+     <div class="wr-hand" id="wrHandBox">
+       <span class="wr-hand-cap">Writer</span>
+-      <button type="button" class="wr-hand-name" id="wrHandOpen" title="Open it in the Writer"><span aria-hidden="true">✎</span> <span id="wrHandName"></span></button>
++      <button type="button" class="wr-hand-name" id="wrHandOpen" title="Open it in the Writer"><span aria-hidden="true">✎</span> <span id="wrHandName" translate="no"></span></button>
+       <button type="button" class="wr-hand-x" id="wrHandDrop" title="Put it down: new takes link to no document" aria-label="Put it down">✕</button>
+       <span class="spacer"></span>
+       <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
+-- 
+2.43.0
+

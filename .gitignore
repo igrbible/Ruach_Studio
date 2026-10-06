@@ -1,0 +1,68 @@
+# Ruach Studio · what never goes public (Viktor, 01.10.2026)
+# The folders stay in the tree, empty, each with a .gitkeep, so the layout reads the same after a clone.
+# The scripts fill them: download-models.sh, lab/install-venv.sh, heresy/fetch-heresy.sh, kit/install.sh.
+
+# ---- the user's work: songs, readings, notes, the trash
+/outputs/*
+!/outputs/.gitkeep
+/trash/*
+!/trash/.gitkeep
+/writer/*
+!/writer/.gitkeep
+/writer-*/
+
+# ---- weights, downloaded or converted on the machine (tens of GB)
+/models/*
+!/models/.gitkeep
+/checkpoints/*
+!/checkpoints/.gitkeep
+/whisper/*
+!/whisper/.gitkeep
+/separation/*
+!/separation/.gitkeep
+/hf_cache/*
+!/hf_cache/.gitkeep
+/sliders/*.gguf
+/loras/*
+!/loras/.gitkeep
+!/loras/sources.json
+
+# ---- trees with histories of their own: made again by the install (upstream and the Kit as
+# released, build/ = upstream + the Kit's patches + heresy/engine), or clones fetched by
+# heresy/fetch-heresy.sh (vendor/)
+/upstream/
+/kit/
+/build/build/
+/build/tools/public/index.html
+/vendor/*
+!/vendor/.gitkeep
+
+# ---- this machine only
+/tmp/*
+!/tmp/.gitkeep
+/install-record/
+/settings.json
+/start.sh.orig
+/.venv/
+/lab/.venv/
+/lab/cache/
+/lab/*.part
+**/__pycache__/
+*.pyc
+*.log
+*.part
+*.bak
+.DS_Store
+
+# ---- the user's settings (single-user studio: they live here, not in ~/.config)
+/user/*
+!/user/.gitkeep
+
+# ---- what the studio makes on the machine beside the shipped folders
+/artwork/*
+!/artwork/.gitkeep
+/datasets/*
+!/datasets/.gitkeep
+/training/*
+!/training/.gitkeep
+/VERSION.local

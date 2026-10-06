@@ -1,0 +1,74 @@
+From a49312ae0c1bef7c974ee7458a079addeecab8b2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 20:51:28 -0600
+Subject: [PATCH 1100/1177] =?UTF-8?q?Engine=20=E2=86=92=20GPUs:=20the=20gu?=
+ =?UTF-8?q?ard's=20verdict=20on=20every=20card=20(1140)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css        |  7 +++++++
+ tools/console/heresy-gpus.js | 18 ++++++++++++++++--
+ 2 files changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index e04b6d7..8fba66d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3245,3 +3245,10 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ .cmp-dur { font-size: 12px; color: var(--dim); text-align: right; }
+ 
+ .cmp-box:focus { outline: none; }
++
++/* HERESY 1140: the guard's verdict per card */
++.gpu-guard { white-space: nowrap; font-size: 12.5px; }
++.gpu-guard .gpu-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
++.gpu-guard.is-open .gpu-dot { background: var(--good); }
++.gpu-guard.is-closed { color: var(--bad); }
++.gpu-guard.is-closed .gpu-dot { background: var(--bad); }
+diff --git a/tools/console/heresy-gpus.js b/tools/console/heresy-gpus.js
+index 9d3e416..5be9408 100644
+--- a/tools/console/heresy-gpus.js
++++ b/tools/console/heresy-gpus.js
+@@ -25,7 +25,8 @@
+       var r = d.roles, studioNow = d.studio_now;
+       if (!Array.isArray(d.cards) || !d.cards.length) { host.innerHTML = '<p class="row-hint">' + esc((d.cards && d.cards.error) || "No card found") + "</p>"; return; }
+       host.innerHTML = '<table class="gpu-table"><tr><th>card</th><th data-tip="The card the studio’s synthesis runs on: one">studio</th>' +
+-        '<th data-tip="Cards a training run may take">training</th><th data-tip="The listener, Whisper, stems, remaster, upscale">lab jobs</th><th>now</th></tr>' +
++        '<th data-tip="Cards a training run may take">training</th><th data-tip="The listener, Whisper, stems, remaster, upscale">lab jobs</th><th>now</th>' +
++        '<th data-tip="What the GPU guard says of the card this moment: open to the studio\u2019s work, or closed by another program\u2019s service (more than 2 GiB); the desktop\u2019s small ones do not close it">the guard</th></tr>' +
+         d.cards.map(function (c) {
+           var i = c.index, now = [];
+           if (studioNow === i) now.push("the studio");
+@@ -34,11 +35,24 @@
+             '<td><input type="radio" name="gpuStudio" value="' + i + '"' + (r.studio === i ? " checked" : "") + " /></td>" +
+             '<td><input type="checkbox" data-role="train" value="' + i + '"' + (r.train.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
+             '<td><input type="checkbox" data-role="jobs" value="' + i + '"' + (r.jobs.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
+-            '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td></tr>";
++            '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td>" + guardCell(d.guard, i) + "</tr>";
+         }).join("") + "</table>";
+       hint();
+     }).catch(function (e) { host.innerHTML = '<p class="tr-err">The lab does not answer: ' + esc(e.message) + "</p>"; });
+   }
++  // HERESY 1140: the guard's verdict: open (with what is free, and the desktop's small programs in the tip), or closed
++  // and by whom
++  function guardCell(guard, i) {
++    if (!Array.isArray(guard)) return '<td class="row-hint">' + esc((guard && guard.error) || "not read") + "</td>";
++    var g = guard.filter(function (x) { return x.index === i; })[0];
++    if (!g) return "<td></td>";
++    var small = (g.foreign || []).filter(function (f) { return !f.heavy; });
++    var tip = small.length ? "The desktop’s own on it: " + small.map(function (f) { return f.name + " " + f.mb + " MiB"; }).join(", ") : "Nothing of anyone else’s on it";
++    if (g.ok) return '<td class="gpu-guard is-open" data-tip="' + esc(tip) + '"><span class="gpu-dot"></span>open · ' + gb(g.free_mb) + " free</td>";
++    var heavy = (g.foreign || []).filter(function (f) { return f.heavy; });
++    return '<td class="gpu-guard is-closed" data-tip="' + esc(g.why) + '"><span class="gpu-dot"></span>closed: ' +
++      esc(heavy.map(function (f) { return f.name + " " + gb(f.mb); }).join(", ")) + "</td>";
++  }
+   function chosen() {
+     var pick = function (role) { return Array.prototype.map.call(document.querySelectorAll('#gpuRoles input[data-role="' + role + '"]:checked'), function (x) { return +x.value; }); };
+     var s = document.querySelector('#gpuRoles input[name="gpuStudio"]:checked');
+-- 
+2.43.0
+

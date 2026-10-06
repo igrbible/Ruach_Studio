@@ -1,0 +1,161 @@
+From c7464757dea446cac20d4a9732a90f179104fd6d Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 19:33:44 -0600
+Subject: [PATCH 1023/1177] Import a track from elsewhere: it becomes a take
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1023. Post has "Import a track": a WAV, FLAC, MP3 (M4A, OGG, AIFF) from
+anywhere — a SUNO track — goes up with a progress line and becomes an ordinary
+take in the library, converted to 48 kHz 24-bit WAV, the original kept beside
+it, marked imported; optional lyrics go with it for the lyrics check. Then it
+opens in Post, where stems, remaster, spectrum and lyrics check work on it as
+on the Kit's own takes.
+The Kit server passes POST /lab/… to heresy-lab (bodies up to 1 GB, a 120 s
+read timeout for slow uploads).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   4 ++++
+ tools/console/app.js       |  36 ++++++++++++++++++++++++++++++++++++
+ tools/console/index.html   |  17 +++++++++++++++++
+ tools/public/index.html.gz | Bin 272343 -> 273339 bytes
+ tools/yue-server.cpp       |  27 +++++++++++++++++++++++++++
+ 5 files changed, 84 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index dddfb8e..2ae3406 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2017,3 +2017,7 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .rm-num { width: 110px; flex: none; }
+ .rm-levels { display: flex; flex-direction: column; gap: 6px; }
+ .dv-group.is-failed .dv-meta { color: var(--bad-line, #c47a77); }
++
++/* ------------------------------------------------ HERESY 1023: import a track */
++.imp-body { gap: 10px; }
++#impFile { padding: 6px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 7e2dc96..87bf2ee 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4977,6 +4977,42 @@
+     window.dispatchEvent(new Event("resize"));   // pictures measure their new width
+   }
+   all("#tabs [data-tab]").forEach(function (b) { b.addEventListener("click", function () { setTab(b.dataset.tab); }); });
++
++  // HERESY 1023: import a track from elsewhere. The body goes up as it is, with a progress line
++  // (XMLHttpRequest: fetch reports no upload progress); then the lyrics, if any; then the new
++  // take opens here in Post.
++  $("impRun").addEventListener("click", function () {
++    var file = $("impFile").files[0], button = this;
++    if (!file) return toast("Pick a file first", "bad");
++    var title = $("impTitle").value.trim() || file.name.replace(/\.[^.]+$/, ""), lyrics = $("impLyrics").value.trim();
++    button.disabled = true;
++    var xhr = new XMLHttpRequest(), started = Date.now();
++    xhr.open("POST", "/lab/import?file=" + encodeURIComponent(file.name) + "&title=" + encodeURIComponent(title));
++    xhr.setRequestHeader("Content-Type", "application/octet-stream");
++    xhr.upload.onprogress = function (e) {
++      if (!e.lengthComputable) return;
++      var secs = (Date.now() - started) / 1000;
++      $("impState").textContent = "uploading " + Math.round(e.loaded / e.total * 100) + "% · " + (e.loaded / 1e6).toFixed(1) + " of " +
++        (e.total / 1e6).toFixed(1) + " MB · " + (e.loaded / 1e6 / Math.max(0.1, secs)).toFixed(1) + " MB/s";
++    };
++    xhr.upload.onload = function () { $("impState").textContent = "converting on Forge…"; };
++    xhr.onerror = function () { $("impState").textContent = "the upload broke off"; button.disabled = false; };
++    xhr.onload = function () {
++      var r = {};
++      try { r = JSON.parse(xhr.responseText); } catch (error) { r = { error: xhr.statusText }; }
++      if (xhr.status !== 200) { $("impState").textContent = "Could not import: " + (r.error || xhr.status); button.disabled = false; return; }
++      var done = function () {
++        $("impState").textContent = "imported: " + r.title + " · " + Math.floor(r.seconds / 60) + ":" + ("0" + Math.floor(r.seconds % 60)).slice(-2);
++        button.disabled = false;
++        $("impFile").value = ""; $("impTitle").value = ""; $("impLyrics").value = "";
++        refreshLibrary().then(function () { openTake(r.name); setTab("post"); }).catch(function () {});
++      };
++      if (!lyrics) return done();
++      fetch("/lab/lyrics?name=" + encodeURIComponent(r.name), { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: lyrics })
++        .then(done, done);
++    };
++    xhr.send(file);
++  });
+   all("[data-goto-tab]").forEach(function (b) { b.addEventListener("click", function () { setTab(b.dataset.gotoTab); }); });
+   // From the take card (and Post's own row): open Post on this take at that tool.
+   all("[data-post-open]").forEach(function (b) {
+diff --git a/tools/console/index.html b/tools/console/index.html
+index e7560e8..f6fe489 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -758,6 +758,23 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+   <!-- HERESY 1014: the Post tab — what is done to a finished take, on Forge -->
+   <section class="col post-col is-hidden" id="view-post">
+     <div class="col-head"><h2 id="postTitle">Post</h2><span class="col-note" id="postNote">pick a take on the right</span></div>
++    <!-- HERESY 1023: a track from elsewhere (a SUNO track…) becomes a take, and every tool here works on it -->
++    <details class="drawer" id="importPanel">
++      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Import a track</span><span class="sum-say">WAV, FLAC, MP3… from anywhere: it becomes a take in the library (48 kHz 24-bit), marked imported, ready for stems, remaster and the rest.</span></span></summary>
++      <div class="drawer-body imp-body">
++        <div class="rm-grid">
++          <label class="field"><span class="label">File</span><input type="file" id="impFile" accept=".wav,.flac,.mp3,.m4a,.ogg,.aif,.aiff,audio/*" /></label>
++          <label class="field"><span class="label">Title <em>blank: the file's name</em></span><input type="text" id="impTitle" autocomplete="off" /></label>
++        </div>
++        <label class="field"><span class="label">Lyrics <em>optional: the lyrics check matches against them</em></span>
++          <textarea id="impLyrics" rows="4" spellcheck="false" placeholder="[Verse]&#10;…"></textarea></label>
++        <div class="dv-actions">
++          <button type="button" class="btn primary small" id="impRun">Import</button>
++          <span class="row-hint mono" id="impState"></span>
++        </div>
++      </div>
++    </details>
++
+     <div class="post-tools" id="postTools">
+       <button type="button" class="btn ghost small" data-post-open="spectrumPanel">Spectrum</button>
+       <button type="button" class="btn ghost small" data-post-open="glossPanel">Lyrics check</button>
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 6b7993a..85da28e 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1660,6 +1660,9 @@ int main(int argc, char ** argv) {
+     // HERESY 1021: big answers (a stem, a spectrum, a WAV) over a phone line: a socket that stalls a few
+     // seconds behind another transfer is not a dead one. The default write timeout was 5 s.
+     svr.set_write_timeout(60, 0);
++    // HERESY 1023: a track imported from a phone line arrives slowly, and can be large
++    svr.set_read_timeout(120, 0);
++    svr.set_payload_max_length((size_t) 1024 * 1024 * 1024);
+     g_svr = &svr;
+ 
+     // SO_REUSEADDR lets us rebind a port still in TIME_WAIT after a restart.
+@@ -1687,6 +1690,30 @@ int main(int argc, char ** argv) {
+     // HERESY 1011: the page reaches heresy-lab (the Python neighbour on this machine,
+     // lab/lab.py) through this server, at the same origin: no second port to open, no
+     // CORS. GET /lab/<path>?<query> goes to 127.0.0.1:LAB_PORT/<path>?<query> as it is.
++    // HERESY 1023: POST /lab/… carries a body (an imported track, lyrics) to heresy-lab as it is
++    svr.Post(R"(/lab/(.*))", [](const httplib::Request & req, httplib::Response & res) {
++        const char *    env  = getenv("LAB_PORT");
++        int             port = env && *env ? atoi(env) : 41870;
++        httplib::Client lab("127.0.0.1", port);
++        lab.set_connection_timeout(3, 0);
++        lab.set_read_timeout(900, 0);
++        lab.set_write_timeout(120, 0);
++        std::string path = "/" + std::string(req.matches[1]), query;
++        for (const auto & p : req.params) {
++            query += (query.empty() ? "?" : "&") + httplib::encode_uri_component(p.first) + "=" +
++                     httplib::encode_uri_component(p.second);
++        }
++        auto r = lab.Post(path + query, req.body, req.get_header_value("Content-Type", "application/octet-stream").c_str());
++        if (!r) {
++            res.status = 502;
++            res.set_content(json_string("error", "heresy-lab is not running on this machine (lab/start-lab.sh)"),
++                            "application/json");
++            return;
++        }
++        res.status = r->status;
++        res.set_content(r->body, r->get_header_value("Content-Type", "application/json").c_str());
++    });
++
+     svr.Get(R"(/lab/(.*))", [](const httplib::Request & req, httplib::Response & res) {
+         const char *   env  = getenv("LAB_PORT");
+         int            port = env && *env ? atoi(env) : 41870;
+-- 
+2.43.0
+

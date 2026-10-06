@@ -1,0 +1,71 @@
+From 23d507a885e2fcaa03b2f9d88458845bfa104399 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 14:20:52 -0600
+Subject: [PATCH 1008/1177] yue-synth --no-fa-lm: flash attention off in the
+ music half only
+
+HERESY 1008. For A/B tests of the attention kernel on the tokens: the sound
+half keeps flash attention, since without it a 7-minute song needs a 15.9 GB
+attention buffer and does not fit a 24 GB card.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/pipeline.h      | 6 +++++-
+ tools/yue-synth.cpp | 3 +++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/pipeline.h b/src/pipeline.h
+index d6bf6f7..9684f49 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -42,6 +42,7 @@ struct Yue2PipelineParams {
+     int  max_seq    = 0;              // 0 = model context, the whole 24576
+     int  max_batch  = 1;              // song batch limit, one KV set per song, two under guidance
+     bool no_fa      = false;          // disable flash attention
++    bool no_fa_lm   = false;          // HERESY 1008: flash attention off in the music half (AR) only
+     bool clamp_fp16 = false;          // clamp hidden states on sub-Ampere CUDA
+     bool fp16_matmul = false;         // Local addition: batched BF16 matmuls on FP16 tensor cores (qwen3-enc.h)
+     int  vae_core   = 512;            // VAE tile core frames
+@@ -131,6 +132,9 @@ static bool pipeline_configure(Yue2Pipeline *             p,
+     if (params.no_fa) {
+         fprintf(stderr, "[Pipeline] Flash attention disabled\n");
+     }
++    if (params.no_fa_lm) {   // HERESY 1008
++        fprintf(stderr, "[Pipeline] Flash attention disabled in the music half (AR) only\n");
++    }
+     if (params.clamp_fp16) {
+         fprintf(stderr, "[Pipeline] FP16 clamp enabled\n");
+     }
+@@ -179,7 +183,7 @@ static Qwen3LM * require_lm(Yue2Pipeline * p) {
+         p->last_error = "LoRA: " + g_gf_lora_error;
+     }
+     if (m) {
+-        m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
++        m->use_flash_attn = m->use_flash_attn && !p->params.no_fa && !p->params.no_fa_lm;
+         m->clamp_fp16     = p->params.clamp_fp16;
+     }
+     return m;
+diff --git a/tools/yue-synth.cpp b/tools/yue-synth.cpp
+index c929097..a47b0b6 100644
+--- a/tools/yue-synth.cpp
++++ b/tools/yue-synth.cpp
+@@ -55,6 +55,7 @@ static void print_usage(const char * prog) {
+             "  --vae-core <N>         VAE tile core frames (default: 512)\n"
+             "  --vae-halo <N>         VAE tile halo frames (default: 16)\n"
+             "  --no-fa                Disable flash attention\n"
++            "  --no-fa-lm             Disable flash attention in the music half (AR) only\n"
+             "  --clamp-fp16           Clamp hidden states to FP16 range\n"
+             "  --fp16-matmul          BF16 prefills and flow matching on FP16 tensor cores (RTX 20, Volta)\n"
+             "  --dump <dir>           Dump intermediate tensors\n",
+@@ -113,6 +114,8 @@ int main(int argc, char ** argv) {
+             params.vae_core = atoi(argv[++i]);
+         } else if (!strcmp(argv[i], "--vae-halo") && !last) {
+             params.vae_halo = atoi(argv[++i]);
++        } else if (!strcmp(argv[i], "--no-fa-lm")) {   // HERESY 1008
++            params.no_fa_lm = true;
+         } else if (!strcmp(argv[i], "--no-fa")) {
+             params.no_fa = true;
+         } else if (!strcmp(argv[i], "--clamp-fp16")) {
+-- 
+2.43.0
+

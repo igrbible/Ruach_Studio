@@ -1,0 +1,1089 @@
+From 8d0b3d212ae672261ed42eff546e84cfca2bf3dc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 04:35:58 -0600
+Subject: [PATCH 1077/1177] The Train room on par with the others (1090): live
+ runs on top, the steps in a row as in Post, the telemetry with both halves
+ explained, epochs into loras/, out of it or downloaded, a column of run cards
+ (archive, trash, restore); the player steps down to a strip here; adapters
+ over 100 MB pass the lab proxy
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         | 132 +++++++
+ tools/console/heresy-train.js | 664 ++++++++++++++++++++++++----------
+ tools/console/index.html      | 115 ++++--
+ tools/public/index.html.gz    | Bin 384909 -> 393676 bytes
+ tools/yue-server.cpp          |   4 +-
+ 5 files changed, 686 insertions(+), 229 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 555c594..de1b0e8 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2641,3 +2641,135 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .sg-abc summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+ .sg-abc pre { max-height: 220px; overflow: auto; margin: 6px 0 0; padding: 8px; font: 11.5px/1.45 var(--mono); background: var(--sunk); border-radius: var(--r-sm);
+   white-space: pre-wrap; word-break: break-all; }
++
++/* ===================================================================== HERESY 1090: the Train room, on par
++   (Viktor, 02.10.2026): live runs on top, the steps in a row as in Post, the telemetry, a column of run cards */
++.train-col { padding-bottom: 28px; }
++.tr-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 22vw, 380px); gap: 18px; align-items: start; }
++.tr-layout.is-folded { grid-template-columns: minmax(0, 1fr) 40px; }
++.tr-main { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
++.tr-side { position: sticky; top: 62px; display: flex; flex-direction: column; max-height: calc(100vh - 52px - var(--playbar-h, 60px) - 80px);
++  min-height: 320px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); overflow: hidden; }
++.tr-side .lib-head { padding: 12px 12px 10px 16px; }
++.tr-filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 12px 0; }
++.tr-side .lib-search { padding: 8px 12px; }
++.tr-side .lib-search input { width: 100%; padding: 6px 9px; font-size: 12.5px; }
++.tr-rlist { flex: 1; overflow-y: auto; padding: 4px 8px 10px; display: flex; flex-direction: column; gap: 4px; }
++.tr-empty { padding: 10px 8px; }
++.tr-unfold { display: none; }
++.tr-layout.is-folded .tr-side > :not(.tr-unfold) { display: none !important; }
++.tr-layout.is-folded .tr-unfold { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; padding: 14px 0; border: 0;
++  background: none; color: var(--muted); cursor: pointer; min-height: 200px; }
++.tr-layout.is-folded .tr-unfold:hover { color: var(--amber); background: var(--hover); }
++/* a run card, as a take in Create's column; a running one lit as a playing take */
++.tr-rcard { position: relative; padding: 10px 12px; border: 1px solid transparent; border-radius: var(--r-md); cursor: pointer; transition: background .13s ease, border-color .13s ease; }
++.tr-rcard:hover { background: var(--hover-soft, var(--raise)); }
++.tr-rcard:focus-visible { outline: 0; border-color: var(--amber); }
++.tr-rcard.is-selected { background: var(--raise); border-color: var(--line); box-shadow: inset 2px 0 0 var(--amber); }
++.tr-rcard.is-running { background: color-mix(in srgb, var(--amber) 12%, transparent); border-color: var(--amber-dim); box-shadow: inset 4px 0 0 var(--amber); }
++.tr-rcard.is-running .tr-rtitle { color: var(--amber); }
++.tr-rcard.is-archived { opacity: .75; }
++.tr-rtitle { font-size: 13.5px; font-weight: 600; padding-right: 26px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.tr-rsub { font-size: 11.5px; color: var(--dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.tr-spark { display: block; width: 100%; height: 18px; margin-top: 6px; }
++.tr-spark path { fill: none; stroke: var(--muted); stroke-width: 1.3; vector-effect: non-scaling-stroke; }
++.tr-rcard.is-running .tr-spark path { stroke: var(--amber); }
++.tr-rbar { height: 3px; margin-top: 6px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
++.tr-rbar i { display: block; height: 100%; background: var(--amber); }
++.tr-rcard .take-foot { margin-top: 6px; }
++.tr-rmenu { position: absolute; top: 6px; right: 6px; width: 24px; height: 22px; border: 1px solid transparent; border-radius: var(--r-sm); background: none;
++  color: var(--dim); cursor: pointer; opacity: .6; }
++.tr-rcard:hover .tr-rmenu, .tr-rmenu:focus-visible { opacity: 1; border-color: var(--line); background: var(--panel); }
++.tr-menu { min-width: 180px; z-index: 140; }
++.tr-menu a { display: block; padding: 7px 12px; color: var(--muted); text-decoration: none; font-size: 13px; }
++.tr-menu a:hover { background: var(--hover); color: var(--ink); }
++.tr-racts { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
++.tr-rcard.is-trash { cursor: default; }
++.tr-rcard.is-trash .tr-racts { margin-top: 8px; }
++.tr-st { text-transform: uppercase; }
++.tag.tr-st.is-running { color: var(--amber); border-color: var(--amber-dim); }
++.tag.tr-st.is-done { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
++.tag.tr-st.is-failed { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
++/* on top: what trains now */
++.tr-live { display: flex; flex-direction: column; gap: 6px; }
++.tr-live[hidden] { display: none; }
++.tr-liverow { display: grid; grid-template-columns: minmax(200px, 30%) minmax(120px, 1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 9px 14px;
++  border: 1px solid var(--amber-dim); border-radius: var(--r-md); background: color-mix(in srgb, var(--amber) 8%, var(--panel)); color: var(--ink);
++  box-shadow: inset 4px 0 0 var(--amber); font: inherit; text-align: left; cursor: pointer; }
++.tr-liverow:hover, .tr-liverow.is-on { background: color-mix(in srgb, var(--amber) 15%, var(--panel)); }
++.tr-lname { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
++.tr-lname b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.tr-lname em { font-style: normal; font-size: 11.5px; color: var(--dim); white-space: nowrap; }
++.tr-pulse { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); align-self: center; animation: tr-pulse 1.6s ease-in-out infinite; }
++@keyframes tr-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
++.tr-lbar { height: 6px; border-radius: 3px; background: var(--sunk); overflow: hidden; }
++.tr-lbar i { display: block; height: 100%; background: var(--amber); transition: width .6s ease; }
++.tr-lnums { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
++@media (max-width: 1300px) { .tr-liverow { grid-template-columns: 1fr; gap: 6px; } }
++/* the steps in a row, and their panes */
++.tr-pills { margin: 0; }
++.tr-pills .ps-say { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.tr-pane { display: none; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
++.tr-pane.is-on { display: flex; }
++.tr-phead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
++.tr-phead b { font-size: 15px; }
++.tr-sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
++.tr-setpick { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; font-size: 13px; }
++.tr-setpick input { position: absolute; opacity: 0; pointer-events: none; }
++.tr-setpick span { font-size: 11.5px; color: var(--muted); }
++.tr-setpick:hover { border-color: var(--line-strong); }
++.tr-setpick.is-on { border-color: var(--amber); box-shadow: inset 2px 0 0 var(--amber); }
++.tr-knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 12px; align-items: end; }
++.tr-knobs .field { width: auto; min-width: 0; }
++.tr-knobs input[type="number"] { width: 100%; }
++.tr-knobs .tr-wide { grid-column: span 2; }
++.tr-knobs .check { align-self: center; }
++.tr-listen[hidden] { display: none; }
++.tr-listen summary { cursor: pointer; }
++/* 4 Telemetry */
++.tr-rhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
++.tr-rname { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
++.tr-rname b { font-size: 16px; }
++.tr-note { margin: -4px 0 0; }
++.tr-prog { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
++.tr-pbar { height: 8px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
++.tr-pbar i { display: block; height: 100%; background: var(--good); transition: width .6s ease; }
++.tr-prog.is-live .tr-pbar i { background: var(--amber); }
++.tr-prog span { font-size: 12px; color: var(--muted); }
++.tr-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
++.tr-tile { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--line-soft, var(--line)); border-radius: var(--r-md); background: var(--ground); }
++.tr-tile span { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
++.tr-tile b { font: 600 14px var(--mono); }
++.tr-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
++.tr-chart { margin: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line-soft, var(--line)); border-radius: var(--r-md); background: var(--ground); }
++.tr-chart figcaption { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 12.5px; }
++.tr-chart figcaption .mono { font-size: 11px; color: var(--muted); }
++.tr-read { margin-left: auto; color: var(--amber) !important; }
++.tr-plot { position: relative; padding-left: 44px; }
++.tr-ylab { position: absolute; left: 0; top: 0; bottom: 0; width: 40px; font-size: 10px; color: var(--dim); }
++.tr-ylab span { position: absolute; right: 2px; transform: translateY(-50%); }
++.tr-plot svg { display: block; width: 100%; height: 150px; cursor: crosshair; }
++.tr-plot line.g { stroke: var(--line-soft, var(--line)); stroke-width: 1; vector-effect: non-scaling-stroke; }
++.tr-plot line.t { stroke: var(--dim); stroke-width: 1; opacity: .55; vector-effect: non-scaling-stroke; }
++.tr-plot line.t.on { stroke: var(--good); stroke-width: 2; opacity: 1; }
++.tr-plot line.t.sel { stroke: var(--amber); stroke-width: 1.5; opacity: 1; stroke-dasharray: 3 3; }
++.tr-plot line.cur { stroke: var(--amber); stroke-width: 1; vector-effect: non-scaling-stroke; }
++.tr-plot path.raw { fill: none; stroke: var(--muted); stroke-width: 1; opacity: .35; vector-effect: non-scaling-stroke; }
++.tr-plot path.avg { fill: none; stroke: var(--ink); stroke-width: 2; vector-effect: non-scaling-stroke; }
++.tr-chart[data-key="ar_ce"] path.avg { stroke: var(--amber); }
++.tr-say { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--dim); }
++.tr-epochs { display: flex; flex-direction: column; gap: 8px; }
++.tr-ehead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
++.tr-echips { display: flex; flex-wrap: wrap; gap: 4px; max-height: 120px; overflow: auto; }
++.tr-echips .coll-chip.is-in { border-color: color-mix(in srgb, var(--good) 55%, transparent); color: var(--good); }
++.tr-echips .coll-chip.is-on { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); color: var(--ink); }
++.tr-eact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px dashed var(--amber-dim); border-radius: var(--r-md); font-size: 12.5px; }
++.tr-facts summary { cursor: pointer; font-size: 12px; color: var(--muted); }
++.tr-fgrid { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 6px; font-size: 12.5px; }
++.tr-fgrid em { font-style: normal; color: var(--dim); margin-right: 4px; }
++/* the player in this room: it steps down to a strip and comes up under the mouse; what plays plays on */
++body[data-tab="train"] .playbar { transform: translateY(calc(100% - 8px)); transition: transform .22s ease .3s; }
++body[data-tab="train"] .playbar:hover, body[data-tab="train"] .playbar:focus-within { transform: none; transition-delay: 0s; }
++body[data-tab="train"] .playbar::before { content: ""; position: absolute; top: 2px; left: 50%; width: 48px; height: 3px; margin-left: -24px; border-radius: 2px; background: var(--line-strong); }
++body[data-tab="train"] .playbar:has(.play.is-playing)::before { background: var(--amber); width: 120px; margin-left: -60px; }
++body[data-tab="train"] .workspace { height: calc(100vh - 52px - 8px); }
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index b795b08..d799c22 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -1,9 +1,14 @@
+-// HERESY 1063: the Train tab, a wizard for YuE2 LoRAs (Viktor, 01.10.2026). The lab does the work
+-// (lab/training.py: AI-Toolkit underneath for now); this page walks the four steps:
+-//   1 Raw      a folder of datasets/raw/, its tracks: which go in, their lyrics, a style of their own
+-//   2 Set      the shared style line (and trigger word); made into datasets/prepared/NAME/
+-//   3 Train    a kind of adapter (its defaults), the knobs, the run, its progress and the AR loss
+-//   4 Result   the LoRA in loras/RUN/, ready in Create
++// HERESY 1063 / 1090: the Train room, LoRAs for YuE2 from your own songs (lab/training.py does the work: the
++// studio's own trainer, lab/trainer, or Ostris' AI-Toolkit as the reference). Viktor, 02.10.2026: on par with the
++// other rooms. So:
++//   on top     the runs that are training, each a line with its progress, time left and loss
++//   a row      1 Material › 2 The set › 3 Train › 4 Telemetry, as Post's steps: one open at a time, each
++//              step summed up in its pill, the next one opened when a step is done
++//   Telemetry  one run: progress, the numbers, the curves of both halves (what they mean said under them),
++//              its epochs: one picked, into loras/ or out of it, or downloaded
++//   the column every run a card, as the takes are in Create: Active · All · Archived · Trash, searched; a
++//              running one lit as a playing take; archive, delete (to the trash, its adapters asked about),
++//              restore, delete for good. Folds to a strip on the right.
+ (function () {
+   "use strict";
+ 
+@@ -13,191 +18,411 @@
+     language: { label: "Language", say: "diction of a language; exact lyrics, many voices", o: { rank: 32, steps: 3000, ar_loss_weight: 1.0, ar_kl_weight: 0.1, ar_lr_multiplier: 1.0 } },
+     artist:   { label: "Artist", say: "all of it; a large, varied catalogue", o: { rank: 32, steps: 3000, ar_loss_weight: 0.7, ar_kl_weight: 0.2, ar_lr_multiplier: 0.7 } }
+   };
+-  var state = { hooks: null, data: null, raw: null, scan: null, rows: [], run: "", timer: 0, kind: "style" };
++  var PANES = ["raw", "set", "train", "run"];
++  var state = {
++    hooks: null, data: null, trash: [], raw: null, rows: [], kind: "style",
++    set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "",
++    filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true
++  };
+   function $(id) { return document.getElementById(id); }
+   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
++  function keep(k, v) { try { if (v == null || v === "") localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private window */ } }
+   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
+   function api(path, body) {
+     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+     return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
+   }
++  function confirmBox(text, opts) { return window.HeresyDialog.confirm(text, opts); }
+   function clock(s) { s = Math.round(s || 0); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+-  function gb(b) { return (b / 1e9).toFixed(1) + " GB"; }
++  function gb(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.round(b / 1e6) + " MB"; }
+   function slug(s) { return String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "set"; }
++  function span(sec) { sec = Math.round(sec || 0); var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? h + " h " + ("0" + m).slice(-2) + " min" : m + " min"; }
++  function ago(t) {
++    if (!t) return "";
++    var s = Date.now() / 1000 - t;
++    return s < 90 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : s < 86400 ? Math.round(s / 3600) + " h ago" : Math.round(s / 86400) + " d ago";
++  }
++  function when(t) { var d = new Date((t || 0) * 1000); return t ? d.toLocaleDateString() + " " + d.toTimeString().slice(0, 5) : ""; }
++  function runs() { return (state.data && state.data.runs) || []; }
++  function runOf(name) { return runs().filter(function (r) { return r.name === name; })[0] || null; }
++  function isLive(r) { return r && (r.status === "running" || r.status === "stopping"); }
++  function engineOf(r) { return ((r && r.options) || {}).engine === "ruach" ? "ruach" : "ai-toolkit"; }
++  function epochs(r) { return r.tracks ? (r.steps || 0) / r.tracks : 0; }
+ 
++  // ------------------------------------------------------------------ loading
+   function load() {
+-    return api("/train/datasets").then(function (d) { state.data = d; paint(); }).catch(function (e) {
+-      $("trBody").innerHTML = '<p class="row-hint">The lab does not answer: ' + esc(e.message) + "</p>";
+-    });
++    return Promise.all([api("/train/datasets"), api("/train/trash").catch(function () { return { trash: [] }; })]).then(function (d) {
++      state.data = d[0]; state.trash = d[1].trash || [];
++      if (state.first) {                       // the first look: a training run comes to the front
++        state.first = false;
++        var live = runs().filter(isLive)[0];
++        if (live && (!state.sel || !runOf(state.sel))) state.sel = live.name;
++        if (!state.pane) state.pane = live ? "run" : "raw";
++      }
++      if (state.sel && !runOf(state.sel)) state.sel = "";
++      paint();
++    }).catch(function (e) {
++      $("trWarn").innerHTML = '<p class="tr-warn">The lab does not answer: ' + esc(e.message) + "</p>";
++    }).then(schedule);
++  }
++  // while the room is open: every 5 s when something trains, else every 30 s; nothing when another room is open
++  function schedule() {
++    clearTimeout(state.timer);
++    if (document.body.dataset.tab !== "train") return;
++    state.timer = setTimeout(function () {
++      if (document.hidden || document.body.dataset.tab !== "train") return schedule();
++      Promise.all([api("/train/datasets"), api("/train/trash").catch(function () { return { trash: state.trash }; })]).then(function (d) {
++        state.data = d[0]; state.trash = d[1].trash || [];
++        paintLive(); paintList(); paintPills(); gate();
++        if (state.pane === "run") paintRun();
++      }).catch(function () { /* the next tick tries again */ }).then(schedule);
++    }, runs().some(isLive) ? 5000 : 30000);
+   }
+ 
+   function paint() {
+-    var d = state.data;
+-    if (!d) return;
+-    $("trWarn").innerHTML = (!d.aitk_ready ? '<p class="tr-warn">AI-Toolkit is not found at <code>' + esc(d.aitk) + "</code>: clone ostris/ai-toolkit there (or set AITK_ROOT for the lab).</p>" : "") +
+-      (!d.head ? '<p class="tr-warn">The realaudio tokenizer is missing from <code>checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/</code>.</p>' : "");
+-    $("trRaw").innerHTML = d.raw.length ? d.raw.map(function (r) {
+-      return '<button type="button" class="tr-pick' + (state.raw === r.name ? " is-on" : "") + '" data-raw="' + esc(r.name) + '"><b>' + esc(r.name) + "</b><span>" +
+-        r.tracks + " tracks · " + gb(r.bytes) + (r.captions ? " · " + r.captions + " captions" : "") + "</span></button>";
+-    }).join("") : '<p class="row-hint">Put a folder of songs into <code>datasets/raw/</code>, then press Reload.</p>';
+-    $("trSets").innerHTML = d.prepared.length ? d.prepared.map(function (p) {
+-      return '<label class="tr-set"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + ($("trRunName").dataset.set === p.name ? " checked" : "") + " /> <b>" + esc(p.name) + "</b> <span>" +
+-        p.tracks + " tracks · " + clock(p.seconds) + " · from " + esc(p.from) + " · " + esc(p.made) + "</span></label>";
+-    }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
+-    $("trRuns").innerHTML = d.runs.length ? d.runs.map(card).join("") : '<p class="row-hint">No runs yet.</p>';
+-    gate();
+-    listenPanel();
++    warn(); paintRaw(); paintSets(); paintLive(); paintList(); paintPills(); gate(); listenPanel();
++    showPane(state.pane || "raw", true);
+   }
+ 
+-  // ---- HERESY 1076: the VRAM gate, on measured numbers only. Every run keeps its peak (nvidia-smi on its
+-  // card); the need for a base (int8 or bf16) is the largest peak measured with it. A card smaller than
+-  // that closes the Train button and says why; the room stays (sets are made here, trained elsewhere).
+-  function gate() {
+-    var d = state.data, el = $("trGate");
+-    if (!el) { el = document.createElement("div"); el.id = "trGate"; el.className = "tr-gate"; $("trRun").parentNode.insertAdjacentElement("afterend", el); }
+-    var quant = $("tr_quant").value, gb = function (mb) { return (mb / 1024).toFixed(1) + " GB"; };
+-    var measured = (d.runs || []).filter(function (r) { return r.vram_peak_mb > 0 && r.options; });
+-    var same = measured.filter(function (r) { return r.options.quant === quant; });
+-    var need = same.reduce(function (m, r) { return Math.max(m, r.vram_peak_mb); }, 0);
+-    var cards = Array.isArray(d.gpus) ? d.gpus : [], big = cards.reduce(function (m, c) { return c.total_mb > m.total_mb ? c : m; }, { total_mb: 0 });
+-    var free = cards.filter(function (c) { return need && c.free_mb >= need; });
+-    var shut = need && big.total_mb && big.total_mb < need;
+-    $("trRun").disabled = !!shut;
+-    var html = "";
+-    if (!Array.isArray(d.gpus)) html += '<p class="tr-err">' + esc(d.gpus && d.gpus.error || "the cards could not be read") + "</p>";
+-    else if (shut) html += '<p class="tr-warn">Training on ' + quant + " weights needed " + gb(need) + " on one card (measured); the largest card here has " + gb(big.total_mb) +
+-      ". The room stays: make the sets here and train on a bigger card" + (quant === "bf16" ? ", or choose int8 weights (the adapter learns a little less exactly)" : "") + ".</p>";
+-    else if (need) html += '<p class="row-hint">' + quant + " weights: " + gb(need) + " measured at the peak. " + (free.length ? "Free enough now: " + free.map(function (c) { return "GPU" + c.index; }).join(", ") + "."
+-      : "No card has that free now (" + cards.map(function (c) { return "GPU" + c.index + " " + gb(c.free_mb); }).join(", ") + "): the run would wait or fail.") + "</p>";
+-    else html += '<p class="row-hint">' + quant + " weights: not measured yet; the first run measures its peak" + (measured.length ? " (measured so far: " + measured[0].options.quant + " " + gb(measured[0].vram_peak_mb) + ")" : "") + ".</p>";
+-    if (measured.length) html += '<details class="tr-calc"><summary>VRAM measured, run by run</summary><table><tr><th>run</th><th>weights</th><th>rank</th><th>window</th><th>peak</th></tr>' +
+-      measured.map(function (r) { return "<tr><td>" + esc(r.name) + "</td><td>" + esc(r.options.quant) + "</td><td>" + esc(r.options.rank) + "</td><td>" + Math.round((r.options.train_window_frames || 0) / 25) + " s</td><td>" + gb(r.vram_peak_mb) + "</td></tr>"; }).join("") + "</table></details>";
+-    el.innerHTML = html;
++  // ------------------------------------------------------------------ the steps in a row
++  function showPane(p, quiet) {
++    if (PANES.indexOf(p) < 0) p = "raw";
++    if (p === "run" && !state.sel) { var any = runs()[0]; if (any) state.sel = any.name; }
++    state.pane = p; keep("yue2.trPane", p);
++    Array.prototype.forEach.call(document.querySelectorAll("#view-train .tr-pane"), function (el) { el.classList.toggle("is-on", el.dataset.pane === p); });
++    paintPills();
++    if (p === "run") paintRun();
++    if (!quiet) { var el = document.querySelector('#view-train .tr-pane[data-pane="' + p + '"]'); if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
++  }
++  function paintPills() {
++    var d = state.data || {}, r = runOf(state.sel), included = state.rows.filter(function (x) { return x.include; }).length;
++    var set = (d.prepared || []).filter(function (p) { return p.name === state.set; })[0];
++    $("trSayRaw").textContent = state.raw ? state.raw + (state.rows.length ? " · " + included + " of " + state.rows.length : "") : "a folder of datasets/raw/";
++    $("trSaySet").textContent = set ? set.name + " · " + set.tracks + " tracks" : "a caption for every track";
++    $("trSayTrain").textContent = KINDS[state.kind].label.toLowerCase() + " · rank " + ($("tr_rank").value || "?") + " · " + $("tr_quant").value +
++      ($("tr_engine").value === "ruach" ? "" : " · AI-Toolkit");
++    $("trSayRun").textContent = r ? r.name + (isLive(r) && r.steps ? " · " + Math.floor(100 * (r.step || 0) / r.steps) + " %" : " · " + r.status) : "a run: its curves and epochs";
++    var done = { raw: !!state.raw, set: !!set, train: runs().some(function (x) { return x.dataset === state.set; }), run: !!(r && r.status === "done") };
++    Array.prototype.forEach.call(document.querySelectorAll("#trPills .ps-step"), function (b) {
++      b.classList.toggle("is-active", b.dataset.pane === state.pane);
++      b.classList.toggle("is-done", !!done[b.dataset.pane]);
++      b.setAttribute("aria-selected", b.dataset.pane === state.pane ? "true" : "false");
++    });
+   }
+ 
+-  // ---- HERESY 1067: the history, a card a run (as the Collection's cards are for takes): what it was
+-  // given, what it did (the curves, the time, the memory), and its epochs, each one a LoRA on a click
+-  function when(t) { var d = new Date((t || 0) * 1000); return t ? d.toLocaleDateString() + " " + d.toTimeString().slice(0, 5) : ""; }
+-  function span(sec) { sec = Math.round(sec || 0); var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? h + " h " + m + " min" : m + " min"; }
+-  function chart(ser) {
+-    var lines = [["loss", "var(--amber)", "flow loss (NAR)"], ["ar_ce", "var(--accent, #6aa9ff)", "ar_ce (AR)"]].filter(function (l) { return ser[l[0]] && ser[l[0]].curve.length > 1; });
+-    if (!lines.length) return "";
+-    var W = 320, H = 70, last = 0;
+-    lines.forEach(function (l) { var c = ser[l[0]].curve; last = Math.max(last, c[c.length - 1][0]); });
+-    var paths = lines.map(function (l) {
+-      var c = ser[l[0]].curve, lo = Infinity, hi = -Infinity;
+-      c.forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
+-      if (hi === lo) hi = lo + 1;
+-      var dd = c.map(function (p, i) { return (i ? "L" : "M") + (W * p[0] / last).toFixed(1) + " " + (H - 4 - (H - 8) * (p[1] - lo) / (hi - lo)).toFixed(1); }).join(" ");
+-      return '<path d="' + dd + '" fill="none" stroke="' + l[1] + '" stroke-width="1.4" vector-effect="non-scaling-stroke"><title>' + l[2] + ": " + lo.toFixed(3) + " … " + hi.toFixed(3) + "</title></path>";
++  // HERESY 1086: what the chosen trainer lacks, said by name; the studio's own needs no AI-Toolkit
++  function warn() {
++    var d = state.data || {}, own = d.own || {}, q = $("tr_quant").value, html = "";
++    if ($("tr_engine").value === "ruach") {
++      var lack = [];
++      if (!own[q]) lack.push("Comfy-Org's YuE2 " + q + " weights");
++      if (!own.mert) lack.push("MERT-v2-FullSong");
++      if (!own.head) lack.push("the realaudio tokenizer head");
++      if (lack.length) html += '<p class="tr-warn">The studio’s trainer is missing ' + esc(lack.join(", ")) + ": <code>heresy/fetch-heresy.sh --trainer " + esc(q) + "</code>" +
++        (own.mert ? "" : " and <code>tools/download-checkpoints.sh</code>") + ".</p>";
++    } else {
++      if (!d.aitk_ready) html += '<p class="tr-warn">AI-Toolkit is not found at <code>' + esc(d.aitk) + "</code>: clone ostris/ai-toolkit there (or set AITK_ROOT for the lab), or train with the studio’s own trainer.</p>";
++      if (!d.head) html += '<p class="tr-warn">The realaudio tokenizer is missing from <code>checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/</code>.</p>';
++    }
++    $("trWarn").innerHTML = html;
++  }
++
++  // ------------------------------------------------------------------ on top: what trains now
++  function paintLive() {
++    var live = runs().filter(isLive), el = $("trLive");
++    el.hidden = !live.length;
++    el.innerHTML = live.map(function (r) {
++      var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, ser = r.series || {};
++      var loss = ser.flow ? ser.flow.last : r.loss, ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce;
++      return '<button type="button" class="tr-liverow' + (r.name === state.sel && state.pane === "run" ? " is-on" : "") + '" data-open="' + esc(r.name) + '" data-tip="Its telemetry">' +
++        '<span class="tr-lname"><i class="tr-pulse"></i><b>' + esc(r.name) + "</b><em>" + esc(r.kind || "") + " · " + (engineOf(r) === "ruach" ? "Ruach" : "AI-Toolkit") + " · GPU" + esc(r.gpu) + "</em></span>" +
++        '<span class="tr-lbar"><i style="width:' + pct.toFixed(1) + '%"></i></span>' +
++        '<span class="tr-lnums mono">' + pct.toFixed(0) + " % · " + (r.step || 0) + "/" + (r.steps || "?") +
++          (r.tracks ? " · e" + ((r.step || 0) / r.tracks).toFixed(1) + "/" + Math.round(epochs(r)) : "") +
++          (r.eta_s != null ? " · " + span(r.eta_s) + " left" : "") + (ser.sec_per_step ? " · " + ser.sec_per_step + " s/step" : "") +
++          (loss != null ? " · flow " + Number(loss).toFixed(3) : "") + (ar != null ? " · ar_ce " + Number(ar).toFixed(2) : "") + "</span></button>";
+     }).join("");
+-    return '<svg class="tr-chart" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + paths + "</svg>" +
+-      '<div class="tr-legend">' + lines.map(function (l) { var x = ser[l[0]]; return '<span><i style="background:' + l[1] + '"></i>' + l[2] + " " + x.first.toFixed(3) + " → " + x.last.toFixed(3) + " (min " + x.min.toFixed(3) + ")</span>"; }).join("") + "</div>";
++  }
++
++  // ------------------------------------------------------------------ the column of runs
++  function inFilter(r) {
++    if (state.filter === "active") return isLive(r);
++    if (state.filter === "archived") return !!r.archived;
++    return !r.archived;                                     // All: everything not archived
++  }
++  function spark(r) {
++    var c = ((r.series || {}).flow || (r.series || {}).loss || {}).curve;
++    if (!c || c.length < 3) return "";
++    var W = 100, H = 18, lo = Infinity, hi = -Infinity, last = c[c.length - 1][0] || 1;
++    c.forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
++    if (hi === lo) hi = lo + 1;
++    var sm = ema(c, 0.15);
++    return '<svg class="tr-spark" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none"><path d="' + sm.map(function (p, i) {
++      return (i ? "L" : "M") + (W * p[0] / last).toFixed(1) + " " + (H - 2 - (H - 4) * (p[1] - lo) / (hi - lo)).toFixed(1);
++    }).join(" ") + '" /></svg>';
++  }
++  function paintList() {
++    var q = state.search.trim().toLowerCase(), html;
++    Array.prototype.forEach.call(document.querySelectorAll("#trFilters [data-filter]"), function (b) { b.setAttribute("aria-pressed", b.dataset.filter === state.filter ? "true" : "false"); });
++    if (state.filter === "trash") {
++      var t = state.trash.filter(function (x) { return !q || (x.name + " " + (x.dataset || "") + " " + (x.kind || "")).toLowerCase().indexOf(q) >= 0; });
++      html = t.length ? t.map(function (x) {
++        return '<article class="tr-rcard is-trash"><div class="tr-rtitle">' + esc(x.name) + '</div><div class="tr-rsub">' + esc([x.kind, x.dataset].filter(Boolean).join(" · ")) +
++          "</div>" + '<div class="take-foot"><span>' + gb(x.bytes) + "</span><span>deleted " + esc(ago(x.trashed)) + "</span>" + (x.loras.length ? "<span>" + x.loras.length + " adapters with it</span>" : "") + "</div>" +
++          '<div class="tr-racts"><button type="button" class="btn ghost small" data-restore="' + esc(x.id) + '">Restore</button>' +
++          '<button type="button" class="btn ghost small danger" data-purge="' + esc(x.id) + '" data-size="' + x.bytes + '" data-name="' + esc(x.name) + '">Delete for good</button></div></article>';
++      }).join("") : '<p class="row-hint tr-empty">The trash is empty.</p>';
++    } else {
++      var list = runs().filter(inFilter).filter(function (r) { return !q || (r.name + " " + (r.dataset || "") + " " + (r.kind || "") + " " + (r.note || "")).toLowerCase().indexOf(q) >= 0; });
++      html = list.length ? list.map(card).join("") : '<p class="row-hint tr-empty">' + (state.filter === "active" ? "Nothing trains now." : state.filter === "archived" ? "Nothing archived." : "No runs yet: steps 1 to 3.") + "</p>";
++    }
++    $("trRunList").innerHTML = html;
++    var n = runs().filter(function (r) { return !r.archived; }).length;
++    $("trRunCount").textContent = n;
++    $("trUnfoldCount").textContent = n;
++    $("trLayout").classList.toggle("is-folded", state.folded);
+   }
+   function card(r) {
+-    var o = r.options || {}, ser = r.series || {}, cks = r.checkpoints || [];
+-    var took = (r.ended || (r.status === "running" ? Date.now() / 1000 : r.started)) - r.started;
++    var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, live = isLive(r);
++    var ep = r.tracks ? "e" + Math.floor((r.step || 0) / r.tracks) + "/" + Math.round(epochs(r)) : (r.step || 0) + "/" + (r.steps || "?");
++    return '<article class="tr-rcard' + (live ? " is-running" : "") + (r.name === state.sel ? " is-selected" : "") + (r.archived ? " is-archived" : "") + '" data-open="' + esc(r.name) + '" tabindex="0">' +
++      '<div class="tr-rtitle">' + esc(r.name) + "</div>" +
++      '<div class="tr-rsub">' + esc([r.kind, r.dataset, r.tracks ? r.tracks + " tracks" : ""].filter(Boolean).join(" · ")) + "</div>" +
++      spark(r) +
++      (live || (r.status !== "done" && pct > 0) ? '<div class="tr-rbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' : "") +
++      '<div class="take-foot"><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
++        '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach" : "AITK") + "</span>" +
++        "<span>" + ep + "</span>" + (r.loras && r.loras.length ? '<span data-tip="In loras/, ready in Create">' + r.loras.length + " in loras/</span>" : "") +
++        "<span>" + esc(ago(r.started)) + "</span></div>" +
++      '<button type="button" class="tr-rmenu" data-menu="' + esc(r.name) + '" aria-label="Run actions">⋯</button></article>';
++  }
++  function menu(btn) {
++    closeMenu();
++    var r = runOf(btn.dataset.menu);
++    if (!r) return;
++    var pop = document.createElement("div"), box = btn.getBoundingClientRect();
++    pop.className = "menu-pop tr-menu";
++    pop.setAttribute("role", "menu");
++    // over the page, not inside the column (its edge would cut the last items off)
++    pop.style.position = "fixed"; pop.style.right = "auto"; pop.style.top = Math.round(box.bottom + 4) + "px";
++    pop.style.left = Math.max(8, Math.round(box.right - 190)) + "px";
++    pop.innerHTML = '<button type="button" role="menuitem" data-act="open">Telemetry</button>' +
++      '<a role="menuitem" href="/lab/train/log?name=' + encodeURIComponent(r.name) + '" target="_blank" rel="noopener">The log</a>' +
++      '<button type="button" role="menuitem" data-act="' + (r.archived ? "unarchive" : "archive") + '">' + (r.archived ? "Out of the archive" : "Archive") + "</button>" +
++      (isLive(r) ? '<button type="button" role="menuitem" class="danger" data-act="stop">Stop…</button>'
++                 : '<button type="button" role="menuitem" class="danger" data-act="delete">Delete…</button>');
++    document.body.appendChild(pop);
++    pop.dataset.run = r.name;
++    pop.addEventListener("click", function (e) { var b = e.target.closest("[data-act]"); if (b) { closeMenu(); act(r.name, b.dataset.act); } });
++    var under = window.innerHeight - pop.getBoundingClientRect().bottom;
++    if (under < 8) pop.style.top = Math.round(box.top - pop.offsetHeight - 4) + "px";
++    setTimeout(function () { document.addEventListener("click", closeMenu, { once: true }); }, 0);
++  }
++  function closeMenu() { Array.prototype.forEach.call(document.querySelectorAll(".tr-menu"), function (m) { m.remove(); }); }
++  function act(name, what) {
++    if (what === "open") return openRun(name);
++    if (what === "archive" || what === "unarchive")
++      return api("/train/archive", { name: name, archived: what === "archive" }).then(function () { toast(what === "archive" ? name + " is archived" : name + " is back from the archive"); load(); }).catch(function (e) { toast(e.message, true); });
++    if (what === "stop") return stopRun(name);
++    if (what === "delete") return deleteRun(name);
++  }
++  function stopRun(name) {
++    var r = runOf(name);
++    confirmBox("Stop " + name + "?\n\n" + (engineOf(r) === "ruach" ? "The studio’s trainer" : "AI-Toolkit") + " saves what it has learned on the way out; the epochs saved so far stay.", { ok: "Stop", danger: true })
++      .then(function (ok) { if (ok) return api("/train/stop", { name: name }).then(function () { toast("Stopping " + name); load(); }); }).catch(function (e) { toast(e.message, true); });
++  }
++  function deleteRun(name) {
++    var r = runOf(name), cks = r.checkpoints || [], bytes = cks.reduce(function (s, c) { return s + (c.bytes || 0); }, 0), own = r.loras || [];
++    confirmBox("Delete " + name + "?\n\nIts folder (" + cks.length + " checkpoints, " + gb(bytes) + ") goes to the trash: the Trash filter here brings it back, or deletes it for good.", { ok: "To the trash", danger: true })
++      .then(function (ok) {
++        if (!ok) return;
++        if (!own.length) return false;
++        return confirmBox("And its " + own.length + " adapter" + (own.length > 1 ? "s" : "") + " in loras/?\n\n" + own.join(", ") + "\n\nThey are in Create’s LoRAs now. Take them out with the run (into the trash beside it), or keep them usable in Create.",
++          { ok: "Take them out", cancel: "Keep them" }).then(function (takeOut) {
++          return api("/train/delete", { name: name, loras: !!takeOut }).then(function (d) { return d; });
++        });
++      })
++      .then(function (d) {
++        if (d === undefined) return;
++        var go = d === false ? api("/train/delete", { name: name, loras: false }) : Promise.resolve(d);
++        return go.then(function (res) {
++          toast(name + " is in the trash" + (res.loras && res.loras.length ? " with " + res.loras.length + " adapter" + (res.loras.length > 1 ? "s" : "") : ""));
++          if (state.sel === name) state.sel = "";
++          load();
++        });
++      }).catch(function (e) { toast(e.message, true); });
++  }
++  function restore(id) {
++    api("/train/restore", { id: id }).then(function (d) { toast(d.name + " is back" + (d.loras.length ? " with its adapters" : "")); load(); }).catch(function (e) { toast(e.message, true); });
++  }
++  function purge(id, name, size) {
++    confirmBox("Delete " + name + " for good?\n\n" + gb(+size || 0) + " freed. This cannot be undone.", { ok: "Delete for good", danger: true })
++      .then(function (ok) { if (ok) return api("/train/purge", { id: id }).then(function (d) { toast(name + " is gone: " + gb(d.freed) + " freed"); load(); }); }).catch(function (e) { toast(e.message, true); });
++  }
++  function openRun(name) {
++    state.sel = name; state.epoch = ""; keep("yue2.trRun", name);
++    paintList(); paintLive(); showPane("run");
++  }
++
++  // ------------------------------------------------------------------ 4 Telemetry
++  function ema(curve, a) {
++    var out = [], v = null;
++    curve.forEach(function (p) { v = v == null ? p[1] : v + a * (p[1] - v); out.push([p[0], v]); });
++    return out;
++  }
++  // a curve over the steps: the raw points faint, their running average bold, the epochs as ticks (a filled one
++  // is in loras/), the chosen epoch as a line; y labelled at its top, middle and bottom
++  function chart(key, ser, r, title, say) {
++    var s = ser[key];
++    if (!s || !s.curve || s.curve.length < 2) return "";
++    var c = s.curve, W = 600, H = 150, L = 0, lo = Infinity, hi = -Infinity, last = Math.max(r.steps || 0, c[c.length - 1][0]) || 1;
++    c.forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
++    var pad = (hi - lo) * 0.06 || 0.05; lo -= pad; hi += pad;
++    var x = function (st) { return L + (W - L) * st / last; }, y = function (v) { return H - 6 - (H - 14) * (v - lo) / (hi - lo); };
++    var path = function (pts) { return pts.map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" "); };
++    var grid = [0, 0.5, 1].map(function (f) { var v = lo + (hi - lo) * (1 - f), yy = y(v); return '<line class="g" x1="0" x2="' + W + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>'; }).join("");
++    var ticks = (r.checkpoints || []).filter(function (k) { return k.step; }).map(function (k) {
++      var xx = x(k.step).toFixed(1);
++      return '<line class="t' + (k.lora ? " on" : "") + (k.file === state.epoch ? " sel" : "") + '" x1="' + xx + '" x2="' + xx + '" y1="' + (k.file === state.epoch ? 0 : H - 6) + '" y2="' + H + '"/>';
++    }).join("");
++    var labels = [hi, (hi + lo) / 2, lo].map(function (v, i) { return '<span style="top:' + [2, 46, 90][i] + '%">' + v.toFixed(v < 10 ? 3 : 2) + "</span>"; }).join("");
++    return '<figure class="tr-chart" data-key="' + key + '" data-last="' + last + '" data-lo="' + lo + '" data-hi="' + hi + '">' +
++      '<figcaption><b>' + title + '</b><span class="mono">' + s.first.toFixed(3) + " → " + s.last.toFixed(3) + " · min " + s.min.toFixed(3) + '</span><span class="tr-read mono"></span></figcaption>' +
++      '<div class="tr-plot"><div class="tr-ylab mono">' + labels + "</div>" +
++      '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + ticks +
++        '<path class="raw" d="' + path(c) + '"/><path class="avg" d="' + path(ema(c, 0.08)) + '"/><line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg></div>' +
++      '<p class="tr-say">' + say + "</p></figure>";
++  }
++  function paintRun() {
++    var el = $("trRunPane"), r = runOf(state.sel), facts = el.querySelector(".tr-facts"), factsOpen = !!(facts && facts.open);
++    if (!r) { el.innerHTML = '<p class="row-hint">No run chosen: pick one in the column on the right, or start one in step 3.</p>'; return; }
++    var o = r.options || {}, ser = r.series || {}, live = isLive(r);
++    var cks = (r.checkpoints || []).slice().sort(function (a, b) {        // by step; the run's final file after its last numbered one
++      return (a.step || 0) - (b.step || 0) || (/_\d{6,}\.safetensors$/.test(b.file) ? 1 : 0) - (/_\d{6,}\.safetensors$/.test(a.file) ? 1 : 0);
++    });
++    var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, took = (r.ended || (live ? Date.now() / 1000 : r.started)) - r.started;
+     var ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce, memo = ar != null && ar < 0.3;
+     var bytes = cks.reduce(function (s, c) { return s + (c.bytes || 0); }, 0);
+-    return '<article class="tr-card is-' + esc(r.status) + '">' +
+-      '<div class="tr-chead"><b>' + esc(r.name) + '</b><span class="tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" + (r.kind ? '<span class="tr-tag">' + esc(r.kind) + "</span>" : "") +
+-        '<span class="spacer"></span><span class="tr-when">' + esc(when(r.started)) + " · " + span(took) + "</span></div>" +
+-      '<div class="tr-facts">' +
++    var tile = function (k, v, hint) { return '<div class="tr-tile"' + (hint ? ' data-tip="' + esc(hint) + '"' : "") + "><span>" + k + "</span><b>" + v + "</b></div>"; };
++    var pick = cks.filter(function (c) { return c.file === state.epoch; })[0];
++    el.innerHTML =
++      '<div class="tr-rhead"><div class="tr-rname"><b>' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
++        (r.kind ? '<span class="tag">' + esc(r.kind) + "</span>" : "") + '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach trainer" : "AI-Toolkit") + "</span>" +
++        (r.archived ? '<span class="tag">archived</span>' : "") + "</div>" +
++        '<div class="tr-racts">' + (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
++          '<a class="btn ghost small" href="/lab/train/log?name=' + encodeURIComponent(r.name) + '" target="_blank" rel="noopener">The log</a>' +
++          '<button type="button" class="btn ghost small" data-menu="' + esc(r.name) + '" aria-label="More">⋯</button></div></div>' +
++      (r.note ? '<p class="row-hint tr-note">' + esc(r.note) + "</p>" : "") +
++      '<div class="tr-prog' + (live ? " is-live" : "") + '"><div class="tr-pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
++        '<span class="mono">' + pct.toFixed(1) + " % · step " + (r.step || 0) + " / " + (r.steps || "?") + (r.tracks ? " · epoch " + ((r.step || 0) / r.tracks).toFixed(1) + " / " + Math.round(epochs(r)) : "") + "</span></div>" +
++      '<div class="tr-tiles">' +
++        tile("speed", ser.sec_per_step ? ser.sec_per_step + " s/step" : "—") +
++        tile(live ? "running" : "took", span(r.elapsed_s != null && live ? r.elapsed_s : took)) +
++        tile("left", live && r.eta_s != null ? span(r.eta_s) : "—") +
++        tile("flow now", ser.flow ? ser.flow.last.toFixed(3) : "—", "the sound half's loss, averaged over the last 25 steps") +
++        tile("ar_ce now", ar != null ? Number(ar).toFixed(3) : "—", "the music half's loss, averaged over the last 25 steps") +
++        tile("ar_kl now", ser.ar_kl ? ser.ar_kl.last.toFixed(4) : "—", "how far the music half has moved from the base model") +
++        tile("VRAM peak", r.vram_peak_mb ? (r.vram_peak_mb / 1024).toFixed(1) + " GB" : "—", "the card's peak while it ran") +
++        tile("GPU", r.gpu != null ? "GPU" + esc(r.gpu) : "—") +
++      "</div>" +
++      (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
++      (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
++      '<div class="tr-charts">' +
++        chart(ser.flow ? "flow" : "loss", ser, r, ser.flow ? "Sound half · flow loss (NAR)" : "All together · loss",
++          "How well the sound half predicts the noise it has to take away. Lower is better. It jumps from step to step with the random noise level of each step: read the bold line, the running average.") +
++        chart("ar_ce", ser, r, "Music half · ar_ce (AR)",
++          "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.") +
++      "</div>" +
++      (cks.length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
++          '<span class="row-hint">pick one: into Create’s LoRAs, out of them, or as a file; a filled tick on the curves is one in loras/</span></div>' +
++        '<div class="tr-echips">' + cks.map(function (c) {
++          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="step ' + c.step + " · " + esc(when(c.saved)) +
++            (c.lora ? " · in loras/" : "") + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
++        }).join("") + "</div>" +
++        (pick ? '<div class="tr-eact"><span><b>' + (pick.epoch != null ? "Epoch " + Math.round(pick.epoch) : "The final file") + "</b> · step " + pick.step + " · " + esc(when(pick.saved)) + " · " + gb(pick.bytes) +
++            (pick.lora ? ' · in Create as <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") + "</span>" +
++            '<span class="spacer"></span>' +
++            (pick.lora ? '<button type="button" class="btn ghost small" data-unpub="' + esc(pick.lora.split("/").pop()) + '">Out of loras/</button>'
++                       : (pick.epoch != null ? '<button type="button" class="btn small primary" data-pub="' + esc(pick.file) + '">Into loras/ → Create</button>' : "")) +
++            '<a class="btn ghost small" download href="/lab/train/file?name=' + encodeURIComponent(r.name) + "&file=" + encodeURIComponent(pick.file) + '">Download</a></div>' : "") +
++        "</div>" : "") +
++      '<details class="tr-facts"><summary>What it was given</summary><div class="tr-fgrid">' +
+         "<span><em>set</em> " + esc(r.dataset) + (r.tracks ? " · " + r.tracks + " tracks" : "") + "</span>" +
+-        "<span><em>steps</em> " + (r.step || 0) + " / " + (r.steps || "?") + (r.tracks ? " · epoch " + ((r.step || 0) / r.tracks).toFixed(1) + " / " + (r.steps / r.tracks).toFixed(0) : "") + "</span>" +
+         "<span><em>rank</em> " + esc(o.rank) + " · lr " + esc(o.lr) + "</span>" +
+-        "<span><em>AR</em> " + esc(o.ar_loss_weight) + " · KL " + esc(o.ar_kl_weight) + " · ×" + esc(o.ar_lr_multiplier) + "</span>" +
++        "<span><em>music half</em> AR " + esc(o.ar_loss_weight) + " · KL " + esc(o.ar_kl_weight) + " · speed ×" + esc(o.ar_lr_multiplier) + "</span>" +
+         "<span><em>mode</em> " + esc(o.cot) + " · " + esc(o.quant) + (o.do_separation ? " · separated" : "") + "</span>" +
+-        (ser.sec_per_step ? "<span><em>speed</em> " + ser.sec_per_step + " s/step</span>" : "") +
+-        (r.vram_peak_mb ? "<span><em>VRAM</em> " + (r.vram_peak_mb / 1024).toFixed(1) + " GB peak · GPU" + esc(r.gpu) + "</span>" : r.gpu != null ? "<span><em>GPU</em> " + esc(r.gpu) + "</span>" : "") +
+-      "</div>" +
+-      (memo ? '<p class="tr-err">ar_ce ' + ar.toFixed(3) + ": the AR is learning the songs by heart; an earlier epoch may be the better adapter</p>" : "") +
+-      (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + chart(ser) +
+-      (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
+-      (cks.length ? '<div class="tr-epochs"><span class="label">epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" + cks.map(function (c) {
+-        return '<button type="button" class="coll-chip' + (c.lora ? " is-on" : "") + '" data-pub="' + esc(r.name) + '" data-file="' + esc(c.file) + '" data-tip="step ' + c.step + " · " + when(c.saved) +
+-          (c.lora ? " · in loras/ as " + esc(c.lora) : " · click: into loras/, ready in Create") + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
+-      }).join("") + "</div>" : "") +
+-      '<div class="tr-cacts">' + (r.lora ? "<code>loras/" + esc(r.lora) + "</code>" : "") + '<span class="spacer"></span>' +
+-        '<a class="btn ghost small" href="/lab/train/log?name=' + encodeURIComponent(r.name) + '" target="_blank" rel="noopener">Log</a>' +
+-        '<button type="button" class="btn ghost small" data-watch="' + esc(r.name) + '">Watch</button></div>' +
+-      "</article>";
+-  }
+-  // ---- HERESY 1078: the listener. Omni hears the checked set and drafts each track's style; you correct the
+-  // drafts here; they go into the captions as "trigger, the track's tags. the shared line".
+-  function checkedSet() { return (document.querySelector('input[name="trSet"]:checked') || {}).value; }
+-  function listenPanel() {
+-    var el = $("trListen"), set = checkedSet();
+-    if (!el) { el = document.createElement("div"); el.id = "trListen"; el.className = "tr-listen"; $("trSets").insertAdjacentElement("afterend", el); }
+-    if (!set) { el.innerHTML = ""; return; }
+-    api("/train/listen?name=" + encodeURIComponent(set)).then(function (d) {
+-      var ok = d.listeners.filter(function (l) { return l.present && l.fits; }), running = d.status === "running";
+-      var cap0 = (d.rows[0] && d.rows[0].caption) || "", trig = (cap0.split(",")[0] || "").trim();
+-      var dot = cap0.indexOf(". "), sharedNow = dot >= 0 ? cap0.slice(dot + 2) : cap0.slice(trig.length).replace(/^,\s*/, "");   // "trigger, tags. shared" or "trigger, shared"
+-      var lines = d.listeners.map(function (l) { return (l.present ? (l.fits ? "\u2713 " : "\u2013 ") : "\u2717 ") + l.what + " \u00b7 " + (l.peak_mb / 1024).toFixed(1) + " GB" + (l.present ? (l.fits ? "" : " (no card big enough)") : " (not downloaded)"); });
+-      el.innerHTML = '<div class="tr-bar"><b>Listener</b><span class="row-hint">drafts each track\u2019s style from what it hears; a draft, read and correct it</span><span class="spacer"></span>' +
+-        '<button type="button" class="btn ghost small" id="trListenGo"' + (ok.length && !running ? "" : " disabled") + ">" + (running ? "Listening\u2026 " + d.done + " / " + d.total : "Listen to " + esc(set)) + "</button></div>" +
+-        '<div class="row-hint">' + lines.map(esc).join(" \u00b7 ") + (d.styles_model ? " \u00b7 drafts here by " + esc(d.styles_model) : "") + (d.error ? ' <span class="tr-err">' + esc(d.error) + "</span>" : "") + "</div>" +
+-        (d.rows.some(function (r) { return r.tags; }) ? '<div class="field-row wrap"><label class="field"><span class="label">Trigger</span><input type="text" id="trLTrigger" value="' + esc(trig) + '" /></label>' +
+-          '<label class="field grow"><span class="label">Shared line <em>after the track\u2019s tags</em></span><input type="text" id="trLShared" value="' + esc(sharedNow) + '" placeholder="the album\u2019s vibe" /></label></div>' +
+-          '<div class="tr-ltable">' + d.rows.map(function (r) {
+-            return '<div class="tr-lrow"><span class="tr-file" title="' + esc(r.file) + '">' + esc(r.stem) + " \u00b7 " + esc(r.file) + '</span><input type="text" data-ltag="' + esc(r.stem) + '" value="' + esc(r.tags) + '" /></div>';
+-          }).join("") + '</div><div class="tr-bar"><span class="spacer"></span><button type="button" class="btn primary small" id="trLApply">Write into the captions</button></div>' : "");
+-      if (running) setTimeout(function () { if (checkedSet() === set) listenPanel(); }, 3000);
+-    }).catch(function (e) { el.innerHTML = '<p class="tr-err">' + esc(e.message) + "</p>"; });
++        "<span><em>window</em> " + Math.round((o.train_window_frames || 0) / 25) + " s</span>" +
++        "<span><em>started</em> " + esc(when(r.started)) + "</span>" +
++      "</div></details>";
++    if (factsOpen) el.querySelector(".tr-facts").open = true;          // a repaint every few seconds keeps what you opened
+   }
+-  function listenGo() {
+-    var set = checkedSet();
+-    window.HeresyDialog.confirm("Listen to " + set + "?\n\nOmni hears 120 s of every track and drafts its style. Drafts heard before are kept aside (styles.DATE.json); the captions change only when you write them.", { ok: "Listen" })
+-      .then(function (ok) { if (ok) return api("/train/listen", { dataset: set }).then(function () { toast("Listening to " + set); listenPanel(); }); })
+-      .catch(function (e) { toast(e.message, true); });
++  // the reading under the cursor: the step, its epoch and both values there
++  function readout(e) {
++    var fig = e.target.closest(".tr-chart"), r = runOf(state.sel);
++    if (!fig || !r) return;
++    var svg = fig.querySelector("svg"), box = svg.getBoundingClientRect(), last = +fig.dataset.last;
++    var f = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)), step = f * last;
++    var c = ((r.series || {})[fig.dataset.key] || {}).curve || [];
++    if (!c.length) return;
++    var best = c.reduce(function (b, p) { return Math.abs(p[0] - step) < Math.abs(b[0] - step) ? p : b; }, c[0]);
++    var sm = ema(c, 0.08).filter(function (p) { return p[0] === best[0]; })[0];
++    Array.prototype.forEach.call(document.querySelectorAll("#trRunPane .tr-chart"), function (g) {
++      var cc = ((r.series || {})[g.dataset.key] || {}).curve || [], pt = cc.reduce(function (b, p) { return Math.abs(p[0] - best[0]) < Math.abs(b[0] - best[0]) ? p : b; }, cc[0] || [0, 0]);
++      var x = (600 * best[0] / +g.dataset.last).toFixed(1), line = g.querySelector("line.cur");
++      line.setAttribute("x1", x); line.setAttribute("x2", x);
++      var avg = ema(cc, 0.08).filter(function (p) { return p[0] === pt[0]; })[0];
++      g.querySelector(".tr-read").textContent = "step " + pt[0] + (r.tracks ? " · e" + (pt[0] / r.tracks).toFixed(1) : "") + " · " + pt[1].toFixed(3) + (avg ? " (avg " + avg[1].toFixed(3) + ")" : "");
++    });
++    return sm;
+   }
+-  function listenApply() {
+-    var set = checkedSet(), tags = {};
+-    Array.prototype.forEach.call(document.querySelectorAll("[data-ltag]"), function (i) { tags[i.dataset.ltag] = i.value; });
+-    var trigger = $("trLTrigger").value.trim(), shared = $("trLShared").value.trim();
+-    window.HeresyDialog.confirm("Write " + Object.keys(tags).length + " styles into the captions of " + set + "?\n\nEach first line becomes: " + (trigger ? trigger + ", " : "") + "the track\u2019s tags" + (shared ? ". " + shared.slice(0, 80) + (shared.length > 80 ? "\u2026" : "") : "") + "\nThe lyrics stay.", { ok: "Write" })
+-      .then(function (ok) { if (ok) return api("/train/styles", { dataset: set, trigger: trigger, shared: shared, tags: tags }).then(function (d) { toast(d.captions + " captions written"); listenPanel(); }); })
++  function publish(file) {
++    var r = runOf(state.sel);
++    api("/train/publish", { name: r.name, file: file }).then(function (d) { toast("In loras/: " + d.lora + " — ready in Create"); load(); }).catch(function (e) { toast(e.message, true); });
++  }
++  function unpublish(lora) {
++    var r = runOf(state.sel);
++    confirmBox("Take " + lora + " out of loras/?\n\nIt leaves Create’s LoRAs; the checkpoint stays in the run, and a click puts it back.", { ok: "Take it out" })
++      .then(function (ok) { if (ok) return api("/train/unpublish", { name: r.name, lora: lora }).then(function () { toast(lora + " is out of loras/"); load(); }); })
+       .catch(function (e) { toast(e.message, true); });
+   }
+ 
+-  function publish(name, file) {
+-    api("/train/publish", { name: name, file: file }).then(function (d) { toast("In loras/: " + d.lora); load(); }).catch(function (e) { toast(e.message, true); });
++  // ------------------------------------------------------------------ 1 Material
++  function paintRaw() {
++    var d = state.data;
++    $("trRaw").innerHTML = d.raw.length ? d.raw.map(function (r) {
++      return '<button type="button" class="tr-pick' + (state.raw === r.name ? " is-on" : "") + '" data-raw="' + esc(r.name) + '"><b>' + esc(r.name) + "</b><span>" +
++        r.tracks + " tracks · " + gb(r.bytes) + (r.captions ? " · " + r.captions + " captions" : "") + "</span></button>";
++    }).join("") : '<p class="row-hint">Put a folder of songs into <code>datasets/raw/</code>, then press Reload.</p>';
+   }
+-
+-  // ---- step 1: the raw tracks
+   function pickRaw(name) {
+-    state.raw = name; paint();
++    state.raw = name; paintRaw(); paintPills();
+     $("trTracks").innerHTML = '<p class="row-hint">Reading the folder…</p>';
+     api("/train/scan?name=" + encodeURIComponent(name)).then(function (d) {
+       state.rows = d.tracks.map(function (t) {
+         return { file: t.file, seconds: t.seconds, include: (t.seconds || 0) >= 30 || !!t.style, style: t.style || "", lyrics: t.lyrics || "", from: t.lyrics_from || "", hints: t.hints || [] };
+       });
+       $("trSetName").value = slug(name);
+-      paintTracks();
++      paintTracks(); paintPills();
+     }).catch(function (e) { $("trTracks").innerHTML = '<p class="tr-warn">' + esc(e.message) + "</p>"; });
+   }
+   function paintTracks() {
+     var n = state.rows.filter(function (r) { return r.include; }).length, secs = state.rows.reduce(function (s, r) { return s + (r.include ? r.seconds || 0 : 0); }, 0);
+-    var groups = {};                    // versions of one song: the same name once the version marks are taken off
+-    state.rows.forEach(function (r) { var k = r.file.replace(/\.[^.]+$/, "").replace(/\bv?\d+([._]\d+)*\b|\(\d+\)|extra|remaster(ed)?|[^a-zа-яё]+/gi, " ").trim().toLowerCase(); (groups[k] = groups[k] || []).push(r); });
+-    var dups = Object.keys(groups).filter(function (k) { return groups[k].filter(function (r) { return r.include; }).length > 2; }).length;
+-    $("trTracksNote").textContent = n + " of " + state.rows.length + " in · " + clock(secs) + " · " +
+-      state.rows.filter(function (r) { return r.include && r.lyrics; }).length + " with lyrics";
++    $("trTracksNote").textContent = state.rows.length ? n + " of " + state.rows.length + " in · " + clock(secs) + " · " + state.rows.filter(function (r) { return r.include && r.lyrics; }).length + " with lyrics" : "";
+     $("trTracks").innerHTML = state.rows.map(function (r, i) {
+       var long = (r.seconds || 0) > 360, short = (r.seconds || 0) < 30;
+       return '<div class="tr-track' + (r.include ? "" : " is-out") + '"><label class="tr-in"><input type="checkbox" data-in="' + i + '"' + (r.include ? " checked" : "") + " /></label>" +
+         '<div class="tr-tbody"><div class="tr-thead"><span class="tr-file">' + esc(r.file) + '</span><span class="tr-sec' + (long || short ? " is-bad" : "") + '">' + clock(r.seconds) +
+-        (long ? " · long: the AR trains on the whole song" : short ? " · under 0:30" : "") + (r.lyrics ? "" : " · no lyrics") + '</span><button type="button" class="btn ghost small" data-open="' + i + '">' + (r.lyrics ? "Lyrics ✓" : "Lyrics") + "</button></div>" +
++        (long ? " · long: the music half trains on the whole song" : short ? " · under 0:30" : "") + (r.lyrics ? "" : " · no lyrics") + '</span><button type="button" class="btn ghost small" data-lyr="' + i + '">' + (r.lyrics ? "Lyrics ✓" : "Lyrics") + "</button></div>" +
+         '<div class="tr-edit" data-edit="' + i + '" hidden>' + (r.from ? '<span class="row-hint">lyrics from ' + esc(r.from) + (r.hints.length ? " · hints (not in the caption): " + esc(r.hints.join(" · ")) : "") + "</span>" : "") +
+         '<input type="text" data-style="' + i + '" value="' + esc(r.style) + '" placeholder="a style of its own (empty: the shared one)" />' +
+         '<textarea rows="8" data-lyrics="' + i + '" placeholder="[Verse]\nthe lyrics exactly as sung (empty for an instrumental)">' + esc(r.lyrics) + "</textarea></div></div></div>";
+     }).join("");
+   }
+ 
+-  // ---- step 2: make the set
++  // ------------------------------------------------------------------ 2 The set
+   function makeSet() {
+-    if (!state.raw) return toast("Pick a raw folder first", true);
++    if (!state.raw) { showPane("raw"); return toast("Pick a raw folder first", true); }
+     var style = $("trStyle").value.trim(), trigger = $("trTrigger").value.trim();
+     if (!style) return toast("Write the shared style line: what is heard, in the words you will generate with", true);
+     var name = slug($("trSetName").value);
+@@ -209,92 +434,155 @@
+           $("trMakeState").textContent = j.status === "running" ? "making… " + j.done + " / " + j.total : j.status === "done" ? "made: datasets/prepared/" + name : "failed: " + (j.error || "");
+           if (j.status === "running") return setTimeout(poll, 1500);
+           $("trMake").disabled = false;
+-          if (j.status === "done") { $("trRunName").dataset.set = name; load(); toast("The set " + name + " is made"); }
++          if (j.status === "done") { state.set = name; keep("yue2.trSet", name); toast("The set " + name + " is made"); load().then(function () { showPane("train"); }); }
+         });
+       })();
+     }).catch(function (e) { $("trMake").disabled = false; toast(e.message, true); });
+   }
+ 
+-  // ---- step 3: the run
++  // ------------------------------------------------------------------ 3 Train
++  function paintSets() {
++    var d = state.data;
++    if (state.set && !(d.prepared || []).some(function (p) { return p.name === state.set; })) state.set = "";
++    $("trSets").innerHTML = d.prepared.length ? d.prepared.map(function (p) {
++      return '<label class="tr-setpick' + (p.name === state.set ? " is-on" : "") + '"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + (p.name === state.set ? " checked" : "") + " /><b>" + esc(p.name) + "</b><span>" +
++        p.tracks + " tracks · " + clock(p.seconds) + " · from " + esc(p.from) + " · " + esc(p.made) + "</span></label>";
++    }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
++  }
+   function setKind(k) {
+     state.kind = k;
+-    Array.prototype.forEach.call(document.querySelectorAll("[data-kind]"), function (b) { b.classList.toggle("is-on", b.dataset.kind === k); });
++    Array.prototype.forEach.call(document.querySelectorAll("#trKinds [data-kind]"), function (b) { b.classList.toggle("is-on", b.dataset.kind === k); });
+     var o = KINDS[k].o;
+     Object.keys(o).forEach(function (key) { var el = $("tr_" + key); if (el) el.value = o[key]; });
+     $("trKindSay").textContent = KINDS[k].say;
++    paintPills();
++  }
++  // HERESY 1076: the VRAM gate on measured peaks only; HERESY 1086: a peak counts for its own trainer only
++  function gate() {
++    var d = state.data;
++    if (!d) return;
++    var quant = $("tr_quant").value, engine = $("tr_engine").value, gbm = function (mb) { return (mb / 1024).toFixed(1) + " GB"; };
++    var measured = (d.runs || []).filter(function (r) { return r.vram_peak_mb > 0 && r.options; });
++    var same = measured.filter(function (r) { return r.options.quant === quant && engineOf(r) === engine; });
++    var need = same.reduce(function (m, r) { return Math.max(m, r.vram_peak_mb); }, 0);
++    var cards = Array.isArray(d.gpus) ? d.gpus : [], big = cards.reduce(function (m, c) { return c.total_mb > m.total_mb ? c : m; }, { total_mb: 0 });
++    var free = cards.filter(function (c) { return need && c.free_mb >= need; });
++    var shut = need && big.total_mb && big.total_mb < need, say;
++    $("trRun").disabled = !!shut;
++    if (!Array.isArray(d.gpus)) say = '<span class="tr-err">' + esc(d.gpus && d.gpus.error || "the cards could not be read") + "</span>";
++    else if (shut) say = '<span class="tr-err">' + quant + " needed " + gbm(need) + " on one card (measured); the largest here has " + gbm(big.total_mb) + (quant === "bf16" ? ": choose int8 weights" : "") + ".</span>";
++    else if (need) say = quant + " · " + gbm(need) + " at the peak (measured). " + (free.length ? "Free enough now: " + free.map(function (c) { return "GPU" + c.index; }).join(", ") : "No card has that free now (" + cards.map(function (c) { return "GPU" + c.index + " " + gbm(c.free_mb); }).join(", ") + ")");
++    else say = quant + " · not measured yet for this trainer: the first run measures its peak";
++    $("trRunSay").innerHTML = say;
++  }
++  function engineKnobs() {
++    var own = $("tr_engine").value === "ruach";
++    if (own) { $("tr_cot").value = "off"; $("tr_sep").checked = false; }
++    $("tr_cot").disabled = own; $("tr_sep").disabled = own;
+   }
+   function startRun() {
+-    var set = (document.querySelector('input[name="trSet"]:checked') || {}).value;
+-    if (!set) return toast("Pick a set (step 2)", true);
+-    var spec = { dataset: set, name: slug($("trRunName").value || set + "-" + state.kind) };
+-    spec.kind = state.kind;
++    var set = state.set;
++    if (!set) return toast("Pick a set (made in step 2)", true);
++    var spec = { dataset: set, name: slug($("trRunName").value || set + "-" + state.kind), kind: state.kind, engine: $("tr_engine").value };
+     ["steps", "save_epochs", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier"].forEach(function (k) { spec[k] = parseFloat($("tr_" + k).value); });
+     spec.cot = $("tr_cot").value; spec.quant = $("tr_quant").value; spec.do_separation = $("tr_sep").checked;
++    if (runOf(spec.name)) return toast("A run named " + spec.name + " is there already: give this one its own name", true);
+     var tracks = ((state.data.prepared || []).filter(function (p) { return p.name === set; })[0] || {}).tracks || 1;
+-    var epochs = Math.ceil(spec.steps / tracks);
+-    window.HeresyDialog.confirm("Train " + spec.name + "?\n\n" + epochs * tracks + " steps (" + epochs + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight +
+-      "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept. It takes a GPU of its own for hours; the first run also fetches Comfy-Org's YuE2 weights.", { ok: "Train" }).then(function (ok) {
++    var ep = Math.ceil(spec.steps / tracks);
++    confirmBox("Train " + spec.name + "?\n\n" + ep * tracks + " steps (" + ep + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight + ", " + spec.quant + " weights, " +
++      (spec.engine === "ruach" ? "the studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept. It takes a GPU of its own for hours" +
++      (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights."), { ok: "Train" }).then(function (ok) {
+       if (!ok) return;
+-      return api("/train/run", spec).then(function () { toast("Training " + spec.name); watch(spec.name); load(); });
++      return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
+     }).catch(function (e) { toast(e.message, true); });
+   }
+-  function watch(name) {
+-    state.run = name; clearTimeout(state.timer);
+-    (function poll() {
+-      api("/train/run?name=" + encodeURIComponent(name)).then(function (r) {
+-        var pct = r.steps ? Math.round(100 * (r.step || 0) / r.steps) : 0;
+-        $("trWatch").hidden = false;
+-        $("trWatchHead").innerHTML = "<b>" + esc(name) + '</b> <span class="tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span> " + (r.step || 0) + " / " + (r.steps || "?") +
+-          (r.loss != null ? " · loss " + Number(r.loss).toFixed(4) : "") + (r.ar_ce != null ? " · ar_ce " + Number(r.ar_ce).toFixed(3) + (r.ar_ce < 0.3 ? " ⚠ near 0: memorizing" : "") : "") +
+-          (r.lora ? " · <code>loras/" + esc(r.lora) + "</code>" : "") + (r.error ? ' <span class="tr-err">' + esc(r.error) + "</span>" : "");
+-        $("trBar").style.width = pct + "%";
+-        $("trBar").parentNode.classList.toggle("is-running", r.status === "running");
+-        $("trTail").textContent = (r.tail || []).join("\n");
+-        $("trStop").hidden = r.status !== "running";
+-        if (r.status === "running" && state.run === name) state.timer = setTimeout(poll, 3000); else load();
+-      }).catch(function (e) { $("trWatchHead").textContent = e.message; });
+-    })();
++
++  // ---- HERESY 1078: the listener. Omni hears the chosen set and drafts each track's style; you correct the
++  // drafts here; they go into the captions as "trigger, the track's tags. the shared line".
++  function listenPanel() {
++    var el = $("trListen"), set = state.set;
++    if (!el) { el = document.createElement("div"); el.id = "trListen"; el.className = "tr-listen"; $("trSets").insertAdjacentElement("afterend", el); }
++    if (!set) { el.innerHTML = ""; el.hidden = true; return; }
++    el.hidden = false;
++    api("/train/listen?name=" + encodeURIComponent(set)).then(function (d) {
++      var ok = d.listeners.filter(function (l) { return l.present && l.fits; }), running = d.status === "running";
++      var cap0 = (d.rows[0] && d.rows[0].caption) || "", trig = (cap0.split(",")[0] || "").trim();
++      var dot = cap0.indexOf(". "), sharedNow = dot >= 0 ? cap0.slice(dot + 2) : cap0.slice(trig.length).replace(/^,\s*/, "");
++      var lines = d.listeners.map(function (l) { return (l.present ? (l.fits ? "✓ " : "– ") : "✗ ") + l.what + " · " + (l.peak_mb / 1024).toFixed(1) + " GB" + (l.present ? (l.fits ? "" : " (no card big enough)") : " (not downloaded)"); });
++      el.innerHTML = '<details' + (d.rows.some(function (r) { return r.tags; }) || running ? " open" : "") + '><summary><b>Listener</b> <span class="row-hint">drafts each track’s style from what it hears; a draft, read and correct it</span></summary>' +
++        '<div class="tr-bar"><span class="row-hint">' + lines.map(esc).join(" · ") + (d.styles_model ? " · drafts here by " + esc(d.styles_model) : "") + (d.error ? ' <span class="tr-err">' + esc(d.error) + "</span>" : "") + "</span>" +
++        '<span class="spacer"></span><button type="button" class="btn ghost small" id="trListenGo"' + (ok.length && !running ? "" : " disabled") + ">" + (running ? "Listening… " + d.done + " / " + d.total : "Listen to " + esc(set)) + "</button></div>" +
++        (d.rows.some(function (r) { return r.tags; }) ? '<div class="field-row wrap"><label class="field"><span class="label">Trigger</span><input type="text" id="trLTrigger" value="' + esc(trig) + '" /></label>' +
++          '<label class="field grow"><span class="label">Shared line <em>after the track’s tags</em></span><input type="text" id="trLShared" value="' + esc(sharedNow) + '" placeholder="the album’s vibe" /></label></div>' +
++          '<div class="tr-ltable">' + d.rows.map(function (r) {
++            return '<div class="tr-lrow"><span class="tr-file" title="' + esc(r.file) + '">' + esc(r.stem) + " · " + esc(r.file) + '</span><input type="text" data-ltag="' + esc(r.stem) + '" value="' + esc(r.tags) + '" /></div>';
++          }).join("") + '</div><div class="tr-bar"><span class="spacer"></span><button type="button" class="btn primary small" id="trLApply">Write into the captions</button></div>' : "") + "</details>";
++      if (running) setTimeout(function () { if (state.set === set) listenPanel(); }, 3000);
++    }).catch(function (e) { el.innerHTML = '<p class="tr-err">' + esc(e.message) + "</p>"; });
++  }
++  function listenGo() {
++    var set = state.set;
++    confirmBox("Listen to " + set + "?\n\nOmni hears 120 s of every track and drafts its style. Drafts heard before are kept aside (styles.DATE.json); the captions change only when you write them.", { ok: "Listen" })
++      .then(function (ok) { if (ok) return api("/train/listen", { dataset: set }).then(function () { toast("Listening to " + set); listenPanel(); }); })
++      .catch(function (e) { toast(e.message, true); });
++  }
++  function listenApply() {
++    var set = state.set, tags = {};
++    Array.prototype.forEach.call(document.querySelectorAll("[data-ltag]"), function (i) { tags[i.dataset.ltag] = i.value; });
++    var trigger = $("trLTrigger").value.trim(), shared = $("trLShared").value.trim();
++    confirmBox("Write " + Object.keys(tags).length + " styles into the captions of " + set + "?\n\nEach first line becomes: " + (trigger ? trigger + ", " : "") + "the track’s tags" + (shared ? ". " + shared.slice(0, 80) + (shared.length > 80 ? "…" : "") : "") + "\nThe lyrics stay.", { ok: "Write" })
++      .then(function (ok) { if (ok) return api("/train/styles", { dataset: set, trigger: trigger, shared: shared, tags: tags }).then(function (d) { toast(d.captions + " captions written"); listenPanel(); }); })
++      .catch(function (e) { toast(e.message, true); });
+   }
+ 
++  // ------------------------------------------------------------------ wiring
+   function init(hooks) {
+     if (!$("view-train")) return;
+     state.hooks = hooks;
+     $("trReload").addEventListener("click", load);
+-    $("trRaw").addEventListener("click", function (e) { var b = e.target.closest("[data-raw]"); if (b) pickRaw(b.dataset.raw); });
+-    $("trTracks").addEventListener("change", function (e) {
+-      var i = e.target.dataset.in;
+-      if (i !== undefined) { state.rows[+i].include = e.target.checked; paintTracks(); }
++    $("trPills").addEventListener("click", function (e) { var b = e.target.closest("[data-pane]"); if (b) showPane(b.dataset.pane); });
++    $("view-train").addEventListener("click", function (e) {
++      var t = e.target, b;
++      if ((b = t.closest("[data-go]"))) return showPane(b.dataset.go);
++      if (t.id === "trListenGo") return listenGo();
++      if (t.id === "trLApply") return listenApply();
++      if ((b = t.closest("[data-menu]"))) { e.stopPropagation(); return menu(b); }
++      if ((b = t.closest("[data-act][data-run]"))) return act(b.dataset.run, b.dataset.act);
++      if ((b = t.closest("[data-restore]"))) return restore(b.dataset.restore);
++      if ((b = t.closest("[data-purge]"))) return purge(b.dataset.purge, b.dataset.name, b.dataset.size);
++      if ((b = t.closest("[data-epoch]"))) { state.epoch = state.epoch === b.dataset.epoch ? "" : b.dataset.epoch; return paintRun(); }
++      if ((b = t.closest("[data-pub]"))) return publish(b.dataset.pub);
++      if ((b = t.closest("[data-unpub]"))) return unpublish(b.dataset.unpub);
++      if ((b = t.closest("[data-open]"))) return openRun(b.dataset.open);
+     });
++    $("trRunList").addEventListener("keydown", function (e) { var c = e.target.closest(".tr-rcard[data-open]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openRun(c.dataset.open); } });
++    $("trRunPane").addEventListener("mousemove", function (e) { if (e.target.closest(".tr-plot")) readout(e); });
++    $("trFilters").addEventListener("click", function (e) { var b = e.target.closest("[data-filter]"); if (b) { state.filter = b.dataset.filter; keep("yue2.trFilter", state.filter); paintList(); } });
++    $("trSearch").addEventListener("input", function () { state.search = this.value; paintList(); });
++    $("trFold").addEventListener("click", function () { state.folded = true; keep("yue2.trFolded", "1"); paintList(); });
++    $("trUnfold").addEventListener("click", function () { state.folded = false; keep("yue2.trFolded", null); paintList(); });
++    $("trRaw").addEventListener("click", function (e) { var b = e.target.closest("[data-raw]"); if (b) pickRaw(b.dataset.raw); });
++    $("trTracks").addEventListener("change", function (e) { var i = e.target.dataset.in; if (i !== undefined) { state.rows[+i].include = e.target.checked; paintTracks(); paintPills(); } });
+     $("trTracks").addEventListener("input", function (e) {
+       if (e.target.dataset.style !== undefined) state.rows[+e.target.dataset.style].style = e.target.value;
+       if (e.target.dataset.lyrics !== undefined) state.rows[+e.target.dataset.lyrics].lyrics = e.target.value;
+     });
+-    $("trTracks").addEventListener("click", function (e) {
+-      var b = e.target.closest("[data-open]");
+-      if (b) { var ed = document.querySelector('[data-edit="' + b.dataset.open + '"]'); ed.hidden = !ed.hidden; }
+-    });
+-    $("trAllIn").addEventListener("click", function () { state.rows.forEach(function (r) { r.include = true; }); paintTracks(); });
+-    $("trNoneIn").addEventListener("click", function () { state.rows.forEach(function (r) { r.include = false; }); paintTracks(); });
++    $("trTracks").addEventListener("click", function (e) { var b = e.target.closest("[data-lyr]"); if (b) { var ed = document.querySelector('[data-edit="' + b.dataset.lyr + '"]'); ed.hidden = !ed.hidden; } });
++    $("trAllIn").addEventListener("click", function () { state.rows.forEach(function (r) { r.include = true; }); paintTracks(); paintPills(); });
++    $("trNoneIn").addEventListener("click", function () { state.rows.forEach(function (r) { r.include = false; }); paintTracks(); paintPills(); });
+     $("trMake").addEventListener("click", makeSet);
++    $("trSets").addEventListener("change", function (e) { if (e.target.name === "trSet") { state.set = e.target.value; keep("yue2.trSet", state.set); paintSets(); paintPills(); listenPanel(); } });
+     $("trKinds").innerHTML = Object.keys(KINDS).map(function (k) { return '<button type="button" class="coll-chip" data-kind="' + k + '">' + KINDS[k].label + "</button>"; }).join("");
+     $("trKinds").addEventListener("click", function (e) { var b = e.target.closest("[data-kind]"); if (b) setKind(b.dataset.kind); });
+-    $("tr_quant").addEventListener("change", function () { if (state.data) gate(); });
+-    $("trSets").addEventListener("change", function () { listenPanel(); });
+-    $("view-train").addEventListener("click", function (e) {
+-      if (e.target.id === "trListenGo") listenGo();
+-      if (e.target.id === "trLApply") listenApply();
++    $("tr_quant").addEventListener("change", function () { if (state.data) { warn(); gate(); paintPills(); } });
++    $("tr_engine").addEventListener("change", function () {
++      $("tr_quant").value = this.value === "ruach" ? "bf16" : "int8";   // Viktor: nothing quantized in our trainer
++      engineKnobs(); if (state.data) { warn(); gate(); paintPills(); }
+     });
++    $("tr_rank").addEventListener("input", paintPills);
+     $("trRun").addEventListener("click", startRun);
+-    $("trStop").addEventListener("click", function () {
+-      window.HeresyDialog.confirm("Stop " + state.run + "?\n\nAI-Toolkit saves what it has on the way out; the last checkpoint goes to loras/.", { ok: "Stop", danger: true })
+-        .then(function (ok) { if (ok) return api("/train/stop", { name: state.run }).then(function () { toast("Stopping " + state.run); }); }).catch(function (e) { toast(e.message, true); });
+-    });
+-    $("trRuns").addEventListener("click", function (e) {
+-      var b = e.target.closest("[data-watch]"), p = e.target.closest("[data-pub]");
+-      if (b) watch(b.dataset.watch);
+-      if (p && !p.classList.contains("is-on")) publish(p.dataset.pub, p.dataset.file);
+-    });
+     setKind("style");
++    engineKnobs();
+   }
+ 
+   window.HeresyTrain = { init: init, reload: load };
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f1d0f0a..1ad3e98 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1091,50 +1091,85 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+   </section>
+ 
+ 
+-  <!-- HERESY 1063: Train — LoRA adapters for YuE2, a wizard (heresy-train.js, lab/training.py) -->
++  <!-- HERESY 1063 / 1090: Train — a LoRA for YuE2 from your own songs (heresy-train.js, lab/training.py). Viktor,
++       02.10.2026: the runs that are training stand on top with their progress; the steps sit in a row as in Post,
++       one open at a time; the telemetry of a run right under them; every run a card in the column on the right -->
+   <section class="col train-col is-hidden" id="view-train">
+     <div class="col-head"><h2>Train</h2><span class="col-note">a LoRA for YuE2 from your own songs · the guide: LORA-TRAINING.md</span>
+       <span class="spacer"></span><button type="button" class="btn ghost small" id="trReload">Reload</button></div>
+-    <div id="trWarn"></div>
+-    <div class="tr-steps" id="trBody">
+-      <section class="tr-step"><h3><span class="ps-mark">1</span> Raw material <em>a folder of datasets/raw/</em></h3>
+-        <div class="tr-picks" id="trRaw"></div>
+-        <div class="tr-bar"><span class="row-hint" id="trTracksNote"></span><span class="spacer"></span>
+-          <button type="button" class="btn ghost small" id="trAllIn">All in</button><button type="button" class="btn ghost small" id="trNoneIn">None</button></div>
+-        <div class="tr-tracks" id="trTracks"></div>
+-      </section>
+-      <section class="tr-step"><h3><span class="ps-mark">2</span> The set <em>a caption for every track: the style line, then the lyrics</em></h3>
+-        <div class="field-row wrap">
+-          <label class="field"><span class="label">Trigger word <em>calls the style by name later</em></span><input type="text" id="trTrigger" placeholder="fosforida" /></label>
+-          <label class="field grow"><span class="label">Shared style line <em>what is heard: genre, instruments, voice, mood (not the SUNO prompt)</em></span>
+-            <input type="text" id="trStyle" placeholder="dark cinematic gothic metal, female contralto vocal, church choir, slow" /></label>
+-          <label class="field"><span class="label">Set name</span><input type="text" id="trSetName" /></label>
+-        </div>
+-        <div class="tr-bar"><button type="button" class="btn primary small" id="trMake">Make the set</button><span class="row-hint" id="trMakeState"></span></div>
+-      </section>
+-      <section class="tr-step"><h3><span class="ps-mark">3</span> Training <em>AI-Toolkit (Ostris) underneath</em></h3>
+-        <div class="tr-sets" id="trSets"></div>
+-        <div class="tr-bar"><span class="label">Kind</span><span id="trKinds"></span><span class="row-hint" id="trKindSay"></span></div>
+-        <div class="field-row wrap tr-knobs">
+-          <label class="field"><span class="label">Run name</span><input type="text" id="trRunName" placeholder="fosforida-style-v1" /></label>
+-          <label class="field"><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="20000" step="50" /></label>
+-          <label class="field"><span class="label">Save every <em>epochs</em></span><input type="number" id="tr_save_epochs" min="1" max="100" step="1" value="1" /></label>
+-          <label class="field"><span class="label">Rank</span><input type="number" id="tr_rank" min="4" max="128" step="4" /></label>
+-          <label class="field"><span class="label">Learning rate</span><input type="number" id="tr_lr" value="0.0001" step="0.00001" /></label>
+-          <label class="field"><span class="label">AR weight <em>0 = sound only</em></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
+-          <label class="field"><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
+-          <label class="field"><span class="label">AR speed</span><input type="number" id="tr_ar_lr_multiplier" min="0" max="2" step="0.1" /></label>
+-          <label class="field"><span class="label">Mode</span><select id="tr_cot"><option value="off">Direct</option><option value="full">Full (score)</option><option value="melody">Melody</option></select></label>
+-          <label class="field"><span class="label">Base weights</span><select id="tr_quant"><option value="int8">int8</option><option value="bf16">bf16</option></select></label>
+-          <label class="check"><input type="checkbox" id="tr_sep" /> <span>Separate vocals and music</span></label>
++    <div class="tr-layout" id="trLayout">
++      <div class="tr-main" id="trBody">
++        <div id="trWarn"></div>
++        <div class="tr-live" id="trLive" hidden></div>
++        <nav class="post-steps tr-pills" id="trPills" role="tablist" aria-label="Train steps">
++          <button type="button" role="tab" class="ps-step" data-pane="raw"><span class="ps-mark">1</span><span class="ps-text"><span class="ps-name">Material</span><span class="ps-say" id="trSayRaw">a folder of datasets/raw/</span></span></button>
++          <span class="ps-arrow" aria-hidden="true">›</span>
++          <button type="button" role="tab" class="ps-step" data-pane="set"><span class="ps-mark">2</span><span class="ps-text"><span class="ps-name">The set</span><span class="ps-say" id="trSaySet">a caption for every track</span></span></button>
++          <span class="ps-arrow" aria-hidden="true">›</span>
++          <button type="button" role="tab" class="ps-step" data-pane="train"><span class="ps-mark">3</span><span class="ps-text"><span class="ps-name">Train</span><span class="ps-say" id="trSayTrain">a kind, the knobs, a card</span></span></button>
++          <span class="ps-arrow" aria-hidden="true">›</span>
++          <button type="button" role="tab" class="ps-step" data-pane="run"><span class="ps-mark">4</span><span class="ps-text"><span class="ps-name">Telemetry</span><span class="ps-say" id="trSayRun">a run: its curves and epochs</span></span></button>
++        </nav>
++
++        <section class="tr-pane" data-pane="raw">
++          <div class="tr-phead"><b>Material</b><span class="row-hint">a folder of songs in <code>datasets/raw/</code>; pick it, choose the tracks, give each its lyrics</span></div>
++          <div class="tr-picks" id="trRaw"></div>
++          <div class="tr-bar"><span class="row-hint" id="trTracksNote"></span><span class="spacer"></span>
++            <button type="button" class="btn ghost small" id="trAllIn">All in</button><button type="button" class="btn ghost small" id="trNoneIn">None</button>
++            <button type="button" class="btn small primary" data-go="set">The set ›</button></div>
++          <div class="tr-tracks" id="trTracks"></div>
++        </section>
++
++        <section class="tr-pane" data-pane="set">
++          <div class="tr-phead"><b>The set</b><span class="row-hint">a caption for every track: the style line, then the lyrics; made into <code>datasets/prepared/</code></span></div>
++          <div class="field-row wrap">
++            <label class="field"><span class="label">Trigger word <em>calls the style by name later</em></span><input type="text" id="trTrigger" placeholder="fosforida" /></label>
++            <label class="field grow"><span class="label">Shared style line <em>what is heard: genre, instruments, voice, mood (not the SUNO prompt)</em></span>
++              <input type="text" id="trStyle" placeholder="dark cinematic gothic metal, female contralto vocal, church choir, slow" /></label>
++            <label class="field"><span class="label">Set name</span><input type="text" id="trSetName" /></label>
++          </div>
++          <div class="tr-bar"><button type="button" class="btn primary small" id="trMake">Make the set</button><span class="row-hint" id="trMakeState"></span>
++            <span class="spacer"></span><button type="button" class="btn ghost small" data-go="train">Train ›</button></div>
++        </section>
++
++        <section class="tr-pane" data-pane="train">
++          <div class="tr-phead"><b>Train</b><span class="row-hint">a set, a kind of adapter, the knobs; the run takes a card of its own</span></div>
++          <div class="tr-sets" id="trSets"></div>
++          <div class="tr-bar"><span class="label">Kind</span><span id="trKinds"></span><span class="row-hint" id="trKindSay"></span></div>
++          <div class="tr-knobs" id="trKnobs">
++            <label class="field tr-wide"><span class="label">Run name</span><input type="text" id="trRunName" placeholder="fosforida-style-v1" /></label>
++            <label class="field"><span class="label">Trainer</span><select id="tr_engine"><option value="ruach">Ruach Studio</option><option value="ai-toolkit">AI-Toolkit (reference)</option></select></label>
++            <label class="field"><span class="label">Base weights</span><select id="tr_quant"><option value="bf16">bf16</option><option value="int8">int8</option></select></label>
++            <label class="field"><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="20000" step="50" /></label>
++            <label class="field"><span class="label">Save every <em>epochs</em></span><input type="number" id="tr_save_epochs" min="1" max="100" step="1" value="1" /></label>
++            <label class="field"><span class="label">Rank</span><input type="number" id="tr_rank" min="4" max="128" step="4" /></label>
++            <label class="field"><span class="label">Learning rate</span><input type="number" id="tr_lr" value="0.0001" step="0.00001" /></label>
++            <label class="field"><span class="label">AR weight <em>0 = sound only</em></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
++            <label class="field"><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
++            <label class="field"><span class="label">AR speed</span><input type="number" id="tr_ar_lr_multiplier" min="0" max="2" step="0.1" /></label>
++            <label class="field"><span class="label">Mode</span><select id="tr_cot"><option value="off">Direct</option><option value="full">Full (score)</option><option value="melody">Melody</option></select></label>
++            <label class="check"><input type="checkbox" id="tr_sep" /> <span>Separate vocals and music</span></label>
++          </div>
++          <div class="tr-bar"><button type="button" class="btn primary small" id="trRun">Train</button><span class="row-hint" id="trRunSay"></span></div>
++        </section>
++
++        <section class="tr-pane" data-pane="run" id="trRunPane"></section>
++      </div>
++
++      <aside class="tr-side" id="trSide">
++        <button type="button" class="lib-unfold tr-unfold" id="trUnfold" data-tip="Unfold the runs">
++          <span class="lib-unfold-name">Runs</span><span class="lib-unfold-count mono" id="trUnfoldCount"></span></button>
++        <header class="lib-head"><h3>Runs</h3><span class="count mono" id="trRunCount">0</span><div class="spacer"></div>
++          <button type="button" class="icon-btn lib-fold" id="trFold" data-icon="collapse" data-tip="Fold the runs to the right">Fold</button></header>
++        <div class="tr-filters" id="trFilters">
++          <button type="button" class="lib-toggle" data-filter="active">Active</button>
++          <button type="button" class="lib-toggle" data-filter="all">All</button>
++          <button type="button" class="lib-toggle" data-filter="archived">Archived</button>
++          <button type="button" class="lib-toggle" data-filter="trash">Trash</button>
+         </div>
+-        <div class="tr-bar"><button type="button" class="btn primary small" id="trRun">Train</button>
+-          <button type="button" class="btn ghost small danger" id="trStop" hidden>Stop</button></div>
+-        <div class="tr-watch" id="trWatch" hidden><div id="trWatchHead"></div><div class="pc-bar"><i id="trBar"></i></div><pre class="mono tr-tail" id="trTail"></pre></div>
+-      </section>
+-      <section class="tr-step"><h3><span class="ps-mark">4</span> Runs <em>the history: every run, its curves and its epochs; an epoch to loras/ is ready in Create</em></h3>
+-        <div class="tr-cards" id="trRuns"></div>
+-      </section>
++        <div class="lib-search"><input type="search" id="trSearch" placeholder="Search runs · set · kind" autocomplete="off" /></div>
++        <div class="tr-rlist" id="trRunList"></div>
++      </aside>
+     </div>
+   </section>
+ 
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 9ddfba5..b9e82da 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1752,6 +1752,8 @@ int main(int argc, char ** argv) {
+         httplib::Client lab("127.0.0.1", port);
+         lab.set_connection_timeout(3, 0);
+         lab.set_read_timeout(1800, 0);   // Whisper on a long song, and a queue before it
++        // HERESY 1090: a trained adapter (100 MB and more) comes through whole; httplib stops at 100 MB by default
++        lab.set_payload_max_length((size_t) 2048 * 1024 * 1024);
+         std::string path = "/" + std::string(req.matches[1]);
+         std::string query;
+         for (const auto & p : req.params) {
+@@ -1771,7 +1773,7 @@ int main(int argc, char ** argv) {
+             return;
+         }
+         res.status = r->status;
+-        for (const char * h : { "Content-Range", "Accept-Ranges" }) {
++        for (const char * h : { "Content-Range", "Accept-Ranges", "Content-Disposition" }) {
+             if (r->has_header(h)) {
+                 res.set_header(h, r->get_header_value(h));
+             }
+-- 
+2.43.0
+

@@ -1,0 +1,729 @@
+From 94a07537e20778c552531dc6b09b94f9e0233c78 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 30 Sep 2026 23:35:22 -0600
+Subject: [PATCH 1028/1177] Score check, MIDI out and in, section markers, one
+ voice moved; a transposer fix
+
+- heresy-abc.js ports YuE2 Studio abc_tools.py (Apache-2.0): the native two-voice dialect,
+  read strictly to the sounding notes (counts checked equal to the Python on three takes).
+  report(): key, BPM, meter, bars, time, sections; per voice notes, notes a minute, range,
+  sounding share, chords; the Ins : Vocal ratio.
+- Under the take score and the form score: the check (or the exact error, with group and
+  bar), MIDI export (tempo, meters, keys, a track per voice, sections as markers), a marker
+  CSV, MIDI import (one line per voice, 1/16 grid, spelled in the file key or a chosen one;
+  read back through the parser), and one voice moved by scale steps in its key, its own
+  inflections kept, chords and the other voice untouched (an octave down is exactly -12).
+- heresy-transpose.js (1018): a note right after a rest (zd) was taken for part of a word
+  and left where it was: 1 to 11 wrong notes a score. Now 0 of 2883 in 15 transpositions.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css             |  11 +
+ tools/console/app.js              |   8 +
+ tools/console/heresy-abc.js       | 454 ++++++++++++++++++++++++++++++
+ tools/console/heresy-score.js     | 114 ++++++++
+ tools/console/heresy-transpose.js |   4 +-
+ tools/console/index.html          |  27 ++
+ tools/public/index.html.gz        | Bin 281777 -> 293139 bytes
+ 7 files changed, 617 insertions(+), 1 deletion(-)
+ create mode 100644 tools/console/heresy-abc.js
+ create mode 100644 tools/console/heresy-score.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index e2508eb..111b49d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2063,3 +2063,14 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ 
+ /* HERESY 1027 */
+ .server-reset { margin-top: 12px; display: flex; justify-content: flex-end; }
++
++/* HERESY 1028: the score check */
++.score-check { margin: 8px 0; font-size: 12.5px; }
++.score-check p { margin: 4px 0; }
++.sc-ok { color: var(--good); }
++.sc-bad { color: var(--bad-ink, var(--bad)); }
++.sc-table { border-collapse: collapse; margin: 4px 0; }
++.sc-table th { font-weight: 400; color: var(--muted); text-align: left; padding: 1px 14px 1px 0; }
++.sc-table td { padding: 1px 14px 1px 0; }
++.sc-ratio strong { font-weight: 600; }
++.file-btn { cursor: pointer; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index cb81235..139be6c 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2972,6 +2972,7 @@
+   });
+ 
+   function renderScore(abc) {
++    if (window.HeresyScore) window.HeresyScore.take(abc || "", STATE.take ? displayTitle(STATE.take) : "");   // HERESY 1028
+     $("scoreAbc").textContent = abc || "";
+     STATE.abcRendered = abc || "";
+     if (!abc) { $("scoreStaff").textContent = ""; return; }
+@@ -4896,6 +4897,13 @@
+     });
+   }
+ 
++  /* ---------------------------------------------- HERESY 1028: the score's check, MIDI, voices */
++  if (window.HeresyScore) window.HeresyScore.init({
++    toast: toast,
++    title: function () { return $("title").value.trim() || "score"; },
++    setAbc: function (abc) { $("abc").value = abc; $("abc").dispatchEvent(new Event("input", { bubbles: true })); }
++  });
++
+   /* ---------------------------------------------- HERESY 1018: keys */
+   // The score's K: is the key the song follows; a style naming another key costs diction
+   // (measured 30.09.2026). The row in the score drawer moves the score; the line under the
+diff --git a/tools/console/heresy-abc.js b/tools/console/heresy-abc.js
+new file mode 100644
+index 0000000..6c83ff4
+--- /dev/null
++++ b/tools/console/heresy-abc.js
+@@ -0,0 +1,454 @@
++// HERESY 1028: the score, checked and carried. A port of YuE2's own abc_tools.py (YuE2 Studio,
++// skills/yue2-music/scripts, Apache-2.0): the limited two-voice ABC dialect YuE2 and SheetSage2
++// write, read strictly (fail closed), down to the sounding notes. On top of it:
++//   report()     notes, rests, bars, range and time per voice, and the Ins : Vocal ratio
++//   toMidi()     a Standard MIDI File: tempo, meter and key, a track per voice, and the section
++//                comments (% verse…) as markers, so a DAW opens the song already marked
++//   markers()    the same sections as times, for a CSV or a DAW's marker import
++//   fromMidi()   a MIDI file (one melodic line per voice) back into this dialect
++//   shiftVoice() one voice moved by scale steps (a third, a fourth, an octave…) in the same key,
++//                its own sharps and flats kept; the other voice and the chords stay
++(function () {
++  "use strict";
++
++  var VOICES = ["Vocal", "Ins"];
++  var DURATIONS = { 1: 1, 2: 1, 3: 1, 4: 1, 6: 1, 8: 1, 12: 1, 16: 1, 24: 1, 32: 1, 48: 1 };
++  var QUALITIES = ["", "m", "dim", "aug", "7", "maj7", "m7", "dim7", "m7b5", "sus4", "sus2", "6", "m6", "7sus4", "m(maj7)"];
++  var PITCH_NAME = "[A-G](?:bb|##|b|#)?";
++  var CHORD = new RegExp("^" + PITCH_NAME + "(?:" + QUALITIES.map(function (q) { return q.replace(/[()]/g, "\\$&"); }).join("|") + ")(?:/" + PITCH_NAME + ")?$");
++  var TOKEN = /"([^"\n]*)"|\[K:([^\]\n]+)\]|(\^\^|__|\^|_|=)?([A-Ga-gz])([,']*)([0-9]*)(-?)/y;
++  var NATURAL = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
++  var KEYS = {};
++  ["Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#"].forEach(function (k, i) { KEYS[k] = i - 7; });
++  ["Abm", "Ebm", "Bbm", "Fm", "Cm", "Gm", "Dm", "Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "A#m"].forEach(function (k, i) { KEYS[k] = i - 7; });
++
++  // exact fractions: [numerator, denominator], always reduced
++  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = a % b; a = b; b = t; } return a || 1; }
++  function F(n, d) { d = d || 1; if (d < 0) { n = -n; d = -d; } var g = gcd(n, d); return [n / g, d / g]; }
++  function add(a, b) { return F(a[0] * b[1] + b[0] * a[1], a[1] * b[1]); }
++  function mul(a, b) { return F(a[0] * b[0], a[1] * b[1]); }
++  function cmp(a, b) { return a[0] * b[1] - b[0] * a[1]; }
++  function num(a) { return a[0] / a[1]; }
++  function str(a) { return a[1] === 1 ? String(a[0]) : a[0] + "/" + a[1]; }
++
++  function AbcError(message) { var e = new Error(message); e.abc = true; return e; }
++  function fail(condition, message) { if (condition) throw AbcError(message); }
++
++  function keyAccidentals(key) {
++    fail(!(key in KEYS), "Unsupported key " + JSON.stringify(key) + "; use a standard major or minor K: field");
++    var count = KEYS[key], result = { C: 0, D: 0, E: 0, F: 0, G: 0, A: 0, B: 0 };
++    (count > 0 ? "FCGDAEB" : "BEADGCF").slice(0, Math.abs(count)).split("").forEach(function (l) { result[l] = count > 0 ? 1 : -1; });
++    return result;
++  }
++  function meterValue(text) {
++    var m = /^([1-9][0-9]*)\/([1-9][0-9]*)$/.exec(text);
++    fail(!m, "Unsupported meter " + JSON.stringify(text) + "; write an explicit fraction");
++    var n = +m[1], d = +m[2];
++    fail(d > 1024 || (d & (d - 1)) !== 0, "Unsupported meter denominator " + d);
++    return [n, d];
++  }
++  function newVoice(meter, key) {
++    return { meter: meter, key: key, time: F(0), notes: [], bars: [], chords: [], keys: [[F(0), key]], pending: null, rests: F(0) };
++  }
++
++  function parseBar(body, voice, unit, context) {
++    var length = F(4 * voice.meter[0], voice.meter[1]), start = voice.time, offset = F(0), local = {};
++    if (body === "Z") {
++      fail(voice.pending !== null, context + ": tie enters a full-measure rest");
++      offset = length;
++      voice.rests = add(voice.rests, length);
++    } else {
++      var cursor = 0;
++      while (cursor < body.length) {
++        if (/\s/.test(body.charAt(cursor))) { cursor++; continue; }
++        TOKEN.lastIndex = cursor;
++        var m = TOKEN.exec(body);
++        fail(!m, context + ": unsupported token at " + JSON.stringify(body.slice(cursor, cursor + 24)));
++        cursor = TOKEN.lastIndex;
++        fail(cmp(offset, length) >= 0, context + ": event after the measure end");
++        if (m[1] !== undefined) {
++          fail(!CHORD.test(m[1]), context + ": unsupported chord " + JSON.stringify(m[1]));
++          voice.chords.push([add(start, offset), m[1]]);
++          continue;
++        }
++        if (m[2] !== undefined) {
++          keyAccidentals(m[2]);
++          voice.key = m[2];
++          voice.keys.push([add(start, offset), m[2]]);
++          local = {};
++          continue;
++        }
++        var acc = m[3] || "", note = m[4], octave = m[5] || "", tie = m[7];
++        var units = parseInt(m[6] || "1", 10);
++        fail(!DURATIONS[units], context + ": unsupported duration " + units + "; split it into tied supported lengths");
++        var duration = mul(F(units * 4), unit);
++        fail(cmp(add(offset, duration), length) > 0, context + ": note/rest exceeds meter duration");
++        fail(octave.indexOf(",") >= 0 && octave.indexOf("'") >= 0, context + ": mixed octave marks");
++        if (note === "z") {
++          fail(!!(acc || octave || tie), context + ": a rest cannot have accidentals, octave marks or ties");
++          fail(voice.pending !== null, context + ": tie enters a rest");
++          voice.rests = add(voice.rests, duration);
++        } else {
++          var letter = note.toUpperCase();
++          var written = 60 + NATURAL[letter] + (note !== letter ? 12 : 0) + 12 * ((octave.match(/'/g) || []).length - (octave.match(/,/g) || []).length);
++          var alteration = letter in local ? local[letter] : keyAccidentals(voice.key)[letter];
++          if (acc) { alteration = { "=": 0, "_": -1, "__": -2, "^": 1, "^^": 2 }[acc]; local[letter] = alteration; }
++          var pitch = written + alteration;
++          if (voice.pending !== null) {
++            // an unmarked continuation keeps its tied accidental across a barline
++            if (!acc && written === voice.pending[1]) pitch = voice.pending[0];
++            fail(pitch !== voice.pending[0], context + ": tie changes pitch from " + voice.pending[0] + " to " + pitch);
++            var last = voice.notes[voice.notes.length - 1];
++            last[2] = add(last[2], duration);
++          } else {
++            fail(pitch < 0 || pitch > 127, context + ": pitch " + pitch + " is outside MIDI range");
++            voice.notes.push([add(start, offset), pitch, duration]);
++          }
++          voice.pending = tie ? [pitch, written] : null;
++        }
++        offset = add(offset, duration);
++      }
++    }
++    fail(cmp(offset, length) !== 0, context + ": duration " + str(offset) + " quarter notes != meter duration " + str(length));
++    voice.bars.push([start, length, voice.meter]);
++    voice.time = add(voice.time, length);
++  }
++
++  // Fail closed for unsupported tokens; resolve sounding notes, not token counts.
++  function parse(text) {
++    var lines = String(text).replace(/\r/g, "").replace(/\n+$/, "").split("\n");
++    fail(lines.length < 12, "Incomplete native two-voice ABC");
++    fail(lines[0] !== "X:1" || lines[1] !== "T:", "Expected native X:1 and blank T: header");
++    fail(lines[2].indexOf("M:") !== 0, "Missing header M:");
++    var meter = meterValue(lines[2].slice(2));
++    var um = /^L:1\/([1-9][0-9]*)$/.exec(lines[3]);
++    fail(!um, "Expected L:1/<power of two>, usually L:1/32");
++    var denominator = +um[1];
++    fail(denominator > 1024 || (denominator & (denominator - 1)) !== 0, "Unsupported L: denominator");
++    var unit = F(1, denominator);
++    var tm = /^Q:1\/4=([1-9][0-9]*)$/.exec(lines[4]);
++    fail(!tm, "Expected integer quarter-note tempo Q:1/4=<BPM>");
++    fail(lines[5] !== 'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"' ||
++         lines[6] !== 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "Preserve native Vocal and Ins voice definitions");
++    fail(lines[7].indexOf("K:") !== 0, "Missing header K:");
++    var key = lines[7].slice(2);
++    keyAccidentals(key);
++    var voices = { Vocal: newVoice(meter, key), Ins: newVoice(meter, key) };
++    var sections = [], cursor = 8, group = 0;
++    while (cursor < lines.length) {
++      while (cursor < lines.length && lines[cursor].indexOf("% ") === 0) {
++        sections.push([voices.Vocal.time, lines[cursor].slice(2).trim()]);
++        cursor++;
++      }
++      fail(cursor === lines.length, "Dangling section comment without music");
++      group++;
++      var counts = [];
++      VOICES.forEach(function (name) {
++        var context = "group " + group + ", " + name;
++        fail(cursor >= lines.length || lines[cursor] !== "V: " + name, context + ": expected V: " + name);
++        cursor++;
++        var voice = voices[name], fields = {};
++        while (cursor < lines.length && /^(M|K):/.test(lines[cursor])) {
++          var field = lines[cursor].charAt(0), value = lines[cursor].slice(2);
++          fail(fields[field], context + ": duplicate " + field + ": field");
++          fields[field] = true;
++          if (field === "M") voice.meter = meterValue(value);
++          else { keyAccidentals(value); voice.key = value; voice.keys.push([voice.time, value]); }
++          cursor++;
++        }
++        fail(cursor >= lines.length, context + ": missing music line");
++        var line = lines[cursor];
++        fail(line.charAt(line.length - 1) !== "|", context + ": music line must end with a plain barline");
++        cursor++;
++        var bars = [];
++        line.slice(0, -1).split("|").forEach(function (bar) {
++          bar = bar.trim();
++          fail(!bar, context + ": empty measure or unsupported double/repeat barline");
++          var rest = /^Z([2-4])?$/.exec(bar);
++          if (rest) for (var i = 0; i < +(rest[1] || 1); i++) bars.push("Z");
++          else bars.push(bar);
++        });
++        fail(bars.length < 1 || bars.length > 4, context + ": expected 1–4 measures after expanding Z rests");
++        counts.push(bars.length);
++        bars.forEach(function (bar) { parseBar(bar, voice, unit, context + ", bar " + (voice.bars.length + 1)); });
++      });
++      fail(counts[0] !== counts[1], "group " + group + ": voices have different measure counts");
++    }
++    VOICES.forEach(function (name) { fail(voices[name].pending !== null, name + ": unresolved tie at end of score"); });
++    fail(voices.Ins.chords.length, "Native chord symbols belong in Vocal, not Ins");
++    var grid = function (v) { return v.bars.map(function (b) { return str(b[0]) + ":" + str(b[1]) + ":" + b[2].join("/"); }).join(","); };
++    fail(grid(voices.Vocal) !== grid(voices.Ins), "Voice meter/time grids differ");
++    var keyline = function (v) { return v.keys.map(function (k) { return str(k[0]) + ":" + k[1]; }).join(","); };
++    fail(keyline(voices.Vocal) !== keyline(voices.Ins), "Voice key-change timelines differ");
++    return { text: text, unit: unit, bpm: +tm[1], key: key, meter: meter, voices: voices, sections: sections };
++  }
++
++  // ---- the numbers a person wants: per voice, and the ratio
++  var NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
++  function noteName(p) { return NAMES[p % 12] + (Math.floor(p / 12) - 1); }
++  function report(score) {
++    var total = score.voices.Vocal.time, secs = num(total) * 60 / score.bpm, out = { bpm: score.bpm, key: score.key,
++      meter: score.meter.join("/"), quarters: num(total), seconds: secs, bars: score.voices.Vocal.bars.length, sections: score.sections.length, voices: {} };
++    VOICES.forEach(function (name) {
++      var v = score.voices[name], sounding = v.notes.reduce(function (s, n) { return s + num(n[2]); }, 0);
++      var lo = Infinity, hi = -Infinity;
++      v.notes.forEach(function (n) { lo = Math.min(lo, n[1]); hi = Math.max(hi, n[1]); });
++      out.voices[name] = { notes: v.notes.length, chords: v.chords.length, sounding: num(total) ? sounding / num(total) : 0,
++        low: v.notes.length ? noteName(lo) : "—", high: v.notes.length ? noteName(hi) : "—", lowMidi: lo, highMidi: hi,
++        perMinute: secs ? v.notes.length / (secs / 60) : 0 };
++    });
++    var ins = out.voices.Ins.notes, voc = out.voices.Vocal.notes;
++    out.ratio = voc ? ins / voc : null;                       // Ins notes per Vocal note
++    var g = gcd(ins, voc);
++    out.ratioText = voc && ins ? (ins / g) + " : " + (voc / g) : "—";
++    return out;
++  }
++
++  function markers(score) {
++    return score.sections.map(function (s) { return { quarters: num(s[0]), seconds: num(s[0]) * 60 / score.bpm, name: s[1] }; });
++  }
++
++  // ---- MIDI out: format 1, 480 ticks a quarter; track 0 holds tempo, meters, keys and markers
++  var PPQ = 480;
++  function vlq(n) { var b = [n & 127]; while ((n >>= 7)) b.unshift((n & 127) | 128); return b; }
++  function textBytes(s) { return Array.from(new TextEncoder().encode(s)); }
++  function track(events) {   // events: [tick, bytes]; sorted, stable
++    events.sort(function (a, b) { return a[0] - b[0] || a[2] - b[2]; });
++    var out = [], last = 0;
++    events.forEach(function (e) { out = out.concat(vlq(e[0] - last), e[1]); last = e[0]; });
++    out = out.concat([0, 0xff, 0x2f, 0]);
++    var len = out.length;
++    return [0x4d, 0x54, 0x72, 0x6b, (len >>> 24) & 255, (len >>> 16) & 255, (len >>> 8) & 255, len & 255].concat(out);
++  }
++  function tick(q) { return Math.round(num(q) * PPQ); }
++  function toMidi(score) {
++    var conductor = [], mpq = Math.round(60000000 / score.bpm), seq = 0;
++    conductor.push([0, [0xff, 0x03].concat(vlq(textBytes("YuE2 OS").length), textBytes("YuE2 OS")), seq++]);
++    conductor.push([0, [0xff, 0x51, 3, (mpq >>> 16) & 255, (mpq >>> 8) & 255, mpq & 255], seq++]);
++    var lastMeter = "";
++    score.voices.Vocal.bars.forEach(function (b) {
++      var m = b[2].join("/");
++      if (m === lastMeter) return;
++      lastMeter = m;
++      conductor.push([tick(b[0]), [0xff, 0x58, 4, b[2][0], Math.round(Math.log2(b[2][1])), 24, 8], seq++]);
++    });
++    score.voices.Vocal.keys.forEach(function (k) {
++      var minor = /m$/.test(k[1]);
++      conductor.push([tick(k[0]), [0xff, 0x59, 2, (KEYS[k[1]] + 256) & 255, minor ? 1 : 0], seq++]);
++    });
++    score.sections.forEach(function (s) {
++      var t = textBytes(s[1]);
++      conductor.push([tick(s[0]), [0xff, 0x06].concat(vlq(t.length), t), seq++]);
++    });
++    var tracks = [track(conductor)];
++    VOICES.forEach(function (name, ch) {
++      var ev = [], t = textBytes(name);
++      ev.push([0, [0xff, 0x03].concat(vlq(t.length), t), seq++]);
++      ev.push([0, [0xc0 | ch, name === "Vocal" ? 52 : 48], seq++]);     // choir aahs · strings: a sketch, not a mix
++      score.voices[name].notes.forEach(function (n) {
++        ev.push([tick(add(n[0], n[2])), [0x80 | ch, n[1], 0], seq++]);   // offs before ons at the same tick
++        ev.push([tick(n[0]), [0x90 | ch, n[1], name === "Vocal" ? 96 : 80], seq + 100000]);
++        seq++;
++      });
++      tracks.push(track(ev));
++    });
++    var head = [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1, 0, tracks.length, (PPQ >> 8) & 255, PPQ & 255];
++    return new Uint8Array(tracks.reduce(function (a, t) { return a.concat(t); }, head));
++  }
++
++  // ---- MIDI in: each track with notes is one melodic line; the first two become Vocal and Ins
++  // (by name when a track is called vocal/voice/ins…, else in order). Overlaps are cut, the grid
++  // is 1/16 by default, notes are spelled in the key (the file's key signature, or the one given).
++  function readMidi(bytes) {
++    var p = 0;
++    function u32() { var v = (bytes[p] << 24) | (bytes[p + 1] << 16) | (bytes[p + 2] << 8) | bytes[p + 3]; p += 4; return v >>> 0; }
++    function u16() { var v = (bytes[p] << 8) | bytes[p + 1]; p += 2; return v; }
++    function rv() { var v = 0, b; do { b = bytes[p++]; v = (v << 7) | (b & 127); } while (b & 128); return v; }
++    fail(String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]) !== "MThd", "Not a MIDI file");
++    p = 4; var hl = u32(), fmt = u16(), ntr = u16(), div = u16(); p = 8 + hl;
++    fail(div & 0x8000, "SMPTE-timed MIDI files are not supported");
++    var tracks = [], tempo = null, meter = null, key = null;
++    for (var t = 0; t < ntr && p < bytes.length; t++) {
++      fail(String.fromCharCode(bytes[p], bytes[p + 1], bytes[p + 2], bytes[p + 3]) !== "MTrk", "Broken MIDI track");
++      p += 4; var end = u32(); end += p;
++      var now = 0, run = 0, name = "", on = {}, notes = [];
++      while (p < end) {
++        now += rv();
++        var st = bytes[p];
++        if (st & 0x80) { p++; if (st < 0xf0) run = st; } else st = run;
++        var type = st & 0xf0;
++        if (st === 0xff) {
++          var mt = bytes[p++], len = rv(), data = bytes.slice(p, p + len); p += len;
++          if (mt === 0x03 && !name) name = new TextDecoder().decode(new Uint8Array(data));
++          if (mt === 0x51 && tempo === null) tempo = Math.round(60000000 / ((data[0] << 16) | (data[1] << 8) | data[2]));
++          if (mt === 0x58 && meter === null) meter = [data[0], Math.pow(2, data[1])];
++          if (mt === 0x59 && key === null) key = { sf: data[0] > 127 ? data[0] - 256 : data[0], minor: data[1] === 1 };
++        } else if (st === 0xf0 || st === 0xf7) { p += rv(); }
++        else if (type === 0x90 || type === 0x80) {
++          var n = bytes[p++], vel = bytes[p++];
++          if (type === 0x90 && vel > 0) on[n] = now;
++          else if (n in on) { notes.push([on[n], n, now - on[n]]); delete on[n]; }
++        } else if (type === 0xc0 || type === 0xd0) p += 1;
++        else p += 2;
++      }
++      p = end;
++      if (notes.length) tracks.push({ name: name, notes: notes.sort(function (a, b) { return a[0] - b[0] || b[1] - a[1]; }) });
++    }
++    return { format: fmt, ppq: div, tracks: tracks, tempo: tempo, meter: meter, key: key };
++  }
++
++  var MAJOR_BY_SF = { "-7": "Cb", "-6": "Gb", "-5": "Db", "-4": "Ab", "-3": "Eb", "-2": "Bb", "-1": "F", 0: "C", 1: "G", 2: "D", 3: "A", 4: "E", 5: "B", 6: "F#", 7: "C#" };
++  var MINOR_BY_SF = { "-7": "Abm", "-6": "Ebm", "-5": "Bbm", "-4": "Fm", "-3": "Cm", "-2": "Gm", "-1": "Dm", 0: "Am", 1: "Em", 2: "Bm", 3: "F#m", 4: "C#m", 5: "G#m", 6: "D#m", 7: "A#m" };
++
++  // spell a MIDI pitch in a key: [letter, alteration, octave]
++  function spell(pitch, key) {
++    var sig = keyAccidentals(key), sharpSide = KEYS[key] >= 0, pc = ((pitch % 12) + 12) % 12, best = null;
++    "CDEFGAB".split("").forEach(function (l) {
++      for (var a = -2; a <= 2; a++) {
++        if (((NATURAL[l] + a) % 12 + 12) % 12 !== pc) continue;
++        var score = (a === sig[l] ? 0 : 10) + Math.abs(a) + (a < 0 && sharpSide ? 1 : 0) + (a > 0 && !sharpSide ? 1 : 0);
++        if (!best || score < best.s) best = { l: l, a: a, s: score };
++      }
++    });
++    var oct = Math.floor((pitch - NATURAL[best.l] - best.a) / 12) - 1;
++    return [best.l, best.a, oct];
++  }
++  function written(l, oct) {
++    var s = oct >= 5 ? l.toLowerCase() : l;
++    if (oct > 5) s += new Array(oct - 5 + 1).join("'");
++    if (oct < 4) s += new Array(4 - oct + 1).join(",");
++    return s;
++  }
++  // a length in grid units as a chain of supported lengths, longest first
++  function pieces(units) {
++    var list = [48, 32, 24, 16, 12, 8, 6, 4, 3, 2, 1], out = [];
++    while (units > 0) { for (var i = 0; i < list.length; i++) if (list[i] <= units) { out.push(list[i]); units -= list[i]; break; } }
++    return out;
++  }
++
++  function fromMidi(bytes, opts) {
++    opts = opts || {};
++    var m = readMidi(bytes);
++    fail(!m.tracks.length, "No notes in this MIDI file");
++    var pick = function (re) { return m.tracks.filter(function (t) { return re.test(t.name); })[0]; };
++    var vocal = pick(/vocal|voice|vox|melody|sing/i) || m.tracks[0];
++    var ins = pick(/^ins|instr|inst\.?$|accomp/i);
++    if (!ins || ins === vocal) ins = m.tracks.filter(function (t) { return t !== vocal; })[0] || null;
++    var meter = opts.meter || m.meter || [4, 4];
++    var key = opts.key || (m.key ? (m.key.minor ? MINOR_BY_SF : MAJOR_BY_SF)[m.key.sf] : "C");
++    keyAccidentals(key);
++    var bpm = opts.bpm || m.tempo || 120;
++    var L = opts.unit || 16;                                     // L:1/16 grid
++    var perQuarter = L / 4, ticksPerUnit = m.ppq / perQuarter;
++    var barUnits = meter[0] * L / meter[1];
++    fail(barUnits !== Math.round(barUnits), "The meter " + meter.join("/") + " does not fit a 1/" + L + " grid");
++    // quantize each line, monophonic: a note ends where the next begins
++    function line(t) {
++      if (!t) return [];
++      var q = t.notes.map(function (n) { return [Math.round(n[0] / ticksPerUnit), n[1], Math.max(1, Math.round(n[2] / ticksPerUnit))]; });
++      var out = [];
++      q.forEach(function (n) {
++        var prev = out[out.length - 1];
++        if (prev && n[0] <= prev[0]) return;                        // a chord: its top note stays
++        if (prev && prev[0] + prev[2] > n[0]) prev[2] = n[0] - prev[0];
++        out.push(n);
++      });
++      return out;
++    }
++    var lines = { Vocal: line(vocal), Ins: line(ins) };
++    var endUnits = Math.max.apply(null, VOICES.map(function (v) { var l = lines[v]; return l.length ? l[l.length - 1][0] + l[l.length - 1][2] : 0; }));
++    var nbars = Math.max(1, Math.ceil(endUnits / barUnits));
++    // per voice, per bar: tokens
++    function bars(notes, withChords) {
++      var out = [], i = 0, carry = null;                          // carry: a note tied into the next bar
++      for (var b = 0; b < nbars; b++) {
++        var start = b * barUnits, stop = start + barUnits, at = start, toks = [], local = {}, sig = keyAccidentals(key);
++        var emit = function (pitch, len, tie) {
++          var sp = spell(pitch, key), cur = sp[0] in local ? local[sp[0]] : sig[sp[0]], accs = "";
++          if (sp[1] !== cur) { accs = { "-2": "__", "-1": "_", 0: "=", 1: "^", 2: "^^" }[sp[1]]; local[sp[0]] = sp[1]; }
++          var parts = pieces(len);
++          parts.forEach(function (u, k) {
++            toks.push((k === 0 ? accs : "") + written(sp[0], sp[2]) + (u === 1 ? "" : u) + (k < parts.length - 1 || tie ? "-" : ""));
++          });
++        };
++        var rest = function (len) { if (len > 0) pieces(len).forEach(function (u) { toks.push("z" + (u === 1 ? "" : u)); }); };
++        if (carry) {
++          var cl = Math.min(carry.left, barUnits);
++          emit(carry.pitch, cl, carry.left > cl);
++          at = start + cl;
++          carry = carry.left > cl ? { pitch: carry.pitch, left: carry.left - cl } : null;
++        }
++        while (i < notes.length && notes[i][0] < stop) {
++          var n = notes[i];
++          if (n[0] < at) { i++; continue; }
++          rest(n[0] - at);
++          var len = Math.min(n[2], stop - n[0]);
++          emit(n[1], len, n[2] > len);
++          if (n[2] > len) carry = { pitch: n[1], left: n[2] - len };
++          at = n[0] + len;
++          i++;
++        }
++        if (!carry) rest(stop - at);
++        out.push(toks.every(function (x) { return x.charAt(0) === "z"; }) ? "Z" : toks.join(""));
++      }
++      return out;
++    }
++    var vb = bars(lines.Vocal), ib = bars(lines.Ins);
++    var text = ["X:1", "T:", "M:" + meter.join("/"), "L:1/" + L, "Q:1/4=" + bpm,
++                'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"', 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "K:" + key];
++    for (var b = 0; b < nbars; b += 4) {
++      text.push("V: Vocal", vb.slice(b, b + 4).join("|") + "|", "V: Ins", ib.slice(b, b + 4).join("|") + "|");
++    }
++    var abc = text.join("\n");
++    var check = parse(abc);                                       // the result must read back
++    return { abc: abc, report: report(check), from: { vocal: vocal.name || "track 1", ins: ins ? ins.name || "track 2" : "(none)", tracks: m.tracks.length } };
++  }
++
++  // ---- one voice by scale steps (diatonic), in the key it stands in; its chromatic notes keep
++  // their distance from the scale. Only that voice's music lines change, chord symbols stay.
++  function shiftVoice(text, voiceName, steps) {
++    var score = parse(text);                                       // fail closed before touching it
++    var lines = String(text).replace(/\r/g, "").split("\n"), current = null, key = score.key, moved = 0, lowest = 127, highest = 0;
++    var LET = "CDEFGAB";
++    for (var li = 8; li < lines.length; li++) {
++      var ln = lines[li];
++      if (/^V: /.test(ln)) { current = ln.slice(3).trim(); continue; }
++      if (/^K:/.test(ln)) { key = ln.slice(2); continue; }
++      if (/^(%|[A-Za-z]:)/.test(ln)) continue;
++      if (current !== voiceName) continue;
++      var res = "", i = 0, localIn = {}, localOut = {}, k = key;
++      while (i < ln.length) {
++        var ch = ln.charAt(i);
++        if (ch === "|") { localIn = {}; localOut = {}; res += ch; i++; continue; }
++        if (ch === '"') { var q = ln.indexOf('"', i + 1); res += ln.slice(i, q + 1); i = q + 1; continue; }
++        if (ch === "[") { var c = ln.indexOf("]", i); var f = ln.slice(i, c + 1); var km = /^\[K:(.+)\]$/.exec(f); if (km) { k = km[1]; localIn = {}; localOut = {}; } res += f; i = c + 1; continue; }
++        TOKEN.lastIndex = i;
++        var m = TOKEN.exec(ln);
++        if (!m || m[4] === undefined || m[4] === "z") { res += m ? m[0] : ch; i = m ? TOKEN.lastIndex : i + 1; continue; }
++        var sig = keyAccidentals(k), L0 = m[4].toUpperCase();
++        var oct = (m[4] !== L0 ? 5 : 4) + (m[5].match(/'/g) || []).length - (m[5].match(/,/g) || []).length;
++        var aIn = m[3] ? { "=": 0, "_": -1, "__": -2, "^": 1, "^^": 2 }[m[3]] : (L0 in localIn ? localIn[L0] : sig[L0]);
++        if (m[3]) localIn[L0] = aIn;
++        var off = aIn - sig[L0];                                    // the note's own inflection
++        var idx = LET.indexOf(L0) + steps, L1 = LET.charAt(((idx % 7) + 7) % 7), oct1 = oct + Math.floor(idx / 7);
++        var aOut = sig[L1] + off, cur = L1 in localOut ? localOut[L1] : sig[L1];
++        fail(Math.abs(aOut) > 2, "A note would need more than a double accidental");
++        var accs = "";
++        if (aOut !== cur) { accs = { "-2": "__", "-1": "_", 0: "=", 1: "^", 2: "^^" }[aOut]; localOut[L1] = aOut; }
++        else if (m[3] && aOut !== sig[L1]) { accs = { "-2": "__", "-1": "_", 0: "=", 1: "^", 2: "^^" }[aOut]; }
++        var pitch = 12 * (oct1 + 1) + NATURAL[L1] + aOut;
++        lowest = Math.min(lowest, pitch); highest = Math.max(highest, pitch);
++        res += accs + written(L1, oct1) + m[6] + m[7];
++        moved++;
++        i = TOKEN.lastIndex;
++      }
++      lines[li] = res;
++    }
++    var out = lines.join("\n");
++    parse(out);                                                    // and must read back
++    return { abc: out, notes: moved, low: noteName(lowest), high: noteName(highest) };
++  }
++
++  window.HeresyAbc = { parse: parse, report: report, markers: markers, toMidi: toMidi, fromMidi: fromMidi,
++                       shiftVoice: shiftVoice, noteName: noteName };
++})();
+diff --git a/tools/console/heresy-score.js b/tools/console/heresy-score.js
+new file mode 100644
+index 0000000..6b0f2a4
+--- /dev/null
++++ b/tools/console/heresy-score.js
+@@ -0,0 +1,114 @@
++// HERESY 1028: the score check, MIDI out and in, section markers and the voice shift, on the
++// page: under the take's score and under the form's own score (heresy-abc.js does the work).
++(function () {
++  "use strict";
++
++  var A = window.HeresyAbc;
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function clock(t) { var m = Math.floor(t / 60), s = Math.round(t % 60); if (s === 60) { m++; s = 0; } return m + ":" + (s < 10 ? "0" : "") + s; }
++  function pct(x) { return Math.round(x * 100) + "%"; }
++  function fileName(title, ext) { return (String(title || "score").replace(/[\\/:*?"<>|]+/g, " ").trim() || "score") + ext; }
++  function save(bytes, name, type) {
++    var url = URL.createObjectURL(new Blob([bytes], { type: type }));
++    var a = document.createElement("a");
++    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
++    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
++  }
++
++  // the check, as a few lines a person reads at a glance
++  function paint(host, abc) {
++    if (!host) return null;
++    if (!abc || !abc.trim()) { host.innerHTML = ""; host.hidden = true; return null; }
++    host.hidden = false;
++    var s;
++    try { s = A.parse(abc); } catch (error) {
++      host.innerHTML = '<p class="sc-bad">✗ Not the native YuE2 score: ' + esc(error.message) + "</p>" +
++        '<p class="row-hint">The engine may still read it, but the check, MIDI and the voice shift need the dialect YuE2 and SheetSage2 write.</p>';
++      return null;
++    }
++    var r = A.report(s), v = r.voices.Vocal, i = r.voices.Ins;
++    var lead = r.ratio === null ? "no vocal notes" : r.ratio > 1.5 ? "the instruments carry most notes" : r.ratio < 0.67 ? "the voice carries most notes" : "voice and instruments about even";
++    var row = function (name, x) {
++      return "<tr><td>" + name + '</td><td class="mono">' + x.notes + '</td><td class="mono">' + Math.round(x.perMinute) + '</td><td class="mono">' +
++        esc(x.low) + "–" + esc(x.high) + '</td><td class="mono">' + pct(x.sounding) + "</td>" + (name === "Vocal" ? '<td class="mono">' + x.chords + "</td>" : "<td></td>") + "</tr>";
++    };
++    host.innerHTML = '<p class="sc-ok">✓ Native YuE2 score · ' + esc(r.key) + " · " + r.bpm + " BPM · " + r.meter + " · " + r.bars +
++      " bars · " + clock(r.seconds) + " · " + r.sections + " sections</p>" +
++      '<table class="sc-table"><tr><th></th><th>notes</th><th>a minute</th><th>range</th><th>sounding</th><th>chords</th></tr>' +
++      row("Vocal", v) + row("Ins", i) + "</table>" +
++      '<p class="sc-ratio">Ins : Vocal = <strong class="mono">' + esc(r.ratioText) + "</strong>" +
++      (r.ratio !== null ? ' = <strong class="mono">' + r.ratio.toFixed(2) + "</strong>" : "") + " · " + lead + "</p>";
++    return s;
++  }
++
++  function midiOut(abc, title) {
++    try { save(A.toMidi(A.parse(abc)), fileName(title, ".mid"), "audio/midi"); }
++    catch (error) { toast("No MIDI: " + error.message, true); }
++  }
++  function markersOut(abc, title) {
++    try {
++      var rows = A.markers(A.parse(abc));
++      if (!rows.length) return toast("This score has no section comments (% verse …)", true);
++      // Reaper's region/marker CSV: #, Name, Start; plain seconds work in most DAWs
++      var csv = "#,Name,Start\n" + rows.map(function (m, k) { return "M" + (k + 1) + "," + JSON.stringify(m.name) + "," + m.seconds.toFixed(3); }).join("\n") + "\n";
++      save(csv, fileName(title, " markers.csv"), "text/csv");
++    } catch (error) { toast("No markers: " + error.message, true); }
++  }
++  var toast = function (text, bad) { if (window.HeresyScore.toast) window.HeresyScore.toast(text, bad ? "bad" : ""); };
++
++  // ---- the take card
++  var takeAbc = "", takeTitle = "";
++  function take(abc, title) {
++    takeAbc = abc || ""; takeTitle = title || "";
++    paint($("takeScoreCheck"), takeAbc);
++    var ok = !!takeAbc.trim();
++    ["takeMidi", "takeMarkers"].forEach(function (id) { if ($(id)) $(id).disabled = !ok; });
++  }
++
++  // ---- the form's score
++  var formTimer = 0;
++  function form() {
++    clearTimeout(formTimer);
++    formTimer = setTimeout(function () {
++      var abc = $("abc").value, s = paint($("formScoreCheck"), abc);
++      $("voiceShiftRow").classList.toggle("is-hidden", !s);
++      ["formMidi", "formMarkers"].forEach(function (id) { $(id).disabled = !s; });
++    }, 250);
++  }
++
++  function init(hooks) {
++    window.HeresyScore.toast = hooks.toast;
++    var set = hooks.setAbc;
++    if ($("takeMidi")) $("takeMidi").addEventListener("click", function () { midiOut(takeAbc, takeTitle); });
++    if ($("takeMarkers")) $("takeMarkers").addEventListener("click", function () { markersOut(takeAbc, takeTitle); });
++    if (!$("abc")) return;
++    $("abc").addEventListener("input", form);
++    $("formMidi").addEventListener("click", function () { midiOut($("abc").value, hooks.title()); });
++    $("formMarkers").addEventListener("click", function () { markersOut($("abc").value, hooks.title()); });
++    $("voiceShiftBtn").addEventListener("click", function () {
++      var steps = parseInt($("voiceShift").value, 10), voice = $("voiceShiftWho").value;
++      try {
++        var r = A.shiftVoice($("abc").value, voice, steps);
++        set(r.abc);
++        $("voiceShiftNote").textContent = voice + ": " + r.notes + " written notes moved (tied ones count apart), now " + r.low + "–" + r.high;
++        toast(voice + " moved " + $("voiceShift").selectedOptions[0].textContent);
++      } catch (error) { toast(error.message, true); }
++    });
++    $("midiIn").addEventListener("change", function () {
++      var file = this.files && this.files[0];
++      this.value = "";
++      if (!file) return;
++      if ($("abc").value.trim() && !confirm("Replace the score in the form with " + file.name + "?")) return;
++      file.arrayBuffer().then(function (buf) {
++        var r = A.fromMidi(new Uint8Array(buf), { key: $("midiInKey").value || undefined });
++        set(r.abc);
++        toast("Score from " + file.name + ": Vocal " + r.from.vocal + " (" + r.report.voices.Vocal.notes + " notes), Ins " + r.from.ins +
++              " (" + r.report.voices.Ins.notes + "), " + r.report.key + ", " + r.report.bpm + " BPM");
++      }).catch(function (error) { toast("This MIDI could not become a score: " + error.message, true); });
++    });
++    form();
++  }
++
++  window.HeresyScore = { init: init, take: take, form: form };
++})();
+diff --git a/tools/console/heresy-transpose.js b/tools/console/heresy-transpose.js
+index 93f2113..8018d24 100644
+--- a/tools/console/heresy-transpose.js
++++ b/tools/console/heresy-transpose.js
+@@ -137,7 +137,9 @@
+         }
+         NOTE.lastIndex = i;
+         m = NOTE.exec(line);
+-        if (m && !(i > 0 && /[A-Za-z]/.test(line.charAt(i - 1)) && !/[A-Ga-g]/.test(line.charAt(i - 1)))) {
++        // a letter right after another letter is part of a word, unless that letter is a note or a
++        // rest (z, Z, x): "zd" is a rest and a D (HERESY 1028: these were left unmoved)
++        if (m && !(i > 0 && /[A-Za-z]/.test(line.charAt(i - 1)) && !/[A-Ga-gzZxX]/.test(line.charAt(i - 1)))) {
+           var up_ = m[2].toUpperCase(), octave = (m[2] === up_ ? 4 : 5) + (m[3].split("'").length - 1) - (m[3].split(",").length - 1);
+           var key = up_ + octave;
+           if (m[1]) accIn[key] = ACC[m[1]];
+diff --git a/tools/console/index.html b/tools/console/index.html
+index db28cc9..76e6772 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -464,6 +464,27 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+             <button type="button" class="btn ghost small" id="transposeBtn">Transpose</button>
+             <span class="row-hint" id="transposeNote"></span>
+           </div>
++          <!-- HERESY 1028: the check, one voice moved, MIDI out and in -->
++          <div class="score-check" id="formScoreCheck" hidden></div>
++          <div class="transpose-row is-hidden" id="voiceShiftRow">
++            <span class="label">Voice</span>
++            <select id="voiceShiftWho" aria-label="Which voice"><option value="Vocal">Vocal</option><option value="Ins">Ins</option></select>
++            <select id="voiceShift" aria-label="How far" data-tip="By steps of the scale, in the score's key: a third up moves every note to the third above it in the key, its own sharps and flats kept. The other voice and the chord symbols stay.">
++              <option value="-14">two octaves down</option><option value="-7" selected>an octave down</option><option value="-5">a sixth down</option>
++              <option value="-4">a fifth down</option><option value="-3">a fourth down</option><option value="-2">a third down</option>
++              <option value="2">a third up</option><option value="3">a fourth up</option><option value="4">a fifth up</option>
++              <option value="5">a sixth up</option><option value="7">an octave up</option><option value="14">two octaves up</option></select>
++            <button type="button" class="btn ghost small" id="voiceShiftBtn">Move</button>
++            <span class="row-hint" id="voiceShiftNote"></span>
++          </div>
++          <div class="transpose-row">
++            <span class="label">MIDI</span>
++            <button type="button" class="btn ghost small" id="formMidi" disabled>Export</button>
++            <button type="button" class="btn ghost small" id="formMarkers" disabled>Markers</button>
++            <label class="btn ghost small file-btn" data-tip="A MIDI file back into a score: one melodic line per voice (a track named vocal/voice/melody becomes Vocal, the next one Ins), on a 1/16 grid">Import…
++              <input type="file" id="midiIn" accept=".mid,.midi,audio/midi" hidden /></label>
++            <select id="midiInKey" aria-label="Key for the imported score"><option value="">key: from the file</option><optgroup label="minor"><option>Abm</option><option>Ebm</option><option>Bbm</option><option>Fm</option><option>Cm</option><option>Gm</option><option>Dm</option><option>Am</option><option>Em</option><option>Bm</option><option>F#m</option><option>C#m</option><option>G#m</option><option>D#m</option><option>A#m</option></optgroup><optgroup label="major"><option>Cb</option><option>Gb</option><option>Db</option><option>Ab</option><option>Eb</option><option>Bb</option><option>F</option><option>C</option><option>G</option><option>D</option><option>A</option><option>E</option><option>B</option><option>F#</option><option>C#</option></optgroup></select>
++          </div>
+           <div class="field">
+             <span class="label">Load an example</span>
+             <div class="chiprow">
+@@ -670,8 +691,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+                 <option value="portrait">Letter ▯</option><option value="landscape">Letter ▭</option>
+               </select></span>
+             <button type="button" class="btn ghost small" id="staffFull" data-tip="The staff over the whole screen: zoom and scroll (or double-click the staff)">⤢ Full screen</button>
++            <button type="button" class="btn ghost small" id="takeMidi" data-tip="The score as a MIDI file: tempo, meter, key, a track per voice and the sections as markers, for a DAW">MIDI</button>
++            <button type="button" class="btn ghost small" id="takeMarkers" data-tip="The sections (% verse …) as a marker list in seconds (CSV, as Reaper imports it)">Markers</button>
+             <button class="btn ghost small" id="reuseScore">Edit and re-render</button>
+           </div>
++          <!-- HERESY 1028: the score checked as YuE2's own dialect, with its numbers (heresy-score.js) -->
++          <div class="score-check" id="takeScoreCheck" hidden></div>
+           <div class="paper" id="scoreStaff"></div>
+           <pre class="paper mono is-hidden" id="scoreAbc"></pre>
+         </div>
+@@ -1114,6 +1139,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="vaes.js"></script>
+ <script src="heresy-icons.js"></script>
+ <script src="heresy-transpose.js"></script>
++<script src="heresy-abc.js"></script>
++<script src="heresy-score.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
+ <script src="heresy-inspect.js"></script>
+-- 
+2.43.0
+

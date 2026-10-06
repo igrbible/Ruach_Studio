@@ -1,0 +1,271 @@
+From 156954c446004afd2191ee7834e954cd6142d318 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 16:16:30 -0600
+Subject: [PATCH 1012/1177] Writing room: OpenRouter, runner presets, empty
+ fields kept; style rules eased
+
+HERESY 1012.
+- Writer: the chat server under Engine, or OpenRouter (model id with the
+  list of OpenRouter's models, the user's API key kept in memory unless asked
+  to be remembered, sent only to openrouter.ai).
+- Engine: one-click addresses for vLLM on Forge, LM Studio and Ollama, the
+  local runners YuE2 Studio knows.
+- An empty field in a draft means unchanged. A style-only answer came back
+  with "lyrics": "" on 30.09.2026; applying it would have wiped 228 lines.
+  The draft now shows the current text there and never applies a blank. The
+  instructions also ask the model to return unchanged fields in full.
+- Style rules eased on Viktor's word and the measurement: up to 1,600
+  characters is fine (a long style agreeing with its score sang as clearly as
+  a short one); ASCII -> is fine; only the Unicode arrow is flagged, with
+  "write -> instead". Help texts say so, and put score agreement first.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |   4 ++
+ tools/console/app.js           |  84 +++++++++++++++++++++++++++------
+ tools/console/help.js          |  18 ++++---
+ tools/console/heresy-assist.js |   8 +++-
+ tools/console/index.html       |  18 +++++++
+ tools/public/index.html.gz     | Bin 245426 -> 247639 bytes
+ 6 files changed, 110 insertions(+), 22 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index c37a7d8..df9a1a8 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1925,3 +1925,7 @@ html.hz-open { overflow: hidden; }
+ .gloss-time { background: none; border: 0; padding: 0; color: var(--amber); cursor: pointer; font-size: 12px; text-align: left; }
+ .gloss-score { color: var(--dim); font-size: 11.5px; }
+ .gloss-lyric { color: var(--dim); }
++
++/* ------------------------------------------------ HERESY 1012: writers */
++.chat-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
++.assist-provider select { width: auto; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index aa922c7..e708ebd 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4176,6 +4176,12 @@
+   }
+ 
+   $("chatUrl").value = recall("yue2.chatUrl") || "";
++  all("[data-chat-url]").forEach(function (b) {   // HERESY 1012
++    b.addEventListener("click", function () {
++      $("chatUrl").value = b.dataset.chatUrl;
++      $("chatUrl").dispatchEvent(new Event("change", { bubbles: true }));
++    });
++  });
+   $("chatUrl").addEventListener("change", function () {
+     store("yue2.chatUrl", this.value.trim() || null);
+     refreshChat().catch(function () {});
+@@ -4773,7 +4779,8 @@
+     if (saved.max) $("assistMax").value = saved.max;
+     var saveAssist = function () {
+       store(ASSIST_KEY, JSON.stringify({ brief: $("assistBrief").value, prefs: $("assistPrefs").value, task: $("assistTask").value,
+-                                         temp: $("assistTemp").value, max: $("assistMax").value }));
++                                         temp: $("assistTemp").value, max: $("assistMax").value,
++                                         provider: $("assistProvider").value, orModel: $("orModel").value }));
+       $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
+     };
+     ["assistBrief", "assistPrefs", "assistTask", "assistTemp", "assistMax"].forEach(function (id) { $(id).addEventListener("input", saveAssist); $(id).addEventListener("change", saveAssist); });
+@@ -4785,6 +4792,48 @@
+     };
+     $("draftStyle").addEventListener("input", paintDraftSize);
+ 
++    // HERESY 1012: OpenRouter. The key stays in memory unless the user asks to keep it;
++    // the page sends it only to openrouter.ai.
++    var OR = "https://openrouter.ai/api/v1", orKey = "", orListed = false;
++    try { orKey = recall("yue2.orKey") || ""; } catch (error) { orKey = ""; }
++    $("orKey").value = orKey;
++    $("orRemember").checked = !!orKey;
++    $("assistProvider").value = saved.provider === "openrouter" ? "openrouter" : "engine";
++    $("orModel").value = saved.orModel || "";
++    var paintProvider = function () {
++      var or = $("assistProvider").value === "openrouter";
++      all("#assistDrawer .or-only").forEach(function (el) { el.classList.toggle("is-hidden", !or); });
++      if (or && !orListed) {
++        orListed = true;
++        fetch(OR + "/models").then(function (r) { return r.json(); }).then(function (d) {
++          ((d && d.data) || []).map(function (m) { return m.id; }).sort().forEach(function (id) {
++            var o = document.createElement("option"); o.value = id; $("orModels").appendChild(o);
++          });
++        }).catch(function () { orListed = false; });
++      }
++    };
++    $("assistProvider").addEventListener("change", function () { paintProvider(); saveAssist(); });
++    $("orModel").addEventListener("change", saveAssist);
++    $("orKey").addEventListener("input", function () { if ($("orRemember").checked) store("yue2.orKey", this.value.trim() || null); });
++    $("orRemember").addEventListener("change", function () { store("yue2.orKey", this.checked ? ($("orKey").value.trim() || null) : null); });
++    paintProvider();
++
++    function openRouterComplete(messages, maxTokens, temperature) {
++      var key = $("orKey").value.trim(), model = $("orModel").value.trim();
++      if (!key) return Promise.reject(new Error("Put your OpenRouter API key in first"));
++      if (!model) return Promise.reject(new Error("Name an OpenRouter model first"));
++      var body = { model: model, messages: messages, max_tokens: maxTokens };
++      if (temperature !== null) body.temperature = temperature;
++      return fetch(OR + "/chat/completions", { method: "POST",
++        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key, "X-Title": "YuE2 Kit" },
++        body: JSON.stringify(body) }).then(function (r) {
++        return r.json().catch(function () { return {}; }).then(function (d) {
++          if (!r.ok) throw new Error("OpenRouter: " + ((d.error && d.error.message) || r.status));
++          return d;
++        });
++      });
++    }
++
+     $("assistBtn").addEventListener("click", function () {
+       var brief = $("assistBrief").value.trim(), button = this, started = Date.now(), model = null;
+       if (!brief) { $("assistBrief").focus(); return toast("Describe the song or the changes you want", "bad"); }
+@@ -4794,23 +4843,30 @@
+       $("assistLabel").textContent = "Writing…";
+       var ticker = setInterval(function () { $("assistStatus").textContent = "writing with " + (model || "the chat server") + "… " + Math.round((Date.now() - started) / 1000) + "s"; }, 1000);
+       var song = { title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value.trim() || STATE.abcRendered || "" };
+-      refreshChat().then(function (status) {
+-        if (!status.configured) throw new Error("Set the chat server address under Engine first");
+-        if (!status.available) throw new Error(status.error || "The chat server is not answering at " + status.base);
+-        if (!status.use) throw new Error("No model is loaded in the chat server");
+-        model = status.use;
+-        return chatComplete([{ role: "system", content: A.system($("assistPrefs").value) }, { role: "user", content: A.user(task, brief, song) }],
+-                            model, max, null, temp === "" ? null : parseFloat(temp));
+-      }).then(function (response) {
++      var messages = [{ role: "system", content: A.system($("assistPrefs").value) }, { role: "user", content: A.user(task, brief, song) }];
++      var temperature = temp === "" ? null : parseFloat(temp);
++      var ask = $("assistProvider").value === "openrouter"
++        ? (model = $("orModel").value.trim() || "OpenRouter", openRouterComplete(messages, max, temperature))
++        : refreshChat().then(function (status) {
++          if (!status.configured) throw new Error("Set the chat server address under Engine first");
++          if (!status.available) throw new Error(status.error || "The chat server is not answering at " + status.base);
++          if (!status.use) throw new Error("No model is loaded in the chat server");
++          model = status.use;
++          return chatComplete(messages, model, max, null, temperature);
++        });
++      ask.then(function (response) {
+         var choice = (response.choices || [])[0] || {};
+         var text = stripThinking(((choice.message || {}).content) || "");
+         var draft = A.parse(text), cut = choice.finish_reason === "length";
+         $("assistRawText").textContent = text;
+         $("assistRaw").classList.remove("is-hidden");
+         if (draft) {
+-          $("draftTitle").value = draft.title;
+-          $("draftStyle").value = draft.style;
+-          $("draftLyrics").value = draft.lyrics;
++          // HERESY 1012: an empty field is "unchanged", shown as the current text, never applied as a blank
++          $("draftTitle").value = draft.title.trim() || $("title").value;
++          $("draftStyle").value = draft.style.trim() || $("style").value;
++          $("draftLyrics").value = draft.lyrics.trim() || $("lyrics").value;
++          $("draftLyrics").dataset.unchanged = draft.lyrics.trim() ? "" : "1";
++          $("draftStyle").dataset.unchanged = draft.style.trim() ? "" : "1";
+           $("draftNotes").textContent = draft.notes;
+           $("assistModel").textContent = model + " · " + Math.round((Date.now() - started) / 100) / 10 + "s";
+           paintDraftSize();
+@@ -4832,8 +4888,8 @@
+     var apply = function (what) {
+       assistBefore = { title: $("title").value, style: $("style").value, lyrics: $("lyrics").value };
+       if (what === "all" && $("draftTitle").value.trim()) $("title").value = $("draftTitle").value.trim();
+-      if (what === "all" || what === "style") $("style").value = $("draftStyle").value.trim();
+-      if (what === "all" || what === "lyrics") $("lyrics").value = $("draftLyrics").value.replace(/\s+$/, "");
++      if ((what === "all" || what === "style") && $("draftStyle").value.trim()) $("style").value = $("draftStyle").value.trim();
++      if ((what === "all" || what === "lyrics") && $("draftLyrics").value.trim()) $("lyrics").value = $("draftLyrics").value.replace(/\s+$/, "");
+       ["title", "style", "lyrics"].forEach(function (id) { $(id).dispatchEvent(new Event("input", { bubbles: true })); });
+       growLyrics();
+       $("undoApply").classList.remove("is-hidden");
+diff --git a/tools/console/help.js b/tools/console/help.js
+index a150f30..5916ebd 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -29,10 +29,12 @@
+       "to get another rendering in seconds.",
+     style: "What the song should sound like, as short comma-separated phrases: language, genre, singer (e.g. female alto, raspy male), " +
+       "instruments, mood, tempo (e.g. 92 BPM). Both the score planner and the music read it; it goes in as the prompt's tag list, verbatim.\n" +
+-      "✓ Write it the way the model learned it (HERESY 1009, measured on the 110 official example styles): a tag line, " +
+-      "4 to 999 characters, half of them 69–399, median 124. Tempo and key belong to the score; if named here, they must agree with it.\n" +
+-      "⚠ No arrows, no dynamics marks (p, f, ff), no \"Mood:\" or \"Arc:\" fields, no section plan: none of the official styles has them, " +
+-      "and a line the model does not read as tags can come out sung, even whispered. The counter under the box flags them.\n" +
++      "✓ Agreement with the score first (HERESY 1012, measured 30.09.2026): the same style with key, meter and tempo set to the score " +
++      "sang clearer (0.74 against 0.60 on lyric recognition), most of all in the first minute. Tempo, meter and key live in the score.\n" +
++      "✓ Length: up to about 1,600 characters reads well; a long style that agreed with the score did as well as a 292-character one. " +
++      "The 110 official examples run 4 to 999 characters, median 124.\n" +
++      "⚠ Plain ASCII arrows (->) read cleanly; the Unicode arrow (→) is a rare token, write -> instead. " +
++      "Dynamics marks (p, f, ff) and \"Label:\" fields are in none of the official styles; the counter under the box flags them.\n" +
+       "Size: no fixed limit in the engine. Style and lyrics share the 24,576-token window with the score and the song; the counter keeps count.",
+     lyrics: "The words, with section tags such as [Verse], [Pre-Chorus], [Chorus], [Bridge], [Outro] on their own lines. " +
+       "The sections set the song's form, and together with the words its length: more sections, a longer song. " +
+@@ -319,14 +321,16 @@
+   }
+ 
+   // HERESY 1009: what the style holds that YuE2 never saw under [Tags]. Measured on the
+-  // 110 official example styles: 4 to 999 characters (half within 69..399), no arrows,
++  // 110 official example styles: 4 to 999 characters (half within 69..399), no arrows (ASCII -> accepted, 1012),
+   // no dynamics marks, "Label:" fields in 5. The engine passes the style verbatim; past
+   // what the model learned, a line of it can come out sung. The official skill also
+   // keeps notes out of the lyrics: section tags and the sung words only.
+   function styleWarnings(style, lyrics) {
+     var w = [];
+-    if (style.length > 1000) w.push("longer than any official example (999 characters)");
+-    if (/[\u2192\u2190\u21d2]|->|=>/.test(style)) w.push("arrows (none of 110 official styles has one)");
++    // HERESY 1012 (Viktor): 1,000–1,600 characters are fine, ASCII -> is fine; Unicode arrows are rare tokens.
++    if (style.length > 1600) w.push("longer than 1,600 characters (the official examples stop at 999)");
++    var uni = (style.match(/[\u2192\u2190\u21d2\u27f6]/g) || []).length;
++    if (uni) w.push(uni + " Unicode arrow" + (uni > 1 ? "s" : "") + " (\u2192): write -> instead");
+     // p f ff mp \u2026 standing alone or chained by arrows and dashes: "p\u2192f\u2192ff", "mp\u2013f", "(ff)"
+     if (/(^|[\s(;,\u2192\u2013>-])(ppp|pp|p|mp|mf|f|ff|fff)(?=[\s),;.\u2192\u2013>]|$)/.test(style)) w.push("dynamics marks (never in the official styles)");
+     var labels = style.match(/\b[A-Z][A-Za-z ]{1,20}:/g) || [];
+diff --git a/tools/console/heresy-assist.js b/tools/console/heresy-assist.js
+index 860ae8d..e33c1d1 100644
+--- a/tools/console/heresy-assist.js
++++ b/tools/console/heresy-assist.js
+@@ -27,7 +27,13 @@
+     "with them, or leave them out; never name a different one. When the draft keeps the score,",
+     "write the tempo exactly as the score has it. List every disagreement you found in the",
+     "supplied style in notes, naming both values. Measured on this engine: a style contradicting",
+-    "the score costs clear diction across the song, most of all in the first minute."
++    "the score costs clear diction across the song, most of all in the first minute.",
++    "",
++    "STYLE AS YUE2 READS IT",
++    "Up to about 1,600 characters reads well. For arcs and progressions write plain ASCII arrows",
++    "(p -> f), never the Unicode arrow character. Keep the style free of \"Label:\" headings when",
++    "plain phrases say the same. An empty field in your JSON means unchanged: when a task leaves",
++    "the lyrics or the style as they are, return them in full rather than as an empty string."
+   ].join("\n");
+ 
+   var TASKS = [
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 98dea6b..88c537a 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -148,6 +148,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+         <label class="field"><span class="label">Address <em>any server with a /v1 chat endpoint</em></span>
+           <input type="text" id="chatUrl" placeholder="http://127.0.0.1:18000/v1" autocomplete="off" spellcheck="false" /></label>
++        <!-- HERESY 1012: the local runners YuE2 Studio knows, one click each -->
++        <div class="chat-presets" id="chatPresets">
++          <button type="button" class="btn ghost small" data-chat-url="http://192.168.1.10:8008/v1">vLLM · Forge :8008</button>
++          <button type="button" class="btn ghost small" data-chat-url="http://127.0.0.1:1234/v1">LM Studio :1234</button>
++          <button type="button" class="btn ghost small" data-chat-url="http://127.0.0.1:11434/v1">Ollama :11434</button>
++        </div>
+         <p class="row-hint" id="chatHint">Uses whatever model the server has loaded. This page never loads,
+           switches or unloads a model on it.</p>
+       </div>
+@@ -293,6 +299,18 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           <textarea id="assistBrief" rows="4" placeholder="Build an arc for every section from the style and the lyrics; keep my words."></textarea>
+         </label>
+         <div class="assist-chips" id="assistChips"></div>
++        <!-- HERESY 1012: the writer is the page's chat server, or OpenRouter with the user's key -->
++        <div class="field-row wrap assist-provider">
++          <label class="field"><span class="label">Writer</span>
++            <select id="assistProvider">
++              <option value="engine">Chat server under Engine (vLLM, LM Studio, Ollama)</option>
++              <option value="openrouter">OpenRouter</option>
++            </select></label>
++          <label class="field grow or-only"><span class="label">Model <em>any OpenRouter id</em></span>
++            <input type="text" id="orModel" list="orModels" placeholder="provider/model" autocomplete="off" spellcheck="false" /><datalist id="orModels"></datalist></label>
++          <label class="field or-only"><span class="label">API key</span><input type="password" id="orKey" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
++        </div>
++        <label class="check or-only"><input type="checkbox" id="orRemember" /> <span>Remember the key in this browser (otherwise it lives until the page is closed)</span></label>
+         <div class="field-row wrap">
+           <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
+           <label class="field assist-num"><span class="label">Temperature <em>blank: the server's</em></span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
+-- 
+2.43.0
+

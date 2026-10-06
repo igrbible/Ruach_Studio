@@ -1,0 +1,217 @@
+From 6a70296d9039c18bf0dbf8a603e1bffce741a168 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 23:10:03 -0600
+Subject: [PATCH 1143/1177] HERESY 1166: no page inside the server, nothing
+ gzipped
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «Мы договорились избавиться от index.html.gz и других .gz,
+потому что это локальный сервис и нам нет смысла экономить на сжатии файлов».
+
+- CMake embeds nothing: no xxd header, no tools/public/index.html.gz in git.
+- yue-server reads build/tools/public/index.html from disk at every load:
+  RUACH_PAGE (start.sh), else the page beside its own build. A page not
+  built yet answers 503 with what to run, never an old copy; no 406 for a
+  client without gzip. The log names the page at start.
+- The spectrum from the lab is read as it comes (the lab sends it as it is);
+  a spectrum overtaken by another take no longer leaves its "Forge is
+  measuring…" over the newer one's result.
+
+Checked on a throwaway CPU server: the page beside the build byte for byte,
+not gzipped though gzip is accepted; 503 for a missing page; 200 for a
+client that asks for no gzip.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ CMakeLists.txt                   |  18 +++---------
+ tools/console/heresy-spectrum.js |  47 +++++++++++++++----------------
+ tools/public/index.html.gz       | Bin 473123 -> 0 bytes
+ tools/yue-server.cpp             |  47 ++++++++++++++++++-------------
+ 4 files changed, 54 insertions(+), 58 deletions(-)
+ delete mode 100644 tools/public/index.html.gz
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 09d00ce..ececb28 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -126,21 +126,11 @@ add_executable(yue-synth tools/yue-synth.cpp src/request.cpp src/model-store.cpp
+ target_link_libraries(yue-synth PRIVATE yyjson)
+ link_ggml_backends(yue-synth)
+ 
+-# webui: convert tools/public/index.html.gz to a C header for embedding.
+-# the .gz is committed to git so the C++ build works without npm.
+-# to update: cd tools/webui && npm install && npm run build, then rebuild yue-server.
+-set(WEBUI_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/tools/public/index.html.gz")
+-set(WEBUI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/index.html.gz.hpp")
+-add_custom_command(
+-    OUTPUT "${WEBUI_OUTPUT}"
+-    COMMAND "${CMAKE_COMMAND}" "-DINPUT=${WEBUI_INPUT}" "-DOUTPUT=${WEBUI_OUTPUT}" -P "${CMAKE_CURRENT_SOURCE_DIR}/tools/xxd.cmake"
+-    DEPENDS "${WEBUI_INPUT}"
+-    COMMENT "Embedding webui into index.html.gz.hpp"
+-)
+-set_source_files_properties(${WEBUI_OUTPUT} PROPERTIES GENERATED TRUE)
++# HERESY 1166: no page inside the server and nothing gzipped (a studio of one machine and its network): yue-server
++# reads the page build.sh makes, tools/public/index.html, from disk at every load.
+ 
+-# yue-server: HTTP server (single slot job queue + embedded webui)
+-add_executable(yue-server tools/yue-server.cpp src/request.cpp src/model-store.cpp ${WEBUI_OUTPUT})
++# yue-server: HTTP server (single slot job queue; the page from disk)
++add_executable(yue-server tools/yue-server.cpp src/request.cpp src/model-store.cpp)
+ target_include_directories(yue-server PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+ target_link_libraries(yue-server PRIVATE yyjson httplib)
+ link_ggml_backends(yue-server)
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+index 41d9456..0e63a63 100644
+--- a/tools/console/heresy-spectrum.js
++++ b/tools/console/heresy-spectrum.js
+@@ -165,8 +165,8 @@
+   // else as it is. Every phase is timed; the times go to the status line.
+   var cache = [];
+   // HERESY 1020: the spectrum computed on Forge by heresy-lab (lab/spectrum_job.py, the same
+-  // method in numpy), fetched through the Kit at /lab/spectrum: ~8 MB gzipped instead of the
+-  // whole take. 202 while it is computed. Its layout: "HSP1", uint32 header length, header
++  // method in numpy), fetched through the Kit at /lab/spectrum: about 10 MB for 7 minutes, as it is
++  // (HERESY 1166: nothing gzipped), instead of the whole take. 202 while it is computed. Its layout: "HSP1", uint32 header length, header
+   // JSON, uint8 spectrogram (0.5 dB steps from -120 dB), float32 Welch average, float32 bands.
+   function fromLab(name, say, source) {
+     var started = performance.now(), tries = 0;
+@@ -186,32 +186,28 @@
+         return new Promise(function (resolve) { setTimeout(resolve, 1500); }).then(ask);
+       });
+     }
+-    return ask().then(function (buf) {
+-      var fetched = (performance.now() - started) / 1000, bytes = buf.byteLength;
+-      say("unpacking\u2026");
+-      var ds = new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip")));
+-      return ds.arrayBuffer().then(function (raw) {
+-        var dv = new DataView(raw), magic = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
+-        if (magic !== "HSP1") throw new Error("not a spectrum");
+-        var hl = dv.getUint32(4, true), h = JSON.parse(new TextDecoder().decode(new Uint8Array(raw, 8, hl))), o = 8 + hl;
+-        var n = h.frames * h.bins, q = new Uint8Array(raw, o, n), db = new Float32Array(n);
+-        for (var i = 0; i < n; i++) db[i] = h.db0 + q[i] * h.dbStep;
+-        o += n;
+-        var avg = new Float32Array(raw.slice(o, o + 4 * h.welchBins)); o += 4 * h.welchBins;
+-        var bands = Array.prototype.slice.call(new Float32Array(raw.slice(o, o + 24)));
+-        var freqs = new Float64Array(h.welchBins);
+-        for (var k = 0; k < h.welchBins; k++) freqs[k] = k * h.sr / h.welchN;
+-        return { seconds: h.seconds, peak: h.peak, sr: h.sr, spec: { db: db, frames: h.frames, bins: h.bins, hop: h.hop },
+-                 freqs: freqs, avg: avg, bands: bands, bytes: bytes, where: "Forge",
+-                 times: { fetch: fetched, decode: 0, stft: 0, welch: 0 } };
+-      });
++    return ask().then(function (raw) {
++      var fetched = (performance.now() - started) / 1000, bytes = raw.byteLength;
++      var dv = new DataView(raw), magic = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
++      if (magic !== "HSP1") throw new Error("not a spectrum");
++      var hl = dv.getUint32(4, true), h = JSON.parse(new TextDecoder().decode(new Uint8Array(raw, 8, hl))), o = 8 + hl;
++      var n = h.frames * h.bins, q = new Uint8Array(raw, o, n), db = new Float32Array(n);
++      for (var i = 0; i < n; i++) db[i] = h.db0 + q[i] * h.dbStep;
++      o += n;
++      var avg = new Float32Array(raw.slice(o, o + 4 * h.welchBins)); o += 4 * h.welchBins;
++      var bands = Array.prototype.slice.call(new Float32Array(raw.slice(o, o + 24)));
++      var freqs = new Float64Array(h.welchBins);
++      for (var k = 0; k < h.welchBins; k++) freqs[k] = k * h.sr / h.welchN;
++      return { seconds: h.seconds, peak: h.peak, sr: h.sr, spec: { db: db, frames: h.frames, bins: h.bins, hop: h.hop },
++               freqs: freqs, avg: avg, bands: bands, bytes: bytes, where: "Forge",
++               times: { fetch: fetched, decode: 0, stft: 0, welch: 0 } };
+     });
+   }
+ 
+   function analyse(take, say) {
+     var key0 = take.url;
+     for (var j = 0; j < cache.length; j++) if (cache[j].url === key0) return cache[j].promise;
+-    if (take.name && window.DecompressionStream) {
++    if (take.name) {
+       var viaLab = fromLab(take.name, say, take.source).catch(function (error) {
+         cache = cache.filter(function (c) { return c.url !== key0; });
+         // only with no lab at all is the whole file fetched to measure here: on a phone line a
+@@ -455,8 +451,11 @@
+     if (!panel || !panel.open || !state.take || !panel.offsetParent) return;
+     var take = state.take, token = ++state.drawn;
+     var wantB = state.other;
+-    var jobs = [analyse(take, say)];
+-    if (wantB) jobs.push(analyse(state.hooks.byUrl(wantB) || { url: wantB }, say));
++    // HERESY 1166: a render overtaken by a newer one (another take, a click on its step) says nothing more: its
++    // "Forge is measuring…" used to land over the newer one's result and stay there
++    var sayHere = function (text, bad) { if (token === state.drawn) say(text, bad); };
++    var jobs = [analyse(take, sayHere)];
++    if (wantB) jobs.push(analyse(state.hooks.byUrl(wantB) || { url: wantB }, sayHere));
+     Promise.all(jobs).then(function (res) {
+       if (token !== state.drawn) return;      // another take or setting since
+       var a = res[0], b = res[1] || null;
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 3fd628b..e9fee8d 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1,4 +1,4 @@
+-// yue-server.cpp: HTTP server (async job queue + embedded webui)
++// yue-server.cpp: HTTP server (async job queue; the page from disk)
+ //
+ // The compute endpoint creates a job and returns its ID immediately. A single
+ // worker thread owns the resident models and runs jobs in FIFO order. The
+@@ -12,7 +12,6 @@
+ #include "audio-io.h"
+ #include "flac-enc.h"
+ #include "httplib.h"
+-#include "index.html.gz.hpp"
+ #include "pipeline.h"
+ #include "version.h"
+ #include "yyjson.h"
+@@ -2244,26 +2243,34 @@ int main(int argc, char ** argv) {
+         });
+     }
+ 
+-    // HERESY 1130: the page from disk at every load (RUACH_PAGE, which start.sh points at build/tools/public/index.html),
+-    // so a page built anew shows on a reload: no server build, no restart, no gzip (a studio of one machine and its
+-    // network has no use for it). The copy embedded at build time answers only when there is no page on disk.
+-    svr.Get("/", [](const httplib::Request & req, httplib::Response & res) {
+-        const char * disk = getenv("RUACH_PAGE");
+-        if (disk && *disk) {
+-            std::string page = read_file(disk);
+-            if (!page.empty()) {
+-                res.set_header("Cache-Control", "no-store");
+-                res.set_content(page, "text/html; charset=utf-8");
+-                return;
+-            }
+-        }
+-        if (req.get_header_value("Accept-Encoding").find("gzip") == std::string::npos) {
+-            res.status = 406;
+-            res.set_content("gzip required", "text/plain");
++    // HERESY 1130: the page from disk at every load, so a page built anew shows on a reload: no server build, no
++    // restart. HERESY 1166: and only from disk: no copy inside the server and nothing gzipped (a studio of one machine
++    // and its network has no use for it). RUACH_PAGE (start.sh points it at build/tools/public/index.html), else the
++    // page beside this build (build/build/yue-server -> build/tools/public/index.html). A page not built yet is said
++    // so, not served from an old copy.
++    static std::string page_path;
++    if (const char * env_page = getenv("RUACH_PAGE"); env_page && *env_page) {
++        page_path = env_page;
++    } else {
++        std::error_code       ec;
++        std::filesystem::path exe = std::filesystem::read_symlink("/proc/self/exe", ec);
++        if (ec) {
++            exe = std::filesystem::absolute(argv[0], ec);
++        }
++        page_path = (exe.parent_path().parent_path() / "tools" / "public" / "index.html").string();
++    }
++    fprintf(stderr, "[Server] The page: %s\n", page_path.c_str());
++    svr.Get("/", [](const httplib::Request &, httplib::Response & res) {
++        std::string page = read_file(page_path);
++        if (page.empty()) {
++            res.status = 503;
++            res.set_content("Ruach Studio: the page is not built (" + page_path +
++                                " is missing). Run ./build.sh in the studio's folder, then reload.\n",
++                            "text/plain; charset=utf-8");
+             return;
+         }
+-        res.set_header("Content-Encoding", "gzip");
+-        res.set_content(std::string((const char *) index_html_gz, index_html_gz_len), "text/html");
++        res.set_header("Cache-Control", "no-store");
++        res.set_content(page, "text/html; charset=utf-8");
+     });
+ 
+     fprintf(stderr, "[Server] yue-server %s\n", YUE2_VERSION);
+-- 
+2.43.0
+

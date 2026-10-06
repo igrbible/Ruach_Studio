@@ -1,0 +1,76 @@
+From 28c6b10503cb88e1529eaf08c08f8d1bfcf97fd3 Mon Sep 17 00:00:00 2001
+From: Prometheus2 <noreply@anthropic.com>
+Date: Wed, 30 Sep 2026 10:02:10 -0600
+Subject: [PATCH 1003/1177] Sound steps: a ceiling of 160
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Слово Виктора 30.09.2026: «по шагам, в патч вшей макс 160 шагов».
+
+До правки проверялось только «не меньше 1» — и в сервере, и на
+странице. Опечатка в поле (1600 вместо 160) означала бы час работы
+решателя впустую: каждый шаг midpoint гоняет звуковую модель дважды по
+всей песне.
+
+Граница стоит в двух местах вровень: поле odeSteps (min 1, max 160) и
+проверка запроса в сервере. Подсказка (i) говорит о потолке.
+
+Проверено живым запросом: 160 принят, 161 и 0 — отказ 400 со словом
+«steps must be between 1 and 160».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/help.js      |   2 +-
+ tools/console/index.html   |   2 +-
+ tools/public/index.html.gz | Bin 214148 -> 214165 bytes
+ tools/yue-server.cpp       |   6 ++++--
+ 4 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/help.js b/tools/console/help.js
+index be63b50..6d4c3d8 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -11,7 +11,7 @@
+   "use strict";
+ 
+   var ODE = "How many steps the sound solver takes to turn the music tokens into audio (flow matching, midpoint method). " +
+-    "32 is the release setting.\n" +
++    "32 is the release setting; 160 is the ceiling.\n" +
+     "Each step runs the sound model twice over the whole song, so 64 steps make this stage take twice as long as 32; " +
+     "the music itself (melody, words, length) is already fixed by then and does not change.\n" +
+     "Fewer steps (8–16) are quicker drafts. Whether 64 sounds better than 32 has not been published: " +
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 98d9c4b..f33c88c 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -475,7 +475,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <div class="drawer-body">
+           <div class="out-grid">
+             <label class="field"><span class="label">ODE steps <em>sound solver</em></span>
+-              <input type="number" id="odeSteps" step="1" /></label>
++              <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
+             <label class="field"><span class="label">Max length <em>seconds</em></span>
+               <input type="number" id="maxLength" step="10" /></label>
+             <label class="field"><span class="label">Sound variations <em>1–9</em></span>
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index c26555b..99868a5 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1293,9 +1293,11 @@ static bool validate(const httplib::Request & req, httplib::Response & res, Yue2
+         res.set_content(json_string("error", "unknown output format"), "application/json");
+         return false;
+     }
+-    if (r->steps < 1) {
++    // HERESY 1003: a ceiling of 160. Before it only "at least 1" was checked, so a slip
++    // of the finger (1600) meant an hour of flow matching for nothing.
++    if (r->steps < 1 || r->steps > 160) {
+         res.status = 400;
+-        res.set_content(json_string("error", "steps must be positive"), "application/json");
++        res.set_content(json_string("error", "steps must be between 1 and 160"), "application/json");
+         return false;
+     }
+     if (r->lm_batch_size < 1 || r->lm_batch_size > g_pipeline.params.max_batch) {
+-- 
+2.43.0
+

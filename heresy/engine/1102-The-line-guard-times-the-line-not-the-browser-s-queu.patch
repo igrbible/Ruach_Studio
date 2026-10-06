@@ -1,0 +1,43 @@
+From a2c46e813e43d12b66dc835db2528950f8247085 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 21:13:30 -0600
+Subject: [PATCH 1102/1177] The line guard times the line, not the browser's
+ queue (1143)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-net.js | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/heresy-net.js b/tools/console/heresy-net.js
+index 5ca756c..8f04b8a 100644
+--- a/tools/console/heresy-net.js
++++ b/tools/console/heresy-net.js
+@@ -21,11 +21,20 @@
+       (S.far ? "Far: marks show at once and the studio confirms them; the page waits longer before it calls a silence a failure."
+              : "Near: the studio answers at once.");
+   }
++  // HERESY 1143: the time on the line only (the request's start to its first byte, from Resource Timing), not the wait in
++  // the browser's own queue: during a render the log stream, the audio and the polls hold the six connections a host
++  // has, and a ping queued behind them read as 2–6 s of distance (measured: the engine answers in 1 ms then)
++  function lineTime(url, t0) {
++    var all = performance.getEntriesByName ? performance.getEntriesByName(new URL(url, location.href).href) : [];
++    var e = all[all.length - 1];
++    if (performance.clearResourceTimings && performance.getEntriesByType("resource").length > 120) performance.clearResourceTimings();
++    return e && e.requestStart > 0 && e.responseStart >= e.requestStart ? e.responseStart - e.requestStart : performance.now() - t0;
++  }
+   function ping() {
+-    var t0 = performance.now();
+-    return fetch("/health?_=" + Date.now(), { cache: "no-store" }).then(function (r) {
++    var t0 = performance.now(), url = "/health?_=" + Date.now();
++    return fetch(url, { cache: "no-store" }).then(function (r) {
+       return r.text().then(function () {
+-        S.samples.push(performance.now() - t0);
++        S.samples.push(lineTime(url, t0));
+         if (S.samples.length > 5) S.samples.shift();
+         S.rtt = median(S.samples); S.down = false;
+         S.far = !LOCAL || S.rtt > 25;
+-- 
+2.43.0
+

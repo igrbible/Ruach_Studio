@@ -1,0 +1,287 @@
+From fd9cecea1de0ebfdfe2fd631f5dd23b48bc5a587 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 00:13:22 -0600
+Subject: [PATCH 1064/1177] Workspace locks in the Collection; the GPU memory
+ presets go, Auto and Manual stay
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1070: right-click a workspace: Lock / Unlock Workspace Deletion, Lock / Unlock Tracks Deletion; a 🔒
+beside its name; a locked take cannot be deleted for good either.
+HERESY 1071: the page guessed a preset from the knobs, and 24 and 32 GB differed only by Keep models loaded,
+so a 24 GB card showed 32 GB again; now Auto (fitted to the GPU found, keep-loaded stays yours) or Manual.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  2 +
+ tools/console/app.js               | 91 ++++++++++++------------------
+ tools/console/heresy-collection.js | 33 ++++++++---
+ tools/console/index.html           |  4 +-
+ 4 files changed, 65 insertions(+), 65 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6fcd430..10130e8 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2560,3 +2560,5 @@ body[data-tab="train"] .library, body[data-tab="train"] .col-grip { display: non
+ .hi-ok { font-size: 11px; color: var(--good); white-space: nowrap; }
+ tr.is-heard .hi-tag { color: var(--good); }
+ @media (max-width: 640px) { .hi-name { width: auto; } .hi-plays { width: auto; } .hi-table td { display: block; border: 0; } .hi-table tr { display: block; border-bottom: 1px solid var(--line-soft); } }
++/* HERESY 1070: a locked workspace */
++.coll-lock { flex: none; font-size: 11px; opacity: .75; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 443e629..d43d076 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2430,50 +2430,37 @@
+   // GPU memory between songs, the context (key/value cache) size and the VAE
+   // tile size. Presets only fill the form; Save applies.
+ 
+-  var MEM_PRESETS = {
+-    "8":  { model: "Q8_0", max_seq: 12288, keep_loaded: false, vae_core: 256 },
+-    "12": { model: "BF16", max_seq: 16384, keep_loaded: false, vae_core: 512 },
+-    "16": { model: "BF16", max_seq: 0, keep_loaded: false, vae_core: 512 },
+-    "24": { model: "BF16", max_seq: 0, keep_loaded: false, vae_core: 1024 },
+-    "32": { model: "BF16", max_seq: 0, keep_loaded: true, vae_core: 1024 }
+-  };
++  // HERESY 1071 (Viktor 02.10.2026): no size presets, Auto and Manual only. Auto fits the backbone, the
++  // context and the VAE tiles to the GPU the server found; "Keep models loaded" stays your own choice.
++  function autoKnobs(gib) {
++    if (gib >= 23) return { model: "BF16", max_seq: 0, vae_core: 1024 };
++    if (gib >= 15.4) return { model: "BF16", max_seq: 0, vae_core: 512 };
++    if (gib >= 11.4) return { model: "BF16", max_seq: 16384, vae_core: 512 };
++    if (gib >= 7.4) return { model: "Q8_0", max_seq: 12288, vae_core: 256 };
++    return null;
++  }
++  function gpuGib() { var gpu = STATE.hardware && (STATE.hardware.gpus || [])[0]; return gpu ? gpu.total_bytes / GIB : 0; }
+   var SETTING_KEYS = ["model", "keep_loaded", "max_seq", "vae_core"];
+   var GIB = 1073741824;
+ 
+   function fullContext() { return (STATE.settings && STATE.settings.max_seq_full) || (STATE.props && STATE.props.context) || 24576; }
+ 
+-  function presetFits(preset) {
+-    var models = (STATE.settings && STATE.settings.models) || [];
+-    return models.indexOf(preset.model) >= 0;
+-  }
+-
+-  function matchPreset(settings) {
+-    var found = "";
+-    Object.keys(MEM_PRESETS).forEach(function (size) {
+-      var p = MEM_PRESETS[size];
+-      if (p.max_seq === settings.max_seq && p.keep_loaded === !!settings.keep_loaded && p.vae_core === settings.vae_core &&
+-          (!presetFits(p) || p.model === settings.model)) found = size;
+-    });
+-    return found;
+-  }
++  function modelThere(m) { return ((STATE.settings && STATE.settings.models) || []).indexOf(m) >= 0; }
+ 
+-  // HERESY 1027: the server keeps the knobs, not the preset's name, and 24 and 32 GB differ by
+-  // "Keep models loaded" alone: ticking it after choosing 24 made F5 show 32. The page now keeps
+-  // the choice (yue2.memPreset) and shows it while model, context and VAE tiles are still its own.
++  // The choice is kept (yue2.memPreset: auto | manual) and nothing is guessed from the knobs: Auto shows
++  // only while the knobs are still what Auto set for this GPU; a knob moved by hand makes it Manual.
+   var PRESET_KEY = "yue2.memPreset";
+   function shownPreset(settings) {
+-    var picked = recall(PRESET_KEY), p = picked && MEM_PRESETS[picked];
+-    if (p && p.max_seq === settings.max_seq && p.vae_core === settings.vae_core && (!presetFits(p) || p.model === settings.model)) return picked;
+-    return matchPreset(settings);
++    var a = autoKnobs(gpuGib());
++    if (recall(PRESET_KEY) !== "auto" || !a) return "manual";
++    var same = a.max_seq === settings.max_seq && a.vae_core === settings.vae_core && (!modelThere(a.model) || a.model === settings.model);
++    return same ? "auto" : "manual";
+   }
+-  // Sizes above the GPU found by the server are marked, and Auto says what it found.
++  // Auto says what it found and what it sets.
+   function paintPresetSizes() {
+-    var gpu = STATE.hardware && (STATE.hardware.gpus || [])[0], gib = gpu ? gpu.total_bytes / GIB : 0;
+-    Array.prototype.forEach.call($("memPreset").options, function (o) {
+-      if (o.value === "auto") { o.textContent = "Auto (detect" + (gib ? ": " + gib.toFixed(1) + " GB found" : "") + ")"; return; }
+-      if (!MEM_PRESETS[o.value]) return;
+-      o.textContent = o.value + " GB" + (gib && +o.value > gib + 0.6 ? " · more than this GPU" : "");
+-    });
++    var gib = gpuGib(), a = autoKnobs(gib), o = $("memPreset").querySelector('option[value="auto"]');
++    if (o) o.textContent = "Auto" + (gib ? " (" + gib.toFixed(1) + " GB found" + (a ? ": " + (modelThere(a.model) ? a.model + ", " : "") +
++      (a.max_seq ? "context " + a.max_seq.toLocaleString() : "whole context") + ", VAE tiles " + a.vae_core : ": too small for YuE2") + ")" : " (detect)");
+   }
+ 
+   // Top-bar model choice: the backbone files the server was started with.
+@@ -2531,8 +2518,6 @@
+     else notes.push("Context " + rows.toLocaleString() + " rows: songs up to about " + clock(Math.max(0, rows - 2500) / FRAME_RATE) +
+                     " with a typical prompt; longer ones will not fit.");
+     notes.push($("setKeepLoaded").checked ? "Models stay in GPU memory between songs." : "Each stage leaves GPU memory when it is done.");
+-    var p = MEM_PRESETS[$("memPreset").value];   // HERESY 1027: the preset, with your own keep-loaded choice
+-    if (p && p.keep_loaded !== $("setKeepLoaded").checked) notes.push("(" + $("memPreset").value + " GB preset, with models " + ($("setKeepLoaded").checked ? "kept loaded" : "unloaded") + " by your choice.)");
+     $("computeHint").textContent = notes.join(" ");
+   }
+ 
+@@ -2563,32 +2548,24 @@
+   ["setMaxSeq", "setVaeCore", "setKeepLoaded", "setModel"].forEach(function (id) {
+     $(id).addEventListener("input", function () {
+       STATE.settingsDirty = true;
+-      if (id !== "setKeepLoaded") $("memPreset").value = "";   // HERESY 1027: keep-loaded is a choice within a preset
++      if (id !== "setKeepLoaded") $("memPreset").value = "manual";   // HERESY 1071: a knob moved by hand is Manual
+       paintComputeHint();
+     });
+     $(id).addEventListener("change", function () { STATE.settingsDirty = true; paintComputeHint(); });
+   });
+ 
+   $("memPreset").addEventListener("change", function () {
+-    var size = this.value;
+-    if (!size) return;
+     STATE.settingsDirty = true;
+-    if (size === "auto") {
+-      var gpu = STATE.hardware && (STATE.hardware.gpus || [])[0], gib = gpu ? gpu.total_bytes / GIB : 0, pick = "";
+-      Object.keys(MEM_PRESETS).forEach(function (c) { if (gib + 0.6 >= +c) pick = c; });
+-      if (!pick) { this.value = ""; return toast("No GPU size detected — choose one", "bad"); }
+-      size = pick;
+-      this.value = size;
+-    }
+-    var p = MEM_PRESETS[size], models = (STATE.settings && STATE.settings.models) || [];
+-    if (models.indexOf(p.model) >= 0) $("setModel").value = p.model;
+-    $("setMaxSeq").value = p.max_seq;
+-    $("setKeepLoaded").checked = p.keep_loaded;
+-    $("setVaeCore").value = p.vae_core;
++    if (this.value !== "auto") return paintComputeHint();          // Manual: the knobs stay as they are, yours
++    var gib = gpuGib(), a = autoKnobs(gib);
++    if (!a) { this.value = "manual"; return toast(gib ? gib.toFixed(1) + " GB is too small for YuE2: set the knobs by hand" : "No GPU detected: set the knobs by hand", "bad"); }
++    if (modelThere(a.model)) $("setModel").value = a.model;
++    $("setMaxSeq").value = a.max_seq;
++    $("setVaeCore").value = a.vae_core;
+     paintComputeHint();
+-    toast(size + " GB preset: " + (models.indexOf(p.model) >= 0 ? p.model + ", " : "") +
+-          (p.max_seq ? "context " + p.max_seq.toLocaleString() : "whole context") + ", models " +
+-          (p.keep_loaded ? "kept loaded" : "unloaded after each song") + ", VAE tiles " + p.vae_core + ". Press Save to apply.");
++    toast("Auto for " + gib.toFixed(1) + " GB: " + (modelThere(a.model) ? a.model + ", " : "") +
++          (a.max_seq ? "context " + a.max_seq.toLocaleString() : "whole context") + ", VAE tiles " + a.vae_core +
++          "; keeping models loaded stays your choice. Press Save to apply.");
+   });
+ 
+   $("resetPageSettings").addEventListener("click", function () {   // HERESY 1027
+@@ -2602,7 +2579,7 @@
+     try { next = readSettingsForm(); } catch (error) { return toast(error.message, "bad"); }
+     var current = STATE.settings || {}, changed = {};
+     SETTING_KEYS.forEach(function (key) { if (next[key] !== undefined && next[key] !== current[key]) changed[key] = next[key]; });
+-    store(PRESET_KEY, MEM_PRESETS[$("memPreset").value] ? $("memPreset").value : null);   // HERESY 1027
++    store(PRESET_KEY, $("memPreset").value === "auto" ? "auto" : "manual");   // HERESY 1071
+     if (!Object.keys(changed).length) { paintSettings(STATE.settings || {}, true); return toast("Saved: the knobs were already so"); }
+     var button = this;
+     button.disabled = true;
+@@ -3489,6 +3466,10 @@
+   }
+ 
+   function deleteTake(take, confirmed, quiet) {
++    if (window.HeresyCollection && window.HeresyCollection.takeLocked(take.name)) {   // HERESY 1070
++      toast("\u201c" + displayTitle(take) + "\u201d is in a workspace that locks its takes: unlock it first (right-click on the workspace)", "bad");
++      return Promise.resolve(false);
++    }
+     var asked = confirmed ? Promise.resolve(true)
+       : window.HeresyDialog.confirm("Delete \u201c" + displayTitle(take) + "\u201d and its files?\n\nThis is for good. To keep a way back, move it to the trash from its menu (right-click).", { danger: true });
+     return asked.then(function (ok) {
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 97bcb47..18e54a8 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -39,7 +39,7 @@
+ 
+   function load() {
+     return api("/catalog").then(function (d) {
+-      state.rows = d.takes || []; state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true;
++      state.rows = d.takes || []; state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {};
+       var names = {};
+       state.rows.forEach(function (r) { names[r.name] = 1; });
+       Object.keys(state.sel).forEach(function (n) { if (!names[n]) delete state.sel[n]; });
+@@ -89,7 +89,9 @@
+     $("collSide").innerHTML = item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
+       item("__none", "Not in a workspace", counts.__none) +
+       '<div class="coll-cap">Workspaces</div>' + state.ws.map(function (w) {
+-        return item(w, w, perWs[w] || 0).replace('<span class="coll-n">', '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete…" role="button">\u22ef</span><span class="coll-n">');
++        var lk = (state.locks || {})[w] || {}, lock = lk.workspace || lk.tracks ?   // HERESY 1070
++          '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "";
++        return item(w, w, perWs[w] || 0).replace('<span class="coll-n">', lock + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock…" role="button">\u22ef</span><span class="coll-n">');
+       }).join("") +
+       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
+       '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined);
+@@ -193,7 +195,7 @@
+   }
+   function act(body, done) {
+     return api("/collection", body).then(function (d) {
+-      state.rows = d.takes || state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0;
++      state.rows = d.takes || state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
+       if (done) toast(done);
+       paint();
+       paintCurrent();
+@@ -380,7 +382,7 @@
+         if (ok) return api("/trash", { op: "move", names: n });
+       }).then(function (d) {
+         if (!d) return;
+-        toast(d.moved.length + " moved to the trash"); state.sel = {};
++        toast(d.moved.length + " moved to the trash" + (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: their workspace locks its takes" : ""), d.locked && d.locked.length); state.sel = {};
+         if (hooks.refreshLibrary) hooks.refreshLibrary();
+         return load();
+       }).catch(function (e) { toast(e.message, true); });
+@@ -531,9 +533,25 @@
+       { icon: "\u2193", label: "New takes land here", checked: current() === w, action: function () { store(WS_KEY, current() === w ? "" : w); paintCurrent(); state.hooks.libraryChanged && state.hooks.libraryChanged(); } },
+       { sep: true },
+       { icon: "Aa", label: "Rename\u2026", action: function () { renameWs(w); } },
+-      { icon: "\ud83d\uddd1", label: "Delete\u2026", danger: true, action: function () { deleteWs(w); } }
++      { sep: true },                                   // HERESY 1070: the safety catches
++      lockItem(w, "workspace", "Workspace Deletion"),
++      lockItem(w, "tracks", "Tracks Deletion"),
++      { sep: true },
++      { icon: "\ud83d\uddd1", label: "Delete\u2026", danger: true, disabled: isLocked(w, "workspace"), hint: isLocked(w, "workspace") ? "locked" : "", action: function () { deleteWs(w); } }
+     ]);
+   }
++  function isLocked(w, what) { return !!((state.locks || {})[w] || {})[what]; }
++  function lockItem(w, what, label) {
++    var on = isLocked(w, what);
++    return { icon: on ? "\ud83d\udd13" : "\ud83d\udd12", label: (on ? "Unlock " : "Lock ") + label, action: function () {
++      act({ op: "lock", workspace: w, what: what, on: !on }, (on ? "Unlocked: " : "Locked: ") + label.toLowerCase() + " of \u201c" + w + "\u201d").then(function () { paint(); });
++    } };
++  }
++  // a take no deletion may reach: it is in a workspace whose tracks are locked
++  function takeLocked(name) {
++    var r = rowOf(name);
++    return !!r && r.workspaces.some(function (w) { return isLocked(w, "tracks"); });
++  }
+   function followRename(from, to) {           // the place on the left and the workspace in hand follow it
+     if (state.place === from) state.place = to;
+     if (recall(WS_KEY) === from) store(WS_KEY, to);
+@@ -575,7 +593,8 @@
+         var spare = $("wsDelSpare") && $("wsDelSpare").checked;
+         var gone = takes.filter(function (r) { return !(spare && r.workspaces.length > 1); }).map(function (r) { return r.name; });
+         done = api("/trash", { op: "move", names: gone }).then(function (d) {
+-          return act({ op: "ws-delete", workspace: w }, d.moved.length + " take" + (d.moved.length === 1 ? "" : "s") + " to the trash; \u201c" + w + "\u201d deleted");
++          return act({ op: "ws-delete", workspace: w }, d.moved.length + " take" + (d.moved.length === 1 ? "" : "s") + " to the trash; \u201c" + w + "\u201d deleted" +
++            (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: another workspace locks them" : ""));
+         }).then(function (ok) { if (ok) followRename(w, ""); if (state.hooks.refreshLibrary) state.hooks.refreshLibrary(); return load(); });
+       }
+       closeDialog();
+@@ -694,7 +713,7 @@
+   // for the takes column: hidden ones stay out of it
+   function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
+ 
+-  window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, matcher: matcher, landed: landed, inCurrent: inCurrent,
++  window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, takeLocked: takeLocked, matcher: matcher, landed: landed, inCurrent: inCurrent,
+                               current: current, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f7eb062..53100c0 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -100,9 +100,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <label class="field"><span class="label">Model <span class="info" tabindex="-1" role="img" aria-label="About the model files" data-tip-ref="tip-model">i</span><em>the backbone file</em></span>
+         <select id="setModel"></select></label>
+       <label class="field"><span class="label">GPU memory preset <em>sets the knobs below; then Save</em></span>
+-        <select id="memPreset"><option value="">Custom</option><option value="auto">Auto (detect)</option>
+-          <option value="8">8 GB</option><option value="12">12 GB</option><option value="16">16 GB</option>
+-          <option value="24">24 GB</option><option value="32">32 GB</option></select></label>
++        <select id="memPreset"><option value="auto">Auto (detect)</option><option value="manual">Manual: the knobs below are yours</option></select></label>
+       <div class="field-row bottom">
+         <label class="field grow"><span class="label">Context rows <span class="info" tabindex="-1" role="img" aria-label="About the context size" data-tip-ref="tip-context">i</span></span>
+           <input type="number" id="setMaxSeq" step="1024" placeholder="0 = whole" /></label>
+-- 
+2.43.0
+

@@ -1,0 +1,229 @@
+From 637fbd6d6999e16081a88b135a80862e16538cf0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 19:19:37 -0600
+Subject: [PATCH 1095/1177] The Takes column's filters in every room, hidden
+ ones too (1125); the datasheet's score as a folded staff (1126); the
+ workspaces column scrolls on its own, the Takes column past the log box
+ (1127); the datasheet shows LoRAs and sliders with their strengths (1128)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  26 +++++++++++++
+ tools/console/app.js               |  30 +++++++++++++--
+ tools/console/heresy-collection.js |  59 +++++++++++++++++++++++++++--
+ tools/console/index.html           |   7 ++++
+ tools/public/index.html.gz         | Bin 468878 -> 471303 bytes
+ 5 files changed, 116 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 9f78a3a..d7b7ae1 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3139,3 +3139,29 @@ input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+   .ds-texts > * { flex: none; }
+   .ds-texts .ds-lyrics { flex: 1 1 0; height: 0; min-height: 240px; max-height: none !important; }
+ }
++
++/* HERESY 1125: the Takes column's filters: a dot on the ⋯ while one is on; a hidden take shown faded */
++.menu-cap { padding: 6px 12px 2px; font: 600 10.5px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
++.menu-sep { height: 1px; margin: 4px 8px; background: var(--line-a); }
++#libMenuBtn.has-filter { position: relative; color: var(--amber); }
++#libMenuBtn.has-filter::after { content: ""; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
++.take.is-hidden-take { opacity: .55; }
++.take.is-hidden-take .take-title::after { content: " · hidden"; font-weight: 400; color: var(--dim); font-size: .85em; }
++/* HERESY 1126: the datasheet's score: a staff, folded until asked for */
++.ds-score { margin-top: 8px; }
++.ds-score > summary, .ds-abc-raw > summary { cursor: pointer; list-style: revert; }
++.ds-score > summary em { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--dim); margin-left: 6px; }
++.ds-staff { padding: 6px 4px; background: var(--paper, var(--panel)); border-radius: var(--r-md); overflow-x: auto; }
++.ds-staff svg { max-width: 100%; height: auto; }
++.ds-abc-raw { margin-top: 6px; }
++
++/* HERESY 1127: the workspaces column scrolls on its own (its height is set by the page, down to the server log) */
++.coll-side { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-a) transparent; }
++
++/* HERESY 1127: the floating server log (bottom right, above the player) covered the end of the Takes column in the
++   Creator, the Writer and the Refiner; the column now scrolls past it, as the rooms always did (their 60 px) */
++#libList { padding-bottom: 66px; }
++
++/* HERESY 1128: the datasheet's sliders and LoRAs: a long name wraps, its strength stays on the right */
++.ds-kv-long span { min-width: 0; overflow-wrap: anywhere; }
++.ds-kv-long b { flex: none; white-space: nowrap; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 7335d32..9b9d98d 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4306,16 +4306,40 @@
+     all("#libList .take[data-name]").forEach(function (card) { card.classList.toggle("is-active", card.dataset.name === name); });
+   }
+ 
++  // HERESY 1125: the Takes column's filters, kept per browser
++  function libFilters() {
++    var f = {};
++    try { f = JSON.parse(recall("yue2.libFilters") || "{}") || {}; } catch (e) { f = {}; }
++    return { liked: !!f.liked, noDisliked: !!f.noDisliked, noted: !!f.noted, hidden: !!f.hidden };
++  }
++  document.addEventListener("click", function (e) {
++    var b = e.target.closest("[data-libf]");
++    if (!b) return;
++    var f = libFilters();
++    f[b.dataset.libf] = !f[b.dataset.libf];
++    if (b.dataset.libf === "liked" && f.liked) f.noDisliked = false;
++    store("yue2.libFilters", JSON.stringify(f));
++    paintLibrary();
++  });
++
+   function paintLibrary() {
+     var list = $("libList");
+     var shown = STATE.favOnly ? STATE.takes.filter(function (t) { return t.favorite; }) : STATE.takes;
+     // HERESY 1041: the quick search, and the takes hidden in the Librarian stay out of the column
+     var HC = window.HeresyCollection, q = $("libSearch") ? $("libSearch").value : "";
++    var F = libFilters(), filtered = STATE.favOnly || F.liked || F.noDisliked || F.noted;
+     if (HC) {
+       var m = HC.matcher(q);
+-      shown = shown.filter(function (t) { return !HC.isHidden(t.name) && HC.inCurrent(t.name) && (m(displayTitle(t)) || m(t.name)); });
++      shown = shown.filter(function (t) {                 // HERESY 1125: and the column's own filters
++        if (!F.hidden && HC.isHidden(t.name)) return false;
++        if (!HC.inCurrent(t.name) || !(m(displayTitle(t)) || m(t.name))) return false;
++        var r = HC.rating(t.name);
++        return !(F.liked && r <= 0) && !(F.noDisliked && r < 0) && !(F.noted && !HC.note(t.name));
++      });
+     }
+-    $("libCount").textContent = STATE.favOnly ? shown.length + " / " + STATE.takes.length : String(STATE.takes.length);
++    $("libCount").textContent = filtered ? shown.length + " / " + STATE.takes.length : String(STATE.takes.length);
++    $("libMenuBtn").classList.toggle("has-filter", F.liked || F.noDisliked || F.noted || F.hidden);
++    all("[data-libf]").forEach(function (b) { b.setAttribute("aria-checked", F[b.dataset.libf] ? "true" : "false"); });
+     $("favFilter").setAttribute("aria-pressed", STATE.favOnly ? "true" : "false");
+ 
+     // A run in progress sits at the top of the list, so it is never lost.
+@@ -4345,7 +4369,7 @@
+       if (take.variation > 0 && !/ · sound \d+/.test(title)) tags += '<span class="tag">sound ' + (take.variation + 1) + "</span>";
+       if (take.format === "mp3") tags += '<span class="tag">mp3</span>';
+       if (take.parent) tags += '<span class="tag re" title="Re-rendered from another take: same music">re-render</span>';
+-      return '<article class="take' + active + (take.favorite ? " is-fav" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
++      return '<article class="take' + active + (take.favorite ? " is-fav" : "") + (HC && HC.isHidden(take.name) ? " is-hidden-take" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
+         '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
+         '" title="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>" +
+         '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>' +
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 752b8d6..27bade1 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -98,6 +98,31 @@
+       }).join("") +
+       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
+       '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined);
++    fitSide();
++  }
++
++  // HERESY 1127: the workspaces column scrolls on its own. Sticky and taller than the window, it never showed what lies
++  // below (Hidden, Trash) unless the page was zoomed out; now it ends above the server log and the player, measured
++  // from where it stands (it climbs to its sticky top as the room scrolls), again on every resize and zoom.
++  var sideFrame = 0;
++  function fitSide() {
++    var side = $("collSide");
++    if (!side) return;
++    if (!side.offsetParent || getComputedStyle(side).position !== "sticky") { side.style.maxHeight = ""; return; }
++    var bottom = window.innerHeight, pb = document.getElementById("playbar"), dock = document.querySelector(".log-dock");
++    if (pb && getComputedStyle(pb).display !== "none") bottom = Math.min(bottom, pb.getBoundingClientRect().top);
++    var sr = side.getBoundingClientRect(), dr = dock && getComputedStyle(dock).display !== "none" ? dock.getBoundingClientRect() : null;
++    if (dr && dr.left < sr.right && dr.right > sr.left) bottom = Math.min(bottom, dr.top);   // the log box only where it is above the column
++    side.style.maxHeight = Math.max(160, Math.floor(bottom - side.getBoundingClientRect().top - 10)) + "px";
++  }
++  function fitSideSoon() { if (!sideFrame) sideFrame = requestAnimationFrame(function () { sideFrame = 0; fitSide(); }); }
++  function watchSide() {
++    var room = $("collSide").closest("[id^='view-']") || document.getElementById("view-collection");
++    window.addEventListener("resize", fitSideSoon);
++    if (room) {
++      room.addEventListener("scroll", fitSideSoon, { passive: true });
++      if (window.ResizeObserver) new ResizeObserver(fitSideSoon).observe(room);   // shown, hidden, the window resized
++    }
+   }
+ 
+   function ico(name) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(name) : ""; }   // HERESY 1051
+@@ -386,6 +411,7 @@
+   }
+ 
+   function init(hooks) {
++    watchSide();
+     if (!$("view-collection")) return;
+     state.hooks = hooks;
+     $("collSearch").addEventListener("input", function () { state.q = this.value; paint(); });
+@@ -830,6 +856,8 @@
+   // ---- HERESY 1059: the datasheet: everything a take was made with, as Create shows it, without going there
+   var MODES = { off: "Direct", plan: "Plan", full: "Full" };
+   function kv(k, v) { return v === undefined || v === null || v === "" ? "" : '<div class="ds-kv"><span>' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }
++  // HERESY 1128: a long name (a LoRA's path) wraps under its value instead of pushing it out; the whole id on hover
++  function kvFull(k, v, full) { return '<div class="ds-kv ds-kv-long" title="' + esc(full || k) + '"><span>' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }
+   function samplingTable(title, s) {
+     if (!s) return "";
+     var names = { temperature: "temperature", top_p: "top-p", top_k: "top-k", repetition_penalty: "repetition penalty", penalty_window: "penalty window", min_tokens: "min tokens", max_tokens: "max tokens" };
+@@ -860,7 +888,10 @@
+         '<button type="button" class="btn ghost small" data-ds="create">Open in the Creator</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
+         '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
+         '<div class="peek-cap">Lyrics</div><pre class="sheet-text ds-lyrics">' + esc(q.lyrics || "") + "</pre>" +
+-        (q.abc ? '<div class="peek-cap">Score (ABC)</div><pre class="sheet-text mono ds-abc">' + esc(q.abc) + "</pre>" : "") + "</div>" +
++        // HERESY 1126: the score as a staff, folded; drawn when unfolded (abcjs); its ABC text beside, folded too
++        '<details class="ds-score"><summary class="peek-cap">Score' + (q.abc ? "" : "<em>none: a Direct take writes no score (Full plan and Melody only do)</em>") + "</summary>" +
++          (q.abc ? '<div class="ds-staff"></div><details class="ds-abc-raw"><summary class="peek-cap">ABC text</summary><pre class="sheet-text mono ds-abc">' + esc(q.abc) + "</pre></details>" : "") +
++        "</details></div>" +
+         '<div class="ds-knobs"><div class="ds-group"><div class="peek-cap">Song</div>' + kv("mode", MODES[q.cot] || q.cot) + kv("length asked", q.duration ? h.clock(q.duration) : "") +
+         kv("format", q.output_format + (q.output_format === "mp3" ? " " + q.mp3_bitrate : "")) + kv("VAE", q.vae) + kv("peak clip", q.peak_clip) +
+         kv("music codes", codes ? codes + " (" + h.clock(codes / 25) + ")" : "") + kv("kept from the parent", keep ? keep + " codes (" + h.clock(keep / 25) + ")" : "") + "</div>" +
+@@ -869,10 +900,32 @@
+         '<div class="ds-group"><div class="peek-cap">Seeds</div>' + kv("music", q.lm_seed) + kv("sound", q.seed) + "</div>" +
+         samplingTable("Score sampling", q.abc_sampling) + samplingTable("Music sampling", q.semantic_sampling) +
+         '<div class="ds-group"><div class="peek-cap">Sliders and LoRAs</div>' +
+-          ((q.sliders || []).map(function (s) { return kv(s.name || s.path || "slider", s.scale != null ? s.scale : s.value); }).join("") || '<div class="ds-kv"><span>sliders</span><b>none</b></div>') +
+-          ((q.loras || []).map(function (l) { return kv(l.name || l.path || "LoRA", l.scale); }).join("") || '<div class="ds-kv"><span>LoRAs</span><b>none</b></div>') + "</div>" +
++          // HERESY 1128: as a take keeps them: sliders {id, strength}, LoRAs {id, ar, nar} (the music half's strength and the
++          // sound half's); the older names (name, path, scale) still read
++          ((q.sliders || []).map(function (s) {
++            var v = s.strength != null ? s.strength : (s.scale != null ? s.scale : s.value);
++            return kvFull(String(s.id || s.name || s.path || "slider"), v);
++          }).join("") || '<div class="ds-kv"><span>sliders</span><b>none</b></div>') +
++          ((q.loras || []).map(function (l) {
++            var id = String(l.id || l.name || l.path || "LoRA"), parts = [];
++            if (Number(l.ar)) parts.push("music " + l.ar);
++            if (Number(l.nar)) parts.push("sound " + l.nar);
++            if (!parts.length && l.scale != null) parts.push(String(l.scale));
++            return kvFull(id.replace(/\/lora\.safetensors$/, "").replace(/\.safetensors$/, "").replace(/\//g, " / "), parts.join(" · ") || "off", id);
++          }).join("") || '<div class="ds-kv"><span>LoRAs</span><b>none</b></div>') + "</div>" +
+         (rest.length ? '<div class="ds-group"><div class="peek-cap">The rest</div>' + rest.map(function (k) { return kv(k, String(q[k])); }).join("") + "</div>" : "") +
+         "</div></div>";
++      var score = back.querySelector(".ds-score");
++      if (score && q.abc) score.addEventListener("toggle", function () {
++        var staff = score.querySelector(".ds-staff");
++        if (!score.open || staff.dataset.drawn) return;
++        if (!window.ABCJS) { staff.textContent = "The engraver did not load: the ABC text below is the score."; score.querySelector(".ds-abc-raw").open = true; return; }
++        try {
++          window.ABCJS.renderAbc(staff, q.abc, { responsive: "resize", staffwidth: 900, paddingtop: 4, paddingbottom: 8,
++            foregroundColor: getComputedStyle(document.documentElement).getPropertyValue("--paper-ink").trim() || "#2a2318" });
++          staff.dataset.drawn = "1";
++        } catch (err) { staff.textContent = "This score could not be engraved; read it as ABC below."; }
++      });
+       back.querySelector(".ds-box").addEventListener("click", function (e) {
+         var b = e.target.closest("[data-ds]");
+         if (!b) return;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index e574da9..07f7e89 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1588,6 +1588,13 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <div class="menu-wrap">
+         <button type="button" class="icon-btn" id="libMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Library actions" title="Library actions">⋯</button>
+         <div class="menu-pop right is-hidden" id="libMenu" role="menu">
++          <!-- HERESY 1125: the column's filters, as the Librarian has them, in every room -->
++          <div class="menu-cap">Show</div>
++          <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="liked">Liked only</button>
++          <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="noDisliked">Without the disliked</button>
++          <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="noted">With a note only</button>
++          <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="hidden">The hidden ones too</button>
++          <div class="menu-sep"></div>
+           <button type="button" role="menuitem" id="refreshLib">Refresh the list</button>
+           <button type="button" role="menuitemcheckbox" aria-checked="false" id="dlNamesDate">Put the date in download names</button>
+           <button type="button" role="menuitem" class="danger" id="deleteNonFav">Delete non-favourites…</button>
+-- 
+2.43.0
+

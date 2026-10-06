@@ -1,0 +1,28 @@
+From d89cb38fccac28d31895043557007a45ec5dfa64 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 00:28:57 -0600
+Subject: [PATCH 1067/1177] Train: a track's own style from the raw folder
+ fills its style field
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-train.js | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index db410e8..1caaf76 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -105,7 +105,7 @@
+     $("trTracks").innerHTML = '<p class="row-hint">Reading the folder…</p>';
+     api("/train/scan?name=" + encodeURIComponent(name)).then(function (d) {
+       state.rows = d.tracks.map(function (t) {
+-        return { file: t.file, seconds: t.seconds, include: (t.seconds || 0) >= 30, style: "", lyrics: t.lyrics || "", from: t.lyrics_from || "", hints: t.hints || [] };
++        return { file: t.file, seconds: t.seconds, include: (t.seconds || 0) >= 30 || !!t.style, style: t.style || "", lyrics: t.lyrics || "", from: t.lyrics_from || "", hints: t.hints || [] };
+       });
+       $("trSetName").value = slug(name);
+       paintTracks();
+-- 
+2.43.0
+

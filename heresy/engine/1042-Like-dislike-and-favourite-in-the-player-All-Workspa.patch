@@ -1,0 +1,197 @@
+From b64b11651da6d1a6040ae7942dd9c09a1748c069 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 11:39:53 -0600
+Subject: [PATCH 1042/1177] Like, dislike and favourite in the player; All
+ Workspaces
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- The player has 👍 👎 ☆ for what plays, as SUNO has: a second click takes a like back; the
+  favourite is the server's own. Likes live with the Collection marks (yue2_os/collection.json),
+  show on the cards and filter the Collection.
+- "All takes" is "All Workspaces" (Viktor), in the header and the Collection.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |   8 ++++++++
+ tools/console/app.js               |  27 ++++++++++++++++++++++++++-
+ tools/console/heresy-collection.js |  26 +++++++++++++++++++-------
+ tools/console/index.html           |   9 +++++++++
+ tools/public/index.html.gz         | Bin 315139 -> 315934 bytes
+ 5 files changed, 62 insertions(+), 8 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6e85080..ecd6498 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2161,3 +2161,11 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .ws-cap { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+ .ws-current select { width: auto; max-width: 220px; }
+ .ws-current.is-set select { border-color: var(--amber); color: var(--amber); }
++
++/* HERESY 1042: likes in the player */
++.playbar-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
++.pb-rate { display: inline-flex; gap: 2px; flex: none; }
++.pb-btn { border: 0; background: none; padding: 2px 4px; font-size: 15px; line-height: 1; cursor: pointer; opacity: .45; filter: grayscale(1); border-radius: var(--r-sm); }
++.pb-btn:hover { opacity: .8; }
++.pb-btn[aria-pressed="true"] { opacity: 1; filter: none; }
++#pbFav { color: var(--amber); filter: none; font-size: 16px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e26071c..738ef74 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3552,6 +3552,7 @@
+     $("playbar").classList.remove("is-empty");
+     // just the name; its style prompt on hover (downloads are on the song page)
+     $("playbarTitle").textContent = displayTitle(take);
++    paintRate();   // HERESY 1042
+     if (take.style) $("playbarTitle").dataset.tip = take.style; else $("playbarTitle").removeAttribute("data-tip");
+     paintMp3();
+     $("timeTotal").textContent = clock(take.seconds);
+@@ -5095,10 +5096,34 @@
+     setStyle: function (text) { $("style").value = text; $("style").dispatchEvent(new Event("input", { bubbles: true })); }
+   });
+ 
++  /* ---------------------------------------------- HERESY 1042: like, dislike, favourite in the player */
++  function paintRate() {
++    var take = STATE.playerTake ? findTake(STATE.playerTake.name) || STATE.playerTake : null, HC = window.HeresyCollection;
++    $("pbRate").hidden = !take || take.session;
++    if (!take) return;
++    var r = HC ? HC.rating(take.name) : 0;
++    $("pbLike").setAttribute("aria-pressed", r > 0 ? "true" : "false");
++    $("pbDislike").setAttribute("aria-pressed", r < 0 ? "true" : "false");
++    $("pbFav").setAttribute("aria-pressed", take.favorite ? "true" : "false");
++    $("pbFav").textContent = take.favorite ? "★" : "☆";
++  }
++  function rateNow(value) {
++    var take = STATE.playerTake, HC = window.HeresyCollection;
++    if (!take || !HC) return;
++    var next = HC.rating(take.name) === value ? 0 : value;   // a second click takes it back
++    HC.rate(take.name, next).then(paintRate).catch(function (e) { toast(e.message, "bad"); });
++  }
++  $("pbLike").addEventListener("click", function () { rateNow(1); });
++  $("pbDislike").addEventListener("click", function () { rateNow(-1); });
++  $("pbFav").addEventListener("click", function () {
++    var take = STATE.playerTake ? findTake(STATE.playerTake.name) : null;
++    if (take) toggleFavorite(take).then(paintRate);
++  });
++
+   /* ---------------------------------------------- HERESY 1041: the Collection */
+   if (window.HeresyCollection) window.HeresyCollection.init({
+     toast: toast, clock: clock, ago: ago, findTake: findTake, openTake: function (name) { openTake(name); setTab("create"); },
+-    playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, libraryChanged: function () { paintLibrary(); }
++    playNow: playNow, updateTake: updateTake, refreshLibrary: refreshLibrary, libraryChanged: function () { paintLibrary(); paintRate(); }
+   });
+   if ($("libSearch")) $("libSearch").addEventListener("input", function () { paintLibrary(); });
+ 
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 8c44273..53adf44 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -47,13 +47,16 @@
+   }
+ 
+   function shown() {
+-    var m = matcher(state.q), anyKind = Object.keys(state.kinds).length, anyDer = Object.keys(state.derived).length;
++    var m = matcher(state.q), anyDer = Object.keys(state.derived).length;
+     var rows = state.rows.filter(function (r) {
+       if (state.place === "__fav" && !r.favorite) return false;
+       if (state.place === "__hidden") { if (!r.hidden) return false; }
+       else if (r.hidden) return false;
+       if (state.place && state.place.charAt(0) !== "_" && r.workspaces.indexOf(state.place) < 0) return false;
+-      if (anyKind && !state.kinds[r.kind]) return false;
++      if (state.kinds.__liked && !(r.rating > 0)) return false;
++      if (state.kinds.__disliked && !(r.rating < 0)) return false;
++      var realKinds = Object.keys(state.kinds).filter(function (k) { return k.charAt(0) !== "_"; });
++      if (realKinds.length && !state.kinds[r.kind]) return false;
+       if (anyDer && !r.derived.some(function (k) { return state.derived[k]; })) return false;
+       return m(r.title) || m(r.name);
+     });
+@@ -78,7 +81,7 @@
+       return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + '" data-place="' + esc(key) + '"><span>' + esc(label) +
+         '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
+     };
+-    $("collSide").innerHTML = item("", "All takes", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
++    $("collSide").innerHTML = item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
+       '<div class="coll-cap">Workspaces</div>' + state.ws.map(function (w) { return item(w, w, perWs[w] || 0); }).join("") +
+       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
+       '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined);
+@@ -100,7 +103,7 @@
+       return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden" : "") + '" data-name="' + esc(r.name) + '">' +
+         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+         '<button type="button" class="coll-play" data-play="' + esc(r.name) + '" aria-label="Play">▶</button>' +
+-        '<div class="coll-body"><div class="coll-title" data-open="' + esc(r.name) + '">' + (r.favorite ? "★ " : "") + esc(r.title) + "</div>" +
++        '<div class="coll-body"><div class="coll-title" data-open="' + esc(r.name) + '">' + (r.favorite ? "★ " : "") + (r.rating > 0 ? "👍 " : r.rating < 0 ? "👎 " : "") + esc(r.title) + "</div>" +
+         '<div class="coll-meta">' + esc(r.created ? ago(r.created) : "") + (r.seconds ? " · " + clock(r.seconds) : "") + (r.cot ? " · " + esc(r.cot) : "") + "</div>" +
+         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+         r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div></div></article>";
+@@ -143,7 +146,7 @@
+     var sel = $("wsCurrent");
+     if (!sel) return;
+     var cur = current();
+-    sel.innerHTML = '<option value="">All takes</option>' + state.ws.map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
++    sel.innerHTML = '<option value="">All Workspaces</option>' + state.ws.map(function (w) { return "<option>" + esc(w) + "</option>"; }).join("") +
+       '<option value="__new">+ New workspace\u2026</option>';
+     sel.value = cur;
+     sel.closest(".ws-current").classList.toggle("is-set", !!cur);
+@@ -303,7 +306,7 @@
+         act({ op: "ws-create", workspace: w }, "Workspace \u201c" + w + "\u201d made and in hand: new takes land in it");
+       } else {
+         store(WS_KEY, w);
+-        toast(w ? "Workspace \u201c" + w + "\u201d in hand: the list shows it, new takes land in it" : "All takes in the list; new takes in no workspace");
++        toast(w ? "Workspace \u201c" + w + "\u201d in hand: the list shows it, new takes land in it" : "All Workspaces in the list; new takes in no workspace");
+       }
+       state.place = w; state.sel = {};
+       paint(); paintCurrent();
+@@ -314,9 +317,18 @@
+     api("/trash").then(function (d) { state.trash = d.items || []; paintSide(); }).catch(function () {});
+   }
+ 
++  // HERESY 1042: likes, as SUNO has them (the player sets them)
++  function rating(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.rating || 0 : 0; }
++  function rate(name, value) {
++    return api("/collection", { op: "rate", names: [name], value: value }).then(function (d) {
++      state.rows = d.takes || state.rows; paint();
++      return value;
++    });
++  }
++
+   // for the takes column: hidden ones stay out of it
+   function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
+ 
+   window.HeresyCollection = { init: init, reload: load, isHidden: isHidden, matcher: matcher, landed: landed, inCurrent: inCurrent,
+-                              current: current, loaded: function () { return state.loaded; } };
++                              current: current, rating: rating, rate: rate, loaded: function () { return state.loaded; } };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 2699408..aca9bff 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1011,6 +1011,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+             <button type="button" class="coll-chip" data-kind="imported">imported</button>
+             <button type="button" class="coll-chip" data-kind="regenerated">regenerated</button>
+             <button type="button" class="coll-chip" data-kind="rerendered">re-rendered</button>
++            <span class="coll-cap-inline">liked</span>
++            <button type="button" class="coll-chip" data-kind="__liked" aria-label="Liked">👍</button>
++            <button type="button" class="coll-chip" data-kind="__disliked" aria-label="Disliked">👎</button>
+             <span class="coll-cap-inline">has</span>
+             <button type="button" class="coll-chip" data-der="stems">stems</button>
+             <button type="button" class="coll-chip" data-der="debuzz">debuzz</button>
+@@ -1083,6 +1086,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <footer class="playbar is-empty" id="playbar">
+   <div class="playbar-id">
+     <strong id="playbarTitle" data-tip="Pick a take on the right">Nothing loaded</strong>
++    <!-- HERESY 1042: like, dislike and favourite for what plays, as SUNO has them -->
++    <span class="pb-rate" id="pbRate" hidden>
++      <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-tip="Like">👍</button>
++      <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-tip="Dislike">👎</button>
++      <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-tip="Keep as a favourite">☆</button>
++    </span>
+   </div>
+ 
+   <!-- HERESY 1009: previous and next take in the list, and play-on down the list -->
+-- 
+2.43.0
+

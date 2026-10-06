@@ -1,0 +1,166 @@
+From 99628a0598f8a28fa6c9e9ce3576e97d69e758a3 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 13:13:05 -0600
+Subject: [PATCH 1005/1177] Sampling tips: what to try and what goes wrong,
+ larger tip type
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1005. Every sampler knob, the guidance and the two shape cards now say
+their default, a recommended range (✓) and the failure past it (⚠), with the
+source where a range is measured or published. Tip type 12 → 14 px.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |  10 ++---
+ tools/console/help.js      |  79 +++++++++++++++++++++++++++----------
+ tools/public/index.html.gz | Bin 214684 -> 215693 bytes
+ 3 files changed, 63 insertions(+), 26 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index ae73c17..bd63022 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1640,14 +1640,14 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+ .tip {
+   position: fixed;
+   z-index: 50;
+-  max-width: min(480px, calc(100vw - 16px));   /* wide enough that a tip's lines stay whole */
++  max-width: min(560px, calc(100vw - 16px));   /* wide enough that a tip's lines stay whole; HERESY 1005: 480 → 560 with the larger type */
+   padding: 7px 10px;
+   background: var(--panel);
+   color: var(--ink);
+   border: 1px solid var(--line);
+   border-radius: var(--r-md);
+   box-shadow: 0 12px 30px -12px var(--shadow-lg);
+-  font: 400 12px/1.5 var(--sans);
++  font: 400 14px/1.5 var(--sans);   /* HERESY 1005: 12 → 14 */
+   white-space: pre-line;
+   pointer-events: none;
+   opacity: 0;
+@@ -1655,15 +1655,15 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+   transition: opacity .12s ease, visibility .12s;
+ }
+ .tip.is-on { opacity: 1; visibility: visible; }
+-.tip.tip-rich { max-width: min(520px, calc(100vw - 16px)); padding: 11px 13px; white-space: normal; }
+-.tip .tip-kind { display: block; margin-bottom: 6px; font: 600 10.5px/1.4 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
++.tip.tip-rich { max-width: min(600px, calc(100vw - 16px)); padding: 11px 13px; white-space: normal; }
++.tip .tip-kind { display: block; margin-bottom: 6px; font: 600 12.5px/1.4 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+ .tip .tip-kind code { letter-spacing: 0; text-transform: none; color: var(--amber); }
+ .tip p { margin: 0 0 7px; color: var(--muted); }
+ .tip p:last-child { margin-bottom: 0; }
+ .tip dl { margin: 0 0 7px; display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; }
+ .tip dt { color: var(--ink); font-weight: 500; }
+ .tip dd { margin: 0; color: var(--muted); }
+-.tip code { font: 400 11px/1.4 var(--mono); color: var(--ink); }
++.tip code { font: 400 13px/1.4 var(--mono); color: var(--ink); }
+ .tip strong { color: var(--ink); font-weight: 600; }
+ .slider-active { display: grid; gap: 6px; }
+ .slider-active:empty { display: none; }
+diff --git a/tools/console/help.js b/tools/console/help.js
+index e7ccb2c..ed792c1 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -49,11 +49,17 @@
+       "The release defaults are 1.0 in Full and Melody mode and 1.01 in Direct.\n" +
+       "Above 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. " +
+       "Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. " +
+-      "No best value is published; 1.1 to 1.3 are the usual experiments.",
++      "No best value is published; 1.1 to 1.3 are the usual experiments.\n" +
++      "✓ 1.2–1.5 for steadier words; the cover configs on r/StableDiffusion go from 1.2 to 2.0, set per song.\n" +
++      "⚠ Above 2 the timbre hardens and artifacts appear. The memory is the cache: guidance keeps a second, " +
++      "unconditioned pass beside every version, 2.8 GB more each at the full context.",
+     shapeComposition: "Moves the score planner's temperature, top-p and top-k together. Left: familiar, safe melodies and chord changes; " +
+-      "right: surprising ones. The middle is the tuned default. No effect in Direct mode or with a supplied score (nothing is planned).",
++      "right: surprising ones. The middle is the tuned default. No effect in Direct mode or with a supplied score (nothing is planned).\n" +
++      "⚠ \"highest\" (1.0 · 0.97 · 64) can break bars.",
+     shapePerformance: "Moves the music stage's temperature, top-p and top-k together. Left: a steadier delivery that sticks to the prompt; " +
+-      "right: looser and more adventurous, with more garbled words. The middle is the tuned default.",
++      "right: looser and more adventurous, with more garbled words. The middle is the tuned default.\n" +
++      "✓ \"low\" (0.9 · 0.92 · 75) for songs where the words matter.\n" +
++      "⚠ \"high\" (1.1 · 0.97 · 140) and \"highest\" (1.2 · 0.99 · 200): measured glossolalia on a 7-minute song.",
+     shapeStyle: "Sets Guidance (CFG) from 0.85 to 1.15. Higher follows the style and lyrics more strongly; " +
+       "any setting except the middle runs the music stage at half speed.",
+     odeSteps: ODE,
+@@ -152,28 +158,59 @@
+     "Auto reads this GPU's memory.";
+ 
+   // The sampler knobs, per stage: the score planner (abc) and the music tokens (semantic).
++  // HERESY 1005: every knob says what it does, what to try (✓) and what goes wrong (⚠).
++  // Where a range comes from a measurement or a published config, the tip says so.
+   var KNOBS = {
+     abc: {
+-      temperature: "Randomness of the score planner (default 0.7). Lower: safer, more predictable melodies and chords; " +
+-        "0 always picks the most likely note. 0.8–0.9: more varied. Well above 1 the score can fall apart.",
+-      top_p: "Only the most likely next notes, up to this share of the total chance, are kept (default 0.9). Lower is safer.",
+-      top_k: "Only this many of the most likely next notes are kept (default 30). Lower is safer; 1 is greedy.",
+-      repetition_penalty: "Makes notes used in the recent window less likely (default 1.005, almost off). " +
+-        "The planner rarely loops, so leave it.",
+-      penalty_window: "How many recent tokens the repetition penalty looks back over (default 100).",
+-      min_tokens: "The score cannot end before this many tokens (default 32).",
+-      max_tokens: "The longest score, in tokens (default 6144: 4096 cut long scores short; 8192 leaves the lyrics too little room). A score cut off here cannot be used."
++      temperature: "Randomness of the score planner. Default 0.7.\n" +
++        "✓ 0.6–0.8 for a song with a firm structure; 0.85–0.95 when the melodies sound stock.\n" +
++        "⚠ Above 1.0 bars break and sections go missing, and a broken score cannot be used. " +
++        "0 is greedy: the same phrase over and over.",
++      top_p: "Keeps only the most likely next notes, up to this share of the total chance. Default 0.9.\n" +
++        "✓ 0.85–0.95.\n" +
++        "⚠ Below 0.7 the melody turns monotone. 1.0 switches it off and lets rare, broken tokens through.",
++      top_k: "Keeps only this many of the most likely next notes. Default 30.\n" +
++        "✓ 20–50.\n" +
++        "⚠ Above about 80, odd durations and broken bars come through. Below 10 it is nearly greedy; 1 is greedy.",
++      repetition_penalty: "Makes notes used in the recent window less likely. Default 1.005, almost off.\n" +
++        "✓ Leave it at 1.0–1.01.\n" +
++        "⚠ A score repeats by nature: choruses, bar patterns. Above 1.05 the penalty breaks the repeats the song needs, " +
++        "and the choruses stop matching each other.",
++      penalty_window: "How many recent tokens the repetition penalty looks back over. Default 100.\n" +
++        "✓ Leave it.\n" +
++        "⚠ It does nothing while the penalty is at 1.0.",
++      min_tokens: "The score cannot end before this many tokens. Default 32.\n" +
++        "✓ Leave it.",
++      max_tokens: "The longest score, in tokens. Default 6144.\n" +
++        "✓ 6144 holds a long song (4096 cut long scores short).\n" +
++        "⚠ The score and the music share ONE context of 24,576 tokens: every token given to the score is taken from the music. " +
++        "8192 leaves the song too little room. A score cut off here cannot be used."
+     },
+     semantic: {
+-      temperature: "Randomness of the music (default 1.0). Lower (0.9–0.95) gives a steadier delivery and helps when words come out garbled; " +
+-        "higher is looser. 0 is greedy and tends to loop.",
+-      top_p: "Only the most likely next music tokens, up to this share of the total chance, are kept (default 0.95).",
+-      top_k: "Only this many of the most likely next music tokens are kept (default 100).",
+-      repetition_penalty: "Makes tokens used in the recent window less likely (default 1.2). The music needs about this much " +
+-        "to avoid getting stuck in loops; much higher makes it restless.",
+-      penalty_window: "How many recent music tokens the repetition penalty looks back over (default 50; the C++ server allows up to 100).",
+-      min_tokens: "The song cannot end before this many music tokens. There are 25 per second, so the default 200 is 8 seconds.",
+-      max_tokens: "The longest song, in music tokens: 25 per second, so the default 12000 is 8:00. A song cut off here is marked truncated."
++      temperature: "Randomness of the music: how the words are sung. Default 1.0.\n" +
++        "✓ 0.85–0.95 for clear words. The cover configs on r/StableDiffusion keep it at 0.80–0.95, below the default.\n" +
++        "⚠ Above 1.0 the words blur into glossolalia, most of all after the fourth minute " +
++        "(measured on a 7-minute song: 1.1 lost 16 of 109 lines). Below 0.8 the delivery flattens and starts to loop. 0 is greedy and loops.",
++      top_p: "Keeps only the most likely next music tokens, up to this share of the total chance. Default 0.95.\n" +
++        "✓ 0.9–0.95.\n" +
++        "⚠ 0.97 and up, together with a high temperature, is the glossolalia recipe: the \"high\" Performance card " +
++        "(1.1 · 0.97 · 140) garbled words on the same measured song.",
++      top_k: "Keeps only this many of the most likely next music tokens. Default 100.\n" +
++        "✓ 50–100.\n" +
++        "⚠ Above about 150 rare tokens come through as garbled syllables; 200 is the \"highest\" Performance card.",
++      repetition_penalty: "Makes music tokens used in the recent window less likely. Default 1.2.\n" +
++        "✓ 1.1–1.2. The music needs about this much to stay out of loops.\n" +
++        "⚠ Below 1.1 a line gets sung again and again. Above 1.3 the delivery turns restless and syllables drop out.",
++      penalty_window: "How many recent music tokens the repetition penalty looks back over. " +
++        "25 tokens are one second: the default 50 is 2 seconds, the ceiling 100 is 4 seconds.\n" +
++        "✓ 100 for long songs: it also catches loops longer than a short phrase.\n" +
++        "⚠ It prevents loops; it does not cure words breaking down in the middle of a song. For that, lower the temperature.",
++      min_tokens: "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds.\n" +
++        "✓ Leave it.",
++      max_tokens: "The longest song, in music tokens: 25 per second, so the default 12000 is 8:00.\n" +
++        "✓ Set it close to the length the lyrics need.\n" +
++        "⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again " +
++        "(measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated."
+     }
+   };
+ 
+-- 
+2.43.0
+

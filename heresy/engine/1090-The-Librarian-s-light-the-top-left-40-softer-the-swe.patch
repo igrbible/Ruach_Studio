@@ -1,0 +1,30 @@
+From c4f2b10ba956031d29a9946adf990a7a9d4fa64c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 18:25:43 -0600
+Subject: [PATCH 1090/1177] The Librarian's light: the top left 40 % softer,
+ the sweep 10 % further (1118)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   3 ++-
+ tools/public/index.html.gz | Bin 466255 -> 466315 bytes
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 40c1d8e..69b519c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3096,7 +3096,8 @@ input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+    the top left (where the room's heading wash begins) and fading to the panel; the cards are windows onto it, the
+    ground between them untouched. A state (hover, checked, the take in the player) is a tint laid over the window,
+    not a second light. Where a browser does not fix backgrounds (phones), each card shows the whole sweep. */
+-:root { --coll-light: linear-gradient(135deg, var(--tone-3) 0%, var(--tone-1) 42%, var(--panel) 82%); }
++:root { --coll-light: linear-gradient(135deg, color-mix(in oklab, var(--amber) 8.4%, var(--panel)) 0%, var(--tone-1) 52%, var(--panel) 92%); }
++/* (Viktor, 02.10: the top-left point 40 % less rich, the sweep 10 % further toward the bottom right) */
+ .coll-card { background: var(--coll-light); background-attachment: fixed; }
+ .coll-card:hover { background: linear-gradient(color-mix(in oklab, var(--amber) 4%, transparent), color-mix(in oklab, var(--amber) 4%, transparent)), var(--coll-light); background-attachment: scroll, fixed; }
+ .coll-card.is-current { background: linear-gradient(180deg, color-mix(in oklab, var(--amber) 8%, transparent), transparent 85%), var(--coll-light); background-attachment: scroll, fixed; }
+-- 
+2.43.0
+

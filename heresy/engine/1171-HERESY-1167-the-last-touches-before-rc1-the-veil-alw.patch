@@ -1,0 +1,140 @@
+From 122f51142f299e3ac661b7fe15b076849306b784 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 11:14:10 -0600
+Subject: [PATCH 1171/1177] HERESY 1167: the last touches before rc1: the veil
+ always the night's, with OSEM; she a little higher, the tall bar 98 px; the
+ cards fainter; the rooms in capitals
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, the morning of 06.10.2026:
+· «давай LOADING только в ночной моей всегда… И Дева чёткая… вдруг не опознается тёмный режим»: the veil wears Scroll by
+  Lamplight whatever the page's theme (the night theme's own attribute on the veil), her cloud the night's black at 0.45;
+  no grey before the page knows its theme, no flash in a dark room.
+· «И не хочешь добавить слоган OSEM?»: «OSEM (say it: awesome) · Open Source, Engaged & Musical» on the veil under the logo,
+  in English in every language (the pun is English).
+· «Деву вверх… пусть слова проседают вниз. И отступ логотипа уменьши при высоком баре… Смотри как честно… 4pt так
+  четыре»: she and her cloud 11 units higher (about 4 px in the tall bar: as far as her wingtips stay inside the window),
+  the words where they were; the tall bar 105 → 98 px.
+· «карточки треков сделай ещё светлее, чтобы не краснили сильно. Поубавь на 10-20% альфа слой»: the Librarian cards' washes
+  of the accent 15 % fainter (4 / 8 / 14 % → 3.4 / 6.8 / 11.9 %), the page's own tones untouched.
+· «либо кегль на 2pt крупнее, либо все имена комнат — в CAPS»: the rooms' names in capitals, spaced .08em, as STUDIO.
+
+cdp-console 340/0/7 (the tall bar's 98 px in its checks), check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css    | 21 ++++++++++++++++-----
+ tools/console/index.html | 12 +++++++-----
+ 2 files changed, 23 insertions(+), 10 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 9031542..527fb35 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2017,6 +2017,8 @@ html.hz-open { overflow: hidden; }
+ .tabs button { padding: 5px 16px; border: 0; border-radius: calc(var(--r-md) - 2px); background: none; color: var(--muted);
+   font: 500 13px/1.3 var(--sans); cursor: pointer; white-space: nowrap; }   /* 1148: a room's name on one line */
+ .tabs button:hover { color: var(--ink); }
++/* HERESY 1167 (Viktor: «либо кегль на 2pt крупнее, либо все имена комнат — в CAPS»): capitals, spaced, as the logo's STUDIO */
++.tabs button { text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+ .tabs button.is-active { background: var(--raise); color: var(--ink); box-shadow: 0 1px 2px var(--shadow-lg, rgba(0,0,0,.15)); }
+ /* Write and Post take the place of the form and the take; the takes list stays */
+ .write-col, .post-col { grid-column: 1 / span 2; }
+@@ -3302,10 +3304,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--check, var(--a
+ /* the player: a tone from the top, the glass kept */
+ #playbar { background: linear-gradient(180deg, color-mix(in oklab, var(--tone-2) 85%, transparent), color-mix(in oklab, var(--panel) 85%, transparent)); }   /* HERESY 1167: 15 % see-through (it was 20) */
+ /* the Librarian's cards: a breath of the accent at the top; deeper when hovered, checked, playing */
+-.coll-card { background: linear-gradient(180deg, var(--tone-1), var(--panel) 70%); }
+-.coll-card:hover { background: linear-gradient(180deg, var(--tone-2), var(--tone-1)); }
+-.coll-card.is-sel { background: linear-gradient(180deg, var(--tone-3), var(--tone-1)); }
+-.coll-card.is-current { background: linear-gradient(180deg, var(--tone-2), var(--panel) 80%); }
++/* HERESY 1167 (Viktor: «карточки треков сделай ещё светлее, чтобы не краснили сильно. Поубавь на 10-20% альфа слой»): the
++   cards' own washes, 15 % fainter than the page's tones (4 / 8 / 14 % → 3.4 / 6.8 / 11.9 %) */
++.coll-card { --card-1: color-mix(in oklab, var(--amber) 3.4%, var(--panel)); --card-2: color-mix(in oklab, var(--amber) 6.8%, var(--panel));
++  --card-3: color-mix(in oklab, var(--amber) 11.9%, var(--panel)); }
++.coll-card { background: linear-gradient(180deg, var(--card-1), var(--panel) 70%); }
++.coll-card:hover { background: linear-gradient(180deg, var(--card-2), var(--card-1)); }
++.coll-card.is-sel { background: linear-gradient(180deg, var(--card-3), var(--card-1)); }
++.coll-card.is-current { background: linear-gradient(180deg, var(--card-2), var(--panel) 80%); }
+ #playbar .pb-cover { box-shadow: 0 4px 12px -6px var(--shadow-lg, rgba(0,0,0,.35)), inset 0 0 0 1px color-mix(in oklab, var(--ink) 8%, transparent); }
+ .coll-pin { background: linear-gradient(135deg, var(--tone-3), var(--tone-1)); }
+ /* drawers: the summary a shade above the body */
+@@ -3835,7 +3841,7 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+      A calmer page (html[data-motion="reduced"]) cuts it to nothing with every other transition. */
+ @property --bar-h { syntax: "<length>"; inherits: true; initial-value: 52px; }
+ :root { --bar-h: 52px; }
+-@media (min-width: 1660px) { body.bar-tall { --bar-h: 105px; } }
++@media (min-width: 1660px) { body.bar-tall { --bar-h: 98px; } }   /* HERESY 1167: 105 → 98 (Viktor: «отступ логотипа уменьши при высоком баре») */
+ body { transition: --bar-h .22s ease; }
+ @media (prefers-reduced-motion: reduce) { body { transition: none; } }
+ /* · the cheat-sheet's lead paragraph across the sheet («убери ручные переносы строк. Пусть всё автоврепом идёт») */
+@@ -3878,6 +3884,11 @@ html.booting .boot-veil {
+   background: var(--ground); color: var(--ink); transition: opacity .5s ease;
+ }
+ html.booting.veil-lift .boot-veil { opacity: 0; pointer-events: none; }
++/* HERESY 1167: the veil is the night's (data-theme on it); her cloud as the night has it, whatever the page's tone */
++.boot-veil { --logo-cloud: #000; --logo-cloud-alpha: .45; }
++.boot-osem { margin: -8px 0 0; font: 400 clamp(12px, .95vw, 16px)/1.4 var(--sans); letter-spacing: .06em; color: var(--dim);
++  text-align: center; animation: boot-in 1.1s .15s ease both; }
++.boot-osem b { color: var(--ink); font-weight: 600; letter-spacing: .18em; }
+ html.i18n-wait .boot-veil > * { visibility: hidden; }
+ .boot-logo { width: min(86vw, 1100px); animation: boot-in 1.1s ease both; }
+ .boot-mark { display: block; width: 100%; height: auto; overflow: visible; }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f19bd99..e816bb1 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -32,8 +32,10 @@
+      stands ready and seven seconds have passed since the navigation (Viktor: «Давай 7. Это стоит того»); a click or a key lifts it sooner, once the page is ready;
+      seventeen seconds lift it whatever happens. The logo is the bar's own (copied in under the top bar, its words in the page's
+      language once the translation runs). Not for a test browser (navigator.webdriver), ?scope=claude or ?noveil. -->
+-<div class="boot-veil" id="bootVeil" role="status">
++<!-- HERESY 1167 (Viktor: «давай LOADING только в ночной моей всегда»): the veil wears the night theme whatever the page's -->
++<div class="boot-veil" id="bootVeil" role="status" data-theme="igr-night">
+   <div class="boot-logo" id="bootLogo"></div>
++  <p class="boot-osem" translate="no"><b>OSEM</b> <i>(say it: awesome)</i> · Open Source, Engaged &amp; Musical</p>
+   <p class="boot-words">Loading the Sound Heresy</p>
+   <div class="boot-line" aria-hidden="true"><i></i></div>
+ </div>
+@@ -84,7 +86,7 @@
+   <g class="rl-studio" fill="var(--logo-on, var(--on-amber, #ffffff))">
+     <path transform="translate(838.86 -22.00)" d="M24.67 0.59Q18.3 0.59 12.52 -1.41Q6.74 -3.42 3.47 -6.57L6.17 -12.12Q9.28 -9.3 14.25 -7.4Q19.22 -5.5 24.65 -5.5Q29.67 -5.5 32.82 -6.71Q35.97 -7.93 37.47 -10Q38.97 -12.08 38.97 -14.64Q38.97 -17.7 37.1 -19.55Q35.24 -21.41 32.22 -22.51Q29.19 -23.62 25.55 -24.45Q21.91 -25.29 18.26 -26.33Q14.6 -27.38 11.58 -29.06Q8.55 -30.74 6.69 -33.54Q4.83 -36.35 4.83 -40.81Q4.83 -45.08 7.09 -48.66Q9.34 -52.24 14.02 -54.42Q18.69 -56.59 25.96 -56.59Q30.79 -56.59 35.53 -55.28Q40.27 -53.97 43.72 -51.59L41.32 -45.91Q37.72 -48.27 33.7 -49.38Q29.68 -50.5 25.92 -50.5Q21.08 -50.5 17.94 -49.22Q14.81 -47.94 13.35 -45.83Q11.89 -43.72 11.89 -41.08Q11.89 -38 13.75 -36.15Q15.61 -34.29 18.63 -33.22Q21.66 -32.14 25.31 -31.28Q28.97 -30.42 32.61 -29.39Q36.25 -28.36 39.27 -26.71Q42.3 -25.06 44.16 -22.27Q46.02 -19.49 46.02 -15.11Q46.02 -10.9 43.73 -7.32Q41.43 -3.74 36.7 -1.57Q31.96 0.59 24.67 0.59ZM96.61 0V-49.79H77.21V-56H123.11V-49.79H103.72V0ZM182.16 0.59Q171.22 0.59 164.98 -5.68Q158.74 -11.95 158.74 -24.09V-56H165.86V-24.34Q165.86 -14.78 170.13 -10.29Q174.4 -5.8 182.22 -5.8Q190.04 -5.8 194.31 -10.29Q198.58 -14.78 198.58 -24.34V-56H205.58V-24.09Q205.58 -11.95 199.34 -5.68Q193.1 0.59 182.16 0.59ZM250.72 0V-56H273.97Q282.97 -56 289.75 -52.45Q296.54 -48.9 300.34 -42.61Q304.13 -36.31 304.13 -28Q304.13 -19.69 300.34 -13.39Q296.54 -7.1 289.75 -3.55Q282.97 0 273.97 0ZM257.83 -6.21H273.57Q280.73 -6.21 285.96 -8.98Q291.2 -11.74 294.08 -16.65Q296.96 -21.55 296.96 -28Q296.96 -34.51 294.08 -39.38Q291.2 -44.26 285.96 -47.02Q280.73 -49.79 273.57 -49.79H257.83ZM345 0V-56H352.12V0ZM422.66 0.59Q416.27 0.59 410.85 -1.56Q405.42 -3.71 401.42 -7.58Q397.42 -11.45 395.2 -16.64Q392.99 -21.83 392.99 -28Q392.99 -34.17 395.2 -39.36Q397.42 -44.55 401.43 -48.43Q405.43 -52.31 410.84 -54.45Q416.25 -56.59 422.64 -56.59Q429.04 -56.59 434.43 -54.46Q439.82 -52.33 443.81 -48.47Q447.81 -44.61 450.03 -39.4Q452.24 -34.19 452.24 -27.99Q452.24 -21.8 450.03 -16.59Q447.81 -11.39 443.81 -7.53Q439.82 -3.67 434.43 -1.54Q429.04 0.59 422.66 0.59ZM422.64 -5.8Q427.47 -5.8 431.55 -7.45Q435.63 -9.11 438.66 -12.13Q441.69 -15.14 443.38 -19.18Q445.07 -23.21 445.07 -28.02Q445.07 -32.82 443.39 -36.83Q441.71 -40.85 438.67 -43.87Q435.64 -46.89 431.55 -48.54Q427.47 -50.2 422.64 -50.2Q417.82 -50.2 413.72 -48.54Q409.62 -46.88 406.58 -43.86Q403.53 -40.84 401.85 -36.82Q400.16 -32.8 400.16 -28.02Q400.16 -23.24 401.84 -19.2Q403.53 -15.16 406.57 -12.13Q409.6 -9.09 413.71 -7.45Q417.82 -5.8 422.64 -5.8Z"/>
+   </g>
+-  <g class="rl-cloud" filter="url(#rlCloud)" opacity="0.88">
++  <g class="rl-cloud" filter="url(#rlCloud)" opacity="0.88" transform="translate(0 -11)">
+     <ellipse cx="669.1" cy="-20.0" rx="171.9" ry="126.0" fill="url(#rlPuff)" opacity="0.92"/>
+     <ellipse cx="607.4" cy="-95.0" rx="97.0" ry="60.0" fill="url(#rlPuff)" opacity="0.78"/>
+     <ellipse cx="730.8" cy="-95.0" rx="97.0" ry="60.0" fill="url(#rlPuff)" opacity="0.78"/>
+@@ -94,7 +96,7 @@
+     <ellipse cx="523.6" cy="-34.0" rx="58.2" ry="42.0" fill="url(#rlPuff)" opacity="0.4"/>
+     <ellipse cx="814.6" cy="-34.0" rx="58.2" ry="42.0" fill="url(#rlPuff)" opacity="0.4"/>
+   </g>
+-  <g class="rl-fig" transform="translate(558.86 -176.00) scale(0.25021) translate(-94 -168)">
++  <g class="rl-fig" transform="translate(0 -11) translate(558.86 -176.00) scale(0.25021) translate(-94 -168)">
+     <g filter="url(#rlWind)" fill="url(#rlPearl)" stroke="var(--logo-edge, var(--amber, #8e1a2e))" stroke-width="0.8" stroke-opacity="0" vector-effect="non-scaling-stroke" paint-order="stroke">
+       <path transform="translate(161.0 170.0)" d="M0 0 C1.14 3.43 0.82 4.41 -0.14 7.8 C-0.41 8.77 -0.67 9.73 -0.94 10.73 C-1.23 11.77 -1.52 12.8 -1.81 13.88 C-9.25 42.52 -9.25 73.93 -4 103 C-3.92 103.46 -3.92 103.46 -3.51 105.8 C0.89 130.42 9.58 155.71 22.88 177.02 C23.25 177.67 23.62 178.33 24 179 C23.67 179.66 23.34 180.32 23 181 C19.31 175.35 15.65 169.68 12 164 C11.38 163.03 10.75 162.06 10.11 161.07 C-10.33 128.31 -12.97 83.36 -9 46 C-15.96 98.64 -9.34 156.88 23.9 200.38 C24.59 201.24 25.29 202.11 26 203 C26.8 204 27.59 205 28.41 206.03 C39.77 219.98 52.45 231.94 66.98 242.52 C68.82 243.87 70.65 245.24 72.46 246.62 C81.73 253.62 91.4 260 101.11 266.37 C125.84 282.63 149.96 302.26 168.2 325.77 C170.03 328.03 171.79 330.1 174 332 C174.95 331.83 175.9 331.67 176.88 331.5 C180 331 180 331 183.38 332.62 C186 335 186 335 186.38 337.75 C186.25 338.49 186.13 339.24 186 340 C184.68 340.33 183.36 340.66 182 341 C182.33 341.39 182.33 341.39 184 343.38 C186 346 186 346 186 348 C186.57 347.99 186.57 347.99 189.44 347.94 C193 348 193 348 194 349 C194.12 350.2 194.24 351.39 194.37 352.62 C194.86 356.86 196.18 360.16 198.06 364 C198.37 364.63 198.67 365.26 198.98 365.91 C200.7 369.45 202.48 372.95 204.28 376.46 C204.65 377.18 205.02 377.91 205.4 378.66 C206.12 380.08 206.86 381.49 207.6 382.9 C208.46 384.57 209.24 386.28 210 388 C209.67 388.66 209.34 389.32 209 390 C208.68 389.4 208.36 388.8 208.03 388.19 C197.34 368.34 186.5 349.99 171.17 333.36 C169.71 331.77 168.28 330.17 166.86 328.55 C144.91 303.45 116 285.81 87 270 C42.03 245.47 -1.17 219.08 -17.26 167.41 C-33.04 113.61 -19.73 50.86 0 0 Z " vector-effect="non-scaling-stroke"/>
+       <path transform="translate(926.0 178.0)" d="M0 0 C10.23 10.23 12.47 36.91 15 51 C15.16 51.89 15.33 52.78 15.5 53.7 C20.26 80.89 20.01 110.87 15 138 C14.84 138.9 14.68 139.81 14.51 140.74 C7.34 179.66 -12.34 214.86 -38.98 243.79 C-40.74 245.72 -42.44 247.69 -44.12 249.69 C-52.4 259.16 -61.44 268.04 -71.31 275.82 C-75.46 279.18 -79.32 282.82 -83.23 286.45 C-85.44 288.48 -87.67 290.48 -89.94 292.44 C-99.32 300.59 -108.28 309.15 -117 318 C-118.67 319.67 -120.33 321.33 -122 323 C-120.31 319.1 -117.75 315.93 -115.12 312.62 C-114.64 312.01 -114.15 311.4 -113.65 310.77 C-105.05 299.98 -95.92 289.69 -86.5 279.61 C-84.99 277.99 -83.49 276.36 -82 274.72 C-77.01 269.25 -71.95 263.89 -66.69 258.69 C-62.24 254.29 -58.03 249.78 -54 245 C-53.17 244.04 -52.34 243.07 -51.48 242.08 C-33.35 220.96 -17.93 198.19 -6 173 C-5.49 171.94 -4.98 170.88 -4.45 169.79 C5.83 147.33 12.34 121.74 13 97 C13.03 96.23 13.05 95.46 13.08 94.66 C13.56 78.59 12.08 62.93 10 47 C10.01 47.48 10.01 47.48 10.05 49.88 C10.59 86.09 10.59 86.09 7 103 C6.91 103.41 6.91 103.41 6.48 105.48 C-1.49 142.32 -18.91 173.15 -40 204 C-40.33 203.34 -40.66 202.68 -41 202 C-39.55 199.45 -38.03 197.02 -36.44 194.56 C-18.08 165.3 -4.74 133.89 2.75 100.19 C2.95 99.29 3.15 98.4 3.35 97.48 C6.33 83.44 7.41 69.74 7.38 55.44 C7.38 54.61 7.38 53.78 7.38 52.92 C7.36 39.6 6.37 26.94 3 14 C2.69 12.79 2.38 11.59 2.07 10.34 C1.58 8.53 1.07 6.72 0.52 4.93 C0 3 0 3 0 0 Z " vector-effect="non-scaling-stroke"/>
+@@ -235,7 +237,7 @@
+     <mask id="rcFade" maskUnits="userSpaceOnUse" x="442.3" y="-188.0" width="453.6" height="324.0"><rect x="442.3" y="-188.0" width="453.6" height="324.0" fill="url(#rcFadeG)"/></mask>
+   </defs>
+   <g mask="url(#rcFade)">
+-  <g class="rl-cloud" filter="url(#rcCloud)" opacity="0.88">
++  <g class="rl-cloud" filter="url(#rcCloud)" opacity="0.88" transform="translate(0 -11)">
+     <ellipse cx="669.1" cy="-20.0" rx="171.9" ry="126.0" fill="url(#rcPuff)" opacity="0.92"/>
+     <ellipse cx="607.4" cy="-95.0" rx="97.0" ry="60.0" fill="url(#rcPuff)" opacity="0.78"/>
+     <ellipse cx="730.8" cy="-95.0" rx="97.0" ry="60.0" fill="url(#rcPuff)" opacity="0.78"/>
+@@ -245,7 +247,7 @@
+     <ellipse cx="523.6" cy="-34.0" rx="58.2" ry="42.0" fill="url(#rcPuff)" opacity="0.4"/>
+     <ellipse cx="814.6" cy="-34.0" rx="58.2" ry="42.0" fill="url(#rcPuff)" opacity="0.4"/>
+   </g>
+-  <g class="rl-fig" transform="translate(558.86 -176.00) scale(0.25021) translate(-94 -168)">
++  <g class="rl-fig" transform="translate(0 -11) translate(558.86 -176.00) scale(0.25021) translate(-94 -168)">
+     <g filter="url(#rcWind)" fill="url(#rcPearl)" stroke="var(--logo-edge, var(--amber, #8e1a2e))" stroke-width="0.8" stroke-opacity="0" vector-effect="non-scaling-stroke" paint-order="stroke">
+       <path transform="translate(161.0 170.0)" d="M0 0 C1.14 3.43 0.82 4.41 -0.14 7.8 C-0.41 8.77 -0.67 9.73 -0.94 10.73 C-1.23 11.77 -1.52 12.8 -1.81 13.88 C-9.25 42.52 -9.25 73.93 -4 103 C-3.92 103.46 -3.92 103.46 -3.51 105.8 C0.89 130.42 9.58 155.71 22.88 177.02 C23.25 177.67 23.62 178.33 24 179 C23.67 179.66 23.34 180.32 23 181 C19.31 175.35 15.65 169.68 12 164 C11.38 163.03 10.75 162.06 10.11 161.07 C-10.33 128.31 -12.97 83.36 -9 46 C-15.96 98.64 -9.34 156.88 23.9 200.38 C24.59 201.24 25.29 202.11 26 203 C26.8 204 27.59 205 28.41 206.03 C39.77 219.98 52.45 231.94 66.98 242.52 C68.82 243.87 70.65 245.24 72.46 246.62 C81.73 253.62 91.4 260 101.11 266.37 C125.84 282.63 149.96 302.26 168.2 325.77 C170.03 328.03 171.79 330.1 174 332 C174.95 331.83 175.9 331.67 176.88 331.5 C180 331 180 331 183.38 332.62 C186 335 186 335 186.38 337.75 C186.25 338.49 186.13 339.24 186 340 C184.68 340.33 183.36 340.66 182 341 C182.33 341.39 182.33 341.39 184 343.38 C186 346 186 346 186 348 C186.57 347.99 186.57 347.99 189.44 347.94 C193 348 193 348 194 349 C194.12 350.2 194.24 351.39 194.37 352.62 C194.86 356.86 196.18 360.16 198.06 364 C198.37 364.63 198.67 365.26 198.98 365.91 C200.7 369.45 202.48 372.95 204.28 376.46 C204.65 377.18 205.02 377.91 205.4 378.66 C206.12 380.08 206.86 381.49 207.6 382.9 C208.46 384.57 209.24 386.28 210 388 C209.67 388.66 209.34 389.32 209 390 C208.68 389.4 208.36 388.8 208.03 388.19 C197.34 368.34 186.5 349.99 171.17 333.36 C169.71 331.77 168.28 330.17 166.86 328.55 C144.91 303.45 116 285.81 87 270 C42.03 245.47 -1.17 219.08 -17.26 167.41 C-33.04 113.61 -19.73 50.86 0 0 Z " vector-effect="non-scaling-stroke"/>
+       <path transform="translate(926.0 178.0)" d="M0 0 C10.23 10.23 12.47 36.91 15 51 C15.16 51.89 15.33 52.78 15.5 53.7 C20.26 80.89 20.01 110.87 15 138 C14.84 138.9 14.68 139.81 14.51 140.74 C7.34 179.66 -12.34 214.86 -38.98 243.79 C-40.74 245.72 -42.44 247.69 -44.12 249.69 C-52.4 259.16 -61.44 268.04 -71.31 275.82 C-75.46 279.18 -79.32 282.82 -83.23 286.45 C-85.44 288.48 -87.67 290.48 -89.94 292.44 C-99.32 300.59 -108.28 309.15 -117 318 C-118.67 319.67 -120.33 321.33 -122 323 C-120.31 319.1 -117.75 315.93 -115.12 312.62 C-114.64 312.01 -114.15 311.4 -113.65 310.77 C-105.05 299.98 -95.92 289.69 -86.5 279.61 C-84.99 277.99 -83.49 276.36 -82 274.72 C-77.01 269.25 -71.95 263.89 -66.69 258.69 C-62.24 254.29 -58.03 249.78 -54 245 C-53.17 244.04 -52.34 243.07 -51.48 242.08 C-33.35 220.96 -17.93 198.19 -6 173 C-5.49 171.94 -4.98 170.88 -4.45 169.79 C5.83 147.33 12.34 121.74 13 97 C13.03 96.23 13.05 95.46 13.08 94.66 C13.56 78.59 12.08 62.93 10 47 C10.01 47.48 10.01 47.48 10.05 49.88 C10.59 86.09 10.59 86.09 7 103 C6.91 103.41 6.91 103.41 6.48 105.48 C-1.49 142.32 -18.91 173.15 -40 204 C-40.33 203.34 -40.66 202.68 -41 202 C-39.55 199.45 -38.03 197.02 -36.44 194.56 C-18.08 165.3 -4.74 133.89 2.75 100.19 C2.95 99.29 3.15 98.4 3.35 97.48 C6.33 83.44 7.41 69.74 7.38 55.44 C7.38 54.61 7.38 53.78 7.38 52.92 C7.36 39.6 6.37 26.94 3 14 C2.69 12.79 2.38 11.59 2.07 10.34 C1.58 8.53 1.07 6.72 0.52 4.93 C0 3 0 3 0 0 Z " vector-effect="non-scaling-stroke"/>
+-- 
+2.43.0
+

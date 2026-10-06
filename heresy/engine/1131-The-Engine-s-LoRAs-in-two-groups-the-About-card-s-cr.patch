@@ -1,0 +1,222 @@
+From 9ce390823b6f96973a4987b7c9f53ac4e920ce9d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 02:03:00 -0600
+Subject: [PATCH 1131/1177] The Engine's LoRAs in two groups; the About card's
+ credits on a line of their own (1166, part eleven)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «В Engine раздели блок LoRA на два: ЛОКАЛЬНЫЕ оттрененные где `нет ссылки на
+источник`, и второй — те чужие адаптеры из HF»; «После лого новая строка».
+
+- The LoRA card: "Trained here" (the files with no web link to a source in loras/sources.json:
+  the duduk, shofar, Fosforida and GTSinger runs) and "From Hugging Face" (the others, with the
+  add-on badge, which leaves the card's title: ours are no add-on); a group with none hides.
+- The About card: About and its credits start under the logo.
+- "Trained here", "From Hugging Face" in the six catalogs (2,432 keys each).
+
+Checked headless in Russian: 24 trained here, 5 from Hugging Face; the About line under the logo.
+cdp-console 317/0/7 (the LoRA checks read both groups; one more check: the split itself),
+check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  7 ++++++-
+ tools/console/app.js            |  2 +-
+ tools/console/heresy-i18n-be.js |  4 +++-
+ tools/console/heresy-i18n-el.js |  4 +++-
+ tools/console/heresy-i18n-es.js |  4 +++-
+ tools/console/heresy-i18n-it.js |  4 +++-
+ tools/console/heresy-i18n-ru.js |  4 +++-
+ tools/console/heresy-i18n-uk.js |  4 +++-
+ tools/console/index.html        |  7 +++++--
+ tools/console/loras.js          | 24 ++++++++++++++++++------
+ 10 files changed, 48 insertions(+), 16 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a9c11a0..298492b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2276,10 +2276,15 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .about-logo { display: inline-flex; align-items: center; gap: 12px; margin-right: 16px; }
+ /* HERESY 1166: the bar's own logo in the About card (a copy, its words in the page's language), the tagline under it;
+    our Hugging Face repositories under Ruach Studio, a line's space below its credits */
+-.about-head .about-logo { flex-direction: column; align-items: flex-start; gap: 2px; }
++.about-head .about-logo { flex-direction: column; align-items: flex-start; gap: 2px; flex-basis: 100%; }   /* Viktor: «После лого новая строка» */
+ .about-mark { display: block; height: 64px; width: auto; overflow: visible; }
+ .about-tagline { font: 400 12px/1.4 var(--sans); color: var(--muted); }
+ .about-links.about-ours { margin-top: 1.4em; }
++/* HERESY 1166: the Engine's LoRAs in two groups, trained here and from Hugging Face */
++.lora-group[hidden] { display: none; }
++.lora-sub { margin: 14px 0 8px; font: 600 12px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
++  display: flex; align-items: center; gap: 8px; }
++.lora-card-head + .lora-group .lora-sub, .lora-card-head + .lora-group[hidden] + .lora-group .lora-sub { margin-top: 4px; }
+ .about-name { display: flex; flex-direction: column; font: 400 24px/1.1 var(--display); color: var(--ink); }
+ .about-name b { color: var(--amber); font-weight: 400; }
+ .about-name small { font: 400 12px/1.4 var(--sans); color: var(--muted); margin-top: 2px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index a9abb50..5f25c1b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -910,7 +910,7 @@
+   $("lyrics").addEventListener("change", function () { YueLoras.repaint(); });
+   $("style").addEventListener("change", function () { YueLoras.repaint(); });
+   all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", function () { YueLoras.repaint(); }); });
+-  YueLoras.listInto($("loraCard"), $("loraCardNote"));   // the Engine panel's list, under the VAEs
++  YueLoras.listInto($("loraCard"), $("loraCardNote"), $("loraCardLocal"));   // HERESY 1166: trained here, and from Hugging Face   // the Engine panel's list, under the VAEs
+ 
+   /* ------------------------------------------------------- reused codes */
+   // A take's music codes in the form: Generate renders exactly that music
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 49676da..5555957 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2433,5 +2433,7 @@ RuachI18n.add("be", {
+ "Epic trailer orchestra, sound half: the big symphonic timbre. The card's sample used sound about 0.375; keep it at 0.3 to 0.7, higher turns harsh or hollow.": "Аркестр эпічнага трэйлера, гукавая палова: вялікі сімфанічны тэмбр. У прыкладзе карткі гук каля 0.375; трымай ад 0.3 да 0.7, вышэй гучыць рэзка або пуста.",
+ "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound.": "Інструментальная музыка з планам раздзелаў, музычная палова (навучаная прыкладна на 2 700 інструментальных трэках). Рэжым «Поўны план». Поле тэксту: толькі голыя тэгі раздзелаў, па адным у радку ([intro] [verse] [chorus] [bridge] [outro]), можна з часам х:сс. У пару — гукавая LoRA real-audio для гуку сапраўднага прадакшну.",
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Меладычны дэт-метал, музычная палова (чэкпойнт кроку 600). Упішы яе трыгер deathmetal у стыль. Картка не раіць сілу: пачні з 1.0 і зменшы, калі вакал развальваецца.",
+-"Instrument probes": "Пробы інструментаў"
++"Instrument probes": "Пробы інструментаў",
++"Trained here": "Натрэніраваныя тут",
++"From Hugging Face": "З Hugging Face"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 4e54c1f..920871c 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2432,5 +2432,7 @@ RuachI18n.add("el", {
+ "Epic trailer orchestra, sound half: the big symphonic timbre. The card's sample used sound about 0.375; keep it at 0.3 to 0.7, higher turns harsh or hollow.": "Ορχήστρα επικού trailer, ηχητικό μισό: η μεγάλη συμφωνική χροιά. Το δείγμα της κάρτας χρησιμοποίησε ήχο γύρω στο 0.375· κράτα τον από 0.3 έως 0.7, πιο πάνω ακούγεται τραχύ ή κούφιο.",
+ "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound.": "Οργανική μουσική με σχέδιο ενοτήτων, μουσικό μισό (εκπαιδευμένη σε περίπου 2.700 οργανικά κομμάτια). Χρησιμοποίησε λειτουργία Πλήρες σχέδιο. Πλαίσιο στίχων: μόνο γυμνές ετικέτες ενοτήτων, μία ανά γραμμή ([intro] [verse] [chorus] [bridge] [outro]), προαιρετικά με χρόνους λ:δδ. Ζευγάρωσέ τη με μια ηχητική LoRA real-audio για ήχο πραγματικής παραγωγής.",
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Μελωδικό death metal, μουσικό μισό (το checkpoint του βήματος 600). Βάλε τη λέξη ενεργοποίησής της deathmetal στο ύφος. Η κάρτα δεν δίνει συμβουλή έντασης: ξεκίνα από 1.0 και χαμήλωσέ τη αν τα φωνητικά διαλύονται.",
+-"Instrument probes": "Δοκιμές οργάνων"
++"Instrument probes": "Δοκιμές οργάνων",
++"Trained here": "Εκπαιδευμένοι εδώ",
++"From Hugging Face": "Από το Hugging Face"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 0801a17..9b6e15b 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2432,5 +2432,7 @@ RuachI18n.add("es", {
+ "Epic trailer orchestra, sound half: the big symphonic timbre. The card's sample used sound about 0.375; keep it at 0.3 to 0.7, higher turns harsh or hollow.": "Orquesta de tráiler épico, mitad sonora: el gran timbre sinfónico. La muestra de la ficha usó el sonido en torno a 0.375; mantenlo entre 0.3 y 0.7, más alto suena áspero o hueco.",
+ "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound.": "Música instrumental con un plan de secciones, mitad musical (entrenada con unas 2700 pistas instrumentales). Usa el modo Plan completo. Cuadro de letra: solo etiquetas de sección desnudas, una por línea ([intro] [verse] [chorus] [bridge] [outro]), opcionalmente con tiempos m:ss. Combínala con una LoRA de sonido real-audio para un sonido de producción real.",
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Death metal melódico, mitad musical (el checkpoint del paso 600). Pon su activador deathmetal en el estilo. La ficha no da consejo de intensidad: empieza en 1.0 y bájala si las voces se desmoronan.",
+-"Instrument probes": "Pruebas de instrumentos"
++"Instrument probes": "Pruebas de instrumentos",
++"Trained here": "Entrenados aquí",
++"From Hugging Face": "De Hugging Face"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index c84fbe3..d69cde1 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2432,5 +2432,7 @@ RuachI18n.add("it", {
+ "Epic trailer orchestra, sound half: the big symphonic timbre. The card's sample used sound about 0.375; keep it at 0.3 to 0.7, higher turns harsh or hollow.": "Orchestra da trailer epico, metà sonora: il grande timbro sinfonico. Il campione della scheda usava il suono intorno a 0.375; tienilo tra 0.3 e 0.7, più alto diventa aspro o vuoto.",
+ "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound.": "Musica strumentale con un piano delle sezioni, metà musicale (addestrata su circa 2.700 tracce strumentali). Usa la modalità Piano completo. Riquadro del testo: solo tag di sezione nudi, uno per riga ([intro] [verse] [chorus] [bridge] [outro]), facoltativamente con tempi m:ss. Abbinala a una LoRA di suono real-audio per un suono di produzione reale.",
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Death metal melodico, metà musicale (il checkpoint del passo 600). Metti il suo trigger deathmetal nello stile. La scheda non dà consigli sull'intensità: parti da 1.0 e abbassala se la voce crolla.",
+-"Instrument probes": "Prove degli strumenti"
++"Instrument probes": "Prove degli strumenti",
++"Trained here": "Addestrati qui",
++"From Hugging Face": "Da Hugging Face"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 4d62233..797a7a8 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2438,5 +2438,7 @@ RuachI18n.add("ru", {
+ "Epic trailer orchestra, sound half: the big symphonic timbre. The card's sample used sound about 0.375; keep it at 0.3 to 0.7, higher turns harsh or hollow.": "Оркестр эпического трейлера, звуковая половина: большой симфонический тембр. В примере карточки звук около 0.375; держи от 0.3 до 0.7, выше звучит резко или пусто.",
+ "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound.": "Инструментальная музыка с планом разделов, музыкальная половина (обучена примерно на 2 700 инструментальных треках). Режим «Полный план». Поле текста: только голые теги разделов, по одному в строке ([intro] [verse] [chorus] [bridge] [outro]), можно со временем м:сс. В пару к ней — звуковую LoRA real-audio для звука настоящего продакшна.",
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Мелодичный дэт-метал, музыкальная половина (чекпоинт шага 600). Впиши её триггер deathmetal в стиль. Карточка не советует силу: начни с 1.0 и убавь, если вокал разваливается.",
+-"Instrument probes": "Пробы инструментов"
++"Instrument probes": "Пробы инструментов",
++"Trained here": "Обучены здесь",
++"From Hugging Face": "С Hugging Face"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index c8075e6..19b72d2 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2433,5 +2433,7 @@ RuachI18n.add("uk", {
+ "Epic trailer orchestra, sound half: the big symphonic timbre. The card's sample used sound about 0.375; keep it at 0.3 to 0.7, higher turns harsh or hollow.": "Оркестр епічного трейлера, звукова половина: великий симфонічний тембр. У прикладі картки звук близько 0.375; тримай від 0.3 до 0.7, вище звучить різко або порожньо.",
+ "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound.": "Інструментальна музика з планом розділів, музична половина (навчена приблизно на 2 700 інструментальних треках). Режим «Повний план». Поле тексту: лише голі теги розділів, по одному в рядку ([intro] [verse] [chorus] [bridge] [outro]), можна з часом х:сс. До пари — звукова LoRA real-audio для звуку справжнього продакшну.",
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Мелодійний дет-метал, музична половина (чекпоінт кроку 600). Впиши її тригер deathmetal у стиль. Картка не радить силу: почни з 1.0 і зменш, якщо вокал розвалюється.",
+-"Instrument probes": "Проби інструментів"
++"Instrument probes": "Проби інструментів",
++"Trained here": "Натреновані тут",
++"From Hugging Face": "З Hugging Face"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 6671ec8..ba18f4a 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -469,9 +469,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     </div>
+ 
+     <div class="card wide lora-card">
+-      <div class="lora-card-head"><h3>LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras"></span></h3>
++      <div class="lora-card-head"><h3>LoRAs <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras"></span></h3>
+         <span class="lora-card-note" id="loraCardNote"></span></div>
+-      <ul class="lora-list" id="loraCard"></ul>
++      <!-- HERESY 1166 (Viktor: «раздели блок LoRA на два: ЛОКАЛЬНЫЕ оттрененные… и второй — те чужие адаптеры из HF»):
++           those with no web link to a source were trained here; the others came from Hugging Face -->
++      <div class="lora-group" id="loraGroupLocal" hidden><h4 class="lora-sub">Trained here</h4><ul class="lora-list" id="loraCardLocal"></ul></div>
++      <div class="lora-group" id="loraGroupHub"><h4 class="lora-sub">From Hugging Face <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span></h4><ul class="lora-list" id="loraCard"></ul></div>
+     </div>
+ 
+     <div class="card wide lora-card">
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 33840e4..ee9906a 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -194,7 +194,22 @@
+     if (!S.list) return;
+     var on = {};
+     S.choice.forEach(function (c) { on[c.id] = c; });
+-    S.list.innerHTML = S.catalog.length ? S.catalog.map(function (e) {
++    // HERESY 1166 (Viktor: «раздели блок LoRA на два»): with a second list, the files with no web link to a source (trained
++    // here) go there, the others (from Hugging Face) stay in the first; a group with none hides
++    var local = S.listLocal ? S.catalog.filter(function (e) { return !webUrl((source(e.id) || {}).url); }) : [];
++    var hub = S.catalog.filter(function (e) { return local.indexOf(e) < 0; });
++    if (S.listLocal) {
++      S.listLocal.innerHTML = local.map(tile).join("");
++      if (S.listLocal.parentNode) S.listLocal.parentNode.hidden = !local.length;
++      if (S.list.parentNode && S.list.parentNode.classList.contains("lora-group")) S.list.parentNode.hidden = !hub.length && local.length > 0;
++    }
++    S.list.innerHTML = hub.length ? hub.map(tile).join("") : local.length ? "" :
++      '<li class="lora-item"><div class="lora-item-meta">No .safetensors files in the app\'s loras/ folder.</div></li>';
++    if (S.note) {
++      var active = S.choice.filter(function (c) { return entry(c.id); }).length;
++      S.note.textContent = tr(S.catalog.length + " in loras/") + " · " + (active ? tr(active + " in the song form") : tr("none in the song form"));
++    }
++    function tile(e) {
+       var parts = String(e.name).split(" / "), main = parts.pop(), folder = parts.join(" / "), title = (source(e.id) || {}).title || main;
+       // HERESY 1165: each piece its own text, so its words translate; the folder and the trigger word are names
+       var meta = e.error ? escape(tr("cannot load: " + e.error))
+@@ -214,10 +229,6 @@
+         '<div class="tile-src">' + where + '<span class="info" tabindex="-1" role="img" aria-label="' + escape(tr("About " + nameOf(e.id))) +
+         '" data-tip="' + escape(aboutTip(e)) + '"></span></div>' +
+         '<div class="lora-item-meta">' + meta + "</div></li>";
+-    }).join("") : '<li class="lora-item"><div class="lora-item-meta">No .safetensors files in the app\'s loras/ folder.</div></li>';
+-    if (S.note) {
+-      var active = S.choice.filter(function (c) { return entry(c.id); }).length;
+-      S.note.textContent = tr(S.catalog.length + " in loras/") + " · " + (active ? tr(active + " in the song form") : tr("none in the song form"));
+     }
+   }
+ 
+@@ -234,9 +245,10 @@
+     changed();
+   }
+ 
+-  function listInto(list, note) {
++  function listInto(list, note, local) {
+     S.list = list;
+     S.note = note || null;
++    S.listLocal = local || null;                  // HERESY 1166: the adapters trained here, a list of their own
+     paintList();
+   }
+ 
+-- 
+2.43.0
+

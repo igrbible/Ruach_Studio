@@ -1,0 +1,75 @@
+From 2a203c67962c9e251c82af920912f2067c1368ef Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 12:49:02 -0600
+Subject: [PATCH 1173/1177] HERESY 1167: by day the Librarian's cards washed
+ from #f2edef to nothing; the probes' pictures said to be painted by an image
+ model
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026:
+· «Карточки у библиотекаря до сих пор слишком красные. Возьми начальный #f2edef и в градиенте дневной темы доводи его в правый
+  низ… до нулевой альфы»: by day a card's wash runs from #f2edef in its top left to nothing at its bottom right (#ebe3e6
+  hovered or in hand, #e5d9dd checked); by night as it was.
+· «В пробах нужно указать дисклеймер по картинкам, что некоторые не соответствуют реальности, потому как сгенерированы
+  нейросетью»: in the cheat-sheet's lead and in the 💎 sets' window.
+
+cdp-console 344/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 7 +++++++
+ tools/console/heresy-collection.js  | 4 +++-
+ tools/console/heresy-instruments.js | 4 +++-
+ 3 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 85909ab..87dfb58 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4077,3 +4077,10 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+   font: 400 clamp(12px, .95vw, 16px)/1.45 var(--sans); color: var(--dim); animation: boot-in 1.1s .15s ease both; }
+ .boot-osem b { font-weight: 600; color: var(--ink); font-size: 1.12em; letter-spacing: .6em; margin-right: -.6em; }
+ .boot-osem .boot-osem-say { font-style: italic; color: var(--muted); }
++/* HERESY 1167 (Viktor: «Карточки у библиотекаря до сих пор слишком красные. Возьми начальный #f2edef и в градиенте дневной темы
++   доводи его в правый низ… до нулевой альфы»): by day the card's wash from #f2edef in its top left to nothing at its bottom
++   right; a little deeper when hovered, held or checked */
++:root[data-tone="light"] .coll-card { background: linear-gradient(to bottom right, #f2edef, rgb(242 237 239 / 0)), var(--panel); }
++:root[data-tone="light"] .coll-card:hover,
++:root[data-tone="light"] .coll-card.is-current { background: linear-gradient(to bottom right, #ebe3e6, rgb(235 227 230 / 0)), var(--panel); }
++:root[data-tone="light"] .coll-card.is-sel { background: linear-gradient(to bottom right, #e5d9dd, rgb(229 217 221 / 0)), var(--panel); }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 5d219d6..cf6beac 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -662,7 +662,9 @@
+     back.innerHTML = '<div class="hd-box hub-box" role="dialog" aria-modal="true" aria-label="💎 Sets from Hugging Face">' +
+       '<div class="hd-title">💎 Sets from Hugging Face</div>' +
+       '<div class="hd-body">The studio\'s approved sets, as their author published them. Each comes in as a workspace of its own, ' +
+-      "locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded.</div>" +
++      "locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded. " +
++      // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
++      "The covers are painted by an image model: some show an instrument not quite as it really is.</div>" +
+       '<div class="hub-list"><p class="row-hint">Asking Hugging Face…</p></div>' +
+       '<div class="hd-acts"><button type="button" class="btn ghost small hub-close">Close</button></div></div>';
+     document.body.appendChild(back);
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 59053ea..dc4605f 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -245,7 +245,9 @@
+       "Click a name to put it into the Style prompt; ▶ plays its probe; its seeds stand under it. ✓ marks what the ear heard and kept, red what YuE2 did not play when named alone. " +
+       // HERESY 1162 (Viktor: «инструмент играет весомый вклад в формирование стиля композиции»; «потрескивание и шелест бумаги, как
+       // будто на заезженной пластинке — артефакт неудачного зерна»)
+-      "An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.</p>" +
++      "An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another. " +
++      // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
++      "The probes' pictures are painted by an image model: some show an instrument not quite as it really is.</p>" +
+       '<div class="hi-tools"><input type="search" id="hiSearch" placeholder="Search: name, home, sound" autocomplete="off" />' +
+       '<select id="hiFam" aria-label="Family"><option value="">every family</option>' +
+       Object.keys(DATA.families).map(function (k) { return '<option value="' + k + '">' + esc(DATA.families[k]) + "</option>"; }).join("") + "</select>" +
+-- 
+2.43.0
+

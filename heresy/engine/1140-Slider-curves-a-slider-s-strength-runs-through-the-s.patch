@@ -1,0 +1,356 @@
+From 0ac917481e3028e8ce9483a8f2b7776256d21b8d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 22:28:38 -0600
+Subject: [PATCH 1140/1177] Slider curves: a slider's strength runs through the
+ song (1166, the engine)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «по кривым, может можно приделать так, чтобы либо было flat, как сейчас (как
+базовое состояние), и кривую в виде арки/параболы, либо амплитуду вручную мышкой двигая вспышки и
+затухания по слайдеру»; «Slider curves делай и тестируй».
+
+A slider in the request may carry "curve": points [t, k] (t the music from its first frame to the
+end of its budget, k the share of the strength, 0..2, 64 at most) or a name (flat, arch, rise,
+fall); none is flat, as before. The gain is a one-number tensor the graph reads (ggml_mul instead
+of ggml_scale with a constant), set before each step of the music to gain × curve(t), eased
+between two points by half a cosine, so the static decode graph is never rebuilt; the kept part of
+a song made again from a point counts in t. The curve goes back into the take's request as points,
+so a take made again runs the same. The log gives each curve at the song's quarters and, every 250
+steps, where each slider stands.
+
+Tested on two throwaway servers beside the studio (their own ports and outputs, the lab out of
+reach): a flat slider writes the very same 750 music tokens on this binary and on the one before;
+an arch and a drawn dip run their schedule (33 % → 0.79, 100 % → 0.15; the dip 0.10).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/generate.h  |   6 +++
+ src/pipeline.h  |   7 +++-
+ src/request.cpp |  43 +++++++++++++++++++-
+ src/request.h   |   4 ++
+ src/sliders.h   | 104 +++++++++++++++++++++++++++++++++++++++++++-----
+ 5 files changed, 149 insertions(+), 15 deletions(-)
+
+diff --git a/src/generate.h b/src/generate.h
+index aea3b63..65470b3 100644
+--- a/src/generate.h
++++ b/src/generate.h
+@@ -116,6 +116,9 @@ static bool yue2_generate(Qwen3LM *                             lm,
+         kv_sets[i] = i;
+     }
+ 
++    if (phase == YUE2_PHASE_SEMANTIC) {
++        sliders_progress(lm->sliders, 0, s.max_tokens);   // HERESY 1166: the curves at the start of the music
++    }
+     Timer prefill_timer;
+     for (int i = 0; i < B; i++) {
+         yue2_prefill(lm, kv, prefixes, 0, i, batched.data(), row0, rows, label);
+@@ -183,6 +186,9 @@ static bool yue2_generate(Qwen3LM *                             lm,
+         if ((step % 100) == 0) {
+             fprintf(stderr, "[AR] %s %d/%d\n", label, step, s.max_tokens);
+         }
++        if (phase == YUE2_PHASE_SEMANTIC) {
++            sliders_progress(lm->sliders, step + 1, s.max_tokens);   // HERESY 1166: each slider where its curve is now
++        }
+         qw3lm_forward_batch(lm, kv, tokens.data(), kv_sets.data(), N, batched.data(), row0, rows);
+         for (int i = 0; i < B; i++) {
+             if (owed[i] > 0) {
+diff --git a/src/pipeline.h b/src/pipeline.h
+index a5656ac..ca39c87 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -558,7 +558,8 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+             }
+         }
+         // Local addition: the sliders steer the music tokens only, then leave
+-        std::vector<std::pair<std::string, float>> chosen;
++        std::vector<std::pair<std::string, float>>        chosen;
++        std::vector<std::vector<std::pair<float, float>>> curves;   // HERESY 1166: each slider's curve
+         for (const Yue2SliderChoice & c : r.sliders) {
+             std::string path = pipeline_slider_path(p, c.id);
+             if (path.empty()) {
+@@ -566,8 +567,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                 return false;
+             }
+             chosen.push_back({ path, c.strength });
++            curves.push_back(c.curve);
+         }
+-        if (!sliders_load(&sliders, lm->backend, chosen, lm->cfg.n_layers)) {
++        if (!sliders_load(&sliders, lm->backend, chosen, lm->cfg.n_layers, curves)) {
+             return false;
+         }
+         sliders_used = sliders_active(&sliders);
+@@ -603,6 +605,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+             fprintf(stderr, "[AR] Continuing after %zu kept frames (%.1f s), budget %d\n", keep.size(),
+                     keep.size() / (double) YUE2_FRAME_RATE, semantic.max_tokens);
+         }
++        sliders.kept     = (int) keep.size();     // HERESY 1166: a curve runs over the whole song, the kept part too
+         bool semantic_ok = yue2_generate(lm, &p->kv, gen_prefixes, gen_negatives, guidance, semantic, r.lm_seed,
+                                          YUE2_PHASE_SEMANTIC, &codes, cancelled, cancel_data);
+         if (semantic_ok && !keep.empty()) {
+diff --git a/src/request.cpp b/src/request.cpp
+index fc1ee39..6bfe093 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -7,6 +7,7 @@
+ #include "task-types.h"
+ #include "yyjson.h"
+ 
++#include <algorithm>  // HERESY 1166: a slider's curve in order
+ #include <cstdio>
+ #include <cstring>
+ #include <random>
+@@ -204,8 +205,36 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+             yyjson_val * id       = yyjson_obj_get(item, "id");
+             yyjson_val * strength = yyjson_obj_get(item, "strength");
+             if (id && yyjson_is_str(id)) {
+-                r->sliders.push_back({ yy_str(id), strength && yyjson_is_num(strength) ?
+-                                                       (float) yyjson_get_num(strength) : 1.0f });
++                Yue2SliderChoice c;
++                c.id       = yy_str(id);
++                c.strength = strength && yyjson_is_num(strength) ? (float) yyjson_get_num(strength) : 1.0f;
++                // HERESY 1166: its curve, points [t, k] (t 0..1, k 0..2, 64 at most) or a name: flat, arch, rise, fall
++                yyjson_val * curve = yyjson_obj_get(item, "curve");
++                if (curve && yyjson_is_str(curve)) {
++                    std::string name = yy_str(curve);
++                    if (name == "arch") {
++                        c.curve = { { 0.0f, 0.15f }, { 0.5f, 1.0f }, { 1.0f, 0.15f } };
++                    } else if (name == "rise") {
++                        c.curve = { { 0.0f, 0.1f }, { 1.0f, 1.0f } };
++                    } else if (name == "fall") {
++                        c.curve = { { 0.0f, 1.0f }, { 1.0f, 0.1f } };
++                    }
++                } else if (curve && yyjson_is_arr(curve)) {
++                    size_t       ci, cmax;
++                    yyjson_val * pt;
++                    yyjson_arr_foreach(curve, ci, cmax, pt) {
++                        yyjson_val * a = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 0) : nullptr;
++                        yyjson_val * b = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 1) : nullptr;
++                        if (a && b && yyjson_is_num(a) && yyjson_is_num(b) && c.curve.size() < 64) {
++                            float t = std::min(1.0f, std::max(0.0f, (float) yyjson_get_num(a)));
++                            float k = std::min(2.0f, std::max(0.0f, (float) yyjson_get_num(b)));
++                            c.curve.push_back({ t, k });
++                        }
++                    }
++                    std::stable_sort(c.curve.begin(), c.curve.end(),
++                                     [](const std::pair<float, float> & x, const std::pair<float, float> & y) { return x.first < y.first; });
++                }
++                r->sliders.push_back(c);
+             }
+         }
+     }
+@@ -335,6 +364,16 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+             yyjson_mut_val * item = yyjson_mut_obj(doc);
+             yyjson_mut_obj_add_strncpy(doc, item, "id", c.id.c_str(), c.id.size());
+             yyjson_mut_obj_add_real(doc, item, "strength", c.strength);
++            if (!c.curve.empty()) {          // HERESY 1166: its curve, so a take made again runs the same
++                yyjson_mut_val * pts = yyjson_mut_arr(doc);
++                for (const auto & p : c.curve) {
++                    yyjson_mut_val * pt = yyjson_mut_arr(doc);
++                    yyjson_mut_arr_add_real(doc, pt, std::round(p.first * 1000.0) / 1000.0);
++                    yyjson_mut_arr_add_real(doc, pt, std::round(p.second * 1000.0) / 1000.0);
++                    yyjson_mut_arr_append(pts, pt);
++                }
++                yyjson_mut_obj_add_val(doc, item, "curve", pts);
++            }
+             yyjson_mut_arr_append(list, item);
+         }
+         yyjson_mut_obj_add_val(doc, root, "sliders", list);
+diff --git a/src/request.h b/src/request.h
+index faef327..d292736 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -9,12 +9,16 @@
+ 
+ #include <cstdint>
+ #include <string>
++#include <utility>
+ #include <vector>
+ 
+ // Local addition: one voice/genre slider and its strength (0..1)
+ struct Yue2SliderChoice {
+     std::string id;
+     float       strength;
++    // HERESY 1166: how the strength runs through the song: points (t, k), t from the first frame of the music (0) to
++    // the end of its budget (1), k the share of the strength (0..2); empty: flat, the strength all through
++    std::vector<std::pair<float, float>> curve;
+ };
+ 
+ // Local addition: one LoRA file (its path under the server's --loras folder) and
+diff --git a/src/sliders.h b/src/sliders.h
+index 41aee1b..e2c5c8e 100644
+--- a/src/sliders.h
++++ b/src/sliders.h
+@@ -22,6 +22,8 @@
+ #include "gguf-weights.h"
+ #include "weight-ctx.h"
+ 
++#include <cmath>
++#include <memory>
+ #include <string>
+ #include <utility>
+ #include <vector>
+@@ -42,6 +44,11 @@ struct SliderProj {
+ struct Slider {
+     std::string          id;
+     float                gain;  // strength * alpha / rank
++    // HERESY 1166: its curve through the song (points t, k; empty: flat) and the gain the graph reads, a tensor set
++    // before each step of the music to gain * curve(t), so the static decode graph needs no rebuild
++    std::vector<std::pair<float, float>> curve;
++    struct ggml_tensor *                 gain_t   = nullptr;
++    mutable float                        gain_now = 0.0f;
+     struct ggml_tensor * particles;
+     struct ggml_tensor * particles_t;
+     SliderProj           proj[SLIDER_MAX_LAYERS][4];
+@@ -51,24 +58,49 @@ struct SliderSet {
+     std::vector<Slider> sliders;
+     WeightCtx           wctx;
+     bool                allocated = false;
++    int                 kept      = 0;  // HERESY 1166: frames kept before the stage (regenerate from here): its curve counts them
+ };
+ 
+ static bool sliders_active(const SliderSet * s) {
+     return s && !s->sliders.empty();
+ }
+ 
++// HERESY 1166: a curve's value at t (0..1): between two points an eased step (half a cosine), so a peak is round and a
++// plateau flat; before the first point the first value, after the last the last; no points: 1, the strength as set
++static float slider_curve_at(const std::vector<std::pair<float, float>> & c, float t) {
++    if (c.empty()) {
++        return 1.0f;
++    }
++    if (t <= c.front().first) {
++        return c.front().second;
++    }
++    for (size_t i = 1; i < c.size(); i++) {
++        if (t <= c[i].first) {
++            float t0 = c[i - 1].first, t1 = c[i].first, u = t1 > t0 ? (t - t0) / (t1 - t0) : 1.0f;
++            float e = 0.5f - 0.5f * cosf(3.14159265f * u);
++            return c[i - 1].second + (c[i].second - c[i - 1].second) * e;
++        }
++    }
++    return c.back().second;
++}
++
+ // Load the chosen sliders onto the backbone's backend. choices: GGUF path and
+ // strength; a strength of 0 is skipped outright (exactly the base model).
+-static bool sliders_load(SliderSet *                                         set,
+-                         ggml_backend_t                                      backend,
+-                         const std::vector<std::pair<std::string, float>> & choices,
+-                         int                                                 n_layers) {
++// HERESY 1166: curves, one a choice in the same order (none: every one flat).
++static bool sliders_load(SliderSet *                                                set,
++                         ggml_backend_t                                             backend,
++                         const std::vector<std::pair<std::string, float>> &        choices,
++                         int                                                        n_layers,
++                         const std::vector<std::vector<std::pair<float, float>>> & curves = {}) {
+     set->sliders.clear();
+     set->allocated = false;
+-    std::vector<std::pair<std::string, float>> used;
+-    for (const auto & c : choices) {
+-        if (c.second != 0.0f) {
+-            used.push_back(c);
++    set->kept      = 0;
++    std::vector<std::pair<std::string, float>>        used;
++    std::vector<std::vector<std::pair<float, float>>> used_curves;
++    for (size_t ci = 0; ci < choices.size(); ci++) {
++        if (choices[ci].second != 0.0f) {
++            used.push_back(choices[ci]);
++            used_curves.push_back(ci < curves.size() ? curves[ci] : std::vector<std::pair<float, float>>{});
+         }
+     }
+     if (used.empty()) {
+@@ -79,7 +111,7 @@ static bool sliders_load(SliderSet *                                         set
+         return false;
+     }
+     std::vector<GGUFModel> files(used.size());
+-    const int              per_slider = 2 + n_layers * 4 * 18;
++    const int              per_slider = 3 + n_layers * 4 * 18;  // HERESY 1166: and its gain
+     wctx_init(&set->wctx, per_slider * (int) used.size());
+     const char proj_char[4] = { 'q', 'k', 'v', 'o' };
+     for (size_t i = 0; i < used.size(); i++) {
+@@ -107,6 +139,16 @@ static bool sliders_load(SliderSet *                                         set
+         Slider s;
+         s.id          = kid >= 0 ? gguf_get_val_str(gf.gguf, kid) : used[i].first;
+         s.gain        = used[i].second * alpha / (float) rank;
++        s.curve       = used_curves[i];                  // HERESY 1166: the gain a tensor, set from its curve
++        s.gain_t      = ggml_new_tensor_1d(set->wctx.ctx, GGML_TYPE_F32, 1);
++        ggml_set_name(s.gain_t, ("sld.gain." + std::to_string(i)).c_str());
++        {
++            auto g0    = std::make_unique<float[]>(1);
++            g0[0]      = s.gain * slider_curve_at(s.curve, 0.0f);
++            s.gain_now = g0[0];
++            set->wctx.pending.push_back({ s.gain_t, g0.get(), sizeof(float), 0 });
++            set->wctx.staging.push_back(std::move(g0));
++        }
+         s.particles   = gf_load_tensor_f32(&set->wctx, gf, "sld.particles");
+         s.particles_t = gf_load_tensor_f32(&set->wctx, gf, "sld.particles_t");
+         for (int l = 0; l < n_layers; l++) {
+@@ -141,7 +183,14 @@ static bool sliders_load(SliderSet *                                         set
+     }
+     set->allocated = true;
+     for (const Slider & s : set->sliders) {
+-        fprintf(stderr, "[Sliders] %s at gain %.2f\n", s.id.c_str(), (double) s.gain);
++        if (s.curve.empty()) {
++            fprintf(stderr, "[Sliders] %s at gain %.2f\n", s.id.c_str(), (double) s.gain);
++        } else {                                         // HERESY 1166: its curve, at the five quarters of the song
++            fprintf(stderr, "[Sliders] %s at gain %.2f, curved through the song: %.2f %.2f %.2f %.2f %.2f of it\n", s.id.c_str(),
++                    (double) s.gain, (double) slider_curve_at(s.curve, 0.0f), (double) slider_curve_at(s.curve, 0.25f),
++                    (double) slider_curve_at(s.curve, 0.5f), (double) slider_curve_at(s.curve, 0.75f),
++                    (double) slider_curve_at(s.curve, 1.0f));
++        }
+     }
+     return true;
+ }
+@@ -195,7 +244,7 @@ static struct ggml_tensor * slider_delta(struct ggml_context * ctx,
+                 h = ggml_leaky_relu(ctx, h, 0.2f, false);
+             }
+         }
+-        struct ggml_tensor * d = ggml_scale(ctx, ggml_mul_mat(ctx, p.up, h), s.gain);  // [out, n]
++        struct ggml_tensor * d = ggml_mul(ctx, ggml_mul_mat(ctx, p.up, h), s.gain_t);  // [out, n]; 1166: a tensor
+         total                  = total ? ggml_add(ctx, total, d) : d;
+     }
+     return total;
+@@ -211,3 +260,36 @@ static struct ggml_tensor * slider_apply(struct ggml_context * ctx,
+     struct ggml_tensor * d = slider_delta(ctx, set, layer, proj, x);
+     return d ? ggml_add(ctx, y, d) : y;
+ }
++
++// HERESY 1166 (Viktor 04.10.2026: «либо было flat, как сейчас (как базовое состояние), и кривую в виде арки/параболы, либо
++// амплитуду вручную мышкой двигая вспышки и затухания по слайдеру»): the gains at a step of the music, t = (kept + step) /
++// (kept + budget); a curved slider's gain is uploaded when it moved; every 250 steps the log says where each stands
++static void sliders_progress(const SliderSet * set, int step, int budget) {
++    if (!sliders_active(set)) {
++        return;
++    }
++    const float span = (float) (set->kept + budget);
++    float       t    = span > 0.0f ? (float) (set->kept + step) / span : 0.0f;
++    t                = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
++    const bool  say  = step > 0 && (step % 250) == 0;
++    std::string line;
++    for (const Slider & s : set->sliders) {
++        if (s.curve.empty()) {
++            continue;
++        }
++        float g = s.gain * slider_curve_at(s.curve, t);
++        if (fabsf(g - s.gain_now) > 1e-4f * (fabsf(s.gain) + 1e-3f)) {
++            ggml_backend_tensor_set(s.gain_t, &g, 0, sizeof(float));
++            s.gain_now = g;
++        }
++        if (say) {
++            char part[160];
++            snprintf(part, sizeof(part), "%s%s %.2f", line.empty() ? "" : ", ", s.id.c_str(),
++                     (double) (s.gain != 0.0f ? s.gain_now / s.gain : 0.0f));
++            line += part;
++        }
++    }
++    if (say && !line.empty()) {
++        fprintf(stderr, "[Sliders] %.0f%% into the music: %s of their strengths\n", (double) (t * 100.0f), line.c_str());
++    }
++}
+-- 
+2.43.0
+

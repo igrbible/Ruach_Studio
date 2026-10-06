@@ -1,0 +1,56 @@
+From 204c2fc867f18065e5a8cd955c069768bfdc8c7a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 21:13:49 -0600
+Subject: [PATCH 1058/1177] The player says why a song did not start
+
+1064 (Viktor: "would not play" on the road): a load cut short by the next
+click says nothing; the browser waiting for a click says so; a connection
+lost while loading says so; only a file the browser cannot decode is
+"would not play".
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js       |  15 +++++++++++++--
+ tools/public/index.html.gz | Bin 353701 -> 353955 bytes
+ 2 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index ac6577b..5f708f6 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3596,10 +3596,21 @@
+ 
+   // Put a song in the player and start it: "Play this song" (right after the title, on the left)
+   // and a double-click in the list
++  // HERESY 1064 (Viktor: "would not play" on the road): a refused play() says why. A load cut short by
++  // the next click is nothing; the browser waiting for a click says so; a lost connection says so; only
++  // a file it cannot decode is "would not play".
++  function playRefused(e) {
++    var name = e && e.name;
++    if (name === "AbortError") return;
++    if (name === "NotAllowedError") return toast("The browser waits for a click before it plays: press ▶", "bad");
++    var err = audio.error && audio.error.code;
++    if (err === 2) return toast("The connection dropped while the song was loading: press ▶ again", "bad");
++    toast(err === 4 || name === "NotSupportedError" ? "Your browser would not play this file" : "It did not start: " + (e && e.message || "press ▶ again"), "bad");
++  }
+   function playNow(take) {
+     if (!take) return;
+     loadPlayer(take, false);
+-    audio.play().catch(function () { toast("Your browser would not play this file", "bad"); });
++    audio.play().catch(playRefused);
+     paintPlayHere();
+   }
+   $("playHere").addEventListener("click", function () { playNow(STATE.take); });
+@@ -3620,7 +3631,7 @@
+   function togglePlay() {
+     if (!audio.getAttribute("src") && STATE.take) loadPlayer(STATE.take, false);
+     if (!audio.getAttribute("src")) return;
+-    if (audio.paused) audio.play().catch(function () { toast("Your browser would not play this file", "bad"); });
++    if (audio.paused) audio.play().catch(playRefused);
+     else audio.pause();
+   }
+ 
+-- 
+2.43.0
+

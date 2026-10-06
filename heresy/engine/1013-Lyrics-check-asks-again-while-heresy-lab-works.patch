@@ -1,0 +1,69 @@
+From 76daf4de158a45b236b05445b24c133e4b43413b Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 16:31:01 -0600
+Subject: [PATCH 1013/1177] Lyrics check asks again while heresy-lab works
+
+HERESY 1013. heresy-lab is asynchronous now: /gloss answers at once, 202 with
+the job's state while Whisper is queued or running, the result when it is
+done. The page asks again every two seconds. No request is held for the
+length of a job, which the coming stems and AudioSR jobs will need.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-gloss.js |  31 ++++++++++++++++++++++---------
+ tools/public/index.html.gz    | Bin 247639 -> 247790 bytes
+ 2 files changed, 22 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/heresy-gloss.js b/tools/console/heresy-gloss.js
+index 895b700..1f18447 100644
+--- a/tools/console/heresy-gloss.js
++++ b/tools/console/heresy-gloss.js
+@@ -78,23 +78,36 @@
+     box.appendChild(det);
+   }
+ 
++  // The lab answers at once: 202 while the job is queued or running, the result when done.
++  // The page asks again every two seconds (HERESY 1013: heresy-lab is asynchronous).
+   function run(force) {
+     if (!state.take) return;
+-    var token = ++state.token, started = Date.now(), take = state.take;
++    var token = ++state.token, started = Date.now(), take = state.take, first = true;
+     $("glossRun").disabled = true;
+-    var ticker = setInterval(function () { say("Whisper is listening on Forge… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
+-    say("asking heresy-lab…");
+-    fetch(lab() + "/gloss?name=" + encodeURIComponent(take.name) + (force ? "&force=1" : "")).then(function (r) {
+-      return r.json().then(function (body) { if (!r.ok) throw new Error(body.error || "heresy-lab answered " + r.status); return body; });
+-    }).then(function (r) {
+-      if (token !== state.token) return;
++    var ticker = setInterval(function () { say("Whisper is listening on Forge\u2026 " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
++    say("asking heresy-lab\u2026");
++    function ask() {
++      var url = lab() + "/gloss?name=" + encodeURIComponent(take.name) + (force && first ? "&force=1" : "");
++      first = false;
++      return fetch(url).then(function (r) {
++        return r.json().then(function (body) {
++          if (r.status === 202) {
++            if (token !== state.token) return null;
++            return new Promise(function (resolve) { setTimeout(resolve, 2000); }).then(ask);
++          }
++          if (!r.ok) throw new Error(body.error || "heresy-lab answered " + r.status);
++          return body;
++        });
++      });
++    }
++    ask().then(function (r) {
++      if (!r || token !== state.token) return;
+       paint(r);
+       say("");
+       $("glossRun").textContent = "Listen again";
+     }).catch(function (error) {
+       if (token !== state.token) return;
+-      say(error instanceof TypeError ? "heresy-lab is not answering at " + lab() + " — start it: ./lab/start-lab.sh"
+-                                     : "Could not check: " + error.message, true);
++      say("Could not check: " + (error && error.message || error), true);
+     }).then(function () { clearInterval(ticker); $("glossRun").disabled = false; });
+   }
+ 
+-- 
+2.43.0
+

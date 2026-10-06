@@ -1,0 +1,76 @@
+From 858aa20487f0687cc9c37fe46d35d2250c04305c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 09:18:02 -0600
+Subject: [PATCH 1148/1177] HERESY 1167: the takes fold to the right; the
+ Creator's player in one row
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026 on the draft: «Одобряю. Takes схлопнул вправо и исчезли
+безвозвратно… сворачивается вниз и практически перекрывается серверным логом.
+Сворачиваем вправо, текст свёртки поверни на 90%»; «на странице Творца плеер
+делаем минималистичным, как в увеличенном режиме скейла. А в других комнатах
+оставляем текущие версии плеера».
+- Folded, the takes are a 40 px strip at the right edge, «Takes» on its side,
+  and the take has the third's whole height (the bar under the take sat under
+  the server log, so nothing told where the takes went).
+- The player in the Creator is one row from 1660 px, as the scaled-up page
+  has it (1150); a long name still wraps to two lines, never cut.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 31 ++++++++++++++++++++++++-------
+ 1 file changed, 24 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 0b4b243..a18859a 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3708,14 +3708,14 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+   body[data-tab="create"] .k-split.is-dragging::after { background: var(--amber); }
+   body.is-resizing-rows, body.is-resizing-rows * { cursor: row-resize !important; user-select: none !important; }
+ 
+-  /* folded, the takes are one bar under the take, and the take has the third to itself */
+-  body[data-tab="create"] .workspace.lib-folded { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important; grid-template-rows: minmax(0, 1fr) auto; }
+-  body[data-tab="create"] .workspace.lib-folded .k-split { display: none; }
+-  body[data-tab="create"] .library.is-folded .lib-unfold {
+-    writing-mode: horizontal-tb; flex-direction: row; justify-content: flex-start; gap: 10px;
+-    width: 100%; height: 40px; padding: 0 16px;
++  /* folded, the takes are a strip at the right edge, its word on its side (Viktor 05.10.2026: «Сворачиваем вправо, текст
++     свёртки поверни на 90%»; a bar under the take sat under the server log), and the take has the third's whole height */
++  body[data-tab="create"] .workspace.lib-folded {
++    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 40px !important; grid-template-rows: minmax(0, 1fr);
+   }
+-  body[data-tab="create"] .library.is-folded .lib-unfold-name { writing-mode: horizontal-tb; }
++  body[data-tab="create"] .workspace.lib-folded #view-compose, body[data-tab="create"] .workspace.lib-folded #view-take { grid-row: 1; }
++  body[data-tab="create"] .workspace.lib-folded .library { grid-column: 3; grid-row: 1; }
++  body[data-tab="create"] .workspace.lib-folded .k-split { display: none; }
+ 
+   /* the takes in compact cards: the title, then its marks, length and time beside its workspace and its votes */
+   body[data-tab="create"] .library .lib-list { gap: 2px; padding: 6px 8px; }
+@@ -3763,3 +3763,20 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+   body[data-tab="create"] #view-take .take-tools .btn.small { padding: 4px 9px; font-size: 11.5px; }
+   body[data-tab="create"] #view-take .tool-row { gap: 5px; }
+ }
++
++/* the player in one row in the Creator, as when the page is scaled up (HERESY 1150; Viktor 05.10.2026: «в такой раскладке
++   на странице Творца плеер делаем минималистичным, как в увеличенном режиме скейла. А в других комнатах оставляем текущие
++   версии плеера»): from 1660 px (below it the scaled-up rule already does it) */
++@media (min-width: 1660px) {
++  body[data-tab="create"] { --playbar-h: 70px; }
++  body[data-tab="create"] #playbar { flex-direction: row; align-items: center; gap: 14px; padding: 8px 18px; }
++  body[data-tab="create"] #playbar .pb-row { display: contents; }
++  body[data-tab="create"] #playbar .playbar-id { order: 1; flex: 0 1 360px; }
++  /* a long name wraps to two lines here too, never cut (HERESY 1106) */
++  body[data-tab="create"] #playbar .pb-names strong {
++    white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.25;
++  }
++  body[data-tab="create"] #playbar #wave { order: 2; flex: 1 1 160px; width: auto; min-width: 120px; height: 40px; }
++  body[data-tab="create"] #playbar .pb-ctrl { order: 3; flex: none; }
++  body[data-tab="create"] #playbar .pb-side { order: 4; flex: none; }
++}
+-- 
+2.43.0
+

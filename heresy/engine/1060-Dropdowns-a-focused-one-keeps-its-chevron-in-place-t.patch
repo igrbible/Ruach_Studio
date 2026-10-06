@@ -1,0 +1,33 @@
+From e4eb8a2026dde2d954c8109d382f7b0eb5b2b5fe Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 1 Oct 2026 23:18:57 -0600
+Subject: [PATCH 1060/1177] Dropdowns: a focused one keeps its chevron in place
+ (the theme shorthand reset its geometry)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css      |   6 +++++-
+ tools/public/index.html.gz | Bin 354091 -> 354188 bytes
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d74e111..a22bf6a 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2416,7 +2416,11 @@ select { appearance: none; -webkit-appearance: none; background-color: var(--fie
+   background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+   padding-right: 26px !important; border: 1px solid var(--line); border-radius: var(--r-md); color: var(--ink); cursor: pointer; }
+ select:hover { border-color: var(--hover-line, var(--line-strong)); }
+-select:focus { background-color: var(--field); background-image: linear-gradient(45deg, transparent 50%, var(--amber) 50%), linear-gradient(135deg, var(--amber) 50%, transparent 50%); }   /* 1065: the theme's focus fill painted the whole box (and hid the accent chevron); the border and chevron say focus */
++select:focus { background-color: var(--field); background-image: linear-gradient(45deg, transparent 50%, var(--amber) 50%), linear-gradient(135deg, var(--amber) 50%, transparent 50%);
++  background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
++/* 1065: the theme's focus fill painted the whole box (and hid the accent chevron); the border and chevron say focus.
++   The theme's rule sets background as a shorthand with a stronger selector, so it also resets position,
++   size and repeat: all three are restated here, or the chevron tiles the whole box (Viktor, 02.10) */
+ /* HERESY 1065 (Viktor): the open list is the browser's own, drawn by the theme's color-scheme (our colours on the
+    options painted its top over in the night theme); the closed box 6 px lower */
+ select { padding-top: 6px; padding-bottom: 6px; }
+-- 
+2.43.0
+

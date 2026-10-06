@@ -1,0 +1,1010 @@
+{
+ "duduk": {
+  "name": "duduk",
+  "home": "Armenia",
+  "looks": "a short straight wooden tube (a woodwind, not a smoking pipe) of reddish-brown apricot wood, about 35 cm long, eight finger holes on top, a large flat pale cane reed pushed into its upper end",
+  "not": "an oboe, clarinet or flute with metal keys, or a plain stick or board"
+ },
+ "low-wooden-flute": {
+  "name": "low wooden flute",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "shofar": {
+  "name": "shofar (ram's horn)",
+  "home": "Israel",
+  "looks": "a ram's horn: a long hollow animal horn, curved and twisted, honey-coloured to dark brown and polished, wide at one end, narrow at the other",
+  "not": "a brass trumpet, a bugle or a metal horn"
+ },
+ "kinnor-lyre": {
+  "name": "kinnor lyre",
+  "home": "ancient Israel",
+  "looks": "an ancient lyre: a small wooden sound box, two curved wooden arms rising to a crossbar, about ten gut strings from the box to the crossbar"
+ },
+ "harp": {
+  "name": "harp",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "psaltery": {
+  "name": "psaltery",
+  "home": "Near East, medieval Europe",
+  "looks": "a flat trapezoid wooden box with many metal strings across its top and a carved rose sound hole, laid on the lap"
+ },
+ "frame-drum": {
+  "name": "frame drum",
+  "home": "Near East",
+  "looks": "a large shallow round frame drum about 50 cm across: a thin wooden hoop with a goatskin head, held upright"
+ },
+ "tambourine": {
+  "name": "tambourine",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "finger-cymbals": {
+  "name": "finger cymbals",
+  "home": "Near East",
+  "looks": "tiny brass finger cymbals, two pairs, each the size of a coin, with elastic loops"
+ },
+ "oud": {
+  "name": "oud",
+  "home": "Middle East",
+  "looks": "a short-necked lute without frets: a large pear-shaped body with a deeply rounded back of wooden ribs, a pegbox bent back, carved rosettes on its face"
+ },
+ "qanun": {
+  "name": "qanun",
+  "home": "Middle East",
+  "looks": "a large flat trapezoid zither laid on the knees, about eighty strings, small brass levers along one edge, a bridge on stretched skin"
+ },
+ "ney-flute": {
+  "name": "ney flute",
+  "home": "Persia, Turkey",
+  "looks": "a long end-blown flute of one pale cane, about 70 cm, its nodes showing, six finger holes on the front, a small horn cap at the top"
+ },
+ "kaval": {
+  "name": "kaval",
+  "home": "Balkans",
+  "looks": "a long slender end-blown wooden flute, about 70 cm, open at both ends, eight finger holes, carved rings and horn inlays near its ends"
+ },
+ "zurna": {
+  "name": "zurna",
+  "home": "Turkey, Balkans",
+  "looks": "a conical dark wooden shawm about 50 cm long widening into a flared bell, a small metal disc and a tiny reed at the top, seven finger holes"
+ },
+ "darbuka": {
+  "name": "darbuka",
+  "home": "Middle East",
+  "looks": "a goblet-shaped hand drum: a body of metal or clay shaped like a goblet, a taut skin over its wide top, engraved patterns"
+ },
+ "santur": {
+  "name": "santur",
+  "home": "Persia",
+  "looks": "a trapezoid walnut box with many strings over rows of small bridges, two light curved wooden hammers lying on it"
+ },
+ "bandura": {
+  "name": "bandura",
+  "home": "Ukraine",
+  "looks": "a large oval wooden lute with a short neck bent to one side and dozens of strings spread across its face like a fan"
+ },
+ "trembita": {
+  "name": "trembita (alpine horn)",
+  "home": "Carpathians",
+  "looks": "a mountain horn: a very long straight wooden tube, three metres, wrapped in birch bark, slightly widening at its far end"
+ },
+ "hammered-dulcimer": {
+  "name": "hammered dulcimer (tsymbaly)",
+  "home": "Ukraine, Eastern Europe",
+  "looks": "a trapezoid wooden box with many strings over two bridges, two small wooden hammers on it, set on a stand"
+ },
+ "sopilka": {
+  "name": "sopilka (low)",
+  "home": "Ukraine",
+  "looks": "a slender straight wooden whistle flute about 35 cm long, a whistle mouthpiece at the top, a row of finger holes, burned ornament on the wood"
+ },
+ "sitar": {
+  "name": "sitar",
+  "home": "India",
+  "looks": "a long-necked lute: a large round gourd body, a long wide neck with curved metal frets, a second small gourd near the top, many tuning pegs"
+ },
+ "tanpura-drone": {
+  "name": "tanpura drone",
+  "home": "India",
+  "looks": "a long-necked drone lute held upright: a large round gourd body, a long plain neck without frets, four long strings"
+ },
+ "erhu": {
+  "name": "erhu",
+  "home": "China",
+  "looks": "a two-string fiddle: a small hexagonal wooden sound box covered with snakeskin, a long thin neck, two pegs at the top, a bow between the two strings",
+  "not": "an ordinary violin"
+ },
+ "guzheng": {
+  "name": "guzheng",
+  "home": "China",
+  "looks": "a long zither about 1.6 m: a long curved wooden board with 21 strings over movable bridges set in a diagonal row, carved and painted ends"
+ },
+ "bansuri": {
+  "name": "bansuri",
+  "home": "India",
+  "looks": "a long straight pale bamboo flute blown from the side, a mouth hole near one end and six finger holes in a row, bound with thin red threads"
+ },
+ "didgeridoo": {
+  "name": "didgeridoo",
+  "home": "Australia",
+  "looks": "a long wooden drone pipe, a hollowed eucalyptus trunk about 1.5 m long, painted with ochre bands and dots, a wax ring at the mouth end"
+ },
+ "throat-singing-drone": {
+  "name": "throat singing drone",
+  "home": "Tuva, Mongolia",
+  "looks": "a singer in a robe with fur trim and a pointed hat, eyes closed, on the open steppe, a horse-head fiddle beside"
+ },
+ "cello": {
+  "name": "cello",
+  "home": "Europe",
+  "looks": ""
+ },
+ "viola": {
+  "name": "viola",
+  "home": "Europe",
+  "looks": ""
+ },
+ "violin": {
+  "name": "violin",
+  "home": "Europe",
+  "looks": ""
+ },
+ "double-bass": {
+  "name": "double bass",
+  "home": "Europe",
+  "looks": ""
+ },
+ "string-quartet": {
+  "name": "string quartet",
+  "home": "Europe",
+  "looks": ""
+ },
+ "flute": {
+  "name": "flute",
+  "home": "Europe",
+  "looks": ""
+ },
+ "oboe": {
+  "name": "oboe",
+  "home": "Europe",
+  "looks": ""
+ },
+ "clarinet": {
+  "name": "clarinet",
+  "home": "Europe",
+  "looks": ""
+ },
+ "bassoon": {
+  "name": "bassoon",
+  "home": "Europe",
+  "looks": ""
+ },
+ "french-horn": {
+  "name": "french horn",
+  "home": "Europe",
+  "looks": ""
+ },
+ "trumpet": {
+  "name": "trumpet",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "trombone": {
+  "name": "trombone",
+  "home": "Europe",
+  "looks": ""
+ },
+ "tuba": {
+  "name": "tuba",
+  "home": "Europe",
+  "looks": ""
+ },
+ "pipe-organ": {
+  "name": "pipe organ",
+  "home": "Europe",
+  "looks": ""
+ },
+ "harmonium": {
+  "name": "harmonium",
+  "home": "India, Europe",
+  "looks": "a small wooden box on the floor with a keyboard on top and folding bellows at its back"
+ },
+ "piano": {
+  "name": "piano",
+  "home": "Europe",
+  "looks": ""
+ },
+ "harpsichord": {
+  "name": "harpsichord",
+  "home": "Europe",
+  "looks": ""
+ },
+ "celesta": {
+  "name": "celesta",
+  "home": "Europe",
+  "looks": "a small upright keyboard instrument in a wooden cabinet, like a little piano"
+ },
+ "glass-harmonica": {
+  "name": "glass harmonica",
+  "home": "Europe",
+  "looks": "a row of nested glass bowls of graded size on a horizontal iron rod, set in a wooden case"
+ },
+ "tubular-bells": {
+  "name": "tubular bells",
+  "home": "Europe",
+  "looks": ""
+ },
+ "handbells": {
+  "name": "handbells",
+  "home": "England",
+  "looks": ""
+ },
+ "gong": {
+  "name": "gong",
+  "home": "East Asia",
+  "looks": ""
+ },
+ "timpani": {
+  "name": "timpani",
+  "home": "Europe",
+  "looks": ""
+ },
+ "taiko-drums": {
+  "name": "taiko drums",
+  "home": "Japan",
+  "looks": "large barrel drums of dark wood on wooden stands, cowhide heads fastened with rows of studs, thick wooden sticks"
+ },
+ "marimba": {
+  "name": "marimba",
+  "home": "Africa, Central America",
+  "looks": ""
+ },
+ "kalimba": {
+  "name": "kalimba",
+  "home": "Africa",
+  "looks": "a small wooden box with a row of thin metal tongues of different lengths fixed across it",
+  "not": "a music box or a toy piano"
+ },
+ "hang-drum": {
+  "name": "hang drum",
+  "home": "Switzerland",
+  "looks": "a handpan: two shallow steel shells joined like a flying saucer, a dome in the middle and seven or eight dimpled notes around it",
+  "not": "a wok, a pan or a cymbal"
+ },
+ "acoustic-guitar": {
+  "name": "acoustic guitar",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "classical-guitar": {
+  "name": "classical guitar",
+  "home": "Spain",
+  "looks": ""
+ },
+ "electric-guitar": {
+  "name": "electric guitar",
+  "home": "USA",
+  "looks": ""
+ },
+ "bass-guitar": {
+  "name": "bass guitar",
+  "home": "USA",
+  "looks": ""
+ },
+ "accordion": {
+  "name": "accordion",
+  "home": "Europe",
+  "looks": ""
+ },
+ "bagpipe": {
+  "name": "bagpipe",
+  "home": "Scotland, Europe",
+  "looks": ""
+ },
+ "synthesizer-pad": {
+  "name": "synthesizer pad",
+  "home": "studio",
+  "looks": ""
+ },
+ "808-drum-machine": {
+  "name": "808 drum machine",
+  "home": "Japan",
+  "looks": "a vintage drum machine: a flat box with a row of coloured square buttons and many small knobs"
+ },
+ "fiddle": {
+  "name": "fiddle",
+  "home": "Ireland, America",
+  "looks": ""
+ },
+ "banjo": {
+  "name": "banjo",
+  "home": "America",
+  "looks": ""
+ },
+ "mandolin": {
+  "name": "mandolin",
+  "home": "Italy",
+  "looks": ""
+ },
+ "balalaika": {
+  "name": "balalaika",
+  "home": "Russia",
+  "looks": "a lute with a triangular wooden body, a long fretted neck and three strings"
+ },
+ "shamisen": {
+  "name": "shamisen",
+  "home": "Japan",
+  "looks": "a three-string lute: a small square body covered with white skin, a long slender neck without frets, a large flat plectrum beside it"
+ },
+ "saxophone": {
+  "name": "saxophone",
+  "home": "Europe, USA",
+  "looks": ""
+ },
+ "harmonica": {
+  "name": "harmonica",
+  "home": "Germany, USA",
+  "looks": ""
+ },
+ "pan-flute": {
+  "name": "pan flute",
+  "home": "Andes, Romania",
+  "looks": ""
+ },
+ "kazoo": {
+  "name": "kazoo",
+  "home": "USA",
+  "looks": "a kazoo: a small metal tube with a little round membrane on top"
+ },
+ "grand-piano": {
+  "name": "grand piano",
+  "home": "Europe",
+  "looks": ""
+ },
+ "upright-piano": {
+  "name": "upright piano",
+  "home": "Europe",
+  "looks": ""
+ },
+ "honky-tonk-piano": {
+  "name": "honky tonk piano",
+  "home": "USA",
+  "looks": ""
+ },
+ "rhodes-electric-piano": {
+  "name": "rhodes electric piano",
+  "home": "USA",
+  "looks": "a vintage electric piano with a black top and a silver panel, 73 keys, standing on four chrome legs"
+ },
+ "wurlitzer-electric-piano": {
+  "name": "wurlitzer electric piano",
+  "home": "USA",
+  "looks": "a small vintage electric piano in a cream-coloured case, standing on four legs"
+ },
+ "clavinet": {
+  "name": "clavinet",
+  "home": "Germany",
+  "looks": "a small vintage electric keyboard in a wooden case with a lid, on four legs"
+ },
+ "hammond-organ": {
+  "name": "hammond organ",
+  "home": "USA",
+  "looks": ""
+ },
+ "toy-piano": {
+  "name": "toy piano",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "prepared-piano": {
+  "name": "prepared piano",
+  "home": "USA",
+  "looks": "a grand piano with its lid open, screws, bolts and strips of rubber wedged between its strings"
+ },
+ "sub-bass": {
+  "name": "sub bass",
+  "home": "studio",
+  "looks": ""
+ },
+ "saw-lead-synth": {
+  "name": "saw lead synth",
+  "home": "studio",
+  "looks": ""
+ },
+ "pluck-synth": {
+  "name": "pluck synth",
+  "home": "studio",
+  "looks": ""
+ },
+ "arpeggiator-synth": {
+  "name": "arpeggiator synth",
+  "home": "studio",
+  "looks": ""
+ },
+ "ambient-pad": {
+  "name": "ambient pad",
+  "home": "studio",
+  "looks": ""
+ },
+ "8-bit-chiptune": {
+  "name": "8-bit chiptune",
+  "home": "game consoles",
+  "looks": ""
+ },
+ "fm-synth": {
+  "name": "fm synth",
+  "home": "studio",
+  "looks": ""
+ },
+ "synth-brass": {
+  "name": "synth brass",
+  "home": "studio",
+  "looks": ""
+ },
+ "lute": {
+  "name": "lute",
+  "home": "Europe",
+  "looks": "a Renaissance lute: a pear-shaped body with a deep rounded back of wooden ribs, a carved rosette on its face, a pegbox bent back at a sharp angle"
+ },
+ "gusli": {
+  "name": "gusli",
+  "home": "Russia, Slavic lands",
+  "looks": "a flat wing-shaped wooden psaltery laid on the knees, ten or more strings fanning across it, carved folk ornament"
+ },
+ "domra": {
+  "name": "domra",
+  "home": "Russia, Ukraine",
+  "looks": "a small lute with a round wooden body, a long fretted neck and three strings"
+ },
+ "kobza": {
+  "name": "kobza",
+  "home": "Ukraine",
+  "looks": "a folk lute: an oval round-backed wooden body, a short fretted neck, a few strings, painted ornament"
+ },
+ "hurdy-gurdy": {
+  "name": "hurdy-gurdy",
+  "home": "Europe",
+  "looks": "a lute-shaped wooden instrument with a crank handle at its end turning a wheel, a box of wooden keys along its neck"
+ },
+ "nyckelharpa": {
+  "name": "nyckelharpa",
+  "home": "Sweden",
+  "looks": "a long fiddle with a row of wooden keys along its neck and many strings, a short bow beside it"
+ },
+ "koto": {
+  "name": "koto",
+  "home": "Japan",
+  "looks": "a long zither lying on the floor, about 1.8 m: a long wooden board with thirteen strings over tall movable white bridges"
+ },
+ "pipa": {
+  "name": "pipa",
+  "home": "China",
+  "looks": "a pear-shaped lute: a flat pear-shaped wooden body, a short neck bent back, high frets running down onto the body, four strings"
+ },
+ "ukulele": {
+  "name": "ukulele",
+  "home": "Hawaii",
+  "looks": ""
+ },
+ "twelve-string-guitar": {
+  "name": "twelve-string guitar",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "slide-guitar": {
+  "name": "slide guitar",
+  "home": "USA",
+  "looks": ""
+ },
+ "pedal-steel-guitar": {
+  "name": "pedal steel guitar",
+  "home": "USA",
+  "looks": "a flat rectangular stringed instrument on four legs, two necks of strings across its top, pedals and knee levers below, a steel bar on it"
+ },
+ "celtic-harp": {
+  "name": "celtic harp",
+  "home": "Ireland, Scotland",
+  "looks": "a small harp: a curved wooden frame with a carved pillar, about thirty strings, Celtic knotwork carved on the wood"
+ },
+ "ancient-greek-lyre": {
+  "name": "ancient greek lyre",
+  "home": "Greece",
+  "looks": "an ancient lyre: a tortoise-shell sound box, two curved horns as arms, a crossbar, seven strings"
+ },
+ "rebab": {
+  "name": "rebab",
+  "home": "Middle East, North Africa",
+  "looks": "a spike fiddle: a small round body covered with skin, a long wooden spike at the bottom, one or two strings, a curved bow",
+  "not": "an ordinary violin"
+ },
+ "kemenche": {
+  "name": "kemenche",
+  "home": "Turkey, Black Sea",
+  "looks": "a small pear-shaped fiddle with three strings, held upright on the knee, a short bow",
+  "not": "an ordinary violin"
+ },
+ "bouzouki": {
+  "name": "bouzouki",
+  "home": "Greece",
+  "looks": "a long-necked lute: a round deep bowl body of wooden ribs, a long fretted neck, mother-of-pearl inlay around its sound hole"
+ },
+ "saz": {
+  "name": "saz (baglama)",
+  "home": "Turkey",
+  "looks": "a long-necked lute: a pear-shaped carved wooden bowl, a very long thin neck with tied frets, seven strings"
+ },
+ "persian-tar": {
+  "name": "persian tar",
+  "home": "Persia",
+  "looks": "a long-necked lute whose body is two carved wooden bowls joined like a figure eight, a thin skin face, tied frets on the neck"
+ },
+ "viola-da-gamba": {
+  "name": "viola da gamba",
+  "home": "Europe",
+  "looks": "a bowed instrument like a cello with sloping shoulders, a flat back and frets on its neck, a bow beside it"
+ },
+ "zither": {
+  "name": "zither",
+  "home": "Alps, Central Europe",
+  "looks": "a flat wooden box zither on a table: frets along its near edge and many open strings behind them"
+ },
+ "appalachian-dulcimer": {
+  "name": "appalachian dulcimer",
+  "home": "USA",
+  "looks": "a long narrow hourglass-shaped wooden box laid on the lap, a fretboard along its length, three or four strings, heart-shaped sound holes"
+ },
+ "sarangi": {
+  "name": "sarangi",
+  "home": "India",
+  "looks": "a short boxy fiddle carved from one block of wood, a skin face, three thick strings and dozens of thin strings with many pegs on its side",
+  "not": "an ordinary violin"
+ },
+ "recorder": {
+  "name": "recorder",
+  "home": "Europe",
+  "looks": ""
+ },
+ "tin-whistle": {
+  "name": "tin whistle",
+  "home": "Ireland",
+  "looks": ""
+ },
+ "uilleann-pipes": {
+  "name": "uilleann pipes",
+  "home": "Ireland",
+  "looks": "Irish bellows bagpipes: a cloth-covered bag, a small bellows, a black wooden chanter and three drones with metal keys lying across the lap"
+ },
+ "ocarina": {
+  "name": "ocarina",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "shakuhachi": {
+  "name": "shakuhachi",
+  "home": "Japan",
+  "looks": "a thick straight bamboo flute with the bamboo root flaring at its lower end, a sharp slanted cut at the top, five finger holes"
+ },
+ "piccolo": {
+  "name": "piccolo",
+  "home": "Europe",
+  "looks": ""
+ },
+ "english-horn": {
+  "name": "english horn",
+  "home": "Europe",
+  "looks": "a long dark wooden oboe with silver keys, a bent metal crook holding the reed at the top and a round pear-shaped bell at the bottom"
+ },
+ "cornet": {
+  "name": "cornet",
+  "home": "Europe",
+  "looks": ""
+ },
+ "flugelhorn": {
+  "name": "flugelhorn",
+  "home": "Europe",
+  "looks": ""
+ },
+ "euphonium": {
+  "name": "euphonium",
+  "home": "Europe",
+  "looks": ""
+ },
+ "alphorn": {
+  "name": "alphorn",
+  "home": "Alps",
+  "looks": "a very long wooden horn, about three metres, a narrow straight tube resting on the ground and ending in an upturned wide wooden bell"
+ },
+ "conch-shell": {
+  "name": "conch shell",
+  "home": "Pacific, India",
+  "looks": ""
+ },
+ "crumhorn": {
+  "name": "crumhorn",
+  "home": "Renaissance Europe",
+  "looks": "a narrow wooden pipe curved upward at its lower end like the letter J, a wooden cap over the reed at the top, a few finger holes"
+ },
+ "shawm": {
+  "name": "shawm",
+  "home": "medieval Europe",
+  "looks": "a long conical dark wooden pipe with a wide flared bell, a short reed at the top, finger holes and a perforated wooden barrel near the bottom"
+ },
+ "aulos": {
+  "name": "aulos (ancient double pipe)",
+  "home": "ancient Greece",
+  "looks": "an ancient double pipe: two long slender pipes of wood or bone held together in a V shape, a leather band beside them"
+ },
+ "dizi": {
+  "name": "dizi",
+  "home": "China",
+  "looks": "a slim bamboo flute blown from the side, a hole covered with thin paper, six finger holes, red silk tassels hanging from one end"
+ },
+ "suona": {
+  "name": "suona",
+  "home": "China",
+  "looks": "a Chinese shawm: a conical wooden body with finger holes, a large flared brass bell at the bottom, a small metal tube and tiny reed at the top"
+ },
+ "sheng": {
+  "name": "sheng",
+  "home": "China",
+  "looks": "a Chinese mouth organ: a ring of slender bamboo pipes of different heights rising from a round metal bowl with a short mouthpiece"
+ },
+ "hulusi": {
+  "name": "hulusi",
+  "home": "China",
+  "looks": "a gourd flute: a dried bottle gourd at the top, three bamboo pipes hanging below it, the middle one with finger holes"
+ },
+ "soprano-saxophone": {
+  "name": "soprano saxophone",
+  "home": "Europe, USA",
+  "looks": ""
+ },
+ "bugle": {
+  "name": "bugle",
+  "home": "military",
+  "looks": ""
+ },
+ "natural-horn": {
+  "name": "natural horn (no valves)",
+  "home": "Europe",
+  "looks": "a valveless brass horn: a long brass tube coiled in a circle, ending in a wide flared bell, no valves"
+ },
+ "rock-drum-kit": {
+  "name": "rock drum kit",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "jazz-brushes-on-snare": {
+  "name": "jazz brushes on snare",
+  "home": "USA",
+  "looks": ""
+ },
+ "electronic-kick-drum": {
+  "name": "electronic kick drum",
+  "home": "studio",
+  "looks": ""
+ },
+ "snare-drum": {
+  "name": "snare drum",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "cymbals-and-hi-hats": {
+  "name": "cymbals and hi-hats",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "toms": {
+  "name": "toms",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "cajon": {
+  "name": "cajon",
+  "home": "Peru",
+  "looks": "a box drum: a plain wooden box about 50 cm tall with a round sound hole at the back, a player sitting on it"
+ },
+ "djembe": {
+  "name": "djembe",
+  "home": "West Africa",
+  "looks": ""
+ },
+ "tabla": {
+  "name": "tabla",
+  "home": "India",
+  "looks": "a pair of hand drums: a small wooden drum and a larger copper one, each with a black circle in the middle of its skin, laced with leather straps"
+ },
+ "congas": {
+  "name": "congas",
+  "home": "Cuba",
+  "looks": ""
+ },
+ "shaker": {
+  "name": "shaker",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "steel-drums": {
+  "name": "steel drums",
+  "home": "Trinidad",
+  "looks": "a steelpan: a shallow bowl of chromed steel with dimpled note areas hammered into its surface, on a stand"
+ },
+ "bongos": {
+  "name": "bongos",
+  "home": "Cuba",
+  "looks": ""
+ },
+ "castanets": {
+  "name": "castanets",
+  "home": "Spain",
+  "looks": ""
+ },
+ "triangle": {
+  "name": "triangle",
+  "home": "Europe",
+  "looks": ""
+ },
+ "cowbell": {
+  "name": "cowbell",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "woodblock": {
+  "name": "woodblock",
+  "home": "China",
+  "looks": ""
+ },
+ "claves": {
+  "name": "claves",
+  "home": "Cuba",
+  "looks": ""
+ },
+ "bodhran": {
+  "name": "bodhran",
+  "home": "Ireland",
+  "looks": "a wide shallow round wooden frame drum with a goatskin head, a small wooden double-ended beater beside it"
+ },
+ "riq": {
+  "name": "riq",
+  "home": "Middle East",
+  "looks": "a small tambourine with a wooden frame inlaid with mother-of-pearl, five pairs of large brass jingles, a thin translucent head"
+ },
+ "daf": {
+  "name": "daf",
+  "home": "Persia, Kurdistan",
+  "looks": "a large round frame drum with many small metal rings hanging inside its wooden frame, a thin skin head"
+ },
+ "sistrum": {
+  "name": "sistrum",
+  "home": "ancient Egypt",
+  "looks": "an ancient rattle: a bronze U-shaped frame on a handle with loose metal rods and small discs threaded across it"
+ },
+ "crash-cymbals": {
+  "name": "crash cymbals",
+  "home": "Europe",
+  "looks": "a pair of large brass crash cymbals with leather straps"
+ },
+ "concert-bass-drum": {
+  "name": "concert bass drum",
+  "home": "Europe",
+  "looks": ""
+ },
+ "glockenspiel": {
+  "name": "glockenspiel",
+  "home": "Europe",
+  "looks": ""
+ },
+ "vibraphone": {
+  "name": "vibraphone",
+  "home": "USA",
+  "looks": ""
+ },
+ "xylophone": {
+  "name": "xylophone",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "singing-bowls": {
+  "name": "singing bowls",
+  "home": "Tibet, Nepal",
+  "looks": "round bowls of hammered bronze in several sizes on small cushions, a wooden striker beside them",
+  "not": "ordinary ceramic, porcelain or kitchen bowls"
+ },
+ "rainstick": {
+  "name": "rainstick",
+  "home": "South America",
+  "looks": "a long hollow dried cactus tube closed at both ends, decorated with woven bands"
+ },
+ "udu": {
+  "name": "udu",
+  "home": "Nigeria",
+  "looks": "a clay pot drum: a round dark terracotta jug with a second hole in its side"
+ },
+ "talking-drum": {
+  "name": "talking drum",
+  "home": "West Africa",
+  "looks": "an hourglass-shaped wooden drum with two skin heads laced together by many leather cords, a curved stick beside it"
+ },
+ "church-bells": {
+  "name": "church bells",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "hand-claps": {
+  "name": "hand claps",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "sambuca": {
+  "name": "sambuca strings",
+  "home": "ancient Near East, Greece",
+  "looks": "an ancient triangular harp: a small angular wooden frame, a sound box along one side, strings running at a slant"
+ },
+ "sambuca-v2": {
+  "name": "sambuca, an ancient triangular harp (sabbeka)",
+  "home": "ancient Near East, Greece",
+  "looks": "an ancient triangular harp: a small angular wooden frame, a sound box along one side, strings running at a slant"
+ },
+ "crystal-singing-bowls": {
+  "name": "crystal singing bowls",
+  "home": "everywhere",
+  "looks": "frosted white translucent quartz crystal bowls of several sizes, perfectly round, glowing softly from within, a suede-wrapped mallet beside them",
+  "not": "ordinary ceramic, porcelain, glass or kitchen bowls"
+ },
+ "string-section": {
+  "name": "string section (massed violins)",
+  "home": "Europe",
+  "looks": ""
+ },
+ "birdsong": {
+  "name": "birdsong",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "cicadas": {
+  "name": "cicadas",
+  "home": "Mediterranean",
+  "looks": ""
+ },
+ "river-waterfall": {
+  "name": "rushing river, waterfall",
+  "home": "everywhere",
+  "looks": ""
+ },
+ "khomus": {
+  "name": "khomus (Yakut jaw harp)",
+  "home": "Yakutia (Sakha), Siberia",
+  "looks": "a jaw harp: a small forged iron frame shaped like a horseshoe with a long thin steel tongue between its arms",
+  "not": "a horseshoe, a key or a pair of tongs"
+ },
+ "shaman-drum": {
+  "name": "Siberian shaman drum",
+  "home": "Siberia",
+  "looks": "a large oval frame drum with a reindeer-skin head painted with red figures, iron pendants hanging inside, a fur-covered beater"
+ },
+ "morin-khuur": {
+  "name": "morin khuur (horsehead fiddle)",
+  "home": "Mongolia",
+  "looks": "a tall two-string fiddle: a flat trapezoid wooden sound box, a long straight neck topped by a small carved wooden horse head, two thick strings, a bow beside it",
+  "not": "an ordinary violin or cello, or a live horse"
+ },
+ "igil": {
+  "name": "igil (Tuvan fiddle)",
+  "home": "Tuva",
+  "looks": "a small two-string fiddle: a narrow wooden body with a skin face, a long neck topped by a small carved wooden horse head, a bow beside it",
+  "not": "an ordinary violin, or a live horse"
+ },
+ "shofar-v1": {
+  "name": "shofar blasts, tekiah, shevarim, teruah",
+  "home": "Israel",
+  "looks": "a ram's horn: a long hollow animal horn, curved and twisted, honey-coloured to dark brown and polished, wide at one end, narrow at the other"
+ },
+ "shofar-v2": {
+  "name": "ancient ram's horn trumpet",
+  "home": "Israel",
+  "looks": "a ram's horn: a long hollow animal horn, curved and twisted, honey-coloured to dark brown and polished, wide at one end, narrow at the other"
+ },
+ "shofar-v3": {
+  "name": "natural horn as a war signal",
+  "home": "",
+  "looks": "a valveless brass horn: a long brass tube coiled in a circle, ending in a wide flared bell, no valves"
+ },
+ "shofar-v4": {
+  "name": "conch shell trumpet calls",
+  "home": "",
+  "looks": ""
+ },
+ "shofar-v5": {
+  "name": "raw bugle calls, two notes",
+  "home": "",
+  "looks": ""
+ },
+ "shofar-v6": {
+  "name": "primitive animal horn blasts",
+  "home": "",
+  "looks": "a long spiralled antelope horn, ridged and dark, hollow, a mouth hole at its narrow end"
+ },
+ "shofar-v7": {
+  "name": "Rosh Hashanah shofar calls",
+  "home": "Israel",
+  "looks": "a ram's horn: a long hollow animal horn, curved and twisted, honey-coloured to dark brown and polished, wide at one end, narrow at the other"
+ },
+ "grand-piano-lid-closed": {
+  "name": "grand piano, lid closed",
+  "home": "Europe",
+  "looks": ""
+ },
+ "grand-piano-lid-half": {
+  "name": "grand piano, lid half open",
+  "home": "Europe",
+  "looks": ""
+ },
+ "grand-piano-lid-open": {
+  "name": "grand piano, lid open",
+  "home": "Europe",
+  "looks": ""
+ },
+ "gusli-helmet": {
+  "name": "helmet gusli",
+  "home": "Russia",
+  "looks": ""
+ },
+ "gusli-table": {
+  "name": "table gusli",
+  "home": "Russia",
+  "looks": ""
+ },
+ "kantele": {
+  "name": "kantele",
+  "home": "Finland",
+  "looks": ""
+ },
+ "kinnor-david": {
+  "name": "kinnor, the lyre of King David",
+  "home": "ancient Israel",
+  "looks": ""
+ },
+ "nevel-harp": {
+  "name": "nevel, the ancient Hebrew harp",
+  "home": "ancient Israel",
+  "looks": ""
+ },
+ "kithara": {
+  "name": "kithara, the ancient Greek concert lyre",
+  "home": "ancient Greece",
+  "looks": ""
+ },
+ "lyre-of-ur": {
+  "name": "Sumerian lyre of Ur",
+  "home": "Sumer, Mesopotamia",
+  "looks": ""
+ },
+ "psaltery-plucked": {
+  "name": "plucked psaltery",
+  "home": "medieval Europe",
+  "looks": ""
+ },
+ "psaltery-bowed": {
+  "name": "bowed psaltery",
+  "home": "Europe",
+  "looks": ""
+ },
+ "concert-zither": {
+  "name": "Alpine concert zither",
+  "home": "Alps",
+  "looks": ""
+ },
+ "cimbalom": {
+  "name": "Hungarian concert cimbalom",
+  "home": "Hungary",
+  "looks": ""
+ },
+ "gudok": {
+  "name": "gudok, an archaic bowed fiddle",
+  "home": "Russia",
+  "looks": ""
+ }
+}

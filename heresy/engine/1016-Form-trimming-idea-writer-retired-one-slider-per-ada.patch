@@ -1,0 +1,309 @@
+From d0aa8b6a4b5247455e43653895e27473525620f9 Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 18:06:09 -0600
+Subject: [PATCH 1016/1177] Form trimming: idea writer retired, one slider per
+ adapter half, TAB skips the tips
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+HERESY 1016.
+- "Start from an idea" leaves the Create form (its code stays, dormant). Its
+  section templates live on in the writing room: a Structure choice whose
+  per-section rules (four-line chorus, identical each time; instrumental
+  intro and outro as a bare tag…) are added to the brief.
+- An adapter shows only the slider of the half its file has: a sound-only
+  LoRA no longer carries a dead music slider, and the column stops swelling.
+- Guidance (CFG) loses its long hint ("1.0 for full and melody…"), which the
+  tip already says and which stretched the field and broke Reset sampling.
+- The (i) marks leave the tab order: TAB goes from field to field and no tip
+  pops up on the way. Hovering still shows them.
+- The spectrum's pictures stay hidden until there is something on them.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |   3 +++
+ tools/console/app.js             |  12 ++++++----
+ tools/console/help.js            |   2 +-
+ tools/console/heresy-spectrum.js |   2 ++
+ tools/console/index.html         |  40 +++++++++++++++++++------------
+ tools/console/loras.js           |   3 ++-
+ tools/console/vaes.js            |   2 +-
+ tools/public/index.html.gz       | Bin 251009 -> 251344 bytes
+ 8 files changed, 42 insertions(+), 22 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 4d6d37e..e25fa50 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1950,3 +1950,6 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ 
+ /* ------------------------------------------------ HERESY 1015: day and night */
+ .day-night { min-width: 34px; font-size: 15px; line-height: 1; padding-left: 8px; padding-right: 8px; }
++
++/* ------------------------------------------------ HERESY 1016: form trimming */
++#spectrumPanel:not(.is-drawn) .spec-stage { display: none; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 25a479f..9ff2c6a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -668,7 +668,7 @@
+     $("sliderSource").innerHTML = (url
+       ? '<a class="tile-link" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer" data-tip="' +
+         escape("Open its model card (new tab): " + url) + '"><span>' + escape(src.repo || url) + "</span>\u2197</a>" : "") +
+-      (src.about ? '<span class="info" tabindex="0" role="img" aria-label="About the sliders" data-tip="' + escape(src.about) + '">i</span>' : "");
++      (src.about ? '<span class="info" tabindex="-1" role="img" aria-label="About the sliders" data-tip="' + escape(src.about) + '">i</span>' : "");
+     $("sliderCard").innerHTML = list.map(function (e) {
+       var on = chosen[e.id], ok = e.installed !== false;
+       var meta = [e.description || "", ok ? "" : "not downloaded"].filter(Boolean).join(" · ");
+@@ -4876,15 +4876,17 @@
+     $("assistBrief").value = saved.brief || "";
+     $("assistPrefs").value = saved.prefs || "";
+     $("assistTask").value = saved.task || "song";
++    $("assistStructure").value = saved.structure || "";
+     if (saved.temp !== undefined) $("assistTemp").value = saved.temp;
+     if (saved.max) $("assistMax").value = saved.max;
+     var saveAssist = function () {
+       store(ASSIST_KEY, JSON.stringify({ brief: $("assistBrief").value, prefs: $("assistPrefs").value, task: $("assistTask").value,
+                                          temp: $("assistTemp").value, max: $("assistMax").value,
+-                                         provider: $("assistProvider").value, orModel: $("orModel").value }));
++                                         provider: $("assistProvider").value, orModel: $("orModel").value,
++                                         structure: $("assistStructure").value }));
+       $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
+     };
+-    ["assistBrief", "assistPrefs", "assistTask", "assistTemp", "assistMax"].forEach(function (id) { $(id).addEventListener("input", saveAssist); $(id).addEventListener("change", saveAssist); });
++    ["assistBrief", "assistPrefs", "assistTask", "assistTemp", "assistMax", "assistStructure"].forEach(function (id) { $(id).addEventListener("input", saveAssist); $(id).addEventListener("change", saveAssist); });
+     saveAssist();
+ 
+     var paintDraftSize = function () {
+@@ -4944,7 +4946,9 @@
+       $("assistLabel").textContent = "Writing…";
+       var ticker = setInterval(function () { $("assistStatus").textContent = "writing with " + (model || "the chat server") + "… " + Math.round((Date.now() - started) / 1000) + "s"; }, 1000);
+       var song = { title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value.trim() || STATE.abcRendered || "" };
+-      var messages = [{ role: "system", content: A.system($("assistPrefs").value) }, { role: "user", content: A.user(task, brief, song) }];
++      // HERESY 1016: the idea writer's section templates, when a structure is picked
++      var structure = $("assistStructure").value, fullBrief = structure ? brief + structureRequest(structure) : brief;
++      var messages = [{ role: "system", content: A.system($("assistPrefs").value) }, { role: "user", content: A.user(task, fullBrief, song) }];
+       var temperature = temp === "" ? null : parseFloat(temp);
+       var ask = $("assistProvider").value === "openrouter"
+         ? (model = $("orModel").value.trim() || "OpenRouter", openRouterComplete(messages, max, temperature))
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 5916ebd..4fcd1db 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -223,7 +223,7 @@
+   function makeInfo(text, name) {
+     var info = document.createElement("span");
+     info.className = "info";
+-    info.tabIndex = 0;
++    info.tabIndex = -1;   // HERESY 1016: TAB goes from field to field, not to the (i) marks
+     info.setAttribute("role", "img");
+     info.setAttribute("aria-label", "About " + name);
+     info.dataset.tip = text;
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+index ce13b37..ff13ef9 100644
+--- a/tools/console/heresy-spectrum.js
++++ b/tools/console/heresy-spectrum.js
+@@ -416,6 +416,7 @@
+       if (b) state.painters.specB.paint($("specB"));
+       state.painters.specAvg.paint($("specAvg"));
+       state.painters.specBands.paint($("specBands"));
++      panel.classList.add("is-drawn");   // HERESY 1016: the pictures show once there is something on them
+       var tm = a.times || {}, f1 = function (x) { return (x || 0).toFixed(1); };
+       say(clock(a.seconds) + " · peak " + (20 * Math.log10(a.peak + 1e-12)).toFixed(1) + " dBFS" +
+           (b ? " · second " + clock(b.seconds) + ", peak " + (20 * Math.log10(b.peak + 1e-12)).toFixed(1) + " dBFS" : "") +
+@@ -506,6 +507,7 @@
+     state.take = take;
+     if (same) return;
+     state.marks = [];
++    panel.classList.remove("is-drawn");
+     say(panel.open ? "" : "");
+     if (panel.open) { paintCompare(); render(); }
+   }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 3604785..c4209ed 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -93,21 +93,21 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ 
+     <div class="card compute-card" id="computeCard">
+       <h3>Compute</h3>
+-      <label class="field"><span class="label">Model <span class="info" tabindex="0" role="img" aria-label="About the model files" data-tip-ref="tip-model">i</span><em>the backbone file</em></span>
++      <label class="field"><span class="label">Model <span class="info" tabindex="-1" role="img" aria-label="About the model files" data-tip-ref="tip-model">i</span><em>the backbone file</em></span>
+         <select id="setModel"></select></label>
+       <label class="field"><span class="label">GPU memory preset <em>sets the knobs below; then Save</em></span>
+         <select id="memPreset"><option value="">Custom</option><option value="auto">Auto (detect)</option>
+           <option value="8">8 GB</option><option value="12">12 GB</option><option value="16">16 GB</option>
+           <option value="24">24 GB</option><option value="32">32 GB</option></select></label>
+       <div class="field-row bottom">
+-        <label class="field grow"><span class="label">Context rows <span class="info" tabindex="0" role="img" aria-label="About the context size" data-tip-ref="tip-context">i</span></span>
++        <label class="field grow"><span class="label">Context rows <span class="info" tabindex="-1" role="img" aria-label="About the context size" data-tip-ref="tip-context">i</span></span>
+           <input type="number" id="setMaxSeq" step="1024" placeholder="0 = whole" /></label>
+         <label class="field grow"><span class="label">VAE tile frames</span>
+           <input type="number" id="setVaeCore" step="64" /></label>
+       </div>
+       <div class="check-row">
+         <label class="check"><input type="checkbox" id="setKeepLoaded" /> <span>Keep models loaded between songs</span></label>
+-        <span class="info" tabindex="0" role="img" aria-label="About keeping models loaded" data-tip-ref="tip-keep">i</span>
++        <span class="info" tabindex="-1" role="img" aria-label="About keeping models loaded" data-tip-ref="tip-keep">i</span>
+       </div>
+       <p class="row-hint" id="computeHint"></p>
+       <div class="card-actions">
+@@ -131,7 +131,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     </div>
+ 
+     <div class="card wide lora-card">
+-      <div class="lora-card-head"><h3>LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="0" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras">i</span></h3>
++      <div class="lora-card-head"><h3>LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras">i</span></h3>
+         <span class="lora-card-note" id="loraCardNote"></span></div>
+       <ul class="lora-list" id="loraCard"></ul>
+     </div>
+@@ -262,7 +262,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <button type="button" class="btn ghost small" id="newSong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.">＋ New song</button>
+     </div>
+ 
+-    <details class="drawer" id="museDrawer">
++    <!-- HERESY 1016: the Kit's idea writer is retired (its code stays dormant); its structure
++         templates live on in the Write tab's writing room -->
++    <details class="drawer" id="museDrawer" hidden>
+       <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Start from an idea</span><span class="sum-say">A local chat model writes the title, style and lyrics from one line.</span></span></summary>
+       <div class="drawer-body">
+         <section class="muse" id="muse">
+@@ -306,7 +308,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       </label>
+       <div class="field-row seedrow">
+         <label class="field seedfield">
+-          <span class="label">Music seed <span class="info" tabindex="0" role="img" aria-label="About the two seeds" data-tip-ref="tip-seeds">i</span></span>
++          <span class="label">Music seed <span class="info" tabindex="-1" role="img" aria-label="About the two seeds" data-tip-ref="tip-seeds">i</span></span>
+           <div class="seed-wrap">
+             <input type="text" id="lmSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
+             <button type="button" class="dice" id="rollLmSeed" aria-label="Put in a random music seed">
+@@ -339,19 +341,19 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       </label>
+ 
+       <fieldset class="field sound" data-fold="vae">
+-        <span class="label">VAE <span class="info" tabindex="0" role="img" aria-label="About the VAE" data-tip-ref="tip-vae">i</span><em>turns the written song into sound</em></span>
++        <span class="label">VAE <span class="info" tabindex="-1" role="img" aria-label="About the VAE" data-tip-ref="tip-vae">i</span><em>turns the written song into sound</em></span>
+         <div class="toggles" id="decoders"></div>
+       </fieldset>
+ 
+       <fieldset class="field sound" data-fold="sliders">
+-        <span class="label">Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="0" role="img" aria-label="About the sliders" data-tip-ref="tip-sliders">i</span><em>voice and genre while the music is written; 0 is off, 1 is full</em></span>
++        <span class="label">Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About the sliders" data-tip-ref="tip-sliders">i</span><em>voice and genre while the music is written; 0 is off, 1 is full</em></span>
+         <div class="slider-active" id="sliderActive"></div>
+         <div class="slider-chips" id="sliderChips"></div>
+         <p class="row-hint" id="sliderHint"></p>
+       </fieldset>
+ 
+       <fieldset class="field sound" data-fold="loras">
+-        <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="0" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras">i</span><em>a strength for the music half and for the sound half</em></span>
++        <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras">i</span><em>a strength for the music half and for the sound half</em></span>
+         <div id="loraPicker"></div>
+       </fieldset>
+ 
+@@ -382,7 +384,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+         <label class="check instrumental-check"><input type="checkbox" id="instrumental" />
+           <span><strong>Instrumental</strong> · no vocals, the official YuE2 recipe</span>
+-          <span class="info" tabindex="0" role="img" aria-label="About instrumental songs" data-tip-ref="tip-instrumental">i</span></label>
++          <span class="info" tabindex="-1" role="img" aria-label="About instrumental songs" data-tip-ref="tip-instrumental">i</span></label>
+       </fieldset>
+ 
+       <div class="codes-note is-hidden" id="codesNote">
+@@ -398,7 +400,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <div class="drawer-body cover-body">
+           <!-- two ways in, the same shape: a heading with its short note, one control per line, the button on the left -->
+           <section class="cover-part">
+-            <h4 class="mini">From a recording <span class="info" tabindex="0" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe">i</span>
++            <h4 class="mini">From a recording <span class="info" tabindex="-1" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe">i</span>
+               <em>its tune only, not the words or the singer</em></h4>
+             <label class="field"><span class="label">Recording</span>
+               <input type="file" id="coverFile" accept=".wav,.mp3,.flac,.m4a,.ogg,.opus,.aac" /></label>
+@@ -416,7 +418,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+             </div>
+           </section>
+           <section class="cover-part">
+-            <h4 class="mini">From one of your takes <span class="info" tabindex="0" role="img" aria-label="About covers from a take"
++            <h4 class="mini">From one of your takes <span class="info" tabindex="-1" role="img" aria-label="About covers from a take"
+                 data-tip="Take the melody from a song you already made and render it somewhere else entirely: a ballad as a techno track, a German song in English. The run switches to Melody only.">i</span>
+               <em>its melody, in a new style</em></h4>
+             <label class="field"><span class="label">Melody from</span>
+@@ -479,7 +481,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+           </div>
+           <div class="field-row">
+             <label class="field">
+-              <span class="label">Guidance (CFG)<em>1.0 for full and melody, 1.01 for direct</em></span>
++              <span class="label">Guidance (CFG)</span>
+               <input type="number" id="cfg" step="0.01" placeholder="default" />
+             </label>
+             <div class="field grow reset-cell">
+@@ -506,7 +508,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+               <input type="number" id="maxLength" step="10" /></label>
+             <label class="field"><span class="label">Sound variations <em>1–9</em></span>
+               <input type="number" id="variations" step="1" max="9" value="1" /></label>
+-            <label class="field"><span class="label">Format <span class="info" tabindex="0" role="img" aria-label="About the output format" data-tip-ref="tip-output">i</span></span>
++            <label class="field"><span class="label">Format <span class="info" tabindex="-1" role="img" aria-label="About the output format" data-tip-ref="tip-output">i</span></span>
+               <select id="outFormat">
+                 <option value="wav24">WAV 24-bit</option>
+                 <option value="wav16">WAV 16-bit</option>
+@@ -532,7 +534,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <div class="submit-bar">
+         <div class="submit-actions">
+           <label class="versions">
+-            <span>Takes <span class="info" tabindex="0" role="img" aria-label="About takes" data-tip-ref="tip-versions">i</span></span><input type="number" id="versions" min="1" max="10" step="1" value="1" /></label>
++            <span>Takes <span class="info" tabindex="-1" role="img" aria-label="About takes" data-tip-ref="tip-versions">i</span></span><input type="number" id="versions" min="1" max="10" step="1" value="1" /></label>
+           <button type="button" class="btn ghost" id="planBtn"
+             title="Write only the score (seconds, no audio). Check its sections, then Generate renders exactly that score.">Plan score only</button>
+           <button type="submit" class="btn primary" id="generateBtn">
+@@ -690,6 +692,14 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <label class="check or-only"><input type="checkbox" id="orRemember" /> <span>Remember the key in this browser (otherwise it lives until the page is closed)</span></label>
+         <div class="field-row wrap">
+           <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
++          <label class="field grow"><span class="label">Structure <em>section order for new lyrics</em></span>
++            <select id="assistStructure">
++              <option value="">Keep mine — as the lyrics have it</option>
++              <option value="simple">Verse · Chorus</option>
++              <option value="bridge">Verse · Chorus · Bridge</option>
++              <option value="prechorus">With a pre-chorus</option>
++              <option value="full">Full arc — intro, pre-chorus, bridge, outro</option>
++            </select></label>
+           <label class="field assist-num"><span class="label">Temperature <em>blank: the server's</em></span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
+           <label class="field assist-num"><span class="label">Max output tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="8192" /></label>
+         </div>
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 8e2cc48..cf1c129 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -100,6 +100,7 @@
+ 
+   function halfControl(choice, e, half) {
+     var label = half === "ar" ? "Music" : "Sound", on = has(e, half) || !e;
++    if (!on) return "";   // HERESY 1016: a file without this half shows no slider for it
+     var value = on ? choice[half] : 0;
+     return '<label class="lora-half' + (on ? "" : " is-off") + '" data-tip="' + escape(on
+       ? (half === "ar" ? "Strength on the music half: the score and the music tokens (0 off, 1 as trained)"
+@@ -148,7 +149,7 @@
+       return '<li class="lora-item' + (on[e.id] ? " is-on" : "") + (e.error ? " is-bad" : "") + '" data-lora="' + escape(e.id) + '">' +
+         '<div class="lora-item-head"><span class="lora-item-name">' + escape(title) + "</span>" +
+         (on[e.id] ? '<span class="tile-state">in the song form</span>' : "") + "</div>" +
+-        '<div class="tile-src">' + where + '<span class="info" tabindex="0" role="img" aria-label="About ' + escape(nameOf(e.id)) +
++        '<div class="tile-src">' + where + '<span class="info" tabindex="-1" role="img" aria-label="About ' + escape(nameOf(e.id)) +
+         '" data-tip="' + escape(aboutTip(e)) + '">i</span></div>' +
+         '<div class="lora-item-meta">' + escape(meta) + "</div></li>";
+     }).join("") : '<li class="lora-item"><div class="lora-item-meta">No .safetensors files in the app\'s loras/ folder.</div></li>';
+diff --git a/tools/console/vaes.js b/tools/console/vaes.js
+index a22e2fd..5b6d226 100644
+--- a/tools/console/vaes.js
++++ b/tools/console/vaes.js
+@@ -64,7 +64,7 @@
+         '" data-vae="' + escape(v.name) + '">' +
+         '<div class="lora-item-head"><span class="lora-item-name">' + escape(labelOf(v)) + badge(kind) + "</span>" +
+         (picked ? '<span class="tile-state">in the song form</span>' : "") + "</div>" +
+-        '<div class="tile-src">' + where + '<span class="info" tabindex="0" role="img" aria-label="About the ' + escape(labelOf(v)) +
++        '<div class="tile-src">' + where + '<span class="info" tabindex="-1" role="img" aria-label="About the ' + escape(labelOf(v)) +
+         ' VAE" data-tip="' + escape(recap) + '">i</span></div>' +
+         (meta ? '<div class="lora-item-meta">' + escape(meta) + "</div>" : "") + "</li>";
+     }).join("");
+-- 
+2.43.0
+

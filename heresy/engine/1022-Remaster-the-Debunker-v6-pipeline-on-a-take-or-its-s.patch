@@ -1,0 +1,250 @@
+From c29b3f9f0b1dedf4e55722212f4272b9eabb6b3c Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 19:18:58 -0600
+Subject: [PATCH 1022/1177] Remaster: the Debunker v6 pipeline on a take or its
+ stems
+
+HERESY 1022. Post has Remaster. heresy-lab runs the Debunker v6 (lab/debunker.py,
+the HERETICAL TANDEM post-processing pipeline) on the take itself or on one of
+its stem sets: the Debunker mixes the stems with a preset (flat, balanced,
+vocal forward, instrumental focus, shamanic) and per-stem levels from the page,
+checks them for drift, then strips metadata, cleans up and fades, de-esses,
+retunes to 432 Hz (off keeps 440 for the public), sets the loudness and exports.
+With drums, bass and other present the instrumental stays out of the mix (it is
+their sum). Each run is its own branch of the take's tree, with its settings
+and the loudness measured in and out.
+In the lab's copy the loudness step is two passes (measured, then a linear
+gain) and keeps 48 kHz: one pass landed at -12.8 for -14 and, since ffmpeg's
+loudnorm works at 192 kHz, wrote 192 kHz files four times the size.
+The tree keeps watching a running job through dropped answers on a slow line.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |   8 +++
+ tools/console/heresy-derived.js |  85 ++++++++++++++++++++++++++++++--
+ tools/console/index.html        |  44 ++++++++++++++++-
+ tools/public/index.html.gz      | Bin 270228 -> 272343 bytes
+ 4 files changed, 131 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 29dcae4..dddfb8e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2009,3 +2009,11 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .dv-group.is-running { opacity: .7; }
+ .dv-empty { margin: 4px 0 0 14px; }
+ #glossSource { width: auto; max-width: 280px; padding: 4px 8px; }
++
++/* ------------------------------------------------ HERESY 1022: remaster */
++.rm-body { gap: 10px; }
++.rm-grid { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
++.rm-grid > .field:not(.rm-num) { flex: 1 1 220px; }
++.rm-num { width: 110px; flex: none; }
++.rm-levels { display: flex; flex-direction: column; gap: 6px; }
++.dv-group.is-failed .dv-meta { color: var(--bad-line, #c47a77); }
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 499cb2f..3806b0c 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -11,7 +11,7 @@
+   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
+   function fileUrl(name, path) { return "/lab/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
+-  var KIND = { stems: "Stems" };
++  var KIND = { stems: "Stems", remaster: "Remaster" };
+   var MODE = { vocals: "vocals + instrumental", four: "four stems" };
+ 
+   function say(text, bad) {
+@@ -32,6 +32,20 @@
+     return out;
+   }
+ 
++  // a remaster's settings in a line: where from, preset, the steps on, loudness in -> out (HERESY 1022)
++  function summary(m) {
++    var s = m.settings || {}, from = m.source && m.source !== "the take" ? String(m.source).replace("derived/", "") : "";
++    var parts = [from ? "from " + from : "from the take"];
++    if (from) parts.push(s.preset || "balanced");
++    if (s.cleanup !== false) parts.push("cleanup");
++    if (s.fade) parts.push("fade " + s.fade + " s");
++    if (s.deess) parts.push("de-ess " + (s.deess_mode || "subtle"));
++    parts.push(s.hz432 === false ? "440 Hz" : "432 Hz");
++    if (s.loudnorm !== false) parts.push((s.lufs || -14) + " LUFS");
++    if (m.lufs_in != null && m.lufs_out != null) parts.push("measured " + m.lufs_in + " → " + m.lufs_out + " LUFS");
++    return parts.join(", ");
++  }
++
+   function paint() {
+     var host = $("derivedTree"), take = state.take;
+     if (!take) { host.innerHTML = '<p class="row-hint">Pick a take on the right.</p>'; return; }
+@@ -39,7 +53,7 @@
+     if (!state.list.length && !state.running.length) html += '<p class="row-hint dv-empty">Nothing made from this take yet.</p>';
+     state.list.forEach(function (m) {
+       html += '<div class="dv-group"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
+-        (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") +
++        (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
+         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
+       (m.files || []).forEach(function (f) {
+         var url = fileUrl(take.name, f.path);
+@@ -52,8 +66,11 @@
+       html += "</div>";
+     });
+     state.running.forEach(function (j) {
+-      html += '<div class="dv-group is-running"><div class="dv-group-head"><strong>' + esc(KIND[j.kind] || j.kind || "Job") + "</strong>" +
+-        (j.mode ? " · " + esc(MODE[j.mode] || j.mode) : "") + '<span class="dv-meta">' + esc(j.status) + "…</span></div></div>";
++      var failed = j.status === "failed";
++      html += '<div class="dv-group is-running' + (failed ? " is-failed" : "") + '"><div class="dv-group-head"><strong>' + esc(KIND[j.kind] || j.kind || "Job") + "</strong>" +
++        (j.mode ? " · " + esc(MODE[j.mode] || j.mode) : "") + '<span class="dv-meta">' +
++        (failed ? "failed: " + esc(j.error || "") : esc(j.status) + "… " + Math.max(0, Math.round(Date.now() / 1000 - (j.started || Date.now() / 1000))) + " s") +
++        "</span></div></div>";
+     });
+     host.innerHTML = html;
+     window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: take.name, files: files() } }));
+@@ -68,7 +85,17 @@
+         state.list = d.derived || [];
+         state.running = d.running || [];
+         paint();
+-      }).catch(function () { /* no lab: the buttons say so when pressed */ });
++        paintSources();
++        // while Forge works on this take, look again every three seconds
++        clearTimeout(state.watch);
++        if (state.running.some(function (j) { return j.status !== "failed"; })) state.watch = setTimeout(refresh, 3000);
++      }).catch(function () {
++        // a dropped answer on a slow line: keep watching while something was running
++        if (token === state.token && state.running.some(function (j) { return j.status !== "failed"; })) {
++          clearTimeout(state.watch);
++          state.watch = setTimeout(refresh, 5000);
++        }
++      });
+   }
+ 
+   function split(mode) {
+@@ -98,9 +125,56 @@
+     Array.prototype.forEach.call(document.querySelectorAll("[data-dv-split]"), function (b) { b.disabled = busy; });
+   }
+ 
++  // ---- remaster (HERESY 1022): the Debunker v6 on the take or one of its stem sets
++  function paintSources() {
++    var sel = $("rmSource");
++    if (!sel) return;
++    var keep = sel.value, stems = state.list.filter(function (m) { return m.kind === "stems"; });
++    sel.innerHTML = '<option value="">the take</option>' + stems.map(function (m) {
++      return '<option value="derived/' + esc(m.id) + '">stems: ' + esc(MODE[m.mode] || m.mode) + "</option>";
++    }).join("");
++    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
++    paintLevels();
++  }
++  function paintLevels() {
++    var src = $("rmSource").value, box = $("rmLevels");
++    var m = state.list.filter(function (x) { return "derived/" + x.id === src; })[0];
++    box.classList.toggle("is-hidden", !m);
++    if (!m) { box.innerHTML = ""; return; }
++    var names = (m.files || []).map(function (f) { return f.name; });
++    if (names.indexOf("drums") >= 0) names = names.filter(function (n) { return n !== "instrumental"; });   // the sum of the others
++    box.innerHTML = '<span class="label">Levels, dB <em>blank: the preset decides</em></span><div class="rm-grid">' + names.map(function (n) {
++      return '<label class="field rm-num"><span class="label">' + esc(n) + '</span><input type="number" step="0.5" min="-24" max="12" data-rm-level="' + esc(n) + '" placeholder="preset" /></label>';
++    }).join("") + "</div>";
++  }
++  function remaster() {
++    if (!state.take) return;
++    var levels = {};
++    Array.prototype.forEach.call(document.querySelectorAll("[data-rm-level]"), function (i) {
++      if (i.value.trim() !== "") levels[i.dataset.rmLevel] = parseFloat(i.value);
++    });
++    var s = { source: $("rmSource").value, preset: $("rmPreset").value, levels: levels,
++              cleanup: $("rmCleanup").checked, fade: parseFloat($("rmFade").value) || 0,
++              trim_start: parseFloat($("rmTrimStart").value) || 0, trim_end: parseFloat($("rmTrimEnd").value) || 0,
++              deess: $("rmDeess").checked, deess_mode: $("rmDeessMode").value, hz432: $("rm432").checked,
++              loudnorm: $("rmLoud").checked, lufs: parseFloat($("rmLufs").value) || -14, tp: parseFloat($("rmTp").value) || -1,
++              formats: $("rmMp3").checked ? ["wav", "flac", "mp3"] : ["wav", "flac"] };
++    $("rmRun").disabled = true;
++    $("rmState").textContent = "sending to Forge…";
++    fetch("/lab/remaster?name=" + encodeURIComponent(state.take.name) + "&s=" + encodeURIComponent(JSON.stringify(s)))
++      .then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
++      .then(function () { $("rmState").textContent = "running on Forge: it appears in the tree above when done"; refresh(); })
++      .catch(function (e) { $("rmState").textContent = "Could not: " + (e.message || e); })
++      .then(function () { $("rmRun").disabled = false; });
++  }
++
+   function init(hooks) {
+     if (!$("derivedPanel")) return;
+     state.hooks = hooks || {};
++    if ($("rmRun")) {
++      $("rmRun").addEventListener("click", remaster);
++      $("rmSource").addEventListener("change", paintLevels);
++    }
+     Array.prototype.forEach.call(document.querySelectorAll("[data-dv-split]"), function (b) {
+       b.addEventListener("click", function () { split(b.dataset.dvSplit); });
+     });
+@@ -122,6 +196,7 @@
+     if (state.take && take && state.take.name === take.name) return;
+     state.take = take;
+     state.token++;
++    clearTimeout(state.watch);
+     state.list = [];
+     state.running = [];
+     say("");
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 982ef49..e7560e8 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -762,7 +762,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+       <button type="button" class="btn ghost small" data-post-open="spectrumPanel">Spectrum</button>
+       <button type="button" class="btn ghost small" data-post-open="glossPanel">Lyrics check</button>
+       <button type="button" class="btn ghost small" data-post-open="derivedPanel">Stems</button>
+-      <button type="button" class="btn ghost small" disabled data-tip="Coming: AudioSR upscaling and clean-up, before or after the stems">AudioSR</button>
++      <button type="button" class="btn ghost small" data-post-open="remasterPanel">Remaster</button>
++      <button type="button" class="btn ghost small" disabled data-tip="Coming: UniverSR upscaling (Subtle, Normal, High, Extreme), before or after the stems">Upscale</button>
+     </div>
+       <!-- HERESY 1021: what is made from this take, as a tree (heresy-derived.js) -->
+       <details class="drawer" id="derivedPanel" open>
+@@ -777,6 +778,47 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         </div>
+       </details>
+ 
++      <!-- HERESY 1022: the Debunker v6 pipeline on the take or its stems (lab/remaster_job.py) -->
++      <details class="drawer" id="remasterPanel">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Remaster</span><span class="sum-say">The Debunker v6 on Forge: mix the stems or take the take, clean, de-ess, 432 Hz, loudness. Each run is a new branch of the tree.</span></span></summary>
++        <div class="drawer-body rm-body">
++          <div class="rm-grid">
++            <label class="field"><span class="label">Source</span><select id="rmSource"><option value="">the take</option></select></label>
++            <label class="field"><span class="label">Preset</span>
++              <select id="rmPreset">
++                <option value="balanced">balanced — voice forward, instruments even</option>
++                <option value="flat">flat — every stem at 0 dB</option>
++                <option value="vocal_forward">vocal forward</option>
++                <option value="instrumental_focus">instrumental focus</option>
++                <option value="shamanic">shamanic — drums and voice, as in FOSFORIDA</option>
++              </select></label>
++          </div>
++          <div class="rm-levels is-hidden" id="rmLevels"></div>
++          <div class="rm-grid">
++            <label class="check"><input type="checkbox" id="rmCleanup" checked /> <span>Cleanup</span></label>
++            <label class="field rm-num"><span class="label">Fade out, s</span><input type="number" id="rmFade" min="0" max="20" step="0.5" value="0" /></label>
++            <label class="field rm-num"><span class="label">Trim start, s</span><input type="number" id="rmTrimStart" min="0" step="0.1" value="0" /></label>
++            <label class="field rm-num"><span class="label">Trim end at, s</span><input type="number" id="rmTrimEnd" min="0" step="0.1" value="0" data-tip="0: to the end" /></label>
++          </div>
++          <div class="rm-grid">
++            <label class="check"><input type="checkbox" id="rmDeess" /> <span>De-ess</span></label>
++            <select id="rmDeessMode" aria-label="De-ess strength"><option value="subtle">subtle</option><option value="normal">normal</option></select>
++            <label class="check" data-tip="Retune from 440 to 432 Hz (pitch and tempo together). Off keeps 440 Hz, for the public."><input type="checkbox" id="rm432" checked /> <span>432 Hz</span></label>
++          </div>
++          <div class="rm-grid">
++            <label class="check"><input type="checkbox" id="rmLoud" checked /> <span>Loudness</span></label>
++            <label class="field rm-num"><span class="label">LUFS</span><input type="number" id="rmLufs" min="-30" max="-6" step="0.5" value="-14" /></label>
++            <label class="field rm-num"><span class="label">True peak, dB</span><input type="number" id="rmTp" min="-6" max="0" step="0.1" value="-1" /></label>
++            <label class="check"><input type="checkbox" id="rmMp3" /> <span>also MP3</span></label>
++          </div>
++          <div class="dv-actions">
++            <button type="button" class="btn primary small" id="rmRun">Remaster</button>
++            <span class="row-hint mono" id="rmState"></span>
++          </div>
++          <p class="row-hint">Loudness in two passes (measured, then a linear gain), 48 kHz out. The result appears in the Stems tree above, with its loudness in and out.</p>
++        </div>
++      </details>
++
+       <!-- HERESY 1007: the spectrum of this take, measured in the page (heresy-spectrum.js) -->
+       <details class="drawer" id="spectrumPanel" open>
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Spectrum</span><span class="sum-say">Where the sound sits: spectrogram, average spectrum, band energy. Lay another take over it to compare.</span></span></summary>
+-- 
+2.43.0
+

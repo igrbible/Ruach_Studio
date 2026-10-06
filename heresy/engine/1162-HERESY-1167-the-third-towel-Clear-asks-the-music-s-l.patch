@@ -1,0 +1,1137 @@
+From ff6220afaf7eaa04a6ff9213ceb3993d13e3c7dc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 5 Oct 2026 21:01:01 -0600
+Subject: [PATCH 1162/1177] HERESY 1167: the third towel: Clear asks, the
+ music's lengths in time, guards that say why, Play new takes, the column's
+ star
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor's third towel of 05.10.2026, and what he added to it the same evening:
+· Clear asks first (a slip no longer empties the form); Plan score only is off in Direct (it writes no score); Save
+  and the guide live in ☰; the fifth tab says Trainer; the Creator's four drawers one under another, each the
+  column's width; the workspace in hand reads in the rooms' colour in the dark themes, every dropdown's list in its
+  theme's colours.
+· The music's Min and Max length in time (25 tokens a second): Max follows Max length (the engine caps there
+  anyway), Min in seconds behind its lock; the score's stay in tokens. A prompt that capped the music lower than its
+  Max length gets that as its Max length. The music's bounds reach 16:00 (Direct gives it nearly the whole window).
+· Guards on Guidance (1–4: Viktor's word, the engine itself sets none), ODE steps, Max length, variations and peak
+  clip, and every knob's guard says why in a line of its own; Guidance from 2.6 is said to be an experiment; a field
+  emptied shows its default again when you leave it, not at the keystroke that emptied it (Backspace in Guidance).
+· The texts as the defaults are now: the Style slider (1.2–2.0, every position two passes), Guidance (Viktor's
+  measure: 1.4–1.6 stable, 2.0 dynamic, 2.4 the edge, from 2.6 the music cut short), the floors (200 and 0:30), the
+  music's ceiling, Max length; the built-in profiles' floors too (750 and 200, not the release's 200 and 32).
+· The meter: Direct writes no score, so the score's budget no longer turns a reading red; over the window in Direct
+  it says how long the sound beside the text can be.
+· Play new takes, the player's third switch: a song made here plays when it is done unless something plays.
+· The rooms' column: the star beside the thumbs; a refused rating is said, not swallowed; a catalog asked before a
+  rating and answered after it no longer takes the rating back.
+· The artwork: Download in its overlay (the browser's menu is off); on the Librarian's tiles it is the card's right
+  side, its whole height.
+· The Writer: its one button filled, on the right, «Send the request to LLM», what is happening on its left;
+  Ctrl+Enter in the brief; its requests and answers (with their tokens) in the server log.
+· 38 words in the seven languages.
+
+cdp-console 334/0/7, check-i18n 14/0, check-player 3/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  46 ++++++-
+ tools/console/app.js               | 210 ++++++++++++++++++++++++++---
+ tools/console/help.js              |  45 +++++--
+ tools/console/heresy-assist.js     |   9 ++
+ tools/console/heresy-collection.js |  33 +++--
+ tools/console/heresy-i18n-be.js    |  40 +++++-
+ tools/console/heresy-i18n-el.js    |  40 +++++-
+ tools/console/heresy-i18n-es.js    |  40 +++++-
+ tools/console/heresy-i18n-it.js    |  40 +++++-
+ tools/console/heresy-i18n-ru.js    |  40 +++++-
+ tools/console/heresy-i18n-uk.js    |  40 +++++-
+ tools/console/heresy-icons.js      |   3 +
+ tools/console/heresy-presets.js    |   6 +-
+ tools/console/index.html           |  29 ++--
+ 14 files changed, 562 insertions(+), 59 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3204db9..13ded02 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3763,9 +3763,9 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ .k-plan #setupLibRow select { flex: 1 1 160px; min-width: 0; max-width: 300px; }
+ 
+ @media (min-width: 1400px) {
+-  /* the four drawers two by two; an open one takes the whole width */
+-  body[data-tab="create"] .k-card.k-more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+-  body[data-tab="create"] .k-more .drawer[open] { grid-column: 1 / -1; }
++  /* HERESY 1167 (Viktor: «Четыре свёрнутые в половинку блока растяни на полную ширину второй колонки»): one under another,
++     each the column's width (two by two, an open one jumped across the pair and Sampling's line broke in two) */
++  body[data-tab="create"] .k-card.k-more { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
+ }
+ 
+ @media (min-width: 1400px) {
+@@ -3931,3 +3931,43 @@ html.i18n-wait .boot-veil > * { visibility: hidden; }
+ /* (Viktor: «В паспорте трека сделай бекграунд отрендеренной партитуры белым как и в Творце»): the datasheet's staff on the
+    Creator's white sheet (#scoreStaff.paper), its ink the Creator's */
+ .ds-staff { --paper: #ffffff; --paper-ink: #111111; --paper-line: #d0d0d0; background: #fff; box-shadow: inset 0 0 0 1px #e4e4e4; }
++
++/* HERESY 1167 (Viktor: «Перепроверь бекграунды в селекторах в ночных темах»): every dropdown's open list in the theme's own
++   colours: Chrome on Linux drew it in the system's light colours with the page's light text on it (1065 had taken this off
++   for a seam at the list's top; an unreadable list is the worse of the two) */
++select option, select optgroup { background-color: var(--panel); color: var(--ink); }
++/* (Viktor: «В ночном режиме в селекторе ворспейсов крась текст так же, как и названия комнат. Сливается с бекграундом»): in
++   the dark themes the workspace in hand reads in the room names' colour; its border keeps the accent */
++:is(:root[data-theme="ink"], :root[data-theme="dark"], :root[data-theme="igr-night"], :root[data-theme="studio"], :root[data-theme="dmm"], :root[data-theme="graphite"], :root[data-theme="nord"], :root[data-theme="dracula"], :root[data-theme="gruvbox"], :root[data-theme="solarized-dark"], :root[data-theme="contrast"]) .ws-current.is-set select { color: var(--ink); }
++
++/* HERESY 1167: the music's floor and ceiling in time (their token fields hidden underneath); the ceiling a read-out */
++.knob input[hidden] { display: none !important; }
++.knob.knob-follows input { color: var(--muted); background: var(--sunk, var(--field)); cursor: default; }
++.toast .toast-why { margin-top: 4px; font-size: 12px; opacity: .86; }
++/* HERESY 1167 (Viktor: «И нет звёздочки»): the star in the column's thumbs row, so the hover row closes the gap it left */
++.take.has-rate .take-dl { right: 38px; }
++.take.has-rate .take-post { right: 68px; }
++.take.has-rate .take-mp3 { right: 106px; }
++.take.has-rate:hover .take-title, .take.has-rate:focus-within .take-title { padding-right: 140px; }
++/* HERESY 1167 (Viktor: «У нас в правой части карточек есть некий воздух. Давай обложку как есть справа, но по всей высоте как
++   cover, чтобы не сдвигались тексты»): on the tiles the artwork is the card's right side, its whole height; a click opens it */
++.coll-grid:not(.list) .coll-card.has-art { grid-template-columns: 30px minmax(0, 1fr) clamp(72px, 24%, 128px);
++  grid-template-areas: "title title art" "play meta art" "play badges art" "check acts art"; }
++.coll-grid:not(.list) .coll-card.has-art .coll-art { grid-area: art; position: static; width: 100%; height: 100%; min-height: 64px;
++  align-self: stretch; border-radius: 8px; }
++.coll-grid:not(.list) .coll-card.has-art .coll-art:hover { transform: none; filter: brightness(1.08); }
++.coll-grid:not(.list) .coll-card.has-art .coll-title, .coll-grid:not(.list) .coll-card.has-art .coll-meta,
++.coll-grid:not(.list) .coll-card.has-art .coll-badges { padding-right: 0; }
++/* the artwork's download beside Close */
++.art-cap .art-dl { display: inline-grid; place-items: center; text-decoration: none; }
++.art-cap .art-dl svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
++/* HERESY 1167 (Viktor: «сместить её вправо»; «слева от кнопки статистика, лог того, что происходит»): the Writer's button on the
++   right, filled; what is happening now on its left */
++.assist-go { justify-content: flex-end; }
++.assist-go #assistStatus { order: -1; flex: 1; min-width: 0; text-align: left; }
++.assist-go #assistBtn { flex: none; }
++/* HERESY 1167 (Viktor: «Guidance (CFG) выстрой в одну строку с полем ввода»): its name and its box on one line, as the knobs */
++.field.field-inline { flex-direction: row; align-items: center; gap: 9px; }
++.field.field-inline > .label { margin: 0; white-space: nowrap; }
++.field.field-inline > input { width: 84px; flex: none; text-align: right; font-family: var(--mono); }
++
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 2fdc368..dace48a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -502,9 +502,64 @@
+   // and said aloud), and the token floors and ceilings locked against a stray edit: the lock opens them
+   var KNOB_BOUNDS = {
+     temperature: [0.1, 2], top_p: [0.5, 1], top_k: [1, 1000], repetition_penalty: [1, 2], penalty_window: [1, 100],
+-    min_tokens: { abc: [0, 6144], semantic: [0, 12000] }, max_tokens: { abc: [256, 6144], semantic: [250, 12000] }
++    // HERESY 1167: the music up to 16:00 (Direct gives it nearly the whole window: Speech · up to 15:00)
++    min_tokens: { abc: [0, 6144], semantic: [0, 24000] }, max_tokens: { abc: [256, 6144], semantic: [250, 24000] }
+   };
+   var LOCKED_KNOBS = { min_tokens: true, max_tokens: true };
++  // HERESY 1167 (Viktor: «Лучше один раз объяснить, чем слушать треш»): why each bound is where it is
++  var KNOB_WHY = {
++    temperature: "Above 2 the choice is close to random; below 0.1 it is nearly fixed and loops.",
++    top_p: "Below 0.5 only a few of the likeliest tokens stay, and the line turns monotone.",
++    top_k: "1 always takes the likeliest token; past 1000 it narrows nothing, top-p decides.",
++    repetition_penalty: "1 switches it off; above 2 every repeat is avoided, and the song loses its refrains and its beat.",
++    penalty_window: "The engine looks back 100 tokens at most.",
++    "abc.min_tokens": "The score's window holds 6,144 tokens.",
++    "abc.max_tokens": "Below 256 a score has no room for its sections; past 6,144 it overflows its window.",
++    "semantic.min_tokens": "The floor never goes above the music's Max length (Max length in Sound and output)."
++  };
++  // HERESY 1167 (Viktor: «CFG при вводе 3 не опускает его до макс. 2. Поставь сторожа на все поля в семплинге и уведомления
++  // оверлеями»; «2.4 - макс стабильности. 2.6 и выше - дурдом. Может макс выставим до 4?»): Guidance and Sound and output
++  // kept in their bounds, each saying why; a field emptied shows its default again when you leave it
++  var FIELD_GUARDS = {
++    cfg: [1, 4, "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off."],
++    odeSteps: [1, 160, "32 is the release; 8–16 are quick drafts; 160 is the ceiling."],
++    maxLength: [10, 960, "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it."],
++    variations: [1, 9, "One pass renders nine at most."],
++    peakClip: [0, 1000, "0 normalises to the true peak; past 1000 (0.1% of the samples cut flat) the peaks distort."]
++  };
++  function fieldDefault(id) {
++    return id === "odeSteps" ? outDefault("steps") : id === "maxLength" ? outDefault("duration") : id === "peakClip" ? outDefault("peak_clip") : 1;
++  }
++  function fieldLabel(el) {
++    var l = el.closest(".field") && el.closest(".field").querySelector(".label");
++    return l && l.firstChild ? l.firstChild.textContent.trim() : el.id;
++  }
++  // a toast whose reason is a line of its own (each part looked up in the page's language on its own)
++  function toastWhy(head, why, kind) {
++    toast(head, kind);
++    var el = $("toasts").lastChild;
++    if (el && why) { var w = document.createElement("div"); w.className = "toast-why"; w.textContent = why; el.appendChild(w); }
++  }
++  function guardField(id) {
++    var el = $(id), g = FIELD_GUARDS[id], v = parseFloat(el.value);
++    if (id === "cfg") {
++      if (!el.value.trim() || !isFinite(v)) { el.value = ""; el.dataset.touched = ""; fillCfg(); syncShape(); return; }
++    } else if (!el.value.trim() || !isFinite(v)) {
++      el.value = fieldDefault(id);
++      el.dispatchEvent(new Event("input", { bubbles: true }));
++      return;
++    }
++    if (v < g[0] || v > g[1]) {
++      el.value = Math.min(g[1], Math.max(g[0], v));
++      el.dispatchEvent(new Event("input", { bubbles: true }));
++      toastWhy(fieldLabel(el) + " is kept within " + g[0] + "–" + g[1], g[2], "bad");
++    } else if (id === "cfg" && v >= 2.6) {
++      toastWhy("Guidance from 2.6 is an experiment", "The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.");
++    }
++  }
++  setTimeout(function () {
++    Object.keys(FIELD_GUARDS).forEach(function (id) { if ($(id)) $(id).addEventListener("change", function () { guardField(id); }); });
++  }, 0);
+   function knobBounds(group, key) { var b = KNOB_BOUNDS[key]; return b && !Array.isArray(b) ? b[group] : b; }
+   var LOCK_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/>' +
+     '<path class="shackle" d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+@@ -536,11 +591,72 @@
+         input.value = def;
+         if (LOCKED_KNOBS[knob[0]]) { input.readOnly = true; wrap.classList.add("is-locked"); }
+         wrap.appendChild(input);
++        if (group === "semantic" && /_tokens$/.test(knob[0])) secsKnob(wrap, input, knob[0]);   // HERESY 1167
+         host.appendChild(wrap);
+       });
+     });
++    syncMusicCeiling();
+     if (window.YueHelp) YueHelp.decorate();   // the knobs were just rebuilt
+   }
++  // HERESY 1167 (Viktor: «синхронизируем max music tokens с секундами в Sound and output… И так же делаем min tokens в
++  // музыкальных токенах. Партитурные так и оставляем в токенах, потому как это не минуты, а ABC»): the music's floor and
++  // ceiling in time, 25 tokens a second. The ceiling follows Max length (the engine caps the music there anyway); the floor
++  // is set in seconds behind its lock. The token fields stay underneath, hidden: the request, the profiles and the meter
++  // read them as before.
++  function secsKnob(wrap, input, key) {
++    var max = key === "max_tokens", name = wrap.querySelector("span");
++    wrap.classList.add("knob-time");
++    if (name && name.firstChild) name.firstChild.textContent = max ? "Max length " : "Min length ";
++    input.hidden = true;
++    var shown = document.createElement("input");
++    shown.type = "text";
++    shown.className = "knob-secs mono";
++    shown.dataset.secsFor = key;
++    shown.readOnly = true;
++    shown.setAttribute("aria-label", max ? "Max length of the music" : "Min length of the music");
++    wrap.appendChild(shown);
++    if (max) {                                        // no lock: it follows Max length
++      var lock = wrap.querySelector(".knob-lock");
++      if (lock) lock.remove();
++      wrap.classList.remove("is-locked");
++      wrap.classList.add("knob-follows");
++      shown.tabIndex = -1;
++      shown.dataset.tip = "It follows Max length in Sound and output: 25 music tokens a second";
++    }
++    shown.addEventListener("change", function () {
++      var s = parseClock(shown.value);
++      if (isFinite(s)) {
++        delete input.dataset.floor; delete input.dataset.held;   // a floor set by hand is the floor
++        input.value = Math.round(s * FRAME_RATE);
++        guardKnob(input);
++      }
++      paintTokenTimes();
++    });
++  }
++  function parseClock(v) {                            // "30", "0:30", "1:05"
++    var m = String(v).trim().match(/^(\d+)(?::(\d{1,2}))?$/);
++    return !m ? NaN : m[2] !== undefined ? +m[1] * 60 + +m[2] : +m[1];
++  }
++  function paintTokenTimes() {
++    all(".knob-secs").forEach(function (shown) {
++      var input = knobInput("semantic", shown.dataset.secsFor);
++      if (input && document.activeElement !== shown) shown.value = clock(parseFloat(input.value) / FRAME_RATE);
++    });
++  }
++  function syncMusicCeiling() {
++    var hi = knobInput("semantic", "max_tokens"), lo = knobInput("semantic", "min_tokens");
++    if (!hi) return;
++    var secs = parseFloat($("maxLength").value), b = knobBounds("semantic", "max_tokens");
++    var v = isFinite(secs) && secs > 0 ? Math.round(secs * FRAME_RATE) : samplingDefault("semantic", "max_tokens");
++    hi.value = Math.min(b[1], Math.max(b[0], v));
++    if (lo) {   // a ceiling below the floor takes it down with it; the floor comes back when the ceiling rises again
++      var held = lo.dataset.held !== undefined && lo.value === lo.dataset.held;
++      var floor = held ? parseFloat(lo.dataset.floor) : parseFloat(lo.value), top = parseFloat(hi.value);
++      if (floor > top) { lo.value = top; lo.dataset.floor = floor; lo.dataset.held = lo.value; }
++      else if (held) { lo.value = floor; delete lo.dataset.floor; delete lo.dataset.held; }
++    }
++    paintTokenTimes();
++  }
+ 
+   function samplingOverrides(group) {
+     var out = {};
+@@ -560,9 +676,20 @@
+     var checked = document.querySelector('input[name="cot"]:checked');
+     return checked ? checked.value : "full";
+   }
++  // HERESY 1167 (Viktor: «В Direct Mode деактивируй кнопку Play Score only»): Direct writes no score, so there is none to plan
++  function paintPlanBtn() {
++    var b = $("planBtn"), direct = currentCot() === "off";
++    if (!b) return;
++    b.disabled = direct;
++    b.title = direct ? "Direct mode writes no score: choose Full plan or Melody only to plan one"
++      : "Write only the score (seconds, no audio). Check its sections, then Generate renders exactly that score.";
++  }
++  document.addEventListener("change", function (e) { if (e.target && e.target.name === "cot") paintPlanBtn(); });
++  setTimeout(paintPlanBtn, 0);
+   function setCot(cot) {
+     var radio = document.querySelector('input[name="cot"][value="' + cot + '"]');
+     if (radio) radio.checked = true;
++    paintPlanBtn();
+     fillCfg();
+     paintSliders();
+     YueLoras.repaint();
+@@ -575,7 +702,9 @@
+     $("cfg").setAttribute("value", def);   // step base: arrows go 1.6 -> 1.61 / 1.59
+     $("cfg").value = def;
+   }
+-  $("cfg").addEventListener("input", function () { this.dataset.touched = this.value.trim() ? "1" : ""; if (!this.value.trim()) fillCfg(); });
++  // HERESY 1167 (Viktor: «когда Backspace в цифровом поле до конца, обнуляется на одну цифру… это лучше делать при потере
++  // фокуса курсора»): emptied, it keeps empty while you type; it shows its default again when you leave it (guardField)
++  $("cfg").addEventListener("input", function () { this.dataset.touched = this.value.trim() ? "1" : ""; });
+   all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", fillCfg); });
+   fillCfg();
+ 
+@@ -594,15 +723,17 @@
+   function guardKnob(input) {
+     var group = input.dataset.group, key = input.dataset.key, b = knobBounds(group, key), v = parseFloat(input.value);
+     var label = (input.parentNode.querySelector("span") || {}).textContent || key;
++    var music = group === "semantic" && /_tokens$/.test(key);   // HERESY 1167: said in time, and why
+     if (b && isFinite(v) && (v < b[0] || v > b[1])) {
+       input.value = Math.min(b[1], Math.max(b[0], v));
+-      toast(label.trim() + " is kept within " + b[0] + "\u2013" + b[1], "bad");
++      toastWhy(label.trim() + " is kept within " + (music ? clock(b[0] / FRAME_RATE) + "–" + clock(b[1] / FRAME_RATE) : b[0] + "–" + b[1]),
++               KNOB_WHY[group + "." + key] || KNOB_WHY[key], "bad");
+     }
+     if (key === "min_tokens" || key === "max_tokens") {
+       var lo = knobInput(group, "min_tokens"), hi = knobInput(group, "max_tokens");
+       if (lo && hi && parseFloat(lo.value) > parseFloat(hi.value)) {
+         if (key === "min_tokens") lo.value = hi.value; else hi.value = lo.value;
+-        toast("Min tokens may not pass Max tokens", "bad");
++        toast(music ? "The music's Min length may not pass its Max length (Max length in Sound and output)" : "Min tokens may not pass Max tokens", "bad");
+       }
+     }
+     syncShape();
+@@ -612,7 +743,7 @@
+     var lock = e.target.closest && e.target.closest(".knob-lock");
+     if (!lock) return;
+     e.preventDefault();
+-    var wrap = lock.closest(".knob"), input = wrap.querySelector("input");
++    var wrap = lock.closest(".knob"), input = wrap.querySelector(".knob-secs") || wrap.querySelector("input");   // HERESY 1167: the time field
+     var open = wrap.classList.toggle("is-locked") === false;
+     input.readOnly = !open;
+     lock.dataset.tip = open ? "Open: click to lock it again" : "Locked against a stray edit: click to change it";
+@@ -666,6 +797,7 @@
+ 
+   // Show where the knobs sit; "custom" when they match no position.
+   function syncShape() {
++    syncMusicCeiling();                               // HERESY 1167
+     Object.keys(SHAPES).forEach(function (id) {
+       var spec = SHAPES[id], found = -1;
+       if (spec.cfg) {
+@@ -734,11 +866,12 @@
+     if (variations > 1) parts.push(variations + " sounds each");
+     $("outSummary").textContent = parts.map(tr).join(" · ");   // HERESY 1166
+     var notes = [];
+-    notes.push("Songs end on their own; max length only caps them (the music tokens stop at " +
+-      clock(samplingDefault("semantic", "max_tokens") / FRAME_RATE) + ").");
++    // HERESY 1167: the music's ceiling is Max length itself now; the window is the other cap
++    notes.push("Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.");
+     if (format === "wav32") notes.push("WAV 32 is raw float: peak clip is ignored.");
+     if (variations > 1) notes.push("Each song renders " + variations + " times with sound seeds seed, seed + 1\u2026; the music is written once.");
+     $("outHint").textContent = notes.map(tr).join(" ");
++    syncMusicCeiling();                               // HERESY 1167: the music's Max length follows
+   }
+ 
+   function saveOutputChoice() {
+@@ -1194,7 +1327,11 @@
+     toast("New song: the form is back to its defaults (your VAE, output and theme choices stay)");
+   }
+   $("newSong").addEventListener("click", newSong);
+-  $("clearForm").addEventListener("click", newSong);
++  // HERESY 1167 (Viktor: «Кнопка CLEAR не имеет сторожа. Нечаянно нажал - и полетели все формы в пустоту»): it asks first
++  $("clearForm").addEventListener("click", function () {
++    window.HeresyDialog.confirm("Clear the form?\n\nIts title, style, lyrics, score and every knob go back to the defaults. The takes stay.",
++      { ok: "Clear the form", danger: true }).then(function (yes) { if (yes) newSong(); });
++  });
+ 
+   // HERESY 1035: a menu: a random official demo, or one of ours by name, grouped (Readings…)
+   function loadExample(ex) {
+@@ -1535,6 +1672,10 @@
+     var tokens = typeof req.semantic_tokens === "string" ? req.semantic_tokens.trim() : "";
+     setCodes(tokens ? { tokens: tokens, from: opts.fromTake || null, title: opts.codesTitle || $("title").value,
+                         frames: countCodes(tokens) } : null);
++    // HERESY 1167: the music's ceiling follows Max length now; a prompt that capped the music lower than its Max length
++    // gets that as its Max length (the engine took the lower of the two either way)
++    var semCap = req.semantic_sampling && req.semantic_sampling.max_tokens, lenNow = parseFloat($("maxLength").value);
++    if (typeof semCap === "number" && semCap > 0 && (!isFinite(lenNow) || semCap / FRAME_RATE < lenNow)) $("maxLength").value = round(semCap / FRAME_RATE, 3);
+     syncShape();
+     paintOutput();
+     growLyrics();
+@@ -2016,6 +2157,12 @@
+       // Only jump to the new song if the run is what you were looking at;
+       // opening it never cuts off a song that is playing.
+       if (watching) openTake(job.takes[0]);
++      // HERESY 1167 (Viktor: «Если плеер неактивен, по окончанию генерации трека прямо в проигрыш его»): a song made here
++      // plays when it is done, unless something plays (the player's «Play new takes»)
++      if (job.kind !== "external" && !playing && playNew()) {
++        var fresh = findTake(job.takes[0]);
++        if (fresh) playNow(fresh);
++      }
+     }).catch(function (error) {
+       job.error = error.message;
+       settle(job, "failed");
+@@ -4375,6 +4522,9 @@
+       '<img class="art-img" alt="" draggable="false" translate="no" />' +
+       '<figcaption class="art-cap"><button type="button" class="coll-play art-play" aria-label="Play"></button>' +
+       '<span class="art-title"></span><span class="art-count"></span>' +
++      // HERESY 1167 (Viktor: «Добавь в оверлей бокс обложек кнопку скачать. Мы же отключили браузерные меню»)
++      '<a class="pb-btn art-dl" aria-label="Download the picture" data-tip="Download the picture (JPEG)">' +
++        (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
+       '<button type="button" class="pb-btn art-close" aria-label="Close" data-tip="Close (Esc)">✕</button></figcaption>' +
+       '<p class="art-guess" hidden>≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.</p>' +
+       '<p class="art-credit" hidden><span>Picture:</span> <a target="_blank" rel="noopener noreferrer" ' +
+@@ -4401,6 +4551,9 @@
+       back.querySelector(".art-title").textContent = take ? displayTitle(take) : n;
+       back.querySelector(".art-count").textContent = list.length > 1 ? (at + 1) + " / " + list.length : "";
+       back.querySelector(".art-play").hidden = !take;
++      var dl = back.querySelector(".art-dl");             // HERESY 1167: saved under the take's title
++      dl.href = artUrl(n);
++      dl.setAttribute("download", (take ? fileTitle(take) : n) + ".jpg");
+       back.querySelector(".art-guess").hidden = !artUnseen(n);
+       // HERESY 1166: a picture someone made says whose it is, and under which licence (its page one click away)
+       var credit = STATE.artsCredit[n], line = back.querySelector(".art-credit"), link = line.querySelector("a");
+@@ -4637,6 +4790,15 @@
+   }
+   $("clickPlay").addEventListener("click", function () { store("yue2.clickPlay", clickPlay() ? "off" : null); paintClickPlay(); });
+   paintClickPlay();
++  // HERESY 1167 (Viktor: «Можно к плееру выключатель третий добавить»): play new takes when they are done
++  function playNew() { return recall("yue2.playNew") !== "off"; }
++  function paintPlayNew() {
++    var on = playNew();
++    $("playNew").setAttribute("aria-pressed", on ? "true" : "false");
++    $("playNew").classList.toggle("is-on", on);
++  }
++  $("playNew").addEventListener("click", function () { store("yue2.playNew", playNew() ? "off" : null); paintPlayNew(); });
++  paintPlayNew();
+   function paintPlayOn() {
+     var on = playOn();
+     $("autoplay").setAttribute("aria-pressed", on ? "true" : "false");
+@@ -5073,10 +5235,11 @@
+       if (take.variation > 0 && !/ · sound \d+/.test(title)) tags += '<span class="tag">sound ' + (take.variation + 1) + "</span>";
+       if (take.format === "mp3") tags += '<span class="tag">mp3</span>';
+       if (take.parent) tags += '<span class="tag re" title="Re-rendered from another take: same music">re-render</span>';
+-      return '<article class="take' + active + (take.favorite ? " is-fav" : "") + (HC && HC.isHidden(take.name) ? " is-hidden-take" : "") + (HC && HC.isFresh && HC.isFresh(take.name) ? " is-fresh" : "") +
++      var extras = HC && HC.cardExtras && !take.session ? HC.cardExtras(take.name) : "";   // HERESY 1082; 1167: the star in it
++      return '<article class="take' + active + (extras ? " has-rate" : "") + (take.favorite ? " is-fav" : "") + (HC && HC.isHidden(take.name) ? " is-hidden-take" : "") + (HC && HC.isFresh && HC.isFresh(take.name) ? " is-fresh" : "") +
+         (window.HeresyRegen && window.HeresyRegen.has(take.name) ? " is-regenerating" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
+-        '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
+-        '" title="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>" +
++        (extras ? "" : '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
++        '" title="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>") +
+         '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>' +
+         (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '" title="Load into the Refiner">Refine</button>') +
+         '<a class="take-dl" data-dl="1" href="' + escape(downloadUrl(take)) + '" download="' + escape(audioFileName(take)) +
+@@ -5086,7 +5249,7 @@
+         '<div class="take-title">' + escape(title) + "</div>" +
+         '<div class="take-style">' + escape(take.style || "") + "</div>" +
+         '<div class="take-foot"><span class="tag playing-tag">playing</span>' + tags + "<span>" + clock(take.seconds) + "</span><span>" +
+-        ago(take.created) + "</span></div>" + (HC && HC.cardExtras && !take.session ? HC.cardExtras(take.name) : "") + "</article>";   // HERESY 1082
++        ago(take.created) + "</span></div>" + extras + "</article>";   // HERESY 1082
+     }).join("");
+     markPlaying();
+   }
+@@ -5097,7 +5260,15 @@
+     if (lrate && window.HeresyCollection) {
+       event.stopPropagation();
+       var HCr = window.HeresyCollection, v = Number(lrate.dataset.lrate);
+-      HCr.rate(lrate.dataset.name, HCr.rating(lrate.dataset.name) === v ? 0 : v).then(function () { paintLibrary(); paintRate(); });
++      HCr.rate(lrate.dataset.name, HCr.rating(lrate.dataset.name) === v ? 0 : v).then(function () { paintLibrary(); paintRate(); },
++        function (e) { paintLibrary(); paintRate(); toast(e.message, "bad"); });   // HERESY 1167: a refusal said, not swallowed
++      return;
++    }
++    var lfav = event.target.closest("[data-lfav]");     // HERESY 1167 (Viktor: «И нет звёздочки»): the star beside the thumbs
++    if (lfav) {
++      event.stopPropagation();
++      var lfavTake = findTake(lfav.dataset.name);
++      if (lfavTake) toggleFavorite(lfavTake);
+       return;
+     }
+     var fav = event.target.closest("[data-fav]"), del = event.target.closest("[data-del]"), toPost = event.target.closest("[data-post]");
+@@ -7125,6 +7296,10 @@
+       var max = Math.max(256, parseInt($("assistMax").value, 10) || 8192);
+       button.disabled = true;
+       $("assistLabel").textContent = "Writing…";
++      // HERESY 1167 (Viktor: «OpenRouter активность не отображается в системном логе»): the page asks the writer itself, so
++      // the server never sees it: the page writes the request and its answer into the log
++      var via = $("assistProvider").value === "openrouter" ? ($("orModel").value.trim() || "OpenRouter") + " on OpenRouter" : "the chat server";
++      addLogLine("[Writer] \u2192 " + via + ": a brief of " + brief.length + " characters, up to " + max + " tokens", false);
+       var ticker = setInterval(function () { $("assistStatus").textContent = "writing with " + (model || "the chat server") + "… " + Math.round((Date.now() - started) / 1000) + "s"; }, 1000);
+       var song = { title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value.trim() || STATE.abcRendered || "" };
+       // HERESY 1016: the idea writer's section templates, when a structure is picked
+@@ -7146,13 +7321,17 @@
+         var choice = (response.choices || [])[0] || {};
+         if (choice.finish_reason !== "length" || A.parse(stripThinking(((choice.message || {}).content) || "")) || max >= 32768) return response;
+         max = Math.min(32768, max * 2);
++        addLogLine("[Writer] " + model + " spent its answer on thinking: asked again with " + max + " tokens", false);
+         return $("assistProvider").value === "openrouter" ? openRouterComplete(messages, max, temperature)
+           : chatComplete(messages, model, max, null, temperature);
+       });
+       ask.then(function (response) {
+         var choice = (response.choices || [])[0] || {};
+         var text = stripThinking(((choice.message || {}).content) || "");
+-        var draft = A.parse(text), cut = choice.finish_reason === "length";
++        var draft = A.parse(text), cut = choice.finish_reason === "length", use = response.usage || {};
++        addLogLine("[Writer] \u2190 " + model + " \u00b7 " + Math.round((Date.now() - started) / 100) / 10 + " s" +
++          (use.prompt_tokens ? " \u00b7 " + use.prompt_tokens + " tokens in, " + use.completion_tokens + " out" : "") +
++          (draft ? " \u00b7 a draft" : " \u00b7 no complete draft") + (cut ? " \u00b7 cut at the output limit" : ""), false);
+         $("assistRawText").textContent = text;
+         $("assistRaw").classList.remove("is-hidden");
+         if (draft) {
+@@ -7175,8 +7354,9 @@
+           : "The model did not return a complete draft; its raw answer is below.";
+       }).catch(function (error) {
+         $("assistStatus").textContent = "";
++        addLogLine("[Writer] " + (model || "the writer") + " failed: " + (error.message || String(error)), false);
+         toast(error.message || String(error), "bad");
+-      }).then(function () { clearInterval(ticker); button.disabled = false; $("assistLabel").textContent = "Create a draft"; });
++      }).then(function () { clearInterval(ticker); button.disabled = false; $("assistLabel").textContent = "Send the request to LLM"; });   // HERESY 1167
+     });
+ 
+     // Apply into the form; one step back is kept.
+diff --git a/tools/console/help.js b/tools/console/help.js
+index c6a634b..172b759 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -56,14 +56,17 @@
+       "For a cover, use Melody only with a score that has no chord symbols.",
+     versions: "Renders this prompt several times, each extra version with a fresh seed. " +
+       "Picking the best of several is the most reliable way to a better song: the model card's own benchmark compared best-of-2 and best-of-8 picks.",
++    // HERESY 1167: Viktor's own measure (05.10.2026, Direct mode, FOSFORIDA), the field kept within 1–4
+     cfg: "Classifier-free guidance, for the music stage only (the score planner never uses it). " +
+       "Default 1.6 in every mode: Viktor's stable set (01.10.2026). The release had 1.0 in Full and Melody mode and 1.01 in Direct.\n" +
+       "Above 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. " +
+       "Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. " +
+       "1.0 switches guidance off: one pass, the release's sound.\n" +
+-      "✓ 1.4–1.8 for steadier words; the cover configs on r/StableDiffusion go from 1.2 to 2.0, set per song.\n" +
+-      "⚠ Above 2 the timbre hardens and artifacts appear. The memory is the cache: guidance keeps a second, " +
+-      "unconditioned pass beside every version, 2.8 GB more each at the full context.",
++      "✓ 1.4–1.6: the verified stable range. 2.0: dynamic, closer to SUNO. Up to 2.4 it still holds.\n" +
++      "⚠ From 2.6 the music gets cut short and the lyrics suffer (the same illness as SUNO's): the higher the guidance, the clearer " +
++      "the instruments come in and the more the words pay for it; how soon depends on how complex the style and the lyrics are " +
++      "(Viktor's test in Direct mode, 05.10.2026). The field takes 1.0–4.0; the engine itself sets no ceiling. The memory is the " +
++      "cache: guidance keeps a second, unconditioned pass beside every version, 2.8 GB more each at the full context.",
+     shapeComposition: "Moves the score planner's temperature, top-p and top-k together. Left: familiar, safe melodies and chord changes; " +
+       "right: surprising ones. The middle is the default (0.95 · 0.95 · 50); \"lowest\" is the release (0.7 · 0.9 · 30). No effect in Direct mode or with a supplied score (nothing is planned).\n" +
+       "⚠ \"highest\" (1.15 · 0.97 · 80) can break bars.",
+@@ -71,8 +74,10 @@
+       "right: looser and more adventurous, with more garbled words. The middle is the default (0.9 · 0.95 · 100); \"high\" is the release (1.0 · 0.95 · 100).\n" +
+       "✓ \"low\" (0.85 · 0.93 · 80) for songs where the words matter most.\n" +
+       "⚠ \"highest\" (1.1 · 0.97 · 140): measured glossolalia on a 7-minute song.",
+-    shapeStyle: "Sets Guidance (CFG) from 0.85 to 1.15. Higher follows the style and lyrics more strongly; " +
+-      "any setting except the middle runs the music stage at half speed.",
++    shapeStyle: "Sets Guidance (CFG): 1.2 · 1.4 · 1.6 (the middle, the default) · 1.8 · 2.0. Higher follows the style prompt " +
++      "more strongly. 1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO. Every position runs the music stage's " +
++      "two passes (half the speed, twice the memory).\n⚠ Past 2.0 only by hand in Guidance: up to 2.4 it holds, from 2.6 the music " +
++      "gets cut short and the lyrics suffer.",
+     odeSteps: ODE,
+     odeSolver: "How the sound stage walks from noise to audio (HERESY 1004). Measured on one song against a 160-step " +
+       "reference, error at the same cost of 64 network calls: Midpoint 32 steps 3.8e-3 (the release), Multistep 64 steps " +
+@@ -83,7 +88,8 @@
+       "Heun: two calls, second order; less accurate than Midpoint at 32–64 steps, catches up only at many steps.\n" +
+       "Euler: one call, first order — ten times rougher at the same cost; for quick drafts.\n" +
+       "Lower error means closer to what the model meant, not necessarily a sound you prefer: listen.",
+-    maxLength: "A ceiling on the song's length in seconds (480 by default): the music stage stops at 25 tokens per second of this. " +
++    maxLength: "A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second " +
++      "of this (Sampling shows it as the music's Max length). " +
+       "The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).",
+     variations: "Renders the same music up to 9 times with different sound seeds (seed, seed + 1, …) in one pass. " +
+       "The music is written once, so this is a cheap way to pick the best-sounding render of a song you like.",
+@@ -190,7 +196,7 @@
+       penalty_window: "How many recent tokens the repetition penalty looks back over. Default 100.\n" +
+         "✓ Leave it.\n" +
+         "⚠ It does nothing while the penalty is at 1.0.",
+-      min_tokens: "The score cannot end before this many tokens. Default 32.\n" +
++      min_tokens: "The score cannot end before this many tokens. Default 200.\n" +
+         "✓ Leave it.",
+       max_tokens: "The longest score, in tokens. Default 6144.\n" +
+         "✓ 6144 holds a long song (4096 cut long scores short).\n" +
+@@ -217,10 +223,10 @@
+         "25 tokens are one second: the default 100 is 4 seconds, which is also the ceiling (the release had 50, 2 seconds).\n" +
+         "✓ 100: it also catches loops longer than a short phrase.\n" +
+         "⚠ It prevents loops; it does not cure words breaking down in the middle of a song. For that, lower the temperature.",
+-      min_tokens: "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds.\n" +
++      min_tokens: "The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n" +
+         "✓ Leave it.",
+-      max_tokens: "The longest song, in music tokens: 25 per second, so the default 12000 is 8:00.\n" +
+-        "✓ Set it close to the length the lyrics need.\n" +
++      max_tokens: "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n" +
++        "✓ Set Max length close to the length the lyrics need.\n" +
+         "⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again " +
+         "(measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated."
+     }
+@@ -319,12 +325,19 @@
+     var v = el ? parseInt(el.value, 10) : NaN;
+     return isFinite(v) && v > 0 ? v : fallback;
+   }
+-  function promptBudget() {
++  // HERESY 1167 (Viktor: «По токенам музыкальным красное», Speech · up to 15:00): Direct writes no score, so the score's
++  // budget takes nothing from the window there (the engine cuts the music to what fits beside the style and the text)
++  function isDirect() { var c = document.querySelector('input[name="cot"]:checked'); return !!c && c.value === "off"; }
++  function songTokens() {
+     var song = knobTokens("semantic", 12000), len = document.getElementById("maxLength");
+     var secs = len ? parseFloat(len.value) : NaN;
+     if (isFinite(secs) && secs > 0) song = Math.min(song, Math.round(secs * 25));
+-    return 24576 - knobTokens("abc", 6144) - song - 80;
++    return song;
++  }
++  function promptBudget() {
++    return 24576 - (isDirect() ? 0 : knobTokens("abc", 6144)) - songTokens() - 80;
+   }
++  function mmss(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + ("0" + s % 60).slice(-2); }
+ 
+   // An estimate without the tokenizer: English runs about 3.6 characters a token, other scripts ~1
+   function estimateTokens(text) {
+@@ -403,8 +416,12 @@
+     var b = warnBadge();
+     if (!b) return;
+     var said = [];
+-    if (full) said.push(tr("The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style " +
++    if (full && isDirect()) said.push(tr("The song's token budget alone fills the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower Max length."));
++    else if (full) said.push(tr("The score's and the song's token budgets alone fill the window of 24,576 tokens: nothing is left for the style " +
+                            "and the lyrics. Lower max tokens under Score sampling or Music sampling, or Max length."));
++    else if (both > budget && isDirect()) said.push(tr("Style and lyrics together: about " + both.toLocaleString(loc()) + " tokens. Beside them the window holds about " +
++                                         mmss((24576 - 80 - both) / 25) + " of sound, and Max length asks for " + mmss(songTokens() / 25) +
++                                         ": the engine cuts the song there and marks it truncated."));
+     else if (both > budget) said.push(tr("Style and lyrics together: about " + both.toLocaleString(loc()) + " of " + budget.toLocaleString(loc()) +
+                                          " tokens \u2014 too long for a full-length song and score."));
+     if (warn.length) said.push(tr("Unlike the model's training styles:") + "\n" + warn.map(function (x) { return "\u2022 " + tr(x); }).join("\n"));
+@@ -429,7 +446,7 @@
+     var last = null;
+     function tick() {
+       // the texts themselves: a new prompt of the same length set by the page must still repaint
+-      var now = style.value + "\u0000" + (lyrics ? lyrics.value : "");
++      var now = style.value + "\u0000" + (lyrics ? lyrics.value : "") + "\u0000" + promptBudget();   // HERESY 1167: the mode and the knobs too
+       if (now === last) return;
+       last = now;
+       if (!sized) growBox(style);
+diff --git a/tools/console/heresy-assist.js b/tools/console/heresy-assist.js
+index c0aa2ca..128ec30 100644
+--- a/tools/console/heresy-assist.js
++++ b/tools/console/heresy-assist.js
+@@ -12,6 +12,15 @@
+ // the contradicting style scored 0.60 on lyric recognition, the same style made to
+ // agree with the score 0.74; the first minute 0.45 against 0.78.
+ //
++// HERESY 1167 (Viktor: «В комнате Писателя не вижу кнопку "Отправить"»): Ctrl+Enter in the brief presses the one button that
++// sends («Send the request to LLM», under the settings)
++document.addEventListener("keydown", function (e) {
++  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target && e.target.id === "assistBrief") {
++    e.preventDefault();
++    var b = document.getElementById("assistBtn");
++    if (b && !b.disabled) b.click();
++  }
++});
+ // The page talks to the chat server it already uses (Engine → chat URL); the Studio's
+ // cloud providers are not ported.
+ (function () {
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 7147a92..9ea34c9 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -42,9 +42,18 @@
+     return function (s) { return re.test(fold(s)); };
+   }
+ 
++  // HERESY 1167 (Viktor: «thumbdown не убирает трек из списка»): a catalog asked for before a rating was given and answered
++  // after it is only older, not truer: the ratings given since stay as given (the lab has them)
++  var rated = {}, rateSeq = 0;
++  function remember(name, value) { rated[name] = { v: value, seq: ++rateSeq }; }
++  function fresh(rows, asked) {
++    (rows || []).forEach(function (r) { var x = rated[r.name]; if (x && x.seq > asked) r.rating = x.v; });
++    return rows;
++  }
+   function load() {
++    var asked = rateSeq;
+     return api("/catalog").then(function (d) {
+-      state.rows = d.takes || []; state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
++      state.rows = fresh(d.takes || [], asked); state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
+       state.frozen = d.frozen || [];               // HERESY 1166
+       var names = {};
+       state.rows.forEach(function (r) { names[r.name] = 1; });
+@@ -193,8 +202,11 @@
+       r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</span>" +
+       '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + "</button>" +
+       '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + "</button>" +
++      // HERESY 1167 (Viktor: «У Творца во фрейме Takes… И нет звёздочки»): the favourite beside them, as on the Librarian's cards
++      '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" title="Favourite">' + ico("star") + "</button>" +
+       (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
+   }
++  function favOf(name, r) { var t = state.hooks && state.hooks.findTake ? state.hooks.findTake(name) : null; return t ? !!t.favorite : !!r.favorite; }
+ 
+   // HERESY 1166: a frozen card's check, rename and actions answer nothing; its play button and its title still do
+   function iceCards() {
+@@ -508,8 +520,9 @@
+   function landed(takeNames) {
+     var cur = current();
+     if (!cur || !takeNames || !takeNames.length) return;
++    var asked = rateSeq;
+     api("/collection", { op: "ws-add", workspace: cur, names: takeNames }).then(function (d) {
+-      state.rows = d.takes || state.rows;
++      state.rows = d.takes ? fresh(d.takes, asked) : state.rows;
+       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+     }).catch(function () { /* the take is in the library anyway */ });
+   }
+@@ -578,9 +591,9 @@
+     };
+   }
+   function act(body, done, quiet) {
+-    var undo = quiet ? null : undoFor(body);             // what was, read before the change
++    var undo = quiet ? null : undoFor(body), asked = rateSeq;   // what was, read before the change
+     return api("/collection", body).then(function (d) {
+-      state.rows = d.takes || state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
++      state.rows = d.takes ? fresh(d.takes, asked) : state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
+       state.pins = d.pins || state.pins || {};
+       state.frozen = d.frozen || state.frozen || [];   // HERESY 1166
+       if (done) { if (undo) undoable(done, undo); else toast(done); }
+@@ -1086,8 +1099,10 @@
+     var rows = list.map(rowOf).filter(Boolean), all = rows.length && rows.every(function (r) { return r.rating === value; });
+     var v = all ? 0 : value, before = rows.map(function (r) { return r.rating; });
+     rows.forEach(function (r) { r.rating = v; }); paint();
++    list.forEach(function (n) { remember(n, v); });
++    var asked = rateSeq;
+     return api("/collection", { op: "rate", names: list, value: v }).then(function (d) {
+-      state.rows = d.takes || state.rows; paint();
++      state.rows = d.takes ? fresh(d.takes, asked) : state.rows; paint();
+       var was = {};                                       // HERESY 1135: each take's own mark back
+       rows.forEach(function (r, i) { (was[before[i]] = was[before[i]] || []).push(r.name); });
+       undoable((v > 0 ? "Liked: " : v < 0 ? "Disliked: " : "Neither liked nor disliked: ") + list.length, function () {
+@@ -1096,7 +1111,7 @@
+         }, Promise.resolve()).then(function (d2) { if (d2) state.rows = d2.takes || state.rows; paint(); if (state.hooks.libraryChanged) state.hooks.libraryChanged(); });
+       });
+       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+-    }, function (e) { rows.forEach(function (r, i) { r.rating = before[i]; }); paint(); toast(e.message, true); });
++    }, function (e) { rows.forEach(function (r, i) { r.rating = before[i]; remember(r.name, before[i]); }); paint(); toast(e.message, true); });
+   }
+   function favMany(list) {
+     var takes = list.map(hk().findTake).filter(Boolean), on = takes.some(function (t) { return !t.favorite; });
+@@ -1114,11 +1129,13 @@
+       toast("“" + (r ? r.title : name) + "” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)");
+     }
+     var told = function () { if (state.hooks.libraryChanged) state.hooks.libraryChanged(); };   // HERESY 1167: the column too
++    remember(name, value);
++    var asked = rateSeq;
+     told();
+     return api("/collection", { op: "rate", names: [name], value: value }).then(function (d) {
+-      state.rows = d.takes || state.rows; paint(); told();
++      state.rows = d.takes ? fresh(d.takes, asked) : state.rows; paint(); told();
+       return value;
+-    }, function (e) { if (r) { r.rating = before; paint(); told(); } throw e; });
++    }, function (e) { remember(name, before); if (r) { r.rating = before; paint(); told(); } throw e; });
+   }
+ 
+   // ---- HERESY 1046: the take without leaving the Librarian: a hover peek (400 ms) and a sheet on click
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index a5abcfd..031acb0 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2604,5 +2604,43 @@ RuachI18n.add("be", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Малюецца вокладка для «{0}»: промпт са стылю і слоў, потым малюнак (хвіліна-другая)",
+ "a minute or two on a GPU": "хвіліна-другая на відэакарце",
+ "Artwork from now on: {0}": "Вокладкі цяпер: {0}",
+-"Artwork: the painter by the cards": "Вокладкі: мастак па відэакартах"
++"Artwork: the painter by the cards": "Вокладкі: мастак па відэакартах",
++"Direct mode writes no score: choose Full plan or Melody only to plan one": "Рэжым «Наўпрост» не піша партытуру: каб яе спланаваць, абяры «Поўны план» або «Толькі мелодыя»",
++"Clear the form?": "Ачысціць форму?",
++"Its title, style, lyrics, score and every knob go back to the defaults. The takes stay.": "Назва, стыль, тэкст, партытура і ўсе рэгулятары вернуцца да прадвызначаных значэнняў. Сэмплы застануцца.",
++"Min length": "Мін. даўжыня",
++"Max length of the music": "Макс. даўжыня музыкі",
++"Min length of the music": "Мін. даўжыня музыкі",
++"It follows Max length in Sound and output: 25 music tokens a second": "Ідзе за «Макс. даўжынёй» у «Гуку і вывадзе»: 25 музычных токенаў у секунду",
++"The music's Min length may not pass its Max length (Max length in Sound and output)": "Мін. даўжыня музыкі не можа перавышаць яе макс. даўжыню («Макс. даўжыня» ў «Гуку і вывадзе»)",
++"Above 2 the choice is close to random; below 0.1 it is nearly fixed and loops.": "Вышэй за 2 выбар амаль выпадковы; ніжэй за 0.1 ён амаль застывае і зацыкліваецца.",
++"Below 0.5 only a few of the likeliest tokens stay, and the line turns monotone.": "Ніжэй за 0.5 застаюцца толькі некалькі найбольш імаверных токенаў, і лінія становіцца манатоннай.",
++"1 always takes the likeliest token; past 1000 it narrows nothing, top-p decides.": "1 заўсёды бярэ найбольш імаверны токен; вышэй за 1000 ён нічога не звужае, вырашае top-p.",
++"1 switches it off; above 2 every repeat is avoided, and the song loses its refrains and its beat.": "1 яго выключае; вышэй за 2 пазбягаецца любы паўтор, і песня губляе прыпевы і рытм.",
++"The engine looks back 100 tokens at most.": "Рухавік глядзіць назад не далей чым на 100 токенаў.",
++"The score's window holds 6,144 tokens.": "Акно партытуры змяшчае 6 144 токены.",
++"Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Ніжэй за 256 партытуры не хапае месца на раздзелы; вышэй за 6 144 яна перапаўняе сваё акно.",
++"The floor never goes above the music's Max length (Max length in Sound and output).": "Ніжняя мяжа не ўздымаецца вышэй за макс. даўжыню музыкі («Макс. даўжыня» ў «Гуку і вывадзе»).",
++"1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 — вывераны стабільны дыяпазон; 2.0 — дынаміка, бліжэй да SUNO; да 2.4 трымаецца. З 2.6 музыка абрываецца, а тэкст пакутуе; 1.0 выключае вядзенне.",
++"32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 — як у рэлізе; 8–16 — хуткія чарнавікі; 160 — столь.",
++"The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "Усё акно мадэлі — 24 576 токенаў (16:23 гуку), і сваю долю з яго бяруць стыль, тэкст і, па-за рэжымам «Наўпрост», партытура.",
++"One pass renders nine at most.": "За адзін праход рэндэрыцца не больш за дзевяць.",
++"0 normalises to the true peak; past 1000 (0.1% of the samples cut flat) the peaks distort.": "0 нармалізуе па сапраўдным піку; вышэй за 1000 (зрэзана 0.1% адлікаў) пікі скажаюцца.",
++"Guidance from 2.6 is an experiment": "Вядзенне ад 2.6 — эксперымент",
++"The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.": "Музыка абрываецца раней, а тэкст пакутуе, затое інструменты ўваходзяць ясней (тэст Віктара ў рэжыме «Наўпрост», 05.10.2026). Стабільна: 1.4–1.6; 2.0 — дынаміка, бліжэй да SUNO; 2.4 — край.",
++"Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Песні заканчваюцца самі; «Макс. даўжыня» толькі абмяжоўвае іх, а рухавік урэзвае песню да таго, што змяшчаецца ў акно з 24 576 токенаў побач са стылем, тэкстам і (па-за рэжымам «Наўпрост») партытурай.",
++"Play new takes": "Граць новыя сэмплы",
++"Play new takes: a song made here plays when it is done, unless something plays. Click to only open it.": "Граць новыя сэмплы: песня, створаная тут, загучыць, калі будзе гатовая, калі нічога не грае. Пстрыкні, каб яна толькі адкрывалася.",
++"Download the picture": "Спампаваць малюнак",
++"Download the picture (JPEG)": "Спампаваць малюнак (JPEG)",
++"Send the request to LLM": "Адправіць запыт у LLM",
++"Ctrl+Enter in the brief does the same": "Ctrl+Enter у полі запыту дзейнічае гэтаксама",
++"The song's token budget alone fills the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower Max length.": "Адзін толькі бюджэт токенаў песні запаўняе акно ў 24 576 токенаў: на стыль і тэкст нічога не застаецца. Паменшы «Макс. даўжыню».",
++"Style and lyrics together: about {#0} tokens. Beside them the window holds about {1} of sound, and Max length asks for {2}: the engine cuts the song there and marks it truncated.": "Стыль і тэкст разам — токенаў: каля {0}. Побач з імі акно змяшчае каля {1} гуку, а «Макс. даўжыня» просіць {2}: рухавік абрэжа песню там і пазначыць яе як абрэзаную.",
++"Classifier-free guidance, for the music stage only (the score planner never uses it). Default 1.6 in every mode: Viktor's stable set (01.10.2026). The release had 1.0 in Full and Melody mode and 1.01 in Direct.\nAbove 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. 1.0 switches guidance off: one pass, the release's sound.\n✓ 1.4–1.6: the verified stable range. 2.0: dynamic, closer to SUNO. Up to 2.4 it still holds.\n⚠ From 2.6 the music gets cut short and the lyrics suffer (the same illness as SUNO's): the higher the guidance, the clearer the instruments come in and the more the words pay for it; how soon depends on how complex the style and the lyrics are (Viktor's test in Direct mode, 05.10.2026). The field takes 1.0–4.0; the engine itself sets no ceiling. The memory is the cache: guidance keeps a second, unconditioned pass beside every version, 2.8 GB more each at the full context.": "Classifier-free guidance — толькі для музычнай стадыі (планавальнік партытуры яе не выкарыстоўвае). Прадвызначана 1.6 ва ўсіх рэжымах: стабільны набор Віктара (01.10.2026). У рэлізе было 1.0 у рэжымах «Поўны план» і «Толькі мелодыя» і 1.01 у рэжыме «Наўпрост».\nВышэй за 1 музыка мацней ідзе за промптам стылю; у рэжымах «Поўны план» і «Толькі мелодыя» партытура захоўваецца ў любым разе. Любое значэнне, акрамя 1.0, дае два праходы на крок: удвая павольней і ўдвая больш памяці для музычнай стадыі. 1.0 выключае вядзенне: адзін праход, гук рэлізу.\n✓ 1.4–1.6: вывераны стабільны дыяпазон. 2.0: дынаміка, бліжэй да SUNO. Да 2.4 яшчэ трымаецца.\n⚠ З 2.6 музыка абрываецца раней, а тэкст пакутуе (тая ж хвароба, што ў SUNO): чым вышэй вядзенне, тым ясней уваходзяць інструменты і тым даражэй за гэта плацяць словы; як хутка — залежыць ад складанасці стылю і тэксту (тэст Віктара ў рэжыме «Наўпрост», 05.10.2026). Поле прымае 1.0–4.0; сам рухавік столі не ставіць. Памяць — гэта кэш: вядзенне трымае другі, безумоўны праход побач з кожнай версіяй, па 2.8 ГБ больш на кожную пры поўным кантэксце.",
++"Sets Guidance (CFG): 1.2 · 1.4 · 1.6 (the middle, the default) · 1.8 · 2.0. Higher follows the style prompt more strongly. 1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO. Every position runs the music stage's two passes (half the speed, twice the memory).\n⚠ Past 2.0 only by hand in Guidance: up to 2.4 it holds, from 2.6 the music gets cut short and the lyrics suffer.": "Задае вядзенне (CFG): 1.2 · 1.4 · 1.6 (сярэдзіна, прадвызначана) · 1.8 · 2.0. Вышэй — мацней ідзе за промптам стылю. 1.4–1.6 — вывераны стабільны дыяпазон; 2.0 — дынаміка, бліжэй да SUNO. Любое становішча запускае два праходы музычнай стадыі (удвая павольней, удвая больш памяці).\n⚠ Вышэй за 2.0 — толькі ўручную ў полі «Вядзенне»: да 2.4 трымаецца, з 2.6 музыка абрываецца раней, а тэкст пакутуе.",
++"A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Столь даўжыні песні ў секундах (прадвызначана 480; 0:10–16:00): музычная стадыя спыняецца на 25 токенах у секунду ад яе (у «Сэмплінгу» гэта «Макс. даўжыня» музыкі). Сама даўжыня бярэцца з тэксту і партытуры; гэта толькі абрывае песню, што разагналася (яна тады пазначаецца як абрэзаная).",
++"The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "Партытура не можа скончыцца раней за гэты лік токенаў. Прадвызначана 200.\n✓ Пакінь так.",
++"The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "Песня не можа скончыцца раней за гэты час: 25 музычных токенаў у секунду, прадвызначана 0:30 — гэта 750 токенаў.\n✓ Пакінь так.",
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая доўгая песня: ідзе за «Макс. даўжынёй» у «Гуку і вывадзе», 25 музычных токенаў у секунду (8:00 — гэта 12 000).\n✓ Стаў «Макс. даўжыню» блізка да той, што патрэбна тэксту.\n⚠ Калі месца нашмат больш, чым трэба тэксту, пасля апошняга радка мадэль вяртаецца і пяе ранейшыя радкі зноў (заменана: 24 такія вяртанні пасля канца тэксту). Песня, абарваная тут, пазначаецца як абрэзаная."
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index b32d2ab..c92aa3d 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2603,5 +2603,43 @@ RuachI18n.add("el", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Ζωγραφίζεται εξώφυλλο για το «{0}»: ένα prompt από το ύφος και τις λέξεις, μετά η εικόνα (ένα-δυο λεπτά)",
+ "a minute or two on a GPU": "ένα-δυο λεπτά σε GPU",
+ "Artwork from now on: {0}": "Εξώφυλλα από εδώ και πέρα: {0}",
+-"Artwork: the painter by the cards": "Εξώφυλλα: ο ζωγράφος κατά τις κάρτες"
++"Artwork: the painter by the cards": "Εξώφυλλα: ο ζωγράφος κατά τις κάρτες",
++"Direct mode writes no score: choose Full plan or Melody only to plan one": "Η λειτουργία «Απευθείας» δεν γράφει παρτιτούρα: για να σχεδιάσεις μία, διάλεξε «Πλήρες σχέδιο» ή «Μόνο μελωδία»",
++"Clear the form?": "Καθαρισμός της φόρμας;",
++"Its title, style, lyrics, score and every knob go back to the defaults. The takes stay.": "Ο τίτλος, το ύφος, οι στίχοι, η παρτιτούρα και κάθε ρύθμιση επιστρέφουν στις προεπιλογές. Οι λήψεις μένουν.",
++"Min length": "Ελάχιστη διάρκεια",
++"Max length of the music": "Μέγιστη διάρκεια της μουσικής",
++"Min length of the music": "Ελάχιστη διάρκεια της μουσικής",
++"It follows Max length in Sound and output: 25 music tokens a second": "Ακολουθεί τη «Μέγιστη διάρκεια» στο «Ήχος και έξοδος»: 25 μουσικά tokens το δευτερόλεπτο",
++"The music's Min length may not pass its Max length (Max length in Sound and output)": "Η ελάχιστη διάρκεια της μουσικής δεν μπορεί να ξεπεράσει τη μέγιστη («Μέγιστη διάρκεια» στο «Ήχος και έξοδος»)",
++"Above 2 the choice is close to random; below 0.1 it is nearly fixed and loops.": "Πάνω από 2 η επιλογή είναι σχεδόν τυχαία· κάτω από 0.1 σχεδόν παγώνει και κάνει κύκλους.",
++"Below 0.5 only a few of the likeliest tokens stay, and the line turns monotone.": "Κάτω από 0.5 μένουν μόνο λίγα από τα πιθανότερα tokens και η γραμμή γίνεται μονότονη.",
++"1 always takes the likeliest token; past 1000 it narrows nothing, top-p decides.": "Το 1 παίρνει πάντα το πιθανότερο token· πάνω από 1000 δεν περιορίζει τίποτα, αποφασίζει το top-p.",
++"1 switches it off; above 2 every repeat is avoided, and the song loses its refrains and its beat.": "Το 1 το απενεργοποιεί· πάνω από 2 αποφεύγεται κάθε επανάληψη και το τραγούδι χάνει τα ρεφρέν και τον ρυθμό του.",
++"The engine looks back 100 tokens at most.": "Η μηχανή κοιτάζει πίσω το πολύ 100 tokens.",
++"The score's window holds 6,144 tokens.": "Το παράθυρο της παρτιτούρας χωρά 6.144 tokens.",
++"Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Κάτω από 256 η παρτιτούρα δεν έχει χώρο για τα μέρη της· πάνω από 6.144 ξεχειλίζει το παράθυρό της.",
++"The floor never goes above the music's Max length (Max length in Sound and output).": "Το κατώτατο όριο δεν ξεπερνά ποτέ τη μέγιστη διάρκεια της μουσικής («Μέγιστη διάρκεια» στο «Ήχος και έξοδος»).",
++"1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 είναι το επαληθευμένο σταθερό εύρος· 2.0 δυναμικό, πιο κοντά στο SUNO· έως 2.4 αντέχει. Από 2.6 η μουσική κόβεται νωρίς και οι στίχοι υποφέρουν· το 1.0 απενεργοποιεί την καθοδήγηση.",
++"32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 όπως στην έκδοση· 8–16 γρήγορα πρόχειρα· 160 το ανώτατο.",
++"The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "Όλο το παράθυρο του μοντέλου είναι 24.576 tokens (16:23 ήχου), και το ύφος, οι στίχοι και, εκτός «Απευθείας», η παρτιτούρα παίρνουν το μερίδιό τους.",
++"One pass renders nine at most.": "Ένα πέρασμα αποδίδει το πολύ εννέα.",
++"0 normalises to the true peak; past 1000 (0.1% of the samples cut flat) the peaks distort.": "Το 0 κανονικοποιεί στην πραγματική κορυφή· πάνω από 1000 (κομμένο το 0.1% των δειγμάτων) οι κορυφές παραμορφώνονται.",
++"Guidance from 2.6 is an experiment": "Η καθοδήγηση από 2.6 είναι πείραμα",
++"The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.": "Η μουσική κόβεται νωρίς και οι στίχοι υποφέρουν, ενώ τα όργανα μπαίνουν πιο καθαρά (δοκιμή του Βίκτορα σε λειτουργία «Απευθείας», 05.10.2026). Σταθερά: 1.4–1.6· 2.0 δυναμικό, πιο κοντά στο SUNO· 2.4 το όριο.",
++"Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Τα τραγούδια τελειώνουν μόνα τους· η «Μέγιστη διάρκεια» απλώς τα περιορίζει, και η μηχανή κόβει ένα τραγούδι σε ό,τι χωρά στο παράθυρο των 24.576 tokens δίπλα στο ύφος, στους στίχους και (εκτός «Απευθείας») στην παρτιτούρα.",
++"Play new takes": "Αναπαραγωγή νέων λήψεων",
++"Play new takes: a song made here plays when it is done, unless something plays. Click to only open it.": "Αναπαραγωγή νέων λήψεων: ένα τραγούδι που φτιάχτηκε εδώ παίζει μόλις ετοιμαστεί, εκτός αν παίζει κάτι. Κάνε κλικ για να ανοίγει μόνο.",
++"Download the picture": "Κατέβασμα της εικόνας",
++"Download the picture (JPEG)": "Κατέβασμα της εικόνας (JPEG)",
++"Send the request to LLM": "Αποστολή του αιτήματος στο LLM",
++"Ctrl+Enter in the brief does the same": "Το Ctrl+Enter στο πεδίο του αιτήματος κάνει το ίδιο",
++"The song's token budget alone fills the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower Max length.": "Μόνο ο προϋπολογισμός tokens του τραγουδιού γεμίζει το παράθυρο των 24.576 tokens: δεν μένει τίποτα για το ύφος και τους στίχους. Μείωσε τη «Μέγιστη διάρκεια».",
++"Style and lyrics together: about {#0} tokens. Beside them the window holds about {1} of sound, and Max length asks for {2}: the engine cuts the song there and marks it truncated.": "Ύφος και στίχοι μαζί: περίπου {0} tokens. Δίπλα τους το παράθυρο χωρά περίπου {1} ήχου, και η «Μέγιστη διάρκεια» ζητά {2}: η μηχανή κόβει εκεί το τραγούδι και το σημειώνει ως κομμένο.",
++"Classifier-free guidance, for the music stage only (the score planner never uses it). Default 1.6 in every mode: Viktor's stable set (01.10.2026). The release had 1.0 in Full and Melody mode and 1.01 in Direct.\nAbove 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. 1.0 switches guidance off: one pass, the release's sound.\n✓ 1.4–1.6: the verified stable range. 2.0: dynamic, closer to SUNO. Up to 2.4 it still holds.\n⚠ From 2.6 the music gets cut short and the lyrics suffer (the same illness as SUNO's): the higher the guidance, the clearer the instruments come in and the more the words pay for it; how soon depends on how complex the style and the lyrics are (Viktor's test in Direct mode, 05.10.2026). The field takes 1.0–4.0; the engine itself sets no ceiling. The memory is the cache: guidance keeps a second, unconditioned pass beside every version, 2.8 GB more each at the full context.": "Classifier-free guidance, μόνο για το μουσικό στάδιο (ο σχεδιαστής της παρτιτούρας δεν τη χρησιμοποιεί ποτέ). Προεπιλογή 1.6 σε κάθε λειτουργία: το σταθερό σετ του Βίκτορα (01.10.2026). Η έκδοση είχε 1.0 σε «Πλήρες σχέδιο» και «Μόνο μελωδία» και 1.01 σε «Απευθείας».\nΠάνω από 1 η μουσική ακολουθεί πιο έντονα το prompt του ύφους· σε «Πλήρες σχέδιο» και «Μόνο μελωδία» η παρτιτούρα διατηρείται έτσι κι αλλιώς. Κάθε τιμή εκτός του 1.0 κάνει δύο περάσματα ανά βήμα: μισή ταχύτητα και διπλή μνήμη για το μουσικό στάδιο. Το 1.0 απενεργοποιεί την καθοδήγηση: ένα πέρασμα, ο ήχος της έκδοσης.\n✓ 1.4–1.6: το επαληθευμένο σταθερό εύρος. 2.0: δυναμικό, πιο κοντά στο SUNO. Έως 2.4 ακόμη αντέχει.\n⚠ Από 2.6 η μουσική κόβεται νωρίς και οι στίχοι υποφέρουν (η ίδια αρρώστια με του SUNO): όσο ψηλότερη η καθοδήγηση, τόσο πιο καθαρά μπαίνουν τα όργανα και τόσο ακριβότερα το πληρώνουν οι λέξεις· πόσο γρήγορα εξαρτάται από το πόσο σύνθετα είναι το ύφος και οι στίχοι (δοκιμή του Βίκτορα σε λειτουργία «Απευθείας», 05.10.2026). Το πεδίο δέχεται 1.0–4.0· η ίδια η μηχανή δεν βάζει ανώτατο όριο. Η μνήμη είναι η cache: η καθοδήγηση κρατά ένα δεύτερο, χωρίς συνθήκη πέρασμα δίπλα σε κάθε εκδοχή, 2.8 GB επιπλέον η καθεμία σε πλήρες context.",
++"Sets Guidance (CFG): 1.2 · 1.4 · 1.6 (the middle, the default) · 1.8 · 2.0. Higher follows the style prompt more strongly. 1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO. Every position runs the music stage's two passes (half the speed, twice the memory).\n⚠ Past 2.0 only by hand in Guidance: up to 2.4 it holds, from 2.6 the music gets cut short and the lyrics suffer.": "Ορίζει την καθοδήγηση (CFG): 1.2 · 1.4 · 1.6 (η μέση, η προεπιλογή) · 1.8 · 2.0. Ψηλότερα ακολουθεί πιο έντονα το prompt του ύφους. 1.4–1.6 είναι το επαληθευμένο σταθερό εύρος· 2.0 δυναμικό, πιο κοντά στο SUNO. Κάθε θέση τρέχει τα δύο περάσματα του μουσικού σταδίου (μισή ταχύτητα, διπλή μνήμη).\n⚠ Πάνω από 2.0 μόνο με το χέρι στην «Καθοδήγηση»: έως 2.4 αντέχει, από 2.6 η μουσική κόβεται νωρίς και οι στίχοι υποφέρουν.",
++"A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Ανώτατο όριο διάρκειας του τραγουδιού σε δευτερόλεπτα (προεπιλογή 480· 0:10–16:00): το μουσικό στάδιο σταματά στα 25 tokens ανά δευτερόλεπτο αυτού (στη «Δειγματοληψία» φαίνεται ως η «Μέγιστη διάρκεια» της μουσικής). Η ίδια η διάρκεια βγαίνει από τους στίχους και την παρτιτούρα· αυτό απλώς κόβει ένα τραγούδι που ξέφυγε (τότε σημειώνεται ως κομμένο).",
++"The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "Η παρτιτούρα δεν μπορεί να τελειώσει πριν από τόσα tokens. Προεπιλογή 200.\n✓ Άφησέ το.",
++"The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "Το τραγούδι δεν μπορεί να τελειώσει πριν από αυτό, σε χρόνο: 25 μουσικά tokens το δευτερόλεπτο, η προεπιλογή 0:30 είναι 750 tokens.\n✓ Άφησέ το.",
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Το μακρύτερο τραγούδι: ακολουθεί τη «Μέγιστη διάρκεια» στο «Ήχος και έξοδος», 25 μουσικά tokens το δευτερόλεπτο (8:00 είναι 12.000).\n✓ Βάλε τη «Μέγιστη διάρκεια» κοντά σε όση χρειάζονται οι στίχοι.\n⚠ Με πολύ περισσότερο χώρο απ' όσο χρειάζονται οι στίχοι, μετά την τελευταία γραμμή το μοντέλο γυρίζει πίσω και τραγουδά ξανά προηγούμενες γραμμές (μετρημένο: 24 τέτοιες επιστροφές μετά το τέλος των στίχων). Ένα τραγούδι που κόβεται εδώ σημειώνεται ως κομμένο."
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index acc487f..b8f329d 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2603,5 +2603,43 @@ RuachI18n.add("es", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Dibujando la portada de «{0}»: un prompt a partir de su estilo y sus palabras, luego la imagen (un minuto o dos)",
+ "a minute or two on a GPU": "un minuto o dos en una GPU",
+ "Artwork from now on: {0}": "Portadas a partir de ahora: {0}",
+-"Artwork: the painter by the cards": "Portadas: el pintor según las GPU"
++"Artwork: the painter by the cards": "Portadas: el pintor según las GPU",
++"Direct mode writes no score: choose Full plan or Melody only to plan one": "El modo «Directo» no escribe partitura: para planificar una, elige «Plan completo» o «Solo melodía»",
++"Clear the form?": "¿Vaciar el formulario?",
++"Its title, style, lyrics, score and every knob go back to the defaults. The takes stay.": "El título, el estilo, la letra, la partitura y todos los controles vuelven a sus valores por defecto. Las tomas se quedan.",
++"Min length": "Duración mínima",
++"Max length of the music": "Duración máxima de la música",
++"Min length of the music": "Duración mínima de la música",
++"It follows Max length in Sound and output: 25 music tokens a second": "Sigue a «Duración máxima» en «Sonido y salida»: 25 tokens de música por segundo",
++"The music's Min length may not pass its Max length (Max length in Sound and output)": "La duración mínima de la música no puede pasar de su máxima («Duración máxima» en «Sonido y salida»)",
++"Above 2 the choice is close to random; below 0.1 it is nearly fixed and loops.": "Por encima de 2 la elección es casi aleatoria; por debajo de 0.1 casi se congela y entra en bucle.",
++"Below 0.5 only a few of the likeliest tokens stay, and the line turns monotone.": "Por debajo de 0.5 quedan solo unos pocos de los tokens más probables, y la línea se vuelve monótona.",
++"1 always takes the likeliest token; past 1000 it narrows nothing, top-p decides.": "1 toma siempre el token más probable; por encima de 1000 no estrecha nada, decide top-p.",
++"1 switches it off; above 2 every repeat is avoided, and the song loses its refrains and its beat.": "1 lo apaga; por encima de 2 se evita toda repetición, y la canción pierde sus estribillos y su pulso.",
++"The engine looks back 100 tokens at most.": "El motor mira atrás 100 tokens como mucho.",
++"The score's window holds 6,144 tokens.": "En la ventana de la partitura caben 6.144 tokens.",
++"Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Por debajo de 256 la partitura no tiene sitio para sus secciones; por encima de 6.144 desborda su ventana.",
++"The floor never goes above the music's Max length (Max length in Sound and output).": "El mínimo nunca pasa de la duración máxima de la música («Duración máxima» en «Sonido y salida»).",
++"1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 es el rango estable comprobado; 2.0 es dinámico, más cerca de SUNO; hasta 2.4 aguanta. Desde 2.6 la música se corta antes y la letra sufre; 1.0 apaga la guía.",
++"32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 es el de la versión publicada; 8–16 son borradores rápidos; 160 es el techo.",
++"The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "La ventana entera del modelo es de 24.576 tokens (16:23 de sonido), y el estilo, la letra y, fuera de «Directo», la partitura se llevan su parte.",
++"One pass renders nine at most.": "Una pasada renderiza nueve como mucho.",
++"0 normalises to the true peak; past 1000 (0.1% of the samples cut flat) the peaks distort.": "0 normaliza al pico real; por encima de 1000 (el 0.1% de las muestras recortadas) los picos se distorsionan.",
++"Guidance from 2.6 is an experiment": "La guía desde 2.6 es un experimento",
++"The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.": "La música se corta antes y la letra sufre, mientras los instrumentos entran más claros (prueba de Viktor en modo «Directo», 05.10.2026). Estable: 1.4–1.6; 2.0 es dinámico, más cerca de SUNO; 2.4 es el límite.",
++"Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Las canciones terminan solas; «Duración máxima» solo las limita, y el motor recorta la canción a lo que cabe en la ventana de 24.576 tokens junto al estilo, la letra y (fuera de «Directo») la partitura.",
++"Play new takes": "Reproducir tomas nuevas",
++"Play new takes: a song made here plays when it is done, unless something plays. Click to only open it.": "Reproducir tomas nuevas: una canción hecha aquí suena al terminar, salvo que algo esté sonando. Haz clic para que solo se abra.",
++"Download the picture": "Descargar la imagen",
++"Download the picture (JPEG)": "Descargar la imagen (JPEG)",
++"Send the request to LLM": "Enviar la petición al LLM",
++"Ctrl+Enter in the brief does the same": "Ctrl+Enter en el campo de la petición hace lo mismo",
++"The song's token budget alone fills the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower Max length.": "Solo el presupuesto de tokens de la canción llena la ventana de 24.576 tokens: no queda nada para el estilo y la letra. Baja «Duración máxima».",
++"Style and lyrics together: about {#0} tokens. Beside them the window holds about {1} of sound, and Max length asks for {2}: the engine cuts the song there and marks it truncated.": "Estilo y letra juntos: unos {0} tokens. A su lado la ventana admite unos {1} de sonido, y «Duración máxima» pide {2}: el motor corta ahí la canción y la marca como truncada.",
++"Classifier-free guidance, for the music stage only (the score planner never uses it). Default 1.6 in every mode: Viktor's stable set (01.10.2026). The release had 1.0 in Full and Melody mode and 1.01 in Direct.\nAbove 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. 1.0 switches guidance off: one pass, the release's sound.\n✓ 1.4–1.6: the verified stable range. 2.0: dynamic, closer to SUNO. Up to 2.4 it still holds.\n⚠ From 2.6 the music gets cut short and the lyrics suffer (the same illness as SUNO's): the higher the guidance, the clearer the instruments come in and the more the words pay for it; how soon depends on how complex the style and the lyrics are (Viktor's test in Direct mode, 05.10.2026). The field takes 1.0–4.0; the engine itself sets no ceiling. The memory is the cache: guidance keeps a second, unconditioned pass beside every version, 2.8 GB more each at the full context.": "Classifier-free guidance, solo para la etapa de música (el planificador de la partitura nunca la usa). Por defecto 1.6 en todos los modos: el juego estable de Viktor (01.10.2026). La versión publicada tenía 1.0 en «Plan completo» y «Solo melodía» y 1.01 en «Directo».\nPor encima de 1 la música sigue con más fuerza el prompt de estilo; en «Plan completo» y «Solo melodía» la partitura se mantiene igualmente. Cualquier valor distinto de 1.0 hace dos pasadas por paso: la mitad de velocidad y el doble de memoria para la etapa de música. 1.0 apaga la guía: una pasada, el sonido de la versión publicada.\n✓ 1.4–1.6: el rango estable comprobado. 2.0: dinámico, más cerca de SUNO. Hasta 2.4 todavía aguanta.\n⚠ Desde 2.6 la música se corta antes y la letra sufre (la misma enfermedad que la de SUNO): cuanto más alta la guía, más claros entran los instrumentos y más lo pagan las palabras; cuándo, depende de lo complejos que sean el estilo y la letra (prueba de Viktor en modo «Directo», 05.10.2026). El campo admite 1.0–4.0; el motor en sí no pone techo. La memoria es la caché: la guía mantiene una segunda pasada, incondicionada, junto a cada versión, 2.8 GB más cada una con el contexto completo.",
++"Sets Guidance (CFG): 1.2 · 1.4 · 1.6 (the middle, the default) · 1.8 · 2.0. Higher follows the style prompt more strongly. 1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO. Every position runs the music stage's two passes (half the speed, twice the memory).\n⚠ Past 2.0 only by hand in Guidance: up to 2.4 it holds, from 2.6 the music gets cut short and the lyrics suffer.": "Fija la guía (CFG): 1.2 · 1.4 · 1.6 (el centro, por defecto) · 1.8 · 2.0. Más alto sigue con más fuerza el prompt de estilo. 1.4–1.6 es el rango estable comprobado; 2.0 es dinámico, más cerca de SUNO. Cada posición hace las dos pasadas de la etapa de música (la mitad de velocidad, el doble de memoria).\n⚠ Por encima de 2.0 solo a mano en «Guía»: hasta 2.4 aguanta, desde 2.6 la música se corta antes y la letra sufre.",
++"A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Un techo para la duración de la canción en segundos (480 por defecto; 0:10–16:00): la etapa de música se detiene en 25 tokens por segundo de él (en «Muestreo» aparece como la «Duración máxima» de la música). La duración en sí sale de la letra y la partitura; esto solo corta una canción desbocada (entonces se marca como truncada).",
++"The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "La partitura no puede terminar antes de este número de tokens. Por defecto 200.\n✓ Déjalo.",
++"The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "La canción no puede terminar antes de esto, en tiempo: 25 tokens de música por segundo, el 0:30 por defecto son 750 tokens.\n✓ Déjalo.",
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canción más larga: sigue a «Duración máxima» en «Sonido y salida», 25 tokens de música por segundo (8:00 son 12.000).\n✓ Pon «Duración máxima» cerca de lo que necesita la letra.\n⚠ Con mucho más sitio del que necesita la letra, tras la última línea el modelo vuelve atrás y canta de nuevo líneas anteriores (medido: 24 vueltas así después de acabar la letra). Una canción cortada aquí se marca como truncada."
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 2d604ae..d545767 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2603,5 +2603,43 @@ RuachI18n.add("it", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Si disegna la copertina di «{0}»: un prompt dal suo stile e dalle sue parole, poi l'immagine (un minuto o due)",
+ "a minute or two on a GPU": "un minuto o due su una GPU",
+ "Artwork from now on: {0}": "Copertine d'ora in poi: {0}",
+-"Artwork: the painter by the cards": "Copertine: il pittore in base alle GPU"
++"Artwork: the painter by the cards": "Copertine: il pittore in base alle GPU",
++"Direct mode writes no score: choose Full plan or Melody only to plan one": "La modalità «Diretto» non scrive la partitura: per pianificarne una, scegli «Piano completo» o «Solo melodia»",
++"Clear the form?": "Svuotare il modulo?",
++"Its title, style, lyrics, score and every knob go back to the defaults. The takes stay.": "Titolo, stile, testo, partitura e ogni manopola tornano ai valori predefiniti. I take restano.",
++"Min length": "Durata minima",
++"Max length of the music": "Durata massima della musica",
++"Min length of the music": "Durata minima della musica",
++"It follows Max length in Sound and output: 25 music tokens a second": "Segue «Durata massima» in «Suono e uscita»: 25 token musicali al secondo",
++"The music's Min length may not pass its Max length (Max length in Sound and output)": "La durata minima della musica non può superare la massima («Durata massima» in «Suono e uscita»)",
++"Above 2 the choice is close to random; below 0.1 it is nearly fixed and loops.": "Sopra 2 la scelta è quasi casuale; sotto 0.1 è quasi fissa e va in loop.",
++"Below 0.5 only a few of the likeliest tokens stay, and the line turns monotone.": "Sotto 0.5 restano solo pochi dei token più probabili, e la linea diventa monotona.",
++"1 always takes the likeliest token; past 1000 it narrows nothing, top-p decides.": "1 prende sempre il token più probabile; oltre 1000 non restringe nulla, decide top-p.",
++"1 switches it off; above 2 every repeat is avoided, and the song loses its refrains and its beat.": "1 lo spegne; sopra 2 si evita ogni ripetizione, e la canzone perde i ritornelli e il ritmo.",
++"The engine looks back 100 tokens at most.": "Il motore guarda indietro al massimo 100 token.",
++"The score's window holds 6,144 tokens.": "La finestra della partitura contiene 6.144 token.",
++"Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Sotto 256 la partitura non ha spazio per le sue sezioni; oltre 6.144 trabocca dalla sua finestra.",
++"The floor never goes above the music's Max length (Max length in Sound and output).": "Il minimo non supera mai la durata massima della musica («Durata massima» in «Suono e uscita»).",
++"1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 è l'intervallo stabile verificato; 2.0 è dinamico, più vicino a SUNO; fino a 2.4 regge. Da 2.6 la musica si tronca e il testo ne soffre; 1.0 spegne la guida.",
++"32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 è quello della release; 8–16 sono bozze rapide; 160 è il tetto.",
++"The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "L'intera finestra del modello è di 24.576 token (16:23 di suono), e lo stile, il testo e, fuori da «Diretto», la partitura ne prendono la loro parte.",
++"One pass renders nine at most.": "Un passaggio ne rende al massimo nove.",
++"0 normalises to the true peak; past 1000 (0.1% of the samples cut flat) the peaks distort.": "0 normalizza al picco reale; oltre 1000 (lo 0.1% dei campioni tagliato) i picchi distorcono.",
++"Guidance from 2.6 is an experiment": "La guida da 2.6 è un esperimento",
++"The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.": "La musica si tronca e il testo ne soffre, mentre gli strumenti entrano più chiari (prova di Viktor in modalità «Diretto», 05.10.2026). Stabile: 1.4–1.6; 2.0 è dinamico, più vicino a SUNO; 2.4 è il limite.",
++"Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Le canzoni finiscono da sole; «Durata massima» le limita soltanto, e il motore taglia la canzone a ciò che entra nella finestra di 24.576 token accanto allo stile, al testo e (fuori da «Diretto») alla partitura.",
++"Play new takes": "Riproduci i nuovi take",
++"Play new takes: a song made here plays when it is done, unless something plays. Click to only open it.": "Riproduci i nuovi take: una canzone fatta qui parte quando è pronta, a meno che non stia suonando qualcosa. Clicca perché si apra soltanto.",
++"Download the picture": "Scarica l'immagine",
++"Download the picture (JPEG)": "Scarica l'immagine (JPEG)",
++"Send the request to LLM": "Invia la richiesta all'LLM",
++"Ctrl+Enter in the brief does the same": "Ctrl+Enter nel campo della richiesta fa lo stesso",
++"The song's token budget alone fills the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower Max length.": "Il solo budget di token della canzone riempie la finestra di 24.576 token: non resta nulla per lo stile e il testo. Abbassa «Durata massima».",
++"Style and lyrics together: about {#0} tokens. Beside them the window holds about {1} of sound, and Max length asks for {2}: the engine cuts the song there and marks it truncated.": "Stile e testo insieme: circa {0} token. Accanto a loro la finestra contiene circa {1} di suono, e «Durata massima» chiede {2}: il motore taglia lì la canzone e la segna come troncata.",
++"Classifier-free guidance, for the music stage only (the score planner never uses it). Default 1.6 in every mode: Viktor's stable set (01.10.2026). The release had 1.0 in Full and Melody mode and 1.01 in Direct.\nAbove 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. 1.0 switches guidance off: one pass, the release's sound.\n✓ 1.4–1.6: the verified stable range. 2.0: dynamic, closer to SUNO. Up to 2.4 it still holds.\n⚠ From 2.6 the music gets cut short and the lyrics suffer (the same illness as SUNO's): the higher the guidance, the clearer the instruments come in and the more the words pay for it; how soon depends on how complex the style and the lyrics are (Viktor's test in Direct mode, 05.10.2026). The field takes 1.0–4.0; the engine itself sets no ceiling. The memory is the cache: guidance keeps a second, unconditioned pass beside every version, 2.8 GB more each at the full context.": "Classifier-free guidance, solo per lo stadio musicale (il pianificatore della partitura non la usa mai). Predefinita 1.6 in ogni modalità: il set stabile di Viktor (01.10.2026). La release aveva 1.0 in «Piano completo» e «Solo melodia» e 1.01 in «Diretto».\nSopra 1 la musica segue più forte il prompt di stile; in «Piano completo» e «Solo melodia» la partitura resta comunque. Ogni valore diverso da 1.0 fa due passaggi per passo: metà velocità e il doppio della memoria per lo stadio musicale. 1.0 spegne la guida: un passaggio, il suono della release.\n✓ 1.4–1.6: l'intervallo stabile verificato. 2.0: dinamico, più vicino a SUNO. Fino a 2.4 regge ancora.\n⚠ Da 2.6 la musica si tronca e il testo ne soffre (la stessa malattia di SUNO): più alta è la guida, più chiari entrano gli strumenti e più lo pagano le parole; quanto presto dipende da quanto sono complessi lo stile e il testo (prova di Viktor in modalità «Diretto», 05.10.2026). Il campo accetta 1.0–4.0; il motore di per sé non mette un tetto. La memoria è la cache: la guida tiene un secondo passaggio, incondizionato, accanto a ogni versione, 2.8 GB in più ciascuna a contesto pieno.",
++"Sets Guidance (CFG): 1.2 · 1.4 · 1.6 (the middle, the default) · 1.8 · 2.0. Higher follows the style prompt more strongly. 1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO. Every position runs the music stage's two passes (half the speed, twice the memory).\n⚠ Past 2.0 only by hand in Guidance: up to 2.4 it holds, from 2.6 the music gets cut short and the lyrics suffer.": "Imposta la guida (CFG): 1.2 · 1.4 · 1.6 (il centro, predefinito) · 1.8 · 2.0. Più alto segue più forte il prompt di stile. 1.4–1.6 è l'intervallo stabile verificato; 2.0 è dinamico, più vicino a SUNO. Ogni posizione fa i due passaggi dello stadio musicale (metà velocità, doppia memoria).\n⚠ Sopra 2.0 solo a mano in «Guida»: fino a 2.4 regge, da 2.6 la musica si tronca e il testo ne soffre.",
++"A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Un tetto alla durata della canzone in secondi (480 predefinito; 0:10–16:00): lo stadio musicale si ferma a 25 token al secondo di esso (in «Campionamento» appare come la «Durata massima» della musica). La durata stessa viene dal testo e dalla partitura; questo taglia soltanto una canzone fuori controllo (che viene allora segnata come troncata).",
++"The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "La partitura non può finire prima di questo numero di token. Predefinito 200.\n✓ Lascialo.",
++"The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "La canzone non può finire prima di questo, in tempo: 25 token musicali al secondo, lo 0:30 predefinito sono 750 token.\n✓ Lascialo.",
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canzone più lunga: segue «Durata massima» in «Suono e uscita», 25 token musicali al secondo (8:00 sono 12.000).\n✓ Metti «Durata massima» vicino a quanto serve al testo.\n⚠ Con molto più spazio di quanto serve al testo, dopo l'ultima riga il modello torna indietro e canta di nuovo righe precedenti (misurato: 24 ritorni così dopo la fine del testo). Una canzone tagliata qui viene segnata come troncata."
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 86aef81..18bb76c 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2609,5 +2609,43 @@ RuachI18n.add("ru", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Рисуется обложка для «{0}»: промпт из стиля и слов, потом картинка (минута-другая)",
+ "a minute or two on a GPU": "минута-другая на видеокарте",
+ "Artwork from now on: {0}": "Обложки отныне: {0}",
+-"Artwork: the painter by the cards": "Обложки: художник по видеокартам"
++"Artwork: the painter by the cards": "Обложки: художник по видеокартам",
++"Direct mode writes no score: choose Full plan or Melody only to plan one": "Режим «Напрямую» не пишет партитуру: чтобы её спланировать, выбери «Полный план» или «Только мелодия»",
++"Clear the form?": "Очистить форму?",
++"Its title, style, lyrics, score and every knob go back to the defaults. The takes stay.": "Название, стиль, текст, партитура и все ручки вернутся к значениям по умолчанию. Семплы останутся.",
++"Min length": "Мин. длина",
++"Max length of the music": "Макс. длина музыки",
++"Min length of the music": "Мин. длина музыки",
++"It follows Max length in Sound and output: 25 music tokens a second": "Следует за «Макс. длиной» в «Звуке и выводе»: 25 музыкальных токенов в секунду",
++"The music's Min length may not pass its Max length (Max length in Sound and output)": "Мин. длина музыки не может превышать её макс. длину («Макс. длина» в «Звуке и выводе»)",
++"Above 2 the choice is close to random; below 0.1 it is nearly fixed and loops.": "Выше 2 выбор почти случаен; ниже 0.1 он почти застывает и зацикливается.",
++"Below 0.5 only a few of the likeliest tokens stay, and the line turns monotone.": "Ниже 0.5 остаются лишь немногие самые вероятные токены, и линия становится монотонной.",
++"1 always takes the likeliest token; past 1000 it narrows nothing, top-p decides.": "1 всегда берёт самый вероятный токен; выше 1000 он ничего не сужает, решает top-p.",
++"1 switches it off; above 2 every repeat is avoided, and the song loses its refrains and its beat.": "1 его выключает; выше 2 избегается любой повтор, и песня теряет припевы и ритм.",
++"The engine looks back 100 tokens at most.": "Движок смотрит назад не дальше чем на 100 токенов.",
++"The score's window holds 6,144 tokens.": "Окно партитуры вмещает 6 144 токена.",
++"Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Ниже 256 партитуре не хватает места на разделы; выше 6 144 она переполняет своё окно.",
++"The floor never goes above the music's Max length (Max length in Sound and output).": "Нижняя граница не поднимается выше макс. длины музыки («Макс. длина» в «Звуке и выводе»).",
++"1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 — выверенный стабильный диапазон; 2.0 — динамика, ближе к SUNO; до 2.4 держится. С 2.6 музыка обрывается, а текст страдает; 1.0 выключает ведение.",
++"32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 — как в релизе; 8–16 — быстрые черновики; 160 — потолок.",
++"The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "Всё окно модели — 24 576 токенов (16:23 звука), и свою долю из него берут стиль, текст и, вне режима «Напрямую», партитура.",
++"One pass renders nine at most.": "За один проход рендерится не больше девяти.",
++"0 normalises to the true peak; past 1000 (0.1% of the samples cut flat) the peaks distort.": "0 нормализует по истинному пику; выше 1000 (срезано 0.1% отсчётов) пики искажаются.",
++"Guidance from 2.6 is an experiment": "Ведение от 2.6 — эксперимент",
++"The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.": "Музыка обрывается раньше, а текст страдает, зато инструменты входят яснее (тест Виктора в режиме «Напрямую», 05.10.2026). Стабильно: 1.4–1.6; 2.0 — динамика, ближе к SUNO; 2.4 — край.",
++"Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Песни заканчиваются сами; «Макс. длина» лишь ограничивает их, а движок урезает песню до того, что помещается в окно из 24 576 токенов рядом со стилем, текстом и (вне режима «Напрямую») партитурой.",
++"Play new takes": "Играть новые семплы",
++"Play new takes: a song made here plays when it is done, unless something plays. Click to only open it.": "Играть новые семплы: песня, сделанная здесь, зазвучит, когда будет готова, если ничего не играет. Щёлкни, чтобы она только открывалась.",
++"Download the picture": "Скачать картинку",
++"Download the picture (JPEG)": "Скачать картинку (JPEG)",
++"Send the request to LLM": "Отправить запрос в LLM",
++"Ctrl+Enter in the brief does the same": "Ctrl+Enter в поле запроса делает то же самое",
++"The song's token budget alone fills the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower Max length.": "Один только бюджет токенов песни заполняет окно в 24 576 токенов: на стиль и текст ничего не остаётся. Уменьши «Макс. длину».",
++"Style and lyrics together: about {#0} tokens. Beside them the window holds about {1} of sound, and Max length asks for {2}: the engine cuts the song there and marks it truncated.": "Стиль и текст вместе — токенов: около {0}. Рядом с ними окно вмещает около {1} звука, а «Макс. длина» просит {2}: движок обрежет песню там и пометит её как обрезанную.",
++"Classifier-free guidance, for the music stage only (the score planner never uses it). Default 1.6 in every mode: Viktor's stable set (01.10.2026). The release had 1.0 in Full and Melody mode and 1.01 in Direct. Above 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. 1.0 switches guidance off: one pass, the release's sound. ✓ 1.4–1.6: the verified stable range. 2.0: dynamic, closer to SUNO. Up to 2.4 it still holds. ⚠ From 2.6 the music gets cut short and the lyrics suffer (the same illness as SUNO's): the higher the guidance, the clearer the instruments come in and the more the words pay for it; how soon depends on how complex the style and the lyrics are (Viktor's test in Direct mode, 05.10.2026). The field takes 1.0–4.0; the engine itself sets no ceiling. The memory is the cache: guidance keeps a second, unconditioned pass beside every version, 2.8 GB more each at the full context.": "Classifier-free guidance — только для музыкальной стадии (планировщик партитуры её не использует). По умолчанию 1.6 во всех режимах: стабильный набор Виктора (01.10.2026). В релизе было 1.0 в режимах «Полный план» и «Только мелодия» и 1.01 в режиме «Напрямую».\nВыше 1 музыка сильнее следует промпту стиля; в режимах «Полный план» и «Только мелодия» партитура сохраняется в любом случае. Любое значение, кроме 1.0, делает два прохода на шаг: вдвое медленнее и вдвое больше памяти для музыкальной стадии. 1.0 выключает ведение: один проход, звук релиза.\n✓ 1.4–1.6: выверенный стабильный диапазон. 2.0: динамика, ближе к SUNO. До 2.4 ещё держится.\n⚠ С 2.6 музыка обрывается раньше, а текст страдает (та же болезнь, что у SUNO): чем выше ведение, тем яснее входят инструменты и тем дороже за это платят слова; как скоро — зависит от сложности стиля и текста (тест Виктора в режиме «Напрямую», 05.10.2026). Поле принимает 1.0–4.0; сам движок потолка не ставит. Память — это кэш: ведение держит второй, безусловный проход рядом с каждой версией, по 2.8 ГБ больше на каждую при полном контексте.",
++"Sets Guidance (CFG): 1.2 · 1.4 · 1.6 (the middle, the default) · 1.8 · 2.0. Higher follows the style prompt more strongly. 1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO. Every position runs the music stage's two passes (half the speed, twice the memory). ⚠ Past 2.0 only by hand in Guidance: up to 2.4 it holds, from 2.6 the music gets cut short and the lyrics suffer.": "Задаёт ведение (CFG): 1.2 · 1.4 · 1.6 (середина, по умолчанию) · 1.8 · 2.0. Выше — сильнее следует промпту стиля. 1.4–1.6 — выверенный стабильный диапазон; 2.0 — динамика, ближе к SUNO. Любое положение запускает два прохода музыкальной стадии (вдвое медленнее, вдвое больше памяти).\n⚠ Выше 2.0 — только вручную в поле «Ведение»: до 2.4 держится, с 2.6 музыка обрывается раньше, а текст страдает.",
++"A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Потолок длины песни в секундах (по умолчанию 480; 0:10–16:00): музыкальная стадия останавливается на 25 токенах в секунду от него (в «Сэмплинге» это «Макс. длина» музыки). Сама длина берётся из текста и партитуры; это лишь обрывает разогнавшуюся песню (она тогда помечается как обрезанная).",
++"The score cannot end before this many tokens. Default 200. ✓ Leave it.": "Партитура не может закончиться раньше этого числа токенов. По умолчанию 200.\n✓ Оставь так.",
++"The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens. ✓ Leave it.": "Песня не может закончиться раньше этого времени: 25 музыкальных токенов в секунду, по умолчанию 0:30 — это 750 токенов.\n✓ Оставь так.",
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000). ✓ Set Max length close to the length the lyrics need. ⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая длинная песня: следует за «Макс. длиной» в «Звуке и выводе», 25 музыкальных токенов в секунду (8:00 — это 12 000).\n✓ Ставь «Макс. длину» близко к той, что нужна тексту.\n⚠ Если места намного больше, чем нужно тексту, после последней строки модель возвращается и поёт прежние строки снова (замерено: 24 таких возврата после конца текста). Песня, оборванная здесь, помечается как обрезанная."
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index aa143d8..e9a98a5 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2604,5 +2604,43 @@ RuachI18n.add("uk", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (a minute or two)": "Малюється обкладинка для «{0}»: промпт зі стилю й слів, потім картинка (хвилина-друга)",
+ "a minute or two on a GPU": "хвилина-друга на відеокарті",
+ "Artwork from now on: {0}": "Обкладинки відтепер: {0}",
+-"Artwork: the painter by the cards": "Обкладинки: художник за відеокартами"
++"Artwork: the painter by the cards": "Обкладинки: художник за відеокартами",
++"Direct mode writes no score: choose Full plan or Melody only to plan one": "Режим «Напряму» не пише партитуру: щоб її спланувати, обери «Повний план» або «Лише мелодія»",
++"Clear the form?": "Очистити форму?",
++"Its title, style, lyrics, score and every knob go back to the defaults. The takes stay.": "Назва, стиль, текст, партитура й усі регулятори повернуться до типових значень. Семпли залишаться.",
++"Min length": "Мін. довжина",
++"Max length of the music": "Макс. довжина музики",
++"Min length of the music": "Мін. довжина музики",
++"It follows Max length in Sound and output: 25 music tokens a second": "Іде за «Макс. довжиною» у «Звуці і виводі»: 25 музичних токенів на секунду",
++"The music's Min length may not pass its Max length (Max length in Sound and output)": "Мін. довжина музики не може перевищувати її макс. довжину («Макс. довжина» у «Звуці і виводі»)",
++"Above 2 the choice is close to random; below 0.1 it is nearly fixed and loops.": "Понад 2 вибір майже випадковий; нижче 0.1 він майже застигає й зациклюється.",
++"Below 0.5 only a few of the likeliest tokens stay, and the line turns monotone.": "Нижче 0.5 лишаються тільки кілька найімовірніших токенів, і лінія стає монотонною.",
++"1 always takes the likeliest token; past 1000 it narrows nothing, top-p decides.": "1 завжди бере найімовірніший токен; понад 1000 він нічого не звужує, вирішує top-p.",
++"1 switches it off; above 2 every repeat is avoided, and the song loses its refrains and its beat.": "1 його вимикає; понад 2 уникається будь-який повтор, і пісня втрачає приспіви та ритм.",
++"The engine looks back 100 tokens at most.": "Рушій дивиться назад щонайбільше на 100 токенів.",
++"The score's window holds 6,144 tokens.": "Вікно партитури вміщує 6 144 токени.",
++"Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Нижче 256 партитурі бракує місця на розділи; понад 6 144 вона переповнює своє вікно.",
++"The floor never goes above the music's Max length (Max length in Sound and output).": "Нижня межа не піднімається вище за макс. довжину музики («Макс. довжина» у «Звуці і виводі»).",
++"1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 — вивірений стабільний діапазон; 2.0 — динаміка, ближче до SUNO; до 2.4 тримається. З 2.6 музика обривається, а текст страждає; 1.0 вимикає ведення.",
++"32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 — як у релізі; 8–16 — швидкі чернетки; 160 — стеля.",
++"The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "Усе вікно моделі — 24 576 токенів (16:23 звуку), і свою частку з нього беруть стиль, текст і, поза режимом «Напряму», партитура.",
++"One pass renders nine at most.": "За один прохід рендериться щонайбільше дев'ять.",
++"0 normalises to the true peak; past 1000 (0.1% of the samples cut flat) the peaks distort.": "0 нормалізує за справжнім піком; понад 1000 (зрізано 0.1% відліків) піки спотворюються.",
++"Guidance from 2.6 is an experiment": "Ведення від 2.6 — експеримент",
++"The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.": "Музика обривається раніше, а текст страждає, зате інструменти входять ясніше (тест Віктора в режимі «Напряму», 05.10.2026). Стабільно: 1.4–1.6; 2.0 — динаміка, ближче до SUNO; 2.4 — край.",
++"Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Пісні закінчуються самі; «Макс. довжина» лише обмежує їх, а рушій урізає пісню до того, що вміщується у вікно з 24 576 токенів поруч зі стилем, текстом і (поза режимом «Напряму») партитурою.",
++"Play new takes": "Грати нові семпли",
++"Play new takes: a song made here plays when it is done, unless something plays. Click to only open it.": "Грати нові семпли: пісня, створена тут, зазвучить, коли буде готова, якщо нічого не грає. Клацни, щоб вона лише відкривалася.",
++"Download the picture": "Завантажити картинку",
++"Download the picture (JPEG)": "Завантажити картинку (JPEG)",
++"Send the request to LLM": "Надіслати запит до LLM",
++"Ctrl+Enter in the brief does the same": "Ctrl+Enter у полі запиту діє так само",
++"The song's token budget alone fills the window of 24,576 tokens: nothing is left for the style and the lyrics. Lower Max length.": "Сам лише бюджет токенів пісні заповнює вікно в 24 576 токенів: на стиль і текст нічого не лишається. Зменш «Макс. довжину».",
++"Style and lyrics together: about {#0} tokens. Beside them the window holds about {1} of sound, and Max length asks for {2}: the engine cuts the song there and marks it truncated.": "Стиль і текст разом — токенів: близько {0}. Поруч із ними вікно вміщує близько {1} звуку, а «Макс. довжина» просить {2}: рушій обріже пісню там і позначить її як обрізану.",
++"Classifier-free guidance, for the music stage only (the score planner never uses it). Default 1.6 in every mode: Viktor's stable set (01.10.2026). The release had 1.0 in Full and Melody mode and 1.01 in Direct.\nAbove 1 the music follows the style prompt more strongly; in Full and Melody mode the score is kept either way. Any value other than 1.0 runs two passes per step: half the speed and twice the memory for the music stage. 1.0 switches guidance off: one pass, the release's sound.\n✓ 1.4–1.6: the verified stable range. 2.0: dynamic, closer to SUNO. Up to 2.4 it still holds.\n⚠ From 2.6 the music gets cut short and the lyrics suffer (the same illness as SUNO's): the higher the guidance, the clearer the instruments come in and the more the words pay for it; how soon depends on how complex the style and the lyrics are (Viktor's test in Direct mode, 05.10.2026). The field takes 1.0–4.0; the engine itself sets no ceiling. The memory is the cache: guidance keeps a second, unconditioned pass beside every version, 2.8 GB more each at the full context.": "Classifier-free guidance — лише для музичної стадії (планувальник партитури її не використовує). Типово 1.6 в усіх режимах: стабільний набір Віктора (01.10.2026). У релізі було 1.0 у режимах «Повний план» і «Лише мелодія» та 1.01 у режимі «Напряму».\nПонад 1 музика сильніше йде за промптом стилю; у режимах «Повний план» і «Лише мелодія» партитура зберігається в будь-якому разі. Будь-яке значення, крім 1.0, дає два проходи на крок: удвічі повільніше й удвічі більше пам'яті для музичної стадії. 1.0 вимикає ведення: один прохід, звук релізу.\n✓ 1.4–1.6: вивірений стабільний діапазон. 2.0: динаміка, ближче до SUNO. До 2.4 ще тримається.\n⚠ З 2.6 музика обривається раніше, а текст страждає (та сама хвороба, що в SUNO): що вище ведення, то ясніше входять інструменти й то дорожче за це платять слова; як скоро — залежить від складності стилю й тексту (тест Віктора в режимі «Напряму», 05.10.2026). Поле приймає 1.0–4.0; сам рушій стелі не ставить. Пам'ять — це кеш: ведення тримає другий, безумовний прохід поруч із кожною версією, по 2.8 ГБ більше на кожну за повного контексту.",
++"Sets Guidance (CFG): 1.2 · 1.4 · 1.6 (the middle, the default) · 1.8 · 2.0. Higher follows the style prompt more strongly. 1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO. Every position runs the music stage's two passes (half the speed, twice the memory).\n⚠ Past 2.0 only by hand in Guidance: up to 2.4 it holds, from 2.6 the music gets cut short and the lyrics suffer.": "Задає ведення (CFG): 1.2 · 1.4 · 1.6 (середина, типово) · 1.8 · 2.0. Вище — сильніше йде за промптом стилю. 1.4–1.6 — вивірений стабільний діапазон; 2.0 — динаміка, ближче до SUNO. Будь-яке положення запускає два проходи музичної стадії (удвічі повільніше, удвічі більше пам'яті).\n⚠ Понад 2.0 — лише вручну в полі «Ведення»: до 2.4 тримається, з 2.6 музика обривається раніше, а текст страждає.",
++"A ceiling on the song's length in seconds (480 by default; 0:10–16:00): the music stage stops at 25 tokens per second of this (Sampling shows it as the music's Max length). The length itself comes from the lyrics and the score; this only cuts a runaway song short (it is then marked truncated).": "Стеля довжини пісні в секундах (типово 480; 0:10–16:00): музична стадія зупиняється на 25 токенах на секунду від неї (у «Семплінгу» це «Макс. довжина» музики). Сама довжина береться з тексту й партитури; це лише обриває пісню, що розігналася (вона тоді позначається як обрізана).",
++"The score cannot end before this many tokens. Default 200.\n✓ Leave it.": "Партитура не може закінчитися раніше за це число токенів. Типово 200.\n✓ Залиш так.",
++"The song cannot end before this, set in time: 25 music tokens a second, the default 0:30 is 750 tokens.\n✓ Leave it.": "Пісня не може закінчитися раніше за цей час: 25 музичних токенів на секунду, типово 0:30 — це 750 токенів.\n✓ Залиш так.",
++"The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Найдовша пісня: іде за «Макс. довжиною» у «Звуці і виводі», 25 музичних токенів на секунду (8:00 — це 12 000).\n✓ Став «Макс. довжину» близько до тієї, що потрібна тексту.\n⚠ Якщо місця набагато більше, ніж потрібно тексту, після останнього рядка модель повертається й співає попередні рядки знову (заміряно: 24 таких повернення після кінця тексту). Пісня, обірвана тут, позначається як обрізана."
+ });
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index eab0cd1..78f83d0 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -58,6 +58,9 @@
+     shuffle: '<path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/>',
+     repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+     pointer: '<path d="M14 4.1 12 6"/><path d="m5.1 8-2.9-.8"/><path d="m6 12-1.9 2"/><path d="M7.2 2.2 8 5.1"/><path d="M9.04 9.86a.5.5 0 0 1 .82-.82l9.6 9.6-4.2 1.3-2.2 3.7z"/>',
++    // HERESY 1167: play new takes (a play mark and a plus), and the artwork's download (Lucide's, ISC)
++    playnew: '<polygon points="5 4 15 11 5 18 5 4"/><path d="M19 15v6"/><path d="M16 18h6"/>',
++    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+     playon: '<path d="M3 5h12"/><path d="M3 12h9"/><path d="M3 19h6"/><path d="M17 8v12"/><path d="m13 16 4 4 4-4"/>',
+     "vol-hi": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/>',
+     "vol-lo": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/>',
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+index d8b2092..4b0ea9b 100644
+--- a/tools/console/heresy-presets.js
++++ b/tools/console/heresy-presets.js
+@@ -5,8 +5,10 @@
+ (function () {
+   "use strict";
+ 
+-  var SEM = { temperature: 0.9, top_p: 0.95, top_k: 100, repetition_penalty: 1.3, penalty_window: 100, min_tokens: 200 };
+-  var ABC = { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 32, max_tokens: 6144 };
++  // HERESY 1167 (Viktor: «Мы изменили дефолты… а тексты остались старые»): the floors as the engine has them since 1088
++  // (the music not under 0:30 = 750 tokens, a score not under 200), not the release's 200 and 32
++  var SEM = { temperature: 0.9, top_p: 0.95, top_k: 100, repetition_penalty: 1.3, penalty_window: 100, min_tokens: 750 };
++  var ABC = { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 200, max_tokens: 6144 };
+   var BUILT_IN = [
+     { name: "Music · up to 8:00", builtin: true, request: { cot: "full", duration: 480, cfg_scale: 1.6, abc_sampling: ABC,
+       semantic_sampling: Object.assign({ max_tokens: 12000 }, SEM) } },
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 5f0946e..0dd4a22 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -361,7 +361,7 @@
+     <button type="button" data-tab="write">Writer</button>
+     <button type="button" data-tab="post">Refiner</button>
+     <button type="button" data-tab="collection">Librarian</button>
+-    <button type="button" data-tab="train">LoRA Trainer</button>
++    <button type="button" data-tab="train">Trainer</button>   <!-- HERESY 1167 (Viktor: «Просто "Trainer"»; Artist comes after it) -->
+   </nav>
+ 
+   <div class="spacer"></div>
+@@ -384,17 +384,10 @@
+     <!-- HERESY 1148: the page's language (Viktor, 03.10.2026): its two letters; the menu names each language in its own words -->
+     <button type="button" class="btn ghost small lang-btn" id="langButton" aria-haspopup="true" aria-label="Language" data-tip="The language of the page">EN</button>
+     <button type="button" class="btn ghost small day-night" id="dayNight" aria-label="Day, night or as the system">☀</button>
+-    <div class="menu-wrap">
+-      <button class="btn ghost small" id="savePrompt" data-icon="save" data-tip="Save the form as a prompt file" aria-haspopup="true" aria-expanded="false">Save</button>
+-      <div class="menu-pop is-hidden" id="saveMenu" role="menu">
+-        <button type="button" role="menuitem" data-save="json">Prompt as JSON</button>
+-        <button type="button" role="menuitem" data-save="yaml">Prompt as YAML</button>
+-      </div>
+-    </div>
++    <!-- HERESY 1167 (Viktor: «кнопку GUIDE убрать… а также перенести туда с бара SAVE»): Save and the guide live in ☰ -->
+     <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
+     <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform, Bitwig)">DAW</button>
+     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
+-    <button type="button" class="btn ghost small" id="guideOpen" data-icon="question" aria-label="The guide" data-tip="The guide: every room, what each thing does (opens on the room you are in)">The guide</button>
+     <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now (tinted red while a model is loaded)" disabled>Unload model</button>
+     <div class="menu-wrap head-more">
+       <button type="button" class="btn ghost small head-more-btn" id="headMore" aria-haspopup="true" aria-expanded="false" aria-label="More" data-tip="More: the card and its memory, the model, themes, prompts, examples, the engine">&#9776;</button>
+@@ -408,6 +401,13 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
+           <button class="btn ghost small" id="openPrompt" data-icon="open" data-tip="Open a prompt saved as JSON or YAML">Open</button>
+           <div class="menu-wrap">
++            <button class="btn ghost small" id="savePrompt" data-icon="save" data-tip="Save the form as a prompt file" aria-haspopup="true" aria-expanded="false">Save</button>
++            <div class="menu-pop is-hidden" id="saveMenu" role="menu">
++              <button type="button" role="menuitem" data-save="json">Prompt as JSON</button>
++              <button type="button" role="menuitem" data-save="yaml">Prompt as YAML</button>
++            </div>
++          </div>
++          <div class="menu-wrap">
+       <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
+       <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
+     </div>
+@@ -1012,7 +1012,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+                 </div>
+               </div>
+               <div class="field-row">
+-                <label class="field">
++                <!-- HERESY 1167 (Viktor: «Guidance (CFG) выстрой в одну строку с полем ввода») -->
++                <label class="field field-inline">
+                   <span class="label">Guidance (CFG)</span>
+                   <input type="number" id="cfg" step="0.01" placeholder="default" />
+                 </label>
+@@ -1312,7 +1313,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <details class="assist-system"><summary>Read the complete songwriting instructions</summary><pre class="mono" id="assistSystem"></pre></details>
+         </details>
+         <div class="assist-go">
+-          <button type="button" class="btn writer" id="assistBtn"><span aria-hidden="true">✦</span> <span id="assistLabel">Create a draft</span></button>
++          <!-- HERESY 1167 (Viktor: «ей нужен бекграунд… как призыв к действию. Лучше сместить её вправо и переименовать как
++               Send the request to LLM»; «слева от кнопки статистика, лог того, что происходит»): filled, on the right; Ctrl+Enter in the brief -->
++          <button type="button" class="btn primary" id="assistBtn" data-tip="Ctrl+Enter in the brief does the same"><span aria-hidden="true">✦</span> <span id="assistLabel">Send the request to LLM</span></button>
+           <span class="row-hint" id="assistStatus"></span>
+         </div>
+         <p class="row-hint">Your brief and the current song go to the chat server set under Engine.</p>
+@@ -1791,6 +1794,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+     <!-- HERESY 1040: a click in the list plays the take at once (on by default), or only opens it -->
+     <button type="button" class="icon-btn pb-tog autoplay-btn" id="clickPlay" aria-pressed="true" aria-label="Play on click"
+       data-tip="Play on click: a click on a take in the list plays it at once. Off: a click only opens it, and what plays keeps playing." data-ui="pointer">▶</button>
++    <!-- HERESY 1167 (Viktor: «Если плеер неактивен, по окончанию генерации трека прямо в проигрыш его. Можно к плееру
++         выключатель третий добавить») -->
++    <button type="button" class="icon-btn pb-tog autoplay-btn" id="playNew" aria-pressed="true" aria-label="Play new takes"
++      data-tip="Play new takes: a song made here plays when it is done, unless something plays. Click to only open it." data-ui="playnew">✦</button>
+     <button type="button" class="icon-btn pb-tog autoplay-btn" id="autoplay" aria-pressed="true" aria-label="Play on"
+       data-tip="Play on: when a take ends, the next one down the list starts, into the history. Click to stop after each take." data-ui="playon">↓</button>
+     <select class="speed-pick mono" id="playSpeed" aria-label="Playback speed" data-tip="Playback speed: slower to hear a detail, faster to skim; the pitch stays">
+-- 
+2.43.0
+

@@ -1,0 +1,507 @@
+From 120f7da469206864c320a7212d5cf7fedb38705e Mon Sep 17 00:00:00 2001
+From: heresy <heresy@local>
+Date: Wed, 30 Sep 2026 19:05:22 -0600
+Subject: [PATCH 1021/1177] Stems on Forge and the tree of what is made from a
+ take
+
+HERESY 1021.
+- Post has Stems: heresy-lab splits a take with BS-Roformer ep317 (vocals,
+  instrumental; SDR 12.97 on vocals) and optionally htdemucs_ft on the
+  instrumental (drums, bass, other), FLAC 24-bit at 48 kHz, ~4 and ~6 minutes
+  for a 7-minute take on a 3090. Weights live in the Kit (separation/), the
+  lab has its own venv (torch, audio-separator, faster-whisper): nothing
+  outside the Kit is used.
+- Everything made from a take goes into outputs/TAKE/derived/ID/ with a
+  manifest, shown in Post as a tree under the take: each file plays, can be
+  laid over the take in the spectrum, and a vocal stem can be given to the
+  lyrics check (which now has a source choice).
+- The Kit server passes Range through /lab/ (the players seek) and writes
+  with a 60 s timeout instead of 5: two big answers sharing a phone line cut
+  one of them. The spectrum asks Forge again on a dropped transfer and no
+  longer falls back to downloading the whole file while the lab is alive.
+- The full-screen spectrum zooms up to 4K wide and no further.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |  16 ++++
+ tools/console/app.js             |  23 +++++-
+ tools/console/heresy-derived.js  | 133 +++++++++++++++++++++++++++++++
+ tools/console/heresy-gloss.js    |  31 ++++++-
+ tools/console/heresy-spectrum.js |  31 +++++--
+ tools/console/heresy-zoom.js     |   3 +-
+ tools/console/index.html         |  17 +++-
+ tools/public/index.html.gz       | Bin 266895 -> 270228 bytes
+ tools/yue-server.cpp             |  15 +++-
+ 9 files changed, 254 insertions(+), 15 deletions(-)
+ create mode 100644 tools/console/heresy-derived.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d3505e5..29dcae4 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1993,3 +1993,19 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left { di
+ .keyfield { flex: none; width: 128px; }
+ .keyfield select { padding-left: 9px; padding-right: 4px; }
+ #songKey.is-wanted { border-style: dashed; color: var(--amber); }
++
++/* ------------------------------------------------ HERESY 1021: stems and the derived tree */
++.derived-body { gap: 10px; }
++.dv-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
++.dv-actions .row-hint { margin: 0; }
++#derivedState.is-bad { color: var(--bad-line, #c47a77); }
++.dv-node { display: grid; grid-template-columns: minmax(120px, 1fr) 48px minmax(220px, 2fr) auto auto auto; align-items: center; gap: 8px; padding: 4px 0; }
++.dv-root { grid-template-columns: auto 1fr; font-weight: 600; }
++.dv-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.dv-meta { font-size: 11.5px; color: var(--dim); margin-left: 8px; }
++.dv-node audio { width: 100%; height: 30px; }
++.dv-group { margin-left: 14px; padding: 6px 0 6px 12px; border-left: 2px solid var(--amber-dim); }
++.dv-group-head { font-size: 12.5px; margin-bottom: 4px; }
++.dv-group.is-running { opacity: .7; }
++.dv-empty { margin: 4px 0 0 14px; }
++#glossSource { width: auto; max-width: 280px; padding: 4px 8px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 067b81e..7e2dc96 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2750,6 +2750,7 @@
+     if (window.HeresySpectrum) window.HeresySpectrum.setTake(spectrumTake(take));   // HERESY 1007
+     if (window.HeresyGloss) window.HeresyGloss.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1011
+     if (document.body.dataset.tab === "post") paintPost();   // HERESY 1014
++    if (window.HeresyDerived) window.HeresyDerived.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1021
+     setTimeout(paintCardFolds, 0);   // HERESY 1009: the peeks read the texts filled below
+     $("metaStyle").textContent = take.style;
+     var parent = take.parent ? findTake(take.parent) : null;
+@@ -5211,13 +5212,31 @@
+     audio.addEventListener("loadedmetadata", go, { once: true });
+   }
+   if (window.HeresyGloss) window.HeresyGloss.init({ seek: seekTake });   // HERESY 1011
++  if (window.HeresyDerived) window.HeresyDerived.init({   // HERESY 1021
++    compare: function (path) {
++      var f = window.HeresyDerived.files().filter(function (x) { return x.source === path; })[0];
++      if (!f || !window.HeresySpectrum) return;
++      $("spectrumPanel").open = true;
++      $("spectrumPanel").scrollIntoView({ behavior: "smooth", block: "start" });
++      window.HeresySpectrum.compareWith(f.url);
++    },
++    gloss: function (path) {
++      $("glossPanel").open = true;
++      $("glossPanel").scrollIntoView({ behavior: "smooth", block: "start" });
++      window.HeresyGloss.useSource(path, true);
++    },
++    pauseMain: function () { audio.pause(); }
++  });
+   if (window.HeresySpectrum) {
+     window.HeresySpectrum.init({
+       others: function (shown) {
+-        return STATE.takes.filter(function (t) { return t.name !== shown.name; })
+-          .map(function (t) { return { url: takeAudioUrl(t), label: takeLabel(t) }; });
++        var derived = window.HeresyDerived ? window.HeresyDerived.files().map(function (f) { return { url: f.url, label: f.label }; }) : [];
++        return derived.concat(STATE.takes.filter(function (t) { return t.name !== shown.name; })
++          .map(function (t) { return { url: takeAudioUrl(t), label: takeLabel(t) }; }));
+       },
+       byUrl: function (url) {
++        var d = window.HeresyDerived ? window.HeresyDerived.files().filter(function (f) { return f.url === url; })[0] : null;
++        if (d) return { name: d.name, source: d.source, url: d.url, label: d.label.replace(/^\u21b3 /, "") };   // HERESY 1021
+         var take = STATE.takes.filter(function (t) { return takeAudioUrl(t) === url; })[0];
+         return take ? spectrumTake(take) : null;
+       },
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+new file mode 100644
+index 0000000..499cb2f
+--- /dev/null
++++ b/tools/console/heresy-derived.js
+@@ -0,0 +1,133 @@
++// HERESY 1021: what is made from a take — stems now, remasters and upscales next — as a tree
++// under it, in Post. heresy-lab keeps each derived thing in outputs/TAKE/derived/ID/ with a
++// manifest.json (kind, models, files, when), so deleting the take deletes its children.
++// Every file in the tree can be played, laid over the take in the spectrum, and given to
++// the lyrics check (a vocal stem is what Whisper hears best).
++(function () {
++  "use strict";
++
++  var state = { take: null, list: [], running: [], token: 0, hooks: null };
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
++  function fileUrl(name, path) { return "/lab/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
++  var KIND = { stems: "Stems" };
++  var MODE = { vocals: "vocals + instrumental", four: "four stems" };
++
++  function say(text, bad) {
++    $("derivedState").textContent = text || "";
++    $("derivedState").classList.toggle("is-bad", !!bad);
++  }
++
++  // every playable file of the shown take: [{name, source, url, label, kind}]
++  function files() {
++    var take = state.take, out = [];
++    if (!take) return out;
++    state.list.forEach(function (m) {
++      (m.files || []).forEach(function (f) {
++        out.push({ name: take.name, source: f.path, url: fileUrl(take.name, f.path), kind: m.kind,
++                   label: "↳ " + f.name + " (" + (KIND[m.kind] || m.kind) + (m.mode ? ", " + (MODE[m.mode] || m.mode) : "") + ")" });
++      });
++    });
++    return out;
++  }
++
++  function paint() {
++    var host = $("derivedTree"), take = state.take;
++    if (!take) { host.innerHTML = '<p class="row-hint">Pick a take on the right.</p>'; return; }
++    var html = '<div class="dv-node dv-root"><span class="dv-name">' + esc(take.label || take.name) + '</span><span class="dv-meta">the take</span></div>';
++    if (!state.list.length && !state.running.length) html += '<p class="row-hint dv-empty">Nothing made from this take yet.</p>';
++    state.list.forEach(function (m) {
++      html += '<div class="dv-group"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
++        (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") +
++        '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
++      (m.files || []).forEach(function (f) {
++        var url = fileUrl(take.name, f.path);
++        html += '<div class="dv-node"><span class="dv-name">↳ ' + esc(f.name) + '</span><span class="dv-meta mono">' + clock(f.seconds || 0) + "</span>" +
++          '<audio controls preload="none" src="' + esc(url) + '"></audio>' +
++          '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
++          (/vocal/i.test(f.name) ? '<button type="button" class="btn ghost small" data-dv-gloss="' + esc(f.path) + '" data-tip="Whisper on this file against the lyrics">Lyrics check</button>' : "") +
++          '<a class="btn ghost small" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + f.name + ".flac") + '">FLAC</a></div>';
++      });
++      html += "</div>";
++    });
++    state.running.forEach(function (j) {
++      html += '<div class="dv-group is-running"><div class="dv-group-head"><strong>' + esc(KIND[j.kind] || j.kind || "Job") + "</strong>" +
++        (j.mode ? " · " + esc(MODE[j.mode] || j.mode) : "") + '<span class="dv-meta">' + esc(j.status) + "…</span></div></div>";
++    });
++    host.innerHTML = html;
++    window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: take.name, files: files() } }));
++  }
++
++  function refresh() {
++    if (!state.take) { paint(); return Promise.resolve(); }
++    var token = state.token, name = state.take.name;
++    return fetch("/lab/derived?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; })
++      .then(function (d) {
++        if (token !== state.token || !d) return;
++        state.list = d.derived || [];
++        state.running = d.running || [];
++        paint();
++      }).catch(function () { /* no lab: the buttons say so when pressed */ });
++  }
++
++  function split(mode) {
++    if (!state.take) return;
++    var token = state.token, name = state.take.name, started = Date.now();
++    var ticker = setInterval(function () { say("Forge is splitting (" + MODE[mode] + ")… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
++    all(true);
++    function ask() {
++      return fetch("/lab/stems?name=" + encodeURIComponent(name) + "&mode=" + mode).then(function (r) {
++        return r.json().then(function (body) {
++          if (r.status === 202) {
++            if (token === state.token && !state.running.length) refresh();
++            return new Promise(function (resolve) { setTimeout(resolve, 3000); }).then(ask);
++          }
++          if (!r.ok) throw new Error(body.error || "heresy-lab answered " + r.status);
++          return body;
++        });
++      });
++    }
++    ask().then(function (m) {
++      if (token === state.token) say("Done: " + (m.files || []).map(function (f) { return f.name; }).join(", ") + " in " + Math.round(m.took || 0) + " s");
++    }).catch(function (error) {
++      if (token === state.token) say("Could not split: " + (error && error.message || error), true);
++    }).then(function () { clearInterval(ticker); all(false); refresh(); });
++  }
++  function all(busy) {
++    Array.prototype.forEach.call(document.querySelectorAll("[data-dv-split]"), function (b) { b.disabled = busy; });
++  }
++
++  function init(hooks) {
++    if (!$("derivedPanel")) return;
++    state.hooks = hooks || {};
++    Array.prototype.forEach.call(document.querySelectorAll("[data-dv-split]"), function (b) {
++      b.addEventListener("click", function () { split(b.dataset.dvSplit); });
++    });
++    $("derivedTree").addEventListener("click", function (event) {
++      var sp = event.target.closest("[data-dv-spectrum]"), gl = event.target.closest("[data-dv-gloss]");
++      if (sp && state.hooks.compare) state.hooks.compare(sp.dataset.dvSpectrum);
++      if (gl && state.hooks.gloss) state.hooks.gloss(gl.dataset.dvGloss);
++    });
++    // one player at a time: starting a stem pauses the others
++    $("derivedTree").addEventListener("play", function (event) {
++      Array.prototype.forEach.call($("derivedTree").querySelectorAll("audio"), function (a) { if (a !== event.target) a.pause(); });
++      if (state.hooks.pauseMain) state.hooks.pauseMain();
++    }, true);
++  }
++
++  // take: { name, label }
++  function setTake(take) {
++    if (!$("derivedPanel")) return;
++    if (state.take && take && state.take.name === take.name) return;
++    state.take = take;
++    state.token++;
++    state.list = [];
++    state.running = [];
++    say("");
++    paint();
++    refresh();
++  }
++
++  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh };
++})();
+diff --git a/tools/console/heresy-gloss.js b/tools/console/heresy-gloss.js
+index 1f18447..4cc4fdc 100644
+--- a/tools/console/heresy-gloss.js
++++ b/tools/console/heresy-gloss.js
+@@ -11,7 +11,8 @@
+ (function () {
+   "use strict";
+ 
+-  var state = { take: null, hooks: null, token: 0 };
++  var state = { take: null, hooks: null, token: 0, source: "" };   // source: "" the take, or derived/… (HERESY 1021)
++  function src() { return state.source ? "&source=" + encodeURIComponent(state.source) : ""; }
+   function $(id) { return document.getElementById(id); }
+   // through the Kit server (/lab/… → 127.0.0.1:41870): one origin, one port to reach
+   function lab() { return "/lab"; }
+@@ -87,7 +88,7 @@
+     var ticker = setInterval(function () { say("Whisper is listening on Forge\u2026 " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
+     say("asking heresy-lab\u2026");
+     function ask() {
+-      var url = lab() + "/gloss?name=" + encodeURIComponent(take.name) + (force && first ? "&force=1" : "");
++      var url = lab() + "/gloss?name=" + encodeURIComponent(take.name) + src() + (force && first ? "&force=1" : "");
+       first = false;
+       return fetch(url).then(function (r) {
+         return r.json().then(function (body) {
+@@ -115,6 +116,16 @@
+     if (!$("glossPanel")) return;
+     state.hooks = hooks;
+     $("glossRun").addEventListener("click", function () { run($("glossRun").textContent === "Listen again"); });
++    $("glossSource").addEventListener("change", function () { useSource(this.value, false); });
++    // the take's derived files (vocal stems first) become sources as they appear
++    window.addEventListener("heresy-derived", function (event) {
++      if (!state.take || event.detail.name !== state.take.name) return;
++      var keep = state.source, sel = $("glossSource");
++      sel.innerHTML = '<option value="">the take</option>' + event.detail.files.filter(function (f) { return f.kind === "stems"; })
++        .sort(function (a, b) { return (/vocal/i.test(b.label) ? 1 : 0) - (/vocal/i.test(a.label) ? 1 : 0); })
++        .map(function (f) { return '<option value="' + f.source + '">' + f.label.replace(/^\u21b3 /, "") + "</option>"; }).join("");
++      sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
++    });
+     // An already measured take shows at once when the drawer opens (the lab keeps a cache).
+     $("glossPanel").addEventListener("toggle", function () { if ($("glossPanel").open && !$("glossResult").childNodes.length) peek(); });
+   }
+@@ -122,16 +133,28 @@
+   function peek() {
+     if (!state.take) return;
+     var token = state.token, name = state.take.name;
+-    fetch(lab() + "/gloss?name=" + encodeURIComponent(name) + "&cached=1").then(function (r) { return r.ok ? r.json() : null; })
++    fetch(lab() + "/gloss?name=" + encodeURIComponent(name) + src() + "&cached=1").then(function (r) { return r.ok ? r.json() : null; })
+       .then(function (r) { if (r && !r.error && token === state.token && state.take && state.take.name === name) { paint(r); $("glossRun").textContent = "Listen again"; } })
+       .catch(function () { /* nothing measured yet, or no lab: the button says the rest */ });
+   }
+ 
++  function useSource(source, run_) {
++    state.source = source || "";
++    if ($("glossSource").value !== state.source) $("glossSource").value = state.source;
++    state.token++;
++    $("glossResult").textContent = "";
++    $("glossRun").textContent = "Listen with Whisper";
++    say("");
++    if (run_) run(false); else peek();
++  }
++
+   // take: { name, label }
+   function setTake(take) {
+     if (!$("glossPanel")) return;
+     if (state.take && take && state.take.name === take.name) return;
+     state.take = take;
++    state.source = "";
++    $("glossSource").innerHTML = '<option value="">the take</option>';
+     state.token++;
+     $("glossResult").textContent = "";
+     $("glossRun").textContent = "Listen with Whisper";
+@@ -139,5 +162,5 @@
+     if ($("glossPanel").open) peek();
+   }
+ 
+-  window.HeresyGloss = { init: init, setTake: setTake };
++  window.HeresyGloss = { init: init, setTake: setTake, useSource: useSource };
+ })();
+diff --git a/tools/console/heresy-spectrum.js b/tools/console/heresy-spectrum.js
+index 0536913..dfd4951 100644
+--- a/tools/console/heresy-spectrum.js
++++ b/tools/console/heresy-spectrum.js
+@@ -168,16 +168,22 @@
+   // method in numpy), fetched through the Kit at /lab/spectrum: ~8 MB gzipped instead of the
+   // whole take. 202 while it is computed. Its layout: "HSP1", uint32 header length, header
+   // JSON, uint8 spectrogram (0.5 dB steps from -120 dB), float32 Welch average, float32 bands.
+-  function fromLab(name, say) {
+-    var started = performance.now();
++  function fromLab(name, say, source) {
++    var started = performance.now(), tries = 0;
+     function ask() {
+-      return fetch("/lab/spectrum?name=" + encodeURIComponent(name)).then(function (r) {
++      return fetch("/lab/spectrum?name=" + encodeURIComponent(name) + (source ? "&source=" + encodeURIComponent(source) : "")).then(function (r) {
+         if (r.status === 202) {
+           say("Forge is measuring\u2026 " + Math.round((performance.now() - started) / 1000) + "s");
+           return new Promise(function (resolve) { setTimeout(resolve, 1000); }).then(ask);
+         }
++        if (r.status === 502) { var gone = new Error("heresy-lab is not running"); gone.noLab = true; throw gone; }
+         if (!r.ok) throw new Error("heresy-lab answered " + r.status);
+         return readAll(r, say);
++      }).catch(function (error) {
++        // HERESY 1021: a transfer cut on a slow line is asked again, twice, before giving up
++        if (error.noLab || error.message.indexOf("heresy-lab answered") === 0 || ++tries > 2) throw error;
++        say("the line dropped; asking Forge again (" + tries + ")\u2026");
++        return new Promise(function (resolve) { setTimeout(resolve, 1500); }).then(ask);
+       });
+     }
+     return ask().then(function (buf) {
+@@ -206,9 +212,12 @@
+     var key0 = take.url;
+     for (var j = 0; j < cache.length; j++) if (cache[j].url === key0) return cache[j].promise;
+     if (take.name && window.DecompressionStream) {
+-      var viaLab = fromLab(take.name, say).catch(function (error) {
+-        say("Forge could not (" + error.message + "): measuring here\u2026");
++      var viaLab = fromLab(take.name, say, take.source).catch(function (error) {
+         cache = cache.filter(function (c) { return c.url !== key0; });
++        // only with no lab at all is the whole file fetched to measure here: on a phone line a
++        // silent 30–120 MB download is a bad answer to one dropped transfer
++        if (!error.noLab && !(error instanceof TypeError && !error.message)) throw error;
++        say("heresy-lab is not running: measuring here\u2026");
+         return analyseHere(take, say);
+       });
+       cache.unshift({ url: key0, promise: viaLab });
+@@ -520,6 +529,7 @@
+       title: painter.title,
+       fill: true,
+       maxPixels: 16000,                           // the browsers' canvas side limit, with room
++      maxWidth: 3840,                             // HERESY 1021 (Viktor): zoom stops at 4K wide
+       render: function (w, h) {
+         var el = document.createElement("canvas");
+         el.style.width = w + "px";
+@@ -541,6 +551,7 @@
+     state.hooks = hooks;
+     panel.addEventListener("toggle", function () { if (panel.open) { paintCompare(); render(); } });
+     $("specCompare").addEventListener("change", function () { state.other = this.value; render(); });
++    window.addEventListener("heresy-derived", function () { if (panel.open) paintCompare(); });   // HERESY 1021
+     Array.prototype.forEach.call(panel.querySelectorAll("[data-spec-scale]"), function (btn) {
+       btn.addEventListener("click", function () {
+         state.scale = btn.dataset.specScale;
+@@ -569,5 +580,13 @@
+     if (panel.open) { paintCompare(); render(); }
+   }
+ 
+-  window.HeresySpectrum = { init: init, setTake: setTake };
++  // HERESY 1021: lay a file (a stem, a remaster) over the take
++  function compareWith(url) {
++    paintCompare();
++    $("specCompare").value = url;
++    state.other = $("specCompare").value;
++    render();
++  }
++
++  window.HeresySpectrum = { init: init, setTake: setTake, compareWith: compareWith };
+ })();
+diff --git a/tools/console/heresy-zoom.js b/tools/console/heresy-zoom.js
+index 9c47052..89ac812 100644
+--- a/tools/console/heresy-zoom.js
++++ b/tools/console/heresy-zoom.js
+@@ -90,6 +90,7 @@
+   function size(scale) {
+     var fit = fitSize(), dpr = window.devicePixelRatio || 1;
+     var most = cur.maxPixels ? Math.min(cur.maxPixels / (fit.w * dpr), cur.maxPixels / (fit.h * dpr)) : 40;
++    if (cur.maxWidth) most = Math.min(most, cur.maxWidth / fit.w);   // HERESY 1021: a width ceiling (4K for the spectrum)
+     scale = Math.max(1, Math.min(scale, most, 40));
+     return { scale: scale, w: Math.round(fit.w * scale), h: Math.round(fit.h * scale) };
+   }
+@@ -125,7 +126,7 @@
+   function open(opts) {
+     if (!view) build();
+     cur = { title: opts.title, render: opts.render, aspect: opts.aspect || 0.5, fill: !!opts.fill,
+-            vector: !!opts.vector, maxPixels: opts.maxPixels || 0, onClick: opts.onClick || null, scale: 1 };
++            vector: !!opts.vector, maxPixels: opts.maxPixels || 0, maxWidth: opts.maxWidth || 0, onClick: opts.onClick || null, scale: 1 };
+     view.querySelector(".hz-title").textContent = opts.title || "";
+     view.hidden = false;
+     document.documentElement.classList.add("hz-open");
+diff --git a/tools/console/index.html b/tools/console/index.html
+index c8f8f02..982ef49 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -761,9 +761,22 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+     <div class="post-tools" id="postTools">
+       <button type="button" class="btn ghost small" data-post-open="spectrumPanel">Spectrum</button>
+       <button type="button" class="btn ghost small" data-post-open="glossPanel">Lyrics check</button>
+-      <button type="button" class="btn ghost small" disabled data-tip="Coming: stem separation on Forge, in heresy-lab">Stems</button>
++      <button type="button" class="btn ghost small" data-post-open="derivedPanel">Stems</button>
+       <button type="button" class="btn ghost small" disabled data-tip="Coming: AudioSR upscaling and clean-up, before or after the stems">AudioSR</button>
+     </div>
++      <!-- HERESY 1021: what is made from this take, as a tree (heresy-derived.js) -->
++      <details class="drawer" id="derivedPanel" open>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Stems</span><span class="sum-say">Split on Forge: BS-Roformer for the voice, htdemucs_ft for drums, bass and the rest. Each file plays, goes into the spectrum and the lyrics check.</span></span></summary>
++        <div class="drawer-body derived-body">
++          <div class="dv-actions">
++            <button type="button" class="btn ghost small" data-dv-split="vocals" data-tip="BS-Roformer ep317 (SDR 12.97): vocals and instrumental, about 4 minutes for 7">Split: vocals + instrumental</button>
++            <button type="button" class="btn ghost small" data-dv-split="four" data-tip="The same, then htdemucs_ft on the instrumental: + drums, bass, other, about 6 minutes for 7">Split: four stems</button>
++            <span class="row-hint mono" id="derivedState"></span>
++          </div>
++          <div id="derivedTree"></div>
++        </div>
++      </details>
++
+       <!-- HERESY 1007: the spectrum of this take, measured in the page (heresy-spectrum.js) -->
+       <details class="drawer" id="spectrumPanel" open>
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Spectrum</span><span class="sum-say">Where the sound sits: spectrogram, average spectrum, band energy. Lay another take over it to compare.</span></span></summary>
+@@ -802,6 +815,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
+         <div class="drawer-body gloss-body">
+           <div class="gloss-bar-row">
++            <select id="glossSource" aria-label="What Whisper listens to" data-tip="The take as it is, or a stem of it: on the vocal stem Whisper hears the words without the music"><option value="">the take</option></select>
+             <button type="button" class="btn ghost small" id="glossRun">Listen with Whisper</button>
+             <span class="row-hint mono" id="glossState"></span>
+           </div>
+@@ -1000,6 +1014,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+ <script src="heresy-transpose.js"></script>
+ <script src="heresy-assist.js"></script>
+ <script src="heresy-gloss.js"></script>
++<script src="heresy-derived.js"></script>
+ <script src="heresy-zoom.js"></script>
+ <script src="heresy-spectrum.js"></script>
+ <script src="themes.js"></script>
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 3e2b803..6b7993a 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1657,6 +1657,9 @@ int main(int argc, char ** argv) {
+     std::thread worker(worker_main);
+ 
+     httplib::Server svr;
++    // HERESY 1021: big answers (a stem, a spectrum, a WAV) over a phone line: a socket that stalls a few
++    // seconds behind another transfer is not a dead one. The default write timeout was 5 s.
++    svr.set_write_timeout(60, 0);
+     g_svr = &svr;
+ 
+     // SO_REUSEADDR lets us rebind a port still in TIME_WAIT after a restart.
+@@ -1696,7 +1699,12 @@ int main(int argc, char ** argv) {
+             query += (query.empty() ? "?" : "&") + httplib::encode_uri_component(p.first) + "=" +
+                      httplib::encode_uri_component(p.second);
+         }
+-        auto r = lab.Get(path + query);
++        // HERESY 1021: a Range goes through and comes back, so the page's players can seek a stem
++        httplib::Headers fwd;
++        if (req.has_header("Range")) {
++            fwd.emplace("Range", req.get_header_value("Range"));
++        }
++        auto r = lab.Get(path + query, fwd);
+         if (!r) {
+             res.status = 502;
+             res.set_content(json_string("error", "heresy-lab is not running on this machine (lab/start-lab.sh)"),
+@@ -1704,6 +1712,11 @@ int main(int argc, char ** argv) {
+             return;
+         }
+         res.status = r->status;
++        for (const char * h : { "Content-Range", "Accept-Ranges" }) {
++            if (r->has_header(h)) {
++                res.set_header(h, r->get_header_value(h));
++            }
++        }
+         res.set_content(r->body, r->get_header_value("Content-Type", "application/json").c_str());
+     });
+ 
+-- 
+2.43.0
+

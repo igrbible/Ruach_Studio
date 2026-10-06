@@ -1,0 +1,259 @@
+From e3b2a68311c6dc6e27f99de68b0b571211613979 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 02:40:16 -0600
+Subject: [PATCH 1134/1177] The music half together follows each strength and
+ drags them all (1166, part fourteen)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «В Креаторе ползунок Music Together не работает. Подсчёт общей силы не
+работает. Сам по скрину посчитай». The bar was counted only when the form was painted, never
+while a strength was dragged: his screen showed 3.55, the five adapters' first strengths
+(1.0 + 0.75 + 0.6 × 3), over 1.55 on the sliders. And it only looked like a slider.
+
+Now a row's music slider brings the bar up to date as it moves, and the bar is a slider of its
+own: dragged, it moves every music strength at once, each in proportion to where it stood when
+the drag began, none past its own max, on the 0.005 grid with the remainders shared so the sum
+lands where it is let go. Shown from two adapters with a music half, so it stays under the hand
+that drags them down to nought. Its tip says so in the seven languages. The page test drags a
+row and the bar (318 checks).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 17 ++++-----
+ tools/console/heresy-i18n-be.js |  3 +-
+ tools/console/heresy-i18n-el.js |  3 +-
+ tools/console/heresy-i18n-es.js |  3 +-
+ tools/console/heresy-i18n-it.js |  3 +-
+ tools/console/heresy-i18n-ru.js |  3 +-
+ tools/console/heresy-i18n-uk.js |  3 +-
+ tools/console/loras.js          | 68 ++++++++++++++++++++++++++++++---
+ 8 files changed, 81 insertions(+), 22 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 298492b..8b13b14 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2757,20 +2757,20 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .take-rate { display: flex; gap: 2px; flex: none; }
+ .take-rate .coll-act { padding: 2px 5px; }
+ /* HERESY 1084: the LoRA strength road, green (safe) to yellow (the limit) to red (past it); colours of its own, not the theme accent (which is red in some themes) */
+-.lora-half input[type="range"].zoned { -webkit-appearance: none; appearance: none; height: 18px; background: transparent; accent-color: auto; }
+-.lora-half input[type="range"].zoned::-webkit-slider-runnable-track {
++.lora-half input[type="range"].zoned, .lora-total input[type="range"].zoned { -webkit-appearance: none; appearance: none; height: 18px; background: transparent; accent-color: auto; }
++.lora-half input[type="range"].zoned::-webkit-slider-runnable-track, .lora-total input[type="range"].zoned::-webkit-slider-runnable-track {
+   height: 6px; border-radius: 3px;
+   background: linear-gradient(to right, #3f9a4a 0, #3f9a4a var(--z1), #e0b030 var(--z2), #c8372d var(--z2), #c8372d 100%);
+ }
+-.lora-half input[type="range"].zoned::-moz-range-track {
++.lora-half input[type="range"].zoned::-moz-range-track, .lora-total input[type="range"].zoned::-moz-range-track {
+   height: 6px; border-radius: 3px;
+   background: linear-gradient(to right, #3f9a4a 0, #3f9a4a var(--z1), #e0b030 var(--z2), #c8372d var(--z2), #c8372d 100%);
+ }
+-.lora-half input[type="range"].zoned::-webkit-slider-thumb {
++.lora-half input[type="range"].zoned::-webkit-slider-thumb, .lora-total input[type="range"].zoned::-webkit-slider-thumb {
+   -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -4px; border-radius: 50%;
+   background: var(--ink); border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-strong); cursor: pointer;
+ }
+-.lora-half input[type="range"].zoned::-moz-range-thumb {
++.lora-half input[type="range"].zoned::-moz-range-thumb, .lora-total input[type="range"].zoned::-moz-range-thumb {
+   width: 12px; height: 12px; border-radius: 50%; background: var(--ink); border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-strong); cursor: pointer;
+ }
+ .lora-half input[type="range"].zoned:disabled { opacity: .4; }
+@@ -2784,14 +2784,11 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .knob-lock svg { width: 11px; height: 11px; }
+ .knob:not(.is-locked) .knob-lock { color: var(--amber); }
+ .knob:not(.is-locked) .knob-lock .shackle { transform: translate(3px, -1px) rotate(18deg); transform-origin: 11px 7px; }
+-/* HERESY 1089: the music half together, on the same road as each strength */
++/* HERESY 1089: the music half together, on the same road as each strength; 1166: a slider of its own (Viktor: «ползунок
++   Music Together не работает»), the same as each strength's, that moves them all */
+ .lora-total { display: grid; grid-template-columns: auto minmax(0, 1fr) 40px; align-items: center; gap: 8px; padding: 6px 10px; margin-top: 2px;
+   border: 1px dashed var(--line); border-radius: var(--r-md); font-size: 11px; color: var(--dim); }
+ .lora-total output { font: 600 12px var(--mono); text-align: right; }
+-.lora-total-road { position: relative; height: 6px; border-radius: 3px;
+-  background: linear-gradient(to right, #3f9a4a 0, #3f9a4a var(--z1), #e0b030 var(--z2), #c8372d var(--z2), #c8372d 100%); }
+-.lora-total-road i { position: absolute; top: -4px; width: 3px; height: 14px; margin-left: -1.5px; border-radius: 2px; background: var(--ink);
+-  box-shadow: 0 0 0 1px var(--panel); }
+ .lora-total.is-amber output { color: #c99a1c; }
+ .lora-total.is-red { border-color: #c8372d; border-style: solid; }
+ .lora-total.is-red output { color: #c8372d; }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 71256ca..eda4d15 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2438,5 +2438,6 @@ RuachI18n.add("be", {
+ "From Hugging Face": "З Hugging Face",
+ "The GPU roles changed and are not saved": "Ролі відэакарт зменены і не захаваны",
+ "Save them, or leave the cards as they were.": "Захавай іх або пакінь карты як былі.",
+-"Ignore": "Ігнараваць"
++"Ignore": "Ігнараваць",
++"Drag it to move them all at once, each in proportion.": "Пацягні яго, і ўсе зрушацца разам, кожная ў сваёй прапорцыі."
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index e225d8d..a35d074 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2437,5 +2437,6 @@ RuachI18n.add("el", {
+ "From Hugging Face": "Από το Hugging Face",
+ "The GPU roles changed and are not saved": "Οι ρόλοι των GPU άλλαξαν και δεν αποθηκεύτηκαν",
+ "Save them, or leave the cards as they were.": "Αποθήκευσέ τους ή άφησε τις κάρτες όπως ήταν.",
+-"Ignore": "Αγνόηση"
++"Ignore": "Αγνόηση",
++"Drag it to move them all at once, each in proportion.": "Σύρε το για να μετακινηθούν όλες μαζί, η καθεμία αναλογικά."
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 155f66d..0047a43 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2437,5 +2437,6 @@ RuachI18n.add("es", {
+ "From Hugging Face": "De Hugging Face",
+ "The GPU roles changed and are not saved": "Los papeles de las GPU cambiaron y no se han guardado",
+ "Save them, or leave the cards as they were.": "Guárdalos o deja las tarjetas como estaban.",
+-"Ignore": "Ignorar"
++"Ignore": "Ignorar",
++"Drag it to move them all at once, each in proportion.": "Arrástralo para moverlas todas a la vez, cada una en proporción."
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index c832a66..0a33e24 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2437,5 +2437,6 @@ RuachI18n.add("it", {
+ "From Hugging Face": "Da Hugging Face",
+ "The GPU roles changed and are not saved": "I ruoli delle GPU sono cambiati e non sono salvati",
+ "Save them, or leave the cards as they were.": "Salvali, oppure lascia le schede come erano.",
+-"Ignore": "Ignora"
++"Ignore": "Ignora",
++"Drag it to move them all at once, each in proportion.": "Trascinalo per spostarle tutte insieme, ciascuna in proporzione."
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 5927b14..ad6c5b5 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2443,5 +2443,6 @@ RuachI18n.add("ru", {
+ "From Hugging Face": "С Hugging Face",
+ "The GPU roles changed and are not saved": "Роли видеокарт изменены и не сохранены",
+ "Save them, or leave the cards as they were.": "Сохрани их или оставь карты как были.",
+-"Ignore": "Игнорировать"
++"Ignore": "Игнорировать",
++"Drag it to move them all at once, each in proportion.": "Потяни его, и все сдвинутся разом, каждая в своей пропорции."
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 4c112a1..7b049d3 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2438,5 +2438,6 @@ RuachI18n.add("uk", {
+ "From Hugging Face": "З Hugging Face",
+ "The GPU roles changed and are not saved": "Ролі відеокарт змінено й не збережено",
+ "Save them, or leave the cards as they were.": "Збережи їх або лиши карти як були.",
+-"Ignore": "Ігнорувати"
++"Ignore": "Ігнорувати",
++"Drag it to move them all at once, each in proportion.": "Потягни його, і всі зсунуться разом, кожна у своїй пропорції."
+ });
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index ee9906a..a69cf17 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -132,15 +132,61 @@
+     return S.choice.reduce(function (s, c) { var e = entry(c.id); return s + (e && has(e, "ar") ? c.ar || 0 : 0); }, 0);
+   }
+   function arStacked() { return S.choice.filter(function (c) { var e = entry(c.id); return e && has(e, "ar") && c.ar > 0; }).length; }
++  // HERESY 1166 (Viktor 04.10.2026: «В Креаторе ползунок Music Together не работает. Подсчёт общей силы не работает. Сам по
++  // скрину посчитай»): the bar was counted only when the form was painted, never while a strength was dragged (his screen:
++  // 3.55, the five adapters' first strengths, over 1.55 on the sliders), and it only looked like a slider. Now it follows
++  // every strength, and it is one: dragged, it moves all the music strengths at once (scaleMusic). Shown from two adapters
++  // with a music half, at nought or not, so it stays under the hand that drags them down to nought.
++  function arCapable() { return S.choice.filter(function (c) { var e = entry(c.id); return e && has(e, "ar"); }).length; }
++  function totalClass(t) { return t > AR_TOTAL.limit + 1e-9 ? "is-red" : t > AR_TOTAL.safe + 1e-9 ? "is-amber" : "is-green"; }
+   function totalBar() {
+-    if (arStacked() < 2) return "";
+-    var t = arTotal(), z = AR_TOTAL, cls = t > z.limit + 1e-9 ? "is-red" : t > z.safe + 1e-9 ? "is-amber" : "is-green";
++    if (arCapable() < 2) return "";
++    var t = arTotal(), z = AR_TOTAL;
+     var road = "--z1:" + (100 * z.safe / z.max).toFixed(1) + "%;--z2:" + (100 * z.limit / z.max).toFixed(1) + "%";
+-    return '<div class="lora-total ' + cls + '" data-tip="' + escape(tr("All the music strengths together. Measured on this studio's takes: the score came out whole up to " +
+-        z.limit + " in every run, broken from 2.5 in every run. Green to " + z.safe + ", amber to " + z.limit + ", red past it.")) + '">' +
++    return '<label class="lora-total ' + totalClass(t) + '" data-tip="' + escape(tr("All the music strengths together. Measured on this studio's takes: the score came out whole up to " +
++        z.limit + " in every run, broken from 2.5 in every run. Green to " + z.safe + ", amber to " + z.limit + ", red past it.") + " " +
++        tr("Drag it to move them all at once, each in proportion.")) + '">' +
+       "<span>Music, together</span>" +
+-      '<span class="lora-total-road" style="' + road + '"><i style="left:' + Math.min(100, 100 * t / z.max).toFixed(1) + '%"></i></span>' +
+-      "<output>" + fmt(t, 2) + "</output></div>";
++      '<input type="range" class="zoned lora-total-range" style="' + road + '" min="0" max="' + z.max + '" step="0.005" value="' + t +
++      '" aria-label="' + escape(tr("Music, together")) + '" />' +
++      "<output>" + fmt(t, 2) + "</output></label>";
++  }
++  // the bar brought up to date where it stands; while its own slider is dragged, the slider is left under the hand
++  function syncTotal(dragging) {
++    var bar = S.host && S.host.querySelector(".lora-total"), html = totalBar();
++    if (!bar || !html) {
++      if (bar) bar.remove();
++      if (html && S.host) S.host.querySelector(".lora-active").insertAdjacentHTML("beforeend", html);
++      return;
++    }
++    var t = arTotal(), range = bar.querySelector("input");
++    bar.className = "lora-total " + totalClass(t);
++    bar.querySelector("output").textContent = fmt(t, 2);
++    if (range && !dragging) range.value = t;
++  }
++  // every music strength moved at once, each in proportion to where it stood when the drag began (all alike when all
++  // stood at nought), none past its own max, on the 0.005 grid the run keeps; the grid's remainders go to the largest
++  // fractions, so the sum lands where the slider is let go (each rounded on its own, 1 came out 0.995)
++  function scaleMusic(target) {
++    if (!S.base) S.base = S.choice.filter(function (c) { var e = entry(c.id); return e && has(e, "ar"); })
++      .map(function (c) { return { c: c, ar: c.ar || 0, cap: capOf(entry(c.id), "ar") }; });
++    var sum = S.base.reduce(function (s, b) { return s + b.ar; }, 0), n = S.base.length;
++    var u = S.base.map(function (b) { return Math.min(b.cap * 200, Math.max(0, (sum > 1e-9 ? b.ar * target / sum : target / n) * 200)); });
++    var got = u.map(function (x) { return Math.floor(x + 1e-9); });
++    var left = Math.round(target * 200) - got.reduce(function (s, x) { return s + x; }, 0);
++    u.map(function (x, i) { return i; }).sort(function (a, b) { return (u[b] - got[b]) - (u[a] - got[a]); }).forEach(function (i) {
++      if (left > 0 && got[i] + 1 <= Math.round(S.base[i].cap * 200) && u[i] - got[i] > 1e-9) { got[i]++; left--; }
++    });
++    S.base.forEach(function (b, i) { b.c.ar = got[i] / 200; });
++    S.host.querySelectorAll('.lora-half input[data-half="ar"]').forEach(function (r) {
++      var c = S.choice.filter(function (x) { return x.id === r.dataset.lora; })[0];
++      if (!c) return;
++      r.value = c.ar;
++      if (r.nextElementSibling) r.nextElementSibling.textContent = fmt(c.ar, 2);
++      r.parentNode.classList.toggle("is-over", overLimit(entry(c.id), "ar", c.ar));
++    });
++    syncTotal(true);
++    S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+   }
+   function overLimit(e, half, v) { return v > zones(e, half).limit + 1e-9; }
+ 
+@@ -255,6 +301,7 @@
+   function paint() {
+     paintList();
+     if (!S.host) return;
++    S.base = null;                                 // HERESY 1166: a drag of the together-slider ends with a new form
+     var on = {};
+     S.choice.forEach(function (c) { on[c.id] = true; });
+     var active = S.host.querySelector(".lora-active"), chips = S.host.querySelector(".lora-chips");
+@@ -326,13 +373,22 @@
+       field.addEventListener("blur", function () { finish(true); });
+     });
+     host.addEventListener("input", function (event) {
++      if (event.target.classList.contains("lora-total-range")) return void scaleMusic(parseFloat(event.target.value));   // 1166
+       var id = event.target.dataset.lora, half = event.target.dataset.half;
+       if (!id || !half) return;
+       S.choice.forEach(function (c) { if (c.id === id) c[half] = parseFloat(event.target.value); });
+       event.target.nextElementSibling.textContent = fmt(event.target.value, 2);
+       event.target.parentNode.classList.toggle("is-over", overLimit(entry(id), half, parseFloat(event.target.value)));   // 1084
++      if (half === "ar") syncTotal();     // HERESY 1166: the music half together follows a strength as it moves
+       S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+     });
++    // HERESY 1166: the together-slider let go: the next drag starts from where the strengths stand, the slider at their sum
++    host.addEventListener("change", function (event) {
++      if (!event.target.classList.contains("lora-total-range")) return;
++      S.base = null;
++      syncTotal();
++      if (S.opts.onChange) S.opts.onChange();
++    });
+     paint();
+   }
+ 
+-- 
+2.43.0
+

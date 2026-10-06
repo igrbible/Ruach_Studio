@@ -1,0 +1,428 @@
+From 8b7cf23afff2efe8f327d6c74bcdd309b999138b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 4 Oct 2026 03:24:32 -0600
+Subject: [PATCH 1138/1177] A frozen workspace in the Librarian (1166, part
+ eighteen)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 04.10.2026: «Деактивация воркспейса. Замораживаются все треки в этом представлении,
+никаких действий по ним, в `All Workspaces` и в поиске не отображаются. Сам деактивированный
+воркспейс немного засЕривается как неактивный».
+
+⋯ → Freeze… (asked first, saying what it does); frozen, the workspace is greyed in the column
+with ❄, its menu only Open and Unfreeze (a section frozen with its parent says so). Its frozen
+takes show only inside it, greyed: the play button and the title answer, the check, rename,
+like, dislike, favourite and Refine do not, nor dragging, Shift ranges, the band or Ctrl+A; a
+take's menu is Play, the datasheet and «Frozen with its workspace». They leave All Workspaces,
+the search, Favourites, Pinned and the counts. The words in the seven languages (16 keys, the
+lab's refusals with each language's plural forms).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  7 ++++
+ tools/console/app.js               | 14 +++++++
+ tools/console/heresy-collection.js | 60 ++++++++++++++++++++++++------
+ tools/console/heresy-i18n-be.js    | 18 ++++++++-
+ tools/console/heresy-i18n-el.js    | 18 ++++++++-
+ tools/console/heresy-i18n-es.js    | 18 ++++++++-
+ tools/console/heresy-i18n-it.js    | 18 ++++++++-
+ tools/console/heresy-i18n-ru.js    | 18 ++++++++-
+ tools/console/heresy-i18n-uk.js    | 18 ++++++++-
+ 9 files changed, 172 insertions(+), 17 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 77fd13a..2989238 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2555,6 +2555,13 @@ body.coll-dragging .coll-peek { display: none; }
+ .hd-input { width: 100%; }
+ .hd-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+ /* HERESY 1166: the published 💎 sets, one row each: its name and link, what it holds, here or not, one button */
++/* HERESY 1166: a frozen workspace greyed in the column, its takes greyed in it (heard and read, never changed) */
++.coll-place.is-frozen > span:first-child { opacity: .5; }
++.coll-place.is-frozen .coll-n { opacity: .5; }
++.coll-ice { margin-left: 4px; font-size: 11px; color: var(--dim); }
++.coll-card.is-frozen { filter: grayscale(.85); opacity: .62; }
++.coll-card.is-frozen .coll-check, .coll-card.is-frozen .coll-ren, .coll-card.is-frozen .coll-acts { pointer-events: none; }
++.coll-card.is-frozen:hover { opacity: .8; }
+ .hub-box { width: min(640px, 100%); }
+ .hub-list { display: flex; flex-direction: column; gap: 8px; max-height: min(60vh, 520px); overflow: auto; }
+ .hub-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 14px; padding: 10px 12px;
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 6716221..876dbca 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -6149,6 +6149,20 @@
+     if (!take || !window.HeresyMenu) return;
+     var row = HC && HC.row ? HC.row(name) : null, r = HC ? HC.rating(name) : 0;
+     var now = STATE.playerTake && STATE.playerTake.name === name && isPlaying();
++    // HERESY 1166 (Viktor: «Замораживаются все треки в этом представлении, никаких действий по ним»): a take frozen with its
++    // workspace is heard and read, nothing else
++    if (HC && HC.isFrozen && HC.isFrozen(name)) {
++      return window.HeresyMenu.open(x, y, [
++        { icon: now ? "\u275a\u275a" : "\u25b6", label: now ? "Pause" : "Play", action: function () {
++          if (now) return togglePlay();
++          STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
++          playNow(take);
++        } },
++        HC.datasheet ? { icon: "\u2630", label: "Open the datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
++        { sep: true },
++        { icon: "\u2744", label: "Frozen with its workspace", hint: "unfreeze it to act on the take", disabled: true }
++      ].filter(Boolean));
++    }
+     var ws = HC && HC.workspaces ? HC.workspaces() : [], inWs = row ? row.workspaces : [], hand = recall("yue2.writerDoc");
+     var here = document.body.dataset.tab || "create";
+     var changed = function () { paintLibrary(); paintRate(); };
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index b7c9efd..8c9e1b0 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -40,6 +40,7 @@
+   function load() {
+     return api("/catalog").then(function (d) {
+       state.rows = d.takes || []; state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
++      state.frozen = d.frozen || [];               // HERESY 1166
+       var names = {};
+       state.rows.forEach(function (r) { names[r.name] = 1; });
+       Object.keys(state.sel).forEach(function (n) { if (!names[n]) delete state.sel[n]; });
+@@ -66,9 +67,15 @@
+       return A.length - B.length;
+     });
+   }
++  // HERESY 1166 (Viktor: «Деактивация воркспейса. Замораживаются все треки в этом представлении, никаких действий по ним,
++  // в `All Workspaces` и в поиске не отображаются. Сам деактивированный воркспейс немного засЕривается»): a take frozen with
++  // its workspace (the lab says which: in no workspace that is not frozen) shows only inside it, greyed, heard and read
++  function frozenWs(w) { return (state.frozen || []).some(function (f) { return w === f || String(w).indexOf(f + SEP) === 0; }); }
++  function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
+   function shown() {
+     var m = matcher(state.q), anyDer = Object.keys(state.derived).length;
+     var rows = state.rows.filter(function (r) {
++      if (!iceHere(r)) return false;               // HERESY 1166
+       if (state.place === "__fav" && !r.favorite) return false;
+       if (state.place === "__pinned" && !pinnedAll()[r.name]) return false;   // HERESY 1105
+       if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
+@@ -96,7 +103,7 @@
+     var counts = { "": 0, __fav: 0, __hidden: 0, __none: 0 }, perWs = {};
+     state.rows.forEach(function (r) {
+       if (r.hidden) { counts.__hidden++; return; }
+-      counts[""]++; if (r.favorite) counts.__fav++;
++      if (!r.frozen) { counts[""]++; if (r.favorite) counts.__fav++; }   // HERESY 1166: a frozen take only in its own
+       if (!r.workspaces.length) counts.__none++;
+       var once = {};                                 // HERESY 1161: a take counted once in a parent, from any of its sections
+       r.workspaces.forEach(function (w) {
+@@ -109,15 +116,16 @@
+       return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + '" data-place="' + esc(key) + '"><span' + (own ? ' translate="no"' : "") + ">" + esc(label) +
+         '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
+     };
+-    var pinAll = pinnedAll(), pinN = state.rows.filter(function (r) { return pinAll[r.name] && !r.hidden; }).length;
++    var pinAll = pinnedAll(), pinN = state.rows.filter(function (r) { return pinAll[r.name] && !r.hidden && !r.frozen; }).length;
+     $("collSide").innerHTML = item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
+       item("__pinned", "\ud83d\udccc Pinned", pinN) +
+       item("__none", "Not in a workspace", counts.__none) +
+       '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws).map(function (w) {
+-        var lk = (state.locks || {})[w] || {}, lock = lk.workspace || lk.tracks ?   // HERESY 1070
+-          '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "";
++        var ice = frozenWs(w) ? '<span class="coll-ice" title="Frozen: its takes are heard, never changed">\u2744</span>' : "";   // HERESY 1166
++        var lk = (state.locks || {})[w] || {}, lock = ice + (lk.workspace || lk.tracks ?   // HERESY 1070
++          '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "");
+         var depth = wsParts(w).length;               // a section: its own name, indented under its parent (1161)
+-        return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0, depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : ""))
++        return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0, depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : ""))
+           .replace('<span class="coll-n">', lock + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">');
+       }).join("") +
+       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
+@@ -166,6 +174,13 @@
+       (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
+   }
+ 
++  // HERESY 1166: a frozen card's check, rename and actions answer nothing; its play button and its title still do
++  function iceCards() {
++    Array.prototype.forEach.call($("collGrid").querySelectorAll(".coll-card.is-frozen"), function (c) {
++      c.setAttribute("draggable", "false");
++      Array.prototype.forEach.call(c.querySelectorAll(".coll-check input, .coll-ren, .coll-act"), function (b) { b.disabled = true; });
++    });
++  }
+   function paint() {
+     paintSide();
+     var trash = state.place === "__trash";
+@@ -179,7 +194,7 @@
+       var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
+       var mine = now.name === r.name;
+       var art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";   // HERESY 1154: beside the title, not in the play button
+-      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.fresh ? " is-fresh" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '" draggable="true">' +
++      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '" draggable="true">' +
+         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+         '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
+         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
+@@ -203,6 +218,7 @@
+         (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" aria-label="Has a note">' + ico("note") + "</button>"
+                 : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
+     }).join("") : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
++    iceCards();                                    // HERESY 1166: a frozen card's controls off
+     // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
+     var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
+     // HERESY 1165: the studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
+@@ -216,7 +232,7 @@
+       if (state.place === "__hidden") return r.hidden;
+       if (state.place) return !r.hidden && inTree(r, state.place);     // HERESY 1161: with its sections
+       return !r.hidden;
+-    });
++    }).filter(iceHere);                            // HERESY 1166: frozen takes count only in their own workspace
+     var secs = inPlace.reduce(function (s, r) { return s + (r.seconds || 0); }, 0), hm = function (t) { var h = Math.floor(t / 3600), m = Math.round(t % 3600 / 60); return h ? h + " h " + m + " min" : m + " min"; };
+     var count = function (f) { return inPlace.filter(f).length; }, kinds = {};
+     inPlace.forEach(function (r) { kinds[r.kind] = (kinds[r.kind] || 0) + 1; });
+@@ -321,10 +337,10 @@
+   // HERESY 1101: a card checked or unchecked by a click on it (Shift: the whole range from the last one)
+   function toggleCard(name, range) {
+     var rows = shown(), i = rows.findIndex(function (r) { return r.name === name; }), on = !state.sel[name];
+-    if (i < 0) return;
++    if (i < 0 || rows[i].frozen) return;           // HERESY 1166: a frozen take is not checked
+     if (range && state.last !== null) {
+       var a = Math.min(state.last, i), b = Math.max(state.last, i);
+-      for (var k = a; k <= b; k++) if (on) state.sel[rows[k].name] = 1; else delete state.sel[rows[k].name];
++      for (var k = a; k <= b; k++) if (on && !rows[k].frozen) state.sel[rows[k].name] = 1; else delete state.sel[rows[k].name];
+     } else if (on) state.sel[name] = 1; else delete state.sel[name];
+     state.last = i;
+     paint();
+@@ -488,6 +504,7 @@
+     return api("/collection", body).then(function (d) {
+       state.rows = d.takes || state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
+       state.pins = d.pins || state.pins || {};
++      state.frozen = d.frozen || state.frozen || [];   // HERESY 1166
+       if (done) { if (undo) undoable(done, undo); else toast(done); }
+       paint();
+       paintCurrent();
+@@ -665,7 +682,7 @@
+     function clearDrop() { Array.prototype.forEach.call(document.querySelectorAll(".coll-place.is-drop"), function (b) { b.classList.remove("is-drop"); }); }
+     $("collGrid").addEventListener("dragstart", function (e) {
+       var card = e.target.closest && e.target.closest(".coll-card[data-name]");
+-      if (!card || state.place === "__trash" || (e.target.closest && e.target.closest("input, textarea"))) { e.preventDefault(); return; }
++      if (!card || state.place === "__trash" || card.classList.contains("is-frozen") || (e.target.closest && e.target.closest("input, textarea"))) { e.preventDefault(); return; }
+       var n = card.dataset.name, list = state.sel[n] ? names() : [n], r = rowOf(n);
+       drag = list;
+       hidePeek();
+@@ -845,7 +862,7 @@
+       var t = e.target, typing = t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+       if (typing || document.querySelector(".hd-back, .ds-back, .hm-pop:not([hidden])") || !$("collDialog").hidden || !$("collSheet").hidden) return;
+       var mod = e.ctrlKey || e.metaKey, k = (e.key || "").toLowerCase();
+-      if (mod && k === "a" && state.place !== "__trash") { e.preventDefault(); shown().forEach(function (r) { state.sel[r.name] = 1; }); paint(); }
++      if (mod && k === "a" && state.place !== "__trash") { e.preventDefault(); shown().forEach(function (r) { if (!r.frozen) state.sel[r.name] = 1; }); paint(); }
+       else if (mod && k === "z" && undoState.fn) { e.preventDefault(); undoLast(); }
+       else if (e.key === "Escape" && names().length) { state.sel = {}; paint(); }
+       else if (e.key === "Delete" && names().length && state.place !== "__trash") { e.preventDefault(); $("collTrash").click(); }
+@@ -1131,6 +1148,16 @@
+   function wsMenu(w, x, y) {
+     if (!window.HeresyMenu) return;
+     var n = state.rows.filter(function (r) { return inTree(r, w); }).length;
++    if (frozenWs(w)) {                             // HERESY 1166: frozen, it is opened or thawed, nothing else
++      var own = (state.frozen || []).indexOf(w) >= 0, by = (state.frozen || []).filter(function (f) { return w.indexOf(f + SEP) === 0; })[0];
++      return window.HeresyMenu.open(x, y, [
++        { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
++        { icon: "\u25a6", label: "Open", action: function () { state.place = w; state.sel = {}; paint(); } },
++        { sep: true },
++        own ? { icon: "\u2600", label: "Unfreeze", action: function () { act({ op: "freeze", workspace: w, on: false }, "Unfrozen: \u201c" + w + "\u201d", true); } }
++            : { icon: "\u2744", label: "Frozen with \u201c" + by + "\u201d", disabled: true }
++      ]);
++    }
+     window.HeresyMenu.open(x, y, [
+       { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
+       { icon: "\u25a6", label: "Open", action: function () { state.place = w; state.sel = {}; paint(); } },
+@@ -1145,12 +1172,22 @@
+       } } : null,
+       { icon: "Aa", label: "Rename\u2026", action: function () { renameWs(w); } },
+       { sep: true },                                   // HERESY 1070: the safety catches
++      { icon: "\u2744", label: "Freeze\u2026", hint: "heard, never changed", action: function () { freezeWs(w); } },   // HERESY 1166
+       lockItem(w, "workspace", "Workspace Deletion"),
+       lockItem(w, "tracks", "Tracks Deletion"),
+       { sep: true },
+       { icon: "\ud83d\uddd1", label: "Delete\u2026", danger: true, disabled: isLocked(w, "workspace"), hint: isLocked(w, "workspace") ? "locked" : "", action: function () { deleteWs(w); } }
+     ].filter(Boolean));
+   }
++  function freezeWs(w) {                           // HERESY 1166
++    ask("Freeze \u201c" + w + "\u201d?\n\nIts takes stay as they are: they are heard and read, never changed, moved or thrown away, " +
++        "and they leave All Workspaces and the search (a take also in a workspace that is not frozen stays there). The workspace " +
++        "greys out; Unfreeze in its \u22ef menu brings everything back.", { ok: "Freeze" }).then(function (yes) {
++      if (!yes) return;
++      state.sel = {};
++      act({ op: "freeze", workspace: w, on: true }, "Frozen: \u201c" + w + "\u201d", true);
++    });
++  }
+   function isLocked(w, what) { return !!((state.locks || {})[w] || {})[what]; }
+   function lockItem(w, what, label) {
+     var on = isLocked(w, what);
+@@ -1420,6 +1457,7 @@
+                               markFavorite: markFavorite,
+                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
+                               pinPlaces: pinPlaces, unpinAll: unpinAll,
++                              isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166
+                               undoable: undoable, untrash: untrash,
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+ })();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 7633a29..601d826 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2462,5 +2462,21 @@ RuachI18n.add("be", {
+ "its repository has no workspace.json yet": "у яго рэпазіторыі яшчэ няма workspace.json",
+ "the repository asks for access first": "рэпазіторый спачатку просіць доступ",
+ "Hugging Face does not answer: {0}": "Hugging Face не адказвае: {0}",
+-"Not on Hugging Face yet": "На Hugging Face яшчэ няма"
++"Not on Hugging Face yet": "На Hugging Face яшчэ няма",
++"Frozen: its takes are heard, never changed": "Замарожана: сэмплы можна слухаць, але не змяняць",
++"Unfreeze": "Размарозіць",
++"Frozen with “{0}”": "Замарожана разам з «{0}»",
++"Freeze…": "Замарозіць…",
++"heard, never changed": "слухаць, але не змяняць",
++"Freeze “{0}”?": "Замарозіць «{0}»?",
++"Its takes stay as they are: they are heard and read, never changed, moved or thrown away, and they leave All Workspaces and the search (a take also in a workspace that is not frozen stays there). The workspace greys out; Unfreeze in its ⋯ menu brings everything back.": "Яе сэмплы застануцца як ёсць: іх можна слухаць і чытаць, але не змяняць, не перамяшчаць і не выкідаць, і яны знікаюць з «Усе прасторы» і з пошуку (сэмпл, які ёсць і ў незамарожанай прасторы, застаецца там). Прастора шарэе; «Размарозіць» у яе меню ⋯ вяртае ўсё.",
++"Freeze": "Замарозіць",
++"Frozen: “{0}”": "Замарожана: «{0}»",
++"Unfrozen: “{0}”": "Размарожана: «{0}»",
++"Frozen with its workspace": "Замарожаны разам з прасторай",
++"unfreeze it to act on the take": "размарозь яе, каб дзейнічаць з сэмплам",
++"{#0} take frozen with its workspace: unfreeze it first": {"one": "{0} сэмпл замарожаны разам са сваёй прасторай: спачатку размарозь яе", "few": "{0} сэмплы замарожаныя разам са сваёй прасторай: спачатку размарозь яе", "many": "{0} сэмплаў замарожаныя разам са сваёй прасторай: спачатку размарозь яе", "other": "{0} сэмпла замарожаныя разам са сваёй прасторай: спачатку размарозь яе"},
++"{#0} takes frozen with their workspace: unfreeze it first": {"one": "{0} сэмпл замарожаны разам са сваёй прасторай: спачатку размарозь яе", "few": "{0} сэмплы замарожаныя разам са сваёй прасторай: спачатку размарозь яе", "many": "{0} сэмплаў замарожаныя разам са сваёй прасторай: спачатку размарозь яе", "other": "{0} сэмпла замарожаныя разам са сваёй прасторай: спачатку размарозь яе"},
++"“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» замарожана: спачатку размарозь яе (⋯ побач з назвай)",
++"frozen with its workspace: unfreeze it first": "замарожаны разам з прасторай: спачатку размарозь яе"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index e5e2b43..e33df39 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2461,5 +2461,21 @@ RuachI18n.add("el", {
+ "its repository has no workspace.json yet": "το αποθετήριό του δεν έχει ακόμη workspace.json",
+ "the repository asks for access first": "το αποθετήριο ζητά πρώτα πρόσβαση",
+ "Hugging Face does not answer: {0}": "Το Hugging Face δεν απαντά: {0}",
+-"Not on Hugging Face yet": "Δεν είναι ακόμη στο Hugging Face"
++"Not on Hugging Face yet": "Δεν είναι ακόμη στο Hugging Face",
++"Frozen: its takes are heard, never changed": "Παγωμένο: οι λήψεις του ακούγονται, δεν αλλάζουν",
++"Unfreeze": "Ξεπάγωμα",
++"Frozen with “{0}”": "Παγωμένο μαζί με το «{0}»",
++"Freeze…": "Πάγωμα…",
++"heard, never changed": "ακούγεται, δεν αλλάζει",
++"Freeze “{0}”?": "Πάγωμα του «{0}»;",
++"Its takes stay as they are: they are heard and read, never changed, moved or thrown away, and they leave All Workspaces and the search (a take also in a workspace that is not frozen stays there). The workspace greys out; Unfreeze in its ⋯ menu brings everything back.": "Οι λήψεις του μένουν όπως είναι: ακούγονται και διαβάζονται, αλλά δεν αλλάζουν, δεν μετακινούνται και δεν πετιούνται, και φεύγουν από το «Όλοι οι χώροι» και από την αναζήτηση (μια λήψη που είναι και σε χώρο που δεν έχει παγώσει μένει εκεί). Ο χώρος γκριζάρει· το «Ξεπάγωμα» στο μενού ⋯ του τα φέρνει όλα πίσω.",
++"Freeze": "Πάγωμα",
++"Frozen: “{0}”": "Πάγωσε: «{0}»",
++"Unfrozen: “{0}”": "Ξεπάγωσε: «{0}»",
++"Frozen with its workspace": "Παγωμένη μαζί με τον χώρο της",
++"unfreeze it to act on the take": "ξεπάγωσέ τον για να κάνεις κάτι με τη λήψη",
++"{#0} take frozen with its workspace: unfreeze it first": {"one": "{0} λήψη παγωμένη μαζί με τον χώρο της: ξεπάγωσέ τον πρώτα", "other": "{0} λήψεις παγωμένες μαζί με τον χώρο τους: ξεπάγωσέ τον πρώτα"},
++"{#0} takes frozen with their workspace: unfreeze it first": {"one": "{0} λήψη παγωμένη μαζί με τον χώρο της: ξεπάγωσέ τον πρώτα", "other": "{0} λήψεις παγωμένες μαζί με τον χώρο τους: ξεπάγωσέ τον πρώτα"},
++"“{0}” is frozen: unfreeze it first (⋯ beside its name)": "Το «{0}» είναι παγωμένο: ξεπάγωσέ το πρώτα (⋯ δίπλα στο όνομά του)",
++"frozen with its workspace: unfreeze it first": "παγωμένη μαζί με τον χώρο της: ξεπάγωσέ τον πρώτα"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 7c921e4..0e083dd 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2461,5 +2461,21 @@ RuachI18n.add("es", {
+ "its repository has no workspace.json yet": "su repositorio aún no tiene workspace.json",
+ "the repository asks for access first": "el repositorio pide acceso primero",
+ "Hugging Face does not answer: {0}": "Hugging Face no responde: {0}",
+-"Not on Hugging Face yet": "Aún no está en Hugging Face"
++"Not on Hugging Face yet": "Aún no está en Hugging Face",
++"Frozen: its takes are heard, never changed": "Congelado: sus tomas se escuchan, nunca se cambian",
++"Unfreeze": "Descongelar",
++"Frozen with “{0}”": "Congelado con «{0}»",
++"Freeze…": "Congelar…",
++"heard, never changed": "se escucha, no se cambia",
++"Freeze “{0}”?": "¿Congelar «{0}»?",
++"Its takes stay as they are: they are heard and read, never changed, moved or thrown away, and they leave All Workspaces and the search (a take also in a workspace that is not frozen stays there). The workspace greys out; Unfreeze in its ⋯ menu brings everything back.": "Sus tomas se quedan como están: se escuchan y se leen, pero no se cambian, no se mueven ni se tiran, y salen de «Todos los espacios» y de la búsqueda (una toma que también está en un espacio no congelado sigue allí). El espacio se vuelve gris; «Descongelar» en su menú ⋯ lo devuelve todo.",
++"Freeze": "Congelar",
++"Frozen: “{0}”": "Congelado: «{0}»",
++"Unfrozen: “{0}”": "Descongelado: «{0}»",
++"Frozen with its workspace": "Congelada con su espacio",
++"unfreeze it to act on the take": "descongélalo para actuar sobre la toma",
++"{#0} take frozen with its workspace: unfreeze it first": {"one": "{0} toma congelada con su espacio: descongélalo primero", "many": "{0} tomas congeladas con su espacio: descongélalo primero", "other": "{0} tomas congeladas con su espacio: descongélalo primero"},
++"{#0} takes frozen with their workspace: unfreeze it first": {"one": "{0} toma congelada con su espacio: descongélalo primero", "many": "{0} tomas congeladas con su espacio: descongélalo primero", "other": "{0} tomas congeladas con su espacio: descongélalo primero"},
++"“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» está congelado: descongélalo primero (⋯ junto a su nombre)",
++"frozen with its workspace: unfreeze it first": "congelada con su espacio: descongélalo primero"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 7ba51e1..926fadc 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2461,5 +2461,21 @@ RuachI18n.add("it", {
+ "its repository has no workspace.json yet": "il suo repository non ha ancora workspace.json",
+ "the repository asks for access first": "il repository chiede prima l'accesso",
+ "Hugging Face does not answer: {0}": "Hugging Face non risponde: {0}",
+-"Not on Hugging Face yet": "Non ancora su Hugging Face"
++"Not on Hugging Face yet": "Non ancora su Hugging Face",
++"Frozen: its takes are heard, never changed": "Congelato: i suoi take si ascoltano, non si cambiano",
++"Unfreeze": "Scongela",
++"Frozen with “{0}”": "Congelato con «{0}»",
++"Freeze…": "Congela…",
++"heard, never changed": "si ascolta, non si cambia",
++"Freeze “{0}”?": "Congelare «{0}»?",
++"Its takes stay as they are: they are heard and read, never changed, moved or thrown away, and they leave All Workspaces and the search (a take also in a workspace that is not frozen stays there). The workspace greys out; Unfreeze in its ⋯ menu brings everything back.": "I suoi take restano come sono: si ascoltano e si leggono, ma non si cambiano, non si spostano e non si buttano, ed escono da «Tutti gli spazi» e dalla ricerca (un take che sta anche in uno spazio non congelato resta lì). Lo spazio diventa grigio; «Scongela» nel suo menu ⋯ riporta tutto.",
++"Freeze": "Congela",
++"Frozen: “{0}”": "Congelato: «{0}»",
++"Unfrozen: “{0}”": "Scongelato: «{0}»",
++"Frozen with its workspace": "Congelato con il suo spazio",
++"unfreeze it to act on the take": "scongelalo per agire sul take",
++"{#0} take frozen with its workspace: unfreeze it first": {"one": "{0} take congelato con il suo spazio: prima scongelalo", "many": "{0} take congelati con il loro spazio: prima scongelalo", "other": "{0} take congelati con il loro spazio: prima scongelalo"},
++"{#0} takes frozen with their workspace: unfreeze it first": {"one": "{0} take congelato con il suo spazio: prima scongelalo", "many": "{0} take congelati con il loro spazio: prima scongelalo", "other": "{0} take congelati con il loro spazio: prima scongelalo"},
++"“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» è congelato: prima scongelalo (⋯ accanto al nome)",
++"frozen with its workspace: unfreeze it first": "congelato con il suo spazio: prima scongelalo"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index eb4ac51..2955216 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2467,5 +2467,21 @@ RuachI18n.add("ru", {
+ "its repository has no workspace.json yet": "в его репозитории ещё нет workspace.json",
+ "the repository asks for access first": "репозиторий сперва просит доступ",
+ "Hugging Face does not answer: {0}": "Hugging Face не отвечает: {0}",
+-"Not on Hugging Face yet": "На Hugging Face ещё нет"
++"Not on Hugging Face yet": "На Hugging Face ещё нет",
++"Frozen: its takes are heard, never changed": "Заморожено: семплы можно слушать, но не менять",
++"Unfreeze": "Разморозить",
++"Frozen with “{0}”": "Заморожен вместе с «{0}»",
++"Freeze…": "Заморозить…",
++"heard, never changed": "слушать, но не менять",
++"Freeze “{0}”?": "Заморозить «{0}»?",
++"Its takes stay as they are: they are heard and read, never changed, moved or thrown away, and they leave All Workspaces and the search (a take also in a workspace that is not frozen stays there). The workspace greys out; Unfreeze in its ⋯ menu brings everything back.": "Его семплы останутся как есть: их можно слушать и читать, но не менять, не перемещать и не выбрасывать, и они уходят из «Все пространства» и из поиска (семпл, который есть и в незамороженном пространстве, остаётся там). Пространство сереет; «Разморозить» в его меню ⋯ возвращает всё.",
++"Freeze": "Заморозить",
++"Frozen: “{0}”": "Заморожено: «{0}»",
++"Unfrozen: “{0}”": "Разморожено: «{0}»",
++"Frozen with its workspace": "Заморожен вместе с пространством",
++"unfreeze it to act on the take": "разморозь его, чтобы что-то делать с семплом",
++"{#0} take frozen with its workspace: unfreeze it first": { "one": "{0} семпл заморожен вместе со своим пространством: сперва разморозь его", "few": "{0} семпла заморожены вместе со своим пространством: сперва разморозь его", "many": "{0} семплов заморожены вместе со своим пространством: сперва разморозь его", "other": "{0} семпла заморожены вместе со своим пространством: сперва разморозь его" },
++"{#0} takes frozen with their workspace: unfreeze it first": { "one": "{0} семпл заморожен вместе со своим пространством: сперва разморозь его", "few": "{0} семпла заморожены вместе со своим пространством: сперва разморозь его", "many": "{0} семплов заморожены вместе со своим пространством: сперва разморозь его", "other": "{0} семпла заморожены вместе со своим пространством: сперва разморозь его" },
++"“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» заморожено: сперва разморозь его (⋯ рядом с именем)",
++"frozen with its workspace: unfreeze it first": "заморожен вместе с пространством: сперва разморозь его"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 1bcea9d..3f47dd8 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2462,5 +2462,21 @@ RuachI18n.add("uk", {
+ "its repository has no workspace.json yet": "у його репозиторії ще немає workspace.json",
+ "the repository asks for access first": "репозиторій спершу просить доступ",
+ "Hugging Face does not answer: {0}": "Hugging Face не відповідає: {0}",
+-"Not on Hugging Face yet": "На Hugging Face ще немає"
++"Not on Hugging Face yet": "На Hugging Face ще немає",
++"Frozen: its takes are heard, never changed": "Заморожено: семпли можна слухати, але не змінювати",
++"Unfreeze": "Розморозити",
++"Frozen with “{0}”": "Заморожено разом із «{0}»",
++"Freeze…": "Заморозити…",
++"heard, never changed": "слухати, але не змінювати",
++"Freeze “{0}”?": "Заморозити «{0}»?",
++"Its takes stay as they are: they are heard and read, never changed, moved or thrown away, and they leave All Workspaces and the search (a take also in a workspace that is not frozen stays there). The workspace greys out; Unfreeze in its ⋯ menu brings everything back.": "Його семпли лишаться як є: їх можна слухати й читати, але не змінювати, не переміщувати й не викидати, і вони зникають з «Усі простори» та з пошуку (семпл, що є і в незамороженому просторі, лишається там). Простір сіріє; «Розморозити» в його меню ⋯ повертає все.",
++"Freeze": "Заморозити",
++"Frozen: “{0}”": "Заморожено: «{0}»",
++"Unfrozen: “{0}”": "Розморожено: «{0}»",
++"Frozen with its workspace": "Заморожено разом із простором",
++"unfreeze it to act on the take": "розморозь його, щоб діяти з семплом",
++"{#0} take frozen with its workspace: unfreeze it first": {"one": "{0} семпл заморожено разом зі своїм простором: спершу розморозь його", "few": "{0} семпли заморожено разом зі своїм простором: спершу розморозь його", "many": "{0} семплів заморожено разом зі своїм простором: спершу розморозь його", "other": "{0} семпла заморожено разом зі своїм простором: спершу розморозь його"},
++"{#0} takes frozen with their workspace: unfreeze it first": {"one": "{0} семпл заморожено разом зі своїм простором: спершу розморозь його", "few": "{0} семпли заморожено разом зі своїм простором: спершу розморозь його", "many": "{0} семплів заморожено разом зі своїм простором: спершу розморозь його", "other": "{0} семпла заморожено разом зі своїм простором: спершу розморозь його"},
++"“{0}” is frozen: unfreeze it first (⋯ beside its name)": "«{0}» заморожено: спершу розморозь його (⋯ біля назви)",
++"frozen with its workspace: unfreeze it first": "заморожено разом із простором: спершу розморозь його"
+ });
+-- 
+2.43.0
+

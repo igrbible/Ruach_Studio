@@ -1,0 +1,30 @@
+From f68767a6904c5d6d64f789ca8620d50612bcc434 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 22:26:31 -0600
+Subject: [PATCH 1103/1177] The MIDI reader lands right after a SysEx: "p +=
+ rv()" read p before rv() moved it, and every time after was garbage (1145)
+
+Found by the lab's port of fromMidi, compared with the page on 3,336 cases.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-abc.js | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/console/heresy-abc.js b/tools/console/heresy-abc.js
+index 6c83ff4..895da2a 100644
+--- a/tools/console/heresy-abc.js
++++ b/tools/console/heresy-abc.js
+@@ -283,7 +283,7 @@
+           if (mt === 0x51 && tempo === null) tempo = Math.round(60000000 / ((data[0] << 16) | (data[1] << 8) | data[2]));
+           if (mt === 0x58 && meter === null) meter = [data[0], Math.pow(2, data[1])];
+           if (mt === 0x59 && key === null) key = { sf: data[0] > 127 ? data[0] - 256 : data[0], minor: data[1] === 1 };
+-        } else if (st === 0xf0 || st === 0xf7) { p += rv(); }
++        } else if (st === 0xf0 || st === 0xf7) { var sl = rv(); p += sl; }   // the length first: "p += rv()" read p before rv() moved it
+         else if (type === 0x90 || type === 0x80) {
+           var n = bytes[p++], vel = bytes[p++];
+           if (type === 0x90 && vel > 0) on[n] = now;
+-- 
+2.43.0
+

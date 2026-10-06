@@ -1,0 +1,377 @@
+From 2f7c1acd19953d3ab3060d8a85aa14654480b966 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 2 Oct 2026 11:09:05 -0600
+Subject: [PATCH 1080/1177] =?UTF-8?q?A=20short=20bar=20with=20the=20rest?=
+ =?UTF-8?q?=20behind=20=E2=98=B0=20(1092),=20the=20epochs=20worth=20hearin?=
+ =?UTF-8?q?g=20first=20lit=20green=20(1093),=20the=20server=20log=20in=20e?=
+ =?UTF-8?q?very=20room=20(1094),=20an=20instrumental=20score=20adapter=20w?=
+ =?UTF-8?q?ith=20words=20to=20sing=20said=20(1095)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  48 +++++++++++++++++++++++++--
+ tools/console/app.js          |  60 ++++++++++++++++++++++++++++++++--
+ tools/console/heresy-train.js |  39 ++++++++++++++++++----
+ tools/console/index.html      |  50 ++++++++++++++++++++--------
+ tools/console/loras.js        |   8 +++++
+ tools/public/index.html.gz    | Bin 396201 -> 399604 bytes
+ 6 files changed, 182 insertions(+), 23 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3b102a5..3766a59 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2754,7 +2754,7 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .tr-plot svg { display: block; width: 100%; height: 150px; cursor: crosshair; }
+ .tr-plot line.g { stroke: var(--line-soft, var(--line)); stroke-width: 1; vector-effect: non-scaling-stroke; }
+ .tr-plot line.t { stroke: var(--dim); stroke-width: 1; opacity: .55; vector-effect: non-scaling-stroke; }
+-.tr-plot line.t.on { stroke: var(--good); stroke-width: 2; opacity: 1; }
++.tr-plot line.t.on { stroke: var(--amber); stroke-width: 2; opacity: 1; }
+ .tr-plot line.t.sel { stroke: var(--amber); stroke-width: 1.5; opacity: 1; stroke-dasharray: 3 3; }
+ .tr-plot line.cur { stroke: var(--amber); stroke-width: 1; vector-effect: non-scaling-stroke; }
+ .tr-plot path.raw { fill: none; stroke: var(--muted); stroke-width: 1; opacity: .35; vector-effect: non-scaling-stroke; }
+@@ -2764,7 +2764,7 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .tr-epochs { display: flex; flex-direction: column; gap: 8px; }
+ .tr-ehead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+ .tr-echips { display: flex; flex-wrap: wrap; gap: 4px; max-height: 120px; overflow: auto; }
+-.tr-echips .coll-chip.is-in { border-color: color-mix(in srgb, var(--good) 55%, transparent); color: var(--good); }
++.tr-echips .coll-chip.is-in { border-color: var(--amber-dim); color: var(--amber); }
+ .tr-echips .coll-chip.is-on { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); color: var(--ink); }
+ .tr-eact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px dashed var(--amber-dim); border-radius: var(--r-md); font-size: 12.5px; }
+ .tr-facts summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+@@ -2792,3 +2792,47 @@ body[data-tab="train"] .workspace { height: calc(100vh - 52px - 8px); }
+ .gpu-table td.mono { font-size: 11.5px; color: var(--muted); }
+ .gpu-table input { accent-color: var(--amber); width: 16px; height: 16px; }
+ .gpu-card .btn[hidden] { display: none !important; }
++
++/* HERESY 1092: the ☰ and what it holds, each item with its words */
++.head-more { position: relative; }
++.head-more-btn { min-width: 34px; height: 30px; padding: 0 9px; font-size: 16px; line-height: 1; }
++.head-more-pop { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; width: 300px; display: flex; flex-direction: column; gap: 10px;
++  padding: 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); box-shadow: 0 18px 40px -18px var(--shadow-lg, rgba(0,0,0,.4)); }
++.head-more-pop.is-hidden { display: none; }
++.head-more-pop .hw-strip { padding-bottom: 8px; border-bottom: 1px solid var(--line-soft, var(--line)); }
++.head-more-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 11px; letter-spacing: .1em;
++  text-transform: uppercase; color: var(--dim); }
++.head-more-row select { width: 100%; }
++.head-more-items { display: flex; flex-direction: column; gap: 4px; }
++.head-more-items .btn, .head-more-items .menu-wrap { width: 100%; }
++.head-more-items .btn { justify-content: flex-start; gap: 10px; height: 32px; padding: 0 10px; }
++.head-more-items .btn.icon-only::after { content: attr(aria-label); font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
++.head-more-items .theme-button::after { content: "Theme"; font-size: 13px; color: var(--ink); }
++.head-more-items .menu-pop { left: auto; right: calc(100% + 8px); top: 0; }
++/* HERESY 1093: the epochs worth hearing first, green; the ones in loras/ amber with their ✓ */
++.tr-echips .coll-chip.is-cand { background: color-mix(in srgb, #3f9a4a 22%, transparent); border-color: #3f9a4a; color: var(--ink); font-weight: 600; }
++.tr-plot line.t.cand { stroke: #3f9a4a; stroke-width: 3; opacity: 1; }
++.tr-key-cand { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; background: color-mix(in srgb, #3f9a4a 40%, transparent); border: 1px solid #3f9a4a; }
++.tr-candsay { color: #3f9a4a; }
++
++/* HERESY 1094: the server log in every room, right above the player */
++.log-dock { position: fixed; right: 16px; bottom: calc(var(--playbar-h, 60px) + 10px); z-index: 35; width: min(600px, calc(100vw - 32px));
++  display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel);
++  box-shadow: 0 16px 36px -20px var(--shadow-lg, rgba(0,0,0,.45)); overflow: hidden; }
++body[data-tab="train"] .log-dock { bottom: 18px; }
++.log-dock-head { display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 4px; }
++.log-dock-tab { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px 6px; border: 0; background: none; color: var(--ink);
++  font: inherit; font-size: 12px; text-align: left; cursor: pointer; border-radius: var(--r-sm); }
++.log-dock-tab:hover { background: var(--hover); }
++.log-dock-tab b { flex: none; font-weight: 600; }
++.log-dock .lamp { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
++.log-dock .lamp[data-s="ready"] { background: var(--good); }
++.log-dock .lamp[data-s="bad"] { background: var(--bad); }
++.log-dock-last { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted); }
++.log-dock-last.bad { color: var(--bad); } .log-dock-last.good { color: var(--good); } .log-dock-last.srv { color: var(--patina); }
++.log-dock-acts { display: flex; align-items: center; gap: 6px; flex: none; }
++.log-dock-body { height: calc(10 * 1.5 * 11px + 16px); overflow: auto; padding: 8px 12px; border-top: 1px solid var(--line-soft, var(--line));
++  background: var(--sunk); font-size: 11px; line-height: 1.5; color: var(--muted); }
++.log-dock.is-folded { width: min(420px, calc(100vw - 32px)); }
++.log-dock.is-folded .log-dock-body, .log-dock.is-folded .log-dock-acts { display: none; }
++@media (max-width: 1150px) { .log-dock { bottom: 10px; } }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index c1bb489..c45c925 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -225,6 +225,26 @@
+       }
+     });
+   }
++  // HERESY 1092: the rest of the bar behind the ☰. Not a .menu-pop: its own menus (examples, the themes)
++  // open inside it, and closeMenus() would close it under them; it closes on a click outside or Esc
++  (function () {
++    var btn = $("headMore"), pop = $("headMorePop");
++    if (!btn || !pop) return;
++    function close() { pop.classList.add("is-hidden"); btn.setAttribute("aria-expanded", "false"); }
++    btn.addEventListener("click", function (event) {
++      event.stopPropagation();
++      var open = pop.classList.toggle("is-hidden") === false;
++      btn.setAttribute("aria-expanded", open ? "true" : "false");
++    });
++    document.addEventListener("click", function (event) {
++      if (pop.classList.contains("is-hidden") || pop.contains(event.target) || event.target === btn) return;
++      if (event.target.closest && event.target.closest(".theme-popup")) return;
++      close();
++    });
++    document.addEventListener("keydown", function (event) { if (event.key === "Escape") close(); });
++    ["openPrompt", "unloadModel", "engineToggle"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", function () { setTimeout(close, 0); }); });
++    pop.addEventListener("click", function (event) { if (event.target.closest("#exampleMenu [data-example]")) setTimeout(close, 0); });
++  })();
+   menuToggle("savePrompt", "saveMenu");
+   menuToggle("libMenuBtn", "libMenu");
+   document.addEventListener("click", function (event) {
+@@ -827,8 +847,10 @@
+       toast("Added \u201c" + word + "\u201d to the style");
+       YueLoras.repaint();
+     },
+-    styleText: function () { return $("style").value; }   // HERESY 1018: the row says when the trigger word is in
++    styleText: function () { return $("style").value; },   // HERESY 1018: the row says when the trigger word is in
++    lyricsText: function () { return $("lyrics").value; }  // HERESY 1095: an instrumental score adapter with words to sing
+   });
++  $("lyrics").addEventListener("change", function () { YueLoras.repaint(); });
+   $("style").addEventListener("change", function () { YueLoras.repaint(); });
+   all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", function () { YueLoras.repaint(); }); });
+   YueLoras.listInto($("loraCard"), $("loraCardNote"));   // the Engine panel's list, under the VAEs
+@@ -1920,6 +1942,8 @@
+     var pill = $("logState");
+     pill.textContent = LOG.connected ? "live" : "reconnecting";
+     pill.dataset.s = LOG.connected ? "ready" : "bad";
++    var lamp = $("logDockLamp");                                 // HERESY 1094
++    if (lamp) { lamp.dataset.s = LOG.connected ? "ready" : "bad"; lamp.title = LOG.connected ? "live" : "reconnecting"; }
+   }
+ 
+   // A run found still going when the backlog ends is shown as if started here.
+@@ -2195,6 +2219,19 @@
+       }
+       fragment.appendChild(row);
+     });
++    // HERESY 1094: the same rows into the dock above the player, and its folded line shows the last one
++    var dock = $("logDockBody");
++    if (dock) {
++      var dockFollow = $("logDockFollow").checked;
++      Array.prototype.forEach.call(fragment.childNodes, function (row) { dock.appendChild(row.cloneNode(true)); });
++      while (dock.childElementCount > LOG_KEEP) dock.removeChild(dock.firstChild);
++      if (dockFollow) dock.scrollTop = dock.scrollHeight;
++      var lastLine = pending[pending.length - 1];
++      if (lastLine) {
++        $("logDockLast").textContent = (lastLine.text || " ").slice(0, 160);
++        $("logDockLast").className = "log-dock-last mono " + logClass(lastLine.text, lastLine.client);
++      }
++    }
+     body.appendChild(fragment);
+     while (body.childElementCount > LOG_KEEP) body.removeChild(body.firstChild);
+     if (follow) body.scrollTop = body.scrollHeight;
+@@ -2207,7 +2244,26 @@
+       .then(function () { toast("Server log copied (" + LOG.lines.length + " lines)"); })
+       .catch(function () { toast("The browser refused clipboard access", "bad"); });
+   });
+-  $("logClear").addEventListener("click", function () { LOG.lines = []; $("logBody").textContent = ""; });
++  $("logClear").addEventListener("click", function () { LOG.lines = []; $("logBody").textContent = ""; if ($("logDockBody")) $("logDockBody").textContent = ""; });
++  // HERESY 1094: the dock: folded by default, the choice kept; Copy as Engine's; Engine opens the whole log
++  (function () {
++    var dock = $("logDock");
++    if (!dock) return;
++    function fold(folded) {
++      dock.classList.toggle("is-folded", folded);
++      $("logDockTab").setAttribute("aria-expanded", folded ? "false" : "true");
++      store("yue2.logDock", folded ? null : "open");
++      if (!folded && $("logDockFollow").checked) $("logDockBody").scrollTop = $("logDockBody").scrollHeight;
++    }
++    fold(recall("yue2.logDock") !== "open");
++    $("logDockTab").addEventListener("click", function () { fold(!dock.classList.contains("is-folded")); });
++    $("logDockCopy").addEventListener("click", function () { $("logCopy").click(); });
++    $("logDockEngine").addEventListener("click", function () {
++      $("engineToggle").click();
++      setTimeout(function () { var b = $("logBody"); if (b) b.scrollIntoView({ block: "center" }); }, 120);
++    });
++    $("logDockFollow").addEventListener("change", function () { if (this.checked) $("logDockBody").scrollTop = $("logDockBody").scrollHeight; });
++  })();
+   $("logFollow").addEventListener("change", scrollLogToEnd);
+ 
+   /* ------------------------------------------------------------ run chain */
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 4d30a4d..92cd7f6 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -274,6 +274,30 @@
+   }
+   // a curve over the steps: the raw points faint, their running average bold, the epochs as ticks (a filled one
+   // is in loras/), the chosen epoch as a line; y labelled at its top, middle and bottom
++  // HERESY 1093 (Viktor, 02.10.2026): the epochs worth hearing first, read off the curves (a guess; the ear
++  // decides). At each saved epoch: the averaged sound loss (flow) and music loss (ar_ce) there. A candidate has
++  // the sound half settled (its average within 15 % of the run's span above its floor, the first fast fall left
++  // out) and the music half not yet knowing the songs by heart (ar_ce 0.3 or more). Lit: the first such epoch,
++  // the one with the lowest sound loss, and the last before the music half learns the songs by heart.
++  function candidates(r) {
++    var ser = r.series || {}, f = (ser.flow || ser.loss || {}).curve, c = (ser.ar_ce || {}).curve;
++    if (!f || f.length < 8) return {};
++    var fa = ema(f, 0.08), ca = c && c.length > 1 ? ema(c, 0.08) : null;
++    var at = function (curve, step) { var v = curve[0][1]; curve.forEach(function (p) { if (p[0] <= step) v = p[1]; }); return v; };
++    var skip = Math.floor(fa.length * 0.05), vals = fa.slice(skip).map(function (p) { return p[1]; });
++    var lo = Math.min.apply(null, vals), span = (Math.max.apply(null, vals) - lo) || 1e-9;
++    var ok = (r.checkpoints || []).filter(function (k) { return k.step && k.epoch != null; })
++      .sort(function (a, b) { return a.step - b.step; })
++      .map(function (k) { return { k: k, flow: at(fa, k.step), ce: ca ? at(ca, k.step) : null }; })
++      .filter(function (x) { return x.flow <= lo + 0.15 * span && (x.ce == null || x.ce >= 0.3); });
++    var out = {};
++    if (!ok.length) return out;
++    var add = function (x, why) { out[x.k.file] = (out[x.k.file] ? out[x.k.file] + "; " : "") + why + " (flow " + x.flow.toFixed(3) + (x.ce != null ? ", ar_ce " + x.ce.toFixed(2) : "") + ")"; };
++    add(ok[0], "the first with the sound settled");
++    add(ok.reduce(function (b, x) { return x.flow < b.flow ? x : b; }, ok[0]), "the lowest sound loss");
++    add(ok[ok.length - 1], "the last before the music half knows the songs by heart");
++    return out;
++  }
+   function chart(key, ser, r, title, say) {
+     var s = ser[key];
+     if (!s || !s.curve || s.curve.length < 2) return "";
+@@ -284,9 +308,10 @@
+     var x = function (st) { return L + (W - L) * st / last; }, y = function (v) { return H - 6 - (H - 14) * (v - lo) / (hi - lo); };
+     var path = function (pts) { return pts.map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" "); };
+     var grid = [0, 0.5, 1].map(function (f) { var v = lo + (hi - lo) * (1 - f), yy = y(v); return '<line class="g" x1="0" x2="' + W + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>'; }).join("");
++    var cand = candidates(r);
+     var ticks = (r.checkpoints || []).filter(function (k) { return k.step; }).map(function (k) {
+       var xx = x(k.step).toFixed(1);
+-      return '<line class="t' + (k.lora ? " on" : "") + (k.file === state.epoch ? " sel" : "") + '" x1="' + xx + '" x2="' + xx + '" y1="' + (k.file === state.epoch ? 0 : H - 6) + '" y2="' + H + '"/>';
++      return '<line class="t' + (k.lora ? " on" : "") + (cand[k.file] ? " cand" : "") + (k.file === state.epoch ? " sel" : "") + '" x1="' + xx + '" x2="' + xx + '" y1="' + (k.file === state.epoch ? 0 : cand[k.file] ? H - 18 : H - 6) + '" y2="' + H + '"/>';
+     }).join("");
+     var labels = [hi, (hi + lo) / 2, lo].map(function (v, i) { return '<span style="top:' + [2, 46, 90][i] + '%">' + v.toFixed(v < 10 ? 3 : 2) + "</span>"; }).join("");
+     return '<figure class="tr-chart" data-key="' + key + '" data-last="' + last + '" data-lo="' + lo + '" data-hi="' + hi + '">' +
+@@ -309,7 +334,7 @@
+     var ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce, memo = ar != null && ar < 0.3;
+     var bytes = cks.reduce(function (s, c) { return s + (c.bytes || 0); }, 0);
+     var tile = function (k, v, hint) { return '<div class="tr-tile"' + (hint ? ' data-tip="' + esc(hint) + '"' : "") + "><span>" + k + "</span><b>" + v + "</b></div>"; };
+-    var pick = cks.filter(function (c) { return c.file === state.epoch; })[0];
++    var pick = cks.filter(function (c) { return c.file === state.epoch; })[0], cand = candidates(r);
+     el.innerHTML =
+       '<div class="tr-rhead"><div class="tr-rname"><b>' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
+         (r.kind ? '<span class="tag">' + esc(r.kind) + "</span>" : "") + '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach trainer" : "AI-Toolkit") + "</span>" +
+@@ -343,13 +368,15 @@
+           "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.") +
+       "</div>" +
+       (cks.length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
+-          '<span class="row-hint">pick one: into Create’s LoRAs, out of them, or as a file; a filled tick on the curves is one in loras/</span></div>' +
++          '<span class="row-hint">pick one: into Create’s LoRAs, out of them, or as a file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
+         '<div class="tr-echips">' + cks.map(function (c) {
+-          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="step ' + c.step + " · " + esc(when(c.saved)) +
+-            (c.lora ? " · in loras/" : "") + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
++          var why = cand[c.file];
++          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="step ' + c.step + " · " + esc(when(c.saved)) +
++            (c.lora ? " · in loras/" : "") + (why ? " · worth hearing first: " + esc(why) : "") + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
+         }).join("") + "</div>" +
+         (pick ? '<div class="tr-eact"><span><b>' + (pick.epoch != null ? "Epoch " + Math.round(pick.epoch) : "The final file") + "</b> · step " + pick.step + " · " + esc(when(pick.saved)) + " · " + gb(pick.bytes) +
+-            (pick.lora ? ' · in Create as <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") + "</span>" +
++            (pick.lora ? ' · in Create as <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") +
++            (cand[pick.file] ? ' · <span class="tr-candsay">worth hearing first: ' + esc(cand[pick.file]) + "</span>" : "") + "</span>" +
+             '<span class="spacer"></span>' +
+             (pick.lora ? '<button type="button" class="btn ghost small" data-unpub="' + esc(pick.lora.split("/").pop()) + '">Out of loras/</button>'
+                        : (pick.epoch != null ? '<button type="button" class="btn small primary" data-pub="' + esc(pick.file) + '">Into loras/ → Create</button>' : "")) +
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 4fd3210..faf94aa 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -53,15 +53,9 @@
+   <div class="spacer"></div>
+ 
+   <div class="head-actions">
+-    <dl class="hw-strip" id="hwStats"></dl>
+-    <select id="modelPick" class="theme-pick" aria-label="Model" data-tip="The copy of the model the engine loads (from the next song).
+-BF16 · 7.2 GB · the full release
+-Q8_0 · 3.8 GB · near lossless
+-Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
++    <!-- HERESY 1092 (Viktor, 02.10.2026): a short bar at any zoom: day/night, save, clear, the DAW; the rest
++         (and what comes later) behind the ☰, each with its words -->
+     <button type="button" class="btn ghost small day-night" id="dayNight" aria-label="Day, night or as the system">☀</button>
+-    <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
+-    <button class="btn ghost small" id="openPrompt" data-icon="open" data-tip="Open a prompt saved as JSON or YAML">Open</button>
+-    <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
+     <div class="menu-wrap">
+       <button class="btn ghost small" id="savePrompt" data-icon="save" data-tip="Save the form as a prompt file" aria-haspopup="true" aria-expanded="false">Save</button>
+       <div class="menu-pop is-hidden" id="saveMenu" role="menu">
+@@ -69,14 +63,29 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+         <button type="button" role="menuitem" data-save="yaml">Prompt as YAML</button>
+       </div>
+     </div>
+-    <div class="menu-wrap">
++    <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
++    <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="openDAW: the DAW beside the studio, in a new tab (a take goes there as Download → DAWproject; there File → Import → DAWproject…). Shift-click: its address">DAW</button>
++    <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
++    <div class="menu-wrap head-more">
++      <button type="button" class="btn ghost small head-more-btn" id="headMore" aria-haspopup="true" aria-expanded="false" aria-label="More" data-tip="More: the card and its memory, the model, themes, prompts, examples, the engine">&#9776;</button>
++      <div class="head-more-pop is-hidden" id="headMorePop" role="menu" aria-label="More">
++        <dl class="hw-strip" id="hwStats"></dl>
++        <label class="head-more-row"><span>Model</span><select id="modelPick" class="theme-pick" aria-label="Model" data-tip="The copy of the model the engine loads (from the next song).
++BF16 · 7.2 GB · the full release
++Q8_0 · 3.8 GB · near lossless
++Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
++        <div class="head-more-items">
++          <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
++          <button class="btn ghost small" id="openPrompt" data-icon="open" data-tip="Open a prompt saved as JSON or YAML">Open</button>
++          <div class="menu-wrap">
+       <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
+       <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
+     </div>
+-    <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
+-    <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now" disabled>Unload model</button>
+-    <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="openDAW: the DAW beside the studio, in a new tab (a take goes there as Download → DAWproject; there File → Import → DAWproject…). Shift-click: its address">DAW</button>
+-    <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
++          <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now" disabled>Unload model</button>
++          <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
++        </div>
++      </div>
++    </div>
+   </div>
+ </header>
+ 
+@@ -1322,6 +1331,21 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select>
+   <audio id="audio" preload="auto"></audio>
+ </footer>
+ 
++<!-- HERESY 1094 (Viktor, 02.10.2026): the server log in every room, right above the player: folded to one line
++     (the last thing the engine said) until unfolded to ten; the same stream as Engine's log, not a second one -->
++<aside class="log-dock is-folded" id="logDock" aria-label="Server log">
++  <div class="log-dock-head">
++    <button type="button" class="log-dock-tab" id="logDockTab" aria-expanded="false" data-tip="The server log, in every room: click to unfold or fold">
++      <span class="lamp" id="logDockLamp"></span><b>Server log</b><span class="log-dock-last mono" id="logDockLast">connecting</span></button>
++    <span class="log-dock-acts">
++      <label class="check small-check"><input type="checkbox" id="logDockFollow" checked /> <span>Follow</span></label>
++      <button type="button" class="btn ghost small" id="logDockCopy">Copy</button>
++      <button type="button" class="btn ghost small" id="logDockEngine" data-tip="The whole log, in Engine">Engine</button>
++    </span>
++  </div>
++  <div class="log-dock-body mono" id="logDockBody" role="log" aria-live="off"></div>
++</aside>
++
+ <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+ 
+ <!-- the score engraver loads beside the page instead of in front of it (app.js: renderScore) -->
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index d68731d..bccdf4a 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -154,6 +154,10 @@
+       '<output data-tip="Double-click to type it">' + (on ? fmt(value, 2) : "—") + "</output></label>";
+   }
+ 
++  function sungLyrics() {        // words to sing: a line that is neither a [section] nor a (cue)
++    var text = S.opts.lyricsText ? S.opts.lyricsText() : "";
++    return String(text).split("\n").some(function (l) { l = l.trim(); return l && !/^\[.*\]$/.test(l) && !/^\(.*\)$/.test(l) && /\p{L}/u.test(l); });
++  }
+   function hints() {
+     var notes = [];
+     if (!S.catalog.length) return ["No LoRAs found. Put .safetensors files (or folders, or links to them) in the app's loras/ folder."];
+@@ -168,6 +172,10 @@
+       if (e.mode && e.mode !== "direct" && cot === "off") notes.push(name + " was trained with a score (" + e.mode + " mode).");
+       if (has(e, "ar") && overLimit(e, "ar", c.ar)) notes.push("\u26a0 " + name + ": " + fmt(c.ar, 2) + " on the music half is past its limit " + zones(e, "ar").limit + ": the score tends to fail after 70-200 tokens.");
+       if (has(e, "nar") && overLimit(e, "nar", c.nar)) notes.push("\u26a0 " + name + ": " + fmt(c.nar, 2) + " on the sound half is past its limit " + zones(e, "nar").limit + ".");
++      // HERESY 1095 (Viktor, 02.10.2026, by ear; the notes agreed): an instrumental score adapter plans scores
++      // without a vocal line: at 1.00 the take had 1 note in 127 vocal bars, spoken over two looping bars
++      if (has(e, "ar") && /instrumental/i.test(c.id) && c.ar > 0.5 && cot !== "off" && sungLyrics())
++        notes.push("\u26a0 " + name + " plans instrumental scores: at " + fmt(c.ar, 2) + " with words to sing, the score loses its vocal line (measured at 1.00: 1 note in 127 vocal bars, the music looping). Keep it low, 0.3\u20130.5, for a sung song.");
+     });
+     if (S.choice.length > 1) notes.push(S.choice.length + " stacked: their changes add up.");
+     if (arStacked() > 1 && arTotal() > AR_TOTAL.limit + 1e-9) notes.push("\u26a0 The music half carries " + fmt(arTotal(), 2) + " together, past the shared ceiling " +
+-- 
+2.43.0
+
