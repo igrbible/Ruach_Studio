@@ -136,6 +136,10 @@ def page_for(code, template, units, catalog):
         last = e
     parts.append(template[last:])
     page = "".join(parts)
+    # the guard (the units once stood on a template changed after they were found, and the page fell apart): before its
+    # placeholders are filled, the English page is the template itself, byte for byte
+    if code == "en" and page != template:
+        sys.exit("the English page drifted from its template: nothing written")
     deep = code != "en"
     links = "".join('<a href="%s" lang="%s" hreflang="%s"%s>%s</a>' % ("/" if c == "en" else "/%s/" % c, c, c,
                     ' aria-current="page"' if c == code else "", name) for c, name in LANGS)
@@ -184,10 +188,6 @@ if __name__ == "__main__":
     for code, _ in built:
         catalog = json.load(open(here / "i18n" / (code + ".json"), encoding="utf-8")) if code != "en" else {}
         page, missing = page_for(code, template, units, catalog)
-        # the guard (the units once stood on a template changed after they were found, and the page fell apart): the
-        # English page, its head's placeholders aside, is the template itself, byte for byte
-        if code == "en" and page[page.find("<body>"):] != template[template.find("<body>"):]:
-            sys.exit("the English page drifted from its template: nothing written")
         out = here / ("index.html" if code == "en" else code + "/index.html")
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(page, encoding="utf-8")
