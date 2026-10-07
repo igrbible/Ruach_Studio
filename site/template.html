@@ -49,7 +49,7 @@
          -webkit-font-smoothing: antialiased; }
   a { color: var(--amber); text-decoration: none; }
   a:hover { text-decoration: underline; text-underline-offset: 3px; }
-  img { max-width: 100%; display: block; }
+  img { max-width: 100%; height: auto; display: block; }   /* HERESY 1168: a picture with its size given keeps its shape when it shrinks */
   code { font: 500 .88em "Noto Sans Mono", ui-monospace, monospace; background: var(--wash); padding: .1em .35em; border-radius: 4px; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
   @media (max-width: 600px) { .wrap { padding: 0 16px; } body { font-size: 16px; } }
