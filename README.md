@@ -228,6 +228,9 @@ machine, and if one eats your files, that is on you. Read before you run.
 - **A voice's kind in the Trainer**: measured on speech and on singing, shown beside the set, with a name to give it.
 - **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its
   services itself.
+- **A score editor as a DAW has one**: a piano roll, a chord lane, the lyrics over the notes, sections copied and
+  moved, a MIDI keyboard to play ideas in; [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System)
+  (Apache-2.0) shows the way.
 - **Native plugins** for REAPER, Waveform and Bitwig, once the studio has found its people.
 
 Issues and pull requests are welcome: they are read and answered.

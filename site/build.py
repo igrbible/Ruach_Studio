@@ -150,6 +150,8 @@ def page_for(code, template, units, catalog):
             .replace("{{LANG}}", code.upper()).replace("{{LANGS}}", links).replace("{{ALTERNATES}}", alternates)
             .replace("{{FIRST_VISIT}}", FIRST_VISIT if code == "en" else ""))
     page = page.replace('content="assets/og.jpg"', 'content="%s/assets/og.jpg"' % SITE)
+    # Viktor 06.10.2026: «внешние ссылки сделай с таргетом _blank»: a link out of the site opens a new tab
+    page = re.sub(r'<a (?![^>]*target=)([^>]*href="https?://)', r'<a target="_blank" rel="noopener" \1', page)
     if deep:
         page = re.sub(r'((?:src|href)=")assets/', r"\1../assets/", page)
     return page, missing

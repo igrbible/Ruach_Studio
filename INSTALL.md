@@ -26,7 +26,7 @@ Ubuntu → 24.04), the `cuda-toolkit-12-8` package.
 ## Install
 
 ```bash
-git clone <the repository's address> Ruach_Studio && cd Ruach_Studio
+git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_Studio
 
 ./lab/install-venv.sh      # Python: torch for CUDA 12.8 and the studio's packages, in .venv (about 8 GB, a few minutes)
 ./fetch-models.sh          # every model the studio uses, pinned and checked (asks before the big ones)
