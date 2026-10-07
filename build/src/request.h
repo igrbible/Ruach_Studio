@@ -110,6 +110,7 @@ struct Yue2Request {
     bool                          plan_only;  // false; stop after the score
     bool                          score_guard;  // true; a broken score stops the run before the music (HERESY 1087)
     std::string                   parent;     // "" or the library take this re-renders
+    std::string                   decode_from;  // "" or a take whose kept latents another decoder makes again (HERESY 1168)
 };
 
 // fills every field with its default

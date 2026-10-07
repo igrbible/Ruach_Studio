@@ -2,7 +2,7 @@ From 76329a2059e2384bb04308a5314bee21baf0b7ab Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 01:27:15 -0600
-Subject: [PATCH 1037/1179] Regenerate from here: semantic_keep keeps a take up
+Subject: [PATCH 1037/1198] Regenerate from here: semantic_keep keeps a take up
  to a moment, the music goes on anew
 
 A request may carry semantic_keep (the start of a take music codes). The music stage continues

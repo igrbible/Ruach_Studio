@@ -36,7 +36,7 @@ The rooms open the bar; the logo stands in its middle; on the right, the workspa
 - **Workspace**: the workspace in hand. The takes list shows only it, and every new take lands in it. *All Workspaces* shows everything. Where the bar is narrow (the logo without its words), the word *Workspace* goes too; the box stays.
 - **EN** (the language's two letters): the page in another language, kept with your settings: English, Русский, Українська, Беларуская, Ελληνικά, Español, Italiano, each named in its own words. Numbers and dates follow the language, and this guide opens in it.
 - **☀ / ☾**: day, night, or as the system says.
-- **Save** a prompt (the whole form) as JSON or YAML; **Clear** the form.
+- **Save** a prompt (all that Generate would send) as JSON or YAML, and **Open** it again; **Clear** the words (title, style, lyrics, score, seeds) and keep the rest, or begin a **New song** (the mode, sampling, sliders and LoRAs back to the defaults too; *Sound and output* stays). **Open** says what of a file the form could not take in, and what it holds instead.
 - **DAW**: the way out of the studio. Either the mixed track as it is (WAV, FLAC, MP3), or the whole take into your own DAW, where the rest happens outside the studio. The page finds REAPER, Waveform and Bitwig on the studio's machine, or you name yours. Any take goes out from its menu (right-click it): *Export to DAW → REAPER project* or *DAWproject* (Waveform, Bitwig, Studio One, Cubase), your own DAW first; the DAW tab of this guide says what is inside.
 - **?**: this guide, opened on the room you are in.
 - **☰**: the rest. The card and its memory, the model copy, themes, opening a saved prompt, examples, unloading the model, the Engine room and this guide.
@@ -89,9 +89,25 @@ The ♪ beside the style opens a table of 200 instruments the studio probed: the
 - Section tags on their own lines; YuE2 knows `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Inst]`, `[Outro]`.
 - **Text profile**: paste a whole text, pick a profile, *Apply*: its rules (cleanup, phonetics) and its shape (`[Intro]`, `[Verse]` at blank lines, `[Interlude]` after long paragraphs) make it ready to read. *Undo* brings the text back. Profiles are made in the Writer.
 
+### The lyrics' meter and the phonetic hand
+
+- **The meter** beside the lyrics: each line's syllables as a bar against its group's ruler — verse and bridge one group, the pre-chorus its own, the chorus its own, any other section its own. A pause, a break, a silence, an interlude, a prelude or an instrumental cue inside a sung section opens no group: its name stands dimmed beside it and the section's ruler goes on. Tags are never counted: a line of tags alone (`[Break] [Silence]`) counts as none, a tag inside a line is left out. The ruler stands at the group's usual length; within a syllable the bar is green, two or three off amber, more red. What is in round brackets is drawn hatched after the bar: YuE2 may sing it. Under the box: the lyrics' characters, syllables and lines, the section tags, the brackets and the phonetic hand; the browser's spelling check in the lyrics' language (switched off there); a box drawn taller by hand keeps its height until *Auto height*.
+- **Stress marks astray**: a mark off a vowel — at a line's start, after a space or a sign, on a consonant, a second one on the same letter, or a spacing ´ in its place — shows a red button under the box (*Stress marks off a vowel*) and a mark before the line's count; the button selects each one in turn. A word with two marks gets an amber one: meant, or a slip? In the count a stress mark is no syllable; ע and a Latin vowel inside a Russian word are. A syllable is one vowel sound, one note, counted by each language's rules: one vowel letter in Russian, Ukrainian and Belarusian (and as the meter measures the time a line takes, a word with no vowel — с, в, к, з, й, ў — and a stop closed against an affricate inside a word — глу-п-цо́в — take a beat of their own, drawn lighter: «Я же вижу глупцо́в с приду́рческим планом» is 12 syllables and 2 such beats, 14); in Greek αι, ει, οι, ου, αυ, ευ are one (a diaeresis or the accent parts them: τσά-ι); in Spanish and Italian a weak i or u joins its neighbour (cie-lo, cuo-re), two strong vowels are two (po-e-ta); in English a silent final e is none (make, but ta-ble); Hebrew counts its vowel points; Chinese, Japanese and Korean one sign each. Latin words count as English, Spanish or Italian: by the style's word for the language, else by the lyrics' own small words.
+- **Ctrl+F** in the lyrics or the style (and in the Writer's boxes) finds in that box alone: Enter and Shift+Enter go through the matches, Esc from the find field puts the cursor back with the match selected; from the box itself (clicked into elsewhere) it closes the bar and leaves the cursor where it is, and words typed there meanwhile do not move the view. A stress mark is not looked for, ё is е, and о and а find ע and the Latin o and a too.
+- **Tags under a «[»**: a «[» typed at a line's start in the lyrics (the Creator's or the Writer's) opens the section tags, as a code editor offers its words: Verse, Chorus, Pre-Chorus, Bridge, Interlude, Break first, then Intro, Outro, END, then the rest. Letters typed after it narrow the list (in a Russian or Ukrainian layout too), a number numbers the tag (`v2` is `[Verse 2]`), and lyrics that number their verses are offered the next one. ↑ ↓ choose, Enter or Tab puts the tag on a line of its own (Ctrl+Z takes it back), Esc or `]` closes the list. Intro, Outro and END already in the lyrics stand last, dimmed, with their line. Ctrl+Space opens the list, and at a line's start types the «[» itself.
+- **The phonetic hand** (Viktor's, from SUNO; YuE2 follows it as well):
+  - **A stress mark** (the combining acute, U+0301) after a vowel: `обе́щано`, `сули́т`. It holds in more than 95 % of lines.
+  - **A capital stressed vowel** pushes the stress where the rhyme wants it, against the dictionary: `базилиО́`.
+  - **ע (ayin) inside a Russian word** sings as a soft о/а, as living speech says an unstressed о: `кעмо́рка`, `пעле́но`, `Ка́рлע`. It also brakes rap that runs faster and faster.
+  - **A Latin o inside a Russian word** sings a hard, open o where the model would say а: `Кo дну`.
+  - **A stretched vowel** (`о-о-о`, `БУ… РА… ТИ… НО`) holds a note; where the music has room for it, not on every line.
+  - **[Interlude] and [Break]** between parts make pauses in rap and slow down speech that keeps speeding up (not always).
+  - **Round brackets** may be sung (the first Buratino takes sang them): an echo, a backing line; a stage direction in brackets can come out too.
+  - **A Hebrew word with its vowel points** (`רוּחַ`) the model says better than in transliteration.
+
 ### VAE, sliders and LoRAs
 
-- **VAE** turns the written song into sound: **Standard** (the best sound), **Legacy** (the benchmark one), **Blend** (a mix of the two, an add-on). A finished take can add another decode later from its own page.
+- **VAE** turns the written song into sound: **Standard** (the best sound), **Legacy** (the benchmark one), **Blend** (a mix of the two, an add-on). A finished take can add another decode later from its own page. It is chosen in the **☰** menu, under the model, for the songs to come; a take decodes again with another from its card in seconds (from rc2 every take keeps its latents; one made before renders its sound again).
 - **Sliders**: genre and voice shapers applied while the music is written; 0 is off, 1 is full.
 - **LoRAs**: adapters for the music half, the sound half, or both, each with its own strength.
 
@@ -130,10 +146,10 @@ Every strength sits on a **road**: green is safe, yellow is its limit, red is pa
 The defaults are tuned. The three **shape** rows (Composition, Performance, Style) move the knobs together in five steps; the knobs themselves are below.
 
 - **Score planner** and **Music tokens**: temperature, top-p, top-k, repetition penalty, penalty window.
-- **Min tokens** and **Max tokens** are **locked** against a stray edit: click the 🔒 beside the name to change them, and again to lock them. The floors are fuses: a score may not end before 200 tokens, the music not before 750 (30 seconds; a shorter requested length lowers it to that length).
+- **Min tokens** and **Max tokens** are **locked** against a stray edit: click the 🔒 beside the name to change them, and again to lock them. The floors are fuses: a score may not end before 200 tokens, the music not before 750 (30 seconds; a shorter requested length lowers it to that length). The music's maximum shows as **Max length**, in time (25 tokens a second), with no lock: it is the song's length at most, set here only (Sound and output has no length field).
 - Every knob is held inside sane bounds; a value past them is pulled back, and the page says so.
 - **Guidance (CFG)**: 1.6 by default in every mode.
-- **ODE steps** and **Solver** for the sound half; **Max length** in seconds; **Sound variations** renders the same music 1 to 9 times with different sound; **Format**: WAV 24-bit, 16-bit, 32-bit float or MP3.
+- **Denoising steps** and **Solver** for the sound half (*Reset output* puts both back); **Sound variations** renders the same music 1 to 9 times with different sound; **Format**: WAV 24-bit, 16-bit, 32-bit float or MP3.
 
 ### Plan score only, and Generate
 
@@ -173,6 +189,7 @@ Every song can live in the Writer as a document: its **style**, **lyrics**, **no
 - **Versions**: *Keep this version* at any point; *Restore this version* or take it *As a new document*.
 - **Takes made from it**: every take whose request came from this document.
 - **The song now**: title, style, the score's key, meter and tempo (the style must agree with them), the lyrics; *Edit in the Creator*.
+- **Export all** (the disk) and **Import** (the folder): the whole notebook in one file for a backup, every document with its versions, the takes made from it and the trash; an import brings in what is missing, leaves the same alone and puts a document that differs beside its namesake as a copy: nothing is written over.
 
 ### Text profiles
 

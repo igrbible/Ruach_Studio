@@ -1,0 +1,324 @@
+From a9301e23a946866b20bb8b91cd81db30170445ac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 22:25:56 -0600
+Subject: [PATCH 1181/1198] HERESY 1168: the (i) marks without notes after them
+ (the notes are their tips' first lines); the Takes' star as our icon; a take
+ moved to the trash leaves the player
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026:
+- «Пройдись по всей Студии и везде, где есть (i), и если там после идёт микро подсказка, либо убирай её, либо в тултип»;
+  «В STYLE полосе ненужный текст подсказки. При свёртывании на две строки рубится». 23 short notes after an (i) (the
+  Model, the GPU memory preset, the theme's two faces, the chat address, the idea, Lyrics, VAE, Sliders, LoRAs, the two
+  ways into a cover, the Score, the three Shape rows, ODE steps, Solver, Max length, Sound variations, MP3 bitrate, Peak
+  clip, Style as tags) are their tips' first lines now: data-tip-head on an (i) of the markup, data-head on a label whose
+  (i) help.js puts in; the tip shows it in bold over its text. The words were the catalogs' keys already, and
+  data-tip-head is translated as data-tip is: all six languages, back and forth. The Style prompt's note goes: its box's
+  placeholder says the same.
+- «В Takes тоже Favorite звезду переведи в стандартную нашу иконку»: the star drawn as its neighbours, the thumbs; its
+  words in the tip.
+- «Когда трек "Move to Trash"… и если проигрывается в данный момент, сразу снимай его с проигрыша»: whichever way takes go
+  to the trash (a card's menu, the checked ones, a workspace deleted), the Librarian tells the page which went (hooks.trashed),
+  and the player lets the one it plays go at once.
+
+The suite: 358 passed, 0 failed (5 new checks); the mock answers the lab's trash (nothing moves there).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  2 +
+ tools/console/app.js               | 11 +++++-
+ tools/console/help.js              |  3 ++
+ tools/console/heresy-collection.js |  9 ++++-
+ tools/console/heresy-i18n.js       |  2 +-
+ tools/console/index.html           | 59 ++++++++++++++++--------------
+ 6 files changed, 56 insertions(+), 30 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index cc2f22e..7991f4c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4168,3 +4168,5 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+   top: calc((100vh - var(--playbar-h)) * .025 / var(--frame-zoom)); height: calc((100vh - var(--playbar-h)) * .95 / var(--frame-zoom));
+   border: 1px solid var(--line-strong-a); border-radius: var(--r-lg); box-shadow: 0 24px 80px var(--shadow-lg);
+ }
++/* HERESY 1168: a label's short note, its (i)'s first line now */
++.tip .tip-head { font-weight: 600; margin: 0 0 6px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 1fc9356..a19e95a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -348,6 +348,12 @@
+     tip.textContent = "";
+     if (ref) tip.appendChild(document.getElementById(ref).content.cloneNode(true));
+     else tip.textContent = target.dataset.tip;
++    if (target.dataset.tipHead) {   // HERESY 1168: a label's short note, moved off the label, is the tip's first line
++      var head = document.createElement("div");
++      head.className = "tip-head";
++      head.textContent = target.dataset.tipHead;
++      tip.insertBefore(head, tip.firstChild);
++    }
+     tip.classList.toggle("tip-rich", !!ref);
+     tip.classList.toggle("tip-big", target.dataset.tipSize === "big");   // HERESY 1167: the Style's WARNING, at 16 pt
+     tip.classList.add("is-on");
+@@ -7111,7 +7117,10 @@
+     playNow: function (t) { STATE.playZone = "collection"; playNow(t); }, updateTake: updateTake, refreshLibrary: refreshLibrary, togglePlay: togglePlay,
+     playing: function () { return { name: STATE.playerTake ? STATE.playerTake.name : "", playing: isPlaying() }; }, libraryChanged: function () { paintLibrary(); paintRate(); paintNote(); },
+     menu: function (name, x, y) { takeMenu(name, x, y); },
+-    rename: renameTake
++    rename: renameTake,
++    // HERESY 1168 (Viktor: «если проигрывается в данный момент, сразу снимай его с проигрыша»): the take playing went to the
++    // trash, so the player lets it go now, not when its file is gone from under it
++    trashed: function (names) { if (STATE.playerTake && names.indexOf(STATE.playerTake.name) >= 0) clearPlayer(); }
+   });
+   if ($("libSearch")) $("libSearch").addEventListener("input", function () { paintLibrary(); });
+ 
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 9b344dd..a89d3da 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -261,6 +261,9 @@
+     if (el.id === "modes") host = el.closest("fieldset").querySelector(".label");
+     if (host && host.querySelector(".info")) return;      // it already has one
+     var info = makeInfo(text, name);
++    // HERESY 1168 (Viktor: «везде, где есть (i), и если там после идёт микро подсказка, либо убирай её, либо в тултип»): the
++    // label's short note (its data-head, English as written) is the tip's first line; the language follows it there
++    if (host && host.dataset && host.dataset.head) info.dataset.tipHead = host.dataset.head;
+     if (!host) {
+       if (el.nextElementSibling && el.nextElementSibling.classList.contains("info")) return;
+       el.insertAdjacentElement("afterend", info);
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index e6c0566..300b7ff 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -33,7 +33,14 @@
+   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
+   function api(path, body) {
+     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+-    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
++    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
++      .then(function (b) {
++        // HERESY 1168 (Viktor 06.10.2026: «Когда трек "Move to Trash"… и если проигрывается в данный момент, сразу снимай его
++        // с проигрыша»): whichever way takes go to the trash (a card's menu, the checked ones, a workspace deleted), the page
++        // hears which went
++        if (path === "/trash" && body && body.op === "move" && b && b.moved && b.moved.length && state.hooks && state.hooks.trashed) state.hooks.trashed(b.moved);
++        return b;
++      });
+   }
+ 
+   // "*" any run, "?" one character; without either, a plain substring. Case and accents ignored.
+diff --git a/tools/console/heresy-i18n.js b/tools/console/heresy-i18n.js
+index 5ac395b..f90948e 100644
+--- a/tools/console/heresy-i18n.js
++++ b/tools/console/heresy-i18n.js
+@@ -27,7 +27,7 @@
+     { code: "es", name: "Español", html: "es" },
+     { code: "it", name: "Italiano", html: "it" }
+   ];
+-  var KEY = "yue2.lang", ATTRS = ["title", "placeholder", "aria-label", "data-tip", "alt"];
++  var KEY = "yue2.lang", ATTRS = ["title", "placeholder", "aria-label", "data-tip", "alt", "data-tip-head"];   // 1168: a tip's first line
+   var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, CODE: 1, PRE: 1, NOSCRIPT: 1, TEMPLATE: 1 };
+   // what the user wrote or the machine said, kept as it is whatever its words: take titles and styles, notes, workspace
+   // names, the logs, the Writer's documents, the cheat-sheet's style words and probe prompts (they go into a style)
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f3a8eee..29ff14d 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -496,9 +496,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+     <div class="card compute-card eg-compute" id="computeCard">
+       <h3>Compute</h3>
+-      <label class="field"><span class="label">Model <span class="info" tabindex="-1" role="img" aria-label="About the model files" data-tip-ref="tip-model"></span><em>the backbone file</em></span>
++      <!-- HERESY 1168 (Viktor 06.10.2026: «Пройдись по всей Студии и везде, где есть (i), и если там после идёт микро подсказка,
++           либо убирай её, либо в тултип»): a label's short note is its (i)'s first line now: data-tip-head on an (i) of the
++           markup, data-head on a label whose (i) help.js puts in -->
++      <label class="field"><span class="label">Model <span class="info" tabindex="-1" role="img" aria-label="About the model files" data-tip-ref="tip-model" data-tip-head="the backbone file"></span></span>
+         <select id="setModel"></select></label>
+-      <label class="field"><span class="label">GPU memory preset <em>sets the knobs below; then Save</em></span>
++      <label class="field"><span class="label" data-head="sets the knobs below; then Save">GPU memory preset</span>
+         <select id="memPreset"><option value="auto">Auto (detect)</option><option value="manual">Manual: the knobs below are yours</option></select></label>
+       <div class="field-row bottom">
+         <label class="field grow"><span class="label">Context rows <span class="info" tabindex="-1" role="img" aria-label="About the context size" data-tip-ref="tip-context"></span></span>
+@@ -555,11 +558,11 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       </section>
+       <section class="look-part">
+         <h4 class="mini">Fonts</h4>
+-        <label class="field"><span class="label">Text <em>labels, fields and paragraphs</em></span>
++        <label class="field"><span class="label" data-head="labels, fields and paragraphs">Text</span>
+           <select id="fontSans" data-font="sans"></select></label>
+         <label class="field"><span class="label">Headings</span>
+           <select id="fontHeading" data-font="heading"></select></label>
+-        <label class="field"><span class="label">Numbers and code <em>seeds, scores, the log</em></span>
++        <label class="field"><span class="label" data-head="seeds, scores, the log">Numbers and code</span>
+           <select id="fontMono" data-font="mono"></select></label>
+         <p class="row-hint" id="fontsHint"></p>
+       </section>
+@@ -581,7 +584,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <div class="spacer"></div>
+           <button type="button" class="btn ghost small" id="chatTest">Test connection</button>
+         </div>
+-        <label class="field"><span class="label">Address <em>any server with a /v1 chat endpoint</em></span>
++        <label class="field"><span class="label" data-head="any server with a /v1 chat endpoint">Address</span>
+           <input type="text" id="chatUrl" placeholder="http://127.0.0.1:18000/v1" autocomplete="off" spellcheck="false" /></label>
+         <!-- HERESY 1012: the local runners YuE2 Studio knows, one click each -->
+         <div class="chat-presets" id="chatPresets">
+@@ -750,7 +753,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <div class="drawer-body">
+         <section class="muse" id="muse">
+           <label class="field">
+-            <span class="label">Idea <em>a line about the song; the box grows as you type</em></span>
++            <span class="label" data-head="a line about the song; the box grows as you type">Idea</span>
+             <textarea id="idea" rows="2" autocomplete="off"
+                       placeholder="a slow song about missing the last train home"></textarea>
+           </label>
+@@ -817,7 +820,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <!-- HERESY 1006: data-fold blocks fold on a click on their heading; the text areas grow with
+                their text up to data-max-rows, then scroll. Lyrics sit right under the style. -->
+           <label class="field" data-fold="style">
+-            <span class="label">Style prompt <em>language, genre, voice, instruments, tempo</em></span>
++            <!-- HERESY 1168 (Viktor 06.10.2026: «В STYLE полосе ненужный текст подсказки. При свёртывании на две строки рубится»):
++                 the box's own placeholder says it; the bar keeps its name, its marks and its buttons -->
++            <span class="label">Style prompt</span>
+             <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
+             <span class="row-hint size-meter" id="styleMeter"></span>
+             <span class="key-check is-hidden" id="keyCheck"><span id="keyCheckText"></span>
+@@ -833,7 +838,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         </section>
+         <section class="k-card k-lyrics">
+           <label class="field" data-fold="lyrics">
+-            <span class="label">Lyrics <em>section tags on their own line</em></span>
++            <span class="label" data-head="section tags on their own line">Lyrics</span>
+             <textarea id="lyrics" rows="6" data-max-rows="16" spellcheck="false" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
+           </label>
+           <!-- HERESY 1043: a whole text made ready to read, by a profile (edited in Write) -->
+@@ -916,12 +921,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         </section>
+         <section class="k-card k-sound">
+           <fieldset class="field sound" data-fold="vae">
+-            <span class="label">VAE <span class="info" tabindex="-1" role="img" aria-label="About the VAE" data-tip-ref="tip-vae"></span><em>turns the written song into sound</em></span>
++            <span class="label">VAE <span class="info" tabindex="-1" role="img" aria-label="About the VAE" data-tip-ref="tip-vae" data-tip-head="turns the written song into sound"></span></span>
+             <div class="toggles" id="decoders"></div>
+           </fieldset>
+ 
+           <fieldset class="field sound" data-fold="sliders">
+-            <span class="label">Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About the sliders" data-tip-ref="tip-sliders"></span><em>voice and genre while the music is written; 0 is off, 1 is full</em></span>
++            <span class="label">Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About the sliders" data-tip-ref="tip-sliders" data-tip-head="voice and genre while the music is written; 0 is off, 1 is full"></span></span>
+             <div class="slider-active" id="sliderActive"></div>
+             <div class="slider-chips" id="sliderChips"></div>
+             <p class="row-hint" id="sliderHint"></p>
+@@ -929,7 +934,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         </section>
+         <section class="k-card k-loras">
+           <fieldset class="field sound" data-fold="loras">
+-            <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras"></span><em>a strength for the music half and for the sound half</em></span>
++            <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras" data-tip-head="a strength for the music half and for the sound half"></span></span>
+             <div id="loraPicker"></div>
+           </fieldset>
+         </section>
+@@ -939,8 +944,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <div class="drawer-body cover-body">
+               <!-- two ways in, the same shape: a heading with its short note, one control per line, the button on the left -->
+               <section class="cover-part">
+-                <h4 class="mini">From a recording <span class="info" tabindex="-1" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe"></span>
+-                  <em>its tune only, not the words or the singer</em></h4>
++                <h4 class="mini">From a recording <span class="info" tabindex="-1" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe" data-tip-head="its tune only, not the words or the singer"></span></h4>
+                 <label class="field"><span class="label">Recording</span>
+                   <input type="file" id="coverFile" accept=".wav,.mp3,.flac,.m4a,.ogg,.opus,.aac" /></label>
+                 <label class="field"><span class="label">Transcribe</span>
+@@ -958,8 +962,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+               </section>
+               <section class="cover-part">
+                 <h4 class="mini">From one of your takes <span class="info" tabindex="-1" role="img" aria-label="About covers from a take"
+-                    data-tip="Take the melody from a song you already made and render it somewhere else entirely: a ballad as a techno track, a German song in English. The run switches to Melody only."></span>
+-                  <em>its melody, in a new style</em></h4>
++                    data-tip="Take the melody from a song you already made and render it somewhere else entirely: a ballad as a techno track, a German song in English. The run switches to Melody only." data-tip-head="its melody, in a new style"></span></h4>
+                 <label class="field"><span class="label">Melody from</span>
+                   <select id="coverTake"></select></label>
+                 <label class="check"><input type="checkbox" id="coverMelodyOnly" checked />
+@@ -976,7 +979,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Supply your own score</span><span class="sum-say">Bring an ABC score, for covers and edits.</span></span></summary>
+             <div class="drawer-body score-body">
+               <label class="field">
+-                <span class="label">Score <em>ABC notation, followed in Full plan and Melody only</em></span>
++                <span class="label" data-head="ABC notation, followed in Full plan and Melody only">Score</span>
+                 <textarea id="abc" rows="8" spellcheck="false" class="mono" placeholder="X:1&#10;L:1/8&#10;M:4/4&#10;K:C"></textarea>
+               </label>
+               <!-- HERESY 1018: move the score to another key (heresy-transpose.js) -->
+@@ -1029,11 +1032,11 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sampling</span><span class="sum-say">The defaults are tuned; change them to experiment.</span></span></summary>
+             <div class="drawer-body">
+               <div class="shape" id="shape">
+-                <label class="shape-row"><span class="shape-name">Composition<em>familiar ↔ unexpected melody and chords</em></span>
++                <label class="shape-row"><span class="shape-name" data-head="familiar ↔ unexpected melody and chords">Composition</span>
+                   <input type="range" id="shapeComposition" min="0" max="4" step="1" value="2" /><output id="shapeCompositionOut">default</output></label>
+-                <label class="shape-row"><span class="shape-name">Performance<em>controlled ↔ adventurous delivery</em></span>
++                <label class="shape-row"><span class="shape-name" data-head="controlled ↔ adventurous delivery">Performance</span>
+                   <input type="range" id="shapePerformance" min="0" max="4" step="1" value="2" /><output id="shapePerformanceOut">default</output></label>
+-                <label class="shape-row"><span class="shape-name">Style influence<em>loose ↔ focused on your style and lyrics</em></span>
++                <label class="shape-row"><span class="shape-name" data-head="loose ↔ focused on your style and lyrics">Style influence</span>
+                   <input type="range" id="shapeStyle" min="0" max="4" step="1" value="2" /><output id="shapeStyleOut">default</output></label>
+                 <div class="shape-foot"><span class="row-hint">Shortcuts that set the knobs below; the middle is the tuned default.
+                   Composition does nothing in Direct mode or with a supplied score.</span>
+@@ -1066,18 +1069,18 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sound and output</span><span class="sum-say" id="outSummary">WAV 24-bit</span></span></summary>
+             <div class="drawer-body">
+               <div class="out-grid">
+-                <label class="field"><span class="label">ODE steps <em>sound solver</em></span>
++                <label class="field"><span class="label" data-head="sound solver">ODE steps</span>
+                   <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
+-                <label class="field"><span class="label">Solver <em>sound ODE</em></span>
++                <label class="field"><span class="label" data-head="sound ODE">Solver</span>
+                   <select id="odeSolver">
+                     <option value="midpoint">Midpoint · release</option>
+                     <option value="multistep">Multistep · 1 call/step</option>
+                     <option value="heun">Heun</option>
+                     <option value="euler">Euler · draft</option>
+                   </select></label>
+-                <label class="field"><span class="label">Max length <em>seconds</em></span>
++                <label class="field"><span class="label" data-head="seconds">Max length</span>
+                   <input type="number" id="maxLength" step="10" /></label>
+-                <label class="field"><span class="label">Sound variations <em>1–9</em></span>
++                <label class="field"><span class="label" data-head="1–9">Sound variations</span>
+                   <input type="number" id="variations" step="1" max="9" value="1" /></label>
+                 <label class="field"><span class="label">Format <span class="info" tabindex="-1" role="img" aria-label="About the output format" data-tip-ref="tip-output"></span></span>
+                   <select id="outFormat">
+@@ -1086,12 +1089,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+                     <option value="wav32">WAV 32-bit float</option>
+                     <option value="mp3">MP3</option>
+                   </select></label>
+-                <label class="field" id="bitrateField"><span class="label">MP3 bitrate <em>kbps</em></span>
++                <label class="field" id="bitrateField"><span class="label" data-head="kbps">MP3 bitrate</span>
+                   <select id="mp3Bitrate">
+                     <option value="96">96</option><option value="128">128</option><option value="160">160</option>
+                     <option value="192">192</option><option value="256">256</option><option value="320">320</option>
+                   </select></label>
+-                <label class="field"><span class="label">Peak clip <em>per million</em></span>
++                <label class="field"><span class="label" data-head="per million">Peak clip</span>
+                   <input type="number" id="peakClip" step="1" /></label>
+               </div>
+               <div class="field-row">
+@@ -1374,7 +1377,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+           <label class="field"><span class="label">Title</span><input type="text" id="draftTitle" /></label>
+           <label class="field"><span class="label">Style <em id="draftStyleSize"></em></span><textarea id="draftStyle" rows="4"></textarea></label>
+           <!-- HERESY 1167 (Viktor: «Промптинг как в SD/SDXL… Но как опцию. Пусть LLM выдаёт полный читабельный и тегированный») -->
+-          <label class="field"><span class="label">Style as tags <em>the most important first</em></span><textarea id="draftStyleTags" rows="2"></textarea></label>
++          <label class="field"><span class="label" data-head="the most important first">Style as tags</span><textarea id="draftStyleTags" rows="2"></textarea></label>
+           <div class="field-row draft-style-form"><span class="label">Into the form</span>
+             <label class="check"><input type="radio" name="draftStyleForm" value="tags" checked /> <span>the tags</span></label>
+             <label class="check"><input type="radio" name="draftStyleForm" value="readable" /> <span>the readable style</span></label></div>
+@@ -1786,7 +1789,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <h3>Takes</h3>
+       <span class="count mono" id="libCount">0</span>
+       <div class="spacer"></div>
+-      <button type="button" class="lib-toggle" id="favFilter" aria-pressed="false" title="Show favourites only">★ Favourites</button>
++      <!-- HERESY 1168 (Viktor 06.10.2026: «В Takes тоже Favorite звезду переведи в стандартную нашу иконку»): the star drawn
++           as its neighbours, the thumbs; its words in the tip -->
++      <button type="button" class="lib-toggle lib-rate-f" id="favFilter" aria-pressed="false" aria-label="Show favourites only" data-tip="Show favourites only" data-ui="star"></button>
+       <!-- HERESY 1167 (Viktor: «добавь ещё палец вверх и вниз. Так будет полная сортировка») -->
+       <button type="button" class="lib-toggle lib-rate-f" data-libf="liked" aria-pressed="false" aria-label="Only the liked" data-tip="Only the liked" data-ui="like"></button>
+       <button type="button" class="lib-toggle lib-rate-f" data-libf="dislikedOnly" aria-pressed="false" aria-label="Only the disliked" data-tip="Only the disliked (a dislike hides a take everywhere else)" data-ui="dislike"></button>
+-- 
+2.43.0
+

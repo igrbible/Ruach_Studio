@@ -762,6 +762,37 @@ static bool write_listen_flac(const std::string & dir, const std::string & wav, 
     return true;
 }
 
+// HERESY 1168 (Viktor 07.10.2026: «прикрутить бы этот код к движку, и тогда будет реальная практически моментальная
+// декОда другим VAE»): a take keeps its acoustic latents beside its audio, latents.f32 in the layout of the engine's own
+// tensor dumps (debug.h: [ndims = 2] [T_lat] [64] as int32, then f32 time major), about 3 MB for eight minutes; another
+// decoder makes the take again from them in seconds, the sound stage not run again
+static bool latents_save(const std::string & dir, const Yue2Song & song) {
+    if (song.T_lat <= 0 || song.latents.size() != (size_t) song.T_lat * YUE2_LATENT_DIM) {
+        return false;
+    }
+    int32_t     head[3] = { 2, (int32_t) song.T_lat, YUE2_LATENT_DIM };
+    std::string out((const char *) head, sizeof(head));
+    out.append((const char *) song.latents.data(), song.latents.size() * sizeof(float));
+    return write_file(dir + "/latents.f32", out);
+}
+
+static bool latents_load(const std::string & dir, Yue2Song * song) {
+    std::string in = read_file(dir + "/latents.f32");
+    int32_t     head[3];
+    if (in.size() < sizeof(head)) {
+        return false;
+    }
+    memcpy(head, in.data(), sizeof(head));
+    if (head[0] != 2 || head[1] <= 0 || head[2] != YUE2_LATENT_DIM ||
+        in.size() != sizeof(head) + (size_t) head[1] * YUE2_LATENT_DIM * sizeof(float)) {
+        return false;
+    }
+    song->T_lat = head[1];
+    song->latents.resize((size_t) head[1] * YUE2_LATENT_DIM);
+    memcpy(song->latents.data(), in.data() + sizeof(head), song->latents.size() * sizeof(float));
+    return true;
+}
+
 static bool listen_flac_fresh(const std::string & dir) {
     std::error_code ec;
     auto            f = std::filesystem::last_write_time(dir + "/listen.flac", ec);
@@ -785,6 +816,7 @@ static yyjson_mut_val * library_entry(yyjson_mut_doc * out, const std::string & 
     yyjson_doc_free(meta);
     yyjson_mut_obj_remove_key(e, "name");
     yyjson_mut_obj_add_strcpy(out, e, "name", name.c_str());
+    yyjson_mut_obj_add_bool(out, e, "latents", std::filesystem::is_regular_file(dir + "/latents.f32"));   // HERESY 1168
     Yue2Request r;
     if (request_parse_json(&r, req_txt.c_str())) {
         yyjson_mut_obj_add_strncpy(out, e, "style", r.style.c_str(), r.style.size());
@@ -1457,6 +1489,13 @@ static bool validate(const httplib::Request & req, httplib::Response & res, Yue2
             return fail("unknown decoder (see /props vaes)");
         }
     }
+    if (!r->decode_from.empty()) {   // HERESY 1168: a take of the library that kept its latents
+        const std::string & n = r->decode_from;
+        if (n == "." || n == ".." || n.find('/') != std::string::npos || n.find('\\') != std::string::npos ||
+            g_outputs_dir.empty() || !std::filesystem::is_regular_file(g_outputs_dir + "/" + n + "/latents.f32")) {
+            return fail("this take keeps no latents (made before HERESY 1168): its sound has to be rendered again");
+        }
+    }
     for (size_t i = 0; i < r->sliders.size(); i++) {
         const Yue2SliderChoice & c = r->sliders[i];
         if (pipeline_slider_path(&g_pipeline, c.id).empty()) {
@@ -1536,6 +1575,63 @@ static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, b
 
 static void refresh_loaded();
 
+// HERESY 1168: another decoder for a take: its kept latents through the VAE alone, saved as a new take of its family (the
+// request as the page sent it, the take's own replay with its vae changed; it keeps the latents too, for the next one)
+static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
+    Yue2Song    song      = {};
+    std::string from      = request.decode_from;
+    auto        started   = std::chrono::steady_clock::now();
+    song.truncated        = false;
+    if (!latents_load(g_outputs_dir + "/" + from, &song)) {
+        active_job_set(nullptr);
+        job->error = "this take keeps no latents (made before HERESY 1168): its sound has to be rendered again";
+        job->status.store(JobStatus::FAILED);
+        return;
+    }
+    bool   ok             = pipeline_decode_latents(&g_pipeline, request.vae, &song, server_cancel_job, (void *) &job->cancel);
+    double render_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    if (!ok) {
+        active_job_set(nullptr);
+        job->error = g_pipeline.last_error.empty() ? "the decoding failed; the server log has the reason" : g_pipeline.last_error;
+        job->status.store(job->cancel.load() ? JobStatus::CANCELLED : JobStatus::FAILED);
+        return;
+    }
+    fprintf(stderr, "[Server] Job %s: %s decoded again in %.1f s (%d frames)\n", job->id.c_str(), from.c_str(), render_seconds, song.T_lat);
+    bool      is_mp3  = false;
+    WavFormat wav_fmt = WAV_S16;
+    audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt);
+    if (is_mp3 || wav_fmt != WAV_F32) {
+        audio_normalize(song.audio.data(), song.T_audio * 2, request.peak_clip);
+    }
+    std::string audio = is_mp3 ? audio_encode_mp3(song.audio.data(), song.T_audio, YUE2_SAMPLE_RATE, request.mp3_bitrate) :
+                                 audio_encode_wav(song.audio.data(), song.T_audio, YUE2_SAMPLE_RATE, wav_fmt);
+    if (audio.empty()) {
+        active_job_set(nullptr);
+        job->status.store(JobStatus::FAILED);
+        return;
+    }
+    Yue2Request replay      = request;
+    replay.decode_from      = "";
+    replay.lm_batch_size    = 1;
+    replay.synth_batch_size = 1;
+    if (replay.parent.empty()) {
+        replay.parent = from;
+    }
+    std::vector<std::string> request_parts = { request_to_json(&replay) };
+    std::vector<std::string> audio_parts   = { audio };
+    if (!g_outputs_dir.empty()) {
+        std::string name = library_save(replay, audio, is_mp3, song, 0, 1, 0, 0, !request.abc.empty(), render_seconds);
+        if (!name.empty()) {
+            job->takes.push_back(name);
+            latents_save(g_outputs_dir + "/" + name, song);
+        }
+    }
+    active_job_set(nullptr);
+    job->result_body = multipart_build_tracks(request_parts, audio_parts, is_mp3 ? "audio/mpeg" : "audio/wav");
+    job->result_mime = MULTIPART_MIME;
+    job->status.store(JobStatus::DONE);
+}
+
 static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
     struct Refresh {
         ~Refresh() { refresh_loaded(); }
@@ -1543,6 +1639,10 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
     job->started.store(true);
     active_job_set(job);
     fprintf(stderr, "[Server] Job %s: %s\n", job->id.c_str(), request_to_json(&request).c_str());
+    if (!request.decode_from.empty()) {   // HERESY 1168: a take's kept latents, another decoder
+        decode_job(job, request);
+        return;
+    }
 
     std::vector<Yue2Song> songs;
     auto                  started = std::chrono::steady_clock::now();
@@ -1601,6 +1701,7 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
                                             (int) t / M, (int) t % M, !request.abc.empty(), render_seconds);
             if (!name.empty()) {
                 job->takes.push_back(name);
+                latents_save(g_outputs_dir + "/" + name, song);   // HERESY 1168: for another decoder, in seconds
             }
         }
     }

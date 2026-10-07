@@ -16,6 +16,7 @@
   function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private */ } }
   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
+  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function api(body, id) {
     var q = [];
     if (id) q.push("id=" + encodeURIComponent(id));
@@ -269,6 +270,50 @@
         .then(function () { $("wrTitle").select(); }).catch(function (e) { toast(e.message, true); });
     });
     $("wrFromCreate").addEventListener("click", function () { fromCreate(true).then(function (doc) { if (doc) open(doc.id); }); });
+    // HERESY 1168 (Viktor 07.10.2026: «глобальный экспорт/импорт всех данных скопом для бекапа»): the whole notebook in one
+    // file and back. Both ways the file stays text in the page: a seed of 19 digits in a document's knobs would come out
+    // rounded through the browser's numbers, so the export is saved as the lab wrote it and the import goes as it was read.
+    var backupUrl = "/lab/writer" + (SCOPE ? "?scope=" + encodeURIComponent(SCOPE) : "");
+    var post = function (text) {
+      return fetch(backupUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: text }).then(function (r) {
+        return r.text().then(function (t) {
+          if (!r.ok) { var e; try { e = JSON.parse(t).error; } catch (x) { e = r.status; } throw new Error(e); }
+          return t;
+        });
+      });
+    };
+    $("wrExport").addEventListener("click", function () {
+      flush().then(function () { return post('{"op": "export"}'); }).then(function (text) {
+        var d = new Date(), two = function (n) { return (n < 10 ? "0" : "") + n; };
+        var name = "ruach-writer-backup-" + d.getFullYear() + two(d.getMonth() + 1) + two(d.getDate()) + "-" + two(d.getHours()) + two(d.getMinutes()) + ".json";
+        var b = JSON.parse(text), a = document.createElement("a");          // parsed only to count
+        a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+        toast(tr("Writer backup: {0} documents and {1} in the trash, into {2}").replace("{0}", (b.docs || []).length)
+          .replace("{1}", (b.trash || []).length).replace("{2}", name));
+      }).catch(function (e) { toast(e.message, true); });
+    });
+    $("wrImport").addEventListener("click", function () { $("wrImportFile").click(); });
+    $("wrImportFile").addEventListener("change", function () {
+      var f = this.files[0];
+      this.value = "";
+      if (!f) return;
+      f.text().then(function (text) {
+        if (!/^\s*\{/.test(text)) throw new Error(tr("not a Writer backup (a file this room exported)"));
+        return flush().then(function () { return post('{"op": "import", "backup": ' + text + "}"); });
+      }).then(function (t) {
+        var d = JSON.parse(t), n = d.imported || {};
+        state.docs = d.docs || state.docs;
+        paintList();
+        paintHand();
+        toast(tr("Writer backup {0}: {1} new, {2} already here, {3} beside their namesakes as copies, {4} into the trash")
+          .replace("{0}", f.name).replace("{1}", n.added || 0).replace("{2}", n.same || 0).replace("{3}", n.copies || 0).replace("{4}", n.trashed || 0));
+      }).catch(function (e) { toast(tr("Not imported: {0}").replace("{0}", e.message), true); });
+    });
     ["wrTitle", "wrStyle", "wrLyrics", "wrNotes"].forEach(function (id) { $(id).addEventListener("input", changed); });
     $("wrDoc").addEventListener("keydown", function (e) {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); flush().then(function () { toast("Saved"); }); }

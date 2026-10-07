@@ -1,0 +1,265 @@
+From 4b943bcf782c5dda5dc9061c898cdc7ac7c000b1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 01:20:32 -0600
+Subject: [PATCH 1184/1198] HERESY 1168: a run's clock through F5; a run
+ brought back by F5 lands and plays; Clear takes the words, New song the rest;
+ the meter's tags and empty sections; no void under the lifted form
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06–07.10.2026, the night:
+- «Когда идёт генерация, счётчик тикает, но стоит во время генерации нажать F5, счётчик времени обнуляется»: the page keeps
+  a run's start with the run (saveJobs); after an F5 the log's backlog replayed the start line and set it to now: a start
+  the page kept now stands, and one it never saw is marked «~».
+- «Play new takes вроде бы как перестал работать»: a run an F5 brought back while it still ran is this page's own again:
+  it lands in the workspace in hand and plays when done (it was treated as a run that ended while the page was away). And
+  the settings file heard of a change only every 4 s, so a setting turned back on and an F5 within them came back off: a
+  change now goes out at once.
+- «Кнопка Clear the Form очищает только формы? Не трогает LoRA и другие параметры? И чем она отличается от `Start new song`?
+  Это нужно утрясти»: they did the same. Clear now takes the words (title, style, lyrics, score), both seeds and loaded codes;
+  the mode, sampling, sliders, LoRAs, VAE and output stay. New song puts the machine back to its defaults too.
+- «Блок Interlude не имеет текста под собою. Там счётчик не нужен»; «По примерам из YuE2 репо вычлени все возможные теги и
+  предусмотри их»: a section with no words shows its name and no ruler. The 110 official examples' tags are known: the head
+  of a tag (before –, —, -, :, |, /, a bracket) names the section («Verse 1 – Him», «Chorus: All», «Final Chorus / Outro»,
+  «Instrumental Break - Horns», «副歌1», «主歌2», «桥段»); verse and bridge one group, pre-chorus, chorus (hook, refrain), post-chorus,
+  intro, outro (end, fade out), interlude, break, drop, solo, instrumental each their own; a tag that names who sings
+  («Male Vocals», «NARRATOR — NOT SUNG», «DRAGONZILLA — MONSTER VOX») or what the song is («MOOD: …», «TEMPO: …») is no section.
+- «В композере в оверлее дохерища пустоты в подвале»: the meter's mirror laid out every line of the lyrics (87 lines,
+  some 1,800 px) under the form and stretched the frame's scrolling; it is 0 tall now, its lines measured all the same.
+
+The new words are English only, for the pass before 2.0.0 (Viktor: «Добавочные языки интерфейса давай в самую последнюю
+очередь перед финальным релизом 2.0.0»). The suite: 370 passed, 0 failed (6 new checks); the mock's MOCK-HOLD runs a song
+eight times slower, to reload under.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  6 +++--
+ tools/console/app.js           | 48 +++++++++++++++++++++++++++-------
+ tools/console/heresy-lyrics.js | 42 ++++++++++++++++++++---------
+ tools/console/index.html       |  2 +-
+ 4 files changed, 73 insertions(+), 25 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 235d09e..6645004 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4186,8 +4186,10 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+    the counts, the phonetic hand, the spelling check and «Auto height» */
+ .lyr-wrap { position: relative; }
+ #lyrics { padding-right: 112px; }
+-.lyr-mirror { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap; overflow-wrap: break-word;
+-  word-break: normal; box-sizing: border-box; border: 0; }
++/* height 0 and its overflow hidden: its lines lay out (and are measured) but never stretch the frame's scrolling (Viktor:
++   «В композере в оверлее дохерища пустоты в подвале»: 87 lines of a mirror, 1,800 px under the form) */
++.lyr-mirror { position: absolute; top: 0; left: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; white-space: pre-wrap;
++  overflow-wrap: break-word; word-break: normal; box-sizing: border-box; border: 0; }
+ .lyr-gutter { position: absolute; width: 190px; overflow: hidden; pointer-events: none; }
+ .lyr-row { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; font: 10.5px/1 var(--mono); color: var(--dim); }
+ .lyr-track { position: relative; height: 6px; flex: none; border-radius: 3px; background: color-mix(in srgb, var(--line-strong, var(--line)) 45%, transparent); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 4511dac..9686fa3 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -215,6 +215,10 @@
+ 
+   function store(key, value) {
+     try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (error) { /* private mode */ }
++    // HERESY 1168 (Viktor: «Play new takes вроде бы как перестал работать»): the settings file heard of a change only every
++    // 4 s; a setting turned back on (its key removed) and an F5 within them, and the file gave the old «off» back. Now the
++    // change goes out at once (a fifth of a second, for a burst of them)
++    if (window.HeresySettings) { clearTimeout(store.soon); store.soon = setTimeout(function () { window.HeresySettings.flush(); }, 150); }
+   }
+   function recall(key) {
+     try { return localStorage.getItem(key); } catch (error) { return null; }
+@@ -1403,10 +1407,25 @@
+     window.HeresyDialog.confirm("Start a new song?\n\nIts title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.",
+       { ok: "New song", danger: true }).then(function (yes) { if (yes) newSong(); });
+   });
+-  // HERESY 1167 (Viktor: «Кнопка CLEAR не имеет сторожа. Нечаянно нажал - и полетели все формы в пустоту»): it asks first
++  // HERESY 1167 (Viktor: «Кнопка CLEAR не имеет сторожа. Нечаянно нажал - и полетели все формы в пустоту»): it asks first.
++  // HERESY 1168 (Viktor: «Кнопка Clear the Form очищает только формы? Не трогает LoRA и другие параметры? И чем она отличается
++  // от `Start new song`? Это нужно утрясти»): it did the same as New song. Now Clear takes the words away (title, style,
++  // lyrics, the score), the seeds and loaded music codes with them; the machine stays as set: mode, sampling, guidance,
++  // sliders, LoRAs, Instrumental, VAE and output. New song puts the machine back to its defaults too.
++  function clearWords() {
++    ["title", "style", "lyrics", "abc", "lmSeed", "soundSeed"].forEach(function (id) { $(id).value = ""; });
++    setCodes(null);
++    ["style", "lyrics", "abc"].forEach(function (id) { $(id).dispatchEvent(new Event("input", { bubbles: true })); });
++    $("scoreDrawer").open = false;
++    growLyrics();
++    paintDice();
++    $("view-compose").scrollTop = 0;
++    $("title").focus();
++    toast("Cleared: the words, the score, the seeds and loaded codes; the mode, knobs, sliders and LoRAs stay");
++  }
+   $("clearForm").addEventListener("click", function () {
+-    window.HeresyDialog.confirm("Clear the form?\n\nIts title, style, lyrics, score and every knob go back to the defaults. The takes stay.",
+-      { ok: "Clear the form", danger: true }).then(function (yes) { if (yes) newSong(); });
++    window.HeresyDialog.confirm("Clear the words?\n\nThe title, style, lyrics, score, both seeds and loaded music codes go. The mode, sampling, sliders, LoRAs, VAE and output stay as they are; New song puts those back to the defaults too.",
++      { ok: "Clear the words", danger: true }).then(function (yes) { if (yes) clearWords(); });
+   });
+ 
+   // HERESY 1035: a menu: a random official demo, or one of ours by name, grouped (Readings…)
+@@ -2075,7 +2094,7 @@
+     var keep = STATE.jobs.filter(function (j) { return isLive(j) && !j.provisional && j.kind !== "external"; }).map(function (j) {
+       return { id: j.id, kind: j.kind, title: j.title, group: j.group, index: j.index, count: j.count, versioned: j.versioned,
+                baseTitle: j.baseTitle, variations: j.variations, parent: j.parent, what: j.what, task: j.task,
+-               fileName: j.fileName, request: j.request, submitted: j.submitted };
++               fileName: j.fileName, request: j.request, submitted: j.submitted, started: j.started || 0, approx: !!j.approx };   // 1168: its clock
+     });
+     store(JOB_KEY, keep.length ? JSON.stringify(keep) : null);
+   }
+@@ -2089,8 +2108,10 @@
+       var job = {
+         id: s.id, kind: s.kind, title: s.title, group: s.group, index: s.index || 0, count: s.count || 1,
+         versioned: !!s.versioned, baseTitle: s.baseTitle, variations: s.variations || 1, parent: s.parent, what: s.what || "",
+-        task: s.task, fileName: s.fileName, request: s.request, status: "queued", submitted: s.submitted || Date.now(),
+-        started: 0, finished: 0, takes: [], saved: [], error: "", resolved: {}, notes: {}, restored: true
++        task: s.task, fileName: s.fileName, request: s.request, status: s.started ? "running" : "queued", submitted: s.submitted || Date.now(),
++        // HERESY 1168 (Viktor: «Когда идёт генерация, счётчик тикает, но стоит во время генерации нажать F5, счётчик времени
++        // обнуляется»): the run's start as this page saw it comes back with it; one it never saw start is marked approximate
++        started: s.started || 0, approx: !!s.approx, finished: 0, takes: [], saved: [], error: "", resolved: {}, notes: {}, restored: true
+       };
+       job.stages = stageSkeleton(job);
+       STATE.jobs.push(job);
+@@ -2138,9 +2159,12 @@
+       // "running" for both, and then only the log line tells them apart.
+       if (job.status === "queued" && (STATE.statusKnowsQueue || !LOG.connected)) {
+         job.status = "running";
++        if (!job.started && job.restored) job.approx = true;   // HERESY 1168: started while the page was away: «~»
+         job.started = job.started || Date.now();
++        saveJobs();                                            // HERESY 1168: its start kept for an F5
+         paintAllRuns();
+       }
++      if (job.restored) job.seenRunning = true;   // HERESY 1168: still running after the F5
+       if (job.restored && !job.rewatched && !STATE.job && !STATE.take && job.kind !== "transcribe" && job.kind !== "replay") {
+         job.rewatched = true;
+         watchJob(job);
+@@ -2236,7 +2260,9 @@
+       settle(job, "done");
+       // HERESY 1116: only a run this page started is filed by it; a run from elsewhere (the API, another browser) is
+       // filed by whoever started it (the API's own workspace field), never into this page's workspace in hand
+-      var mine = !job.restored && job.kind !== "external";
++      // HERESY 1168 (Viktor: «Play new takes вроде бы как перестал работать»): a run this page started and an F5 brought back
++      // while it still ran (seenRunning) is its own as well: it lands in the workspace in hand and plays when done
++      var mine = (!job.restored || job.seenRunning) && job.kind !== "external";
+       if (window.HeresyCollection && mine) window.HeresyCollection.landed(takes);   // HERESY 1041: into the workspace in hand
+       if (window.HeresyWriter && mine) window.HeresyWriter.landed(takes);           // HERESY 1047: to the document in hand
+       return refreshLibrary().catch(function () {}).then(function () { return nameVersions(job); });
+@@ -2244,7 +2270,7 @@
+       paintAllRuns();
+       if (job.kind === "replay") return replayLanded(job);
+       var count = job.takes.length;
+-      if (job.restored) return;
++      if (job.restored && !job.seenRunning) return;   // one that ended while the page was away: no toast, no jump, no play
+       var watching = STATE.job === job && !STATE.take && count, playing = isPlaying();
+       toastOnce(job.id, "Song complete — " + job.title + (count > 1 ? " (" + count + " takes)" : "") +
+                 (watching && playing ? ". What you are playing keeps playing; ▶ Play this song when you are ready." : ""), "good");
+@@ -2494,8 +2520,10 @@
+     }
+     if (job.status === "queued") {
+       job.status = "running";
+-      job.started = Date.now();
+-      job.approx = LOG.backlog;
++      // HERESY 1168: after an F5 the log's backlog replays the run's start line now; a start the page kept stands
++      if (!job.started) { job.started = Date.now(); job.approx = LOG.backlog; }
++      if (job.restored) job.seenRunning = true;
++      if (!job.provisional) saveJobs();
+     }
+     var body = rest.trim();
+     if (body === "{") LOG.capture = { id: id, text: "{" };
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index dcc585b..9b3e91b 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -37,25 +37,40 @@
+     return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) { return n + wordSyllables(w); }, 0);
+   }
+ 
+-  // the group a section measures with: «verse+bridge» one, the rest each its own
++  // the group a section measures with: «verse+bridge» one, the rest each its own. HERESY 1168 (Viktor: «По примерам из YuE2
++  // репо вычлени все возможные теги и предусмотри их»): the 110 official examples' tags, as written there: «Verse 1 – Him»,
++  // «Chorus: All», «Final Chorus / Outro», «Instrumental Break - Horns», «Guitar Solo», «副歌1»… The head of a tag (before –,
++  // —, -, :, |, /, a bracket) names the section; a tag that names none (who sings: «Male Vocals», «NARRATOR — NOT SUNG»; what
++  // the song is: «MOOD: …», «TEMPO: …») is no new section: its lines stay in the one before (null)
++  var SECTIONS = [
++    [/\bpre[\s-]?chorus\b|^пред/, "pre-chorus"], [/\bpost[\s-]?chorus\b/, "post-chorus"],
++    [/\b(chorus|hook|refrain)\b|^(副歌|припев|приспів|прыпеў)/, "chorus"],
++    [/\b(verse|bridge)\b|^(主歌|桥段|куплет|бридж|мост|міст)/, "verse + bridge"],
++    [/\bintro(duction)?\b|^(вступ)/, "intro"],
++    [/\b(outro|ends?|fade[\s-]?out|fadeout|fades out)\b|^(fade|аутро|кода)/, "outro"],
++    [/\binterlude\b|^проигрыш/, "interlude"], [/\b(break|breakdown)\b|^перерыв/, "break"], [/\bdrops?\b/, "drop"], [/\bsolo\b/, "solo"],
++    [/\b(inst|instrumental|riffs?|vamp|flourish)\b/, "instrumental"]
++  ];
+   function groupOf(name) {
+-    var n = name.toLowerCase().replace(/[\d:.#]+/g, " ").replace(/\s+/g, " ").trim();
+-    if (/^(verse|bridge|куплет|бридж|мост)/.test(n)) return "verse + bridge";
+-    if (/^pre[\s-]?chorus|^пред/.test(n)) return "pre-chorus";
+-    if (/^post[\s-]?chorus/.test(n)) return "post-chorus";
+-    if (/^(chorus|hook|refrain|припев)/.test(n)) return "chorus";
+-    return n.split(" ")[0] || "—";
++    var n = name.toLowerCase().replace(/\s+/g, " ").trim();
++    var head = n.split(/\s[–—-]\s|:|\||\/|\(/)[0].replace(/[\d#.]+/g, " ").trim();
++    for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i][0].test(head)) return SECTIONS[i][1];
++    if (/^(genres?|style|mood|tempo|instrumentation|arrangement|production|structure|dynamics|emotions|meta)\b/.test(head)) return null;
++    if (/\b(vocals?|vox|voices?|narrator|spoken|lead|male|female|him|her|both|all|duet|choir|ad-?libs?|baritone|tenor|soprano|alto|rapper)\b/.test(n)) return null;
++    return head.split(" ")[0] || "—";
+   }
+ 
+   function measure(text) {
+-    var lines = text.split("\n"), group = "—", out = [], tags = { chars: 0, n: 0 }, br = { chars: 0, n: 0 };
++    var lines = text.split("\n"), group = "—", out = [], tags = { chars: 0, n: 0 }, br = { chars: 0, n: 0 }, head = null;
+     var lyr = { chars: 0, syl: 0, lines: 0 }, hand = { stress: 0, ayin: 0, latin: 0 };
+     lines.forEach(function (line) {
+       var tag = line.match(/^\s*\[([^\]]+)\]\s*$/);
+       if (tag) {
+-        group = groupOf(tag[1]);
++        var g = groupOf(tag[1]);
++        if (g !== null) group = g;                  // who sings or what the song is: the section goes on
+         tags.chars += line.trim().length; tags.n++;
+-        out.push({ tag: true, group: group, name: tag[1] });
++        head = { tag: true, group: group, name: tag[1], lines: 0, section: g !== null };
++        out.push(head);
+         return;
+       }
+       var brackets = line.match(/\([^)]*\)/g) || [], inner = brackets.join(" ");
+@@ -67,7 +82,7 @@
+       hand.stress += (line.match(/́/g) || []).length;
+       hand.ayin += (line.match(/[а-яё]ע|ע[а-яё]/gi) || []).length;
+       hand.latin += (line.match(/[а-яё][a-z]|[a-z][а-яё]/gi) || []).length;
+-      if (syl || bsyl) { lyr.syl += syl; lyr.lines++; }
++      if (syl || bsyl) { lyr.syl += syl; lyr.lines++; if (head) head.lines++; }
+       out.push({ group: group, syl: syl, bsyl: bsyl, empty: !line.trim() });
+     });
+     // each group's ruler: the median length of its sung lines, once it has two
+@@ -155,8 +170,11 @@
+         if (y < -lh || y > area.clientHeight) return;
+         var ruler = m.rulers[o.group];
+         if (o.tag) {
++          // HERESY 1168 (Viktor: «Блок Interlude не имеет текста под собою. Там счётчик не нужен»): a section with no words of
++          // its own shows its name, no ruler; a tag that is no section (who sings, what the song is) shows nothing
++          if (!o.section) return;
+           html.push('<div class="lyr-row lyr-head" style="top:' + y + 'px;height:' + lh + 'px">' + esc(o.group) +
+-            (ruler !== undefined ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + "</div>");
++            (ruler !== undefined && o.lines ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + "</div>");
+           return;
+         }
+         if (o.empty || (!o.syl && !o.bsyl)) return;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 8ec3e7c..c8b9783 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -735,7 +735,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
+         <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
+         </div>
+-        <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
++        <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs, sliders and LoRAs stay (New song resets those too)">Clear</button>
+       </div>
+       <button type="button" class="btn ghost small" id="newSong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.">＋ New song</button>
+       <!-- HERESY 1168 (Viktor 06.10.2026: «в комнате Творца прикрути на каждый фрейм — левый и правый — разворот этого фрейма на
+-- 
+2.43.0
+

@@ -1,0 +1,594 @@
+From 25bf0e3beb73d5b232767bb37d58aace67487b31 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 10:25:59 -0600
+Subject: [PATCH 1194/1198] =?UTF-8?q?HERESY=201168:=20the=20Writer's=20bac?=
+ =?UTF-8?q?kup=20out=20and=20in;=20the=20VAE=20in=20the=20=E2=98=B0=20menu?=
+ =?UTF-8?q?=20under=20the=20model;=20the=20music's=20Max=20tokens=20is=20M?=
+ =?UTF-8?q?ax=20length;=20Ctrl+F=20finds=20in=20the=20box?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 07.10.2026:
+- «В комнате Писателя добавить глобальный экспорт/импорт всех данных скопом для бекапа». In the notebook's bar, the disk
+  (Export all) and the folder (Import): the lab's export (every document with its versions, the takes made from it, the
+  trash) saved as one file named for the day; a backup brought back through the lab's import (what is missing comes in,
+  the same is left alone, a document that differs comes in beside its namesake as a copy; nothing written over), its
+  count in a toast. Both ways the file stays text in the page: a seed of 19 digits in a document's knobs would come out
+  rounded through the browser's numbers. The bar's buttons stay whole, the two side by side, a row more when needed.
+- «Может к хуям убираем из Композера VAE блок. В карте трека оставляем кнопки… Выбор VAE переносим в бар в спадающее меню
+  прямо под выбор модели»: the ☰ menu has a VAE row right under the model (Standard, Legacy, Blend · add-on; its tip says
+  the three and that a take decodes again from its card in seconds). The Composer shows no VAE block; its radios stay as
+  the page's record of the choice (profiles, Open, the Writer's params and the request read it), the menu and they in
+  step both ways. The Engine card says «… picked in the ☰ menu» (the six catalogs' pattern renamed with it).
+- «То поле в блоке семплера вообще нужно убрать и передавать туда секундное значение»: the music's Max tokens is not on
+  the page: Max length (Sound and output) sets it, 25 tokens a second, as it did since 1167.
+- «Если курсор стоит в блоке редактора лирики или стиля, можем перехватывать Ctrl+F, чтобы искать не по всей странице, а
+  только в активном блоке?»: heresy-find.js. Ctrl+F in the Creator's lyrics and style and the Writer's style, lyrics and
+  notes opens a find bar over the box's top edge (inside it when there is no room above): the words, which match of how
+  many, previous, next, close; Enter and Shift+Enter (F3) go through the matches, the one in hand marked over the box
+  where its letters stand (a copy of the box's layout measures them, wrapped lines too) and scrolled into view; Esc puts
+  the cursor back with it selected; a click elsewhere closes it. His hand finds as plain words: a stress mark is not
+  looked for (обещано finds обе́щано), ё is е, о and а find ע and the Latin o and a. Ctrl+F anywhere else is the browser's.
+
+New words English only, for the pass before 2.0.0. The suite: 376 passed, 0 failed (the VAE checks read the menu now; the
+(i) checks use Sliders', the VAE's having left with its block; the Writer's backup and Ctrl+F checked; the mock answers
+the Writer with the lab's own lab/writer.py on a folder of its own).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  25 +++-
+ tools/console/app.js            |  18 ++-
+ tools/console/help.js           |   2 +-
+ tools/console/heresy-find.js    | 243 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-be.js |   2 +-
+ tools/console/heresy-i18n-el.js |   2 +-
+ tools/console/heresy-i18n-es.js |   2 +-
+ tools/console/heresy-i18n-it.js |   2 +-
+ tools/console/heresy-i18n-ru.js |   2 +-
+ tools/console/heresy-i18n-uk.js |   2 +-
+ tools/console/heresy-writer.js  |  45 ++++++
+ tools/console/index.html        |  11 ++
+ tools/console/vaes.js           |   2 +-
+ 13 files changed, 348 insertions(+), 10 deletions(-)
+ create mode 100644 tools/console/heresy-find.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 8a400ae..6cc836d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2407,7 +2407,9 @@ body.coll-dragging .coll-peek { display: none; }
+ .wr-book { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 22px; }
+ @media (max-width: 1000px) { .wr-book { grid-template-columns: minmax(0, 1fr); } }
+ .wr-side { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 8px; }
+-.wr-side-bar { display: flex; gap: 6px; align-items: center; }
++.wr-side-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
++.wr-side-bar .btn { white-space: nowrap; }   /* HERESY 1168: its buttons whole, a row more when they need it */
++.wr-side-bar .wr-io { display: inline-flex; gap: 6px; }   /* the backup out and in, side by side */
+ .wr-side-bar .coll-n { margin-left: auto; }
+ .wr-list { display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - 260px); overflow: auto; }
+ .wr-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+@@ -4217,3 +4219,24 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ .lyr-x { margin-right: 3px; font: 700 14px/1 var(--sans); vertical-align: -3px; }
+ .lyr-x.bad { color: var(--bad); }
+ .lyr-x.near { color: #d9a441; }
++
++/* HERESY 1168 (Viktor 07.10.2026: «Может к хуям убираем из Композера VAE блок»): the VAE is chosen in the ☰ menu under the model;
++   the form's radios stay as the page's own record of it, not shown */
++.k-sound fieldset[data-fold="vae"] { display: none; }
++/* HERESY 1168 (Viktor: «То поле в блоке семплера вообще нужно убрать и передавать туда секундное значение»): the music's Max
++   tokens is Max length (Sound and output) in tokens, set from it; shown once, in seconds, there */
++.knobs[data-group="semantic"] .knob:has(input[data-key="max_tokens"]) { display: none; }
++
++/* HERESY 1168 (Viktor: «перехватывать Ctrl+F, чтобы искать не по всей странице, а только в активном блоке»): the find bar of a
++   box, the match marked over the box, and the hidden copy of the box's layout that says where its letters stand */
++.find-bar { position: fixed; z-index: 45; display: flex; align-items: center; gap: 4px; padding: 4px 6px; background: var(--panel);
++  border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 10px 28px -12px var(--shadow-lg); }
++.find-bar[hidden] { display: none; }
++.find-bar .find-q { width: 190px; height: 28px; }
++.find-bar.is-none .find-q { border-color: var(--bad); }
++.find-n { min-width: 64px; font-size: 11.5px; color: var(--muted); text-align: center; }
++.find-btn { min-width: 28px; padding: 2px 6px; }
++.find-mark { position: fixed; z-index: 44; pointer-events: none; border-radius: 2px;
++  background: color-mix(in srgb, var(--amber) 36%, transparent); outline: 1px solid color-mix(in srgb, var(--amber) 75%, transparent); }
++.find-mirror { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap;
++  overflow-wrap: break-word; word-break: normal; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index d9c6a85..965565b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -995,6 +995,12 @@
+         (YueVaes.kindOf(v) === "add-on" ? YueVaes.badge("add-on") : "") + "</span>" +
+         (VAE_NOTES[v.name] ? "<small>" + VAE_NOTES[v.name] + "</small>" : "") + "</label>";
+     }).join("");
++    // HERESY 1168: the ☰ menu's VAE row, under the model: the choice the Composer's (now hidden) radios hold
++    if ($("vaePick")) {
++      $("vaePick").innerHTML = STATE.vaes.map(function (v) {
++        return '<option value="' + escape(v.name) + '">' + escape((v.label || v.name) + (YueVaes.kindOf(v) === "add-on" ? " · add-on" : "")) + "</option>";
++      }).join("");
++    }
+     var want = current || recall("yue2.vae");
+     if (!vaeInfo(want)) want = STATE.defaultVae;
+     checkVae(want);
+@@ -1006,6 +1012,7 @@
+       var first = document.querySelector("#decoders input");
+       if (first) first.checked = true;
+     }
++    if ($("vaePick")) $("vaePick").value = selectedVae();   // HERESY 1168: the menu says the same
+     YueVaes.repaint();
+   }
+ 
+@@ -1014,7 +1021,16 @@
+     return input ? input.value : (noFallback ? null : STATE.defaultVae);
+   }
+ 
+-  $("decoders").addEventListener("change", function () { store("yue2.vae", selectedVae()); YueVaes.repaint(); });
++  $("decoders").addEventListener("change", function () {
++    store("yue2.vae", selectedVae());
++    if ($("vaePick")) $("vaePick").value = selectedVae();
++    YueVaes.repaint();
++  });
++  if ($("vaePick")) $("vaePick").addEventListener("change", function () {   // HERESY 1168: the ☰ menu's VAE
++    checkVae(this.value);
++    store("yue2.vae", selectedVae());
++    toast("VAE for the songs to come: " + vaeLabel(selectedVae()));
++  });
+ 
+   // The Engine panel's VAE tiles (vaes.js) mark the one the form has picked
+   YueVaes.listInto($("vaeCard"), $("vaeCardNote"), { current: function () { return selectedVae(true) || ""; } });
+diff --git a/tools/console/help.js b/tools/console/help.js
+index a89d3da..ca20227 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -318,7 +318,7 @@
+     collSearch: 1, collSort: 1, collTrashDays: 1, collWsPick: 1, collWsMove: 1
+   };
+   function missing() {
+-    var skip = { themePick: 1, volume: 1, openFile: 1 };
++    var skip = { themePick: 1, volume: 1, openFile: 1, wrImportFile: 1 };   // HERESY 1168: the Writer's backup file, as Open's
+     return Array.prototype.filter.call(document.querySelectorAll("input[id], select[id], textarea[id]"), function (el) {
+       return !skip[el.id] && !SELF_EVIDENT[el.id] && el.type !== "radio" && el.type !== "hidden" && !hasHelp(el);
+     }).map(function (el) { return el.id; });
+diff --git a/tools/console/heresy-find.js b/tools/console/heresy-find.js
+new file mode 100644
+index 0000000..c764b32
+--- /dev/null
++++ b/tools/console/heresy-find.js
+@@ -0,0 +1,243 @@
++// HERESY 1168 (Viktor 07.10.2026: «Если курсор стоит в блоке редактора лирики или стиля, можем перехватывать Ctrl+F, чтобы
++// искать не по всей странице, а только в активном блоке?»): Ctrl+F in a box the song is written in (the Creator's lyrics and
++// style, the Writer's style, lyrics and notes) finds in that box alone; anywhere else the browser's own find stays.
++//
++// The bar sits at the box's top right: the words to find, which match of how many, previous and next, close. Enter and
++// Shift+Enter (F3, Shift+F3) go through the matches; the one in hand is marked over the box (a copy of the box's layout
++// says where its letters stand, wrapped lines too) and scrolled into view; Esc closes and puts the cursor back into the
++// box with that match selected. His phonetic hand finds as plain words: a stress mark is not looked for (обещано finds
++// обе́щано), ё is е, and о and а find his ע and his Latin o and a too (коморка finds кעмо́рка, ко finds Кo).
++//
++//   HeresyFind.open(box) · HeresyFind.close() · HeresyFind.state()   (the last for the checks)
++(function () {
++  "use strict";
++  var BOXES = { lyrics: "lyrics", style: "style", wrStyle: "style", wrLyrics: "lyrics", wrNotes: "notes" };
++  var ALIKE = { "о": "[оoע]", "o": "[оoע]", "а": "[аaע]", "a": "[аaע]", "е": "[еёe]", "ё": "[еёe]", "ע": "[עоoаa]" };
++  var MARK = /[\u0300-\u036f]/;
++  var bar = null, input = null, count = null, box = null, hits = [], at = -1, marks = [], mirror = null, queued = false;
++
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++
++  // the box's text as it is searched: combining marks left out, letters lower case; and where each letter stands in the box
++  function fold(text) {
++    var out = "", map = [];
++    for (var i = 0; i < text.length; i++) {
++      var c = text[i];
++      if (MARK.test(c)) continue;
++      var low = c.toLowerCase();
++      out += low.length === 1 ? low : c;
++      map.push(i);
++    }
++    map.push(text.length);
++    return { text: out, map: map };
++  }
++  // the words to find as a pattern over the folded text: marks out, each letter with its kin
++  function pattern(q) {
++    var out = "";
++    for (var i = 0; i < q.length; i++) {
++      var c = q[i];
++      if (MARK.test(c)) continue;
++      var low = c.toLowerCase();
++      out += ALIKE[low] || low.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
++    }
++    return out ? new RegExp(out, "g") : null;
++  }
++  function find(text, q) {
++    var re = pattern(q), f = fold(text), out = [], m;
++    if (!re) return out;
++    while ((m = re.exec(f.text)) !== null) {
++      if (!m[0].length) { re.lastIndex++; continue; }
++      var from = f.map[m.index], to = f.map[m.index + m[0].length - 1] + 1;
++      while (to < text.length && MARK.test(text[to])) to++;      // a match keeps its last letter's stress mark
++      out.push([from, to]);
++    }
++    return out;
++  }
++
++  function build() {
++    if (bar) return;
++    bar = document.createElement("div");
++    bar.className = "find-bar";
++    bar.setAttribute("role", "search");
++    bar.hidden = true;
++    bar.innerHTML = '<input type="search" class="find-q" id="findQ" autocomplete="off" spellcheck="false" aria-label="Find in this box" data-tip="Find in this box only: Enter for the next, Shift+Enter for the one before, Esc back to the box with it selected. A stress mark is not looked for; ё is е; о and а find ע and the Latin o and a too" />' +
++      '<span class="find-n mono" id="findN" aria-live="polite"></span>' +
++      '<button type="button" class="btn ghost small find-btn" data-find="prev" aria-label="The one before (Shift+Enter)" data-tip="The one before (Shift+Enter)">&#x2191;</button>' +
++      '<button type="button" class="btn ghost small find-btn" data-find="next" aria-label="The next (Enter)" data-tip="The next (Enter)">&#x2193;</button>' +
++      '<button type="button" class="btn ghost small find-btn" data-find="close" aria-label="Close (Esc)" data-tip="Close (Esc): back to the box, the match selected">&#x2715;</button>';
++    document.body.appendChild(bar);
++    input = bar.querySelector(".find-q");
++    count = bar.querySelector(".find-n");
++    input.addEventListener("input", function () { search(true); });
++    input.addEventListener("keydown", function (e) {
++      if (e.key === "Enter" || e.key === "F3") { e.preventDefault(); step(e.shiftKey ? -1 : 1); }
++      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); }
++    });
++    bar.addEventListener("mousedown", function (e) { if (e.target.closest("[data-find]")) e.preventDefault(); });   // the box keeps its words selected
++    bar.addEventListener("click", function (e) {
++      var b = e.target.closest("[data-find]");
++      if (!b) return;
++      if (b.dataset.find === "close") close(true);
++      else step(b.dataset.find === "prev" ? -1 : 1);
++    });
++  }
++
++  // over the box's top edge, on its label's row, so it hides none of the words; inside the box when there is no room above
++  function place() {
++    if (!bar || bar.hidden || !box) return;
++    var r = box.getBoundingClientRect(), w = bar.offsetWidth || 300, h = bar.offsetHeight || 38, above = r.top - h - 4;
++    bar.style.top = (above >= 56 ? above : Math.max(4, Math.min(window.innerHeight - h - 4, r.top + 4))) + "px";
++    bar.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, r.right - w - 6)) + "px";
++  }
++
++  function search(fromCaret) {
++    if (!box) return;
++    hits = find(box.value, input.value);
++    if (!hits.length) at = -1;
++    else if (fromCaret || at < 0) {
++      var caret = box.selectionStart || 0;
++      at = hits.findIndex(function (h) { return h[1] > caret; });
++      if (at < 0) at = 0;
++    } else {
++      at = Math.min(at, hits.length - 1);
++    }
++    show();
++  }
++
++  function step(d) {
++    if (!hits.length) return search(false);
++    at = (at + d + hits.length) % hits.length;
++    show();
++  }
++
++  // the match in hand marked over the box: a hidden copy of the box's layout gives its letters' boxes
++  function show() {
++    count.textContent = !input.value ? "" : hits.length ? tr("{0} of {1}").replace("{0}", at + 1).replace("{1}", hits.length) : tr("no match");
++    bar.classList.toggle("is-none", !!input.value && !hits.length);
++    if (at >= 0) reveal(hits[at]);
++    paintMarks();
++  }
++
++  function reveal(h) {
++    var m = measure(h);
++    if (!m) return;
++    var cs = getComputedStyle(box), lh = parseFloat(cs.lineHeight) || 20, bt = parseFloat(cs.borderTopWidth) || 0;
++    if (box.scrollHeight > box.clientHeight + 1) {               // the box scrolls: bring the line into its view
++      if (m.top < box.scrollTop || m.top + lh > box.scrollTop + box.clientHeight) box.scrollTop = Math.max(0, m.top - box.clientHeight / 3);
++    }
++    var r = box.getBoundingClientRect(), top = r.top + bt + m.top - box.scrollTop;   // and the frame or page around it
++    var p = box.parentElement;
++    while (p && p !== document.body && !(/(auto|scroll)/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight + 1)) p = p.parentElement;
++    var inner = p && p !== document.body, area = inner ? p.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
++    if (top < area.top + 48 || top > area.bottom - 48) {
++      var dy = top - (area.top + (area.bottom - area.top) / 3);
++      if (inner) p.scrollTop += dy; else window.scrollBy(0, dy);
++    }
++  }
++
++  // where the letters of a match stand inside the box (relative to its padding box, the box's own scroll not counted): a copy
++  // as wide as the box's inside (its scroll bar left out, so its lines wrap where the box's do), its paddings, no borders
++  function measure(h) {
++    if (!box || !h) return null;
++    if (!mirror) {
++      mirror = document.createElement("div");
++      mirror.className = "find-mirror";
++      mirror.setAttribute("aria-hidden", "true");
++      document.body.appendChild(mirror);
++    }
++    var cs = getComputedStyle(box);
++    ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "tabSize", "textTransform",
++     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent"].forEach(function (k) { mirror.style[k] = cs[k]; });
++    mirror.style.boxSizing = "border-box";
++    mirror.style.border = "0";
++    mirror.style.width = box.clientWidth + "px";
++    var text = box.value;
++    mirror.innerHTML = esc(text.slice(0, h[0])) + "<mark>" + esc(text.slice(h[0], h[1])) + "</mark>" + esc(text.slice(h[1])) + "​";
++    var mark = mirror.querySelector("mark"), base = mirror.getBoundingClientRect();
++    var rects = Array.prototype.map.call(mark.getClientRects(), function (q) {
++      return { left: q.left - base.left, top: q.top - base.top, width: q.width, height: q.height };
++    });
++    return rects.length ? { top: rects[0].top, rects: rects } : null;
++  }
++
++  function paintMarks() {
++    marks.forEach(function (m) { m.remove(); });
++    marks = [];
++    if (!box || at < 0 || !bar || bar.hidden) return;
++    var m = measure(hits[at]);
++    if (!m) return;
++    var r = box.getBoundingClientRect(), cs = getComputedStyle(box);
++    var bl = parseFloat(cs.borderLeftWidth) || 0, bt = parseFloat(cs.borderTopWidth) || 0;
++    var clip = { top: r.top + bt, bottom: r.top + bt + box.clientHeight };
++    m.rects.forEach(function (q) {
++      var top = r.top + bt + q.top - box.scrollTop, bottom = top + q.height;
++      if (bottom <= clip.top || top >= clip.bottom) return;       // scrolled out of the box's view
++      var d = document.createElement("div");
++      d.className = "find-mark";
++      d.style.left = (r.left + bl + q.left - box.scrollLeft) + "px";
++      d.style.top = Math.max(top, clip.top) + "px";
++      d.style.width = Math.max(2, q.width) + "px";
++      d.style.height = (Math.min(bottom, clip.bottom) - Math.max(top, clip.top)) + "px";
++      document.body.appendChild(d);
++      marks.push(d);
++    });
++  }
++
++  function later() {
++    if (queued || !bar || bar.hidden) return;
++    queued = true;
++    requestAnimationFrame(function () { queued = false; place(); paintMarks(); });
++  }
++
++  function open(target) {
++    build();
++    if (box && box !== target) box.removeEventListener("input", onBoxInput);
++    box = target;
++    box.addEventListener("input", onBoxInput);
++    bar.hidden = false;
++    input.placeholder = tr({ lyrics: "Find in the lyrics", style: "Find in the style", notes: "Find in the notes" }[BOXES[box.id]] || "Find in this box");
++    var sel = box.value.slice(box.selectionStart, box.selectionEnd);
++    if (sel && sel.indexOf("\n") < 0 && sel.length < 80) input.value = sel;   // the words selected in the box, as a browser does
++    place();
++    input.focus();
++    input.select();
++    search(true);
++  }
++
++  function close(back) {
++    if (!bar || bar.hidden) return;
++    bar.hidden = true;
++    marks.forEach(function (m) { m.remove(); });
++    marks = [];
++    var b = box, h = at >= 0 ? hits[at] : null;
++    if (b) b.removeEventListener("input", onBoxInput);
++    box = null;
++    if (back && b) {
++      b.focus({ preventScroll: true });
++      if (h) b.setSelectionRange(h[0], h[1]);
++    }
++  }
++
++  function onBoxInput() { search(false); }
++
++  document.addEventListener("keydown", function (e) {
++    var key = (e.key || "").toLowerCase();
++    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && key === "f") {
++      var el = document.activeElement;
++      if (el && BOXES[el.id] && el.tagName === "TEXTAREA") { e.preventDefault(); open(el); return; }
++      if (bar && !bar.hidden && el === input) { e.preventDefault(); input.select(); }
++      return;
++    }
++    if (bar && !bar.hidden && e.key === "F3") { e.preventDefault(); step(e.shiftKey ? -1 : 1); return; }
++    if (bar && !bar.hidden && e.key === "Escape" && document.activeElement === box) { e.preventDefault(); close(true); }
++  }, true);
++  window.addEventListener("scroll", later, true);
++  window.addEventListener("resize", later);
++  document.addEventListener("mousedown", function (e) {           // a click elsewhere closes it (not in the box, not in the bar)
++    if (bar && !bar.hidden && !bar.contains(e.target) && e.target !== box) close(false);
++  });
++
++  window.HeresyFind = { open: open, close: close, find: find,
++    state: function () { return { open: !!(bar && !bar.hidden), box: box ? box.id : null, at: at, hits: hits.length, said: count ? count.textContent : "" }; } };
++})();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 13315b8..4c7fc43 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1991,7 +1991,7 @@ RuachI18n.add("be", {
+ "About the {0} VAE": "Пра VAE «{0}»",
+ "{#0} decoders": {"one": "{0} дэкодар", "few": "{0} дэкодары", "many": "{0} дэкодараў", "other": "{0} дэкодара"},
+ "{#0} decoder": {"one": "{0} дэкодар", "few": "{0} дэкодары", "many": "{0} дэкодараў", "other": "{0} дэкодара"},
+-"{0} picked in the form": "{0} выбраны ў форме",
++"{0} picked in the ☰ menu": "{0} выбраны ў меню ☰",
+ "a finished song can add another from its page": "гатовая песня можа дадаць яшчэ адзін са сваёй старонкі",
+ "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "Цяперашні афіцыйны дэкодар, ён жа па змаўчанні. Найчысцейшы і гучыць лепш за ўсіх: пачынай з яго.",
+ "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "Ранейшы афіцыйны дэкодар. Апублікаваныя ацэнкі бенчмаркаў атрыманы з ім. Менш чысты, чым Стандартны; камусьці ён чуецца больш музычным. Той жа энкодар, адрозніваецца толькі дэкодар.",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index b6a5ef1..64eb27f 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1990,7 +1990,7 @@ RuachI18n.add("el", {
+ "About the {0} VAE": "Σχετικά με το VAE {0}",
+ "{#0} decoders": {"one": "{0} αποκωδικοποιητής", "other": "{0} αποκωδικοποιητές"},
+ "{#0} decoder": {"one": "{0} αποκωδικοποιητής", "other": "{0} αποκωδικοποιητές"},
+-"{0} picked in the form": "{0} επιλεγμένος στη φόρμα",
++"{0} picked in the ☰ menu": "{0} επιλεγμένος στο μενού ☰",
+ "a finished song can add another from its page": "ένα ολοκληρωμένο τραγούδι μπορεί να προσθέσει άλλον από τη σελίδα του",
+ "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "Ο τρέχων επίσημος αποκωδικοποιητής, και η προεπιλογή. Ο πιο καθαρός και αυτός που ακούγεται καλύτερα: ξεκίνα από εδώ.",
+ "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "Ο παλαιότερος επίσημος αποκωδικοποιητής. Οι δημοσιευμένες βαθμολογίες benchmark βγήκαν με αυτόν. Λιγότερο καθαρός από τον Τυπικό· σε κάποιους ακούγεται πιο μουσικός. Ίδιος κωδικοποιητής, αλλάζει μόνο ο αποκωδικοποιητής.",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 9a717b8..8b57f39 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1990,7 +1990,7 @@ RuachI18n.add("es", {
+ "About the {0} VAE": "Sobre el VAE {0}",
+ "{#0} decoders": {"one": "{0} decodificador", "many": "{0} decodificadores", "other": "{0} decodificadores"},
+ "{#0} decoder": {"one": "{0} decodificador", "many": "{0} decodificadores", "other": "{0} decodificadores"},
+-"{0} picked in the form": "{0} elegido en el formulario",
++"{0} picked in the ☰ menu": "{0} elegido en el menú ☰",
+ "a finished song can add another from its page": "una canción terminada puede añadir otro desde su página",
+ "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "El decodificador oficial actual, y el predeterminado. El más limpio y el que mejor suena: empieza por aquí.",
+ "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "El decodificador oficial anterior. Las puntuaciones publicadas de los benchmarks se obtuvieron con él. Menos limpio que el Estándar; a algunos les suena más musical. El mismo codificador, solo cambia el decodificador.",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index e9bc4ef..5750a7b 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1990,7 +1990,7 @@ RuachI18n.add("it", {
+ "About the {0} VAE": "Sul VAE {0}",
+ "{#0} decoders": {"one": "{0} decoder", "many": "{0} decoder", "other": "{0} decoder"},
+ "{#0} decoder": {"one": "{0} decoder", "many": "{0} decoder", "other": "{0} decoder"},
+-"{0} picked in the form": "{0} scelto nel modulo",
++"{0} picked in the ☰ menu": "{0} scelto nel menu ☰",
+ "a finished song can add another from its page": "una canzone finita può aggiungerne un altro dalla sua pagina",
+ "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "Il decoder ufficiale attuale, e il predefinito. Il più pulito e quello che suona meglio: parti da qui.",
+ "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "Il decoder ufficiale precedente. I punteggi pubblicati dei benchmark sono stati ottenuti con esso. Meno pulito dello Standard; ad alcuni suona più musicale. Lo stesso encoder, cambia solo il decoder.",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 35e9603..b8bd65f 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1996,7 +1996,7 @@ RuachI18n.add("ru", {
+ "About the {0} VAE": "О VAE «{0}»",
+ "{#0} decoders": { "one": "{0} декодер", "few": "{0} декодера", "many": "{0} декодеров", "other": "{0} декодера" },
+ "{#0} decoder": { "one": "{0} декодер", "few": "{0} декодера", "many": "{0} декодеров", "other": "{0} декодера" },
+-"{0} picked in the form": "{0} выбран в форме",
++"{0} picked in the ☰ menu": "{0} выбран в меню ☰",
+ "a finished song can add another from its page": "готовая песня может добавить ещё один со своей страницы",
+ "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "Нынешний официальный декодер, он же стандартный. Самый чистый и лучше всех звучащий: начинай с него.",
+ "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "Прежний официальный декодер. Опубликованные оценки бенчмарков сделаны с ним. Менее чистый, чем Стандартный; кому-то он слышится музыкальнее. Тот же энкодер, отличается только декодер.",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 2f86cf4..7bddefd 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1991,7 +1991,7 @@ RuachI18n.add("uk", {
+ "About the {0} VAE": "Про VAE «{0}»",
+ "{#0} decoders": {"one": "{0} декодер", "few": "{0} декодери", "many": "{0} декодерів", "other": "{0} декодера"},
+ "{#0} decoder": {"one": "{0} декодер", "few": "{0} декодери", "many": "{0} декодерів", "other": "{0} декодера"},
+-"{0} picked in the form": "{0} вибрано у формі",
++"{0} picked in the ☰ menu": "{0} вибрано в меню ☰",
+ "a finished song can add another from its page": "готова пісня може додати ще один зі своєї сторінки",
+ "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "Нинішній офіційний декодер, він же типовий. Найчистіший і найкраще звучить: починай із нього.",
+ "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "Колишній офіційний декодер. Опубліковані оцінки бенчмарків отримано з ним. Менш чистий, ніж Стандартний; комусь він чується музичнішим. Той самий енкодер, відрізняється лише декодер.",
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index 64761fb..dfffdb2 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -16,6 +16,7 @@
+   function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+   function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private */ } }
+   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+   function api(body, id) {
+     var q = [];
+     if (id) q.push("id=" + encodeURIComponent(id));
+@@ -269,6 +270,50 @@
+         .then(function () { $("wrTitle").select(); }).catch(function (e) { toast(e.message, true); });
+     });
+     $("wrFromCreate").addEventListener("click", function () { fromCreate(true).then(function (doc) { if (doc) open(doc.id); }); });
++    // HERESY 1168 (Viktor 07.10.2026: «глобальный экспорт/импорт всех данных скопом для бекапа»): the whole notebook in one
++    // file and back. Both ways the file stays text in the page: a seed of 19 digits in a document's knobs would come out
++    // rounded through the browser's numbers, so the export is saved as the lab wrote it and the import goes as it was read.
++    var backupUrl = "/lab/writer" + (SCOPE ? "?scope=" + encodeURIComponent(SCOPE) : "");
++    var post = function (text) {
++      return fetch(backupUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: text }).then(function (r) {
++        return r.text().then(function (t) {
++          if (!r.ok) { var e; try { e = JSON.parse(t).error; } catch (x) { e = r.status; } throw new Error(e); }
++          return t;
++        });
++      });
++    };
++    $("wrExport").addEventListener("click", function () {
++      flush().then(function () { return post('{"op": "export"}'); }).then(function (text) {
++        var d = new Date(), two = function (n) { return (n < 10 ? "0" : "") + n; };
++        var name = "ruach-writer-backup-" + d.getFullYear() + two(d.getMonth() + 1) + two(d.getDate()) + "-" + two(d.getHours()) + two(d.getMinutes()) + ".json";
++        var b = JSON.parse(text), a = document.createElement("a");          // parsed only to count
++        a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
++        a.download = name;
++        document.body.appendChild(a);
++        a.click();
++        a.remove();
++        setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
++        toast(tr("Writer backup: {0} documents and {1} in the trash, into {2}").replace("{0}", (b.docs || []).length)
++          .replace("{1}", (b.trash || []).length).replace("{2}", name));
++      }).catch(function (e) { toast(e.message, true); });
++    });
++    $("wrImport").addEventListener("click", function () { $("wrImportFile").click(); });
++    $("wrImportFile").addEventListener("change", function () {
++      var f = this.files[0];
++      this.value = "";
++      if (!f) return;
++      f.text().then(function (text) {
++        if (!/^\s*\{/.test(text)) throw new Error(tr("not a Writer backup (a file this room exported)"));
++        return flush().then(function () { return post('{"op": "import", "backup": ' + text + "}"); });
++      }).then(function (t) {
++        var d = JSON.parse(t), n = d.imported || {};
++        state.docs = d.docs || state.docs;
++        paintList();
++        paintHand();
++        toast(tr("Writer backup {0}: {1} new, {2} already here, {3} beside their namesakes as copies, {4} into the trash")
++          .replace("{0}", f.name).replace("{1}", n.added || 0).replace("{2}", n.same || 0).replace("{3}", n.copies || 0).replace("{4}", n.trashed || 0));
++      }).catch(function (e) { toast(tr("Not imported: {0}").replace("{0}", e.message), true); });
++    });
+     ["wrTitle", "wrStyle", "wrLyrics", "wrNotes"].forEach(function (id) { $(id).addEventListener("input", changed); });
+     $("wrDoc").addEventListener("keydown", function (e) {
+       if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); flush().then(function () { toast("Saved"); }); }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index ae4be08..c7ac103 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -405,6 +405,12 @@
+ BF16 · 7.2 GB · the full release
+ Q8_0 · 3.8 GB · near lossless
+ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
++        <!-- HERESY 1168 (Viktor 07.10.2026: «Может к хуям убираем из Композера VAE блок… Выбор VAE переносим в бар в спадающее меню
++             прямо под выбор модели»): the decoder is the machine's, as the model is -->
++        <label class="head-more-row"><span>VAE</span><select id="vaePick" class="theme-pick" aria-label="VAE" data-tip="The sound decoder for the songs to come. A take already made decodes again with another one from its card, in seconds.
++Standard · the cleanest sound, the newer model, the default
++Legacy · the older official decoder, the benchmarks were made with it
++Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <div class="head-more-items">
+           <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
+           <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
+@@ -1267,6 +1273,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <div class="wr-side-bar">
+           <button type="button" class="btn primary small" id="wrNew">＋ New</button>
+           <button type="button" class="btn ghost small" id="wrFromCreate" title="A new document from the song in the Creator, with every knob">＋ From the Creator</button>
++          <!-- HERESY 1168 (Viktor 07.10.2026: «В комнате Писателя добавить глобальный экспорт/импорт всех данных скопом для бекапа») -->
++          <span class="wr-io"><button type="button" class="btn ghost small" id="wrExport" data-icon="save" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, in one file (a backup)">Export all</button>
++          <button type="button" class="btn ghost small" id="wrImport" data-icon="open" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy. Nothing here is written over">Import</button></span>
++          <input type="file" id="wrImportFile" accept=".json,application/json" aria-label="A Writer backup to import" hidden />
+           <span class="coll-n" id="wrCount"></span>
+         </div>
+         <input type="search" id="wrSearch" placeholder="Search all four parts · * and ?" autocomplete="off" />
+@@ -2045,6 +2055,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ <script src="heresy-collection.js"></script>
+ <script src="heresy-textprep.js"></script>
+ <script src="heresy-lyrics.js"></script>
++<script src="heresy-find.js"></script>
+ <script src="heresy-menu.js"></script>
+ <script src="heresy-writer.js"></script>
+ <script src="heresy-train.js"></script>
+diff --git a/tools/console/vaes.js b/tools/console/vaes.js
+index aa44d0b..34ab030 100644
+--- a/tools/console/vaes.js
++++ b/tools/console/vaes.js
+@@ -75,7 +75,7 @@
+     }).join("");
+     if (S.note) {
+       S.note.textContent = tr(S.vaes.length + " decoder" + (S.vaes.length === 1 ? "" : "s")) +
+-        (pickedLabel ? " · " + tr(pickedLabel + " picked in the form") : "") + " · " + tr("a finished song can add another from its page");
++        (pickedLabel ? " · " + tr(pickedLabel + " picked in the ☰ menu") : "") + " · " + tr("a finished song can add another from its page");
+     }
+   }
+ 
+-- 
+2.43.0
+

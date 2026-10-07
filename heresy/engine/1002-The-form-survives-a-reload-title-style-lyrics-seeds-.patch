@@ -1,7 +1,7 @@
 From cfb3b6737eef7bc585b34a3cc26960fe6ea45af6 Mon Sep 17 00:00:00 2001
 From: Prometheus2 <noreply@anthropic.com>
 Date: Wed, 30 Sep 2026 09:52:18 -0600
-Subject: [PATCH 1002/1179] The form survives a reload: title, style, lyrics,
+Subject: [PATCH 1002/1198] The form survives a reload: title, style, lyrics,
  seeds and knobs
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

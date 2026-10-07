@@ -209,10 +209,77 @@
     var all = DATA.styles || [], heardN = all.filter(function (s) { return styleState(s).cls === "is-heard"; }).length;
     $("hiCount").innerHTML = "<span>" + all.length + " style" + (all.length === 1 ? "" : "s") + "</span> \u00b7 <span>" + heardN + " heard by ear</span>";
   }
+
+  // HERESY 1168 (Viktor 07.10.2026: «По примерам из YuE2 репо вычлени все возможные теги и предусмотри их… было бы круто иметь
+  // в читшит максимальный список музыкальных тегов/маркеров для промпта лирики»): the lyrics' tags, as the 110 official
+  // examples write them (how often, counted 07.10.2026), and Viktor's phonetic hand. A click puts a tag into the
+  // lyrics where the cursor stands, on a line of its own; a mark of the hand goes in where the cursor stands.
+  var LYRIC_TAGS = [
+    { group: "Sections YuE2 knows (×: how often the 110 official examples write it)", rows: [
+      ["[Verse]", 145, "Verse 1, Verse 2… a numbered one counts as the same"], ["[Chorus]", 187, "the hook the song comes back to"],
+      ["[Pre-Chorus]", 61, "Prechorus too (8)"], ["[Bridge]", 47, "measured with the verses in the meter"], ["[Outro]", 37, ""],
+      ["[Intro]", 21, "its lines are seldom sung: put a spoken intro under [Interlude] or [Verse]"], ["[Interlude]", 18, "Viktor: a pause in rap, a brake on speech that runs ahead"],
+      ["[Final Chorus]", 9, ""], ["[End]", 7, "Ends too"], ["[Instrumental Break]", 9, "with what plays: «Instrumental Break - Horns»"],
+      ["[Guitar Solo]", 8, "Drum Solo, Keyboard Solo, Solo"], ["[Refrain]", 4, "Refrain 1…4"], ["[Post-Chorus]", 3, ""], ["[Breakdown]", 2, ""],
+      ["[Fade Out]", 2, "Fadeout, Instrumental fade out"], ["[Hook]", 1, ""], ["[Drop]", 1, "Beat drops – …"], ["[Instrumental]", 1, ""],
+      ["[Inst]", 0, "the studio's own short name of an instrumental part"], ["[Break]", 0, "Viktor's: a pause in rap"]] },
+    { group: "A section and how it is sung (after a dash or a colon)", rows: [
+      ["[Verse 1 – Male voice (raspy, relaxed)]", 1, ""], ["[Chorus – Both voices (call & response)]", 1, ""], ["[Pre-Chorus – Sung softly]", 1, ""],
+      ["[Verse 1 – Melodic Rap / Spoken Rhythmically]", 1, ""], ["[Intro – Muse (whispered)]", 1, ""], ["[Intro – Warlord (spoken/half-sung)]", 1, ""],
+      ["[Final Chorus – Full power, layered vocals]", 1, ""], ["[Chorus: All]", 2, ""], ["[Verse 1 – Him]", 1, "Verse 1 – Her"], ["[Outro – Piano + fading echo]", 1, ""]] },
+    { group: "Who sings (no new section: the lines stay in the one before)", rows: [
+      ["[Male Vocals]", 25, ""], ["[Female ad-libs]", 1, "Vocal ad-libs"], ["[NARRATOR — NOT SUNG | cinematic voiceover]", 2, ""], ["[Spoken: …]", 1, ""]] },
+    { group: "What plays (an instrumental cue as a section)", rows: [
+      ["[Intro: Piano & Flute]", 1, ""], ["[Guitar Interlude]", 1, ""], ["[Instrumental Break - Saxophone Solo]", 1, ""], ["[Beat drops – male rap enters, 95 BPM]", 1, ""],
+      ["[Final guitar strum]", 1, ""], ["[Outro - Instrumental Fade Out]", 1, ""]] },
+    { group: "Meta-tags (one example of 110: their place is the Style prompt)", rows: [
+      ["[GENRES: …]", 1, "MOOD, TEMPO, INSTRUMENTATION, ARRANGEMENT, PRODUCTION, STRUCTURE, DYNAMICS, EMOTIONS too"]] },
+    { group: "The phonetic hand (Viktor's, from SUNO; YuE2 follows it as well)", hand: true, rows: [
+      ["́", 0, "a stress mark after a vowel: обе́щано, сули́т (holds in more than 95 % of lines)", "stress mark"],
+      ["О́", 0, "a capital stressed vowel pushes the stress where the rhyme wants it: базилиО́", "capital stressed vowel"],
+      ["ע", 0, "ע inside a Russian word sings a soft о/а: кעмо́рка, пעле́но; it also brakes rap that runs ahead", "ayin"],
+      ["o", 0, "a Latin o inside a Russian word sings a hard, open o where the model would say а: Кo дну", "Latin o"],
+      ["о-о-о", 0, "a stretched vowel holds a note: where the music has room for it, not on every line", "stretched vowel"],
+      ["Бу-ра-ти-но", 0, "syllables apart with hyphens, each on its own beat", "syllables apart"],
+      ["( )", 0, "round brackets may be sung: an echo, a backing line (the first Buratino takes sang them)", "round brackets"],
+      ["רוּחַ", 0, "a Hebrew word with its vowel points is said better than in transliteration", "Hebrew with its points"]] }
+  ];
+  function paintTags() {
+    var f = fold(state.q), html = "", n = 0;
+    LYRIC_TAGS.forEach(function (g) {
+      var rows = g.rows.filter(function (r) { return !f || fold(r[0] + " " + r[2] + " " + (r[3] || "")).indexOf(f) >= 0; });
+      if (!rows.length) return;
+      n += rows.length;
+      html += '<tr class="hi-fam"><th colspan="4">' + esc(g.group) + " <em>" + rows.length + "</em></th></tr>" + rows.map(function (r) {
+        return '<tr class="is-heard"><td class="hi-name"><button type="button" class="hi-tag" data-hi-lyr="' + esc(r[0]) + '"' + (g.hand ? ' data-hi-hand="1"' : "") +
+          ' translate="no" data-tip="' + (g.hand ? "into the lyrics, where the cursor stands" : "into the lyrics, on a line of its own") + '">' + esc(g.hand ? (r[3] ? r[0] + "  ·  " + r[3] : r[0]) : r[0]) + "</button></td>" +
+          '<td class="hi-say" colspan="2"><div>' + esc(r[2]) + "</div></td>" +
+          '<td class="hi-plays mono">' + (r[1] ? "×" + esc(String(r[1])) : "") + "</td></tr>";
+      }).join("");
+    });
+    $("hiTable").innerHTML = html || '<tr><td class="row-hint">Nothing matches.</td></tr>';
+    $("hiCount").innerHTML = "<span>" + n + " tags and marks</span> · <span>the official examples counted</span>";
+  }
+  function addLyricTag(tag, hand) {
+    var ly = $("lyrics");
+    if (!ly || !tag) return;
+    var at = ly.selectionStart, end = ly.selectionEnd, v = ly.value, ins = tag;
+    if (hand) ins = tag === "( )" ? "()" : tag;
+    else {
+      if (at > 0 && v.charAt(at - 1) !== "\n") ins = "\n" + ins;
+      if (v.charAt(end) !== "\n") ins = ins + "\n";
+    }
+    ly.value = v.slice(0, at) + ins + v.slice(end);
+    var caret = at + ins.length - (hand && tag === "( )" ? 1 : 0);
+    ly.setSelectionRange(caret, caret);
+    ly.dispatchEvent(new Event("input", { bubbles: true }));
+    state.hooks.toast("Into the lyrics: " + tag);
+  }
   function paint() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-hi-tab]"), function (b) { b.classList.toggle("is-on", b.dataset.hiTab === state.tab); });
     $("hiFam").hidden = $("hiHeardBox").hidden = state.tab !== "instruments";
     if (state.tab === "styles") return paintStyles();
+    if (state.tab === "tags") return paintTags();   // HERESY 1168
     var f = fold(state.q), fams = DATA.families, html = "";
     Object.keys(fams).forEach(function (fam) {
       if (state.fam && state.fam !== fam) return;
@@ -237,7 +304,8 @@
     back.className = "hi-back"; back.id = "hiBack"; back.hidden = true;
     back.innerHTML = '<div class="hi-box" aria-label="Instruments">' +
       '<div class="hi-head"><b>♪</b><span class="hi-tabs"><button type="button" class="hi-tabb" data-hi-tab="instruments">Instruments</button>' +
-      '<button type="button" class="hi-tabb" data-hi-tab="styles">Styles</button></span><span class="row-hint" id="hiCount"></span><span class="spacer"></span>' +
+      '<button type="button" class="hi-tabb" data-hi-tab="styles">Styles</button>' +
+      '<button type="button" class="hi-tabb" data-hi-tab="tags">Lyrics tags</button></span><span class="row-hint" id="hiCount"></span><span class="spacer"></span>' +
       '<button type="button" class="btn ghost small" id="hiClose">Close</button></div>' +
       // HERESY 1167 (Viktor: «Дизайн аудио шпаргалки пересмотри. Там в голове навалено сплошными потоками»): the head in parts:
       // the warning in a line, a legend of four, how the probes were made folded
@@ -266,6 +334,8 @@
       if (tb) { state.tab = tb.dataset.hiTab; return paint(); }
       if (a && window.HeresyArt) return window.HeresyArt.show(a.dataset.hiArt, Array.prototype.map.call($("hiTable").querySelectorAll("[data-hi-art]"), function (b) { return b.dataset.hiArt; }));
       if (t) return addTag(t.dataset.hiTag);
+      var lt = e.target.closest("[data-hi-lyr]");
+      if (lt) return addLyricTag(lt.dataset.hiLyr, !!lt.dataset.hiHand);   // HERESY 1168
       if (p) { var take = state.hooks.findTake(p.dataset.hiPlay); if (take) state.hooks.playNow(take); else state.hooks.toast("The probe is not in the library now", "bad"); }
     });
     $("hiSearch").addEventListener("input", function () { state.q = this.value; paint(); });
@@ -504,5 +574,6 @@
   // HERESY 1156: pictures drawn meanwhile reach the open sheet; 1158: and the chips under the style
   function paintArts() { if ($("hiBack") && !$("hiBack").hidden) paint(); paintChips(); }
   window.HeresyInstruments = { init: init, open: open, heardTags: heardTags, notHeardTags: notHeardTags, paintArts: paintArts, data: function () { return DATA; },
-    styleLines: styleLines, styleProbed: styleProbed, voices: voices, adapters: adapters };   // HERESY 1166: the Writer's charter
+    styleLines: styleLines, styleProbed: styleProbed, voices: voices, adapters: adapters,   // HERESY 1166: the Writer's charter
+    lyricTags: function () { return LYRIC_TAGS; } };   // HERESY 1168: the tags offered under a «[» in the lyrics (heresy-complete.js)
 })();

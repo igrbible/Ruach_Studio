@@ -1,0 +1,417 @@
+From d82a1364f985319157b31a83bbe405d9f1ac224d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 21:36:13 -0600
+Subject: [PATCH 1180/1198] HERESY 1168: the Creator's frames over the room; a
+ Score card with no score holds only its from-the-sound button; the
+ Librarian's star filter
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026:
+- «в комнате Творца прикрути на каждый фрейм — левый и правый — разворот этого фрейма на "полный экран", в оверлей окно
+  95%x95%, с увеличением масштаба всего фрейма здесь на добрых 20%… кнопку переключения между фреймами. При запуске
+  генерации — сворачиваем фреймы оверлейные. Retake — сразу в левый фрейм переносит». Compose and the take each get a button
+  that lifts the frame over the room: 95 % of the screen above the player (which stays in sight and in hand), a fifth
+  larger (CSS zoom, its own sizes divided by it), the frame lifted where it stands so its handlers and state stay its own.
+  From there the other frame; Esc, a click beside it, another room or a run started put it back; Retake, Reuse and the
+  score into the form bring the form's frame (show("compose")).
+- «если нет партитуры, нужно прятать все кнопки, которые касаются сессии с готовой партитурой. FULL SCREEN, к примеру, не
+  работает… Туда только кнопку "Сгенерить партитуру из звука"». A take with no score: the card holds that button alone
+  (no staff tabs, print, paper, MIDI, markers, edit, full screen, nor the sheet the engraver left from the take before:
+  its inline display is why the rule is important). The tools come with a score, its own or written from its sound; the
+  pencil puts a score written from the sound into the form as the Full plan. And the button's row, display: flex, never
+  obeyed its [hidden]: it stood under every score; now only where there is none.
+- «В фильтр в Воркспейсах добавь Звезду»: ★ beside the thumbs, the favourites in the workspace in hand.
+
+The new words in all six catalogs. The suite: 353 passed, 0 failed (9 new checks).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 24 +++++++++++++
+ tools/console/app.js               | 58 ++++++++++++++++++++++++++++--
+ tools/console/heresy-collection.js |  5 +--
+ tools/console/heresy-i18n-be.js    | 12 +++++++
+ tools/console/heresy-i18n-el.js    | 12 +++++++
+ tools/console/heresy-i18n-es.js    | 12 +++++++
+ tools/console/heresy-i18n-it.js    | 12 +++++++
+ tools/console/heresy-i18n-ru.js    | 12 +++++++
+ tools/console/heresy-i18n-uk.js    | 12 +++++++
+ tools/console/heresy-icons.js      |  3 ++
+ tools/console/index.html           | 16 +++++++++
+ 11 files changed, 173 insertions(+), 5 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 2ebf560..cc2f22e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4144,3 +4144,27 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .eg-unload-row .check { white-space: nowrap; }
+ /* HERESY 1167 (Viktor: «SVG кнопки переключения режима день/ночь/система сделай побольше»): 21 px, the others 17 */
+ .day-night .hz-icon { width: 21px; height: 21px; }
++/* HERESY 1168 (Viktor 06.10.2026: «если нет партитуры, нужно прятать все кнопки… Туда только кнопку "Сгенерить партитуру из
++   звука"»): no score yet, nothing to engrave, print, zoom or export: the button that writes it, alone */
++#scorePanel[data-empty] .score-head, #scorePanel[data-empty] .paper, #scorePanel[data-empty] .score-check { display: none !important; }
++/* (important: the engraver leaves its own inline display on the staff it drew for the take before.) And the row of the
++   button was never hidden by its [hidden]: its display: flex outweighed it, so it stood under every score */
++.score-from-sound[hidden], .score-from-sound .btn[hidden] { display: none; }
++/* HERESY 1168 (Viktor 06.10.2026: «на каждый фрейм — левый и правый — разворот этого фрейма… в оверлей окно 95%x95%, с
++   увеличением масштаба всего фрейма на добрых 20%»): a Creator frame over the room, 95 % of the screen above the player (the
++   player stays in sight and in hand), all of it a fifth larger. The frame is lifted where it stands; the zoom multiplies its
++   own sizes too, so they are given divided by it */
++.frame-tools { display: inline-flex; align-items: center; gap: 2px; flex: none; }
++.frame-tools .icon-btn { display: inline-grid; place-items: center; padding: 4px 7px; }
++.frame-tools .ui-ico { width: 17px; height: 17px; }
++.frame-tools .frame-swap { display: none; }
++body[data-frame] .frame-tools .frame-swap { display: inline-grid; }
++.frame-veil { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 26;
++  background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55)); backdrop-filter: blur(3px); }
++:root { --frame-zoom: 1.2; }
++body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
++  position: fixed; z-index: 27; zoom: var(--frame-zoom);
++  left: calc(2.5vw / var(--frame-zoom)); width: calc(95vw / var(--frame-zoom));
++  top: calc((100vh - var(--playbar-h)) * .025 / var(--frame-zoom)); height: calc((100vh - var(--playbar-h)) * .95 / var(--frame-zoom));
++  border: 1px solid var(--line-strong-a); border-radius: var(--r-lg); box-shadow: 0 24px 80px var(--shadow-lg);
++}
+diff --git a/tools/console/app.js b/tools/console/app.js
+index fd7d015..1fc9356 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -232,6 +232,8 @@
+       $("view-engine").classList.add("is-hidden");
+       drawWave();
+       if (window.innerWidth <= 1150) $("view-take").scrollIntoView({ behavior: "smooth", block: "start" });
++    } else if (view === "compose" && document.body.dataset.frame) {
++      frameOver("compose");   // HERESY 1168: what brings the form forward brings its frame over the room
+     }
+   }
+ 
+@@ -1540,6 +1542,7 @@
+   // No score yet: plan one (the form's lyrics, or a bare section skeleton), then convert and render it.
+   function planForInstrumental(body, versions) {
+     if (!body.style) return toast("A style prompt is required", "bad");
++    frameOver(null);   // HERESY 1168: a run starts, the frames go back into the room
+     var plan = Object.assign({}, body, { plan_only: true, cot: body.cot === "off" ? "full" : body.cot,
+       lyrics: body.lyrics.trim() ? body.lyrics : YueInstrumental.planningLyrics });
+     $("generateBtn").disabled = true;
+@@ -1601,6 +1604,7 @@
+   });
+ 
+   function queueVersions(body, versions) {
++    frameOver(null);   // HERESY 1168 (Viktor: «При запуске генерации — сворачиваем фреймы оверлейные»)
+     if (body.semantic_tokens && versions > 1) {
+       versions = 1;
+       toast("Loaded codes render one song; use Sound variations for more takes of it");
+@@ -3865,10 +3869,15 @@
+   function paintFromSound(take) {
+     var box = $("scoreFromSound"), run = $("scoreFromSoundRun"), btn = $("scoreFromSoundBtn");
+     box.hidden = !!take.has_score || !!take.session;
++    // HERESY 1168 (Viktor 06.10.2026: «если нет партитуры, нужно прятать все кнопки, которые касаются сессии с готовой
++    // партитурой. FULL SCREEN, к примеру, не работает, потому что нечего разворачивать. Туда только кнопку "Сгенерить
++    // партитуру из звука"»): with no score yet the card holds that one button; the score's tools come with a score
++    $("scorePanel").toggleAttribute("data-empty", !box.hidden);
+     if (box.hidden) return;
+     run.textContent = ""; btn.disabled = false; btn.hidden = false;
+     fetch("/lab/score?name=" + encodeURIComponent(take.name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+       if (STATE.take !== take || !d || !d.abc) return;
++      $("scorePanel").removeAttribute("data-empty");
+       btn.hidden = true;
+       run.textContent = "written from its sound by " + (d.by || "the transcriber") + (d.made ? ", " + d.made : "");
+       renderScore(d.abc);
+@@ -3896,6 +3905,7 @@
+         return fetch("/lab/score?name=" + encodeURIComponent(take.name), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ abc: abc }) })
+           .then(function () {
+             if (STATE.take !== take) return;
++            $("scorePanel").removeAttribute("data-empty");   // HERESY 1168: a score now, and its tools with it
+             btn.hidden = true;
+             run.textContent = "written from its sound by the transcriber (SheetSage2), now";
+             renderScore(abc);
+@@ -3964,13 +3974,18 @@
+ 
+   $("reuseScore").addEventListener("click", function () {
+     var take = STATE.take;
+-    if (!take || !take.has_score) return;
+-    getRequest(take).then(function (req) {
++    if (!take) return;
++    // HERESY 1168: a Direct take's score written from its sound (with its chords: the Full plan) goes into the form the same
++    // way; the pencil shows only with a score now, so it never stands there doing nothing
++    var fromSound = !take.has_score && !take.session && STATE.abcRendered;
++    if (!take.has_score && !fromSound) return;
++    (fromSound ? Promise.resolve({ abc: STATE.abcRendered }) : getRequest(take)).then(function (req) {
++      var cot = fromSound ? "full" : take.cot;
+       $("abc").value = req.abc || "";
+       $("style").value = take.style;
+       $("lyrics").value = take.lyrics;
+       $("title").value = displayTitle(take) + " (edit)";
+-      if (MODES[take.cot] && take.cot !== "off") setCot(take.cot);
++      if (MODES[cot] && cot !== "off") setCot(cot);
+       setCodes(null);
+       growLyrics();
+       queueComfort();   // HERESY 1145: the style box's height too (this lands after the click)
+@@ -3988,6 +4003,7 @@
+     if (!take) return;
+     getRequest(take).then(function (req) {
+       loadRequestIntoForm(req, { title: displayTitle(take), fromTake: take.session ? null : take.name, codesTitle: displayTitle(take) });
++      show("compose");   // HERESY 1168 (Viktor: «Retake — сразу в левый фрейм переносит»)
+       toast("Retake: this take is in the form with its music codes, so Generate renders that music again. Drop the codes to write new music.", "good");
+     }).catch(function (error) { toast(error.message, "bad"); });
+   });
+@@ -7270,6 +7286,7 @@
+     if (tab === "post") { paintPost(); refreshRefined(); restorePostTake(); }   // HERESY 1132
+     paintLibrary();                                                          // the Refiner's column is its own
+     if (tab === "create") drawWave();
++    else frameOver(null);                            // HERESY 1168: a frame lifted in the Creator does not follow to another room
+     window.dispatchEvent(new Event("resize"));   // pictures measure their new width
+   }
+   // HERESY 1166: a room in the bar leaves the Engine page for that room (asked first when the GPU roles are not saved)
+@@ -7769,6 +7786,41 @@
+   });
+   $("scoreStaff").addEventListener("dblclick", openStaff);
+ 
++  // HERESY 1168 (Viktor 06.10.2026: «в комнате Творца прикрути на каждый фрейм — левый и правый — разворот этого фрейма на
++  // "полный экран", в оверлей окно 95%x95%, с увеличением масштаба всего фрейма здесь на добрых 20%. … Также в оверлеях
++  // кнопку переключения между фреймами. При запуске генерации — сворачиваем фреймы оверлейные. Retake — сразу в левый фрейм
++  // переносит. И всё в таком типе»): a frame lifted over the room, body[data-frame] (the CSS lifts it where it stands, so its
++  // handlers and state stay its own); from there the other frame. Esc, a click beside it, another room or a run started put
++  // it back; what brings the form forward (Retake, Reuse, the score into the form) brings the form's frame: show("compose").
++  var FRAMES = { compose: "view-compose", take: "view-take" };
++  function frameOver(which) {
++    if (!FRAMES[which] || document.body.dataset.tab !== "create") which = null;
++    if ((document.body.dataset.frame || null) === which) return;
++    if (which) document.body.dataset.frame = which; else delete document.body.dataset.frame;
++    $("frameVeil").hidden = !which;
++    all(".frame-big").forEach(function (b) {
++      var up = b.dataset.frame === which;
++      b.setAttribute("aria-pressed", up ? "true" : "false");
++      b.setAttribute("aria-label", up ? "Back into the room" : "Over the room");
++      b.dataset.tip = up ? "Back into the room (Esc)" : "This frame over the room, larger: Esc or a click beside it puts it back";
++      if (window.HeresyIcons) b.innerHTML = window.HeresyIcons.ui(up ? "minimize" : "maximize");
++    });
++    window.dispatchEvent(new Event("resize"));   // the wave, the staff and the pictures measure their frame again
++  }
++  all(".frame-big").forEach(function (b) {
++    b.addEventListener("click", function () { frameOver(document.body.dataset.frame === b.dataset.frame ? null : b.dataset.frame); });
++  });
++  all(".frame-swap").forEach(function (b) { b.addEventListener("click", function () { frameOver(b.dataset.frame); }); });
++  $("frameVeil").addEventListener("click", function () { frameOver(null); });
++  // Esc puts the frame back, unless a menu, a dialog or the staff's full screen is open over it: those close first, by their
++  // own Esc (this runs before them, while they are still there)
++  window.addEventListener("keydown", function (event) {
++    if (event.key !== "Escape" || !document.body.dataset.frame) return;
++    var over = document.querySelectorAll(".menu-pop:not(.is-hidden), .hm-menu, .hz-view, .hd-back, .ds-back, .hi-back, .cmp-back, .hg-back, .dw-back, .coll-sheet");
++    if (Array.prototype.some.call(over, function (e) { return e.getClientRects().length > 0; })) return;   // some wait [hidden]
++    frameOver(null);
++  }, true);
++
+   buildKnobs();
+   syncShape();
+   paintOutputDefaults();
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 705f57b..e6c0566 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -119,6 +119,7 @@
+       if (state.place && state.place.charAt(0) !== "_" && !inTree(r, state.place)) return false;   // its sections too (1161)
+       if (state.kinds.__liked && !(r.rating > 0)) return false;
+       if (state.kinds.__disliked && !(r.rating < 0)) return false;
++      if (state.kinds.__starred && !r.favorite) return false;   // HERESY 1168: the favourites, where you are
+       var realKinds = Object.keys(state.kinds).filter(function (k) { return k.charAt(0) !== "_"; });
+       if (realKinds.length && !state.kinds[r.kind]) return false;
+       if (anyDer && !r.derived.some(function (k) { return state.derived[k]; })) return false;
+@@ -791,8 +792,8 @@
+     $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
+     // HERESY 1167: the disliked shown or not: the rooms' takes column's ⋯ («The disliked ones too»), one setting with this
+     window.addEventListener("ruach-disliked", function () { paint(); });
+-    Array.prototype.forEach.call(document.querySelectorAll('#collFilters [data-kind="__liked"], #collFilters [data-kind="__disliked"]'), function (b) {
+-      var svg = ico(b.dataset.kind === "__liked" ? "like" : "dislike");     // the cards' one-colour icons, not the emoji
++    Array.prototype.forEach.call(document.querySelectorAll('#collFilters [data-kind="__liked"], #collFilters [data-kind="__disliked"], #collFilters [data-kind="__starred"]'), function (b) {
++      var svg = ico({ __liked: "like", __disliked: "dislike", __starred: "star" }[b.dataset.kind]);   // the cards' one-colour icons, not the emoji
+       if (svg) b.innerHTML = svg;
+     });
+     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) {
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 4c3a9e6..70930c3 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2818,3 +2818,15 @@ RuachI18n.add("be", {
+ "Classical string quartet": "Класічны струнны квартэт",
+ "Film noir jazz": "Джаз у духу нуару"
+ });
++// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
++RuachI18n.add("be", {
++"The take's frame": "Фрэйм сэмпла",
++"The other frame over the room: the take": "Іншы фрэйм па-над пакоем: сэмпл",
++"Over the room": "Па-над пакоем",
++"This frame over the room, larger: Esc or a click beside it puts it back": "Гэты фрэйм па-над пакоем, буйней: Esc або пстрычка побач верне яго на месца",
++"The form's frame": "Фрэйм формы",
++"The other frame over the room: Compose": "Іншы фрэйм па-над пакоем: Стварэнне",
++"Back into the room": "Назад у пакой",
++"Back into the room (Esc)": "Назад у пакой (Esc)",
++"Only the favourites (★), in the workspace you are in": "Толькі абраныя (★), у прасторы, дзе ты цяпер"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index d2c708d..c1f2bd1 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2817,3 +2817,15 @@ RuachI18n.add("el", {
+ "Classical string quartet": "Κλασικό κουαρτέτο εγχόρδων",
+ "Film noir jazz": "Τζαζ φιλμ νουάρ"
+ });
++// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
++RuachI18n.add("el", {
++"The take's frame": "Το πλαίσιο της λήψης",
++"The other frame over the room: the take": "Το άλλο πλαίσιο πάνω από το δωμάτιο: η λήψη",
++"Over the room": "Πάνω από το δωμάτιο",
++"This frame over the room, larger: Esc or a click beside it puts it back": "Αυτό το πλαίσιο πάνω από το δωμάτιο, μεγαλύτερο: το Esc ή ένα κλικ δίπλα του το επαναφέρει",
++"The form's frame": "Το πλαίσιο της φόρμας",
++"The other frame over the room: Compose": "Το άλλο πλαίσιο πάνω από το δωμάτιο: Σύνθεση",
++"Back into the room": "Πίσω στο δωμάτιο",
++"Back into the room (Esc)": "Πίσω στο δωμάτιο (Esc)",
++"Only the favourites (★), in the workspace you are in": "Μόνο τα αγαπημένα (★), στον χώρο όπου βρίσκεσαι"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 94b6228..1fc30da 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2817,3 +2817,15 @@ RuachI18n.add("es", {
+ "Classical string quartet": "Cuarteto de cuerda clásico",
+ "Film noir jazz": "Jazz de cine negro"
+ });
++// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
++RuachI18n.add("es", {
++"The take's frame": "El marco de la toma",
++"The other frame over the room: the take": "El otro marco sobre la sala: la toma",
++"Over the room": "Sobre la sala",
++"This frame over the room, larger: Esc or a click beside it puts it back": "Este marco sobre la sala, más grande: Esc o un clic al lado lo devuelve a su sitio",
++"The form's frame": "El marco del formulario",
++"The other frame over the room: Compose": "El otro marco sobre la sala: Composición",
++"Back into the room": "De vuelta a la sala",
++"Back into the room (Esc)": "De vuelta a la sala (Esc)",
++"Only the favourites (★), in the workspace you are in": "Solo las favoritas (★), en el espacio donde estás"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index d0dd7f6..1d28292 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2817,3 +2817,15 @@ RuachI18n.add("it", {
+ "Classical string quartet": "Quartetto d'archi classico",
+ "Film noir jazz": "Jazz noir"
+ });
++// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
++RuachI18n.add("it", {
++"The take's frame": "Il riquadro del take",
++"The other frame over the room: the take": "L'altro riquadro sopra la stanza: il take",
++"Over the room": "Sopra la stanza",
++"This frame over the room, larger: Esc or a click beside it puts it back": "Questo riquadro sopra la stanza, più grande: Esc o un clic accanto lo rimette al suo posto",
++"The form's frame": "Il riquadro del modulo",
++"The other frame over the room: Compose": "L'altro riquadro sopra la stanza: Composizione",
++"Back into the room": "Di nuovo nella stanza",
++"Back into the room (Esc)": "Di nuovo nella stanza (Esc)",
++"Only the favourites (★), in the workspace you are in": "Solo i preferiti (★), nello spazio in cui sei"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 2033eb8..c7a743a 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2823,3 +2823,15 @@ RuachI18n.add("ru", {
+ "Classical string quartet": "Классический струнный квартет",
+ "Film noir jazz": "Джаз в духе нуара"
+ });
++// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
++RuachI18n.add("ru", {
++"The take's frame": "Фрейм семпла",
++"The other frame over the room: the take": "Другой фрейм поверх комнаты: семпл",
++"Over the room": "Поверх комнаты",
++"This frame over the room, larger: Esc or a click beside it puts it back": "Этот фрейм поверх комнаты, крупнее: Esc или щелчок рядом вернёт его на место",
++"The form's frame": "Фрейм формы",
++"The other frame over the room: Compose": "Другой фрейм поверх комнаты: Сочинение",
++"Back into the room": "Обратно в комнату",
++"Back into the room (Esc)": "Обратно в комнату (Esc)",
++"Only the favourites (★), in the workspace you are in": "Только избранные (★), в пространстве, где ты сейчас"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 672e3a2..91eb302 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2818,3 +2818,15 @@ RuachI18n.add("uk", {
+ "Classical string quartet": "Класичний струнний квартет",
+ "Film noir jazz": "Джаз у дусі нуару"
+ });
++// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
++RuachI18n.add("uk", {
++"The take's frame": "Фрейм семпла",
++"The other frame over the room: the take": "Інший фрейм поверх кімнати: семпл",
++"Over the room": "Поверх кімнати",
++"This frame over the room, larger: Esc or a click beside it puts it back": "Цей фрейм поверх кімнати, більшим: Esc або клацання поруч поверне його на місце",
++"The form's frame": "Фрейм форми",
++"The other frame over the room: Compose": "Інший фрейм поверх кімнати: Творення",
++"Back into the room": "Назад у кімнату",
++"Back into the room (Esc)": "Назад у кімнату (Esc)",
++"Only the favourites (★), in the workspace you are in": "Лише обрані (★), у просторі, де ти зараз"
++});
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 78f83d0..2be0fe4 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -72,6 +72,9 @@
+     flag: '<path d="M4 22V4"/><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1"/>',
+     pencil: '<path d="M21.2 6.8a2.8 2.8 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8l-1.3 4.4a.5.5 0 0 0 .6.6l4.4-1.3a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/>',
+     maximize: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
++    // HERESY 1168: a Creator frame back into the room, and the other frame (Lucide's minimize and arrow-left-right, ISC)
++    minimize: '<path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>',
++    swap: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+     play: '<polygon points="7 4 19 12 7 20 7 4"/>',
+     pause: '<rect x="7" y="5" width="3.2" height="14" rx="1"/><rect x="13.8" y="5" width="3.2" height="14" rx="1"/>',
+     prev: '<polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>',
+diff --git a/tools/console/index.html b/tools/console/index.html
+index c70b794..f3a8eee 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -707,6 +707,8 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ 
+ <!-- ------------------------------------------------------------- workspace -->
+ <div class="workspace">
++  <!-- HERESY 1168: under a Creator frame lifted over the room; a click on it puts the frame back -->
++  <div class="frame-veil" id="frameVeil" hidden></div>
+ 
+   <!-- compose ------------------------------------------------------------ -->
+   <section class="col compose-col" id="view-compose">
+@@ -733,6 +735,13 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the form">Clear</button>
+       </div>
+       <button type="button" class="btn ghost small" id="newSong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.">＋ New song</button>
++      <!-- HERESY 1168 (Viktor 06.10.2026: «в комнате Творца прикрути на каждый фрейм — левый и правый — разворот этого фрейма на
++           "полный экран", в оверлей окно 95%x95%, с увеличением масштаба всего фрейма здесь на добрых 20%… Также в оверлеях
++           кнопку переключения между фреймами»): this frame over the room, larger; from there, the other frame -->
++      <span class="frame-tools">
++        <button type="button" class="btn ghost small icon-btn frame-swap" data-frame="take" data-ui="swap" aria-label="The take's frame" data-tip="The other frame over the room: the take"></button>
++        <button type="button" class="btn ghost small icon-btn frame-big" data-frame="compose" data-ui="maximize" aria-pressed="false" aria-label="Over the room" data-tip="This frame over the room, larger: Esc or a click beside it puts it back"></button>
++      </span>
+     </div>
+     <!-- HERESY 1016: the Kit's idea writer is retired (its code stays dormant); its structure
+          templates live on in the Write tab's writing room -->
+@@ -1123,6 +1132,10 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+       <!-- HERESY 1167 (Viktor: «Пропала кнопка отмены генерации»): the run cancelled from wherever you are -->
+       <button type="button" class="btn ghost small run-cancel is-hidden" id="cancelAway" aria-label="Cancel run" data-tip="Cancel run">✕</button>
+       <div class="head-actions" id="takeActions"></div>
++      <span class="frame-tools">   <!-- HERESY 1168: as Compose's -->
++        <button type="button" class="btn ghost small icon-btn frame-swap" data-frame="compose" data-ui="swap" aria-label="The form's frame" data-tip="The other frame over the room: Compose"></button>
++        <button type="button" class="btn ghost small icon-btn frame-big" data-frame="take" data-ui="maximize" aria-pressed="false" aria-label="Over the room" data-tip="This frame over the room, larger: Esc or a click beside it puts it back"></button>
++      </span>
+     </div>
+ 
+     <div class="chain" id="chain" hidden>
+@@ -1711,6 +1724,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <!-- HERESY 1167: the cards' own one-colour icons (heresy-collection.js puts them in); a dislike hides a take, this shows them -->
+             <button type="button" class="coll-chip coll-chip-ico" data-kind="__liked" aria-label="Liked" data-tip="Only the liked">👍</button>
+             <button type="button" class="coll-chip coll-chip-ico" data-kind="__disliked" aria-label="Disliked" data-tip="Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them">👎</button>
++            <!-- HERESY 1168 (Viktor 06.10.2026: «В фильтр в Воркспейсах добавь Звезду»): the favourites of the workspace in hand
++                 (★ Favourites at the side is all of them, everywhere) -->
++            <button type="button" class="coll-chip coll-chip-ico" data-kind="__starred" aria-label="Favourites" data-tip="Only the favourites (★), in the workspace you are in">★</button>
+             <span class="coll-cap-inline">has</span>
+             <button type="button" class="coll-chip" data-der="stems">stems</button>
+             <button type="button" class="coll-chip" data-der="debuzz">debuzz</button>
+-- 
+2.43.0
+

@@ -75,7 +75,7 @@
     }).join("");
     if (S.note) {
       S.note.textContent = tr(S.vaes.length + " decoder" + (S.vaes.length === 1 ? "" : "s")) +
-        (pickedLabel ? " · " + tr(pickedLabel + " picked in the form") : "") + " · " + tr("a finished song can add another from its page");
+        (pickedLabel ? " · " + tr(pickedLabel + " picked in the ☰ menu") : "") + " · " + tr("a finished song can add another from its page");
     }
   }
 

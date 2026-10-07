@@ -22,7 +22,7 @@ stage loads its module and, unless keep_loaded is on, drops it when done.
   /fakechat-loaded/...   a stand-in local chat server with a loaded model
   /fakechat-none/...     one that answers but has nothing loaded
   /fakechat-plain/...    one without the native model-state endpoint
-A request whose style contains MOCK-FAIL fails in the sound stage; MOCK-SLOW
+A request whose style contains MOCK-FAIL fails in the sound stage; MOCK-HOLD runs eight times slower; MOCK-SLOW
 makes that run take three times as long.
 """
 
@@ -326,6 +326,8 @@ class Mock:
         self.loaded = {}          # module -> bytes in GPU memory
         self.active = None        # the job on the worker right now
         self.outputs = Path(args.outputs).resolve() if args.outputs else TMP / "mock-outputs"
+        self.writer_kit = TMP / "mock-writer"   # HERESY 1168: the Writer's notebooks of the mock (writer/, writer-claude/)
+        self.writer_kit.mkdir(parents=True, exist_ok=True)
         self.vaes = [v for v in VAES if v["name"] in args.vaes.split(",")]
         self.sliders = [] if args.no_sliders else SLIDERS
         self.version = "mock (2026-09-24)"
@@ -429,7 +431,7 @@ class Mock:
     def run_synth(self, job):
         req = job["request"]
         started = time.time()
-        self.slow = 3.0 if "MOCK-SLOW" in req["style"] else 1.0
+        self.slow = 8.0 if "MOCK-HOLD" in req["style"] else 3.0 if "MOCK-SLOW" in req["style"] else 1.0   # HOLD: 1168, a run to reload under
         sparse = {k: v for k, v in req.items() if DEFAULTS.get(k) != v}
         self.log_request("[Server] Job %s: " % job["id"], sparse)
         B = 1 if req["semantic_tokens"] else req["lm_batch_size"]
@@ -604,6 +606,8 @@ class Mock:
                     "format": req["output_format"], "favorite": False, "truncated": False,
                     "render_seconds": round(render_seconds, 2), "song": song, "variation": variation,
                     "provided_score": provided_score, "model": self.settings["model"]}
+            if when is None or when >= time.time() - 1:   # HERESY 1168: a take made now keeps its latents (the demo ones, older, do not)
+                (folder / "latents.f32").write_bytes(b"\x02\x00\x00\x00\x01\x00\x00\x00\x40\x00\x00\x00" + b"\x00" * 256)
             write_atomic(folder / "meta.json", json.dumps(meta, indent=2))   # last: a take is listed once this exists
             return name
 
@@ -620,7 +624,7 @@ class Mock:
                   "vae": req.get("vae") or self.vaes[0]["name"], "sliders": req.get("sliders", []), "loras": req.get("loras", []),
                   "steps": req.get("steps", 32), "cfg_scale": req.get("cfg_scale", -1.0),
                   "duration": req.get("duration", 360.0), "parent": req.get("parent", ""),
-                  "has_score": bool(req.get("abc"))})
+                  "has_score": bool(req.get("abc")), "latents": (folder / "latents.f32").is_file()})
         return e
 
     def library(self):
@@ -837,6 +841,26 @@ def make_handler(mock):
         def query(self):
             return {k: v[0] for k, v in parse_qs(urlparse(self.path).query, keep_blank_values=True).items()}
 
+        def writer(self, fn):
+            """the lab's own lab/writer.py answers, on the mock's folder; its refusals as the lab sends them"""
+            try:
+                import importlib.util
+                here = Path(__file__).resolve()   # the studio's lab/, the nearest above the mock (a kitchen copy sits deeper)
+                found = next((d / "lab" / "writer.py" for d in here.parents if (d / "lab" / "writer.py").is_file()), None)
+                if found is None:
+                    raise ImportError("no lab/writer.py above " + str(here.parent))
+                spec = importlib.util.spec_from_file_location("lab_writer", found)
+                w = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(w)
+            except (OSError, ImportError) as e:
+                return self.error(404, "no lab/writer.py beside the mock: %s" % e)
+            try:
+                return self.send(200, fn(w))
+            except FileNotFoundError as e:
+                return self.error(404, str(e))
+            except ValueError as e:
+                return self.error(400, str(e))
+
         # ----------------------------------------------------------- GET
         def route_get(self):
             path, q = urlparse(self.path).path, self.query()
@@ -844,6 +868,11 @@ def make_handler(mock):
                 if not PAGE.is_file():
                     return self.send(404, "build/tools/public/index.html is missing: run ./build.sh first\n", "text/plain")
                 return self.send(200, PAGE.read_bytes(), "text/html; charset=utf-8", {"Cache-Control": "no-store"})
+            if path == "/lab/trash":   # HERESY 1168
+                return self.send(200, {"items": []})
+            if path == "/lab/writer":   # HERESY 1168: the Writer's notebook, the lab's own code on a folder of the mock's
+                return self.writer(lambda w: w.get(mock.writer_kit, q["id"], q.get("scope", "")) if q.get("id")
+                                   else w.listing(mock.writer_kit, q.get("scope", "")))
             if path == "/health":
                 return self.send(200, {"status": "ok"})
             if path == "/props":
@@ -988,6 +1017,24 @@ def make_handler(mock):
                 job = mock.new_job("synth", req)
                 mock.work.put(job)
                 return self.send(200, {"id": job["id"]})
+            if path == "/lab/writer":   # HERESY 1168: the notebook's ops (put, export, import…) as the lab answers them
+                raw = self.body()
+                mock.requests.append({"path": "/lab/writer", "body": raw.decode("utf-8", "replace")[:2000]})
+                try:
+                    data = json.loads(raw or b"{}")
+                except ValueError:
+                    return self.error(400, "bad JSON")
+                return self.writer(lambda w: w.post(mock.writer_kit, data, q.get("scope", "")))
+            if path == "/lab/trash":   # HERESY 1168: the lab's trash as the page sees it; nothing is moved here
+                raw = self.body()
+                mock.requests.append({"path": "/lab/trash", "body": raw.decode("utf-8", "replace")})
+                try:
+                    req = json.loads(raw or b"{}")
+                except ValueError:
+                    return self.error(400, "bad JSON")
+                if req.get("op") == "move":
+                    return self.send(200, {"moved": [n for n in req.get("names") or [] if mock.name_ok(n)], "locked": []})
+                return self.send(200, {"restored": [], "emptied": []})
             if path == "/transcribe" and not mock.args.no_transcriber:
                 return self.transcribe()
             if path == "/settings":

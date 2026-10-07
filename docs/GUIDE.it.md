@@ -36,7 +36,7 @@ Le stanze aprono la barra; il logo sta al centro; a destra, lo spazio, la spia d
 - **Spazio**: lo spazio in mano. L'elenco dei take mostra solo quello, e ogni nuovo take vi finisce dentro. *Tutti gli spazi* mostra tutto. Dove la barra è stretta (il logo senza le sue parole), se ne va anche la parola *Spazio*; il selettore resta.
 - **IT** (le due lettere della lingua): la pagina in un'altra lingua, salvata con le tue impostazioni: English, Русский, Українська, Беларуская, Ελληνικά, Español, Italiano, ognuna chiamata con le sue parole. Numeri e date seguono la lingua, e questa guida si apre in essa.
 - **☀ / ☾**: giorno, notte o come dice il sistema.
-- **Salva** un prompt (tutto il modulo) come JSON o YAML; **Svuota** il modulo.
+- **Salva** un prompt (tutto ciò che la generazione invierebbe) come JSON o YAML e **Apri** per riprenderlo; **Svuota** le parole (titolo, stile, testo, partitura, seed) senza toccare il resto, oppure inizia una **Nuova canzone** (anche modalità, campionamento, slider e LoRA ai predefiniti; *Suono e uscita* resta). **Apri** dice cosa di un file il modulo non ha potuto accogliere e cosa tiene al suo posto.
 - **DAW**: la via d'uscita dallo studio. O la traccia mixata così com'è (WAV, FLAC, MP3), o l'intero take nella tua DAW, dove il resto avviene fuori dallo studio. La pagina trova REAPER, Waveform e Bitwig sulla macchina dello studio, oppure indichi tu la tua. Ogni take esce dal suo menu (clic destro): *Esporta in una DAW → Progetto REAPER* o *DAWproject* (Waveform, Bitwig, Studio One, Cubase), la tua DAW per prima; la scheda DAW di questa guida dice cosa c'è dentro.
 - **?**: questa guida, aperta sulla stanza in cui sei.
 - **☰**: il resto. La scheda video e la sua memoria, la copia del modello, i temi, aprire un prompt salvato, esempi, rilasciare il modello, la stanza del Motore e questa guida.
@@ -89,9 +89,25 @@ Il ♪ accanto allo stile apre una tabella di 200 strumenti che lo studio ha pro
 - Tag di sezione su righe a sé; YuE2 conosce `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Inst]`, `[Outro]`.
 - **Profilo del testo**: incolla un testo intero, scegli un profilo, *Applica*: le sue regole (pulizia, fonetica) e la sua forma (`[Intro]`, `[Verse]` alle righe vuote, `[Interlude]` dopo i paragrafi lunghi) lo rendono pronto da leggere. *Annulla* riporta il testo indietro. I profili si creano nello Scrittore.
 
+### Il contatore del testo e la mano fonetica <!-- #the-lyrics-meter-and-the-phonetic-hand -->
+
+- **Il contatore** accanto al testo: ogni riga, le sue sillabe in una barra contro il righello del suo gruppo — strofa e ponte un gruppo, il pre-ritornello il suo, il ritornello il suo, ogni altra sezione la sua. Una pausa, un break, un silenzio, un interludio, un preludio o un passaggio strumentale dentro una sezione cantata non apre un gruppo: il suo nome sta accanto, tenue, e il righello della sezione prosegue. I tag non si contano mai: una riga di soli tag (`[Break] [Silence]`) non conta, un tag dentro una riga resta fuori dal conto. Il righello sta alla lunghezza abituale del gruppo; entro una sillaba la barra è verde, a due o tre ambra, oltre rossa. Ciò che è tra parentesi tonde è disegnato tratteggiato dopo la barra: YuE2 può cantarlo. Sotto la casella: caratteri, sillabe e righe del testo, i tag, le parentesi e la mano fonetica; il correttore del browser nella lingua del testo (lì si spegne); una casella allungata a mano tiene la sua altezza fino ad *Altezza automatica*.
+- **Accenti fuori posto**: un segno non su una vocale — a inizio riga, dopo uno spazio o un segno, su una consonante, un secondo sulla stessa lettera, o un ´ staccato al suo posto — mostra un pulsante rosso sotto il riquadro (*Stress marks off a vowel*) e un segno davanti al conteggio della riga; il pulsante li seleziona uno alla volta. Una parola con due segni ne riceve uno ambra: voluto o una svista? Nel conteggio il segno d'accento non è una sillaba; ע e una vocale latina dentro una parola russa sì. Una sillaba è un suono vocalico, una nota, e ogni lingua si conta con le sue regole: in russo, ucraino e bielorusso una lettera vocale (e poiché il contatore misura il tempo di una riga, una parola senza vocale — с, в, к, з, й, ў — e un'occlusiva davanti a un'affricata dentro una parola — глу-п-цо́в — prendono un battito proprio, disegnato più chiaro: «Я же вижу глупцо́в с приду́рческим планом» sono 12 sillabe e 2 di questi battiti, 14); in greco αι, ει, οι, ου, αυ, ευ sono una (la dieresi o l'accento le separano: τσά-ι); in spagnolo e in italiano una i o u debole si unisce alla vicina (cie-lo, cuo-re), due forti sono due (po-e-ta), e non contano la i di ciao, giorno, figlio né la u di qu e gu; in inglese una e finale muta non conta (make, ma ta-ble); l'ebraico conta i suoi punti vocalici; cinese, giapponese e coreano un segno per sillaba. Le parole latine si contano come inglesi, spagnole o italiane: dal nome della lingua nello stile, altrimenti dalle parolette del testo stesso.
+- **Ctrl+F** nel testo o nello stile (e nei riquadri dello Scrittore) cerca solo in quel riquadro: Invio e Maiusc+Invio scorrono le corrispondenze, Esc dal campo di ricerca riporta il cursore con la corrispondenza selezionata; dal riquadro stesso (se hai cliccato altrove) chiude la ricerca e lascia il cursore dov'è, e ciò che scrivi intanto non sposta la vista. Il segno d'accento non ostacola la ricerca, ё è е, e о e а trovano anche ע e le o e a latine.
+- **Tag dopo «[»**: un «[» all'inizio di una riga del testo (del Creatore o dello Scrittore) apre i tag di sezione, come un editor di codice suggerisce le parole: prima Verse, Chorus, Pre-Chorus, Bridge, Interlude, Break, poi Intro, Outro, END, poi il resto. Le lettere dopo il «[» restringono l'elenco (anche con la tastiera russa o ucraina), un numero numera il tag (`v2` è `[Verse 2]`), e se il testo numera le strofe si offre la successiva. ↑ ↓ scelgono, Invio o Tab mettono il tag su una riga sua (Ctrl+Z lo toglie), Esc o `]` chiudono l'elenco. Intro, Outro ed END già nel testo stanno in fondo, tenui, con la loro riga. Ctrl+Spazio apre l'elenco, e all'inizio di una riga scrive il «[» stesso.
+- **La mano fonetica** (di Viktor, da SUNO; YuE2 la segue allo stesso modo):
+  - **Un segno d'accento** (l'acuto combinante, U+0301) dopo una vocale: `обе́щано`, `сули́т`. Tiene in oltre il 95 % delle righe.
+  - **Una vocale tonica maiuscola** spinge l'accento dove lo vuole la rima, contro il dizionario: `базилиО́`.
+  - **ע (ayin) dentro una parola russa** si canta come una o/a morbida, come il parlato vivo dice la o atona: `кעмо́рка`, `пעле́но`, `Ка́рлע`. Frena anche il rap che accelera sempre di più.
+  - **Una o latina dentro una parola russa** canta una o dura e aperta dove il modello direbbe a: `Кo дну`.
+  - **Una vocale allungata** (`о-о-о`, `БУ… РА… ТИ… НО`) tiene una nota; dove la musica ha spazio per lei, non in ogni riga.
+  - **[Interlude] e [Break]** tra le parti fanno pause nel rap e frenano il parlato che accelera sempre di più (non sempre).
+  - **Le parentesi tonde** possono essere cantate (così nelle prime prese di «Buratino»): eco, controcanto; anche una didascalia tra parentesi può suonare.
+  - **Una parola ebraica con i suoi punti vocalici** (`רוּחַ`) il modello la dice meglio che in traslitterazione.
+
 ### VAE, slider e LoRA <!-- #vae-sliders-and-loras -->
 
-- Il **VAE** trasforma la canzone scritta in suono: **Standard** (il suono migliore), **Precedente** (quello dei benchmark), **Miscela** (una miscela dei due, un componente aggiuntivo). Un take finito può aggiungere più tardi un'altra decodifica dalla sua pagina.
+- Il **VAE** trasforma la canzone scritta in suono: **Standard** (il suono migliore), **Precedente** (quello dei benchmark), **Miscela** (una miscela dei due, un componente aggiuntivo). Un take finito può aggiungere più tardi un'altra decodifica dalla sua pagina. Si sceglie nel menu **☰**, sotto il modello, per le canzoni a venire; un take si decodifica di nuovo con un altro dalla sua scheda in pochi secondi (da rc2 ogni take conserva i suoi latenti; uno fatto prima rigenera il suo suono).
 - **Slider**: modellatori di genere e di voce applicati mentre la musica viene scritta; 0 è spento, 1 è pieno.
 - **LoRA**: adattatori per la metà musicale, quella sonora o entrambe, ognuno con la sua forza.
 
@@ -130,10 +146,10 @@ Ogni forza sta su una **strada**: il verde è sicuro, il giallo è il suo limite
 I valori predefiniti sono già tarati. Le tre righe di **forma** (Composizione, Interpretazione, Influenza dello stile) muovono le manopole insieme, in cinque passi; le manopole vere e proprie sono più sotto.
 
 - **Pianificatore della partitura** e **Token musicali**: temperatura, top-p, top-k, penalità di ripetizione, finestra della penalità.
-- **Token minimi** e **Token massimi** sono **bloccati** contro una modifica involontaria: fai clic sul 🔒 accanto al nome per cambiarli, e di nuovo per bloccarli. I minimi sono fusibili: una partitura non può finire prima di 200 token, la musica non prima di 750 (30 secondi; una durata richiesta più breve lo abbassa a quella durata).
+- **Token minimi** e **Token massimi** sono **bloccati** contro una modifica involontaria: fai clic sul 🔒 accanto al nome per cambiarli, e di nuovo per bloccarli. I minimi sono fusibili: una partitura non può finire prima di 200 token, la musica non prima di 750 (30 secondi; una durata richiesta più breve lo abbassa a quella durata). Il massimo della musica appare come **Durata massima**, in tempo (25 token al secondo), senza lucchetto: è al più la durata della canzone, e si imposta solo qui («Suono e uscita» non ha un campo per la durata).
 - Ogni manopola è tenuta entro limiti sensati; un valore oltre viene riportato indietro, e la pagina lo dice.
 - **Guida (CFG)**: 1.6 per impostazione predefinita in ogni modalità.
-- **Passi ODE** e **Risolutore** per la metà sonora; **Durata massima** in secondi; **Variazioni sonore** rende la stessa musica da 1 a 9 volte con un suono diverso; **Formato**: WAV a 24 bit, 16 bit, 32 bit in virgola mobile o MP3.
+- **Passi di riduzione del rumore** e **Risolutore** per la metà sonora (*Reset output* li riporta entrambi); **Variazioni sonore** rende la stessa musica da 1 a 9 volte con un suono diverso; **Formato**: WAV a 24 bit, 16 bit, 32 bit in virgola mobile o MP3.
 
 ### Pianifica solo la partitura, e Genera <!-- #plan-score-only-and-generate -->
 
@@ -173,6 +189,7 @@ Ogni canzone può vivere nello Scrittore come un documento: il suo **stile**, il
 - **Versioni**: *Conserva questa versione* in qualsiasi momento; *Ripristina questa versione* o prendila *Come nuovo documento*.
 - **Take nati da questo**: ogni take la cui richiesta è venuta da questo documento.
 - **La canzone ora**: titolo, stile, la tonalità, il metro e il tempo della partitura (lo stile deve concordare con essi), il testo; *Modifica nel Creatore*.
+- **Esporta tutto** (il dischetto, *Export all*) e **Importa** (la cartella, *Import*): tutto il quaderno in un file per un backup — ogni documento con le sue versioni, i take nati da esso e il cestino; l'importazione porta ciò che manca, lascia ciò che è uguale e mette un documento che differisce accanto al suo omonimo come copia: niente viene sovrascritto.
 
 ### Profili del testo <!-- #text-profiles -->
 

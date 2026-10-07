@@ -50,6 +50,26 @@
         return '<option value="s:' + esc(p.name) + '">' + esc(p.name) + "</option>"; }).join("") + "</optgroup>" : "");
     if (Array.prototype.some.call($("setupLib").options, function (o) { return o.value === keepP; })) $("setupLib").value = keepP;
     $("setupDel").disabled = $("setupLib").value.indexOf("s:") !== 0;
+    syncTextRow();
+  }
+
+  // HERESY 1168 (Viktor 07.10.2026: «Если у Творца ПРОФИЛЬ - музыка, деактивируй текстовый профиль, потому что он чисто для
+  // начитки»): the text profile (a pasted text made ready to read) is for readings. A speech profile is the built-in Speech, or
+  // one of the user's in Direct mode longer than eight minutes, or named so; with any other (music) it is off, and says why
+  function isSpeech(p) {
+    if (!p) return false;
+    var r = p.request || p.data || {};
+    if (r.cot === "off" && (+r.duration || 0) > 480) return true;
+    return !p.builtin && /speech|reading|начит|чтени|речь|мова|чыт|ανάγν|lectura|lettura/i.test(p.name || "");
+  }
+  function syncTextRow() {
+    var row = $("tpRow");
+    if (!row) return;
+    var on = isSpeech(chosenSetup());
+    row.classList.toggle("is-off", !on);
+    ["tpPick", "tpApply"].forEach(function (id) { if ($(id)) $(id).disabled = !on; });
+    if (on) delete row.dataset.tip;
+    else row.dataset.tip = "Text profiles make a pasted text ready to read: pick a Speech profile in Profile to use them";
   }
 
   function chosenSetup() {
@@ -93,7 +113,7 @@
         if (ok) return send({ op: "delete", kind: "style", name: name }).then(function (d) { take(d); toast("Style “" + name + "” deleted"); });
       }).catch(function (e) { toast("Not deleted: " + e.message, true); });
     });
-    $("setupLib").addEventListener("change", function () { $("setupDel").disabled = this.value.indexOf("s:") !== 0; });
+    $("setupLib").addEventListener("change", function () { $("setupDel").disabled = this.value.indexOf("s:") !== 0; syncTextRow(); });
     $("setupApply").addEventListener("click", function () {
       var p = chosenSetup();
       if (!p) return;

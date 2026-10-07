@@ -767,7 +767,7 @@ body.is-resizing, body.is-resizing * { cursor: col-resize !important; user-selec
 }
 .label em { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--dim); margin-left: 8px; }
 
-input[type="text"], input[type="search"], input[type="number"], textarea, select {
+input[type="text"], input[type="search"], input[type="number"], input[type="password"], textarea, select {   /* 1168: password too */
   width: 100%;
   padding: 9px 11px;
   background: var(--field);
@@ -782,7 +782,7 @@ input:hover, textarea:hover, select:hover { border-color: var(--hover-line, var(
 /* a little room between a number and its up/down arrows */
 input[type="number"]::-webkit-inner-spin-button { margin-left: 8px; }
 
-input[type="text"]:focus, input[type="number"]:focus, input[type="search"]:focus, textarea:focus, select:focus {
+input[type="text"]:focus, input[type="number"]:focus, input[type="search"]:focus, input[type="password"]:focus, textarea:focus, select:focus {
   outline: 0; border-color: var(--amber); background: var(--focus-bg); }
 select:disabled { opacity: .7; }
 ::placeholder { color: var(--placeholder); }
@@ -915,6 +915,11 @@ select:disabled { opacity: .7; }
 
 /* sound and output: the C++ engine's own knobs */
 .out-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; }
+/* HERESY 1168 (Viktor 07.10.2026: «Расширь селектор солвера на две колонки, чтобы была симетрия»): the solver over two columns
+   (its name whole), the other fields filling the rows round it, two rows full; with MP3's bitrate shown the six fields fill
+   them as they are */
+.out-grid { grid-auto-flow: row dense; }
+.out-grid:has(#bitrateField.is-hidden) > .field:has(> #odeSolver) { grid-column: span 2; }
 .out-grid input { font-family: var(--mono); font-size: 12.5px; }
 .out-grid select { font-family: var(--mono); font-size: 14px; }
 
@@ -1353,6 +1358,7 @@ pre.paper { font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; word-br
 }
 .toast.bad { border-left-color: var(--bad); }
 .toast.good { border-left-color: var(--good); }
+.toast.warn { border-left-color: var(--amber); }   /* HERESY 1168: what a prompt file lost on the way into the form */
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 
 /* ------------------------------------------------------------------ panels */
@@ -2406,7 +2412,9 @@ body.coll-dragging .coll-peek { display: none; }
 .wr-book { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 22px; }
 @media (max-width: 1000px) { .wr-book { grid-template-columns: minmax(0, 1fr); } }
 .wr-side { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 8px; }
-.wr-side-bar { display: flex; gap: 6px; align-items: center; }
+.wr-side-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.wr-side-bar .btn { white-space: nowrap; }   /* HERESY 1168: its buttons whole, a row more when they need it */
+.wr-side-bar .wr-io { display: inline-flex; gap: 6px; }   /* the backup out and in, side by side */
 .wr-side-bar .coll-n { margin-left: auto; }
 .wr-list { display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - 260px); overflow: auto; }
 .wr-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
@@ -4144,3 +4152,119 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
 .eg-unload-row .check { white-space: nowrap; }
 /* HERESY 1167 (Viktor: «SVG кнопки переключения режима день/ночь/система сделай побольше»): 21 px, the others 17 */
 .day-night .hz-icon { width: 21px; height: 21px; }
+/* HERESY 1168 (Viktor 06.10.2026: «если нет партитуры, нужно прятать все кнопки… Туда только кнопку "Сгенерить партитуру из
+   звука"»): no score yet, nothing to engrave, print, zoom or export: the button that writes it, alone */
+#scorePanel[data-empty] .score-head, #scorePanel[data-empty] .paper, #scorePanel[data-empty] .score-check { display: none !important; }
+/* (important: the engraver leaves its own inline display on the staff it drew for the take before.) And the row of the
+   button was never hidden by its [hidden]: its display: flex outweighed it, so it stood under every score */
+.score-from-sound[hidden], .score-from-sound .btn[hidden] { display: none; }
+/* HERESY 1168 (Viktor 06.10.2026: «на каждый фрейм — левый и правый — разворот этого фрейма… в оверлей окно 95%x95%, с
+   увеличением масштаба всего фрейма на добрых 20%»): a Creator frame over the room, 95 % of the screen above the player (the
+   player stays in sight and in hand), all of it a fifth larger. The frame is lifted where it stands; the zoom multiplies its
+   own sizes too, so they are given divided by it */
+.frame-tools { display: inline-flex; align-items: center; gap: 2px; flex: none; }
+.frame-tools .icon-btn { display: inline-grid; place-items: center; padding: 4px 7px; }
+.frame-tools .ui-ico { width: 17px; height: 17px; }
+.frame-tools .frame-swap { display: none; }
+body[data-frame] .frame-tools .frame-swap { display: inline-grid; }
+.frame-veil { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 26;
+  background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55)); backdrop-filter: blur(3px); }
+:root { --frame-zoom: 1.2; }
+body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+  position: fixed; z-index: 27; zoom: var(--frame-zoom);
+  left: calc(2.5vw / var(--frame-zoom)); width: calc(95vw / var(--frame-zoom));
+  top: calc((100vh - var(--playbar-h)) * .025 / var(--frame-zoom)); height: calc((100vh - var(--playbar-h)) * .95 / var(--frame-zoom));
+  border: 1px solid var(--line-strong-a); border-radius: var(--r-lg); box-shadow: 0 24px 80px var(--shadow-lg);
+}
+/* HERESY 1168: a label's short note, its (i)'s first line now */
+.tip .tip-head { font-weight: 600; margin: 0 0 6px; }
+/* HERESY 1168 (Viktor: «Иконку FULL SCREEN в правом фрейме перенеси в самый верхний правый угол. Она сейчас под титлом»):
+   the take's frame tools in its very top right corner, whatever its head wraps into */
+#view-take > .col-head { padding-right: 84px; }
+#view-take > .col-head > .frame-tools { position: absolute; top: 12px; right: 12px; }
+/* HERESY 1168 (Viktor 06.10.2026: «В комнате Писателя пройдись по всем дропдаун селекторам и однострочным полям ввода.
+   Приведи их в единый стиль, единая высота. А то смотрятся паршиво»): the Writer's one-line fields and drop-downs one
+   height and one dress (the text profile's rules table keeps its compact cells); the OpenRouter key wide, Remember beside it */
+#view-write :is(input[type="text"], input[type="search"], input[type="number"], input[type="password"], select):not(.tp-rules input) {
+  height: 38px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; font-size: 14px; line-height: normal; }
+.or-key-row { flex: 1 1 100%; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+.or-key-row .field { flex: 0 1 640px; min-width: 260px; }
+.or-key-row .check { flex: none; height: 38px; }
+/* HERESY 1168: the lyrics' meter (heresy-lyrics.js): beside each line its syllables against its group's ruler; under the box
+   the counts, the phonetic hand, the spelling check and «Auto height» */
+.lyr-wrap { position: relative; }
+#lyrics { padding-right: 112px; }
+/* height 0 and its overflow hidden: its lines lay out (and are measured) but never stretch the frame's scrolling (Viktor:
+   «В композере в оверлее дохерища пустоты в подвале»: 87 lines of a mirror, 1,800 px under the form) */
+.lyr-mirror { position: absolute; top: 0; left: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; white-space: pre-wrap;
+  overflow-wrap: break-word; word-break: normal; box-sizing: border-box; border: 0; }
+.lyr-gutter { position: absolute; width: 190px; overflow: hidden; pointer-events: none; }
+.lyr-row { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; font: 10.5px/1 var(--mono); color: var(--dim); }
+.lyr-track { position: relative; height: 6px; flex: none; border-radius: 3px; background: color-mix(in srgb, var(--line-strong, var(--line)) 45%, transparent); }
+.lyr-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--muted); }
+.lyr-row.ok .lyr-bar { background: var(--good); }
+.lyr-row.near .lyr-bar { background: #d9a441; }
+.lyr-row.far .lyr-bar { background: var(--bad); }
+/* HERESY 1168 (Viktor: «Допиши одиночные согласные доли»): the beats no vowel carries, at the end of the bar, lighter */
+.lyr-cbar { position: absolute; top: 0; bottom: 0; border-radius: 0 3px 3px 0; background: color-mix(in srgb, var(--panel) 55%, transparent); }
+.lyr-bbar { position: absolute; top: 0; bottom: 0; border-radius: 0 3px 3px 0; opacity: .85;
+  background: repeating-linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 4px); }
+.lyr-ruler { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); opacity: .5; }
+.lyr-n { min-width: 26px; text-align: right; }
+.lyr-head { font: 600 9.5px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
+.lyr-head.lyr-pause { font-weight: 500; color: var(--dim); opacity: .8; }
+.lyr-meter { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 6px 0 0; font-size: 11.5px; color: var(--dim); }
+.lyr-meter .lyr-hand { color: var(--muted); }
+.lyr-tog { padding: 2px 9px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: transparent; color: var(--muted);
+  font: inherit; cursor: pointer; }
+.lyr-tog:hover { border-color: var(--hover-line, var(--line-strong)); color: var(--ink); }
+.lyr-tog[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+/* HERESY 1168 (Viktor: «проверку проёбов с x301»): the stress marks astray — a button under the box (red: off a vowel;
+   amber: two in one word) that goes to the next, and a mark before the line's syllable count */
+.lyr-tog.lyr-warn.bad { border-color: color-mix(in srgb, var(--bad) 55%, transparent); color: var(--bad); }
+.lyr-tog.lyr-warn.near { border-color: color-mix(in srgb, #d9a441 55%, transparent); color: #d9a441; }
+.lyr-tog.lyr-warn:hover { border-color: currentColor; }
+.lyr-x { margin-right: 3px; font: 700 14px/1 var(--sans); vertical-align: -3px; }
+.lyr-x.bad { color: var(--bad); }
+.lyr-x.near { color: #d9a441; }
+
+/* HERESY 1168 (Viktor 07.10.2026: «Может к хуям убираем из Композера VAE блок»): the VAE is chosen in the ☰ menu under the model;
+   the form's radios stay as the page's own record of it, not shown */
+.k-sound fieldset[data-fold="vae"] { display: none; }
+/* HERESY 1168 (Viktor: «То поле в блоке семплера вообще нужно убрать и передавать туда секундное значение»; «В Sound and Output
+   поле max length так и осталось»): the song's Max length is set in Sampling (the music's time); Sound and output has no field
+   of its own for it (the request's duration follows the one in Sampling) */
+.field:has(> #maxLength) { display: none; }
+
+/* HERESY 1168 (Viktor: «перехватывать Ctrl+F, чтобы искать не по всей странице, а только в активном блоке»): the find bar of a
+   box, the match marked over the box, and the hidden copy of the box's layout that says where its letters stand */
+.find-bar { position: fixed; z-index: 45; display: flex; align-items: center; gap: 4px; padding: 4px 6px; background: var(--panel);
+  border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 10px 28px -12px var(--shadow-lg); }
+.find-bar[hidden] { display: none; }
+.find-bar .find-q { width: 190px; height: 28px; }
+.find-bar.is-none .find-q { border-color: var(--bad); }
+.find-n { min-width: 64px; font-size: 11.5px; color: var(--muted); text-align: center; }
+.find-btn { min-width: 28px; padding: 2px 6px; }
+.find-mark { position: fixed; z-index: 44; pointer-events: none; border-radius: 2px;
+  background: color-mix(in srgb, var(--amber) 36%, transparent); outline: 1px solid color-mix(in srgb, var(--amber) 75%, transparent); }
+.find-mirror { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap;
+  overflow-wrap: break-word; word-break: normal; }
+/* HERESY 1168 (Viktor 07.10.2026: «при наборе `[` появлялись как в кодовых IDE подсказки с выбором, Enter и вставка»): the
+   section tags offered under a «[» at a line's start (heresy-complete.js); the ones already in the lyrics dimmed, their line amber */
+.tc-pop { position: fixed; z-index: 46; min-width: 280px; max-width: min(460px, calc(100vw - 8px)); background: var(--panel);
+  border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 10px 28px -12px var(--shadow-lg); overflow: hidden; }
+.tc-pop[hidden] { display: none; }
+.tc-list { position: relative; max-height: 290px; overflow-y: auto; padding: 4px 0; }
+.tc-item { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; padding: 4px 12px; cursor: pointer; }
+.tc-item.is-on { background: color-mix(in srgb, var(--amber) 20%, transparent); }
+.tc-tag { font: 13px/1.5 var(--mono); color: var(--ink); white-space: nowrap; }
+.tc-say { font-size: 11.5px; color: var(--dim); white-space: nowrap; }
+.tc-item.is-there { cursor: default; }
+.tc-item.is-there .tc-tag { color: var(--dim); }
+.tc-item.is-there .tc-say { color: #d9a441; }
+.tc-foot { display: grid; gap: 3px; padding: 6px 12px 7px; border-top: 1px solid var(--line-a); font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+.tc-keys { color: var(--dim); }
+.tc-mirror { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap;
+  overflow-wrap: break-word; word-break: normal; }
+/* HERESY 1168: the text profile is for readings: dimmed, its controls off, while the Creator's profile is music */
+#tpRow.is-off { opacity: .5; }

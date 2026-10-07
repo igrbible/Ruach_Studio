@@ -2,7 +2,7 @@ From 70274a83b8e4342cdab73a17054c8aea51bf4033 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 19:47:29 -0600
-Subject: [PATCH 1096/1179] The Refiner's progress up top and each step's yield
+Subject: [PATCH 1096/1198] The Refiner's progress up top and each step's yield
  (1129); the page from disk, no gzip in the loop (1130); the score in the
  datasheet, a Direct take's from its sound (1131); the Refiner's own column
  and F5 (1132)

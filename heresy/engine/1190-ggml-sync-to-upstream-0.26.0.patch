@@ -1,0 +1,37 @@
+From e9a7ba2e52efb30d890fc51bdb72b8c1d47686c0 Mon Sep 17 00:00:00 2001
+From: Pascal <admin@serveurperso.com>
+Date: Wed, 7 Oct 2026 11:48:52 +0200
+Subject: [PATCH 1190/1198] ggml: sync to upstream 0.26.0
+
+The vendored fork rebases onto ggml-org/ggml 0.26.0, which now carries
+the fixes upstreamed from these projects:
+
+- Vulkan: mul_mat and mul_mat_id read strided views such as a KV cache
+  slice with their real batch stride, and mul_mm keeps exact A and B
+  ranges (ggml-org/llama.cpp#28956)
+- Metal: GGML_OP_PAD supports left and circular padding
+  (ggml-org/llama.cpp#29561)
+- CUDA: bitonic argsort handles rows wider than 1024 without CUB, on
+  HIP and MUSA (ggml-org/llama.cpp#28957)
+
+Two commits remain on top of upstream:
+
+- cpu: fused snake activation
+- ggml: conv_1d result layout for batched input
+  (ggml-org/llama.cpp#28738)
+
+(cherry picked from commit 05ca71c115f0410b39d0332037691cecf98f5ded)
+---
+ ggml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ggml b/ggml
+index 40e16e4..2eddaf9 160000
+--- a/ggml
++++ b/ggml
+@@ -1 +1 @@
+-Subproject commit 40e16e4a814f7fe851a0c486fb9e8c722e957830
++Subproject commit 2eddaf94a8cdbbf1c30017d28313cd661a9da543
+-- 
+2.43.0
+

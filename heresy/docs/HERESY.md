@@ -1541,6 +1541,129 @@ README each until their adapters come. `heresy/tools/upload-loras.sh` stages it 
 repo once each of their files had its copy under `instruments/`. The studio's `loras/` is unchanged: an adapter's folder
 goes there as it comes.
 
+### 1168 · Frames over the Creator; the lyrics' meter and its stress marks; F5, copying, Clear and New song set right
+
+**Frames over the room** (Viktor 06.10.2026: «прикрути на каждый фрейм — левый и правый — разворот этого фрейма на "полный
+экран"… с увеличением масштаба всего фрейма здесь на добрых 20%… кнопку переключения между фреймами»; later: «при начале
+генерации всё же не нужно схлопывать фрейм… Просто переключаться на правый, где генерация идёт… И кликами на плеер чтобы не
+убегал фокус»): the form and the take each lift over the room, 95 % of the screen above the player and a fifth larger, with
+a button to the other frame; Esc, a click beside it or another room puts it back. Generate turns a lifted frame to the
+take's, where the run shows; Retake, Reuse and a score into the form bring the form's frame; the player's clicks keep the
+frame and give the keys back to it; the take's frame tools sit in its top right corner.
+
+**The Score card with no score** («Туда только кнопку "Сгенерить партитуру из звука"»): a take without a score shows that
+button alone, the tools coming with a score. **Stars:** ★ among the Librarian's filters (the favourites in the workspace in
+hand); the Takes' star drawn as the thumbs. **The (i) notes** («везде, где есть (i), и если там после идёт микро
+подсказка, либо убирай её, либо в тултип»): 23 short notes after an (i) are their tips' bold first lines; the Style bar's
+hint goes. **The trash and the player:** a take moved to the trash, any way, leaves the player at once. **Play this song**
+hides while a song is made and offers the finished one when the player only holds it.
+
+**F5:** in the Librarian it reads the library again and keeps the page and the music (Ctrl+F5 reloads); a run's clock goes
+on through a reload («стоит во время генерации нажать F5, счётчик времени обнуляется»); a run brought back by F5 lands in
+the workspace in hand and plays when done; a setting goes to the settings file at once. **Copying** («Кнопка копирования в
+буфер не копирует»): opened by the machine's address (http://192.168.…) the page has no clipboard API from the browser; its
+own copy stands in. **The Writer's fields** one height and dress, the API key wide with «Remember» beside it. **Clear and
+New song** («чем она отличается от `Start new song`? Это нужно утрясти»): Clear takes the words (title, style, lyrics,
+score), both seeds and loaded codes; New song puts the mode, sampling, sliders and LoRAs back to the defaults as well; Sound
+and output stays with both.
+
+**The lyrics' meter** («нужна не только рифма, но и длина строк… вертикальную линейку, которая по куплету+мосту будет
+едино мерить. По при-корусу и корусу — отдельно… спелл чекер… подсчёт символов… ручную растяжку поля»): beside each line
+its syllables against its group's ruler (verse and bridge one group; the pre-chorus, the chorus and every other section
+their own; the ruler at the median; green, amber, red), what is in round brackets hatched after (it may be sung); under the
+box the counts, the tags, the brackets and the phonetic hand, the browser's spelling check in the lyrics' language, a height
+drawn by hand kept. The 110 official examples' tags are known (a tag's head names its section; who sings or what the song
+is opens none); a section with no words shows its name alone. **Stress marks astray** («вшей ещё проверку проёбов с x301.
+Что не на гласных, в пустоте, на пробеле»): a mark off a vowel (at a line's start, after a space or a sign, on a consonant,
+doubled, a spacing ´) in red, a word with two in amber, a button that selects each in turn. The count, measured on his
+lyrics (2,033 lines): stress marks move none of it and ע counts; a decomposed «й», a composed Latin ó and Belarusian ў,
+counted wrong before, count right. **The cheat-sheet's Lyrics tags:** a third tab with the sections as the official
+examples write them, counted, who sings, the instrumental cues, the meta-tags and his phonetic hand; a click puts a tag
+into the lyrics.
+
+**The guide:** the meter and his phonetic hand (the stress mark, a capital stressed vowel, ע, the Latin o, a stretched
+vowel, [Interlude] and [Break], round brackets, Hebrew with its points) and Save, Open, Clear and New song as they are, in
+all seven languages. The interface's new words are English only until the pass before 2.0.0 (Viktor: «Добавочные языки
+интерфейса давай в самую последнюю очередь перед финальным релизом 2.0.0»). Patches 1180–1194.
+
+**Open** («О том, что сброшено, Open молчит… это нужно допилить»): a prompt file's places the form could not hold (a
+field no prompt has, an unknown mode, solver, VAE, slider or adapter, a number that is none, a knob past its bounds) are
+listed in the toast, each with what the form holds instead; a file the page saved opens as before.
+
+**Another VAE in seconds** («должны лишь готовые латенты за 5-7 секунд декодироваться»; «ты как-то сохранял готовые
+латенты. Вот прикрутить бы этот код к движку»): the Kit's VAE buttons on a take sent its replay with another decoder,
+and the whole sound stage ran again. The engine now keeps each take's acoustic latents beside its audio (latents.f32, the
+layout of its own tensor dumps, about 3 MB for eight minutes); a request with decode_from runs the VAE alone on them.
+Measured on an RTX 3090: 120 s of a song decoded again in 2.1 s (1.0 s of decoding), the same VAE giving the same sound
+to the sample, Legacy and Blend 1.6 s each; a take made before refused with that said, and the page renders its sound
+again with its button saying so. **The VAE** is chosen in the ☰ menu under the model («Выбор VAE переносим в бар в
+спадающее меню прямо под выбор модели»), the Composer's block gone. **Max length** («То поле в блоке семплера вообще
+нужно убрать и передавать туда секундное значение»): read first the other way round, the music's Max tokens hidden;
+Viktor from the road: «В Sound and Output поле max length так и осталось». The «sampler's block» was Sound and output (the
+solver is its sampler): Max length lives in Sampling now, the music's time, editable with no lock, the request's duration
+following it; Sound and output has no length field. Setting it, the duration is written before the bounds' guard runs,
+which re-syncs the ceiling from it (written after, the old length pulled the new one straight back). **Denoising steps**
+for ODE steps («замени на понятное DENOISING STEPS»); *Reset output* puts the solver back to midpoint too («не обнуляет
+выбор резолвера»). **The text profile** is off while the Creator's profile is music («деактивируй текстовый профиль,
+потому что он чисто для начитки»).
+
+**The Writer's backup** («глобальный экспорт/импорт всех данных скопом для бекапа»): the whole notebook in one file and
+back, nothing written over. **Ctrl+F in a box** («перехватывать Ctrl+F, чтобы искать… только в активном блоке»): the
+lyrics', the style's and the Writer's boxes find in themselves, the match marked over the box; stress marks, ё, ע and
+the Latin o and a do not stand in the way. Viktor's first try found two faults, mended the same hour: in a Russian
+layout Ctrl+F comes as «а», so the key is read (KeyF), not its letter; in a lifted frame (zoomed 1.2) the mark floated,
+now measured in the box's own pixels and drawn at its scale. **The training keeps ע** («Оставляй ע как есть»).
+
+**Upstream** («По репо апстримов подтяни патчи, особенно с ggml+yue2-cpp»): yue2.cpp's five commits since our base (its
+ggml fork rebased on ggml 0.26.0, 147 commits: CUDA kernels and fixes among them; Windows build scripts; a CMake policy
+range), taken as commits of ours so the patch series stays one line. Measured: his two-minute recipe in 51 s on GPU1,
+54–61 s on the engine before. The official YuE2 repository's code changes since 10.09 are its own Python's (UTF-8 I/O,
+batches, an example's line endings) and its instrumental recipe, which the studio's Instrumental already follows.
+**Windows 11**: INSTALL_WINDOWS.md, through WSL2, said to be untried by us.
+
+**Tags under a «[»** («при наборе `[` появлялись как в кодовых IDE подсказки с выбором, Enter и вставка? Базовые в самом
+начале — Verse, Bridge, etc, но на особые Intro, Outro, END проверка, если уже есть в тексте»): heresy-complete.js, on the
+Creator's and the Writer's lyrics. The cheat-sheet's sections (lyricTags()), the common ones first, then the three a song has
+once, then the rest as the examples count them; narrowed from a word's start, in a Russian or Ukrainian layout too; a typed
+number numbers the tag, numbered verses are offered the next; Enter or Tab inserts by the browser's own typing, so Ctrl+Z
+takes it back; Intro, Outro and End already there (his [END] too) last and dimmed with their line. Ctrl+Space opens it and,
+at a line's start, types the «[» itself (no Latin layout for it). It inserts the official examples' [End]; his songs write
+[END] (30 of them), which counts as there.
+
+**The meter by the sung sections** («игнорирование подсчётов, если в строке два [] тега типа [Break] [Silence]»; «Счёт по
+базису реальных вокальных секций. Даже если внутри паузные, интерлюдия/прелюдия, общее продолжаем по главному тегу
+секции»): every [tag] of a line is a tag, never sung (a line of tags alone none, a tag inside a line left out); a pause,
+break, silence, interlude, prelude or instrumental cue inside a sung section opens no group (dimmed, the section's ruler
+goes on); before the first sung section an intro's lines keep their own. **A syllable** («Считает гласные, а нужно считать
+слоги… Я|же|ви|жу|глу|п|цо́в|с|при|ду́р|чес|ким|пла|ном… 15 долей. Сможешь унифицировать счётчики и для всех языков»): in
+Russian a syllable is one vowel letter, and the meter counted that; his split is fourteen parts, two with no vowel (п, с),
+consonants that take time but are no syllable: глуп-цо́в спри-ду́р-чес-ким, twelve. Elsewhere it was wrong, and is mended:
+Spanish and Italian went by English (a final e silent: «noche» one), Greek lost its diaeresis, Hebrew counted ע and the
+shin's dot, Chinese counted nothing. Each language by its own rules now; the Latin words' language from the style, else from
+the lyrics' small words (the spelling check follows it).
+
+**Seen, asked of the page** («Твоя подсветка работает при ровном скейле в 100%. На 110% уже съехала вниз»): not the zoom.
+A lifted frame's sticky Generate bar is 70 px, and the frame's own box reaches under it; a match was taken for seen down to
+48 px above the frame's foot, so in the 22 px between nothing scrolled and the mark stood on the bar; at 110 % his line fell
+there. Measured with a real browser zoom (the profile's zoom level): at 100 % and at 110 % a line put under the bar left the
+mark on it. Now whether a line is seen is asked of the page (what stands at that point), the browser scrolls a probe into
+the middle of every box on the way, and a mark is drawn only on words seen; the stress marks' button likewise. **The view
+stays** («Если активен виджет поиска… встал курсором на другом месте, и единое движение клавишами… переносит оттуда на
+место поиска»): words typed in the box count the matches again and do not move the view; Esc from the box closes the bar
+and leaves the cursor; Esc in the find bar or the tags' list of a lifted frame closes them and keeps the frame. **The
+solver** spans two columns of Sound and output while the MP3 bitrate is hidden («Расширь селектор солвера на две колонки,
+чтобы была симетрия»). Patches 1196–1197.
+
+**Consonant beats** (to my offer to draw «согласные доли» as the brackets are drawn: «Допиши одиночные согласные доли,
+потому что мы не меряем по реальным слогам между 2 и 4 символами, а по реальной затрате времени на произношение»): the
+meter measures the time a line takes. In Russian, Ukrainian and Belarusian words, a word with no vowel (с, в, к, з, й, ў)
+and a stop right after a vowel closed against an affricate (п|ц, т|ч, д|ц; not сердце's silent д, whose stop follows a
+consonant) are beats of their own, counted with the line's syllables (its bar, its number, the group's ruler) and drawn
+lighter at the bar's end; under the box the syllables stay syllables, the consonant beats counted beside them. His line
+«Я же вижу глупцо́в с приду́рческим планом» is 12 and 2: 14, his own split. The rule inside a word is narrow on purpose
+(his one example: глу|п|цо́в; not г|д in когда, not к|т in доктор): widened when his ear asks. **[END]**: the tags list
+writes it as his songs do («Да, измени»); the cheat-sheet keeps the official examples' [End]. Patch 1198.
+
 ## heresy-lab
 
 `lab/lab.py` — standard-library Python, port 41870, reached by the page through the Kit

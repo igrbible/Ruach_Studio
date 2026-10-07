@@ -245,8 +245,8 @@ RuachI18n.add("es", {
 "Reset sampling": "Restablecer el muestreo",
 "Sound and output": "Sonido y salida",
 "WAV 24-bit": "WAV 24 bits",
-"ODE steps": "Pasos ODE",
-"About ODE steps": "Sobre los pasos ODE",
+"Denoising steps": "Pasos de eliminación de ruido",
+"About Denoising steps": "Sobre los pasos de eliminación de ruido",
 "sound solver": "resolvedor del sonido",
 "Solver": "Resolvedor",
 "About Solver": "Sobre el resolvedor",
@@ -944,7 +944,7 @@ RuachI18n.add("es", {
 ", then watch it take shape: the score is written, the music is composed, and the sound is rendered into your finished track. Any song you pick from Takes opens here too.": ", y mira cómo toma forma: se escribe la partitura, se compone la música y el sonido se renderiza en tu pista terminada. Cualquier canción que elijas en Tomas también se abre aquí.",
 "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Bitrate cuando la propia canción se hace como MP3 (Formato: MP3). 320 es casi transparente; el valor por defecto del servidor es 128. Para compartir una canción WAV como MP3, usa mejor la descarga MP3 de su página.",
 "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: la misma canción, sin pérdidas (cada muestra idéntica a la del WAV) en cerca de tres cuartos del tamaño. Se hace al momento, en un segundo más o menos; el título y la letra se escriben en el archivo.",
-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Empezar una canción nueva: cada campo, las dos semillas, la partitura, los códigos musicales cargados, el modo, el muestreo, los deslizadores, las LoRA e Instrumental vuelven a sus valores por defecto. Tus elecciones de VAE, salida y tema se quedan.",
+"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Empezar una canción nueva: cada campo, las dos semillas, la partitura, los códigos musicales cargados, el modo, el muestreo, los deslizadores, las LoRA e Instrumental vuelven a sus valores por defecto. «Sonido y salida» (VAE, resolvedor, pasos, duración, formato) y el tema se quedan.",
 "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Una línea sobre la canción que quieres (una historia, un ánimo, un género). El modelo escritor redacta a partir de ella el título, el prompt de estilo y la letra, en el formulario de abajo, donde puedes editarlos antes de generar.",
 "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode). Vocal melody only: just the sung line. Melody and chords: melody plus chord symbols (use Full mode).": "Melodía principal: la línea más destacada, voz o instrumento, sin acordes (usa el modo Melodía). Solo la melodía vocal: solo la línea cantada. Melodía y acordes: la melodía más los símbolos de acordes (usa el modo Completo).",
 "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Cómo se equilibran los stems en la mezcla, en dB por stem (los niveles de abajo mandan sobre él). Solo para un conjunto de stems: un archivo suelto, la toma incluida, no tiene nada que equilibrar, y entonces el preajuste se apaga.",
@@ -1072,7 +1072,7 @@ RuachI18n.add("es", {
 "temperature {0} · top-p {1} · top-k {2}": "temperatura {0} · top-p {1} · top-k {2}",
 "Sliders reset to the tuned defaults": "Deslizadores restablecidos a los valores afinados",
 "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Salida restablecida: WAV 24 bits, {0} pasos, sin tope de duración por debajo del valor por defecto",
-"ODE steps must be a whole number, 1 or more": "Los pasos ODE deben ser un número entero, 1 o más",
+"Denoising steps must be a whole number, 1 or more": "Los pasos de eliminación de ruido deben ser un número entero, 1 o más",
 "Max length must be a number of seconds above 0": "La duración máxima debe ser un número de segundos mayor que 0",
 "Sound variations must be between 1 and 9": "Las variaciones de sonido deben estar entre 1 y 9",
 "Peak clip must be a whole number, 0 or more": "El recorte de picos debe ser un número entero, 0 o más",
@@ -1990,7 +1990,7 @@ RuachI18n.add("es", {
 "About the {0} VAE": "Sobre el VAE {0}",
 "{#0} decoders": {"one": "{0} decodificador", "many": "{0} decodificadores", "other": "{0} decodificadores"},
 "{#0} decoder": {"one": "{0} decodificador", "many": "{0} decodificadores", "other": "{0} decodificadores"},
-"{0} picked in the form": "{0} elegido en el formulario",
+"{0} picked in the ☰ menu": "{0} elegido en el menú ☰",
 "a finished song can add another from its page": "una canción terminada puede añadir otro desde su página",
 "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "El decodificador oficial actual, y el predeterminado. El más limpio y el que mejor suena: empieza por aquí.",
 "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "El decodificador oficial anterior. Las puntuaciones publicadas de los benchmarks se obtuvieron con él. Menos limpio que el Estándar; a algunos les suena más musical. El mismo codificador, solo cambia el decodificador.",
@@ -2644,7 +2644,7 @@ RuachI18n.add("es", {
 "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canción más larga: sigue a «Duración máxima» en «Sonido y salida», 25 tokens de música por segundo (8:00 son 12.000).\n✓ Pon «Duración máxima» cerca de lo que necesita la letra.\n⚠ Con mucho más sitio del que necesita la letra, tras la última línea el modelo vuelve atrás y canta de nuevo líneas anteriores (medido: 24 vueltas así después de acabar la letra). Una canción cortada aquí se marca como truncada.",
 "Only the disliked (a dislike hides a take everywhere else)": "Solo las que no me gustan («No me gusta» oculta una toma en todos los demás sitios)",
 "Start a new song?": "¿Empezar una canción nueva?",
-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "El título, el estilo, la letra, la partitura, las semillas y todos los controles vuelven a sus valores por defecto. Las tomas se quedan.",
+"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "El título, el estilo, la letra, la partitura, las semillas, el modo, el muestreo, los deslizadores y las LoRA vuelven a sus valores por defecto. «Sonido y salida» (VAE, resolvedor, pasos, duración, formato) y las tomas se quedan.",
 "New song": "Canción nueva",
 "(the log is empty)": "(el registro está vacío)",
 "Sound, together": "Sonido, en conjunto",
@@ -2816,4 +2816,36 @@ RuachI18n.add("es", {
 "Mongolian throat singing": "Canto difónico mongol",
 "Classical string quartet": "Cuarteto de cuerda clásico",
 "Film noir jazz": "Jazz de cine negro"
+});
+// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
+RuachI18n.add("es", {
+"The take's frame": "El marco de la toma",
+"The other frame over the room: the take": "El otro marco sobre la sala: la toma",
+"Over the room": "Sobre la sala",
+"This frame over the room, larger: Esc or a click beside it puts it back": "Este marco sobre la sala, más grande: Esc o un clic al lado lo devuelve a su sitio",
+"The form's frame": "El marco del formulario",
+"The other frame over the room: Compose": "El otro marco sobre la sala: Composición",
+"Back into the room": "De vuelta a la sala",
+"Back into the room (Esc)": "De vuelta a la sala (Esc)",
+"Only the favourites (★), in the workspace you are in": "Solo las favoritas (★), en el espacio donde estás"
+});
+// HERESY 1168: F5 in the Librarian
+RuachI18n.add("es", {
+"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "La biblioteca, leída de nuevo (F5 aquí deja la página y la música); Ctrl+F5 recarga la página"
+});
+// HERESY 1168: the lyrics' meter
+RuachI18n.add("es", {
+"Lyrics: {0} characters · {1} syllables · {2} lines": "Letra: {0} caracteres · {1} sílabas · {2} líneas",
+"Tags: {0} characters in {1}": "Etiquetas: {0} caracteres en {1}",
+"In brackets: {0} characters in {1}": "Entre paréntesis: {0} caracteres en {1}",
+"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "La mano fonética: acentos (U+0301), ayin dentro de palabras rusas (o/a suave), letras latinas dentro de palabras rusas (o dura)",
+"Stress {0} · ע {1} · Latin {2}": "Acentos {0} · ע {1} · latinas {2}",
+"The browser's spelling check in the lyrics' language; press to switch it off or on": "El corrector ortográfico del navegador en el idioma de la letra; pulsa para apagarlo o encenderlo",
+"Spelling": "Ortografía",
+"The box grows with the words again, as it did before you drew it": "El cuadro vuelve a crecer con las palabras, como antes de que lo estiraras",
+"Auto height": "Altura automática",
+"verse + bridge": "estrofa + puente",
+"pre-chorus": "pre-estribillo",
+"post-chorus": "post-estribillo",
+"chorus": "estribillo"
 });

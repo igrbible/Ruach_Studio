@@ -1,0 +1,76 @@
+From ed797b578af85da3ad3f19f9c8cd06f02bedb964 Mon Sep 17 00:00:00 2001
+From: Pascal <admin@serveurperso.com>
+Date: Wed, 7 Oct 2026 13:14:07 +0200
+Subject: [PATCH 1191/1198] windows: build with Visual Studio 2026, Ninja and
+ ccache from a clean build dir
+
+(cherry picked from commit b8f8aaf7fbedc4b41fe60494d68995e0b6d03110)
+---
+ buildall.cmd    | 6 +++---
+ buildcuda.cmd   | 6 +++---
+ buildvulkan.cmd | 6 +++---
+ 3 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/buildall.cmd b/buildall.cmd
+index 092979c..1ce01e5 100644
+--- a/buildall.cmd
++++ b/buildall.cmd
+@@ -1,12 +1,12 @@
+ @echo off
+ 
+-call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
++call "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+ 
+-rem rd /s /q build 2>nul
++rd /s /q build 2>nul
+ mkdir build 2>nul
+ cd build
+ 
+-cmake .. -DGGML_CPU_ALL_VARIANTS=ON -DGGML_CUDA=ON -DGGML_VULKAN=ON -DGGML_BACKEND_DL=ON
++cmake .. -G "Ninja Multi-Config" -DGGML_CPU_ALL_VARIANTS=ON -DGGML_CUDA=ON -DGGML_VULKAN=ON -DGGML_BACKEND_DL=ON
+ cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
+ 
+ cd ..
+diff --git a/buildcuda.cmd b/buildcuda.cmd
+index e64cbac..da24f87 100644
+--- a/buildcuda.cmd
++++ b/buildcuda.cmd
+@@ -1,12 +1,12 @@
+ @echo off
+ 
+-call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
++call "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+ 
+-rem rd /s /q build 2>nul
++rd /s /q build 2>nul
+ mkdir build 2>nul
+ cd build
+ 
+-cmake .. -DGGML_CUDA=ON
++cmake .. -G "Ninja Multi-Config" -DGGML_CUDA=ON
+ cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
+ 
+ cd ..
+diff --git a/buildvulkan.cmd b/buildvulkan.cmd
+index 354d000..2ae2ba1 100644
+--- a/buildvulkan.cmd
++++ b/buildvulkan.cmd
+@@ -1,12 +1,12 @@
+ @echo off
+ 
+-call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
++call "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+ 
+-rem rd /s /q build 2>nul
++rd /s /q build 2>nul
+ mkdir build 2>nul
+ cd build
+ 
+-cmake .. -DGGML_VULKAN=ON
++cmake .. -G "Ninja Multi-Config" -DGGML_VULKAN=ON
+ cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
+ 
+ cd ..
+-- 
+2.43.0
+

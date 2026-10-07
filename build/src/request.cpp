@@ -50,6 +50,7 @@ void request_init(Yue2Request * r) {
     r->plan_only = false;
     r->parent    = "";
     r->score_guard = true;
+    r->decode_from = "";
 }
 
 static inline std::string yy_str(yyjson_val * v) {
@@ -191,6 +192,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     }
     if ((v = yyjson_obj_get(obj, "parent")) && yyjson_is_str(v)) {
         r->parent = yy_str(v);
+    }
+    if ((v = yyjson_obj_get(obj, "decode_from")) && yyjson_is_str(v)) {   // HERESY 1168
+        r->decode_from = yy_str(v);
     }
     if ((v = yyjson_obj_get(obj, "plan_only")) && yyjson_is_bool(v)) {
         r->plan_only = yyjson_get_bool(v);
@@ -397,6 +401,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     }
     if (!sparse || r->parent != d.parent) {
         yyjson_mut_obj_add_strncpy(doc, root, "parent", r->parent.c_str(), r->parent.size());
+    }
+    if (!r->decode_from.empty()) {   // HERESY 1168: only on its way in; a take's own request never keeps it
+        yyjson_mut_obj_add_strncpy(doc, root, "decode_from", r->decode_from.c_str(), r->decode_from.size());
     }
 
     char *      json = yyjson_mut_write(doc, WRITE_FLAGS, NULL);

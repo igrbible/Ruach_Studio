@@ -1,0 +1,496 @@
+From 50b166475012c0747702b65d050dd8bb07d9634e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 00:02:11 -0600
+Subject: [PATCH 1183/1198] HERESY 1168: the lyrics' meter: each line's
+ syllables against its group's ruler, the counts under the box, the spelling
+ check, a box drawn by hand
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026, the night: «В поле редактора Лирики можешь прикрутить ересь?… когда пишешь лирику, нужна не только
+рифма, но и длина строк, чтобы ложились на общий такт. Некий визуализатор длин строк, вертикальную линейку, которая по
+куплету+мосту будет едино мерить. По при-корусу и корусу — отдельно. Там же разные такты и темпы… браузер встроенный спелл
+чекер… внизу текстового поля Лирики подсчёт символов/знаков самой лирики, и отдельно служебные теги разделов и то, что в
+скобках круглых»; «разреши ручную растяжку поля лирики по высоте… поле лирики можно увеличить на десять строк».
+
+heresy-lyrics.js (HeresyLyrics.attach): beside each line its syllables as a bar against the ruler of its group (verse and
+bridge one, the pre-chorus its own, the chorus its own, any other section its own; the ruler at the group's median, the
+rows of a group one vertical line; within a syllable green, two or three amber, more red); what is in round brackets hatched
+after the bar (it may be sung). Syllables: vowels; ע counts (his soft о/а), stress marks do not, a Latin letter in a
+Russian word counts (his hard o); English vowel groups, Greek vowels, Hebrew points and the shuruk. A mirror of the box wraps
+the lines as it does, so each row stands beside its line through wrapping and scrolling. Under the box: the lyrics'
+characters, syllables and lines; the tags; the brackets; the phonetic hand (stress marks, ayins, Latin letters in Russian
+words); the browser's spelling check in the lyrics' language (Russian, or Ukrainian or Belarusian when the style says so,
+Greek, English), switched off there; a box drawn by hand keeps its height (and in this browser) until «Auto height». The box
+16 rows, growing to 26. All the words in six catalogs.
+
+The suite: 365 passed, 0 failed (2 new checks).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  24 ++++
+ tools/console/app.js            |   4 +
+ tools/console/heresy-i18n-be.js |  16 +++
+ tools/console/heresy-i18n-el.js |  16 +++
+ tools/console/heresy-i18n-es.js |  16 +++
+ tools/console/heresy-i18n-it.js |  16 +++
+ tools/console/heresy-i18n-ru.js |  16 +++
+ tools/console/heresy-i18n-uk.js |  16 +++
+ tools/console/heresy-lyrics.js  | 219 ++++++++++++++++++++++++++++++++
+ tools/console/index.html        |   6 +-
+ 10 files changed, 348 insertions(+), 1 deletion(-)
+ create mode 100644 tools/console/heresy-lyrics.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d826710..235d09e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4182,3 +4182,27 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ .or-key-row { flex: 1 1 100%; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+ .or-key-row .field { flex: 0 1 640px; min-width: 260px; }
+ .or-key-row .check { flex: none; height: 38px; }
++/* HERESY 1168: the lyrics' meter (heresy-lyrics.js): beside each line its syllables against its group's ruler; under the box
++   the counts, the phonetic hand, the spelling check and «Auto height» */
++.lyr-wrap { position: relative; }
++#lyrics { padding-right: 112px; }
++.lyr-mirror { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap; overflow-wrap: break-word;
++  word-break: normal; box-sizing: border-box; border: 0; }
++.lyr-gutter { position: absolute; width: 190px; overflow: hidden; pointer-events: none; }
++.lyr-row { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; font: 10.5px/1 var(--mono); color: var(--dim); }
++.lyr-track { position: relative; height: 6px; flex: none; border-radius: 3px; background: color-mix(in srgb, var(--line-strong, var(--line)) 45%, transparent); }
++.lyr-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--muted); }
++.lyr-row.ok .lyr-bar { background: var(--good); }
++.lyr-row.near .lyr-bar { background: #d9a441; }
++.lyr-row.far .lyr-bar { background: var(--bad); }
++.lyr-bbar { position: absolute; top: 0; bottom: 0; border-radius: 0 3px 3px 0; opacity: .85;
++  background: repeating-linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 4px); }
++.lyr-ruler { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); opacity: .5; }
++.lyr-n { min-width: 26px; text-align: right; }
++.lyr-head { font: 600 9.5px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
++.lyr-meter { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 6px 0 0; font-size: 11.5px; color: var(--dim); }
++.lyr-meter .lyr-hand { color: var(--muted); }
++.lyr-tog { padding: 2px 9px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: transparent; color: var(--muted);
++  font: inherit; cursor: pointer; }
++.lyr-tog:hover { border-color: var(--hover-line, var(--line-strong)); color: var(--ink); }
++.lyr-tog[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f514ff7..4511dac 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1347,6 +1347,9 @@
+     fitText($("lyrics"));
+   }
+   $("lyrics").addEventListener("input", growLyrics);
++  // HERESY 1168: the lyrics' meter: each line's syllables against its group's ruler, the counts under the box, the browser's
++  // spelling check; the box drawn by hand keeps its height (heresy-lyrics.js)
++  var lyricsMeter = window.HeresyLyrics ? window.HeresyLyrics.attach($("lyrics"), { meter: $("lyricsMeter"), style: $("style"), fit: function (area) { fitText(area); } }) : null;
+ 
+   // Each dice toggles: an empty box (random each run) gets a seed to keep or edit; a seed is cleared
+   var DICE = [["lmSeed", "rollLmSeed", "music seed"], ["soundSeed", "rollSoundSeed", "sound seed"]];
+@@ -6658,6 +6661,7 @@
+   // Style and lyrics grow with their text up to data-max-rows lines, then scroll.
+   function fitText(area) {
+     if (!area.offsetParent) return;           // folded or hidden: measured when shown
++    if (area.dataset.manual) { area.style.overflowY = "auto"; return; }   // HERESY 1168: drawn by hand, its height stays
+     var cs = getComputedStyle(area), line = parseFloat(cs.lineHeight) || 20;
+     var pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+     var edge = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index cfce02b..1c3e5de 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2834,3 +2834,19 @@ RuachI18n.add("be", {
+ RuachI18n.add("be", {
+ "The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Бібліятэка перачытаная (F5 тут не кранае старонку і музыку); Ctrl+F5 перазагружае старонку"
+ });
++// HERESY 1168: the lyrics' meter
++RuachI18n.add("be", {
++"Lyrics: {0} characters · {1} syllables · {2} lines": "Лірыка: {0} знакаў · {1} складоў · {2} радкоў",
++"Tags: {0} characters in {1}": "Тэгі: {0} знакаў у {1}",
++"In brackets: {0} characters in {1}": "У дужках: {0} знакаў у {1}",
++"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "Фанетычная рука: націскі (U+0301), айн унутры рускіх слоў (мяккае о/а), лацініца ўнутры рускіх слоў (цвёрдае o)",
++"Stress {0} · ע {1} · Latin {2}": "Націскаў {0} · ע {1} · лацініца {2}",
++"The browser's spelling check in the lyrics' language; press to switch it off or on": "Праверка правапісу браўзера на мове лірыкі; націсні, каб выключыць ці ўключыць",
++"Spelling": "Правапіс",
++"The box grows with the words again, as it did before you drew it": "Поле зноў расце за словамі, як да таго, як ты яго расцягнуў",
++"Auto height": "Аўтавышыня",
++"verse + bridge": "куплет + мост",
++"pre-chorus": "перадпрыпеў",
++"post-chorus": "постпрыпеў",
++"chorus": "прыпеў"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 7f6c959..c1ec902 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2833,3 +2833,19 @@ RuachI18n.add("el", {
+ RuachI18n.add("el", {
+ "The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Η βιβλιοθήκη διαβάστηκε ξανά (το F5 εδώ αφήνει τη σελίδα και τη μουσική); το Ctrl+F5 ξαναφορτώνει τη σελίδα"
+ });
++// HERESY 1168: the lyrics' meter
++RuachI18n.add("el", {
++"Lyrics: {0} characters · {1} syllables · {2} lines": "Στίχοι: {0} χαρακτήρες · {1} συλλαβές · {2} γραμμές",
++"Tags: {0} characters in {1}": "Ετικέτες: {0} χαρακτήρες σε {1}",
++"In brackets: {0} characters in {1}": "Σε παρενθέσεις: {0} χαρακτήρες σε {1}",
++"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "Το φωνητικό χέρι: τόνοι (U+0301), αΐν μέσα σε ρωσικές λέξεις (μαλακό ο/α), λατινικά μέσα σε ρωσικές λέξεις (σκληρό o)",
++"Stress {0} · ע {1} · Latin {2}": "Τόνοι {0} · ע {1} · λατινικά {2}",
++"The browser's spelling check in the lyrics' language; press to switch it off or on": "Ο ορθογραφικός έλεγχος του φυλλομετρητή στη γλώσσα των στίχων· πάτα για να τον σβήσεις ή να τον ανάψεις",
++"Spelling": "Ορθογραφία",
++"The box grows with the words again, as it did before you drew it": "Το πεδίο μεγαλώνει ξανά με τις λέξεις, όπως πριν το τραβήξεις",
++"Auto height": "Αυτόματο ύψος",
++"verse + bridge": "στροφή + γέφυρα",
++"pre-chorus": "προ-ρεφρέν",
++"post-chorus": "μετα-ρεφρέν",
++"chorus": "ρεφρέν"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index b2df528..83c43a3 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2833,3 +2833,19 @@ RuachI18n.add("es", {
+ RuachI18n.add("es", {
+ "The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "La biblioteca, leída de nuevo (F5 aquí deja la página y la música); Ctrl+F5 recarga la página"
+ });
++// HERESY 1168: the lyrics' meter
++RuachI18n.add("es", {
++"Lyrics: {0} characters · {1} syllables · {2} lines": "Letra: {0} caracteres · {1} sílabas · {2} líneas",
++"Tags: {0} characters in {1}": "Etiquetas: {0} caracteres en {1}",
++"In brackets: {0} characters in {1}": "Entre paréntesis: {0} caracteres en {1}",
++"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "La mano fonética: acentos (U+0301), ayin dentro de palabras rusas (o/a suave), letras latinas dentro de palabras rusas (o dura)",
++"Stress {0} · ע {1} · Latin {2}": "Acentos {0} · ע {1} · latinas {2}",
++"The browser's spelling check in the lyrics' language; press to switch it off or on": "El corrector ortográfico del navegador en el idioma de la letra; pulsa para apagarlo o encenderlo",
++"Spelling": "Ortografía",
++"The box grows with the words again, as it did before you drew it": "El cuadro vuelve a crecer con las palabras, como antes de que lo estiraras",
++"Auto height": "Altura automática",
++"verse + bridge": "estrofa + puente",
++"pre-chorus": "pre-estribillo",
++"post-chorus": "post-estribillo",
++"chorus": "estribillo"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 801a086..e8a779e 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2833,3 +2833,19 @@ RuachI18n.add("it", {
+ RuachI18n.add("it", {
+ "The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "La libreria riletta (F5 qui lascia la pagina e la musica); Ctrl+F5 ricarica la pagina"
+ });
++// HERESY 1168: the lyrics' meter
++RuachI18n.add("it", {
++"Lyrics: {0} characters · {1} syllables · {2} lines": "Testo: {0} caratteri · {1} sillabe · {2} righe",
++"Tags: {0} characters in {1}": "Tag: {0} caratteri in {1}",
++"In brackets: {0} characters in {1}": "Tra parentesi: {0} caratteri in {1}",
++"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "La mano fonetica: accenti (U+0301), ayin dentro parole russe (o/a morbida), lettere latine dentro parole russe (o dura)",
++"Stress {0} · ע {1} · Latin {2}": "Accenti {0} · ע {1} · latine {2}",
++"The browser's spelling check in the lyrics' language; press to switch it off or on": "Il correttore del browser nella lingua del testo; premi per spegnerlo o accenderlo",
++"Spelling": "Ortografia",
++"The box grows with the words again, as it did before you drew it": "La casella torna a crescere con le parole, come prima che la allungassi",
++"Auto height": "Altezza automatica",
++"verse + bridge": "strofa + ponte",
++"pre-chorus": "pre-ritornello",
++"post-chorus": "post-ritornello",
++"chorus": "ritornello"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 944b33a..3b94046 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2839,3 +2839,19 @@ RuachI18n.add("ru", {
+ RuachI18n.add("ru", {
+ "The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Библиотека перечитана (F5 здесь не трогает страницу и музыку); Ctrl+F5 перезагружает страницу"
+ });
++// HERESY 1168: the lyrics' meter
++RuachI18n.add("ru", {
++"Lyrics: {0} characters · {1} syllables · {2} lines": "Лирика: {0} знаков · {1} слогов · {2} строк",
++"Tags: {0} characters in {1}": "Теги: {0} знаков в {1}",
++"In brackets: {0} characters in {1}": "В скобках: {0} знаков в {1}",
++"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "Фонетическая рука: ударения (U+0301), айин внутри русских слов (мягкое о/а), латиница внутри русских слов (твёрдое o)",
++"Stress {0} · ע {1} · Latin {2}": "Ударений {0} · ע {1} · латиница {2}",
++"The browser's spelling check in the lyrics' language; press to switch it off or on": "Проверка орфографии браузера на языке лирики; нажми, чтобы выключить или включить",
++"Spelling": "Орфография",
++"The box grows with the words again, as it did before you drew it": "Поле снова растёт за словами, как до того, как ты его растянул",
++"Auto height": "Авто-высота",
++"verse + bridge": "куплет + мост",
++"pre-chorus": "пред-припев",
++"post-chorus": "пост-припев",
++"chorus": "припев"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index ff816b9..1cab402 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2834,3 +2834,19 @@ RuachI18n.add("uk", {
+ RuachI18n.add("uk", {
+ "The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Бібліотеку перечитано (F5 тут не чіпає сторінку й музику); Ctrl+F5 перезавантажує сторінку"
+ });
++// HERESY 1168: the lyrics' meter
++RuachI18n.add("uk", {
++"Lyrics: {0} characters · {1} syllables · {2} lines": "Лірика: {0} знаків · {1} складів · {2} рядків",
++"Tags: {0} characters in {1}": "Теги: {0} знаків у {1}",
++"In brackets: {0} characters in {1}": "У дужках: {0} знаків у {1}",
++"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "Фонетична рука: наголоси (U+0301), айн усередині російських слів (м'яке о/а), латиниця всередині російських слів (тверде o)",
++"Stress {0} · ע {1} · Latin {2}": "Наголосів {0} · ע {1} · латиниця {2}",
++"The browser's spelling check in the lyrics' language; press to switch it off or on": "Перевірка орфографії браузера мовою лірики; натисни, щоб вимкнути чи ввімкнути",
++"Spelling": "Орфографія",
++"The box grows with the words again, as it did before you drew it": "Поле знову росте за словами, як до того, як ти його розтягнув",
++"Auto height": "Автовисота",
++"verse + bridge": "куплет + міст",
++"pre-chorus": "передприспів",
++"post-chorus": "постприспів",
++"chorus": "приспів"
++});
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+new file mode 100644
+index 0000000..dcc585b
+--- /dev/null
++++ b/tools/console/heresy-lyrics.js
+@@ -0,0 +1,219 @@
++// HERESY 1168 (Viktor 06.10.2026: «В поле редактора Лирики можешь прикрутить ересь?… когда пишешь лирику, нужна не только
++// рифма, но и длина строк, чтобы ложились на общий такт. Некий визуализатор длин строк, вертикальную линейку, которая по
++// куплету+мосту будет едино мерить. По при-корусу и корусу — отдельно. Там же разные такты и темпы… браузер встроенный
++// спелл чекер… внизу текстового поля Лирики подсчёт символов/знаков самой лирики, и отдельно служебные теги разделов и то,
++// что в скобках круглых»; «разреши ручную растяжку поля лирики по высоте»): the lyrics' meter.
++//
++// Beside each line, its syllables as a bar against the ruler of its group: verse and bridge one group, the pre-chorus its
++// own, the chorus its own, any other section its own. The ruler stands at the group's usual length (the median of its
++// lines); a line within a syllable of it is in step, two or three off amber, more red. What is in round brackets is drawn
++// on after the bar, hatched: it may be sung (Viktor heard it in the first Buratino takes). Syllables are vowels: ע counts
++// (his soft о/а), stress marks do not, a Latin letter in a Russian word counts as the vowel it is (his hard o); English
++// counts vowel groups, Greek its vowels, Hebrew its points (and the shuruk).
++//
++// Under the box: the lyrics' own characters, syllables and lines; the section tags; what is in brackets; his phonetic hand
++// (stress marks, ayins, Latin letters inside Russian words); the browser's own spelling check in the lyrics' language,
++// switched off there when it is in the way; and «auto height» once the box was drawn by hand.
++//
++//   HeresyLyrics.attach(textarea, { meter: element, fit: function (area) {…} })
++(function () {
++  "use strict";
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
++  function store(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private window */ } }
++  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function num(n) { return Number(n).toLocaleString(window.RuachI18n ? window.RuachI18n.locales() : undefined); }
++
++  var CYR = /[а-яёіїєў]/i, HEB = /[֐-׿]/, GRK = /[α-ωάέήίόύώϊϋΐΰ]/i;
++  function wordSyllables(w) {
++    if (CYR.test(w)) return (w.match(/[аеёиоуыэюяіїєўע]/gi) || []).length + (w.match(/[aeiouy]/gi) || []).length;
++    if (HEB.test(w)) return Math.max(1, (w.match(/[ֱ-ׇֻ]|וּ|ע/g) || []).length);
++    if (GRK.test(w)) return Math.max(1, (w.normalize("NFD").replace(/[̀-ͯ]/g, "").match(/[αεηιουω]+/gi) || []).length);
++    var low = w.toLowerCase(), groups = low.match(/[aeiouy]+/g) || [];
++    if (!groups.length) return /\d/.test(low) ? low.replace(/\D/g, "").length : 0;   // 2026: its digits, one each (rough)
++    return Math.max(1, groups.length - (groups.length > 1 && /[^aeiouy]e$/.test(low) ? 1 : 0));
++  }
++  function syllables(text) {
++    return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) { return n + wordSyllables(w); }, 0);
++  }
++
++  // the group a section measures with: «verse+bridge» one, the rest each its own
++  function groupOf(name) {
++    var n = name.toLowerCase().replace(/[\d:.#]+/g, " ").replace(/\s+/g, " ").trim();
++    if (/^(verse|bridge|куплет|бридж|мост)/.test(n)) return "verse + bridge";
++    if (/^pre[\s-]?chorus|^пред/.test(n)) return "pre-chorus";
++    if (/^post[\s-]?chorus/.test(n)) return "post-chorus";
++    if (/^(chorus|hook|refrain|припев)/.test(n)) return "chorus";
++    return n.split(" ")[0] || "—";
++  }
++
++  function measure(text) {
++    var lines = text.split("\n"), group = "—", out = [], tags = { chars: 0, n: 0 }, br = { chars: 0, n: 0 };
++    var lyr = { chars: 0, syl: 0, lines: 0 }, hand = { stress: 0, ayin: 0, latin: 0 };
++    lines.forEach(function (line) {
++      var tag = line.match(/^\s*\[([^\]]+)\]\s*$/);
++      if (tag) {
++        group = groupOf(tag[1]);
++        tags.chars += line.trim().length; tags.n++;
++        out.push({ tag: true, group: group, name: tag[1] });
++        return;
++      }
++      var brackets = line.match(/\([^)]*\)/g) || [], inner = brackets.join(" ");
++      var main = line.replace(/\([^)]*\)/g, " ");
++      br.chars += brackets.reduce(function (n, b) { return n + b.length; }, 0); br.n += brackets.length;
++      var syl = syllables(main), bsyl = syllables(inner.replace(/[()]/g, " "));
++      var words = main.replace(/\s+/g, "");
++      lyr.chars += words.length;
++      hand.stress += (line.match(/́/g) || []).length;
++      hand.ayin += (line.match(/[а-яё]ע|ע[а-яё]/gi) || []).length;
++      hand.latin += (line.match(/[а-яё][a-z]|[a-z][а-яё]/gi) || []).length;
++      if (syl || bsyl) { lyr.syl += syl; lyr.lines++; }
++      out.push({ group: group, syl: syl, bsyl: bsyl, empty: !line.trim() });
++    });
++    // each group's ruler: the median length of its sung lines, once it has two
++    var byGroup = {};
++    out.forEach(function (o) { if (!o.tag && o.syl) (byGroup[o.group] = byGroup[o.group] || []).push(o.syl); });
++    var rulers = {};
++    Object.keys(byGroup).forEach(function (g) {
++      var v = byGroup[g].slice().sort(function (a, b) { return a - b; });
++      if (v.length >= 2) rulers[g] = v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2;
++    });
++    return { rows: out, rulers: rulers, tags: tags, brackets: br, lyrics: lyr, hand: hand };
++  }
++
++  // the language the browser's spelling check reads the lyrics in: their script, and for Cyrillic the style's own word
++  function langOf(text, style) {
++    var cyr = (text.match(/[а-яё]/gi) || []).length, lat = (text.match(/[a-z]/gi) || []).length, grk = (text.match(/[α-ω]/gi) || []).length;
++    if (grk > cyr && grk > lat) return "el";
++    if (cyr >= lat && cyr) {
++      if (/\bukrainian\b/i.test(style || "")) return "uk";
++      if (/\bbelarusian\b/i.test(style || "")) return "be";
++      return "ru";
++    }
++    return lat ? "en" : "";
++  }
++
++  function attach(area, opts) {
++    opts = opts || {};
++    var meter = opts.meter, styleBox = opts.style;
++    var wrap = document.createElement("div");
++    wrap.className = "lyr-wrap";
++    area.parentNode.insertBefore(wrap, area);
++    wrap.appendChild(area);
++    var gutter = document.createElement("div");
++    gutter.className = "lyr-gutter";
++    gutter.setAttribute("aria-hidden", "true");
++    wrap.appendChild(gutter);
++    var mirror = document.createElement("div");
++    mirror.className = "lyr-mirror";
++    mirror.setAttribute("aria-hidden", "true");
++    wrap.appendChild(mirror);
++    var last = null, queued = false;
++
++    function paintMeter(m) {
++      if (!meter) return;
++      var spell = recall("yue2.lyrSpell") !== "off", manual = !!area.dataset.manual;
++      var parts = [
++        '<span class="lyr-c">' + esc(tr("Lyrics: {0} characters · {1} syllables · {2} lines")
++          .replace("{0}", num(m.lyrics.chars)).replace("{1}", num(m.lyrics.syl)).replace("{2}", num(m.lyrics.lines))) + "</span>",
++        '<span class="lyr-c">' + esc(tr("Tags: {0} characters in {1}").replace("{0}", num(m.tags.chars)).replace("{1}", num(m.tags.n))) + "</span>",
++        '<span class="lyr-c">' + esc(tr("In brackets: {0} characters in {1}").replace("{0}", num(m.brackets.chars)).replace("{1}", num(m.brackets.n))) + "</span>"
++      ];
++      if (m.hand.stress || m.hand.ayin || m.hand.latin) {
++        parts.push('<span class="lyr-c lyr-hand" data-tip="' + esc(tr("The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)")) + '">' +
++          esc(tr("Stress {0} · ע {1} · Latin {2}").replace("{0}", num(m.hand.stress)).replace("{1}", num(m.hand.ayin)).replace("{2}", num(m.hand.latin))) + "</span>");
++      }
++      parts.push('<button type="button" class="lyr-tog" data-lyr="spell" aria-pressed="' + spell + '" data-tip="' + esc(tr("The browser's spelling check in the lyrics' language; press to switch it off or on")) + '">' + esc(tr("Spelling")) + "</button>");
++      if (manual) parts.push('<button type="button" class="lyr-tog" data-lyr="auto" data-tip="' + esc(tr("The box grows with the words again, as it did before you drew it")) + '">' + esc(tr("Auto height")) + "</button>");
++      meter.innerHTML = parts.join("");
++    }
++
++    function draw() {
++      queued = false;
++      var text = area.value, m = measure(text);
++      last = m;
++      paintMeter(m);
++      var spell = recall("yue2.lyrSpell") !== "off";
++      area.spellcheck = spell;
++      var lang = langOf(text, styleBox ? styleBox.value : "");
++      if (lang) area.setAttribute("lang", lang); else area.removeAttribute("lang");
++      if (!area.offsetParent) { gutter.innerHTML = ""; return; }
++      // the mirror wraps the lines as the box does, so each row of the meter stands beside its line
++      var cs = getComputedStyle(area);
++      ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
++       "tabSize", "wordSpacing", "fontVariantLigatures"].forEach(function (k) { mirror.style[k] = cs[k]; });
++      mirror.style.width = area.clientWidth + "px";
++      var rows = text.split("\n");
++      mirror.innerHTML = rows.map(function (r) { return "<div>" + (esc(r) || "​") + "</div>"; }).join("");
++      var top0 = area.offsetTop + parseFloat(cs.borderTopWidth), left = area.offsetLeft + area.clientWidth - 6;
++      var lh = parseFloat(cs.lineHeight) || 20, scale = 12;
++      m.rows.forEach(function (o) { if (!o.tag) scale = Math.max(scale, o.syl + o.bsyl); });
++      Object.keys(m.rulers).forEach(function (g) { scale = Math.max(scale, Math.ceil(m.rulers[g]) + 2); });
++      var W = 64, kids = mirror.children, html = [];
++      m.rows.forEach(function (o, i) {
++        var y = (kids[i] ? kids[i].offsetTop : i * lh) - area.scrollTop;
++        if (y < -lh || y > area.clientHeight) return;
++        var ruler = m.rulers[o.group];
++        if (o.tag) {
++          html.push('<div class="lyr-row lyr-head" style="top:' + y + 'px;height:' + lh + 'px">' + esc(o.group) +
++            (ruler !== undefined ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + "</div>");
++          return;
++        }
++        if (o.empty || (!o.syl && !o.bsyl)) return;
++        var off = ruler === undefined ? null : Math.abs(o.syl - ruler), cls = off === null ? "" : off <= 1 ? " ok" : off <= 3 ? " near" : " far";
++        html.push('<div class="lyr-row' + cls + '" style="top:' + y + 'px;height:' + lh + 'px">' +
++          '<span class="lyr-track" style="width:' + W + 'px">' +
++          '<span class="lyr-bar" style="width:' + Math.round(o.syl / scale * W) + 'px"></span>' +
++          (o.bsyl ? '<span class="lyr-bbar" style="left:' + Math.round(o.syl / scale * W) + "px;width:" + Math.round(o.bsyl / scale * W) + 'px"></span>' : "") +
++          (ruler !== undefined ? '<span class="lyr-ruler" style="left:' + Math.round(ruler / scale * W) + 'px;top:' + (-(lh - 6) / 2) + "px;bottom:" + (-(lh - 6) / 2) + 'px"></span>' : "") +
++          '</span><span class="lyr-n">' + o.syl + (o.bsyl ? "+" + o.bsyl : "") + "</span></div>");
++      });
++      gutter.style.top = top0 + "px";
++      gutter.style.left = (left - 190) + "px";   // 190: a section's name and its ruler may reach left over its own short tag line
++      gutter.style.height = area.clientHeight + "px";
++      gutter.innerHTML = html.join("");
++    }
++    function later() { if (!queued) { queued = true; requestAnimationFrame(draw); } }
++
++    area.addEventListener("input", later);
++    area.addEventListener("scroll", later);
++    if (styleBox) styleBox.addEventListener("input", later);
++    if (window.ResizeObserver) new ResizeObserver(later).observe(area);
++    window.addEventListener("ruach-lang", later);
++    if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
++
++    // drawn by hand: the height stays (and is kept); «Auto height» gives the growth back
++    var drag = null;
++    area.addEventListener("pointerdown", function (e) {
++      var r = area.getBoundingClientRect();
++      if (e.clientX > r.right - 18 && e.clientY > r.bottom - 18) drag = area.offsetHeight;
++    });
++    window.addEventListener("pointerup", function () {
++      if (drag === null) return;
++      var was = drag;
++      drag = null;
++      if (Math.abs(area.offsetHeight - was) < 3) return;
++      area.dataset.manual = "1";
++      area.style.overflowY = "auto";
++      store("yue2.lyricsHeight", String(area.offsetHeight));
++      later();
++    });
++    var kept = parseInt(recall("yue2.lyricsHeight") || "", 10);
++    if (kept > 60) { area.dataset.manual = "1"; area.style.height = kept + "px"; area.style.overflowY = "auto"; }
++    if (meter) meter.addEventListener("click", function (e) {
++      var b = e.target.closest("[data-lyr]");
++      if (!b) return;
++      if (b.dataset.lyr === "spell") store("yue2.lyrSpell", recall("yue2.lyrSpell") === "off" ? null : "off");
++      if (b.dataset.lyr === "auto") {
++        delete area.dataset.manual;
++        store("yue2.lyricsHeight", null);
++        if (opts.fit) opts.fit(area);
++      }
++      draw();
++    });
++    later();
++    return { draw: draw, measure: function () { return last || measure(area.value); } };
++  }
++
++  window.HeresyLyrics = { attach: attach, measure: measure, syllables: syllables, groupOf: groupOf };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 47529b2..8ec3e7c 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -839,8 +839,11 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <section class="k-card k-lyrics">
+           <label class="field" data-fold="lyrics">
+             <span class="label" data-head="section tags on their own line">Lyrics</span>
+-            <textarea id="lyrics" rows="6" data-max-rows="16" spellcheck="false" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
++            <!-- HERESY 1168 (Viktor: «теперь, когда у нас две отдельные колонки в левом фрейме, поле лирики можно увеличить на десять
++                 строк»): 16 rows to 26; the lyrics' meter (heresy-lyrics.js) draws beside it and counts under it -->
++            <textarea id="lyrics" rows="16" data-max-rows="26" spellcheck="true" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
+           </label>
++          <div class="lyr-meter" id="lyricsMeter"></div>
+           <!-- HERESY 1043: a whole text made ready to read, by a profile (edited in Write) -->
+           <div class="lib-row" id="tpRow">
+             <span class="label">Text profile</span>
+@@ -2041,6 +2044,7 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+ <script src="heresy-presets.js"></script>
+ <script src="heresy-collection.js"></script>
+ <script src="heresy-textprep.js"></script>
++<script src="heresy-lyrics.js"></script>
+ <script src="heresy-menu.js"></script>
+ <script src="heresy-writer.js"></script>
+ <script src="heresy-train.js"></script>
+-- 
+2.43.0
+

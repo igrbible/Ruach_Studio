@@ -1,7 +1,7 @@
 From bddc002ed5b6a57766823640bd9bae780112cc33 Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 18:20:47 -0600
-Subject: [PATCH 1018/1179] Keys: move the score, catch a style naming another
+Subject: [PATCH 1018/1198] Keys: move the score, catch a style naming another
  key; adapter rows line up
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

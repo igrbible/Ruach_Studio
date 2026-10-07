@@ -33,7 +33,14 @@
   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
   function api(path, body) {
     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
-    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
+    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+      .then(function (b) {
+        // HERESY 1168 (Viktor 06.10.2026: «Когда трек "Move to Trash"… и если проигрывается в данный момент, сразу снимай его
+        // с проигрыша»): whichever way takes go to the trash (a card's menu, the checked ones, a workspace deleted), the page
+        // hears which went
+        if (path === "/trash" && body && body.op === "move" && b && b.moved && b.moved.length && state.hooks && state.hooks.trashed) state.hooks.trashed(b.moved);
+        return b;
+      });
   }
 
   // "*" any run, "?" one character; without either, a plain substring. Case and accents ignored.
@@ -119,6 +126,7 @@
       if (state.place && state.place.charAt(0) !== "_" && !inTree(r, state.place)) return false;   // its sections too (1161)
       if (state.kinds.__liked && !(r.rating > 0)) return false;
       if (state.kinds.__disliked && !(r.rating < 0)) return false;
+      if (state.kinds.__starred && !r.favorite) return false;   // HERESY 1168: the favourites, where you are
       var realKinds = Object.keys(state.kinds).filter(function (k) { return k.charAt(0) !== "_"; });
       if (realKinds.length && !state.kinds[r.kind]) return false;
       if (anyDer && !r.derived.some(function (k) { return state.derived[k]; })) return false;
@@ -791,8 +799,8 @@
     $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
     // HERESY 1167: the disliked shown or not: the rooms' takes column's ⋯ («The disliked ones too»), one setting with this
     window.addEventListener("ruach-disliked", function () { paint(); });
-    Array.prototype.forEach.call(document.querySelectorAll('#collFilters [data-kind="__liked"], #collFilters [data-kind="__disliked"]'), function (b) {
-      var svg = ico(b.dataset.kind === "__liked" ? "like" : "dislike");     // the cards' one-colour icons, not the emoji
+    Array.prototype.forEach.call(document.querySelectorAll('#collFilters [data-kind="__liked"], #collFilters [data-kind="__disliked"], #collFilters [data-kind="__starred"]'), function (b) {
+      var svg = ico({ __liked: "like", __disliked: "dislike", __starred: "star" }[b.dataset.kind]);   // the cards' one-colour icons, not the emoji
       if (svg) b.innerHTML = svg;
     });
     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) {

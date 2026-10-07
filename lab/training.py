@@ -94,20 +94,13 @@ CUE = re.compile(r"^\s*\([^()]*\)\s*$")
 KNOWN = {"intro": "Intro", "verse": "Verse", "pre-chorus": "Pre-Chorus", "prechorus": "Pre-Chorus", "chorus": "Chorus",
          "bridge": "Bridge", "interlude": "Interlude", "inst": "Inst", "instrumental": "Inst", "outro": "Outro"}
 INLINE_CUE = re.compile(r"\s*\([^()]*\)")
-CYR = re.compile(r"[\u0400-\u04ff]")
-WORD = re.compile(r"\S+")
-
-
-def _no_ayin(line):
-    """ע inside a Russian word reads as о (Viktor: YuE2 stumbles over Hebrew inside Russian); whole
-    Hebrew or Greek words stay as they are."""
-    return WORD.sub(lambda m: m.group(0).replace("\u05e2", "о") if CYR.search(m.group(0)) else m.group(0), line)
 
 
 def clean_lyrics(text):
     """A SUNO-style text made a training caption's lyrics: whole-line (cues) and (cues) inside lines go,
-    [Tags] YuE2 does not know go, ע in Russian words becomes о, the head before the first section goes
-    to hints (style words, not lyrics); the sections YuE2 knows and the words stay."""
+    [Tags] YuE2 does not know go, the head before the first section goes to hints (style words, not lyrics); the
+    sections YuE2 knows and the words stay. ע inside a Russian word stays (HERESY 1168, Viktor 07.10.2026: «Оставляй ע как
+    есть»: YuE2 sings it as a soft о/а, as he writes it; it used to become о, when YuE2 was thought to stumble on it)."""
     lines, hints, started = [], [], False
     for line in str(text or "").splitlines():
         if SECTION.match(line) or line.strip().startswith("["):
@@ -123,7 +116,7 @@ def clean_lyrics(text):
                     lines.append("[" + KNOWN[key] + "]")
             rest = re.sub(r"\[[^\]]*\]", "", line).strip()
             if rest and not CUE.match(rest):
-                lines.append(_no_ayin(INLINE_CUE.sub("", rest).strip()))
+                lines.append(INLINE_CUE.sub("", rest).strip())
         elif not started:
             if line.strip():
                 hints.append(line.strip().strip("()"))
@@ -132,7 +125,7 @@ def clean_lyrics(text):
         else:
             line = INLINE_CUE.sub("", line).rstrip()
             if line.strip() or not lines or lines[-1]:
-                lines.append(_no_ayin(line))
+                lines.append(line)
     out = "\n".join(lines)
     out = re.sub(r"\n{3,}", "\n\n", out).strip()
     out = re.sub(r"(\[[^\]]+\])\s*\n(?=\[)", "", out)          # a section left empty by its cues goes

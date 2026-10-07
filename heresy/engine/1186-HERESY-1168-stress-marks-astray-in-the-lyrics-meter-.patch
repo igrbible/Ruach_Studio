@@ -1,0 +1,429 @@
+From b35dee32a8667f8ef42f272ab6479d45eefab10c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 03:13:19 -0600
+Subject: [PATCH 1186/1198] HERESY 1168: stress marks astray in the lyrics'
+ meter; the count composed first; Clear and New song say what they keep
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 07.10.2026, the night: «В твой навороченный редактор лирики вшей ещё проверку проёбов с x301. Что не на гласных, в
+пустоте, на пробеле... С x301 неправильно считаются слоги, мне так кажется. ע учитывается в слогах как гласная?»
+
+- Every stress mark (U+0301) belongs right after the vowel it stresses (Cyrillic, Latin — his hard o —, Greek, or ע — his
+  soft о/а). The meter now finds the ones off a vowel: at a line's start, after a space or a sign, on a consonant, a second
+  mark on the same letter, a spacing ´ in its place; and the words with two marks (amber: meant, or a slip?). A button under
+  the box counts each kind, lists them in its tip and selects them in turn (a mark with its letter; a lone one with its
+  neighbours, to be seen); a mark before the line's count. On his v9.0.9: one, at line 27's start, before «Я».
+- The count, measured on his v9.0.9 (89 sung lines) and on 2,033 lines of his recent takes: no line's count moves with its
+  stress marks, and ע counts as a vowel. Three faults found instead and mended: a decomposed «й» (и + U+0306, as pasted text
+  may bring it) counted as a vowel; a Latin vowel with its acute composed (ó, what «o + U+0301» becomes in a normalizing
+  editor) not counted; Belarusian «ў», no syllable, counted. A word is composed (NFC) before it is counted; in English an
+  accented vowel counts (café) and a diaeresis parts two (naïve). None of his 2,033 lines counts otherwise.
+- Clear's dialog said New song puts the VAE and output back too: it does not, and New song's own dialog said «every knob».
+  Both now say what each keeps: Clear the words alone; New song the mode, sampling, sliders and LoRAs as well, Sound and
+  output (VAE, solver, steps, length, format) staying. The two changed sentences of New song in all six catalogs; the new
+  words English only, for the pass before 2.0.0.
+
+The suite: 374 passed, 0 failed (3 new checks); the F5 clock check waits for the clock to show three seconds instead of a
+fixed sleep, which read 0:02 on a busy machine.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |   8 ++
+ tools/console/app.js            |   4 +-
+ tools/console/heresy-i18n-be.js |   4 +-
+ tools/console/heresy-i18n-el.js |   4 +-
+ tools/console/heresy-i18n-es.js |   4 +-
+ tools/console/heresy-i18n-it.js |   4 +-
+ tools/console/heresy-i18n-ru.js |   4 +-
+ tools/console/heresy-i18n-uk.js |   4 +-
+ tools/console/heresy-lyrics.js  | 125 ++++++++++++++++++++++++++++++--
+ tools/console/index.html        |   4 +-
+ 10 files changed, 143 insertions(+), 22 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6645004..e6a6243 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4208,3 +4208,11 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+   font: inherit; cursor: pointer; }
+ .lyr-tog:hover { border-color: var(--hover-line, var(--line-strong)); color: var(--ink); }
+ .lyr-tog[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
++/* HERESY 1168 (Viktor: «проверку проёбов с x301»): the stress marks astray — a button under the box (red: off a vowel;
++   amber: two in one word) that goes to the next, and a mark before the line's syllable count */
++.lyr-tog.lyr-warn.bad { border-color: color-mix(in srgb, var(--bad) 55%, transparent); color: var(--bad); }
++.lyr-tog.lyr-warn.near { border-color: color-mix(in srgb, #d9a441 55%, transparent); color: #d9a441; }
++.lyr-tog.lyr-warn:hover { border-color: currentColor; }
++.lyr-x { margin-right: 3px; font: 700 14px/1 var(--sans); vertical-align: -3px; }
++.lyr-x.bad { color: var(--bad); }
++.lyr-x.near { color: #d9a441; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 9686fa3..cddbed1 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1404,7 +1404,7 @@
+   }
+   // HERESY 1167 (Viktor: «кнопка New Song… без сторожа и диалогового окна всё сотрёт в формах»): it asks first, as Clear
+   $("newSong").addEventListener("click", function () {
+-    window.HeresyDialog.confirm("Start a new song?\n\nIts title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.",
++    window.HeresyDialog.confirm("Start a new song?\n\nIts title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.",
+       { ok: "New song", danger: true }).then(function (yes) { if (yes) newSong(); });
+   });
+   // HERESY 1167 (Viktor: «Кнопка CLEAR не имеет сторожа. Нечаянно нажал - и полетели все формы в пустоту»): it asks first.
+@@ -1424,7 +1424,7 @@
+     toast("Cleared: the words, the score, the seeds and loaded codes; the mode, knobs, sliders and LoRAs stay");
+   }
+   $("clearForm").addEventListener("click", function () {
+-    window.HeresyDialog.confirm("Clear the words?\n\nThe title, style, lyrics, score, both seeds and loaded music codes go. The mode, sampling, sliders, LoRAs, VAE and output stay as they are; New song puts those back to the defaults too.",
++    window.HeresyDialog.confirm("Clear the words?\n\nThe title, style, lyrics, score, both seeds and loaded music codes go. The mode, sampling, sliders, LoRAs and Sound and output stay as they are; New song puts the mode, sampling, sliders and LoRAs back to the defaults too.",
+       { ok: "Clear the words", danger: true }).then(function (yes) { if (yes) clearWords(); });
+   });
+ 
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 1c3e5de..13315b8 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -945,7 +945,7 @@ RuachI18n.add("be", {
+ ", then watch it take shape: the score is written, the music is composed, and the sound is rendered into your finished track. Any song you pick from Takes opens here too.": ", потым глядзі, як яна набывае форму: пішацца партытура, складаецца музыка, і гук агучваецца ў гатовы трэк. Любая песня, абраная з «Сэмплаў», таксама адкрываецца тут.",
+ "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Бітрэйт, калі сама песня ствараецца ў MP3 (Фармат: MP3). 320 амаль празрыста; па змаўчанні ў сервера 128. Каб падзяліцца WAV-песняй у MP3, лепш спампуй MP3 на яе старонцы.",
+ "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: тая ж песня без страт (кожны адлік як у WAV) прыкладна на тры чвэрці памеру. Ствараецца на месцы прыкладна за секунду; назва і тэкст запісваюцца ў файл.",
+-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Пачаць новую песню: усе палі, абодва сіды, партытура, загружаныя музычныя коды, рэжым, сэмплінг, слайдары, LoRA і «Інструментал» — да значэнняў па змаўчанні. Твае VAE, вывад і тэма застаюцца.",
++"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Пачаць новую песню: усе палі, абодва сіды, партытура, загружаныя музычныя коды, рэжым, сэмплінг, слайдары, LoRA і «Інструментал» — да значэнняў па змаўчанні. «Гук і вывад» (VAE, развязальнік, крокі, даўжыня, фармат) і тэма застаюцца.",
+ "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Адзін радок пра песню, якой ты хочаш (гісторыя, настрой, жанр). Мадэль Пісьменніка накідае па ім назву, промпт стылю і тэкст у форму ніжэй, дзе іх можна правіць перад стварэннем.",
+ "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode). Vocal melody only: just the sung line. Melody and chords: melody plus chord symbols (use Full mode).": "Вядучая мелодыя: найбольш прыкметная лінія, голас ці інструмент, без акордаў (рэжым «Толькі мелодыя»).\nТолькі вакальная мелодыя: адна праспяваная лінія.\nМелодыя і акорды: мелодыя плюс акордавыя сімвалы (рэжым «Поўны план»).",
+ "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Як стэмы ўраўнаважаны ў зводцы, у dB на стэм (узроўні ніжэй важнейшыя). Толькі для набору стэмаў: у адзіночнага файла, у тым ліку сэмпла, ураўнаважваць няма чаго, і прэсэт тады выключаны.",
+@@ -2645,7 +2645,7 @@ RuachI18n.add("be", {
+ "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая доўгая песня: ідзе за «Макс. даўжынёй» у «Гуку і вывадзе», 25 музычных токенаў у секунду (8:00 — гэта 12 000).\n✓ Стаў «Макс. даўжыню» блізка да той, што патрэбна тэксту.\n⚠ Калі месца нашмат больш, чым трэба тэксту, пасля апошняга радка мадэль вяртаецца і пяе ранейшыя радкі зноў (заменана: 24 такія вяртанні пасля канца тэксту). Песня, абарваная тут, пазначаецца як абрэзаная.",
+ "Only the disliked (a dislike hides a take everywhere else)": "Толькі неўпадабаныя («Не падабаецца» хавае сэмпл ва ўсіх іншых месцах)",
+ "Start a new song?": "Пачаць новую песню?",
+-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Назва, стыль, тэкст, партытура, сіды і ўсе рэгулятары вернуцца да прадвызначаных значэнняў. Сэмплы застануцца.",
++"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "Назва, стыль, тэкст, партытура, сіды, рэжым, сэмплінг, слайдары і LoRA вернуцца да прадвызначаных значэнняў. «Гук і вывад» (VAE, развязальнік, крокі, даўжыня, фармат) і сэмплы застануцца.",
+ "New song": "Новая песня",
+ "(the log is empty)": "(лог пусты)",
+ "Sound, together": "Гук разам",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index c1ec902..b6a5ef1 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -944,7 +944,7 @@ RuachI18n.add("el", {
+ ", then watch it take shape: the score is written, the music is composed, and the sound is rendered into your finished track. Any song you pick from Takes opens here too.": ", και μετά δες το να παίρνει μορφή: γράφεται η παρτιτούρα, συντίθεται η μουσική και ο ήχος αποδίδεται στο ολοκληρωμένο κομμάτι σου. Και κάθε τραγούδι που διαλέγεις από τις Λήψεις ανοίγει εδώ.",
+ "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Bitrate όταν το ίδιο το τραγούδι φτιάχνεται ως MP3 (Μορφή: MP3). Το 320 είναι σχεδόν διάφανο· η προεπιλογή του διακομιστή είναι 128. Για να μοιραστείς ένα τραγούδι WAV ως MP3, χρησιμοποίησε καλύτερα το κατέβασμα MP3 στη σελίδα του.",
+ "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: το ίδιο τραγούδι, χωρίς απώλειες (κάθε δείγμα ίδιο με το WAV) σε περίπου τρία τέταρτα του μεγέθους. Φτιάχνεται επιτόπου σε περίπου ένα δευτερόλεπτο· ο τίτλος και οι στίχοι γράφονται μέσα στο αρχείο.",
+-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Ξεκίνα νέο τραγούδι: κάθε πεδίο, οι δύο σπόροι, η παρτιτούρα, οι φορτωμένοι μουσικοί κώδικες, η λειτουργία, η δειγματοληψία, τα ρυθμιστικά, οι LoRA και το Οργανικό πίσω στις προεπιλογές. Οι επιλογές σου για VAE, έξοδο και θέμα μένουν.",
++"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Ξεκίνα νέο τραγούδι: κάθε πεδίο, οι δύο σπόροι, η παρτιτούρα, οι φορτωμένοι μουσικοί κώδικες, η λειτουργία, η δειγματοληψία, τα ρυθμιστικά, οι LoRA και το Οργανικό πίσω στις προεπιλογές. Το «Ήχος και έξοδος» (VAE, λύτης, βήματα, διάρκεια, μορφή) και το θέμα μένουν.",
+ "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Μία γραμμή για το τραγούδι που θέλεις (μια ιστορία, μια διάθεση, ένα είδος). Το μοντέλο συγγραφέα σχεδιάζει από αυτήν τον τίτλο, το prompt ύφους και τους στίχους, στη φόρμα παρακάτω, όπου μπορείς να τα διορθώσεις πριν από την παραγωγή.",
+ "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode). Vocal melody only: just the sung line. Melody and chords: melody plus chord symbols (use Full mode).": "Κύρια μελωδία: η πιο εμφανής γραμμή, φωνή ή όργανο, χωρίς συγχορδίες (χρησιμοποίησε τη λειτουργία Μελωδία). Μόνο η φωνητική μελωδία: μόνο η τραγουδισμένη γραμμή. Μελωδία και συγχορδίες: η μελωδία μαζί με σύμβολα συγχορδιών (χρησιμοποίησε την Πλήρη λειτουργία).",
+ "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Πώς ισορροπούν τα stems στη μίξη, σε dB ανά stem (τα επίπεδα παρακάτω υπερισχύουν). Μόνο για σύνολο stems: ένα μεμονωμένο αρχείο, και η λήψη μαζί, δεν έχει τίποτα να ισορροπήσει, και τότε η προρύθμιση είναι κλειστή.",
+@@ -2644,7 +2644,7 @@ RuachI18n.add("el", {
+ "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Το μακρύτερο τραγούδι: ακολουθεί τη «Μέγιστη διάρκεια» στο «Ήχος και έξοδος», 25 μουσικά tokens το δευτερόλεπτο (8:00 είναι 12.000).\n✓ Βάλε τη «Μέγιστη διάρκεια» κοντά σε όση χρειάζονται οι στίχοι.\n⚠ Με πολύ περισσότερο χώρο απ' όσο χρειάζονται οι στίχοι, μετά την τελευταία γραμμή το μοντέλο γυρίζει πίσω και τραγουδά ξανά προηγούμενες γραμμές (μετρημένο: 24 τέτοιες επιστροφές μετά το τέλος των στίχων). Ένα τραγούδι που κόβεται εδώ σημειώνεται ως κομμένο.",
+ "Only the disliked (a dislike hides a take everywhere else)": "Μόνο όσα δεν μου αρέσουν (το «Δεν μου αρέσει» κρύβει μια λήψη παντού αλλού)",
+ "Start a new song?": "Νέο τραγούδι;",
+-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Ο τίτλος, το ύφος, οι στίχοι, η παρτιτούρα, οι σπόροι και κάθε ρύθμιση επιστρέφουν στις προεπιλογές. Οι λήψεις μένουν.",
++"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "Ο τίτλος, το ύφος, οι στίχοι, η παρτιτούρα, οι σπόροι, η λειτουργία, η δειγματοληψία, τα ρυθμιστικά και οι LoRA επιστρέφουν στις προεπιλογές. Το «Ήχος και έξοδος» (VAE, λύτης, βήματα, διάρκεια, μορφή) και οι λήψεις μένουν.",
+ "New song": "Νέο τραγούδι",
+ "(the log is empty)": "(το αρχείο καταγραφής είναι κενό)",
+ "Sound, together": "Ήχος, μαζί",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 83c43a3..9a717b8 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -944,7 +944,7 @@ RuachI18n.add("es", {
+ ", then watch it take shape: the score is written, the music is composed, and the sound is rendered into your finished track. Any song you pick from Takes opens here too.": ", y mira cómo toma forma: se escribe la partitura, se compone la música y el sonido se renderiza en tu pista terminada. Cualquier canción que elijas en Tomas también se abre aquí.",
+ "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Bitrate cuando la propia canción se hace como MP3 (Formato: MP3). 320 es casi transparente; el valor por defecto del servidor es 128. Para compartir una canción WAV como MP3, usa mejor la descarga MP3 de su página.",
+ "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: la misma canción, sin pérdidas (cada muestra idéntica a la del WAV) en cerca de tres cuartos del tamaño. Se hace al momento, en un segundo más o menos; el título y la letra se escriben en el archivo.",
+-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Empezar una canción nueva: cada campo, las dos semillas, la partitura, los códigos musicales cargados, el modo, el muestreo, los deslizadores, las LoRA e Instrumental vuelven a sus valores por defecto. Tus elecciones de VAE, salida y tema se quedan.",
++"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Empezar una canción nueva: cada campo, las dos semillas, la partitura, los códigos musicales cargados, el modo, el muestreo, los deslizadores, las LoRA e Instrumental vuelven a sus valores por defecto. «Sonido y salida» (VAE, resolvedor, pasos, duración, formato) y el tema se quedan.",
+ "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Una línea sobre la canción que quieres (una historia, un ánimo, un género). El modelo escritor redacta a partir de ella el título, el prompt de estilo y la letra, en el formulario de abajo, donde puedes editarlos antes de generar.",
+ "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode). Vocal melody only: just the sung line. Melody and chords: melody plus chord symbols (use Full mode).": "Melodía principal: la línea más destacada, voz o instrumento, sin acordes (usa el modo Melodía). Solo la melodía vocal: solo la línea cantada. Melodía y acordes: la melodía más los símbolos de acordes (usa el modo Completo).",
+ "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Cómo se equilibran los stems en la mezcla, en dB por stem (los niveles de abajo mandan sobre él). Solo para un conjunto de stems: un archivo suelto, la toma incluida, no tiene nada que equilibrar, y entonces el preajuste se apaga.",
+@@ -2644,7 +2644,7 @@ RuachI18n.add("es", {
+ "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canción más larga: sigue a «Duración máxima» en «Sonido y salida», 25 tokens de música por segundo (8:00 son 12.000).\n✓ Pon «Duración máxima» cerca de lo que necesita la letra.\n⚠ Con mucho más sitio del que necesita la letra, tras la última línea el modelo vuelve atrás y canta de nuevo líneas anteriores (medido: 24 vueltas así después de acabar la letra). Una canción cortada aquí se marca como truncada.",
+ "Only the disliked (a dislike hides a take everywhere else)": "Solo las que no me gustan («No me gusta» oculta una toma en todos los demás sitios)",
+ "Start a new song?": "¿Empezar una canción nueva?",
+-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "El título, el estilo, la letra, la partitura, las semillas y todos los controles vuelven a sus valores por defecto. Las tomas se quedan.",
++"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "El título, el estilo, la letra, la partitura, las semillas, el modo, el muestreo, los deslizadores y las LoRA vuelven a sus valores por defecto. «Sonido y salida» (VAE, resolvedor, pasos, duración, formato) y las tomas se quedan.",
+ "New song": "Canción nueva",
+ "(the log is empty)": "(el registro está vacío)",
+ "Sound, together": "Sonido, en conjunto",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index e8a779e..e9bc4ef 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -944,7 +944,7 @@ RuachI18n.add("it", {
+ ", then watch it take shape: the score is written, the music is composed, and the sound is rendered into your finished track. Any song you pick from Takes opens here too.": ", poi guarda come prende forma: si scrive la partitura, si compone la musica e il suono viene renderizzato nella tua traccia finita. Anche qualsiasi canzone scelta da Take si apre qui.",
+ "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Bitrate quando la canzone stessa viene creata come MP3 (Formato: MP3). 320 è quasi trasparente; il predefinito del server è 128. Per condividere una canzone WAV come MP3, usa invece il download MP3 della sua pagina.",
+ "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: la stessa canzone, senza perdita (ogni campione identico al WAV) in circa tre quarti delle dimensioni. Si crea al momento, in circa un secondo; titolo e testo vengono scritti nel file.",
+-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Inizia una nuova canzone: ogni campo, entrambi i semi, la partitura, i codici musicali caricati, la modalità, il campionamento, gli slider, le LoRA e Strumentale tornano ai predefiniti. Le tue scelte di VAE, uscita e tema restano.",
++"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Inizia una nuova canzone: ogni campo, entrambi i semi, la partitura, i codici musicali caricati, la modalità, il campionamento, gli slider, le LoRA e Strumentale tornano ai predefiniti. «Suono e uscita» (VAE, risolutore, passi, durata, formato) e il tema restano.",
+ "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Una riga sulla canzone che vuoi (una storia, un'atmosfera, un genere). Il modello scrittore ne ricava titolo, prompt di stile e testo, nel modulo qui sotto, dove puoi modificarli prima di generare.",
+ "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode). Vocal melody only: just the sung line. Melody and chords: melody plus chord symbols (use Full mode).": "Melodia principale: la linea più in evidenza, voce o strumento, senza accordi (usa la modalità Melodia). Solo la melodia vocale: solo la linea cantata. Melodia e accordi: la melodia più i simboli degli accordi (usa la modalità Completo).",
+ "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Come si bilanciano gli stem nel mix, in dB per stem (i livelli qui sotto prevalgono). Solo per un set di stem: un singolo file, take compreso, non ha nulla da bilanciare, e allora il preset è spento.",
+@@ -2644,7 +2644,7 @@ RuachI18n.add("it", {
+ "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "La canzone più lunga: segue «Durata massima» in «Suono e uscita», 25 token musicali al secondo (8:00 sono 12.000).\n✓ Metti «Durata massima» vicino a quanto serve al testo.\n⚠ Con molto più spazio di quanto serve al testo, dopo l'ultima riga il modello torna indietro e canta di nuovo righe precedenti (misurato: 24 ritorni così dopo la fine del testo). Una canzone tagliata qui viene segnata come troncata.",
+ "Only the disliked (a dislike hides a take everywhere else)": "Solo i Non mi piace («Non mi piace» nasconde un take in tutti gli altri posti)",
+ "Start a new song?": "Iniziare una canzone nuova?",
+-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Titolo, stile, testo, partitura, seed e ogni manopola tornano ai valori predefiniti. I take restano.",
++"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "Titolo, stile, testo, partitura, seed, modalità, campionamento, slider e LoRA tornano ai valori predefiniti. «Suono e uscita» (VAE, risolutore, passi, durata, formato) e i take restano.",
+ "New song": "Nuova canzone",
+ "(the log is empty)": "(il log è vuoto)",
+ "Sound, together": "Suono, insieme",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 3b94046..35e9603 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -944,7 +944,7 @@ RuachI18n.add("ru", {
+ ", then watch it take shape: the score is\n        written, the music is composed, and the sound is rendered into your finished track. Any song you pick\n        from Takes opens here too.": ", затем смотри, как она обретает форму: пишется партитура, сочиняется музыка, и звук отрисовывается в готовый трек. Любая песня, выбранная из «Семплов», тоже открывается здесь.",
+ "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Битрейт, когда сама песня делается в MP3 (Формат: MP3). 320 почти прозрачно; по умолчанию у сервера 128. Чтобы поделиться WAV-песней в MP3, лучше скачай MP3 на её странице.",
+ "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: та же песня без потерь (каждый отсчёт как в WAV) примерно на три четверти размера. Делается на месте примерно за секунду; название и текст записываются в файл.",
+-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Начать новую песню: все поля, оба сида, партитура, загруженные музыкальные коды, режим, сэмплинг, слайдеры, LoRA и «Инструментал» — к значениям по умолчанию. Твои VAE, вывод и тема остаются.",
++"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Начать новую песню: все поля, оба сида, партитура, загруженные музыкальные коды, режим, сэмплинг, слайдеры, LoRA и «Инструментал» — к значениям по умолчанию. «Звук и вывод» (VAE, решатель, шаги, длина, формат) и тема остаются.",
+ "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Одна строка о песне, которую ты хочешь (история, настроение, жанр). Модель Писателя набрасывает по ней название, промпт стиля и текст в форму ниже, где их можно править перед созданием.",
+ "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode).\nVocal melody only: just the sung line.\nMelody and chords: melody plus chord symbols (use Full mode).": "Ведущая мелодия: самая заметная линия, голос или инструмент, без аккордов (режим «Только мелодия»).\nТолько вокальная мелодия: одна спетая линия.\nМелодия и аккорды: мелодия плюс аккордовые символы (режим «Полный план»).",
+ "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Как стемы уравновешены в сведении, в dB на стем (уровни ниже важнее). Только для набора стемов: у одиночного файла, включая семпл, уравновешивать нечего, и пресет тогда выключен.",
+@@ -2650,7 +2650,7 @@ RuachI18n.add("ru", {
+ "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000). ✓ Set Max length close to the length the lyrics need. ⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая длинная песня: следует за «Макс. длиной» в «Звуке и выводе», 25 музыкальных токенов в секунду (8:00 — это 12 000).\n✓ Ставь «Макс. длину» близко к той, что нужна тексту.\n⚠ Если места намного больше, чем нужно тексту, после последней строки модель возвращается и поёт прежние строки снова (замерено: 24 таких возврата после конца текста). Песня, оборванная здесь, помечается как обрезанная.",
+ "Only the disliked (a dislike hides a take everywhere else)": "Только непонравившиеся («Не нравится» прячет семпл везде в других местах)",
+ "Start a new song?": "Начать новую песню?",
+-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Название, стиль, текст, партитура, сиды и все ручки вернутся к значениям по умолчанию. Семплы останутся.",
++"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "Название, стиль, текст, партитура, сиды, режим, сэмплинг, слайдеры и LoRA вернутся к значениям по умолчанию. «Звук и вывод» (VAE, решатель, шаги, длина, формат) и семплы останутся.",
+ "New song": "Новая песня",
+ "(the log is empty)": "(лог пуст)",
+ "Sound, together": "Звук вместе",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 1cab402..2f86cf4 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -945,7 +945,7 @@ RuachI18n.add("uk", {
+ ", then watch it take shape: the score is written, the music is composed, and the sound is rendered into your finished track. Any song you pick from Takes opens here too.": ", потім дивись, як вона набирає форми: пишеться партитура, складається музика, і звук озвучується в готовий трек. Будь-яка пісня, обрана із «Семплів», теж відкривається тут.",
+ "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Бітрейт, коли сама пісня створюється в MP3 (Формат: MP3). 320 майже прозоро; типово в сервера 128. Щоб поділитися WAV-піснею в MP3, краще завантаж MP3 на її сторінці.",
+ "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: та сама пісня без утрат (кожен відлік як у WAV) приблизно на три чверті розміру. Створюється на місці приблизно за секунду; назва й текст записуються у файл.",
+-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Почати нову пісню: усі поля, обидва сіди, партитура, завантажені музичні коди, режим, семплінг, слайдери, LoRA й «Інструментал» — до типових значень. Твої VAE, вивід і тема лишаються.",
++"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Почати нову пісню: усі поля, обидва сіди, партитура, завантажені музичні коди, режим, семплінг, слайдери, LoRA й «Інструментал» — до типових значень. «Звук і вивід» (VAE, розв'язувач, кроки, довжина, формат) і тема лишаються.",
+ "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Один рядок про пісню, якої ти хочеш (історія, настрій, жанр). Модель Письменника накидає за ним назву, промпт стилю й текст у форму нижче, де їх можна правити перед створенням.",
+ "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode). Vocal melody only: just the sung line. Melody and chords: melody plus chord symbols (use Full mode).": "Провідна мелодія: найпомітніша лінія, голос чи інструмент, без акордів (режим «Лише мелодія»).\nЛише вокальна мелодія: одна заспівана лінія.\nМелодія й акорди: мелодія плюс акордові символи (режим «Повний план»).",
+ "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Як стеми врівноважено у зведенні, у dB на стем (рівні нижче важливіші). Лише для набору стемів: в одиночного файлу, зокрема семплу, врівноважувати нічого, і пресет тоді вимкнений.",
+@@ -2645,7 +2645,7 @@ RuachI18n.add("uk", {
+ "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Найдовша пісня: іде за «Макс. довжиною» у «Звуці і виводі», 25 музичних токенів на секунду (8:00 — це 12 000).\n✓ Став «Макс. довжину» близько до тієї, що потрібна тексту.\n⚠ Якщо місця набагато більше, ніж потрібно тексту, після останнього рядка модель повертається й співає попередні рядки знову (заміряно: 24 таких повернення після кінця тексту). Пісня, обірвана тут, позначається як обрізана.",
+ "Only the disliked (a dislike hides a take everywhere else)": "Лише невподобані («Не подобається» ховає семпл у всіх інших місцях)",
+ "Start a new song?": "Почати нову пісню?",
+-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Назва, стиль, текст, партитура, сіди й усі регулятори повернуться до типових значень. Семпли залишаться.",
++"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "Назва, стиль, текст, партитура, сіди, режим, семплінг, слайдери й LoRA повернуться до типових значень. «Звук і вивід» (VAE, розв'язувач, кроки, довжина, формат) і семпли залишаться.",
+ "New song": "Нова пісня",
+ "(the log is empty)": "(лог порожній)",
+ "Sound, together": "Звук разом",
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index 9b3e91b..62f01a4 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -15,6 +15,17 @@
+ // (stress marks, ayins, Latin letters inside Russian words); the browser's own spelling check in the lyrics' language,
+ // switched off there when it is in the way; and «auto height» once the box was drawn by hand.
+ //
++// HERESY 1168 (Viktor 07.10.2026: «вшей ещё проверку проёбов с x301. Что не на гласных, в пустоте, на пробеле...»): every
++// stress mark (U+0301) belongs right after the vowel it stresses (Cyrillic, Latin — his hard o —, Greek, or ע — his soft
++// о/а). Off a vowel it is a slip: at a line's start, after a space or a sign, on a consonant, a second mark on the same
++// letter, or a spacing ´ in its place; a word with two marks is asked about (amber), not called wrong. A button under the
++// box counts them and goes to the next; the line's number beside it carries a mark.
++// His second question («С x301 неправильно считаются слоги, мне так кажется. ע учитывается в слогах как гласная?»),
++// measured on his v9.0.9 (89 sung lines): no line's count moves with its stress marks, and ע counts. The measure found three
++// faults of the count instead, mended here: a decomposed «й» (и + U+0306, as pasted text may bring it) counted as a vowel;
++// a Latin vowel with its acute composed (ó — what «o + U+0301» becomes in a normalizing editor) not counted; Belarusian «ў»,
++// which is no syllable, counted. A word is composed (NFC) before it is counted.
++//
+ //   HeresyLyrics.attach(textarea, { meter: element, fit: function (area) {…} })
+ (function () {
+   "use strict";
+@@ -25,18 +36,75 @@
+   function num(n) { return Number(n).toLocaleString(window.RuachI18n ? window.RuachI18n.locales() : undefined); }
+ 
+   var CYR = /[а-яёіїєў]/i, HEB = /[֐-׿]/, GRK = /[α-ωάέήίόύώϊϋΐΰ]/i;
++  var LATV = /[aeiouyàáâãäåèéêëìíîïòóôõöùúûüýÿ]/gi;   // a Latin vowel, its accent composed or not
+   function wordSyllables(w) {
+-    if (CYR.test(w)) return (w.match(/[аеёиоуыэюяіїєўע]/gi) || []).length + (w.match(/[aeiouy]/gi) || []).length;
++    w = w.normalize("NFC");                        // и + U+0306 is «й», no vowel; o + U+0301 is «ó», a vowel
++    if (CYR.test(w)) return (w.match(/[аеёиоуыэюяіїєѐѝע]/gi) || []).length + (w.match(LATV) || []).length;
+     if (HEB.test(w)) return Math.max(1, (w.match(/[ֱ-ׇֻ]|וּ|ע/g) || []).length);
+     if (GRK.test(w)) return Math.max(1, (w.normalize("NFD").replace(/[̀-ͯ]/g, "").match(/[αεηιουω]+/gi) || []).length);
+-    var low = w.toLowerCase(), groups = low.match(/[aeiouy]+/g) || [];
++    // HERESY 1168: an accented vowel is a vowel (café), a diaeresis parts two (naïve), an accented final e is sung
++    var raw = w.toLowerCase(), low = raw.normalize("NFD").replace(/([aeiouy])\u0308/g, "|$1").replace(/[\u0300-\u036f]/g, "");
++    var groups = low.match(/[aeiouy]+/g) || [];
+     if (!groups.length) return /\d/.test(low) ? low.replace(/\D/g, "").length : 0;   // 2026: its digits, one each (rough)
+-    return Math.max(1, groups.length - (groups.length > 1 && /[^aeiouy]e$/.test(low) ? 1 : 0));
++    return Math.max(1, groups.length - (groups.length > 1 && /[^aeiouy]e$/.test(raw) ? 1 : 0));
+   }
+   function syllables(text) {
+     return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) { return n + wordSyllables(w); }, 0);
+   }
+ 
++  // the stress marks that are off a vowel (kind, where), and the words with two (asked about, not called wrong)
++  var VOWEL = /[аеёиоуыэюяіїєѐѝaeiouyαεηιουωע]/i, ACCENTED = /[àáâãäåèéêëìíîïòóôõöùúûüýÿάέήίόύώΐΰ]/i, MARK = /[\u0300-\u036f]/;
++  var SPACING = /[\u00b4\u02ca]/, SPACING_GRK = /[\u0384\u1ffd]/;   // ´ ˊ anywhere; ΄ and the Greek oxia outside Greek
++  function stressFaults(text) {
++    var out = [], twos = [], start = 0;
++    text.split("\n").forEach(function (line, n) {
++      var grk = GRK.test(line);
++      for (var i = 0; i < line.length; i++) {
++        var c = line[i];
++        if (SPACING.test(c) || (!grk && SPACING_GRK.test(c))) { out.push({ line: n, at: start + i, from: start + i, to: start + i + 1, kind: "spacing", c: c }); continue; }
++        if (c !== "\u0301") continue;
++        var j = i - 1, doubled = false;
++        while (j >= 0 && MARK.test(line[j])) { if (line[j] === "\u0301") doubled = true; j--; }
++        var base = j >= 0 ? line[j] : "", kind = null;
++        if (doubled) kind = "doubled";
++        else if (j < 0) kind = "start";
++        else if (/\s/.test(base)) kind = "space";
++        else if (ACCENTED.test(base)) kind = "doubled";
++        else if (VOWEL.test(base)) kind = null;
++        else if (/[a-zа-яёіїєўα-ω֐-׿]/i.test(base) || base.toLowerCase() !== base.toUpperCase()) kind = "consonant";
++        else kind = "sign";
++        if (kind) {
++          // what is selected to show it: the letter (or sign) with its mark; a mark at a line's start or after a space has no
++          // letter of its own, so the space before and the letter after it come with it (a lone mark selected is invisible)
++          var lone = kind === "start" || kind === "space", from = lone ? (kind === "space" ? i - 1 : i) : j, to = lone && i + 1 < line.length ? i + 2 : i + 1;
++          out.push({ line: n, at: start + i, from: start + from, to: start + to, kind: kind, c: base, next: line[i + 1] || "" });
++        }
++      }
++      var words = line.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || [], pos = 0;
++      words.forEach(function (w) {
++        var k = line.indexOf(w, pos);
++        pos = k + w.length;
++        var marks = 0;                                 // the marks of the word that are no fault already (a doubled one is)
++        for (var q = w.indexOf("\u0301"); q >= 0; q = w.indexOf("\u0301", q + 1)) {
++          if (!out.some(function (f) { return f.at === start + k + q; })) marks++;
++        }
++        if (marks >= 2) twos.push({ line: n, at: start + k, from: start + k, to: start + k + w.length, kind: "two", word: w });
++      });
++      start += line.length + 1;
++    });
++    return { faults: out, twos: twos };
++  }
++  function faultSays(f) {
++    var q = function (c) { return "«" + c + "»"; };
++    if (f.kind === "spacing") return tr("{0} is a spacing accent, not the stress mark (U+0301 after the vowel)").replace("{0}", q(f.c));
++    if (f.kind === "start") return tr("at the line's start") + (f.next.trim() ? " " + tr("(before {0})").replace("{0}", q(f.next)) : "");
++    if (f.kind === "space") return tr("after a space") + (f.next.trim() ? " " + tr("(before {0})").replace("{0}", q(f.next)) : "");
++    if (f.kind === "doubled") return tr("a second mark on {0}").replace("{0}", q(f.c));
++    if (f.kind === "consonant") return tr("on {0}, not a vowel").replace("{0}", q(f.c));
++    if (f.kind === "sign") return tr("after {0}").replace("{0}", q(f.c));
++    return tr("two marks in {0}").replace("{0}", q(f.word));
++  }
++
+   // the group a section measures with: «verse+bridge» one, the rest each its own. HERESY 1168 (Viktor: «По примерам из YuE2
+   // репо вычлени все возможные теги и предусмотри их»): the 110 official examples' tags, as written there: «Verse 1 – Him»,
+   // «Chorus: All», «Final Chorus / Outro», «Instrumental Break - Horns», «Guitar Solo», «副歌1»… The head of a tag (before –,
+@@ -93,7 +161,10 @@
+       var v = byGroup[g].slice().sort(function (a, b) { return a - b; });
+       if (v.length >= 2) rulers[g] = v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2;
+     });
+-    return { rows: out, rulers: rulers, tags: tags, brackets: br, lyrics: lyr, hand: hand };
++    var st = stressFaults(text);
++    st.faults.forEach(function (f) { if (out[f.line]) out[f.line].fault = true; });
++    st.twos.forEach(function (f) { if (out[f.line]) out[f.line].two = true; });
++    return { rows: out, rulers: rulers, tags: tags, brackets: br, lyrics: lyr, hand: hand, stress: st };
+   }
+ 
+   // the language the browser's spelling check reads the lyrics in: their script, and for Cyrillic the style's own word
+@@ -138,6 +209,17 @@
+         parts.push('<span class="lyr-c lyr-hand" data-tip="' + esc(tr("The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)")) + '">' +
+           esc(tr("Stress {0} · ע {1} · Latin {2}").replace("{0}", num(m.hand.stress)).replace("{1}", num(m.hand.ayin)).replace("{2}", num(m.hand.latin))) + "</span>");
+       }
++      // HERESY 1168: the stress marks off a vowel (red) and the words with two (amber): each button goes to the next one
++      [["faults", "stress", "bad", "Stress marks off a vowel: {0}"], ["twos", "stress2", "near", "Words with two stress marks: {0}"]].forEach(function (k) {
++        var list = m.stress[k[0]];
++        if (!list.length) return;
++        var says = list.slice(0, 12).map(function (f) { return tr("line {0}: {1}").replace("{0}", num(f.line + 1)).replace("{1}", faultSays(f)); });
++        if (list.length > 12) says.push(tr("and {0} more").replace("{0}", num(list.length - 12)));
++        var head = k[0] === "faults" ? tr("A stress mark (U+0301) stands right after the vowel it stresses. Press to go to the next one.")
++                                     : tr("One word, two stress marks: meant, or a slip? Press to go to the next one.");
++        parts.push('<button type="button" class="lyr-tog lyr-warn ' + k[2] + '" data-lyr="' + k[1] + '" data-tip="' + esc(head + "\n" + says.join("\n")) + '">' +
++          esc(tr(k[3]).replace("{0}", num(list.length))) + "</button>");
++      });
+       parts.push('<button type="button" class="lyr-tog" data-lyr="spell" aria-pressed="' + spell + '" data-tip="' + esc(tr("The browser's spelling check in the lyrics' language; press to switch it off or on")) + '">' + esc(tr("Spelling")) + "</button>");
+       if (manual) parts.push('<button type="button" class="lyr-tog" data-lyr="auto" data-tip="' + esc(tr("The box grows with the words again, as it did before you drew it")) + '">' + esc(tr("Auto height")) + "</button>");
+       meter.innerHTML = parts.join("");
+@@ -177,6 +259,10 @@
+             (ruler !== undefined && o.lines ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + "</div>");
+           return;
+         }
++        if (!o.syl && !o.bsyl && (o.fault || o.two)) {   // a line of no syllables with a mark gone astray: the mark alone
++          html.push('<div class="lyr-row" style="top:' + y + 'px;height:' + lh + 'px"><span class="lyr-n"><span class="lyr-x ' + (o.fault ? "bad" : "near") + '">\u00b4</span></span></div>');
++          return;
++        }
+         if (o.empty || (!o.syl && !o.bsyl)) return;
+         var off = ruler === undefined ? null : Math.abs(o.syl - ruler), cls = off === null ? "" : off <= 1 ? " ok" : off <= 3 ? " near" : " far";
+         html.push('<div class="lyr-row' + cls + '" style="top:' + y + 'px;height:' + lh + 'px">' +
+@@ -184,7 +270,8 @@
+           '<span class="lyr-bar" style="width:' + Math.round(o.syl / scale * W) + 'px"></span>' +
+           (o.bsyl ? '<span class="lyr-bbar" style="left:' + Math.round(o.syl / scale * W) + "px;width:" + Math.round(o.bsyl / scale * W) + 'px"></span>' : "") +
+           (ruler !== undefined ? '<span class="lyr-ruler" style="left:' + Math.round(ruler / scale * W) + 'px;top:' + (-(lh - 6) / 2) + "px;bottom:" + (-(lh - 6) / 2) + 'px"></span>' : "") +
+-          '</span><span class="lyr-n">' + o.syl + (o.bsyl ? "+" + o.bsyl : "") + "</span></div>");
++          '</span><span class="lyr-n">' + (o.fault || o.two ? '<span class="lyr-x ' + (o.fault ? "bad" : "near") + '">\u00b4</span>' : "") +
++          o.syl + (o.bsyl ? "+" + o.bsyl : "") + "</span></div>");
+       });
+       gutter.style.top = top0 + "px";
+       gutter.style.left = (left - 190) + "px";   // 190: a section's name and its ruler may reach left over its own short tag line
+@@ -218,9 +305,35 @@
+     });
+     var kept = parseInt(recall("yue2.lyricsHeight") || "", 10);
+     if (kept > 60) { area.dataset.manual = "1"; area.style.height = kept + "px"; area.style.overflowY = "auto"; }
++    // HERESY 1168: to a stress mark astray: the letter and its mark selected, the line brought into view (in the box when it
++    // scrolls, and in the frame or page around it)
++    var visit = { stress: -1, stress2: -1 };
++    function goTo(f) {
++      area.focus({ preventScroll: true });
++      area.setSelectionRange(f.from, f.to);
++      var kid = mirror.children[f.line];
++      if (!kid) return;
++      var y = kid.offsetTop;
++      if (area.scrollHeight > area.clientHeight + 1) area.scrollTop = Math.max(0, y - area.clientHeight / 3);
++      var top = area.getBoundingClientRect().top + y - area.scrollTop, p = area.parentElement;
++      while (p && p !== document.body && !(/(auto|scroll)/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight + 1)) p = p.parentElement;
++      var inner = p && p !== document.body, box = inner ? p.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
++      if (top < box.top + 24 || top > box.bottom - 48) {
++        var dy = top - (box.top + (box.bottom - box.top) / 3);
++        if (inner) p.scrollTop += dy; else window.scrollBy(0, dy);
++      }
++    }
+     if (meter) meter.addEventListener("click", function (e) {
+       var b = e.target.closest("[data-lyr]");
+       if (!b) return;
++      if (b.dataset.lyr === "stress" || b.dataset.lyr === "stress2") {
++        var st = stressFaults(area.value), list = b.dataset.lyr === "stress" ? st.faults : st.twos;
++        if (!list.length) return draw();
++        visit[b.dataset.lyr] = (visit[b.dataset.lyr] + 1) % list.length;
++        draw();                                       // the mirror as the text is now, before it is read for the place
++        goTo(list[visit[b.dataset.lyr]]);
++        return;
++      }
+       if (b.dataset.lyr === "spell") store("yue2.lyrSpell", recall("yue2.lyrSpell") === "off" ? null : "off");
+       if (b.dataset.lyr === "auto") {
+         delete area.dataset.manual;
+@@ -233,5 +346,5 @@
+     return { draw: draw, measure: function () { return last || measure(area.value); } };
+   }
+ 
+-  window.HeresyLyrics = { attach: attach, measure: measure, syllables: syllables, groupOf: groupOf };
++  window.HeresyLyrics = { attach: attach, measure: measure, syllables: syllables, groupOf: groupOf, stressFaults: stressFaults };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index c8b9783..ae4be08 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -735,9 +735,9 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+         <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
+         <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
+         </div>
+-        <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs, sliders and LoRAs stay (New song resets those too)">Clear</button>
++        <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs, sliders and LoRAs stay (New song resets them too, all but Sound and output)">Clear</button>
+       </div>
+-      <button type="button" class="btn ghost small" id="newSong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.">＋ New song</button>
++      <button type="button" class="btn ghost small" id="newSong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.">＋ New song</button>
+       <!-- HERESY 1168 (Viktor 06.10.2026: «в комнате Творца прикрути на каждый фрейм — левый и правый — разворот этого фрейма на
+            "полный экран", в оверлей окно 95%x95%, с увеличением масштаба всего фрейма здесь на добрых 20%… Также в оверлеях
+            кнопку переключения между фреймами»): this frame over the room, larger; from there, the other frame -->
+-- 
+2.43.0
+

@@ -1,0 +1,20 @@
+From adb20e1658dfcd3b557d22d9caec95a5d0f8769d Mon Sep 17 00:00:00 2001
+From: Pascal <admin@serveurperso.com>
+Date: Mon, 28 Sep 2026 11:28:10 +0200
+Subject: [PATCH 1189/1198] ggml: fork update
+
+(cherry picked from commit 11c1ecb084329200e22fcb286e252b847442ea5c)
+---
+ ggml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ggml b/ggml
+index 8b60b81..40e16e4 160000
+--- a/ggml
++++ b/ggml
+@@ -1 +1 @@
+-Subproject commit 8b60b81bf9608e25d438803c990c187de85d23ed
++Subproject commit 40e16e4a814f7fe851a0c486fb9e8c722e957830
+-- 
+2.43.0
+

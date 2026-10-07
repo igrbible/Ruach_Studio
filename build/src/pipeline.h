@@ -812,3 +812,31 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             total_timer.ms() / 1000.0, seconds / (float) (total_timer.ms() / 1000.0));
     return true;
 }
+
+// HERESY 1168 (Viktor 07.10.2026: «должны лишь готовые латенты за 5-7 секунд декодироваться»): a take's kept acoustic
+// latents made into sound again by another decoder: no music stage, no sound stage, the VAE alone
+static bool pipeline_decode_latents(Yue2Pipeline * p, const std::string & vae_name, Yue2Song * song,
+                                    bool (*cancelled)(void *) = nullptr, void * cancel_data = nullptr) {
+    std::string vae_path;
+    if (!pipeline_vae_path(p, vae_name, &vae_path)) {
+        p->last_error = "unknown decoder '" + vae_name + "'";
+        return false;
+    }
+    VAEGGML * vae = require_vae(p, vae_path);
+    if (!vae) {
+        p->last_error = "the decoder could not be loaded";
+        return false;
+    }
+    ModelHandle vae_hold(p->store, vae);
+    int max_T_audio = song->T_lat * YUE2_HOP;
+    fprintf(stderr, "[VAE] Kept latents: %d frames, decoded again by %s\n", song->T_lat,
+            vae_name.empty() ? "the default decoder" : vae_name.c_str());
+    song->audio.assign((size_t) 2 * max_T_audio, 0.0f);
+    song->T_audio = vae_ggml_decode_tiled(vae, song->latents.data(), song->T_lat, song->audio.data(), max_T_audio,
+                                          p->params.vae_core, p->params.vae_halo, cancelled, cancel_data);
+    if (song->T_audio < 0) {
+        return false;
+    }
+    song->audio.resize((size_t) 2 * song->T_audio);
+    return true;
+}

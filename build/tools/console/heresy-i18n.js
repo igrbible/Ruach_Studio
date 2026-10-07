@@ -27,7 +27,7 @@
     { code: "es", name: "Español", html: "es" },
     { code: "it", name: "Italiano", html: "it" }
   ];
-  var KEY = "yue2.lang", ATTRS = ["title", "placeholder", "aria-label", "data-tip", "alt"];
+  var KEY = "yue2.lang", ATTRS = ["title", "placeholder", "aria-label", "data-tip", "alt", "data-tip-head"];   // 1168: a tip's first line
   var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, CODE: 1, PRE: 1, NOSCRIPT: 1, TEMPLATE: 1 };
   // what the user wrote or the machine said, kept as it is whatever its words: take titles and styles, notes, workspace
   // names, the logs, the Writer's documents, the cheat-sheet's style words and probe prompts (they go into a style)

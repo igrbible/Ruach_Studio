@@ -1,0 +1,390 @@
+From da0f49e56b4e2face0365205717a6a4376eb1dd5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 11:06:46 -0600
+Subject: [PATCH 1195/1198] HERESY 1168: Max length lives in Sampling; Reset
+ output resets the solver; Denoising steps; Ctrl+F by the key and in a lifted
+ frame; the text profile off with a music profile
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 07.10.2026, from the road:
+- «В Sound and Output поле max length так и осталось»: his «sampler's block» (that field to go, the seconds passed there)
+  was Sound and output, whose solver is the sampler; I had read it the other way round and hidden the music's Max tokens.
+  Now the song's Max length is set in Sampling, the music's time, editable and with no lock (it is the song's length, as
+  the field it replaces was); Sound and output has no length field; the request's duration follows the one in Sampling.
+  The duration is written before the bounds' guard runs (guardKnob re-syncs the ceiling from it: written after, the old
+  length pulled the new one straight back, as the first check of it showed: 3:00 typed, 6:00 kept).
+- «Reset output не обнуляет выбор резолвера»: the solver back to midpoint too; the toast says it, with the length.
+- «ODE STEPS замени на понятное DENOISING STEPS»: the label, its (i)'s name and its refusal, in the six catalogs too.
+- Ctrl+F (his first try: «Повторно Ctrl+F — всплыло браузерное… Снова Ctrl+F — твой виджет больше не появляется»; «какой-то
+  оверлейный прямоугольник начал плавать»): the key is read (KeyF), not its letter, which a Russian layout gives as «а»;
+  in a lifted frame (zoomed 1.2) the mark is measured in the box's own pixels and drawn at its scale.
+- «Если у Творца ПРОФИЛЬ - музыка, деактивируй текстовый профиль, потому что он чисто для начитки»: the text profile row is
+  off (dimmed, its tip saying why) while the Profile chosen is music; on with the built-in Speech, or one of the user's in
+  Direct mode longer than eight minutes, or named for speech or reading.
+
+The suite: 381 passed, 0 failed (5 new checks: the length in Sampling and the request's duration, Reset output's solver,
+Ctrl+F in a Russian layout from the box, from the bar and after a close, the mark in a lifted frame, the text profile row).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  9 ++++++---
+ tools/console/app.js            | 26 ++++++++++++++++++++------
+ tools/console/heresy-find.js    | 21 +++++++++++++--------
+ tools/console/heresy-i18n-be.js |  6 +++---
+ tools/console/heresy-i18n-el.js |  6 +++---
+ tools/console/heresy-i18n-es.js |  6 +++---
+ tools/console/heresy-i18n-it.js |  6 +++---
+ tools/console/heresy-i18n-ru.js |  6 +++---
+ tools/console/heresy-i18n-uk.js |  6 +++---
+ tools/console/heresy-presets.js | 22 +++++++++++++++++++++-
+ tools/console/index.html        |  2 +-
+ 11 files changed, 79 insertions(+), 37 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6cc836d..29cd45c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4223,9 +4223,10 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ /* HERESY 1168 (Viktor 07.10.2026: «Может к хуям убираем из Композера VAE блок»): the VAE is chosen in the ☰ menu under the model;
+    the form's radios stay as the page's own record of it, not shown */
+ .k-sound fieldset[data-fold="vae"] { display: none; }
+-/* HERESY 1168 (Viktor: «То поле в блоке семплера вообще нужно убрать и передавать туда секундное значение»): the music's Max
+-   tokens is Max length (Sound and output) in tokens, set from it; shown once, in seconds, there */
+-.knobs[data-group="semantic"] .knob:has(input[data-key="max_tokens"]) { display: none; }
++/* HERESY 1168 (Viktor: «То поле в блоке семплера вообще нужно убрать и передавать туда секундное значение»; «В Sound and Output
++   поле max length так и осталось»): the song's Max length is set in Sampling (the music's time); Sound and output has no field
++   of its own for it (the request's duration follows the one in Sampling) */
++.field:has(> #maxLength) { display: none; }
+ 
+ /* HERESY 1168 (Viktor: «перехватывать Ctrl+F, чтобы искать не по всей странице, а только в активном блоке»): the find bar of a
+    box, the match marked over the box, and the hidden copy of the box's layout that says where its letters stand */
+@@ -4240,3 +4241,5 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+   background: color-mix(in srgb, var(--amber) 36%, transparent); outline: 1px solid color-mix(in srgb, var(--amber) 75%, transparent); }
+ .find-mirror { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap;
+   overflow-wrap: break-word; word-break: normal; }
++/* HERESY 1168: the text profile is for readings: dimmed, its controls off, while the Creator's profile is music */
++#tpRow.is-off { opacity: .5; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 965565b..6305e1e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -676,20 +676,30 @@
+     shown.readOnly = true;
+     shown.setAttribute("aria-label", max ? "Max length of the music" : "Min length of the music");
+     wrap.appendChild(shown);
+-    if (max) {                                        // no lock: it follows Max length
++    // HERESY 1168 (Viktor 07.10.2026: «То поле в блоке семплера вообще нужно убрать и передавать туда секундное значение. Нет
++    // смысла дублировать»; «В Sound and Output поле max length так и осталось»): the song's Max length is set here, as time, and
++    // only here: Sound and output has no field for it any more; its value (the request's duration) follows this one. No lock:
++    // it is the length of the song, as the field it replaces was
++    if (max) {
+       var lock = wrap.querySelector(".knob-lock");
+       if (lock) lock.remove();
+       wrap.classList.remove("is-locked");
+-      wrap.classList.add("knob-follows");
+-      shown.tabIndex = -1;
+-      shown.dataset.tip = "It follows Max length in Sound and output: 25 music tokens a second";
++      shown.dataset.tip = "The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it";
+     }
++    shown.readOnly = false;
+     shown.addEventListener("change", function () {
+       var s = parseClock(shown.value);
+       if (isFinite(s)) {
+         delete input.dataset.floor; delete input.dataset.held;   // a floor set by hand is the floor
++        // the request's duration first: guardKnob re-syncs the ceiling from it (syncMusicCeiling), and an old one would
++        // pull the new value straight back
++        if (max) $("maxLength").value = round(s, 3);
+         input.value = Math.round(s * FRAME_RATE);
+         guardKnob(input);
++        if (max) {                                    // as the bounds kept it, and with it the outputs' summary
++          $("maxLength").value = round(parseFloat(input.value) / FRAME_RATE, 3);
++          paintOutput();
++        }
+       }
+       paintTokenTimes();
+     });
+@@ -947,7 +957,11 @@
+     $("variations").value = 1;
+     store("yue2.output", null);
+     paintOutputDefaults();
+-    toast("Output reset: WAV 24-bit, " + outDefault("steps") + " steps, no length cap below the default");
++    // HERESY 1168 (Viktor 07.10.2026: «Reset output не обнуляет выбор резолвера»): the solver back to midpoint too
++    $("odeSolver").value = "midpoint";
++    $("odeSolver").dispatchEvent(new Event("change", { bubbles: true }));
++    paintOutput();
++    toast("Output reset: WAV 24-bit, " + outDefault("steps") + " denoising steps, the midpoint solver, the songs up to " + clock(outDefault("duration")));
+   });
+ 
+   function readOutput() {
+@@ -956,7 +970,7 @@
+     var variations = $("variations").value.trim(), clip = $("peakClip").value.trim();
+     if (steps !== "") {
+       var s = Number(steps);
+-      if (!Number.isInteger(s) || s < 1) throw new Error("ODE steps must be a whole number, 1 or more");
++      if (!Number.isInteger(s) || s < 1) throw new Error("Denoising steps must be a whole number, 1 or more");
+       if (s !== outDefault("steps")) out.steps = s;
+     }
+     if (length !== "") {
+diff --git a/tools/console/heresy-find.js b/tools/console/heresy-find.js
+index c764b32..77ca230 100644
+--- a/tools/console/heresy-find.js
++++ b/tools/console/heresy-find.js
+@@ -119,14 +119,17 @@
+     paintMarks();
+   }
+ 
++  // how much larger the box is drawn than its own pixels (a lifted frame is zoomed 1.2; Viktor saw the mark float there)
++  function scale() { var w = box.offsetWidth; return w ? box.getBoundingClientRect().width / w : 1; }
++
+   function reveal(h) {
+     var m = measure(h);
+     if (!m) return;
+-    var cs = getComputedStyle(box), lh = parseFloat(cs.lineHeight) || 20, bt = parseFloat(cs.borderTopWidth) || 0;
++    var cs = getComputedStyle(box), lh = parseFloat(cs.lineHeight) || 20, bt = parseFloat(cs.borderTopWidth) || 0, k = scale();
+     if (box.scrollHeight > box.clientHeight + 1) {               // the box scrolls: bring the line into its view
+       if (m.top < box.scrollTop || m.top + lh > box.scrollTop + box.clientHeight) box.scrollTop = Math.max(0, m.top - box.clientHeight / 3);
+     }
+-    var r = box.getBoundingClientRect(), top = r.top + bt + m.top - box.scrollTop;   // and the frame or page around it
++    var r = box.getBoundingClientRect(), top = r.top + k * (bt + m.top - box.scrollTop);   // and the frame or page around it
+     var p = box.parentElement;
+     while (p && p !== document.body && !(/(auto|scroll)/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight + 1)) p = p.parentElement;
+     var inner = p && p !== document.body, area = inner ? p.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+@@ -167,17 +170,17 @@
+     if (!box || at < 0 || !bar || bar.hidden) return;
+     var m = measure(hits[at]);
+     if (!m) return;
+-    var r = box.getBoundingClientRect(), cs = getComputedStyle(box);
++    var r = box.getBoundingClientRect(), cs = getComputedStyle(box), k = scale();
+     var bl = parseFloat(cs.borderLeftWidth) || 0, bt = parseFloat(cs.borderTopWidth) || 0;
+-    var clip = { top: r.top + bt, bottom: r.top + bt + box.clientHeight };
++    var clip = { top: r.top + k * bt, bottom: r.top + k * (bt + box.clientHeight) };
+     m.rects.forEach(function (q) {
+-      var top = r.top + bt + q.top - box.scrollTop, bottom = top + q.height;
++      var top = r.top + k * (bt + q.top - box.scrollTop), bottom = top + k * q.height;
+       if (bottom <= clip.top || top >= clip.bottom) return;       // scrolled out of the box's view
+       var d = document.createElement("div");
+       d.className = "find-mark";
+-      d.style.left = (r.left + bl + q.left - box.scrollLeft) + "px";
++      d.style.left = (r.left + k * (bl + q.left - box.scrollLeft)) + "px";
+       d.style.top = Math.max(top, clip.top) + "px";
+-      d.style.width = Math.max(2, q.width) + "px";
++      d.style.width = Math.max(2, k * q.width) + "px";
+       d.style.height = (Math.min(bottom, clip.bottom) - Math.max(top, clip.top)) + "px";
+       document.body.appendChild(d);
+       marks.push(d);
+@@ -221,9 +224,11 @@
+ 
+   function onBoxInput() { search(false); }
+ 
++  // the key, not its letter: in a Russian layout Ctrl+F comes as «а» (Viktor 07.10.2026: «Повторно Ctrl+F — всплыло браузерное
++  // поиска… Снова Ctrl+F — твой виджет больше не появляется»): the browser goes by the key, and so does this
+   document.addEventListener("keydown", function (e) {
+     var key = (e.key || "").toLowerCase();
+-    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && key === "f") {
++    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyF" || key === "f")) {
+       var el = document.activeElement;
+       if (el && BOXES[el.id] && el.tagName === "TEXTAREA") { e.preventDefault(); open(el); return; }
+       if (bar && !bar.hidden && el === input) { e.preventDefault(); input.select(); }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 4c7fc43..743181d 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -246,8 +246,8 @@ RuachI18n.add("be", {
+ "Reset sampling": "Скінуць сэмплінг",
+ "Sound and output": "Гук і вывад",
+ "WAV 24-bit": "WAV 24 біты",
+-"ODE steps": "Крокі ODE",
+-"About ODE steps": "Пра крокі ODE",
++"Denoising steps": "Крокі расшумлення",
++"About Denoising steps": "Пра крокі расшумлення",
+ "sound solver": "гукавы развязальнік",
+ "Solver": "Развязальнік",
+ "About Solver": "Пра развязальнік",
+@@ -1073,7 +1073,7 @@ RuachI18n.add("be", {
+ "temperature {0} · top-p {1} · top-k {2}": "тэмпература {0} · top-p {1} · top-k {2}",
+ "Sliders reset to the tuned defaults": "Слайдары скінуты да наладжаных значэнняў",
+ "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Вывад скінуты: WAV 24 біты, крокаў: {0}, без абмежавання даўжыні ніжэй за тыповае",
+-"ODE steps must be a whole number, 1 or more": "Крокі ODE: цэлы лік, 1 або больш",
++"Denoising steps must be a whole number, 1 or more": "Крокі расшумлення: цэлы лік, 1 або больш",
+ "Max length must be a number of seconds above 0": "Макс. даўжыня: лік секунд, большы за 0",
+ "Sound variations must be between 1 and 9": "Гукавых варыяцый: ад 1 да 9",
+ "Peak clip must be a whole number, 0 or more": "Зрэз пікаў: цэлы лік, 0 або больш",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 64eb27f..318eede 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -245,8 +245,8 @@ RuachI18n.add("el", {
+ "Reset sampling": "Επαναφορά δειγματοληψίας",
+ "Sound and output": "Ήχος και έξοδος",
+ "WAV 24-bit": "WAV 24-bit",
+-"ODE steps": "Βήματα ODE",
+-"About ODE steps": "Σχετικά με τα βήματα ODE",
++"Denoising steps": "Βήματα αποθορυβοποίησης",
++"About Denoising steps": "Σχετικά με τα βήματα αποθορυβοποίησης",
+ "sound solver": "λύτης ήχου",
+ "Solver": "Λύτης",
+ "About Solver": "Σχετικά με τον λύτη",
+@@ -1072,7 +1072,7 @@ RuachI18n.add("el", {
+ "temperature {0} · top-p {1} · top-k {2}": "θερμοκρασία {0} · top-p {1} · top-k {2}",
+ "Sliders reset to the tuned defaults": "Τα ρυθμιστικά επανήλθαν στις ρυθμισμένες προεπιλογές",
+ "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Η έξοδος επανήλθε: WAV 24-bit, {0} βήματα, χωρίς όριο διάρκειας κάτω από την προεπιλογή",
+-"ODE steps must be a whole number, 1 or more": "Τα βήματα ODE πρέπει να είναι ακέραιος, 1 ή περισσότερα",
++"Denoising steps must be a whole number, 1 or more": "Τα βήματα αποθορυβοποίησης: ακέραιος αριθμός, 1 ή περισσότερα",
+ "Max length must be a number of seconds above 0": "Η μέγιστη διάρκεια πρέπει να είναι αριθμός δευτερολέπτων πάνω από 0",
+ "Sound variations must be between 1 and 9": "Οι ηχητικές παραλλαγές πρέπει να είναι από 1 έως 9",
+ "Peak clip must be a whole number, 0 or more": "Η αποκοπή κορυφών πρέπει να είναι ακέραιος, 0 ή περισσότερο",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 8b57f39..b4fdbc5 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -245,8 +245,8 @@ RuachI18n.add("es", {
+ "Reset sampling": "Restablecer el muestreo",
+ "Sound and output": "Sonido y salida",
+ "WAV 24-bit": "WAV 24 bits",
+-"ODE steps": "Pasos ODE",
+-"About ODE steps": "Sobre los pasos ODE",
++"Denoising steps": "Pasos de eliminación de ruido",
++"About Denoising steps": "Sobre los pasos de eliminación de ruido",
+ "sound solver": "resolvedor del sonido",
+ "Solver": "Resolvedor",
+ "About Solver": "Sobre el resolvedor",
+@@ -1072,7 +1072,7 @@ RuachI18n.add("es", {
+ "temperature {0} · top-p {1} · top-k {2}": "temperatura {0} · top-p {1} · top-k {2}",
+ "Sliders reset to the tuned defaults": "Deslizadores restablecidos a los valores afinados",
+ "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Salida restablecida: WAV 24 bits, {0} pasos, sin tope de duración por debajo del valor por defecto",
+-"ODE steps must be a whole number, 1 or more": "Los pasos ODE deben ser un número entero, 1 o más",
++"Denoising steps must be a whole number, 1 or more": "Los pasos de eliminación de ruido deben ser un número entero, 1 o más",
+ "Max length must be a number of seconds above 0": "La duración máxima debe ser un número de segundos mayor que 0",
+ "Sound variations must be between 1 and 9": "Las variaciones de sonido deben estar entre 1 y 9",
+ "Peak clip must be a whole number, 0 or more": "El recorte de picos debe ser un número entero, 0 o más",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 5750a7b..4be7de3 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -245,8 +245,8 @@ RuachI18n.add("it", {
+ "Reset sampling": "Ripristina il campionamento",
+ "Sound and output": "Suono e uscita",
+ "WAV 24-bit": "WAV 24 bit",
+-"ODE steps": "Passi ODE",
+-"About ODE steps": "Sui passi ODE",
++"Denoising steps": "Passi di riduzione del rumore",
++"About Denoising steps": "Sui passi di riduzione del rumore",
+ "sound solver": "risolutore del suono",
+ "Solver": "Risolutore",
+ "About Solver": "Sul risolutore",
+@@ -1072,7 +1072,7 @@ RuachI18n.add("it", {
+ "temperature {0} · top-p {1} · top-k {2}": "temperatura {0} · top-p {1} · top-k {2}",
+ "Sliders reset to the tuned defaults": "Slider ripristinati ai valori tarati",
+ "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Uscita ripristinata: WAV 24 bit, {0} passi, nessun limite di durata sotto il predefinito",
+-"ODE steps must be a whole number, 1 or more": "I passi ODE devono essere un numero intero, 1 o più",
++"Denoising steps must be a whole number, 1 or more": "I passi di riduzione del rumore devono essere un numero intero, 1 o più",
+ "Max length must be a number of seconds above 0": "La durata massima deve essere un numero di secondi maggiore di 0",
+ "Sound variations must be between 1 and 9": "Le variazioni sonore devono essere tra 1 e 9",
+ "Peak clip must be a whole number, 0 or more": "Il taglio dei picchi deve essere un numero intero, 0 o più",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index b8bd65f..8201d24 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -245,8 +245,8 @@ RuachI18n.add("ru", {
+ "Reset sampling": "Сбросить сэмплинг",
+ "Sound and output": "Звук и вывод",
+ "WAV 24-bit": "WAV 24 бита",
+-"ODE steps": "Шаги ODE",
+-"About ODE steps": "О шагах ODE",
++"Denoising steps": "Шаги расшумления",
++"About Denoising steps": "О шагах расшумления",
+ "sound solver": "звуковой решатель",
+ "Solver": "Решатель",
+ "About Solver": "О решателе",
+@@ -1078,7 +1078,7 @@ RuachI18n.add("ru", {
+ "temperature {0} · top-p {1} · top-k {2}": "температура {0} · top-p {1} · top-k {2}",
+ "Sliders reset to the tuned defaults": "Слайдеры сброшены к настроенным значениям",
+ "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Вывод сброшен: WAV 24 бит, шагов: {0}, без ограничения длины ниже стандартного",
+-"ODE steps must be a whole number, 1 or more": "Шаги ODE: целое число, 1 или больше",
++"Denoising steps must be a whole number, 1 or more": "Шаги расшумления: целое число, 1 или больше",
+ "Max length must be a number of seconds above 0": "Макс. длина: число секунд больше 0",
+ "Sound variations must be between 1 and 9": "Звуковых вариаций: от 1 до 9",
+ "Peak clip must be a whole number, 0 or more": "Срез пиков: целое число, 0 или больше",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 7bddefd..21c708b 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -246,8 +246,8 @@ RuachI18n.add("uk", {
+ "Reset sampling": "Скинути семплінг",
+ "Sound and output": "Звук і вивід",
+ "WAV 24-bit": "WAV 24 біти",
+-"ODE steps": "Кроки ODE",
+-"About ODE steps": "Про кроки ODE",
++"Denoising steps": "Кроки розшумлення",
++"About Denoising steps": "Про кроки розшумлення",
+ "sound solver": "звуковий розв'язувач",
+ "Solver": "Розв'язувач",
+ "About Solver": "Про розв'язувач",
+@@ -1073,7 +1073,7 @@ RuachI18n.add("uk", {
+ "temperature {0} · top-p {1} · top-k {2}": "температура {0} · top-p {1} · top-k {2}",
+ "Sliders reset to the tuned defaults": "Слайдери скинуто до налаштованих значень",
+ "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Вивід скинуто: WAV 24 біти, кроків: {0}, без обмеження довжини нижче типового",
+-"ODE steps must be a whole number, 1 or more": "Кроки ODE: ціле число, 1 або більше",
++"Denoising steps must be a whole number, 1 or more": "Кроки розшумлення: ціле число, 1 або більше",
+ "Max length must be a number of seconds above 0": "Макс. довжина: число секунд, більше за 0",
+ "Sound variations must be between 1 and 9": "Звукових варіацій: від 1 до 9",
+ "Peak clip must be a whole number, 0 or more": "Зріз піків: ціле число, 0 або більше",
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+index 4b0ea9b..a1eb82f 100644
+--- a/tools/console/heresy-presets.js
++++ b/tools/console/heresy-presets.js
+@@ -50,6 +50,26 @@
+         return '<option value="s:' + esc(p.name) + '">' + esc(p.name) + "</option>"; }).join("") + "</optgroup>" : "");
+     if (Array.prototype.some.call($("setupLib").options, function (o) { return o.value === keepP; })) $("setupLib").value = keepP;
+     $("setupDel").disabled = $("setupLib").value.indexOf("s:") !== 0;
++    syncTextRow();
++  }
++
++  // HERESY 1168 (Viktor 07.10.2026: «Если у Творца ПРОФИЛЬ - музыка, деактивируй текстовый профиль, потому что он чисто для
++  // начитки»): the text profile (a pasted text made ready to read) is for readings. A speech profile is the built-in Speech, or
++  // one of the user's in Direct mode longer than eight minutes, or named so; with any other (music) it is off, and says why
++  function isSpeech(p) {
++    if (!p) return false;
++    var r = p.request || p.data || {};
++    if (r.cot === "off" && (+r.duration || 0) > 480) return true;
++    return !p.builtin && /speech|reading|начит|чтени|речь|мова|чыт|ανάγν|lectura|lettura/i.test(p.name || "");
++  }
++  function syncTextRow() {
++    var row = $("tpRow");
++    if (!row) return;
++    var on = isSpeech(chosenSetup());
++    row.classList.toggle("is-off", !on);
++    ["tpPick", "tpApply"].forEach(function (id) { if ($(id)) $(id).disabled = !on; });
++    if (on) delete row.dataset.tip;
++    else row.dataset.tip = "Text profiles make a pasted text ready to read: pick a Speech profile in Profile to use them";
+   }
+ 
+   function chosenSetup() {
+@@ -93,7 +113,7 @@
+         if (ok) return send({ op: "delete", kind: "style", name: name }).then(function (d) { take(d); toast("Style “" + name + "” deleted"); });
+       }).catch(function (e) { toast("Not deleted: " + e.message, true); });
+     });
+-    $("setupLib").addEventListener("change", function () { $("setupDel").disabled = this.value.indexOf("s:") !== 0; });
++    $("setupLib").addEventListener("change", function () { $("setupDel").disabled = this.value.indexOf("s:") !== 0; syncTextRow(); });
+     $("setupApply").addEventListener("click", function () {
+       var p = chosenSetup();
+       if (!p) return;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index c7ac103..f8b5319 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1078,7 +1078,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sound and output</span><span class="sum-say" id="outSummary">WAV 24-bit</span></span></summary>
+             <div class="drawer-body">
+               <div class="out-grid">
+-                <label class="field"><span class="label" data-head="sound solver">ODE steps</span>
++                <label class="field"><span class="label" data-head="sound solver">Denoising steps</span>
+                   <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
+                 <label class="field"><span class="label" data-head="sound ODE">Solver</span>
+                   <select id="odeSolver">
+-- 
+2.43.0
+

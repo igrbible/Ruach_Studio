@@ -1,0 +1,163 @@
+From 113a845d2289a5da65d638cd9f086ccc4955cca1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 13:13:55 -0600
+Subject: [PATCH 1198/1198] HERESY 1168: the meter measures time: a word with
+ no vowel and a stop closed against an affricate take a beat of their own; the
+ tags list writes [END]
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Допиши одиночные согласные доли, потому что мы не меряем по реальным слогам между 2 и 4 символами, а по
+реальной затрате времени на произношение»; and to «подсказка вставляет [End]… Перевести вставку на [END]?»: «Да, измени».
+
+In Russian, Ukrainian and Belarusian words: a word with no vowel (с, в, к, з, й, ў) and, inside a word, a stop right after a
+vowel closed against an affricate (п|ц, т|ч, д|ц…; not сердце's silent д) are beats of their own. They count with the line's
+syllables (the bar, its number and the group's ruler measure the whole), drawn lighter at the bar's end; under the box the
+syllables stay syllables and the consonant beats are counted beside them. His line «Я же вижу глупцо́в с приду́рческим
+планом» is 12 syllables and 2 beats: 14, his own split. The tags list inserts [END], as his songs write it (the cheat-sheet
+keeps the official examples' [End]).
+
+Kitchen suite: 393 passed, 0 failed, 7 skipped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |  2 ++
+ tools/console/heresy-complete.js |  8 +++++---
+ tools/console/heresy-lyrics.js   | 31 ++++++++++++++++++++++++++-----
+ 3 files changed, 33 insertions(+), 8 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d0df043..bad4087 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4205,6 +4205,8 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ .lyr-row.ok .lyr-bar { background: var(--good); }
+ .lyr-row.near .lyr-bar { background: #d9a441; }
+ .lyr-row.far .lyr-bar { background: var(--bad); }
++/* HERESY 1168 (Viktor: «Допиши одиночные согласные доли»): the beats no vowel carries, at the end of the bar, lighter */
++.lyr-cbar { position: absolute; top: 0; bottom: 0; border-radius: 0 3px 3px 0; background: color-mix(in srgb, var(--panel) 55%, transparent); }
+ .lyr-bbar { position: absolute; top: 0; bottom: 0; border-radius: 0 3px 3px 0; opacity: .85;
+   background: repeating-linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 4px); }
+ .lyr-ruler { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); opacity: .5; }
+diff --git a/tools/console/heresy-complete.js b/tools/console/heresy-complete.js
+index d5b4da2..42384a8 100644
+--- a/tools/console/heresy-complete.js
++++ b/tools/console/heresy-complete.js
+@@ -9,7 +9,7 @@
+ // Pre-Chorus), in a Russian or Ukrainian layout too («[мук» is «[ver»); a number after it numbers the tag («v2» is
+ // [Verse 2]); lyrics that number their verses are offered the next one. ↑ ↓ choose (the mouse too); Enter or Tab puts
+ // the tag in on a line of its own and the cursor on the line under it (Ctrl+Z takes it back); Esc closes it (what was
+-// typed stays), and so does «]» (a tag of one's own). Intro, Outro and End already in the lyrics stand at the list's end,
++// typed stays), and so does «]» (a tag of one's own). Intro, Outro and END already in the lyrics stand at the list's end,
+ // dimmed, with their line, and are not put in twice; a numbered tag already there likewise. Ctrl+Space opens the list on
+ // a «[» line, and at a line's start types the «[» itself: no Latin layout needed for it.
+ //
+@@ -17,6 +17,8 @@
+ (function () {
+   "use strict";
+   var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude", "Break"], ONCE = ["Intro", "Outro", "End"];
++  // as Viktor writes it (thirty songs of his end so; «Да, измени»), where the official examples write [End]
++  var SPELL = { End: "END" };
+   var ONCE_HEAD = { Intro: /^intro(duction)?$/, Outro: /^outro$/, End: /^ends?$/ };
+   // the keys of a Russian (and Ukrainian) layout, as the Latin letters on the same keys
+   var RU = "йцукенгшщзхъфывапролджэячсмитьбюё", EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`", UK = { "і": "s", "ї": "]", "є": "'", "ґ": "`" };
+@@ -74,12 +76,12 @@
+     ordered().forEach(function (t, k) {
+       var r = rank(t.name, head);
+       if (!r) return;
+-      var name = t.name, next = false;
++      var name = SPELL[t.name] || t.name, next = false;
+       if (num) name += " " + num;
+       else if (t.name === "Verse" && have.verse) { name = "Verse " + (have.verse + 1); next = true; }
+       var it = { tag: "[" + name + "]", note: t.note, n: t.n, rank: r, k: k, next: next };
+       if (ONCE.indexOf(t.name) >= 0 && have.once[t.name] !== undefined) it.there = have.once[t.name];
+-      else if (name !== t.name && have.named[name.toLowerCase()] !== undefined) it.there = have.named[name.toLowerCase()];
++      else if (name !== (SPELL[t.name] || t.name) && have.named[name.toLowerCase()] !== undefined) it.there = have.named[name.toLowerCase()];
+       out.push(it);
+     });
+     return out.sort(function (a, b) { return ((a.there !== undefined) - (b.there !== undefined)) || (a.rank - b.rank) || (a.k - b.k); });
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index cc0167e..f5027f7 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -130,6 +130,24 @@
+     lang = lang || latinOf(text, "");
+     return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) { return n + wordSyllables(w, lang); }, 0);
+   }
++  // HERESY 1168 (Viktor 07.10.2026: «Допиши одиночные согласные доли, потому что мы не меряем по реальным слогам между 2 и 4
++  // символами, а по реальной затрате времени на произношение»): the meter measures the time a line takes, and in Russian,
++  // Ukrainian and Belarusian two things take a beat no vowel carries: a word with no vowel (с, в, к, з, й, ў: his «глупцо́в
++  // с приду́рческим») and, inside a word, a stop closed against an affricate (п|ц, т|ч, д|ц…: his «глу|п|цо́в»). They count with
++  // the line's syllables (the ruler measures the whole), drawn lighter on its bar; the syllables under the box stay syllables
++  var CV = "аеёиоуыэюяіїєѐѝעaeiouyàáâãäåèéêëìíîïòóôõöùúûüýÿ";
++  var CLUSTER = new RegExp("[" + CV + "]([бвгджзйклмнпрстфхцчшщьъґ]+)(?=[" + CV + "])", "g");
++  function consonantBeats(text) {
++    return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) {
++      w = w.normalize("NFC");
++      if (!CYR.test(w) || w.match(CJK)) return n;
++      if (!cyrillic(w)) return n + 1;
++      var low = w.toLowerCase().replace(/[\u0300-\u036f]/g, ""), m, k = 0;
++      CLUSTER.lastIndex = 0;
++      while ((m = CLUSTER.exec(low)) !== null) if (/^[пбтдкг][ьъ]?[цч]/.test(m[1])) k++;   // the stop right after the vowel (not сердце's silent д)
++      return n + k;
++    }, 0);
++  }
+ 
+   // the stress marks that are off a vowel (kind, where), and the words with two (asked about, not called wrong)
+   var VOWEL = /[аеёиоуыэюяіїєѐѝaeiouyαεηιουωע]/i, ACCENTED = /[àáâãäåèéêëìíîïòóôõöùúûüýÿάέήίόύώΐΰ]/i, MARK = /[\u0300-\u036f]/;
+@@ -214,7 +232,7 @@
+   function measure(text, lang) {
+     lang = lang || latinOf(text, "");
+     var lines = text.split("\n"), group = "—", sung = false, out = [], tags = { chars: 0, n: 0 }, br = { chars: 0, n: 0 }, head = null;
+-    var lyr = { chars: 0, syl: 0, lines: 0 }, hand = { stress: 0, ayin: 0, latin: 0 };
++    var lyr = { chars: 0, syl: 0, cb: 0, lines: 0 }, hand = { stress: 0, ayin: 0, latin: 0 };
+     // the tags a line begins with: who sings and what the song is go by; a sung section is a new group, and so is a pause
+     // before the first; a pause inside one is marked on its row and nothing more. True when the group changed
+     function heads(names, row) {
+@@ -246,14 +264,14 @@
+       var brackets = rest.match(/\([^)]*\)/g) || [], inner = brackets.join(" ");
+       var main = rest.replace(/\([^)]*\)/g, " ");
+       br.chars += brackets.reduce(function (n, b) { return n + b.length; }, 0); br.n += brackets.length;
+-      var syl = syllables(main, lang), bsyl = syllables(inner.replace(/[()]/g, " "), lang);
++      var syl = syllables(main, lang), cb = consonantBeats(main), bsyl = syllables(inner.replace(/[()]/g, " "), lang);
+       var words = main.replace(/\s+/g, "");
+       lyr.chars += words.length;
+       hand.stress += (line.match(/́/g) || []).length;
+       hand.ayin += (line.match(/[а-яё]ע|ע[а-яё]/gi) || []).length;
+       hand.latin += (rest.match(/[а-яё][a-z]|[a-z][а-яё]/gi) || []).length;
+-      if (syl || bsyl) { lyr.syl += syl; lyr.lines++; if (head) head.lines++; }
+-      out.push({ group: group, syl: syl, bsyl: bsyl, empty: !rest.trim() });
++      if (syl || bsyl || cb) { lyr.syl += syl; lyr.cb += cb; lyr.lines++; if (head) head.lines++; }
++      out.push({ group: group, syl: syl + cb, cb: cb, bsyl: bsyl, empty: !rest.trim() });   // syl: the beats the line takes
+     });
+     // each group's ruler: the median length of its sung lines, once it has two
+     var byGroup = {};
+@@ -309,6 +327,8 @@
+         '<span class="lyr-c">' + esc(tr("Tags: {0} characters in {1}").replace("{0}", num(m.tags.chars)).replace("{1}", num(m.tags.n))) + "</span>",
+         '<span class="lyr-c">' + esc(tr("In brackets: {0} characters in {1}").replace("{0}", num(m.brackets.chars)).replace("{1}", num(m.brackets.n))) + "</span>"
+       ];
++      if (m.lyrics.cb) parts.splice(1, 0, '<span class="lyr-c" data-tip="' + esc(tr("Beats no vowel carries, counted with the syllables in each line's bar (drawn lighter): a word with no vowel (с, в, к, з, й, ў) and a stop closed against an affricate inside a word (глу-п-цо́в)")) + '">' +
++        esc(tr("Consonant beats: {0}").replace("{0}", num(m.lyrics.cb))) + "</span>");
+       if (m.hand.stress || m.hand.ayin || m.hand.latin) {
+         parts.push('<span class="lyr-c lyr-hand" data-tip="' + esc(tr("The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)")) + '">' +
+           esc(tr("Stress {0} · ע {1} · Latin {2}").replace("{0}", num(m.hand.stress)).replace("{1}", num(m.hand.ayin)).replace("{2}", num(m.hand.latin))) + "</span>");
+@@ -374,6 +394,7 @@
+         html.push('<div class="lyr-row' + cls + '" style="top:' + y + 'px;height:' + lh + 'px">' +
+           '<span class="lyr-track" style="width:' + W + 'px">' +
+           '<span class="lyr-bar" style="width:' + Math.round(o.syl / scale * W) + 'px"></span>' +
++          (o.cb ? '<span class="lyr-cbar" style="left:' + Math.round((o.syl - o.cb) / scale * W) + "px;width:" + Math.round(o.cb / scale * W) + 'px"></span>' : "") +
+           (o.bsyl ? '<span class="lyr-bbar" style="left:' + Math.round(o.syl / scale * W) + "px;width:" + Math.round(o.bsyl / scale * W) + 'px"></span>' : "") +
+           (ruler !== undefined ? '<span class="lyr-ruler" style="left:' + Math.round(ruler / scale * W) + 'px;top:' + (-(lh - 6) / 2) + "px;bottom:" + (-(lh - 6) / 2) + 'px"></span>' : "") +
+           '</span><span class="lyr-n">' + (o.fault || o.two ? '<span class="lyr-x ' + (o.fault ? "bad" : "near") + '">\u00b4</span>' : "") +
+@@ -456,5 +477,5 @@
+     return { draw: draw, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
+   }
+ 
+-  window.HeresyLyrics = { attach: attach, measure: measure, syllables: syllables, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
++  window.HeresyLyrics = { attach: attach, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
+ })();
+-- 
+2.43.0
+

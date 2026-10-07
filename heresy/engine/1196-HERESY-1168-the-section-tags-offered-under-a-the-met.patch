@@ -1,0 +1,707 @@
+From 3bd6bcf69adad808a1fcb1b50e628b9ae5c07a12 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 12:20:40 -0600
+Subject: [PATCH 1196/1198] =?UTF-8?q?HERESY=201168:=20the=20section=20tags?=
+ =?UTF-8?q?=20offered=20under=20a=20=C2=AB[=C2=BB;=20the=20meter=20counts?=
+ =?UTF-8?q?=20by=20the=20sung=20sections;=20find=20and=20the=20stress=20ma?=
+ =?UTF-8?q?rks=20seen=20under=20the=20frame's=20Generate=20bar;=20the=20so?=
+ =?UTF-8?q?lver=20over=20two=20columns?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026, from the road:
+
+- «при наборе `[` появлялись как в кодовых IDE подсказки с выбором, Enter и вставка? Базовые в самом начале — Verse, Bridge,
+  etc, но на особые Intro, Outro, END проверка, если уже есть в тексте»: heresy-complete.js. A «[» at a line's start in the
+  Creator's or the Writer's lyrics opens the cheat-sheet's sections (heresy-instruments.js lyricTags()): Verse, Chorus,
+  Pre-Chorus, Bridge, Interlude, Break, then Intro, Outro, End, then the rest as the official examples count them. Typed
+  letters narrow it from a word's start, a Russian or Ukrainian layout too; a number numbers the tag; numbered verses are
+  offered the next. ↑ ↓, Enter or Tab (the tag on its own line, the cursor under it, Ctrl+Z takes it back), Esc, «]»; Intro,
+  Outro and End already there (his [END] too) last and dimmed with their line, a numbered tag there likewise. Ctrl+Space
+  opens it, and at a line's start types the «[» itself.
+- «игнорирование подсчётов, если в строке два [] тега типа [Break] [Silence]»; «Счёт по базису реальных вокальных секций.
+  Даже если внутри паузные, интерлюдия/прелюдия, общее продолжаем по главному тегу секции»: heresy-lyrics.js. Every [tag] of
+  a line is a tag: a line of tags alone counts as none, a tag inside a sung line is left out; a pause, break, silence,
+  interlude, prelude or instrumental cue inside a sung section opens no group (its name dimmed beside it, the section's
+  ruler goes on); a tag still being written is not counted.
+- «Твоя подсветка работает при ровном скейле в 100%. На 110% уже съехала вниз»: not the zoom. The lifted frame's sticky
+  Generate bar is 70 px and the frame's own box reaches under it; a match counted as seen down to 48 px above the frame's
+  foot fell in 22 px under the bar (his 110 % put the line there): nothing scrolled, the mark stood on the bar (measured at
+  100 % and 110 %, the profile's zoom level). Seen is asked of the page now (elementFromPoint), the browser scrolls a probe
+  into the middle of every box on the way, a mark is drawn only on words seen. The stress marks' button likewise.
+- «Если активен виджет поиска… встал курсором на другом месте, и единое движение клавишами… переносит оттуда на место
+  поиска»: words typed in the box count the matches again quietly; Esc from the box closes the bar and leaves the cursor.
+  And Esc in the find bar or the tags list in a lifted frame closes them, not the frame.
+- «Расширь селектор солвера на две колонки, чтобы была симетрия»: the solver spans two columns while MP3's bitrate is
+  hidden (two rows full); with MP3 the six fields fill two rows as they are.
+
+Kitchen suite: 391 passed, 0 failed, 7 skipped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               |  23 +++
+ tools/console/app.js                |   3 +-
+ tools/console/heresy-complete.js    | 288 ++++++++++++++++++++++++++++
+ tools/console/heresy-find.js        |  58 ++++--
+ tools/console/heresy-instruments.js |   3 +-
+ tools/console/heresy-lyrics.js      |  84 +++++---
+ tools/console/index.html            |   1 +
+ 7 files changed, 417 insertions(+), 43 deletions(-)
+ create mode 100644 tools/console/heresy-complete.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 29cd45c..d0df043 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -915,6 +915,11 @@ select:disabled { opacity: .7; }
+ 
+ /* sound and output: the C++ engine's own knobs */
+ .out-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; }
++/* HERESY 1168 (Viktor 07.10.2026: «Расширь селектор солвера на две колонки, чтобы была симетрия»): the solver over two columns
++   (its name whole), the other fields filling the rows round it, two rows full; with MP3's bitrate shown the six fields fill
++   them as they are */
++.out-grid { grid-auto-flow: row dense; }
++.out-grid:has(#bitrateField.is-hidden) > .field:has(> #odeSolver) { grid-column: span 2; }
+ .out-grid input { font-family: var(--mono); font-size: 12.5px; }
+ .out-grid select { font-family: var(--mono); font-size: 14px; }
+ 
+@@ -4205,6 +4210,7 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ .lyr-ruler { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); opacity: .5; }
+ .lyr-n { min-width: 26px; text-align: right; }
+ .lyr-head { font: 600 9.5px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
++.lyr-head.lyr-pause { font-weight: 500; color: var(--dim); opacity: .8; }
+ .lyr-meter { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 6px 0 0; font-size: 11.5px; color: var(--dim); }
+ .lyr-meter .lyr-hand { color: var(--muted); }
+ .lyr-tog { padding: 2px 9px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: transparent; color: var(--muted);
+@@ -4241,5 +4247,22 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+   background: color-mix(in srgb, var(--amber) 36%, transparent); outline: 1px solid color-mix(in srgb, var(--amber) 75%, transparent); }
+ .find-mirror { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap;
+   overflow-wrap: break-word; word-break: normal; }
++/* HERESY 1168 (Viktor 07.10.2026: «при наборе `[` появлялись как в кодовых IDE подсказки с выбором, Enter и вставка»): the
++   section tags offered under a «[» at a line's start (heresy-complete.js); the ones already in the lyrics dimmed, their line amber */
++.tc-pop { position: fixed; z-index: 46; min-width: 280px; max-width: min(460px, calc(100vw - 8px)); background: var(--panel);
++  border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 10px 28px -12px var(--shadow-lg); overflow: hidden; }
++.tc-pop[hidden] { display: none; }
++.tc-list { position: relative; max-height: 290px; overflow-y: auto; padding: 4px 0; }
++.tc-item { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; padding: 4px 12px; cursor: pointer; }
++.tc-item.is-on { background: color-mix(in srgb, var(--amber) 20%, transparent); }
++.tc-tag { font: 13px/1.5 var(--mono); color: var(--ink); white-space: nowrap; }
++.tc-say { font-size: 11.5px; color: var(--dim); white-space: nowrap; }
++.tc-item.is-there { cursor: default; }
++.tc-item.is-there .tc-tag { color: var(--dim); }
++.tc-item.is-there .tc-say { color: #d9a441; }
++.tc-foot { display: grid; gap: 3px; padding: 6px 12px 7px; border-top: 1px solid var(--line-a); font-size: 11.5px; line-height: 1.4; color: var(--muted); }
++.tc-keys { color: var(--dim); }
++.tc-mirror { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap;
++  overflow-wrap: break-word; word-break: normal; }
+ /* HERESY 1168: the text profile is for readings: dimmed, its controls off, while the Creator's profile is music */
+ #tpRow.is-off { opacity: .5; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 6305e1e..2de6dbb 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8035,7 +8035,8 @@
+   }, true);
+   window.addEventListener("keydown", function (event) {
+     if (event.key !== "Escape" || !document.body.dataset.frame) return;
+-    var over = document.querySelectorAll(".menu-pop:not(.is-hidden), .hm-menu, .hz-view, .hd-back, .ds-back, .hi-back, .cmp-back, .hg-back, .dw-back, .coll-sheet");
++    // (HERESY 1168: the find bar of a box and the tags offered under a «[» close by their own Esc too, the frame stays)
++    var over = document.querySelectorAll(".menu-pop:not(.is-hidden), .hm-menu, .hz-view, .hd-back, .ds-back, .hi-back, .cmp-back, .hg-back, .dw-back, .coll-sheet, .find-bar, .tc-pop");
+     if (Array.prototype.some.call(over, function (e) { return e.getClientRects().length > 0; })) return;   // some wait [hidden]
+     frameOver(null);
+   }, true);
+diff --git a/tools/console/heresy-complete.js b/tools/console/heresy-complete.js
+new file mode 100644
+index 0000000..d5b4da2
+--- /dev/null
++++ b/tools/console/heresy-complete.js
+@@ -0,0 +1,288 @@
++// HERESY 1168 (Viktor 07.10.2026: «В редактор может прикрутить ещё собранный тобою массив `[...]`, чтобы при наборе `[`
++// появлялись как в кодовых IDE подсказки с выбором, Enter и вставка? Базовые в самом начале — Verse, Bridge, etc, но на
++// особые Intro, Outro, END проверка, если уже есть в тексте»): the section tags offered as a code editor offers its words.
++//
++// A «[» typed at a line's start (spaces before it allowed) in the Creator's or the Writer's lyrics opens a list under it:
++// the sections of the cheat-sheet (heresy-instruments.js: the 110 official examples counted), the common ones first
++// (Verse, Chorus, Pre-Chorus, Bridge, Interlude, Break), then the three a song has once (Intro, Outro, End), then the rest
++// as often as the examples write them. What is typed after the «[» narrows it, from a word's start («ch» finds Chorus and
++// Pre-Chorus), in a Russian or Ukrainian layout too («[мук» is «[ver»); a number after it numbers the tag («v2» is
++// [Verse 2]); lyrics that number their verses are offered the next one. ↑ ↓ choose (the mouse too); Enter or Tab puts
++// the tag in on a line of its own and the cursor on the line under it (Ctrl+Z takes it back); Esc closes it (what was
++// typed stays), and so does «]» (a tag of one's own). Intro, Outro and End already in the lyrics stand at the list's end,
++// dimmed, with their line, and are not put in twice; a numbered tag already there likewise. Ctrl+Space opens the list on
++// a «[» line, and at a line's start types the «[» itself: no Latin layout needed for it.
++//
++//   HeresyComplete.attach(textarea) · HeresyComplete.state()   (the last for the checks)
++(function () {
++  "use strict";
++  var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude", "Break"], ONCE = ["Intro", "Outro", "End"];
++  var ONCE_HEAD = { Intro: /^intro(duction)?$/, Outro: /^outro$/, End: /^ends?$/ };
++  // the keys of a Russian (and Ukrainian) layout, as the Latin letters on the same keys
++  var RU = "йцукенгшщзхъфывапролджэячсмитьбюё", EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`", UK = { "і": "s", "ї": "]", "є": "'", "ґ": "`" };
++  var pop = null, list = null, foot = null, box = null, items = [], at = -1, from = -1, shut = -1, query = null, mirror = null, queued = false;
++
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function visible() { return !!(pop && !pop.hidden); }
++
++  // the tags offered, in their order: the common sections, the three a song has once, the rest as the examples count them
++  function ordered() {
++    var g = window.HeresyInstruments && window.HeresyInstruments.lyricTags ? window.HeresyInstruments.lyricTags()[0] : null;
++    var rows = (g ? g.rows : []).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: r[1], note: r[2] }; });
++    if (!rows.length) rows = FIRST.concat(ONCE).map(function (name) { return { name: name, n: 0, note: "" }; });
++    var by = {};
++    rows.forEach(function (r) { by[r.name] = r; });
++    return FIRST.concat(ONCE).map(function (n) { return by[n]; }).filter(Boolean)
++      .concat(rows.filter(function (r) { return FIRST.indexOf(r.name) < 0 && ONCE.indexOf(r.name) < 0; }));
++  }
++
++  function fold(q) {
++    if (!/[а-яёіїєґ]/i.test(q)) return q;
++    return q.toLowerCase().split("").map(function (c) { var i = RU.indexOf(c); return i >= 0 ? EN[i] : UK[c] || c; }).join("");
++  }
++  function compact(s) { return s.toLowerCase().replace(/[\s-]+/g, ""); }
++  // 1: from the name's start; 2: from a later word's start (ch → Pre-Chorus); 0: no
++  function rank(name, head) {
++    var h = compact(head);
++    if (!h || compact(name).indexOf(h) === 0) return 1;
++    var words = name.toLowerCase().split(/[\s-]+/);
++    for (var i = 1; i < words.length; i++) if (compact(words.slice(i).join(" ")).indexOf(h) === 0) return 2;
++    return 0;
++  }
++
++  // the tags the lyrics have: the first line of each of the three a song has once, every tag's own line, the verses' highest number
++  function present(text) {
++    var once = {}, named = {}, verse = 0;
++    text.split("\n").forEach(function (line, i) {
++      var t = line.match(/^\s*\[([^\]]+)\]\s*$/);
++      if (!t) return;
++      var low = t[1].replace(/\s+/g, " ").trim().toLowerCase();
++      var head = low.split(/\s[–—-]\s|:|\||\/|\(/)[0].replace(/[\d#.]+/g, " ").trim();
++      ONCE.forEach(function (o) { if (once[o] === undefined && ONCE_HEAD[o].test(head)) once[o] = i; });
++      if (named[low] === undefined) named[low] = i;
++      var v = low.match(/^verse\s*(\d+)\b/);
++      if (v) verse = Math.max(verse, +v[1]);
++    });
++    return { once: once, named: named, verse: verse };
++  }
++
++  function offer(text, q) {
++    var f = fold(q), m = f.match(/^(.*?)\s*(\d+)$/), head = m ? m[1] : f, num = m ? m[2] : "";
++    if (num && !head.trim()) return [];
++    var have = present(text), out = [];
++    ordered().forEach(function (t, k) {
++      var r = rank(t.name, head);
++      if (!r) return;
++      var name = t.name, next = false;
++      if (num) name += " " + num;
++      else if (t.name === "Verse" && have.verse) { name = "Verse " + (have.verse + 1); next = true; }
++      var it = { tag: "[" + name + "]", note: t.note, n: t.n, rank: r, k: k, next: next };
++      if (ONCE.indexOf(t.name) >= 0 && have.once[t.name] !== undefined) it.there = have.once[t.name];
++      else if (name !== t.name && have.named[name.toLowerCase()] !== undefined) it.there = have.named[name.toLowerCase()];
++      out.push(it);
++    });
++    return out.sort(function (a, b) { return ((a.there !== undefined) - (b.there !== undefined)) || (a.rank - b.rank) || (a.k - b.k); });
++  }
++
++  // the «[» the cursor stands after, at its line's start, nothing but its letters between: where it is and what follows it.
++  // Inside a tag already closed further on («[Int|ro]») there is none; a «]» right after the cursor is taken in
++  function context() {
++    if (!box || box.readOnly || box.disabled || box.selectionStart !== box.selectionEnd) return null;
++    var v = box.value, c = box.selectionStart, ls = c > 0 ? v.lastIndexOf("\n", c - 1) + 1 : 0, le = v.indexOf("\n", c);
++    var m = v.slice(ls, c).match(/^(\s*)\[([^\[\]\n]*)$/), rest = v.slice(c, le < 0 ? v.length : le);
++    if (!m || (rest.indexOf("]") >= 0 && rest.trim() !== "]")) return null;
++    return { from: ls + m[1].length, q: m[2], to: rest.trim() === "]" ? c + rest.indexOf("]") + 1 : c };
++  }
++
++  function build() {
++    if (pop) return;
++    pop = document.createElement("div");
++    pop.className = "tc-pop";
++    pop.id = "tcPop";
++    pop.hidden = true;
++    pop.innerHTML = '<div class="tc-list" role="listbox" id="tcList" aria-label="Section tags"></div><div class="tc-foot" aria-live="polite"></div>';
++    document.body.appendChild(pop);
++    list = pop.querySelector(".tc-list");
++    foot = pop.querySelector(".tc-foot");
++    pop.addEventListener("mousedown", function (e) { e.preventDefault(); });   // the box keeps the cursor
++    pop.addEventListener("click", function (e) {
++      var o = e.target.closest(".tc-item");
++      if (o && !o.classList.contains("is-there")) accept(+o.dataset.i);
++    });
++    pop.addEventListener("mousemove", function (e) {
++      var o = e.target.closest(".tc-item");
++      if (o && !o.classList.contains("is-there") && +o.dataset.i !== at) { at = +o.dataset.i; mark(false); }
++    });
++  }
++
++  function note(it) {
++    if (it.there !== undefined) return tr("Already in the lyrics, line {0}: a song has one").replace("{0}", it.there + 1);
++    var n = it.n ? tr("{0} times in the 110 official examples").replace("{0}", it.n) : "";
++    return [it.next ? tr("The lyrics number their verses: this is the next one") : it.note, n].filter(Boolean).join(" · ");
++  }
++
++  // the list drawn anew when it narrows; the one in hand only marked when the keys or the mouse move it (the rows stay, so a
++  // click lands on the row it was pressed on)
++  function render() {
++    list.innerHTML = items.map(function (it, i) {
++      var there = it.there !== undefined;
++      var say = there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.n ? "×" + it.n : "";
++      return '<div class="tc-item' + (there ? " is-there" : "") + '" role="option" id="tcOpt' + i + '" data-i="' + i + '" aria-selected="false"' +
++        (there ? ' aria-disabled="true"' : "") + '><span class="tc-tag" translate="no">' + esc(it.tag) + '</span><span class="tc-say">' + esc(say) + "</span></div>";
++    }).join("");
++    mark(true);
++  }
++  function mark(scroll) {
++    Array.prototype.forEach.call(list.children, function (o, i) { o.classList.toggle("is-on", i === at); o.setAttribute("aria-selected", i === at ? "true" : "false"); });
++    var cur = items[at];
++    foot.innerHTML = (cur && note(cur) ? '<span class="tc-note">' + esc(note(cur)) + "</span>" : "") +
++      '<span class="tc-keys">' + esc(tr("↑ ↓ choose · Enter or Tab puts it in · Esc closes")) + "</span>";
++    box.setAttribute("aria-expanded", "true");
++    if (cur) box.setAttribute("aria-activedescendant", "tcOpt" + at); else box.removeAttribute("aria-activedescendant");
++    var on = list.children[at];
++    if (on && scroll) {                                              // the one in hand in the list's view (the page does not move)
++      if (on.offsetTop < list.scrollTop) list.scrollTop = on.offsetTop;
++      else if (on.offsetTop + on.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = on.offsetTop + on.offsetHeight - list.clientHeight;
++    }
++  }
++
++  // how much larger the box is drawn than its own pixels (a lifted frame is zoomed 1.2)
++  function scale() { var w = box.offsetWidth; return w ? box.getBoundingClientRect().width / w : 1; }
++  // where the cursor stands inside the box (relative to its padding box, its own scroll not counted): a copy of its layout
++  function caret() {
++    if (!mirror) {
++      mirror = document.createElement("div");
++      mirror.className = "tc-mirror";
++      mirror.setAttribute("aria-hidden", "true");
++      document.body.appendChild(mirror);
++    }
++    var cs = getComputedStyle(box);
++    ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "tabSize", "textTransform",
++     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent"].forEach(function (k) { mirror.style[k] = cs[k]; });
++    mirror.style.boxSizing = "border-box";
++    mirror.style.border = "0";
++    mirror.style.width = box.clientWidth + "px";
++    var v = box.value, c = box.selectionStart;
++    mirror.innerHTML = esc(v.slice(0, c)) + "<span>​</span>" + esc(v.slice(c)) + "​";
++    var s = mirror.querySelector("span").getBoundingClientRect(), base = mirror.getBoundingClientRect();
++    return { left: s.left - base.left, top: s.top - base.top, height: s.height };
++  }
++  // under the cursor's line; over it when the player or the window's edge leaves no room under it
++  function place() {
++    if (!visible() || !box) return;
++    var p = caret(), r = box.getBoundingClientRect(), cs = getComputedStyle(box), k = scale();
++    var bl = parseFloat(cs.borderLeftWidth) || 0, bt = parseFloat(cs.borderTopWidth) || 0, lh = parseFloat(cs.lineHeight) || p.height || 20;
++    var top = r.top + k * (bt + p.top - box.scrollTop), bottom = top + k * lh;
++    if (bottom < r.top || top > r.bottom) return hide();              // the line scrolled out of the box's view
++    var bar = document.getElementById("playbar"), floor = bar && bar.getClientRects().length ? Math.min(window.innerHeight, bar.getBoundingClientRect().top) : window.innerHeight;
++    var w = pop.offsetWidth, h = pop.offsetHeight, y = bottom + 3;
++    if (y + h > floor - 4 && top - h - 3 >= 4) y = top - h - 3;
++    pop.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, r.left + k * (bl + p.left - box.scrollLeft) - 10)) + "px";
++    pop.style.top = Math.max(4, y) + "px";
++  }
++  function later() {
++    if (queued || !visible()) return;
++    queued = true;
++    requestAnimationFrame(function () { queued = false; place(); });
++  }
++
++  function fill(cx) {
++    var keep = cx.q === query && items[at] ? items[at].tag : null;
++    from = cx.from;
++    query = cx.q;
++    items = offer(box.value, cx.q);
++    if (!items.length) return hide();
++    at = -1;
++    if (keep) items.forEach(function (it, i) { if (at < 0 && it.tag === keep && it.there === undefined) at = i; });
++    if (at < 0) items.some(function (it, i) { if (it.there === undefined) { at = i; return true; } return false; });
++    build();
++    pop.hidden = false;
++    render();
++    place();
++  }
++  function hide() {
++    items = [];
++    at = -1;
++    query = null;
++    if (pop) pop.hidden = true;
++    if (box) { box.setAttribute("aria-expanded", "false"); box.removeAttribute("aria-activedescendant"); }
++  }
++  // the list follows the cursor while it is open; it opens only on a letter typed (a paste, an undo or a click opens none)
++  function check(typed) {
++    var cx = context();
++    if (!cx) { shut = -1; return hide(); }
++    if (cx.from === shut) return hide();
++    if (!visible() && !typed) return;
++    fill(cx);
++  }
++
++  // into the box as typed, so Ctrl+Z takes it back (a value set by hand would leave the browser's undo nothing)
++  function insert(s) {
++    var ok = false;
++    try { ok = document.execCommand("insertText", false, s); } catch (e) { ok = false; }
++    if (!ok) {
++      var a = box.selectionStart, b = box.selectionEnd;
++      box.value = box.value.slice(0, a) + s + box.value.slice(b);
++      box.setSelectionRange(a + s.length, a + s.length);
++      box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: s }));
++    }
++  }
++  function accept(i) {
++    var it = items[i], cx = context();
++    if (!it || it.there !== undefined || !cx) return;
++    hide();
++    box.focus({ preventScroll: true });
++    box.setSelectionRange(cx.from, cx.to);
++    insert(it.tag + "\n");
++    shut = -1;
++  }
++  function move(d) {
++    var n = items.length;
++    for (var s = 1; s <= n; s++) {
++      var i = ((at < 0 ? (d > 0 ? -1 : 0) : at) + d * s + n * 2) % n;
++      if (items[i].there === undefined) { at = i; break; }
++    }
++    mark(true);
++  }
++
++  function onKey(e) {
++    if (e.isComposing) return;
++    if (e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && e.code === "Space") {
++      var cx = context();
++      if (cx) { e.preventDefault(); shut = -1; return fill(cx); }
++      var v = box.value, c = box.selectionStart, ls = c > 0 ? v.lastIndexOf("\n", c - 1) + 1 : 0;
++      if (box.selectionStart === box.selectionEnd && !box.readOnly && /^\s*$/.test(v.slice(ls, c))) { e.preventDefault(); shut = -1; insert("["); }
++      return;
++    }
++    if (!visible()) return;
++    if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) { e.preventDefault(); move(e.key === "ArrowDown" ? 1 : -1); }
++    else if ((e.key === "Enter" || e.key === "Tab") && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
++      if (at >= 0) { e.preventDefault(); accept(at); } else hide();
++    } else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); shut = from; hide(); }
++  }
++
++  var boxes = [];
++  function attach(area) {
++    if (!area || boxes.indexOf(area) >= 0) return;
++    boxes.push(area);
++    area.setAttribute("aria-autocomplete", "list");
++    area.setAttribute("aria-controls", "tcList");
++    area.setAttribute("aria-expanded", "false");
++    area.addEventListener("input", function (e) { box = area; check(/^insert(Text|CompositionText)$/.test(e.inputType || "")); });
++    area.addEventListener("keydown", function (e) { box = area; onKey(e); });
++    area.addEventListener("keyup", function (e) { if (box === area && visible() && !/^(ArrowUp|ArrowDown|Enter|Tab|Escape)$/.test(e.key)) check(false); });
++    area.addEventListener("mouseup", function () { if (box === area && visible()) check(false); });
++    area.addEventListener("blur", function () { if (box === area) hide(); });
++    area.addEventListener("scroll", function () { if (box === area) later(); });
++  }
++  window.addEventListener("scroll", later, true);
++  window.addEventListener("resize", later);
++  ["lyrics", "wrLyrics"].forEach(function (id) { attach(document.getElementById(id)); });
++
++  window.HeresyComplete = { attach: attach, offer: offer,
++    state: function () {
++      return { open: visible(), box: box ? box.id : null, at: at, active: items[at] ? items[at].tag : null,
++        tags: items.map(function (it) { return it.tag + (it.there !== undefined ? "@" + (it.there + 1) : ""); }) };
++    } };
++})();
+diff --git a/tools/console/heresy-find.js b/tools/console/heresy-find.js
+index 77ca230..e307d17 100644
+--- a/tools/console/heresy-find.js
++++ b/tools/console/heresy-find.js
+@@ -8,6 +8,15 @@
+ // box with that match selected. His phonetic hand finds as plain words: a stress mark is not looked for (обещано finds
+ // обе́щано), ё is е, and о and а find his ע and his Latin o and a too (коморка finds кעмо́рка, ко finds Кo).
+ //
++// HERESY 1168 (Viktor 07.10.2026: «Твоя подсветка работает при ровном скейле в 100%. На 110% уже съехала вниз»): a match
++// whose line had gone under the lifted frame's foot (its sticky Generate bar, 70 px) was taken for seen, for the frame's own
++// box reaches under the bar: nothing scrolled, and the mark, drawn over all, stood on the bar (at 110 % his line fell there).
++// Whether a match is seen is asked of the page now (what stands at that point), and the browser itself scrolls it into the
++// middle of every box on the way; a mark is drawn only where its words are seen. His second: «Если активен виджет поиска,
++// когда прокрутил по тексту, встал курсором на другом месте, и единое движение клавишами… переносит оттуда на место поиска»:
++// words typed in the box count the matches again and leave the view where it is; Esc from the box closes the bar and leaves
++// the cursor where he put it (from the bar's own field Esc still goes back to the match).
++//
+ //   HeresyFind.open(box) · HeresyFind.close() · HeresyFind.state()   (the last for the checks)
+ (function () {
+   "use strict";
+@@ -91,7 +100,7 @@
+     bar.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, r.right - w - 6)) + "px";
+   }
+ 
+-  function search(fromCaret) {
++  function search(fromCaret, quiet) {
+     if (!box) return;
+     hits = find(box.value, input.value);
+     if (!hits.length) at = -1;
+@@ -102,7 +111,7 @@
+     } else {
+       at = Math.min(at, hits.length - 1);
+     }
+-    show();
++    show(quiet);
+   }
+ 
+   function step(d) {
+@@ -111,31 +120,45 @@
+     show();
+   }
+ 
+-  // the match in hand marked over the box: a hidden copy of the box's layout gives its letters' boxes
+-  function show() {
++  // the match in hand marked over the box: a hidden copy of the box's layout gives its letters' boxes. Quiet (the box's own
++  // words changed): counted and marked again where it is, the view not moved
++  function show(quiet) {
+     count.textContent = !input.value ? "" : hits.length ? tr("{0} of {1}").replace("{0}", at + 1).replace("{1}", hits.length) : tr("no match");
+     bar.classList.toggle("is-none", !!input.value && !hits.length);
+-    if (at >= 0) reveal(hits[at]);
++    if (at >= 0 && !quiet) reveal(hits[at]);
+     paintMarks();
+   }
+ 
+   // how much larger the box is drawn than its own pixels (a lifted frame is zoomed 1.2; Viktor saw the mark float there)
+   function scale() { var w = box.offsetWidth; return w ? box.getBoundingClientRect().width / w : 1; }
+ 
++  // whether a point of the box is seen: the box itself is what stands there (no sticky bar over it, not outside its frame or the
++  // window)
++  function seen(x, y) {
++    return x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight && document.elementFromPoint(x, y) === box;
++  }
++  // the browser itself brings a line of the box into the middle of every scrolling box on the way (it knows a lifted frame's
++  // zoom, the page's own and the sticky bars): a probe beside the box where the line stands, scrolled to, removed
++  function bringIntoView(top, height) {
++    var probe = document.createElement("span");
++    probe.setAttribute("aria-hidden", "true");
++    probe.style.cssText = "position:absolute;width:1px;visibility:hidden;pointer-events:none;left:" + box.offsetLeft + "px;top:" +
++      (box.offsetTop + top) + "px;height:" + Math.max(1, height) + "px";
++    box.parentNode.insertBefore(probe, box.nextSibling);
++    probe.scrollIntoView({ block: "center", inline: "nearest" });
++    probe.remove();
++  }
++
+   function reveal(h) {
+     var m = measure(h);
+     if (!m) return;
+-    var cs = getComputedStyle(box), lh = parseFloat(cs.lineHeight) || 20, bt = parseFloat(cs.borderTopWidth) || 0, k = scale();
++    var cs = getComputedStyle(box), lh = parseFloat(cs.lineHeight) || 20, bt = parseFloat(cs.borderTopWidth) || 0, bl = parseFloat(cs.borderLeftWidth) || 0, k = scale();
+     if (box.scrollHeight > box.clientHeight + 1) {               // the box scrolls: bring the line into its view
+       if (m.top < box.scrollTop || m.top + lh > box.scrollTop + box.clientHeight) box.scrollTop = Math.max(0, m.top - box.clientHeight / 3);
+     }
+-    var r = box.getBoundingClientRect(), top = r.top + k * (bt + m.top - box.scrollTop);   // and the frame or page around it
+-    var p = box.parentElement;
+-    while (p && p !== document.body && !(/(auto|scroll)/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight + 1)) p = p.parentElement;
+-    var inner = p && p !== document.body, area = inner ? p.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+-    if (top < area.top + 48 || top > area.bottom - 48) {
+-      var dy = top - (area.top + (area.bottom - area.top) / 3);
+-      if (inner) p.scrollTop += dy; else window.scrollBy(0, dy);
++    var q = m.rects[0], r = box.getBoundingClientRect();         // and into the frame's or the page's, unless it is seen there
++    if (!seen(r.left + k * (bl + q.left - box.scrollLeft + Math.min(q.width, 6) / 2), r.top + k * (bt + q.top - box.scrollTop + q.height / 2))) {
++      bringIntoView(bt + q.top - box.scrollTop, q.height || lh);
+     }
+   }
+ 
+@@ -174,11 +197,12 @@
+     var bl = parseFloat(cs.borderLeftWidth) || 0, bt = parseFloat(cs.borderTopWidth) || 0;
+     var clip = { top: r.top + k * bt, bottom: r.top + k * (bt + box.clientHeight) };
+     m.rects.forEach(function (q) {
+-      var top = r.top + k * (bt + q.top - box.scrollTop), bottom = top + k * q.height;
++      var top = r.top + k * (bt + q.top - box.scrollTop), bottom = top + k * q.height, left = r.left + k * (bl + q.left - box.scrollLeft);
+       if (bottom <= clip.top || top >= clip.bottom) return;       // scrolled out of the box's view
++      if (!seen(left + Math.min(k * q.width, 6) / 2, (Math.max(top, clip.top) + Math.min(bottom, clip.bottom)) / 2)) return;   // under a bar, out of the frame
+       var d = document.createElement("div");
+       d.className = "find-mark";
+-      d.style.left = (r.left + k * (bl + q.left - box.scrollLeft)) + "px";
++      d.style.left = left + "px";
+       d.style.top = Math.max(top, clip.top) + "px";
+       d.style.width = Math.max(2, k * q.width) + "px";
+       d.style.height = (Math.min(bottom, clip.bottom) - Math.max(top, clip.top)) + "px";
+@@ -222,7 +246,7 @@
+     }
+   }
+ 
+-  function onBoxInput() { search(false); }
++  function onBoxInput() { search(false, true); }
+ 
+   // the key, not its letter: in a Russian layout Ctrl+F comes as «а» (Viktor 07.10.2026: «Повторно Ctrl+F — всплыло браузерное
+   // поиска… Снова Ctrl+F — твой виджет больше не появляется»): the browser goes by the key, and so does this
+@@ -235,7 +259,7 @@
+       return;
+     }
+     if (bar && !bar.hidden && e.key === "F3") { e.preventDefault(); step(e.shiftKey ? -1 : 1); return; }
+-    if (bar && !bar.hidden && e.key === "Escape" && document.activeElement === box) { e.preventDefault(); close(true); }
++    if (bar && !bar.hidden && e.key === "Escape" && document.activeElement === box) { e.preventDefault(); close(false); }   // the cursor stays where he put it
+   }, true);
+   window.addEventListener("scroll", later, true);
+   window.addEventListener("resize", later);
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index f247c73..7df6fd3 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -574,5 +574,6 @@
+   // HERESY 1156: pictures drawn meanwhile reach the open sheet; 1158: and the chips under the style
+   function paintArts() { if ($("hiBack") && !$("hiBack").hidden) paint(); paintChips(); }
+   window.HeresyInstruments = { init: init, open: open, heardTags: heardTags, notHeardTags: notHeardTags, paintArts: paintArts, data: function () { return DATA; },
+-    styleLines: styleLines, styleProbed: styleProbed, voices: voices, adapters: adapters };   // HERESY 1166: the Writer's charter
++    styleLines: styleLines, styleProbed: styleProbed, voices: voices, adapters: adapters,   // HERESY 1166: the Writer's charter
++    lyricTags: function () { return LYRIC_TAGS; } };   // HERESY 1168: the tags offered under a «[» in the lyrics (heresy-complete.js)
+ })();
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index 62f01a4..21eb783 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -26,6 +26,14 @@
+ // a Latin vowel with its acute composed (ó — what «o + U+0301» becomes in a normalizing editor) not counted; Belarusian «ў»,
+ // which is no syllable, counted. A word is composed (NFC) before it is counted.
+ //
++// HERESY 1168 (Viktor 07.10.2026: «предусмотри в твоём "градуснике" строк текстов игнорирование подсчётов, если, к примеру,
++// в строке два [] тега типа [Break] [Silence]. И т.п.»; «Счёт по базису реальных вокальных секций. Даже если внутри паузные,
++// интерлюдия/прелюдия, общее продолжаем по главному тегу секции»): every [tag] of a line is a tag, never sung: a line of tags
++// alone counts as none, a tag inside a sung line is left out of its count. A pause, a break, a silence, an interlude, a
++// prelude or an instrumental cue inside a sung section opens no group of its own: its name stands beside it, and the lines
++// after it go on in the section's group, measured by its ruler (before the first sung section, an intro's spoken lines keep
++// a group of their own, as before). A line still being written as a tag («[Ver», the tags offered under it) is not counted.
++//
+ //   HeresyLyrics.attach(textarea, { meter: element, fit: function (area) {…} })
+ (function () {
+   "use strict";
+@@ -114,11 +122,15 @@
+     [/\bpre[\s-]?chorus\b|^пред/, "pre-chorus"], [/\bpost[\s-]?chorus\b/, "post-chorus"],
+     [/\b(chorus|hook|refrain)\b|^(副歌|припев|приспів|прыпеў)/, "chorus"],
+     [/\b(verse|bridge)\b|^(主歌|桥段|куплет|бридж|мост|міст)/, "verse + bridge"],
+-    [/\bintro(duction)?\b|^(вступ)/, "intro"],
++    [/\b(intro(duction)?|prelude)\b|^(вступ|прелюд)/, "intro"],
+     [/\b(outro|ends?|fade[\s-]?out|fadeout|fades out)\b|^(fade|аутро|кода)/, "outro"],
+-    [/\binterlude\b|^проигрыш/, "interlude"], [/\b(break|breakdown)\b|^перерыв/, "break"], [/\bdrops?\b/, "drop"], [/\bsolo\b/, "solo"],
++    [/\binterlude\b|^(проигрыш|интерлюд)/, "interlude"], [/\b(break|breakdown)\b|^перерыв/, "break"],
++    [/\b(silence|pause|rest|tacet)\b|^(тишина|пауза)/, "pause"], [/\bdrops?\b/, "drop"], [/\bsolo\b/, "solo"],
+     [/\b(inst|instrumental|riffs?|vamp|flourish)\b/, "instrumental"]
+   ];
++  // what is no sung section: inside one it opens no group (the section's count goes on under it); before the first, it does
++  var PAUSES = { intro: 1, interlude: 1, "break": 1, pause: 1, drop: 1, solo: 1, instrumental: 1 };
++  var TAG = /\[[^\]\n]*\]/g;
+   function groupOf(name) {
+     var n = name.toLowerCase().replace(/\s+/g, " ").trim();
+     var head = n.split(/\s[–—-]\s|:|\||\/|\(/)[0].replace(/[\d#.]+/g, " ").trim();
+@@ -129,29 +141,47 @@
+   }
+ 
+   function measure(text) {
+-    var lines = text.split("\n"), group = "—", out = [], tags = { chars: 0, n: 0 }, br = { chars: 0, n: 0 }, head = null;
++    var lines = text.split("\n"), group = "—", sung = false, out = [], tags = { chars: 0, n: 0 }, br = { chars: 0, n: 0 }, head = null;
+     var lyr = { chars: 0, syl: 0, lines: 0 }, hand = { stress: 0, ayin: 0, latin: 0 };
++    // the tags a line begins with: who sings and what the song is go by; a sung section is a new group, and so is a pause
++    // before the first; a pause inside one is marked on its row and nothing more. True when the group changed
++    function heads(names, row) {
++      var moved = false;
++      names.forEach(function (name) {
++        var g = groupOf(name);
++        if (g === null) return;
++        if (PAUSES[g] && sung) { if (row && !row.section && !row.pause) row.pause = g; return; }
++        group = g;
++        moved = true;
++        if (!PAUSES[g]) sung = true;
++        if (row) { row.group = g; row.section = true; row.pause = null; }
++      });
++      return moved;
++    }
+     lines.forEach(function (line) {
+-      var tag = line.match(/^\s*\[([^\]]+)\]\s*$/);
+-      if (tag) {
+-        var g = groupOf(tag[1]);
+-        if (g !== null) group = g;                  // who sings or what the song is: the section goes on
+-        tags.chars += line.trim().length; tags.n++;
+-        head = { tag: true, group: group, name: tag[1], lines: 0, section: g !== null };
+-        out.push(head);
++      var found = line.match(TAG) || [], rest = line.replace(TAG, " ");
++      found.forEach(function (t) { tags.chars += t.length; tags.n++; });
++      var lead = line.match(/^\s*(?:\[[^\]\n]*\]\s*)+/), names = lead ? (lead[0].match(TAG) || []).map(function (t) { return t.slice(1, -1); }) : [];
++      if (found.length && !rest.trim()) {             // tags alone: a section's head, a pause, who sings; no sung line
++        var row = { tag: true, group: group, name: names.join(" "), lines: 0, section: false, pause: null };
++        heads(names, row);
++        if (row.section) head = row;
++        out.push(row);
+         return;
+       }
+-      var brackets = line.match(/\([^)]*\)/g) || [], inner = brackets.join(" ");
+-      var main = line.replace(/\([^)]*\)/g, " ");
++      if (/^\s*\[[^\]]*$/.test(rest)) { out.push({ group: group, syl: 0, bsyl: 0, empty: true }); return; }   // a tag being written
++      if (names.length && heads(names, null)) head = null;   // a section named at a sung line's start: no row of its own to count on
++      var brackets = rest.match(/\([^)]*\)/g) || [], inner = brackets.join(" ");
++      var main = rest.replace(/\([^)]*\)/g, " ");
+       br.chars += brackets.reduce(function (n, b) { return n + b.length; }, 0); br.n += brackets.length;
+       var syl = syllables(main), bsyl = syllables(inner.replace(/[()]/g, " "));
+       var words = main.replace(/\s+/g, "");
+       lyr.chars += words.length;
+       hand.stress += (line.match(/́/g) || []).length;
+       hand.ayin += (line.match(/[а-яё]ע|ע[а-яё]/gi) || []).length;
+-      hand.latin += (line.match(/[а-яё][a-z]|[a-z][а-яё]/gi) || []).length;
++      hand.latin += (rest.match(/[а-яё][a-z]|[a-z][а-яё]/gi) || []).length;
+       if (syl || bsyl) { lyr.syl += syl; lyr.lines++; if (head) head.lines++; }
+-      out.push({ group: group, syl: syl, bsyl: bsyl, empty: !line.trim() });
++      out.push({ group: group, syl: syl, bsyl: bsyl, empty: !rest.trim() });
+     });
+     // each group's ruler: the median length of its sung lines, once it has two
+     var byGroup = {};
+@@ -253,7 +283,9 @@
+         var ruler = m.rulers[o.group];
+         if (o.tag) {
+           // HERESY 1168 (Viktor: «Блок Interlude не имеет текста под собою. Там счётчик не нужен»): a section with no words of
+-          // its own shows its name, no ruler; a tag that is no section (who sings, what the song is) shows nothing
++          // its own shows its name, no ruler; a tag that is no section (who sings, what the song is) shows nothing; a pause inside
++          // a section its name alone, dimmed (the section's count goes on under it)
++          if (o.pause) { html.push('<div class="lyr-row lyr-head lyr-pause" style="top:' + y + 'px;height:' + lh + 'px">' + esc(o.pause) + "</div>"); return; }
+           if (!o.section) return;
+           html.push('<div class="lyr-row lyr-head" style="top:' + y + 'px;height:' + lh + 'px">' + esc(o.group) +
+             (ruler !== undefined && o.lines ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + "</div>");
+@@ -306,22 +338,26 @@
+     var kept = parseInt(recall("yue2.lyricsHeight") || "", 10);
+     if (kept > 60) { area.dataset.manual = "1"; area.style.height = kept + "px"; area.style.overflowY = "auto"; }
+     // HERESY 1168: to a stress mark astray: the letter and its mark selected, the line brought into view (in the box when it
+-    // scrolls, and in the frame or page around it)
++    // scrolls, and in the frame or page around it when it is not seen there: under a lifted frame's sticky Generate bar too,
++    // which the frame's own box reaches under; the browser itself scrolls a probe set where the line stands)
+     var visit = { stress: -1, stress2: -1 };
+     function goTo(f) {
+       area.focus({ preventScroll: true });
+       area.setSelectionRange(f.from, f.to);
+       var kid = mirror.children[f.line];
+       if (!kid) return;
+-      var y = kid.offsetTop;
++      var y = kid.offsetTop, cs = getComputedStyle(area), bt = parseFloat(cs.borderTopWidth) || 0, lh = parseFloat(cs.lineHeight) || 20;
+       if (area.scrollHeight > area.clientHeight + 1) area.scrollTop = Math.max(0, y - area.clientHeight / 3);
+-      var top = area.getBoundingClientRect().top + y - area.scrollTop, p = area.parentElement;
+-      while (p && p !== document.body && !(/(auto|scroll)/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight + 1)) p = p.parentElement;
+-      var inner = p && p !== document.body, box = inner ? p.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+-      if (top < box.top + 24 || top > box.bottom - 48) {
+-        var dy = top - (box.top + (box.bottom - box.top) / 3);
+-        if (inner) p.scrollTop += dy; else window.scrollBy(0, dy);
+-      }
++      var r = area.getBoundingClientRect(), k = area.offsetWidth ? r.width / area.offsetWidth : 1;
++      var px = r.left + k * ((parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.paddingLeft) || 0) + 4), py = r.top + k * (bt + y - area.scrollTop + lh / 2);
++      if (px >= 0 && py >= 0 && px < window.innerWidth && py < window.innerHeight && document.elementFromPoint(px, py) === area) return;
++      var probe = document.createElement("span");
++      probe.setAttribute("aria-hidden", "true");
++      probe.style.cssText = "position:absolute;width:1px;visibility:hidden;pointer-events:none;left:" + area.offsetLeft + "px;top:" +
++        (area.offsetTop + bt + y - area.scrollTop) + "px;height:" + lh + "px";
++      wrap.appendChild(probe);
++      probe.scrollIntoView({ block: "center", inline: "nearest" });
++      probe.remove();
+     }
+     if (meter) meter.addEventListener("click", function (e) {
+       var b = e.target.closest("[data-lyr]");
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f8b5319..ca4250f 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -2056,6 +2056,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ <script src="heresy-textprep.js"></script>
+ <script src="heresy-lyrics.js"></script>
+ <script src="heresy-find.js"></script>
++<script src="heresy-complete.js"></script>
+ <script src="heresy-menu.js"></script>
+ <script src="heresy-writer.js"></script>
+ <script src="heresy-train.js"></script>
+-- 
+2.43.0
+

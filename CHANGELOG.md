@@ -6,6 +6,89 @@ which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by Serveurper
 (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each
 change to the engine and the page as a patch of its own.
 
+## 2.0.0-rc2 · 2026-10-07
+
+What a day and a night of making songs asked for (HERESY 1168).
+
+### Everywhere
+
+- The engine on **ggml 0.26.0**, with yue2.cpp's latest (ServeurpersoCom's ggml fork rebased on upstream: CUDA and Vulkan
+  kernels and fixes; Windows build scripts for Visual Studio 2026). Measured on an RTX 3090: a two-minute song in 51 s,
+  where the engine before took 54–61 s the same morning.
+- **F5** during a run keeps its clock, and the run brought back lands in its workspace and plays when done; in the
+  Librarian, F5 reads the library again and keeps the page, the music playing on (Ctrl+F5 reloads).
+- **Copy** works on the machine's address (http://192.168.…): the browser has no clipboard API there, the page's own
+  copy stands in.
+- The short notes after an (i) are the first line of its tip.
+- **Open** says what of a prompt file the form could not take in, and what it holds instead.
+- **Windows 11**: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md), through WSL2 (written from WSL's and NVIDIA's documented
+  way; not yet run by us on Windows, and said so).
+
+### Creator
+
+- **Frames over the room**: the form and the take each lift over the room (95 % of the screen above the player, a fifth
+  larger), a button to the other frame; Generate turns to the take's frame, Retake and Reuse to the form's; the
+  player's clicks never fold it.
+- **The VAE** is chosen in the **☰** menu, under the model; the Composer's VAE block is gone. **Another VAE in
+  seconds**: every take keeps its acoustic latents beside its audio (about 3 MB for eight minutes), and a take's
+  + Standard, + Legacy, + Blend decode them again with the VAE alone, about 2 s for two minutes (measured; the same VAE
+  gives the same sound to the sample). A take made before rc2 renders its sound again, and its button says so.
+- **The lyrics' meter**: each line's syllables against its group's ruler (verse and bridge one group, the pre-chorus,
+  the chorus and every other section their own), what is in round brackets hatched after (it may be sung); under the
+  box the lyrics' characters, syllables and lines, the tags, the brackets and the phonetic hand; the browser's spelling
+  check in the lyrics' language; the box 16 rows growing to 26, drawn taller by hand it keeps its height.
+- **Stress marks astray**: a mark (U+0301) off a vowel, at a line's start, after a space or a sign, on a consonant,
+  doubled, or a spacing ´ in its place, in red; a word with two marks in amber; a button selects each in turn.
+- **Ctrl+F** in the lyrics or the style finds in that box alone, in any keyboard layout and in a lifted frame; a stress
+  mark, ё, and the phonetic hand's ע and Latin o and a do not stand in the way. A match under a lifted frame's Generate
+  bar is scrolled into view (the mark never stands on the bar); words typed elsewhere in the box leave the view where it
+  is, and Esc from the box closes the bar and leaves the cursor.
+- **Tags under a «[»**: a «[» at a line's start in the lyrics (the Creator's and the Writer's) offers the section tags as
+  a code editor offers its words: Verse, Chorus, Pre-Chorus, Bridge, Interlude, Break first, then Intro, Outro, END, then
+  the rest; typed letters narrow it (a Russian or Ukrainian layout too), a number numbers the tag, numbered verses are
+  offered the next; Enter or Tab puts it on its own line; Intro, Outro and END already there stand last, dimmed, with
+  their line. Ctrl+Space opens it, and at a line's start types the «[» itself.
+- **The meter by the sung sections**: a pause, a break, a silence, an interlude, a prelude or an instrumental cue inside a
+  sung section opens no group of its own (the section's ruler goes on under it); a line of tags alone (`[Break]
+  [Silence]`) is not counted, nor a tag inside a line. **A syllable by each language's rules**: Russian, Ukrainian and
+  Belarusian one vowel letter, and as the meter measures the time a line takes, a word with no vowel (с, в, к, з, й, ў)
+  and a stop closed against an affricate inside a word (глу-п-цо́в) are beats of their own, drawn lighter on the bar;
+  Greek with its digraphs, diaeresis and glides; Spanish
+  and Italian with their weak and strong vowels (their final e was taken for English and silent); English with its
+  silent e, -es, -ed and -ing; Hebrew by its vowel points (ע and the shin's dot counted before); Chinese, Japanese and
+  Korean one sign each (nothing before). The Latin words' language comes from the style, else from the lyrics' words.
+- **The cheat-sheet's Lyrics tags**: the sections as the 110 official examples write them, counted; who sings;
+  instrumental cues; the meta-tags; the phonetic hand. A click puts one into the lyrics.
+- **Clear** takes the words (title, style, lyrics, score, seeds, loaded codes); **New song** the mode, sampling, sliders
+  and LoRAs too; both dialogs say what stays.
+- **Play this song** hides while a song is made and offers the finished one; the Score card of a take with no score
+  holds only its from-the-sound button.
+- **Max length** lives in Sampling, as the music's time (25 tokens a second) and with no lock; Sound and output has no
+  length field of its own (the API keeps `duration`). **ODE steps** are **Denoising steps**; *Reset output* puts the solver
+  back to midpoint too, and the solver spans two columns (its name whole, the two rows full).
+- The **text profile** (a pasted text made ready to read) is off while the Creator's profile is music: it is for readings.
+
+### Writer
+
+- **Export all** and **Import**: the whole notebook in one file (every document with its versions, the takes made from
+  it, the trash) and back; an import brings in what is missing and never writes over (a document that differs comes in
+  beside its namesake as a copy).
+- Its fields one height and dress; the API key wide, *Remember the key* beside it.
+
+### Librarian
+
+- ★ among the workspace's filters; the Takes' star drawn as the thumbs; a take moved to the trash leaves the player.
+
+### Trainer
+
+- The training lyrics keep **ע** inside Russian words: YuE2 sings it as a soft о/а.
+
+### The guide
+
+- The lyrics' meter and the phonetic hand; Save, Open, Clear and New song; the VAE in the ☰ menu and decoded again in
+  seconds; Ctrl+F in a box; the Writer's backup: in all seven languages. New words of the page itself are English only
+  until the pass before 2.0.0.
+
 ## 2.0.0-rc1 · 2026-10-06
 
 The release candidate: the alpha after three days of daily use and what that use asked for (HERESY 1167).

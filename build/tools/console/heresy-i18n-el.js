@@ -245,8 +245,8 @@ RuachI18n.add("el", {
 "Reset sampling": "Επαναφορά δειγματοληψίας",
 "Sound and output": "Ήχος και έξοδος",
 "WAV 24-bit": "WAV 24-bit",
-"ODE steps": "Βήματα ODE",
-"About ODE steps": "Σχετικά με τα βήματα ODE",
+"Denoising steps": "Βήματα αποθορυβοποίησης",
+"About Denoising steps": "Σχετικά με τα βήματα αποθορυβοποίησης",
 "sound solver": "λύτης ήχου",
 "Solver": "Λύτης",
 "About Solver": "Σχετικά με τον λύτη",
@@ -944,7 +944,7 @@ RuachI18n.add("el", {
 ", then watch it take shape: the score is written, the music is composed, and the sound is rendered into your finished track. Any song you pick from Takes opens here too.": ", και μετά δες το να παίρνει μορφή: γράφεται η παρτιτούρα, συντίθεται η μουσική και ο ήχος αποδίδεται στο ολοκληρωμένο κομμάτι σου. Και κάθε τραγούδι που διαλέγεις από τις Λήψεις ανοίγει εδώ.",
 "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Bitrate όταν το ίδιο το τραγούδι φτιάχνεται ως MP3 (Μορφή: MP3). Το 320 είναι σχεδόν διάφανο· η προεπιλογή του διακομιστή είναι 128. Για να μοιραστείς ένα τραγούδι WAV ως MP3, χρησιμοποίησε καλύτερα το κατέβασμα MP3 στη σελίδα του.",
 "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: το ίδιο τραγούδι, χωρίς απώλειες (κάθε δείγμα ίδιο με το WAV) σε περίπου τρία τέταρτα του μεγέθους. Φτιάχνεται επιτόπου σε περίπου ένα δευτερόλεπτο· ο τίτλος και οι στίχοι γράφονται μέσα στο αρχείο.",
-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Ξεκίνα νέο τραγούδι: κάθε πεδίο, οι δύο σπόροι, η παρτιτούρα, οι φορτωμένοι μουσικοί κώδικες, η λειτουργία, η δειγματοληψία, τα ρυθμιστικά, οι LoRA και το Οργανικό πίσω στις προεπιλογές. Οι επιλογές σου για VAE, έξοδο και θέμα μένουν.",
+"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Ξεκίνα νέο τραγούδι: κάθε πεδίο, οι δύο σπόροι, η παρτιτούρα, οι φορτωμένοι μουσικοί κώδικες, η λειτουργία, η δειγματοληψία, τα ρυθμιστικά, οι LoRA και το Οργανικό πίσω στις προεπιλογές. Το «Ήχος και έξοδος» (VAE, λύτης, βήματα, διάρκεια, μορφή) και το θέμα μένουν.",
 "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Μία γραμμή για το τραγούδι που θέλεις (μια ιστορία, μια διάθεση, ένα είδος). Το μοντέλο συγγραφέα σχεδιάζει από αυτήν τον τίτλο, το prompt ύφους και τους στίχους, στη φόρμα παρακάτω, όπου μπορείς να τα διορθώσεις πριν από την παραγωγή.",
 "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode). Vocal melody only: just the sung line. Melody and chords: melody plus chord symbols (use Full mode).": "Κύρια μελωδία: η πιο εμφανής γραμμή, φωνή ή όργανο, χωρίς συγχορδίες (χρησιμοποίησε τη λειτουργία Μελωδία). Μόνο η φωνητική μελωδία: μόνο η τραγουδισμένη γραμμή. Μελωδία και συγχορδίες: η μελωδία μαζί με σύμβολα συγχορδιών (χρησιμοποίησε την Πλήρη λειτουργία).",
 "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Πώς ισορροπούν τα stems στη μίξη, σε dB ανά stem (τα επίπεδα παρακάτω υπερισχύουν). Μόνο για σύνολο stems: ένα μεμονωμένο αρχείο, και η λήψη μαζί, δεν έχει τίποτα να ισορροπήσει, και τότε η προρύθμιση είναι κλειστή.",
@@ -1072,7 +1072,7 @@ RuachI18n.add("el", {
 "temperature {0} · top-p {1} · top-k {2}": "θερμοκρασία {0} · top-p {1} · top-k {2}",
 "Sliders reset to the tuned defaults": "Τα ρυθμιστικά επανήλθαν στις ρυθμισμένες προεπιλογές",
 "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Η έξοδος επανήλθε: WAV 24-bit, {0} βήματα, χωρίς όριο διάρκειας κάτω από την προεπιλογή",
-"ODE steps must be a whole number, 1 or more": "Τα βήματα ODE πρέπει να είναι ακέραιος, 1 ή περισσότερα",
+"Denoising steps must be a whole number, 1 or more": "Τα βήματα αποθορυβοποίησης: ακέραιος αριθμός, 1 ή περισσότερα",
 "Max length must be a number of seconds above 0": "Η μέγιστη διάρκεια πρέπει να είναι αριθμός δευτερολέπτων πάνω από 0",
 "Sound variations must be between 1 and 9": "Οι ηχητικές παραλλαγές πρέπει να είναι από 1 έως 9",
 "Peak clip must be a whole number, 0 or more": "Η αποκοπή κορυφών πρέπει να είναι ακέραιος, 0 ή περισσότερο",
@@ -1990,7 +1990,7 @@ RuachI18n.add("el", {
 "About the {0} VAE": "Σχετικά με το VAE {0}",
 "{#0} decoders": {"one": "{0} αποκωδικοποιητής", "other": "{0} αποκωδικοποιητές"},
 "{#0} decoder": {"one": "{0} αποκωδικοποιητής", "other": "{0} αποκωδικοποιητές"},
-"{0} picked in the form": "{0} επιλεγμένος στη φόρμα",
+"{0} picked in the ☰ menu": "{0} επιλεγμένος στο μενού ☰",
 "a finished song can add another from its page": "ένα ολοκληρωμένο τραγούδι μπορεί να προσθέσει άλλον από τη σελίδα του",
 "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "Ο τρέχων επίσημος αποκωδικοποιητής, και η προεπιλογή. Ο πιο καθαρός και αυτός που ακούγεται καλύτερα: ξεκίνα από εδώ.",
 "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "Ο παλαιότερος επίσημος αποκωδικοποιητής. Οι δημοσιευμένες βαθμολογίες benchmark βγήκαν με αυτόν. Λιγότερο καθαρός από τον Τυπικό· σε κάποιους ακούγεται πιο μουσικός. Ίδιος κωδικοποιητής, αλλάζει μόνο ο αποκωδικοποιητής.",
@@ -2644,7 +2644,7 @@ RuachI18n.add("el", {
 "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000).\n✓ Set Max length close to the length the lyrics need.\n⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Το μακρύτερο τραγούδι: ακολουθεί τη «Μέγιστη διάρκεια» στο «Ήχος και έξοδος», 25 μουσικά tokens το δευτερόλεπτο (8:00 είναι 12.000).\n✓ Βάλε τη «Μέγιστη διάρκεια» κοντά σε όση χρειάζονται οι στίχοι.\n⚠ Με πολύ περισσότερο χώρο απ' όσο χρειάζονται οι στίχοι, μετά την τελευταία γραμμή το μοντέλο γυρίζει πίσω και τραγουδά ξανά προηγούμενες γραμμές (μετρημένο: 24 τέτοιες επιστροφές μετά το τέλος των στίχων). Ένα τραγούδι που κόβεται εδώ σημειώνεται ως κομμένο.",
 "Only the disliked (a dislike hides a take everywhere else)": "Μόνο όσα δεν μου αρέσουν (το «Δεν μου αρέσει» κρύβει μια λήψη παντού αλλού)",
 "Start a new song?": "Νέο τραγούδι;",
-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Ο τίτλος, το ύφος, οι στίχοι, η παρτιτούρα, οι σπόροι και κάθε ρύθμιση επιστρέφουν στις προεπιλογές. Οι λήψεις μένουν.",
+"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "Ο τίτλος, το ύφος, οι στίχοι, η παρτιτούρα, οι σπόροι, η λειτουργία, η δειγματοληψία, τα ρυθμιστικά και οι LoRA επιστρέφουν στις προεπιλογές. Το «Ήχος και έξοδος» (VAE, λύτης, βήματα, διάρκεια, μορφή) και οι λήψεις μένουν.",
 "New song": "Νέο τραγούδι",
 "(the log is empty)": "(το αρχείο καταγραφής είναι κενό)",
 "Sound, together": "Ήχος, μαζί",
@@ -2816,4 +2816,36 @@ RuachI18n.add("el", {
 "Mongolian throat singing": "Μογγολικό λαρυγγικό τραγούδι",
 "Classical string quartet": "Κλασικό κουαρτέτο εγχόρδων",
 "Film noir jazz": "Τζαζ φιλμ νουάρ"
+});
+// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
+RuachI18n.add("el", {
+"The take's frame": "Το πλαίσιο της λήψης",
+"The other frame over the room: the take": "Το άλλο πλαίσιο πάνω από το δωμάτιο: η λήψη",
+"Over the room": "Πάνω από το δωμάτιο",
+"This frame over the room, larger: Esc or a click beside it puts it back": "Αυτό το πλαίσιο πάνω από το δωμάτιο, μεγαλύτερο: το Esc ή ένα κλικ δίπλα του το επαναφέρει",
+"The form's frame": "Το πλαίσιο της φόρμας",
+"The other frame over the room: Compose": "Το άλλο πλαίσιο πάνω από το δωμάτιο: Σύνθεση",
+"Back into the room": "Πίσω στο δωμάτιο",
+"Back into the room (Esc)": "Πίσω στο δωμάτιο (Esc)",
+"Only the favourites (★), in the workspace you are in": "Μόνο τα αγαπημένα (★), στον χώρο όπου βρίσκεσαι"
+});
+// HERESY 1168: F5 in the Librarian
+RuachI18n.add("el", {
+"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Η βιβλιοθήκη διαβάστηκε ξανά (το F5 εδώ αφήνει τη σελίδα και τη μουσική); το Ctrl+F5 ξαναφορτώνει τη σελίδα"
+});
+// HERESY 1168: the lyrics' meter
+RuachI18n.add("el", {
+"Lyrics: {0} characters · {1} syllables · {2} lines": "Στίχοι: {0} χαρακτήρες · {1} συλλαβές · {2} γραμμές",
+"Tags: {0} characters in {1}": "Ετικέτες: {0} χαρακτήρες σε {1}",
+"In brackets: {0} characters in {1}": "Σε παρενθέσεις: {0} χαρακτήρες σε {1}",
+"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "Το φωνητικό χέρι: τόνοι (U+0301), αΐν μέσα σε ρωσικές λέξεις (μαλακό ο/α), λατινικά μέσα σε ρωσικές λέξεις (σκληρό o)",
+"Stress {0} · ע {1} · Latin {2}": "Τόνοι {0} · ע {1} · λατινικά {2}",
+"The browser's spelling check in the lyrics' language; press to switch it off or on": "Ο ορθογραφικός έλεγχος του φυλλομετρητή στη γλώσσα των στίχων· πάτα για να τον σβήσεις ή να τον ανάψεις",
+"Spelling": "Ορθογραφία",
+"The box grows with the words again, as it did before you drew it": "Το πεδίο μεγαλώνει ξανά με τις λέξεις, όπως πριν το τραβήξεις",
+"Auto height": "Αυτόματο ύψος",
+"verse + bridge": "στροφή + γέφυρα",
+"pre-chorus": "προ-ρεφρέν",
+"post-chorus": "μετα-ρεφρέν",
+"chorus": "ρεφρέν"
 });

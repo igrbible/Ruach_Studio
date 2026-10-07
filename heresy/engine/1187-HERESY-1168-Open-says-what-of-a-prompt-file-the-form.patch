@@ -1,0 +1,180 @@
+From e771b0d22ba8a69d6cd43480946209cc545d6bb2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 09:00:37 -0600
+Subject: [PATCH 1187/1198] HERESY 1168: Open says what of a prompt file the
+ form could not hold
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 07.10.2026: «О том, что сброшено, Open молчит… да, конечно, это нужно допилить». A file that loads «clean» but lost
+a field, the mode or an adapter on the way lies; now Open lists in its toast (amber, longer the longer the list) each place
+where the form holds something else than the file: a field no prompt has; no mode or an unknown one (Full plan); a seed that
+is no whole number (left empty); guidance, steps, length or peak clip that are no number (the form's own stay); an unknown
+solver (midpoint); a sampling knob unknown or no number (its default), or past its bounds (kept within them, as a typed one
+is); a VAE or slider not installed (yours stays, it is left out); an adapter with no strength (left out) or not in loras/
+(the run cannot load it); variations and versions kept within their range; a format or MP3 bitrate not offered. A file the
+page saved opens as before, «Prompt loaded from …». YueLoras.has(id): whether an adapter is in loras/ (null while the
+catalog has not come). English only, for the pass before 2.0.0.
+
+The suite: 375 passed, 0 failed (1 new check: an odd file's eleven places, a saved one's none).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css  |   1 +
+ tools/console/app.js   | 100 ++++++++++++++++++++++++++++++++++++++++-
+ tools/console/loras.js |   5 ++-
+ 3 files changed, 104 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index e6a6243..8a400ae 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1353,6 +1353,7 @@ pre.paper { font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; word-br
+ }
+ .toast.bad { border-left-color: var(--bad); }
+ .toast.good { border-left-color: var(--good); }
++.toast.warn { border-left-color: var(--amber); }   /* HERESY 1168: what a prompt file lost on the way into the form */
+ @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+ 
+ /* ------------------------------------------------------------------ panels */
+diff --git a/tools/console/app.js b/tools/console/app.js
+index cddbed1..b3f5002 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1785,6 +1785,98 @@
+     queueComfort();   // HERESY 1145: every box's height, the style's too: Retake, Reuse and Open land after their click
+   }
+ 
++  // HERESY 1168 (Viktor 07.10.2026, of Open: «О том, что сброшено, Open молчит… да, конечно, это нужно допилить»): what of a
++  // prompt file does not come into the form as written is said when it opens. A file that loads «clean» but lost a field, a
++  // mode or an adapter on the way lies; each such place says what was there and what the form holds instead.
++  var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "lm_seed", "seed", "cfg_scale", "abc_sampling", "semantic_sampling",
++    "vae", "solver", "sliders", "loras", "plan_only", "semantic_tokens", "semantic_keep", "parent", "duration", "steps",
++    "lm_batch_size", "synth_batch_size", "output_format", "mp3_bitrate", "peak_clip", "score_guard", "seconds", "instrumental"];
++  var GROUP_NAMES = { abc: "Score planner", semantic: "Music tokens" };
++  function openNotes(req) {
++    var notes = [], say = function (text) { notes.push(text); };
++    var q = function (v) { return "«" + (typeof v === "string" ? v : JSON.stringify(v)) + "»"; };
++    var given = function (v) { return v !== undefined && v !== null && v !== ""; };
++    var isNum = function (v) { return typeof v === "number" && isFinite(v); };
++    Object.keys(req).forEach(function (k) {
++      if (PROMPT_KEYS.indexOf(k) < 0) say(tr("{0}: no such field in a prompt, left out").replace("{0}", k));
++    });
++    if (!given(req.cot)) say(tr("No mode in the file: Full plan"));
++    else if (!MODES[req.cot]) say(tr("Mode {0} unknown: Full plan").replace("{0}", q(req.cot)));
++    if (given(req.lm_seed) && !seedText(req.lm_seed)) say(tr("Music seed {0} is no whole number: left empty (a random one)").replace("{0}", q(req.lm_seed)));
++    if (given(req.seed) && !seedText(req.seed)) say(tr("Sound seed {0} is no whole number: left empty (a random one)").replace("{0}", q(req.seed)));
++    if (given(req.cfg_scale) && !isNum(req.cfg_scale)) say(tr("Guidance {0} is no number: the mode's own").replace("{0}", q(req.cfg_scale)));
++    ["abc", "semantic"].forEach(function (group) {
++      var set = req[group + "_sampling"];
++      if (!given(set)) return;
++      if (typeof set !== "object" || Array.isArray(set)) { say(tr("{0}: not a set of knobs, the defaults").replace("{0}", GROUP_NAMES[group])); return; }
++      Object.keys(set).forEach(function (k) {
++        var knob = SAMPLER_KNOBS.filter(function (x) { return x[0] === k; })[0];
++        if (!knob) say(tr("{0}: {1} unknown, left out").replace("{0}", GROUP_NAMES[group]).replace("{1}", k));
++        else if (!isNum(set[k])) say(tr("{0} · {1} {2} is no number: its default").replace("{0}", GROUP_NAMES[group]).replace("{1}", knob[1]).replace("{2}", q(set[k])));
++      });
++    });
++    if (given(req.vae) && !vaeInfo(req.vae)) say(tr("VAE {0} is not installed: yours stays").replace("{0}", q(req.vae)));
++    if (given(req.sliders) && !Array.isArray(req.sliders)) say(tr("{0}: not a list, left out").replace("{0}", "sliders"));
++    else if (Array.isArray(req.sliders)) {
++      var known = sliderLabels();
++      req.sliders.forEach(function (c) {
++        if (!c || known[c.id] === undefined) say(tr("Slider {0} is not installed: left out").replace("{0}", q(c && c.id)));
++        else if (isNum(c.strength) && (c.strength < 0 || c.strength > 1)) say(tr("Slider {0}: strength {1} kept within 0–1").replace("{0}", known[c.id] || c.id).replace("{1}", c.strength));
++      });
++    }
++    if (given(req.loras) && !Array.isArray(req.loras)) say(tr("{0}: not a list, left out").replace("{0}", "loras"));
++    else if (Array.isArray(req.loras)) {
++      req.loras.forEach(function (c) {
++        var id = c && String(c.id || "");
++        if (!id || !(Number(c.ar) || Number(c.nar))) say(tr("Adapter {0} has no strength: left out").replace("{0}", q(id ? YueLoras.name(id) : c)));
++        else if (YueLoras.has && YueLoras.has(id) === false) say(tr("Adapter {0} is not in loras/: the run cannot load it").replace("{0}", q(YueLoras.name(id))));
++      });
++    }
++    if (given(req.steps) && !isNum(req.steps)) say(tr("Steps {0} is no number: yours stay").replace("{0}", q(req.steps)));
++    if (given(req.solver) && ["midpoint", "multistep", "heun", "euler"].indexOf(req.solver) < 0) say(tr("Solver {0} unknown: midpoint").replace("{0}", q(req.solver)));
++    if (given(req.duration) && !isNum(req.duration)) say(tr("Max length {0} is no number: yours stays").replace("{0}", q(req.duration)));
++    [["synth_batch_size", "Variations", 9], ["lm_batch_size", "Versions", 10]].forEach(function (f) {
++      var v = req[f[0]];
++      if (!given(v)) return;
++      if (!isNum(v)) say(tr("{0} {1} is no number: 1").replace("{0}", f[1]).replace("{1}", q(v)));
++      else if (v < 1 || v > f[2]) say(tr("{0} {1} kept within 1–{2}").replace("{0}", f[1]).replace("{1}", v).replace("{2}", f[2]));
++    });
++    if (given(req.output_format) && !FORMAT_LABELS[req.output_format]) say(tr("Format {0} unknown: yours stays").replace("{0}", q(req.output_format)));
++    if (given(req.mp3_bitrate) && !(isNum(req.mp3_bitrate) && $("mp3Bitrate").querySelector('option[value="' + req.mp3_bitrate + '"]'))) {
++      say(tr("MP3 bitrate {0} is not offered: yours stays").replace("{0}", q(req.mp3_bitrate)));
++    }
++    if (given(req.peak_clip) && !isNum(req.peak_clip)) say(tr("Peak clip {0} is no number: yours stays").replace("{0}", q(req.peak_clip)));
++    return notes;
++  }
++  // after the load: a sampling knob past its bounds comes inside them, as one typed would (guardKnob), and says so
++  function openHoldKnobs() {
++    var notes = [];
++    all("input[data-group]").forEach(function (input) {
++      var key = input.dataset.key, b = knobBounds(input.dataset.group, key), v = parseFloat(input.value);
++      if (!b || /_tokens$/.test(key) || !isFinite(v) || (v >= b[0] && v <= b[1])) return;
++      input.value = Math.min(b[1], Math.max(b[0], v));
++      var knob = SAMPLER_KNOBS.filter(function (x) { return x[0] === key; })[0];
++      notes.push(tr("{0} · {1} {2} kept within {3}–{4}").replace("{0}", GROUP_NAMES[input.dataset.group]).replace("{1}", knob ? knob[1] : key)
++        .replace("{2}", v).replace("{3}", b[0]).replace("{4}", b[1]));
++    });
++    if (notes.length) syncShape();
++    return notes;
++  }
++  // a toast with a list under its first line, longer on screen the longer the list
++  function toastList(head, lines, kind) {
++    var el = document.createElement("div"), shown = lines.slice(0, 12);
++    el.className = "toast" + (kind ? " " + kind : "");
++    el.textContent = head;
++    if (lines.length > 12) shown.push(tr("and {0} more").replace("{0}", lines.length - 12));
++    shown.forEach(function (line) { var d = document.createElement("div"); d.className = "toast-why"; d.textContent = "· " + line; el.appendChild(d); });
++    $("toasts").appendChild(el);
++    setTimeout(function () {
++      el.style.transition = "opacity .3s ease";
++      el.style.opacity = "0";
++      setTimeout(function () { el.remove(); }, 320);
++    }, Math.min(32000, 9200 + 1800 * shown.length));
++  }
++
+   $("openPrompt").addEventListener("click", function () { $("openFile").click(); });
+ 
+   $("openFile").addEventListener("change", function () {
+@@ -1795,9 +1887,15 @@
+     file.text().then(function (text) {
+       var req = ext === "json" ? parseJSON(text) : parseYAML(text);
+       if (!req || typeof req !== "object" || Array.isArray(req)) throw new Error("not a prompt");
++      var notes = openNotes(req);                   // HERESY 1168: read before the form takes it
+       loadRequestIntoForm(req, { title: String(req.title || file.name.replace(/\.(json|ya?ml)$/i, "")),
+                                  codesTitle: file.name });
+-      toast("Prompt loaded from " + file.name, "good");
++      notes = notes.concat(openHoldKnobs());
++      if (notes.length) {
++        toastList(tr("Prompt loaded from {0}; {1} not as in the file:").replace("{0}", file.name).replace("{1}", notes.length), notes, "warn");
++      } else {
++        toast("Prompt loaded from " + file.name, "good");
++      }
+     }).catch(function (error) {
+       toast("Could not read " + file.name + " as a prompt (" + error.message + ")", "bad");
+     });
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 558cf4c..9bcd26f 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -562,7 +562,10 @@
+     if (n) changed();
+     return n;
+   }
+-  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, triggersFor: triggersFor, describe: describe, lines: lines, repaint: paint,
++  // HERESY 1168: is this adapter in loras/? (null while the catalog has not come: unknown, not «no»)
++  // (its own name: has(e, half) above is the halves' question)
++  function inCatalog(id) { return S.catalog.length ? !!entry(id) : null; }
++  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, triggersFor: triggersFor, describe: describe, has: inCatalog, lines: lines, repaint: paint,
+     listInto: listInto, setSources: setSources, zone: function (id, half) { return zones(entry(id), half); }, name: nameOf, toGreen: toGreen,
+     total: function () { return { value: arTotal(), stacked: arStacked(), safe: AR_TOTAL.safe, limit: AR_TOTAL.limit }; } };
+ })(window);
+-- 
+2.43.0
+

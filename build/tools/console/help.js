@@ -261,6 +261,9 @@
     if (el.id === "modes") host = el.closest("fieldset").querySelector(".label");
     if (host && host.querySelector(".info")) return;      // it already has one
     var info = makeInfo(text, name);
+    // HERESY 1168 (Viktor: «везде, где есть (i), и если там после идёт микро подсказка, либо убирай её, либо в тултип»): the
+    // label's short note (its data-head, English as written) is the tip's first line; the language follows it there
+    if (host && host.dataset && host.dataset.head) info.dataset.tipHead = host.dataset.head;
     if (!host) {
       if (el.nextElementSibling && el.nextElementSibling.classList.contains("info")) return;
       el.insertAdjacentElement("afterend", info);
@@ -315,7 +318,7 @@
     collSearch: 1, collSort: 1, collTrashDays: 1, collWsPick: 1, collWsMove: 1
   };
   function missing() {
-    var skip = { themePick: 1, volume: 1, openFile: 1 };
+    var skip = { themePick: 1, volume: 1, openFile: 1, wrImportFile: 1 };   // HERESY 1168: the Writer's backup file, as Open's
     return Array.prototype.filter.call(document.querySelectorAll("input[id], select[id], textarea[id]"), function (el) {
       return !skip[el.id] && !SELF_EVIDENT[el.id] && el.type !== "radio" && el.type !== "hidden" && !hasHelp(el);
     }).map(function (el) { return el.id; });

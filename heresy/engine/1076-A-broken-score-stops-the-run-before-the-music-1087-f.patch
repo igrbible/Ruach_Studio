@@ -2,7 +2,7 @@ From e205b92bfe39a7bc11ea2742318cee65d72a6a58 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 04:19:37 -0600
-Subject: [PATCH 1076/1179] A broken score stops the run before the music
+Subject: [PATCH 1076/1198] A broken score stops the run before the music
  (1087); floors as fuses: a score not under 200 tokens, the music not under
  750, locked against stray edits, every knob in bounds (1088); the music half
  together under a shared ceiling, Plan clears an old score (1089)

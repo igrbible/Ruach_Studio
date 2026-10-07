@@ -1,0 +1,199 @@
+From e071327274e08fe5db7c4d12d795f7c5443f59c0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 12:40:46 -0600
+Subject: [PATCH 1197/1198] HERESY 1168: a syllable by each language's rules:
+ Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, English, Hebrew,
+ Chinese, Japanese, Korean
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Считает гласные, а нужно считать слоги. Каждый слог забирает часть доли музыкальной… `Я|же|ви|жу|глу|п|
+цо́в|с|при|ду́р|чес|ким|пла|ном.` У меня получилось 15 долей. Сможешь унифицировать счётчики и для всех языков, что у нас
+запланированы в финальный релиз?»
+
+In Russian, Ukrainian and Belarusian a syllable is one vowel letter, as the meter counted: his split is fourteen parts, two
+with no vowel (п, с): consonants that take time when sung, not syllables (глуп-цо́в спри-ду́р-чес-ким): twelve, as shown.
+What was wrong was elsewhere, and is mended:
+- Spanish and Italian went by English (a final e taken for silent: «noche» one, «amore» two). Now a run of vowels counts
+  its strong ones (a, e, o, any written accent), the weak i and u join (cie-lo, cuo-re), two weak are one (ciu-dad); the u
+  of que/gui/qua and the i of ciao/giorno/figlio are no vowel; a Spanish y ends a syllable (hoy, muy, the word y).
+- Greek lost its diaeresis (Μαΐου one): αι ει οι υι ου αυ ευ ηυ are one unless a diaeresis or the first's accent parts
+  them (τσά-ι, Μα-ΐ-ου); an unstressed ι after a consonant glides (καρ-διά); an elided σ' is none.
+- Hebrew counted ע, the dagesh and the shin's dot as vowels (שָׁלוֹם three): its vowel points and the shuruk now.
+- Chinese, Japanese and Korean counted nothing: one sign each.
+- English: -es and -ed (makes, loved; not boxes, wanted), -ing after a vowel (go-ing), -io/-ia/-eo/-ea at the end (ra-di-o).
+- The Latin words' language: the style's word for it (Spanish, Italian, English), else the lyrics' small words; the
+  browser's spelling check follows it (and Ukrainian or Belarusian by their own letters).
+
+Kitchen suite: 392 passed, 0 failed, 7 skipped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-lyrics.js | 108 +++++++++++++++++++++++++++------
+ 1 file changed, 91 insertions(+), 17 deletions(-)
+
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index 21eb783..cc0167e 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -43,21 +43,92 @@
+   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+   function num(n) { return Number(n).toLocaleString(window.RuachI18n ? window.RuachI18n.locales() : undefined); }
+ 
++  // HERESY 1168 (Viktor 07.10.2026: «Считает гласные, а нужно считать слоги. Каждый слог забирает часть доли музыкальной…
++  // Сможешь унифицировать счётчики и для всех языков, что у нас запланированы в финальный релиз?»): a syllable is one vowel
++  // sound, one note; each language counts it by its own rules (the studio's seven, Hebrew by its points, Chinese, Japanese and
++  // Korean by their signs). In Russian, Ukrainian and Belarusian that is one vowel letter each, as before: his «Я|же|ви|жу|
++  // глу|п|цо́в|с|при|ду́р|чес|ким|пла|ном» is fourteen parts, and two have no vowel (п, с): consonants that take time when sung,
++  // not syllables (глуп-цо́в спри-ду́р-чес-ким): twelve. What the count got wrong was elsewhere: Spanish and Italian went by
++  // English (their final e taken for silent: «noche» one), Greek lost its diaeresis, Hebrew counted ע and the shin's dot as
++  // vowels, Chinese counted nothing.
+   var CYR = /[а-яёіїєў]/i, HEB = /[֐-׿]/, GRK = /[α-ωάέήίόύώϊϋΐΰ]/i;
++  var CJK = /[぀-ヿ㐀-䶿一-鿿가-힯豈-﫿]/g;   // kana, Han, Hangul: one sign, one syllable
+   var LATV = /[aeiouyàáâãäåèéêëìíîïòóôõöùúûüýÿ]/gi;   // a Latin vowel, its accent composed or not
+-  function wordSyllables(w) {
++  function cyrillic(w) { return (w.match(/[аеёиоуыэюяіїєѐѝע]/gi) || []).length + (w.match(LATV) || []).length; }   // ע and his Latin o count
++  // the vowel points, sheva and the dots that are no vowel left out (dagesh, the shin's and sin's dots, meteg), and the shuruk
++  function hebrew(w) { return Math.max(1, (w.match(/[ֱ-ֻ]|וּ(?![ְ-ֻ])/g) || []).length); }
++  // αι ει οι υι ου αυ ευ ηυ one vowel, unless a diaeresis on the second or the accent on the first parts them (τσάι, Μαΐου);
++  // an unstressed ι after a consonant glides into the vowel after it (καρδιά); an elided σ' has none
++  function greek(w) {
++    var s = w.toLowerCase().normalize("NFD"), L = [], n = 0;
++    for (var i = 0; i < s.length; i++) {
++      var c = s[i];
++      if (/[̀-ͯ]/.test(c)) { if (L.length) { if (c === "̈") L[L.length - 1].dia = true; else if (/[̀́͂]/.test(c)) L[L.length - 1].acc = true; } continue; }
++      L.push({ c: c, v: /[αεηιουω]/.test(c), acc: false, dia: false });
++    }
++    for (var j = 0; j < L.length; j++) {
++      var a = L[j], b = L[j + 1];
++      if (!a.v) continue;
++      if (b && b.v && !b.dia && !a.acc && /^(αι|ει|οι|υι|ου|αυ|ευ|ηυ)$/.test(a.c + b.c)) { n++; j++; continue; }
++      if (a.c === "ι" && !a.acc && !a.dia && b && b.v && j > 0 && !L[j - 1].v) continue;
++      n++;
++    }
++    return n;
++  }
++  // Spanish and Italian: in a run of vowels each strong one (a, e, o, or any with a written accent) is a syllable, the weak i
++  // and u join their neighbour (cie-lo, cuo-re), two weak are one (ciu-dad), none strong is still one; the u of que, gui and
++  // qua is no vowel, nor the i of ciao, giorno, figlio; a Spanish y ends a syllable as a vowel (hoy, muy, the word y)
++  function romance(w, lang) {
++    var s = w.toLowerCase().normalize("NFC"), n = 0;
++    if (lang === "es") s = s.replace(/([qg])u(?=[eéií])/g, "$1").replace(/y(?![aeiouáéíóú])/g, "i");
++    else s = s.replace(/(sc|c|g)i(?=[aeouàèéòóù])/g, "$1").replace(/gli(?=[aeouàèéòóù])/g, "gl").replace(/([qg])u(?=[aeioàèéìòóù])/g, "$1");
++    (s.match(/[aeiouáéíóúàèìòùü]+/g) || []).forEach(function (run) { n += Math.max(1, (run.match(/[aeoáéíóúàèìòù]/g) || []).length); });
++    return n || (/\d/.test(s) ? s.replace(/\D/g, "").length : 0);
++  }
++  // English by its vowel groups: a final silent e is none (make; not -le: ta-ble; not an accented é: café), nor the e of -es
++  // and -ed (makes, loved; not boxes, wanted); -ing after a vowel and -io, -ia, -eo, -ea at the end are two (go-ing, ra-di-o)
++  function english(w) {
++    var raw = w.toLowerCase().replace(/['’]/g, ""), low = raw.normalize("NFD").replace(/([aeiouy])̈/g, "|$1").replace(/[̀-ͯ]/g, "");
++    var n = (low.match(/[aeiouy]+/g) || []).length;
++    if (!n) return /\d/.test(low) ? low.replace(/\D/g, "").length : 0;   // 2026: its digits, one each (rough)
++    if (n > 1) {
++      if (/[^aeiouy]e$/.test(raw) && !/[^aeiouy]le$/.test(raw)) n--;
++      else if (/[^aeiouysxzcgh]es$/.test(raw) || /[^aeiouytd]ed$/.test(raw)) n--;
++      if (/(i[aoe]|e[ao])$/.test(low)) n++;
++    }
++    if (/[aeiouy]ing$/.test(low)) n++;
++    return Math.max(1, n);
++  }
++  function wordSyllables(w, lang) {
+     w = w.normalize("NFC");                        // и + U+0306 is «й», no vowel; o + U+0301 is «ó», a vowel
+-    if (CYR.test(w)) return (w.match(/[аеёиоуыэюяіїєѐѝע]/gi) || []).length + (w.match(LATV) || []).length;
+-    if (HEB.test(w)) return Math.max(1, (w.match(/[ֱ-ׇֻ]|וּ|ע/g) || []).length);
+-    if (GRK.test(w)) return Math.max(1, (w.normalize("NFD").replace(/[̀-ͯ]/g, "").match(/[αεηιουω]+/gi) || []).length);
+-    // HERESY 1168: an accented vowel is a vowel (café), a diaeresis parts two (naïve), an accented final e is sung
+-    var raw = w.toLowerCase(), low = raw.normalize("NFD").replace(/([aeiouy])\u0308/g, "|$1").replace(/[\u0300-\u036f]/g, "");
+-    var groups = low.match(/[aeiouy]+/g) || [];
+-    if (!groups.length) return /\d/.test(low) ? low.replace(/\D/g, "").length : 0;   // 2026: its digits, one each (rough)
+-    return Math.max(1, groups.length - (groups.length > 1 && /[^aeiouy]e$/.test(raw) ? 1 : 0));
++    var signs = w.match(CJK);
++    if (signs) return signs.length + syllables(w.replace(CJK, " "), lang);
++    if (CYR.test(w)) return cyrillic(w);
++    if (HEB.test(w)) return hebrew(w);
++    if (GRK.test(w)) return greek(w);
++    if (lang === "es" || lang === "it") return romance(w, lang);
++    return english(w);
++  }
++  // the language of the lyrics' Latin words: the style's own word for it, else their commonest small words and letters
++  var LATIN = {
++    es: /^(el|los|las|que|de|del|y|en|un|una|por|con|para|como|pero|yo|es|est[aá]|muy|m[aá]s|sin|cuando|donde|coraz[oó]n|amor|noche|vida|soy|eres|todo|nada)$/,
++    it: /^(il|lo|gli|che|non|di|della|nel|un|una|per|con|come|ma|mio|mia|io|sono|sei|è|più|perché|cuore|amore|notte|vita|anche|questo|quando|tutto|niente)$/,
++    en: /^(the|and|you|i|is|of|to|in|it|my|me|your|we|on|for|with|that|this|be|are|was|love|all|not|dont|im|so|but|what|when|night|heart)$/
++  };
++  function latinOf(text, style) {
++    var st = (style || "").toLowerCase();
++    if (/\b(spanish|español|espanol|castellano)\b/.test(st)) return "es";
++    if (/\b(italian|italiano)\b/.test(st)) return "it";
++    if (/\benglish\b/.test(st)) return "en";
++    var score = { es: (text.match(/[ñ¿¡]/gi) || []).length * 3, it: (text.match(/[àèìòù]/gi) || []).length, en: 0 };
++    (text.toLowerCase().replace(/['’]/g, "").match(/[a-zàáèéìíòóùúñü]+/g) || []).forEach(function (t) {
++      Object.keys(LATIN).forEach(function (k) { if (LATIN[k].test(t)) score[k]++; });
++    });
++    return score.es > score.en && score.es >= score.it ? "es" : score.it > score.en && score.it > score.es ? "it" : "en";
+   }
+-  function syllables(text) {
+-    return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) { return n + wordSyllables(w); }, 0);
++  function syllables(text, lang) {
++    lang = lang || latinOf(text, "");
++    return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) { return n + wordSyllables(w, lang); }, 0);
+   }
+ 
+   // the stress marks that are off a vowel (kind, where), and the words with two (asked about, not called wrong)
+@@ -140,7 +211,8 @@
+     return head.split(" ")[0] || "—";
+   }
+ 
+-  function measure(text) {
++  function measure(text, lang) {
++    lang = lang || latinOf(text, "");
+     var lines = text.split("\n"), group = "—", sung = false, out = [], tags = { chars: 0, n: 0 }, br = { chars: 0, n: 0 }, head = null;
+     var lyr = { chars: 0, syl: 0, lines: 0 }, hand = { stress: 0, ayin: 0, latin: 0 };
+     // the tags a line begins with: who sings and what the song is go by; a sung section is a new group, and so is a pause
+@@ -174,7 +246,7 @@
+       var brackets = rest.match(/\([^)]*\)/g) || [], inner = brackets.join(" ");
+       var main = rest.replace(/\([^)]*\)/g, " ");
+       br.chars += brackets.reduce(function (n, b) { return n + b.length; }, 0); br.n += brackets.length;
+-      var syl = syllables(main), bsyl = syllables(inner.replace(/[()]/g, " "));
++      var syl = syllables(main, lang), bsyl = syllables(inner.replace(/[()]/g, " "), lang);
+       var words = main.replace(/\s+/g, "");
+       lyr.chars += words.length;
+       hand.stress += (line.match(/́/g) || []).length;
+@@ -204,9 +276,11 @@
+     if (cyr >= lat && cyr) {
+       if (/\bukrainian\b/i.test(style || "")) return "uk";
+       if (/\bbelarusian\b/i.test(style || "")) return "be";
++      if (/ў/i.test(text)) return "be";                              // HERESY 1168: the letters only one of them has
++      if (/[їєґ]/i.test(text) && !/[ыэъё]/i.test(text)) return "uk";
+       return "ru";
+     }
+-    return lat ? "en" : "";
++    return lat ? latinOf(text, style) : "";                         // HERESY 1168: English, Spanish or Italian
+   }
+ 
+   function attach(area, opts) {
+@@ -257,7 +331,7 @@
+ 
+     function draw() {
+       queued = false;
+-      var text = area.value, m = measure(text);
++      var text = area.value, m = measure(text, latinOf(text, styleBox ? styleBox.value : ""));
+       last = m;
+       paintMeter(m);
+       var spell = recall("yue2.lyrSpell") !== "off";
+@@ -379,8 +453,8 @@
+       draw();
+     });
+     later();
+-    return { draw: draw, measure: function () { return last || measure(area.value); } };
++    return { draw: draw, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
+   }
+ 
+-  window.HeresyLyrics = { attach: attach, measure: measure, syllables: syllables, groupOf: groupOf, stressFaults: stressFaults };
++  window.HeresyLyrics = { attach: attach, measure: measure, syllables: syllables, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
+ })();
+-- 
+2.43.0
+

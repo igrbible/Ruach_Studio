@@ -138,7 +138,7 @@ What it needs:
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder
   against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
-[INSTALL.md](INSTALL.md) installs it step by step; [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI
+[INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI
 agent.
 
 ## Dependencies
@@ -216,14 +216,14 @@ machine, and if one eats your files, that is on you. Read before you run.
 
 ## What comes next
 
-2.0.0-rc1 is the studio we make our own songs in every day. These are the larger pieces on their way, for rc2 and after:
+2.0.0-rc2 is the studio we make our own songs in every day. These are the larger pieces on their way, for rc3 and after:
 
 - **The Artist room**: covers in three shapes at once from one seed (1:1 for the album, 16:9 for a video, 9:16 for a
   short), the title and the artist written on them, the painter of your choice, the versions of each take's picture.
 - **Five more languages** for the page: Chinese, French, Portuguese, German and Japanese. Right-to-left languages
   (Arabic, Hebrew, Urdu) come once the page itself runs right to left.
 - **The Writer's models with their prices**, from OpenRouter's list, as you type.
-- **Every button that cannot be undone behind a dialog**, and the inline notes of every room as tips.
+- **Every button that cannot be undone behind a dialog.**
 - **One shape for the icon buttons** across the rooms.
 - **A voice's kind in the Trainer**: measured on speech and on singing, shown beside the set, with a name to give it.
 - **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its

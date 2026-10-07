@@ -1,0 +1,299 @@
+From b8a6921f6009f1677266379a3946ac5223ac5fc5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 6 Oct 2026 23:42:29 -0600
+Subject: [PATCH 1182/1198] HERESY 1168: frames stay up through a run; Play
+ this song while a song is made and after; F5 in the Librarian; copying on the
+ machine's address; the Writer's fields one height
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor, 06.10.2026, late:
+- «при начале генерации всё же не нужно схлопывать фрейм… Просто переключаться на правый, где генерация идёт. Так можно
+  стоять в этих оверлеях Вечно. И кликами на плеер чтобы не убегал фокус и чтобы оверлей не схлопывался… А по другим
+  краям иже оверлея пусть схлопывается»: Generate turns a lifted frame to the take's, where the run shows; the player sits
+  over the veil, so its clicks never fold the frame (measured: none did), and after one the keys go back to the frame.
+  «Иконку FULL SCREEN в правом фрейме перенеси в самый верхний правый угол»: the take's frame tools in its top right corner.
+- «PLAY THIS SONG не должна появляться, когда крутится синтез. А вот когда рендер закончился, она наоборот - исчезла»:
+  watching a run hides it (it stood there from the take before); it offers the take shown whenever that take is not
+  playing, so a finished song the idle player only holds is offered (Play new takes off).
+- «ты говорил, что перехватишь F5 в Библиотеке»: F5 in the Librarian reads the library again and keeps the page, the
+  music playing on; Ctrl+F5 and Shift+F5 still reload.
+- «Кнопка копирования в буфер не копирует стиль и карты трека… И из Prompt тоже»: opened by the machine's address
+  (http://192.168.…) the page is no secure context and the browser gives no navigator.clipboard: every copy threw before
+  it copied. The page's own copy (ruachCopyText: a hidden box, selected, copied) stands in there; measured on
+  http://192.168.1.10: «Prompt copied», the text on the clipboard.
+- «В комнате Писателя пройдись по всем дропдаун селекторам и однострочным полям ввода. Приведи их в единый стиль, единая
+  высота… И поле API Key расширь, и `Remember the key` в одну строчку с этим полем ключа»: 38 px and one dress for them
+  all (the text profile's rules table keeps its cells); a password field dressed as the others everywhere; the key 640 px
+  wide with Remember beside it.
+
+The suite: 363 passed, 0 failed (6 new checks).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 16 ++++++++--
+ tools/console/app.js            | 55 ++++++++++++++++++++++++++++++---
+ tools/console/heresy-i18n-be.js |  4 +++
+ tools/console/heresy-i18n-el.js |  4 +++
+ tools/console/heresy-i18n-es.js |  4 +++
+ tools/console/heresy-i18n-it.js |  4 +++
+ tools/console/heresy-i18n-ru.js |  4 +++
+ tools/console/heresy-i18n-uk.js |  4 +++
+ tools/console/index.html        |  7 +++--
+ 9 files changed, 93 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7991f4c..d826710 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -767,7 +767,7 @@ body.is-resizing, body.is-resizing * { cursor: col-resize !important; user-selec
+ }
+ .label em { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--dim); margin-left: 8px; }
+ 
+-input[type="text"], input[type="search"], input[type="number"], textarea, select {
++input[type="text"], input[type="search"], input[type="number"], input[type="password"], textarea, select {   /* 1168: password too */
+   width: 100%;
+   padding: 9px 11px;
+   background: var(--field);
+@@ -782,7 +782,7 @@ input:hover, textarea:hover, select:hover { border-color: var(--hover-line, var(
+ /* a little room between a number and its up/down arrows */
+ input[type="number"]::-webkit-inner-spin-button { margin-left: 8px; }
+ 
+-input[type="text"]:focus, input[type="number"]:focus, input[type="search"]:focus, textarea:focus, select:focus {
++input[type="text"]:focus, input[type="number"]:focus, input[type="search"]:focus, input[type="password"]:focus, textarea:focus, select:focus {
+   outline: 0; border-color: var(--amber); background: var(--focus-bg); }
+ select:disabled { opacity: .7; }
+ ::placeholder { color: var(--placeholder); }
+@@ -4170,3 +4170,15 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ }
+ /* HERESY 1168: a label's short note, its (i)'s first line now */
+ .tip .tip-head { font-weight: 600; margin: 0 0 6px; }
++/* HERESY 1168 (Viktor: «Иконку FULL SCREEN в правом фрейме перенеси в самый верхний правый угол. Она сейчас под титлом»):
++   the take's frame tools in its very top right corner, whatever its head wraps into */
++#view-take > .col-head { padding-right: 84px; }
++#view-take > .col-head > .frame-tools { position: absolute; top: 12px; right: 12px; }
++/* HERESY 1168 (Viktor 06.10.2026: «В комнате Писателя пройдись по всем дропдаун селекторам и однострочным полям ввода.
++   Приведи их в единый стиль, единая высота. А то смотрятся паршиво»): the Writer's one-line fields and drop-downs one
++   height and one dress (the text profile's rules table keeps its compact cells); the OpenRouter key wide, Remember beside it */
++#view-write :is(input[type="text"], input[type="search"], input[type="number"], input[type="password"], select):not(.tp-rules input) {
++  height: 38px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; font-size: 14px; line-height: normal; }
++.or-key-row { flex: 1 1 100%; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
++.or-key-row .field { flex: 0 1 640px; min-width: 260px; }
++.or-key-row .check { flex: none; height: 38px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index a19e95a..f514ff7 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -149,6 +149,28 @@
+   // HERESY 1166: a text the code glues from words, names and numbers is translated piece by piece where it is made (the
+   // page's translator matches whole texts); what is drawn so is drawn again when the language changes (below)
+   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++
++  // HERESY 1168 (Viktor 06.10.2026: «Кнопка копирования в буфер не копирует стиль и карты трека… И из Prompt тоже»): the
++  // studio is opened by the machine's address (http://192.168.…), which is no secure context, and there the browser gives
++  // no navigator.clipboard: every copy button threw before it copied, silently. The old way stands in for it there (and is
++  // the page's own, ruachCopyText): the text in a hidden box, selected, copied, the focus given back where it was.
++  window.ruachCopyText = function (text) {
++    return new Promise(function (ok, no) {
++      var was = document.activeElement, area = document.createElement("textarea"), done = false;
++      area.value = String(text);
++      area.setAttribute("readonly", "");
++      area.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
++      document.body.appendChild(area);
++      area.select();
++      try { done = document.execCommand("copy"); } catch (e) { done = false; }
++      area.remove();
++      if (was && was.focus) was.focus({ preventScroll: true });
++      if (done) ok(); else no(new Error("The browser refused to copy"));
++    });
++  };
++  if (!(navigator.clipboard && navigator.clipboard.writeText)) {
++    try { Object.defineProperty(navigator, "clipboard", { value: { writeText: window.ruachCopyText }, configurable: true }); } catch (e) { /* left as it is */ }
++  }
+   function loc() { return window.RuachI18n ? window.RuachI18n.locales() : undefined; }   // HERESY 1166: numbers and dates as the page's language writes them
+   window.addEventListener("ruach-lang", function () {
+     try {
+@@ -1548,7 +1570,7 @@
+   // No score yet: plan one (the form's lyrics, or a bare section skeleton), then convert and render it.
+   function planForInstrumental(body, versions) {
+     if (!body.style) return toast("A style prompt is required", "bad");
+-    frameOver(null);   // HERESY 1168: a run starts, the frames go back into the room
++    if (document.body.dataset.frame) frameOver("take");   // HERESY 1168: a run starts: the take's frame, where it shows
+     var plan = Object.assign({}, body, { plan_only: true, cot: body.cot === "off" ? "full" : body.cot,
+       lyrics: body.lyrics.trim() ? body.lyrics : YueInstrumental.planningLyrics });
+     $("generateBtn").disabled = true;
+@@ -1610,7 +1632,9 @@
+   });
+ 
+   function queueVersions(body, versions) {
+-    frameOver(null);   // HERESY 1168 (Viktor: «При запуске генерации — сворачиваем фреймы оверлейные»)
++    // HERESY 1168 (Viktor, the same night: «при начале генерации всё же не нужно схлопывать фрейм… Просто переключаться на
++    // правый, где генерация идёт. Так можно стоять в этих оверлеях Вечно»): a lifted frame turns to the take's, the run
++    if (document.body.dataset.frame) frameOver("take");
+     if (body.semantic_tokens && versions > 1) {
+       versions = 1;
+       toast("Loaded codes render one song; use Sound variations for more takes of it");
+@@ -2761,6 +2785,7 @@
+   function watchJob(job) {
+     STATE.job = job;
+     STATE.take = null;
++    paintPlayHere();   // HERESY 1168: no take shown, nothing to offer (it stood there from the take before)
+     $("takeBody").classList.add("is-hidden");
+     $("takeBody").classList.remove("is-running");
+     $("takeEmpty").classList.add("is-hidden");
+@@ -4527,7 +4552,10 @@
+   // "Play this song" shows when the page and the player hold different songs.
+   function paintPlayHere() {
+     var button = $("playHere");
+-    if (button) button.classList.toggle("is-hidden", !STATE.take || !!(STATE.playerTake && STATE.playerTake.name === STATE.take.name));
++    // HERESY 1168 (Viktor 06.10.2026: «PLAY THIS SONG не должна появляться, когда крутится синтез. А вот когда рендер
++    // закончился, она наоборот - исчезла, а не появилась. Автоматический плей был выключен»): it offers the take shown
++    // when that take is not playing; a run being watched has no take yet; a take the idle player only holds is offered
++    if (button) button.classList.toggle("is-hidden", !STATE.take || !!(STATE.playerTake && STATE.playerTake.name === STATE.take.name && isPlaying()));
+   }
+ 
+   // Put a song in the player and start it: "Play this song" (right after the title, on the left)
+@@ -4837,12 +4865,12 @@
+     $("playBtn").setAttribute("aria-label", playing ? "Pause" : "Play");
+   }
+   audio.addEventListener("play", function () {
+-    paintPlayButton(true); markPlaying(); paintSession();
++    paintPlayButton(true); markPlaying(); paintSession(); paintPlayHere();
+     var HC = window.HeresyCollection;                   // HERESY 1162: heard once, fresh no more
+     if (HC && HC.markPlayed && STATE.playerTake && !STATE.playerTake.session) HC.markPlayed(STATE.playerTake.name);
+   });
+   audio.addEventListener("loadedmetadata", function () { paintSession(); paintTimes(); });   // HERESY 1111
+-  audio.addEventListener("pause", function () { paintPlayButton(false); markPlaying(); paintSession(); });
++  audio.addEventListener("pause", function () { paintPlayButton(false); markPlaying(); paintSession(); paintPlayHere(); });   // HERESY 1168
+   audio.addEventListener("ended", function () {
+     paintPlayButton(false); markPlaying();
+     if (repeatMode() === "one") { audio.currentTime = 0; audio.play().catch(function () {}); return; }   // HERESY 1106
+@@ -7814,6 +7842,7 @@
+       b.dataset.tip = up ? "Back into the room (Esc)" : "This frame over the room, larger: Esc or a click beside it puts it back";
+       if (window.HeresyIcons) b.innerHTML = window.HeresyIcons.ui(up ? "minimize" : "maximize");
+     });
++    if (which) $(FRAMES[which]).setAttribute("tabindex", "-1");   // the keys can stay with it (the player's clicks give them back)
+     window.dispatchEvent(new Event("resize"));   // the wave, the staff and the pictures measure their frame again
+   }
+   all(".frame-big").forEach(function (b) {
+@@ -7821,8 +7850,24 @@
+   });
+   all(".frame-swap").forEach(function (b) { b.addEventListener("click", function () { frameOver(b.dataset.frame); }); });
+   $("frameVeil").addEventListener("click", function () { frameOver(null); });
++  // Viktor: «И кликами на плеер чтобы не убегал фокус и чтобы оверлей не схлопывался… А по другим краям иже оверлея пусть
++  // схлопывается»: the player sits over the veil, so its clicks never fold the frame; after one the keys go back to the frame
++  $("playbar").addEventListener("pointerup", function (event) {
++    var f = document.body.dataset.frame && $(FRAMES[document.body.dataset.frame]);
++    if (!f || (event.target.closest && event.target.closest("input, select, textarea"))) return;
++    setTimeout(function () { if (!f.contains(document.activeElement)) f.focus({ preventScroll: true }); }, 0);
++  });
+   // Esc puts the frame back, unless a menu, a dialog or the staff's full screen is open over it: those close first, by their
+   // own Esc (this runs before them, while they are still there)
++  // HERESY 1168 (Viktor: «ты говорил, что перехватишь F5 в Библиотеке»): F5 in the Librarian reads the library again and
++  // leaves the page as it is, the music playing on; Ctrl+F5 or Shift+F5 still reload the page
++  window.addEventListener("keydown", function (event) {
++    if (event.key !== "F5" || event.ctrlKey || event.shiftKey || event.metaKey || event.altKey || document.body.dataset.tab !== "collection") return;
++    event.preventDefault();
++    if (window.HeresyCollection) window.HeresyCollection.reload();
++    refreshLibrary().catch(function () {});
++    toast("The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page");
++  }, true);
+   window.addEventListener("keydown", function (event) {
+     if (event.key !== "Escape" || !document.body.dataset.frame) return;
+     var over = document.querySelectorAll(".menu-pop:not(.is-hidden), .hm-menu, .hz-view, .hd-back, .ds-back, .hi-back, .cmp-back, .hg-back, .dw-back, .coll-sheet");
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 70930c3..cfce02b 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2830,3 +2830,7 @@ RuachI18n.add("be", {
+ "Back into the room (Esc)": "Назад у пакой (Esc)",
+ "Only the favourites (★), in the workspace you are in": "Толькі абраныя (★), у прасторы, дзе ты цяпер"
+ });
++// HERESY 1168: F5 in the Librarian
++RuachI18n.add("be", {
++"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Бібліятэка перачытаная (F5 тут не кранае старонку і музыку); Ctrl+F5 перазагружае старонку"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index c1f2bd1..7f6c959 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2829,3 +2829,7 @@ RuachI18n.add("el", {
+ "Back into the room (Esc)": "Πίσω στο δωμάτιο (Esc)",
+ "Only the favourites (★), in the workspace you are in": "Μόνο τα αγαπημένα (★), στον χώρο όπου βρίσκεσαι"
+ });
++// HERESY 1168: F5 in the Librarian
++RuachI18n.add("el", {
++"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Η βιβλιοθήκη διαβάστηκε ξανά (το F5 εδώ αφήνει τη σελίδα και τη μουσική); το Ctrl+F5 ξαναφορτώνει τη σελίδα"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 1fc30da..b2df528 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2829,3 +2829,7 @@ RuachI18n.add("es", {
+ "Back into the room (Esc)": "De vuelta a la sala (Esc)",
+ "Only the favourites (★), in the workspace you are in": "Solo las favoritas (★), en el espacio donde estás"
+ });
++// HERESY 1168: F5 in the Librarian
++RuachI18n.add("es", {
++"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "La biblioteca, leída de nuevo (F5 aquí deja la página y la música); Ctrl+F5 recarga la página"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 1d28292..801a086 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2829,3 +2829,7 @@ RuachI18n.add("it", {
+ "Back into the room (Esc)": "Di nuovo nella stanza (Esc)",
+ "Only the favourites (★), in the workspace you are in": "Solo i preferiti (★), nello spazio in cui sei"
+ });
++// HERESY 1168: F5 in the Librarian
++RuachI18n.add("it", {
++"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "La libreria riletta (F5 qui lascia la pagina e la musica); Ctrl+F5 ricarica la pagina"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index c7a743a..944b33a 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2835,3 +2835,7 @@ RuachI18n.add("ru", {
+ "Back into the room (Esc)": "Обратно в комнату (Esc)",
+ "Only the favourites (★), in the workspace you are in": "Только избранные (★), в пространстве, где ты сейчас"
+ });
++// HERESY 1168: F5 in the Librarian
++RuachI18n.add("ru", {
++"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Библиотека перечитана (F5 здесь не трогает страницу и музыку); Ctrl+F5 перезагружает страницу"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 91eb302..ff816b9 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2830,3 +2830,7 @@ RuachI18n.add("uk", {
+ "Back into the room (Esc)": "Назад у кімнату (Esc)",
+ "Only the favourites (★), in the workspace you are in": "Лише обрані (★), у просторі, де ти зараз"
+ });
++// HERESY 1168: F5 in the Librarian
++RuachI18n.add("uk", {
++"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Бібліотеку перечитано (F5 тут не чіпає сторінку й музику); Ctrl+F5 перезавантажує сторінку"
++});
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 29ff14d..47529b2 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1343,9 +1343,12 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
+             <button type="button" class="btn ghost small" data-or-model="deepseek/deepseek-v4.1-flash">DeepSeek V4.1 Flash</button>
+             <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-max-0902">Qwen3.8 Max</button>
+             <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-flash">Qwen3.8 Flash</button></div>
+-          <label class="field or-only" data-tip="Your OpenRouter key. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file. Without Remember it is gone when the page closes."><span class="label">API key</span><input type="password" id="orKey" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
++          <!-- HERESY 1168 (Viktor 06.10.2026: «И поле API Key расширь, и `Remember the key` в одну строчку с этим полем ключа») -->
++          <div class="or-only or-key-row">
++            <label class="field" data-tip="Your OpenRouter key. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file. Without Remember it is gone when the page closes."><span class="label">API key</span><input type="password" id="orKey" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
++            <label class="check" data-tip-size="big" data-tip="Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file."><input type="checkbox" id="orRemember" /> <span>Remember the key</span></label>
++          </div>
+         </div>
+-        <label class="check or-only" data-tip-size="big" data-tip="Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file."><input type="checkbox" id="orRemember" /> <span>Remember the key</span></label>
+         <div class="field-row wrap">
+           <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
+           <label class="field grow"><span class="label">Structure</span>
+-- 
+2.43.0
+

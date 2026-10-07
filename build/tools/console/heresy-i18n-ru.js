@@ -245,8 +245,8 @@ RuachI18n.add("ru", {
 "Reset sampling": "Сбросить сэмплинг",
 "Sound and output": "Звук и вывод",
 "WAV 24-bit": "WAV 24 бита",
-"ODE steps": "Шаги ODE",
-"About ODE steps": "О шагах ODE",
+"Denoising steps": "Шаги расшумления",
+"About Denoising steps": "О шагах расшумления",
 "sound solver": "звуковой решатель",
 "Solver": "Решатель",
 "About Solver": "О решателе",
@@ -944,7 +944,7 @@ RuachI18n.add("ru", {
 ", then watch it take shape: the score is\n        written, the music is composed, and the sound is rendered into your finished track. Any song you pick\n        from Takes opens here too.": ", затем смотри, как она обретает форму: пишется партитура, сочиняется музыка, и звук отрисовывается в готовый трек. Любая песня, выбранная из «Семплов», тоже открывается здесь.",
 "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. To share a WAV song as MP3, use the MP3 download on its page instead.": "Битрейт, когда сама песня делается в MP3 (Формат: MP3). 320 почти прозрачно; по умолчанию у сервера 128. Чтобы поделиться WAV-песней в MP3, лучше скачай MP3 на её странице.",
 "FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.": "FLAC: та же песня без потерь (каждый отсчёт как в WAV) примерно на три четверти размера. Делается на месте примерно за секунду; название и текст записываются в файл.",
-"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Your VAE, output and theme choices stay.": "Начать новую песню: все поля, оба сида, партитура, загруженные музыкальные коды, режим, сэмплинг, слайдеры, LoRA и «Инструментал» — к значениям по умолчанию. Твои VAE, вывод и тема остаются.",
+"Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.": "Начать новую песню: все поля, оба сида, партитура, загруженные музыкальные коды, режим, сэмплинг, слайдеры, LoRA и «Инструментал» — к значениям по умолчанию. «Звук и вывод» (VAE, решатель, шаги, длина, формат) и тема остаются.",
 "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, into the form below, where you can edit them before generating.": "Одна строка о песне, которую ты хочешь (история, настроение, жанр). Модель Писателя набрасывает по ней название, промпт стиля и текст в форму ниже, где их можно править перед созданием.",
 "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode).\nVocal melody only: just the sung line.\nMelody and chords: melody plus chord symbols (use Full mode).": "Ведущая мелодия: самая заметная линия, голос или инструмент, без аккордов (режим «Только мелодия»).\nТолько вокальная мелодия: одна спетая линия.\nМелодия и аккорды: мелодия плюс аккордовые символы (режим «Полный план»).",
 "How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then.": "Как стемы уравновешены в сведении, в dB на стем (уровни ниже важнее). Только для набора стемов: у одиночного файла, включая семпл, уравновешивать нечего, и пресет тогда выключен.",
@@ -1078,7 +1078,7 @@ RuachI18n.add("ru", {
 "temperature {0} · top-p {1} · top-k {2}": "температура {0} · top-p {1} · top-k {2}",
 "Sliders reset to the tuned defaults": "Слайдеры сброшены к настроенным значениям",
 "Output reset: WAV 24-bit, {0} steps, no length cap below the default": "Вывод сброшен: WAV 24 бит, шагов: {0}, без ограничения длины ниже стандартного",
-"ODE steps must be a whole number, 1 or more": "Шаги ODE: целое число, 1 или больше",
+"Denoising steps must be a whole number, 1 or more": "Шаги расшумления: целое число, 1 или больше",
 "Max length must be a number of seconds above 0": "Макс. длина: число секунд больше 0",
 "Sound variations must be between 1 and 9": "Звуковых вариаций: от 1 до 9",
 "Peak clip must be a whole number, 0 or more": "Срез пиков: целое число, 0 или больше",
@@ -1996,7 +1996,7 @@ RuachI18n.add("ru", {
 "About the {0} VAE": "О VAE «{0}»",
 "{#0} decoders": { "one": "{0} декодер", "few": "{0} декодера", "many": "{0} декодеров", "other": "{0} декодера" },
 "{#0} decoder": { "one": "{0} декодер", "few": "{0} декодера", "many": "{0} декодеров", "other": "{0} декодера" },
-"{0} picked in the form": "{0} выбран в форме",
+"{0} picked in the ☰ menu": "{0} выбран в меню ☰",
 "a finished song can add another from its page": "готовая песня может добавить ещё один со своей страницы",
 "The current official decoder, and the default. The cleanest, best-sounding one: start here.": "Нынешний официальный декодер, он же стандартный. Самый чистый и лучше всех звучащий: начинай с него.",
 "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs.": "Прежний официальный декодер. Опубликованные оценки бенчмарков сделаны с ним. Менее чистый, чем Стандартный; кому-то он слышится музыкальнее. Тот же энкодер, отличается только декодер.",
@@ -2650,7 +2650,7 @@ RuachI18n.add("ru", {
 "The longest song: it follows Max length in Sound and output, 25 music tokens a second (8:00 is 12,000). ✓ Set Max length close to the length the lyrics need. ⚠ Much more room than the lyrics need, and after the last line the model goes back and sings earlier lines again (measured: 24 such returns after the lyrics ended). A song cut off here is marked truncated.": "Самая длинная песня: следует за «Макс. длиной» в «Звуке и выводе», 25 музыкальных токенов в секунду (8:00 — это 12 000).\n✓ Ставь «Макс. длину» близко к той, что нужна тексту.\n⚠ Если места намного больше, чем нужно тексту, после последней строки модель возвращается и поёт прежние строки снова (замерено: 24 таких возврата после конца текста). Песня, оборванная здесь, помечается как обрезанная.",
 "Only the disliked (a dislike hides a take everywhere else)": "Только непонравившиеся («Не нравится» прячет семпл везде в других местах)",
 "Start a new song?": "Начать новую песню?",
-"Its title, style, lyrics, score, seeds and every knob go back to the defaults. The takes stay.": "Название, стиль, текст, партитура, сиды и все ручки вернутся к значениям по умолчанию. Семплы останутся.",
+"Its title, style, lyrics, score, seeds, the mode, sampling, sliders and LoRAs go back to the defaults. Sound and output (VAE, solver, steps, length, format) and the takes stay.": "Название, стиль, текст, партитура, сиды, режим, сэмплинг, слайдеры и LoRA вернутся к значениям по умолчанию. «Звук и вывод» (VAE, решатель, шаги, длина, формат) и семплы останутся.",
 "New song": "Новая песня",
 "(the log is empty)": "(лог пуст)",
 "Sound, together": "Звук вместе",
@@ -2822,4 +2822,36 @@ RuachI18n.add("ru", {
 "Mongolian throat singing": "Монгольское горловое пение",
 "Classical string quartet": "Классический струнный квартет",
 "Film noir jazz": "Джаз в духе нуара"
+});
+// HERESY 1168: the Creator's frames over the room; the Librarian's star among the filters
+RuachI18n.add("ru", {
+"The take's frame": "Фрейм семпла",
+"The other frame over the room: the take": "Другой фрейм поверх комнаты: семпл",
+"Over the room": "Поверх комнаты",
+"This frame over the room, larger: Esc or a click beside it puts it back": "Этот фрейм поверх комнаты, крупнее: Esc или щелчок рядом вернёт его на место",
+"The form's frame": "Фрейм формы",
+"The other frame over the room: Compose": "Другой фрейм поверх комнаты: Сочинение",
+"Back into the room": "Обратно в комнату",
+"Back into the room (Esc)": "Обратно в комнату (Esc)",
+"Only the favourites (★), in the workspace you are in": "Только избранные (★), в пространстве, где ты сейчас"
+});
+// HERESY 1168: F5 in the Librarian
+RuachI18n.add("ru", {
+"The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page": "Библиотека перечитана (F5 здесь не трогает страницу и музыку); Ctrl+F5 перезагружает страницу"
+});
+// HERESY 1168: the lyrics' meter
+RuachI18n.add("ru", {
+"Lyrics: {0} characters · {1} syllables · {2} lines": "Лирика: {0} знаков · {1} слогов · {2} строк",
+"Tags: {0} characters in {1}": "Теги: {0} знаков в {1}",
+"In brackets: {0} characters in {1}": "В скобках: {0} знаков в {1}",
+"The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)": "Фонетическая рука: ударения (U+0301), айин внутри русских слов (мягкое о/а), латиница внутри русских слов (твёрдое o)",
+"Stress {0} · ע {1} · Latin {2}": "Ударений {0} · ע {1} · латиница {2}",
+"The browser's spelling check in the lyrics' language; press to switch it off or on": "Проверка орфографии браузера на языке лирики; нажми, чтобы выключить или включить",
+"Spelling": "Орфография",
+"The box grows with the words again, as it did before you drew it": "Поле снова растёт за словами, как до того, как ты его растянул",
+"Auto height": "Авто-высота",
+"verse + bridge": "куплет + мост",
+"pre-chorus": "пред-припев",
+"post-chorus": "пост-припев",
+"chorus": "припев"
 });

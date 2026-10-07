@@ -562,7 +562,10 @@
     if (n) changed();
     return n;
   }
-  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, triggersFor: triggersFor, describe: describe, lines: lines, repaint: paint,
+  // HERESY 1168: is this adapter in loras/? (null while the catalog has not come: unknown, not «no»)
+  // (its own name: has(e, half) above is the halves' question)
+  function inCatalog(id) { return S.catalog.length ? !!entry(id) : null; }
+  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, triggersFor: triggersFor, describe: describe, has: inCatalog, lines: lines, repaint: paint,
     listInto: listInto, setSources: setSources, zone: function (id, half) { return zones(entry(id), half); }, name: nameOf, toGreen: toGreen,
     total: function () { return { value: arTotal(), stacked: arStacked(), safe: AR_TOTAL.safe, limit: AR_TOTAL.limit }; } };
 })(window);

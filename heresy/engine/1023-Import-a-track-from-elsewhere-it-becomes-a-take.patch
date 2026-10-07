@@ -1,7 +1,7 @@
 From c7464757dea446cac20d4a9732a90f179104fd6d Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 19:33:44 -0600
-Subject: [PATCH 1023/1179] Import a track from elsewhere: it becomes a take
+Subject: [PATCH 1023/1198] Import a track from elsewhere: it becomes a take
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
