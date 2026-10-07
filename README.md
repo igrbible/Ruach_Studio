@@ -249,7 +249,10 @@ until their time:
 - **One shape for the icon buttons** across the rooms.
 - **A voice's kind in the Trainer**: measured on speech and on singing, shown beside the set, with a name to give it.
 - **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its
-  services itself.
+  services itself (Ctrl+1…6 for the rooms there), packed as an **AppImage**: the studio, its Python and its CUDA libraries
+  in one file, the models fetched at the first start, and the models and the songs kept wherever you choose on your disk.
+- **A one-click install with [Pinokio](https://pinokio.computer)**: install and start the studio in one click, on Linux and
+  on Windows 11 through the same WSL2 path (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)).
 - **A score editor as a DAW has one**: a piano roll, a chord lane, the lyrics over the notes, sections copied and
   moved, a MIDI keyboard to play ideas in; [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System)
   (Apache-2.0) shows the way.
