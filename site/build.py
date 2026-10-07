@@ -168,6 +168,33 @@ FIRST_VISIT = """<script>
   } catch (e) {} })();
 </script>"""
 
+# HERESY 1168 (Viktor 07.10.2026: «на русский переключил и увидел вручную перенесённые строки… Пройдись по всем языкам и
+# исправь для правильного autowrap»): no line ends in a word of one or two letters (а, в, и, на; a, I; y, de; e, il; ο, το),
+# the particles lean on the word before them (же, ли, бы), no line starts with a dash, a number keeps its unit and a model
+# name its number (12 ГБ, RTX 3090): the spaces there are non-breaking, in the text between the tags only (not in
+# scripts, styles, the logo, the title)
+NB = " "
+SKIP_TAGS = ("script", "style", "svg", "title", "code", "pre", "textarea")
+POST = r"(?:же|ли|бы|ль|ж|б|жа|лі|би)"
+def typeset(page, code):
+    parts = re.split(r"(<!--.*?-->|<[^>]+>)", page, flags=re.S)
+    depth = 0
+    for i, p in enumerate(parts):
+        if i % 2:
+            m = re.match(r"<(/?)([a-zA-Z][\w-]*)", p)
+            if m and m.group(2).lower() in SKIP_TAGS and not p.endswith("/>"):
+                depth += -1 if m.group(1) else 1
+            continue
+        if depth > 0 or not p.strip():
+            continue
+        t = re.sub(r"[ \t\r\n]+(?=" + POST + r"(?!\w))", NB, p)
+        t = re.sub(r"(?<![\w'’\-.&#;])(?!" + POST + r"(?!\w))(\w{1,2})[ \t\r\n]+(?=\S|$)", lambda m: m.group(1) + NB, t)
+        t = re.sub(r"[ \t\r\n]+(?=[—–](?:\s|$))", NB, t)
+        t = re.sub(r"(\d[\d.,:+%×]*)[ \t\r\n]+(?=\S)", lambda m: m.group(1) + NB, t)
+        t = re.sub(r"(\b[A-ZА-ЯЁ][\w.+-]*)[ \t\r\n]+(?=\d)", lambda m: m.group(1) + NB, t)
+        parts[i] = t
+    return "".join(parts)
+
 if __name__ == "__main__":
     svg = (here.parent / "src/brand/ruach-logo.svg").read_text(encoding="utf-8").strip()
     template = (here / "template.html").read_text(encoding="utf-8").replace("{{LOGO}}", svg)
@@ -190,6 +217,7 @@ if __name__ == "__main__":
     for code, _ in built:
         catalog = json.load(open(here / "i18n" / (code + ".json"), encoding="utf-8")) if code != "en" else {}
         page, missing = page_for(code, template, units, catalog)
+        page = typeset(page, code)
         out = here / ("index.html" if code == "en" else code + "/index.html")
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(page, encoding="utf-8")

@@ -93,6 +93,11 @@
   h1 { font-size: clamp(30px, 4.6vw, 52px); line-height: 1.12; margin: 0 0 18px; font-weight: 700; letter-spacing: -.01em; }
   .lead { max-width: 760px; margin: 0 auto 26px; color: var(--soft); font-size: clamp(17px, 2vw, 20px); }
   .lead b { color: var(--ink); font-weight: 600; }
+  /* HERESY 1168 (Viktor 07.10.2026: «увидел вручную перенесённые строки… исправь для правильного autowrap»): headings and the
+     lead in balanced lines, the text with no word left alone on its last line; build.py binds short words, numbers, units
+     and dashes to their neighbours with non-breaking spaces */
+  h1, h2, h3, .lead, .sub, .rc { text-wrap: balance; }
+  p, li, td, figcaption, .nums span { text-wrap: pretty; }
   .ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 10px; font-weight: 600; font-size: 15px;
          border: 1px solid var(--rule); background: var(--paper); color: var(--ink); }
@@ -397,10 +402,10 @@
   </g>
 </svg></div>
     <div class="osem" translate="no"><b>OSEM</b><span class="say">Simply awesome</span><span>Open Source, Engaged &amp; Musical</span></div>
-    <h1>Песни из слов, на твоей собственной машине.</h1>
-    <p class="lead">Целая студия вокруг <b>YuE2</b>, открытой модели песен. Пишешь стиль и текст, а студия сочиняет, поёт и сводит песню на <b>твоей собственной видеокарте</b>. Твои песни, слова и настройки никогда её не покидают.</p>
-    <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Взять на GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.ru.md">Читать руководство</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Модели на Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Купи мне кофемашину</a></div>
-    <span class="rc"><b>2.0.0-rc2</b> · второй кандидат в релизы · октябрь 2026</span>
+    <h1>Песни из слов и аккордов<br>на твоей собственной машине</h1>
+    <p class="lead">Целая студия вокруг <b>YuE2</b>, открытой модели песен. Пишешь стиль и текст, а студия сочиняет, поёт и сводит песню на <b>твоей собственной видеокарте</b>. Твои песни, слова и настройки никогда её не покидают.</p>
+    <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Взять на GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.ru.md">Читать руководство</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Модели на Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Купи мне кофемашину</a></div>
+    <span class="rc"><b>2.0.0-rc2</b> · второй кандидат в релизы · октябрь 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -410,10 +415,10 @@
     </div>
 
     <div class="nums">
-      <div><b>8 мин</b><span>целые песни, до восьми минут</span></div>
-      <div><b>126 с</b><span>песня в 6:12 на одной RTX 3090</span></div>
-      <div><b>5 комнат</b><span>сочинять, писать, гранить, хранить и учить</span></div>
-      <div><b>200</b><span>инструментов, проверенных на слух</span></div>
+      <div><b>8 мин</b><span>целые песни, до восьми минут</span></div>
+      <div><b>126 с</b><span>песня в 6:12 на одной RTX 3090</span></div>
+      <div><b>5 комнат</b><span>сочинять, писать, гранить, хранить и учить</span></div>
+      <div><b>200</b><span>инструментов, проверенных на слух</span></div>
       <div><b>7</b><span>языков страницы</span></div>
     </div>
   </div>
@@ -421,20 +426,20 @@
   <section id="rooms">
     <div class="wrap">
       <h2>Пять комнат, одна студия</h2>
-      <p class="sub"><b>Творец</b> делает песню, <b>Писатель</b> пишет её вместе с чат-моделью, <b>Огранщик</b> доводит её, <b>Библиотекарь</b> хранит каждый семпл, а <b>Тренер LoRA</b> учит YuE2 твоим собственным песням. Руководство по каждой комнате — внутри студии.</p>
+      <p class="sub"><b>Творец</b> делает песню, <b>Писатель</b> пишет её вместе с чат-моделью, <b>Огранщик</b> доводит её, <b>Библиотекарь</b> хранит каждый семпл, а <b>Тренер LoRA</b> учит YuE2 твоим собственным песням. Руководство по каждой комнате — внутри студии.</p>
       <div class="rooms">
         <article class="room"><a class="pic" href="../assets/shots/studio-create.webp"><img src="../assets/shots/studio-create.webp" alt="Творец" loading="lazy"></a>
-          <div><h3>Творец</h3><p>Стиль, текст, режим планирования, декодер, слайдеры, LoRA на дороге от зелёного к красному; семпл с его партитурой, сидами и всем, чтобы сделать его снова.</p></div></article>
+          <div><h3>Творец</h3><p>Стиль, текст, режим планирования, декодер, слайдеры, LoRA на дороге от зелёного к красному; семпл с его партитурой, сидами и всем, чтобы сделать его снова.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-writer.webp"><img src="../assets/shots/studio-writer.webp" alt="Писатель" loading="lazy"></a>
-          <div><h3>Писатель</h3><p>Песни как документы с версиями, текстовые профили и твоя собственная чат-модель (или OpenRouter), которая набрасывает и правит вместе с тобой.</p></div></article>
+          <div><h3>Писатель</h3><p>Песни как документы с версиями, текстовые профили и твоя собственная чат-модель (или OpenRouter), которая набрасывает и правит вместе с тобой.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-post.webp"><img src="../assets/shots/studio-post.webp" alt="Огранщик" loading="lazy"></a>
-          <div><h3>Огранщик</h3><p>Спектр, артефакты, антигул, проверка текста через Whisper, стемы, ремастер, апскейл; одна цепочка запускает их все.</p></div></article>
+          <div><h3>Огранщик</h3><p>Спектр, артефакты, антигул, проверка текста через Whisper, стемы, ремастер, апскейл; одна цепочка запускает их все.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="Библиотекарь" loading="lazy"></a>
-          <div><h3>Библиотекарь</h3><p>Каждый семпл в пространствах: найден, оценён, с заметкой, под замком, с обложкой, отправлен в твою DAW; корзина, которая возвращает.</p></div></article>
+          <div><h3>Библиотекарь</h3><p>Каждый семпл в пространствах: найден, оценён, с заметкой, под замком, с обложкой, отправлен в твою DAW; корзина, которая возвращает.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-train.webp"><img src="../assets/shots/studio-train.webp" alt="Тренер LoRA" loading="lazy"></a>
-          <div><h3>Тренер LoRA</h3><p>Адаптеры из твоих собственных песен: набор, запуск, кривые обеих половин с объяснением, эпохи, которые стоит послушать первыми.</p></div></article>
+          <div><h3>Тренер LoRA</h3><p>Адаптеры из твоих собственных песен: набор, запуск, кривые обеих половин с объяснением, эпохи, которые стоит послушать первыми.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/instruments.webp"><img src="../assets/shots/instruments.webp" alt="Шпаргалка инструментов" loading="lazy"></a>
-          <div><h3>Шпаргалка ♪</h3><p>200 инструментов, проверенных и оценённых на слух: что YuE2 действительно играет, что звучит у неё жидко и чего она не знает.</p></div></article>
+          <div><h3>Шпаргалка ♪</h3><p>200 инструментов, проверенных и оценённых на слух: что YuE2 действительно играет, что звучит у неё жидко и чего она не знает.</p></div></article>
       </div>
     </div>
   </section>
@@ -442,35 +447,43 @@
   <section id="studio">
     <div class="wrap">
       <h2>Почему это студия</h2>
-      <p class="sub">Не очередная обёртка над моделью, а мастерская вокруг неё: открытая до костей, каждое изменение пронумеровано и описано.</p>
+      <p class="sub">Не очередная обёртка над моделью, а мастерская вокруг неё: открытая до костей, каждое изменение пронумеровано и описано.</p>
       <ul class="feats">
-        <li><b>Целые песни, до восьми минут.</b> Песня в 6:12 за 126 с; песня в 7:25 с партитурой сначала за 198 с, на одной RTX 3090.</li>
-        <li><b>Сначала партитура, и править её тебе.</b> YuE2 пишет мелодию и аккорды в ABC прежде, чем прозвучит хоть одна нота: меняй их, транспонируй, приноси свою партитуру или MIDI, и песня пойдёт за ней.</li>
-        <li><b>Два сида, а не один.</b> Оставь песню (музыкальный сид) и услышь её отрисованной заново (звуковой сид).</li>
-        <li><b>Твой собственный звук.</b> Обучение LoRA на твоих собственных песнях, прямо в студии, без квантизации (bf16), с телеметрией, которая подскажет, какие эпохи слушать первыми.</li>
+        <li><b>Целые песни, до восьми минут.</b> Песня в 6:12 за 126 с; песня в 7:25 с партитурой сначала за 198 с, на одной RTX 3090.</li>
+        <li><b>Сначала партитура, и править её тебе.</b> YuE2 пишет мелодию и аккорды в ABC прежде, чем прозвучит хоть одна нота: меняй их, транспонируй, приноси свою партитуру или MIDI, и песня пойдёт за ней.</li>
+        <li><b>Два сида, а не один.</b> Оставь песню (музыкальный сид) и услышь её отрисованной заново (звуковой сид).</li>
+        <li><b>Твой собственный звук.</b> Обучение LoRA на твоих собственных песнях, прямо в студии, без квантизации (bf16), с телеметрией, которая подскажет, какие эпохи слушать первыми.</li>
         <li><b>Постпродакшн, весь локально.</b> Стемы (BS-Roformer, htdemucs), антигул, ремастер, апскейл (UniverSR), проверка текста через Whisper.</li>
-        <li><b>В твою DAW</b> <i>(экспериментально)</i>. Проект REAPER со стемами, партитурой в MIDI, секциями и текстом на таймлайне; DAWproject для Waveform и Bitwig.</li>
-        <li><b>Лирика, которая держит такт.</b> Доли каждой строки против линейки её раздела: слоги по правилам каждого языка и согласные, что берут свою долю; теги разделов подсказываются, пока набираешь «[»; ударения мимо гласной находятся.</li>
-        <li><b>Писатель, который знает движок.</b> Стиль короткими тегами, самое важное первым: так YuE2 следует лучше всего.</li>
-        <li><b>Несколько видеокарт, несколько задач.</b> Синтез на одной карте, обучение на других; с одной картой страница скажет, что ждёт.</li>
-        <li><b>Для скриптов и агентов.</b> API (OpenAPI 3.1) и MCP-сервер на твоей машине и в твоей сети.</li>
-        <li><b>Твой язык.</b> Страница целиком на английском, русском, украинском, белорусском, греческом, испанском и итальянском.</li>
+        <li><b>В твою DAW</b> <i>(экспериментально)</i>. Проект REAPER со стемами, партитурой в MIDI, секциями и текстом на таймлайне; DAWproject для Waveform и Bitwig.</li>
+        <li><b>Лирика, которая держит такт.</b> Доли каждой строки против линейки её раздела: слоги по правилам каждого языка и согласные, что берут свою долю; теги разделов подсказываются, пока набираешь «[»; ударения мимо гласной находятся.</li>
+        <li><b>Писатель, который знает движок.</b> Стиль короткими тегами, самое важное первым: так YuE2 следует лучше всего.</li>
+        <li><b>Несколько видеокарт, несколько задач.</b> Синтез на одной карте, обучение на других; с одной картой страница скажет, что ждёт.</li>
+        <li><b>Для скриптов и агентов.</b> API (OpenAPI 3.1) и MCP-сервер на твоей машине и в твоей сети.</li>
+        <li><b>Твой язык.</b> Страница целиком на английском, русском, украинском, белорусском, греческом, испанском и итальянском.</li>
       </ul>
 
       <div class="pair">
-        <figure><img src="../assets/shots/babel.webp" alt="Вавилон в партитуре: запуск остановлен, и сказано почему" loading="lazy" style="margin:auto"><figcaption>Вавилон в партитуре: пойман через 15 с после старта</figcaption></figure>
+        <figure><img src="../assets/shots/babel.webp" alt="Вавилон в партитуре: запуск остановлен, и сказано почему" loading="lazy" style="margin:auto"><figcaption>Вавилон в партитуре: пойман через 15 с после старта</figcaption></figure>
         <div>
-          <h3>Сторож от мусора</h3>
-          <p>Когда музыкальная половина пишет сломанную партитуру (так бывает с адаптерами, выкрученными слишком сильно), движок останавливает запуск прежде, чем на ней построится хоть какая-то музыка, за секунды, и говорит почему: какие адаптеры, насколько они вышли за свои пределы, что было написано.</p>
-          <p>Силы стоят на измеренных дорогах; сложенные адаптеры делят измеренный потолок.</p>
+          <h3>Сторож от мусора</h3>
+          <p>Когда музыкальная половина пишет сломанную партитуру (так бывает с адаптерами, выкрученными слишком сильно), движок останавливает запуск прежде, чем на ней построится хоть какая-то музыка, за секунды, и говорит почему: какие адаптеры, насколько они вышли за свои пределы, что было написано.</p>
+          <p>Силы стоят на измеренных дорогах; сложенные адаптеры делят измеренный потолок.</p>
         </div>
       </div>
       <div class="pair flip">
-        <figure><img src="../assets/shots/train-charts.webp" alt="Кривые Тренера" loading="lazy"><figcaption>Кривые обеих половин, с объяснением</figcaption></figure>
+        <figure><img src="../assets/shots/train-charts.webp" alt="Кривые Тренера" loading="lazy"><figcaption>Кривые обеих половин, с объяснением</figcaption></figure>
         <div>
           <h3>Свой тренер LoRA</h3>
-          <p>Студия сама обучает адаптеры, на неквантованных весах bf16. Против AI-Toolkit от Ostris на том же наборе потеря музыкальной половины сходится эпоха в эпоху в пределах 0.015.</p>
-          <p>Ранг 16 на 148 песнях: 2.1 с на шаг в 12 ГБ. Ранг 32 на 42 целых песнях: 6.7 с на шаг в 18 ГБ.</p>
+          <p>Студия сама обучает адаптеры, на неквантованных весах bf16. Против AI-Toolkit от Ostris на том же наборе потеря музыкальной половины сходится эпоха в эпоху в пределах 0.015.</p>
+          <p>Ранг 16 на 148 песнях: 2.1 с на шаг в 12 ГБ. Ранг 32 на 42 целых песнях: 6.7 с на шаг в 18 ГБ.</p>
+        </div>
+      </div>
+      <div class="pair">
+        <figure><img src="../assets/shots/lyrics-meter.webp" width="895" height="850" alt="Редактор лирики: доли каждой строки против линейки раздела" loading="lazy"><figcaption>Доли каждой строки против линейки раздела</figcaption></figure>
+        <div>
+          <h3>Лирика, которая держит такт</h3>
+          <p>У каждой строки её доли, против линейки её раздела: куплет и мост одна группа, пред-припев и припев свои. Слог считается по правилам каждого языка, и согласные, что берут свою долю, тоже идут в счёт; пауза или интерлюдия внутри раздела новой группы не открывает.</p>
+          <p>Набери «[» в начале строки, и теги разделов подскажутся, как редактор кода подсказывает слова. Ударения мимо гласной находятся; Ctrl+F ищет только в этом поле.</p>
         </div>
       </div>
     </div>
@@ -478,22 +491,23 @@
 
   <section id="honestly">
     <div class="wrap">
-      <h2>Ruach Studio и SUNO, честно</h2>
-      <p class="sub">Каждую неделю какое-нибудь видео объявляет, что очередная модель убивает SUNO. Это не модель, а студия вокруг модели. Вот где она выигрывает, а где (пока) нет.</p>
+      <h2>Ruach Studio и SUNO, честно</h2>
+      <p class="sub">Каждую неделю какое-нибудь видео объявляет, что очередная модель убивает SUNO. Это не модель, а студия вокруг модели. Вот где она выигрывает, а где (пока) нет.</p>
       <div class="table">
         <table>
           <thead><tr><th></th><th>Ruach Studio (YuE2)</th><th>SUNO</th></tr></thead>
           <tbody>
-            <tr><td>где живёт</td><td>на твоей видеокарте; песни никогда её не покидают</td><td>в их облаке</td></tr>
-            <tr><td>сколько стоит</td><td>электричество</td><td>подписка и кредиты</td></tr>
+            <tr><td>где живёт</td><td>на твоей видеокарте; песни никогда её не покидают</td><td>в их облаке</td></tr>
+            <tr><td>сколько стоит</td><td>электричество</td><td>подписка и кредиты</td></tr>
             <tr><td>партитура</td><td>пишется первой, видна, правится, твоя (ABC, MIDI)</td><td>скрыта</td></tr>
-            <tr><td>повторить семпл</td><td>в точности: два сида, которые ты хранишь</td><td>нет</td></tr>
-            <tr><td>твой собственный звук</td><td>обучи LoRA на своих песнях, прямо в студии</td><td>обучения нет</td></tr>
-            <tr><td>после рендера</td><td>стемы, антигул, ремастер, апскейл, проверка текста, всё локально</td><td>стемы, в облаке</td></tr>
-            <tr><td>в DAW</td><td>проект REAPER с партитурой, секциями и текстом (экспериментально)</td><td>аудиостемы</td></tr>
+            <tr><td>лирика</td><td>счётчик у каждой строки: её доли против линейки раздела, слоги по правилам каждого языка; теги разделов подсказываются при наборе «[»</td><td>текстовое поле; текст напишут за тебя по запросу</td></tr>
+            <tr><td>повторить семпл</td><td>в точности: два сида, которые ты хранишь</td><td>нет</td></tr>
+            <tr><td>твой собственный звук</td><td>обучи LoRA на своих песнях, прямо в студии</td><td>обучения нет</td></tr>
+            <tr><td>после рендера</td><td>стемы, антигул, ремастер, апскейл, проверка текста, всё локально</td><td>стемы, в облаке</td></tr>
+            <tr><td>в DAW</td><td>проект REAPER с партитурой, секциями и текстом (экспериментально)</td><td>аудиостемы</td></tr>
             <tr><td>код</td><td>открыт, каждое изменение описано</td><td>закрыт</td></tr>
-            <tr class="honest"><td>лоск из коробки</td><td><b>меньше</b>: микс может гудеть (помогает антигул), текст может уплывать (проверка текста найдёт где), некоторые инструменты YuE2 играет жидко или не играет вовсе (их научит LoRA)</td><td><b>больше</b></td></tr>
-            <tr class="honest"><td>что нужно</td><td>видеокарта NVIDIA (24 ГБ, чтобы всё шло в полной точности), Linux, около 120 ГБ диска под модели, LoRA и пространства</td><td>браузер</td></tr>
+            <tr class="honest"><td>лоск из коробки</td><td><b>меньше</b>: микс может гудеть (помогает антигул), текст может уплывать (проверка текста найдёт где), некоторые инструменты YuE2 играет жидко или не играет вовсе (их научит LoRA)</td><td><b>больше</b></td></tr>
+            <tr class="honest"><td>что нужно</td><td>видеокарта NVIDIA (24 ГБ, чтобы всё шло в полной точности), Linux, около 120 ГБ диска под модели, LoRA и пространства</td><td>браузер</td></tr>
           </tbody>
         </table>
       </div>
@@ -505,17 +519,17 @@
       <h2>Что нужно</h2>
       <div class="cols">
         <div class="card"><h3>Машина</h3><ul>
-          <li><b>Видеокарта NVIDIA</b>: 24 ГБ, чтобы всё шло в полной точности</li>
-          <li><b>Linux</b> (сделано на Ubuntu 24.04, CUDA 12.8)</li>
-          <li><b>Около 120 ГБ</b> диска: модели (около 100 ГБ, их скачивает, закрепляет и проверяет <code>fetch-models.sh</code>), LoRA и пространства</li></ul></div>
+          <li><b>Видеокарта NVIDIA</b>: 24 ГБ, чтобы всё шло в полной точности</li>
+          <li><b>Linux</b> (сделано на Ubuntu 24.04, CUDA 12.8)</li>
+          <li><b>Около 120 ГБ</b> диска: модели (около 100 ГБ, их скачивает, закрепляет и проверяет <code>fetch-models.sh</code>), LoRA и пространства</li></ul></div>
         <div class="card"><h3>Экран</h3><ul>
-          <li>Сделано для окна браузера <b>1920×1080 при 100 %</b></li>
-          <li>Идеал: <b>2K</b> (2560×1440), от 22″, 16:9 или шире</li>
-          <li>Две темы для долгих часов творчества: Scroll &amp; Brick днём, Scroll by Lamplight ночью, и ещё 20</li></ul></div>
-        <div class="card"><h3>По желанию</h3><ul>
-          <li>Чат-сервер для Писателя (vLLM, LM Studio, Ollama) или ключ OpenRouter</li>
-          <li>DAW: REAPER, Waveform 14+, Bitwig</li>
-          <li>Больше видеокарт: обучение и задачи лаборатории рядом с песнями</li></ul></div>
+          <li>Сделано для окна браузера <b>1920×1080 при 100 %</b></li>
+          <li>Идеал: <b>2K</b> (2560×1440), от 22″, 16:9 или шире</li>
+          <li>Две темы для долгих часов творчества: Scroll &amp; Brick днём, Scroll by Lamplight ночью, и ещё 20</li></ul></div>
+        <div class="card"><h3>По желанию</h3><ul>
+          <li>Чат-сервер для Писателя (vLLM, LM Studio, Ollama) или ключ OpenRouter</li>
+          <li>DAW: REAPER, Waveform 14+, Bitwig</li>
+          <li>Больше видеокарт: обучение и задачи лаборатории рядом с песнями</li></ul></div>
       </div>
     </div>
   </section>
@@ -523,16 +537,16 @@
   <section id="next">
     <div class="wrap">
       <h2>Что дальше</h2>
-      <p class="sub">2.0.0-rc2 — студия, в которой мы каждый день делаем собственные песни. Вот крупные части на подходе, для rc3 и дальше.</p>
+      <p class="sub">2.0.0-rc2 — студия, в которой мы каждый день делаем собственные песни. Вот крупные части на подходе, для rc3 и дальше.</p>
       <ul class="feats">
-        <li><b>Комната Художника.</b> Обложки сразу в трёх форматах с одного сида (1:1 для альбома, 16:9 для видео, 9:16 для шортса), с названием и исполнителем на них, версии картинки каждого семпла.</li>
-        <li><b>Ещё пять языков.</b> Китайский, французский, португальский, немецкий и японский; языки справа налево — когда сама страница научится идти справа налево.</li>
-        <li><b>Модели Писателя с ценами</b> из списка OpenRouter, прямо при наборе.</li>
-        <li><b>Спокойнее в комнатах.</b> Каждая кнопка, которую не отменить, — за диалогом, пояснения в строке — в подсказки, одна форма для кнопок-иконок.</li>
-        <li><b>Тип голоса в Тренере</b>, измеренный на речи и на пении.</li>
-        <li><b>Настольное приложение.</b> Сначала устанавливаемая страница (PWA), потом приложение на Electron, которое само запускает и останавливает свои службы.</li>
-        <li><b>Редактор партитуры, как в DAW.</b> Пиано-ролл, дорожка аккордов, текст над нотами, MIDI-клавиатура, чтобы наигрывать идеи.</li>
-        <li><b>Нативные плагины</b> для REAPER, Waveform и Bitwig, когда студия найдёт своих людей.</li>
+        <li><b>Комната Художника.</b> Обложки сразу в трёх форматах с одного сида (1:1 для альбома, 16:9 для видео, 9:16 для шортса), с названием и исполнителем на них, версии картинки каждого семпла.</li>
+        <li><b>Ещё пять языков.</b> Китайский, французский, португальский, немецкий и японский; языки справа налево — когда сама страница научится идти справа налево.</li>
+        <li><b>Модели Писателя с ценами</b> из списка OpenRouter, прямо при наборе.</li>
+        <li><b>Спокойнее в комнатах.</b> Каждая кнопка, которую не отменить, — за диалогом, пояснения в строке — в подсказки, одна форма для кнопок-иконок.</li>
+        <li><b>Тип голоса в Тренере</b>, измеренный на речи и на пении.</li>
+        <li><b>Настольное приложение.</b> Сначала устанавливаемая страница (PWA), потом приложение на Electron, которое само запускает и останавливает свои службы.</li>
+        <li><b>Редактор партитуры, как в DAW.</b> Пиано-ролл, дорожка аккордов, текст над нотами, MIDI-клавиатура, чтобы наигрывать идеи.</li>
+        <li><b>Нативные плагины</b> для REAPER, Waveform и Bitwig, когда студия найдёт своих людей.</li>
       </ul>
     </div>
   </section>
@@ -541,25 +555,25 @@
     <div class="wrap">
       <h2>Лицензии</h2>
       <div class="cols">
-        <div class="card"><h3>Код</h3><ul><li><b>GNU AGPL</b>, версия 3 или новее: любой может пользоваться, изучать, менять и передавать дальше, а форк остаётся открытым, с исходниками.</li></ul></div>
-        <div class="card"><h3>Имя и графика</h3><ul><li>Логотип, имя «Ruach Studio», а также аудио и картинки, опубликованные с ними: <b>CC BY-NC-ND 4.0</b>.</li></ul></div>
-        <div class="card"><h3>Модель</h3><ul><li>Веса YuE2 — <b>CC BY-NC 4.0</b>. Их лицензия говорит о весах, а не о песнях, сделанных с ними: прочти её, прежде чем продавать.</li></ul></div>
+        <div class="card"><h3>Код</h3><ul><li><b>GNU AGPL</b>, версия 3 или новее: любой может пользоваться, изучать, менять и передавать дальше, а форк остаётся открытым, с исходниками.</li></ul></div>
+        <div class="card"><h3>Имя и графика</h3><ul><li>Логотип, имя «Ruach Studio», а также аудио и картинки, опубликованные с ними: <b>CC BY-NC-ND 4.0</b>.</li></ul></div>
+        <div class="card"><h3>Модель</h3><ul><li>Веса YuE2 — <b>CC BY-NC 4.0</b>. Их лицензия говорит о весах, а не о песнях, сделанных с ними: прочти её, прежде чем продавать.</li></ul></div>
       </div>
     </div>
   </section>
 
   <section id="credits">
     <div class="wrap">
-      <h2>На чём стоит</h2>
+      <h2>На чём стоит</h2>
       <ul class="credits">
-        <li><b>YuE2</b> и MERT-v2 от m-a-p: модель</li>
-        <li><b>yue2.cpp</b> от ServeurpersoCom: движок на C++ поверх ggml, перенесённый сюда со своими патчами</li>
-        <li><b>YuE2 Kit</b> от IronWolve: основа страницы и скриптов</li>
-        <li><b>AI-Toolkit</b> от Ostris: код YuE2 в тренере перенесён оттуда</li>
-        <li><b>Mothersuperior</b>: голова токенизатора realaudio и слияние VAE</li>
-        <li><b>Qwen2.5-Omni</b> (слушатель), <b>Whisper</b> (проверка текста), <b>BS-Roformer</b> и <b>htdemucs</b> (стемы), <b>UniverSR</b> (апскейл)</li>
-        <li><b>Krea 2 Muse</b> от Stable Yogi и <b>CyberRealistic XL</b> от Cyberdelia: обложки</li>
-        <li><b>YuE2 Studio</b>: проверка партитуры; <b>GTSinger</b>: голоса для обучения</li>
+        <li><b>YuE2</b> и MERT-v2 от m-a-p: модель</li>
+        <li><b>yue2.cpp</b> от ServeurpersoCom: движок на C++ поверх ggml, перенесённый сюда со своими патчами</li>
+        <li><b>YuE2 Kit</b> от IronWolve: основа страницы и скриптов</li>
+        <li><b>AI-Toolkit</b> от Ostris: код YuE2 в тренере перенесён оттуда</li>
+        <li><b>Mothersuperior</b>: голова токенизатора realaudio и слияние VAE</li>
+        <li><b>Qwen2.5-Omni</b> (слушатель), <b>Whisper</b> (проверка текста), <b>BS-Roformer</b> и <b>htdemucs</b> (стемы), <b>UniverSR</b> (апскейл)</li>
+        <li><b>Krea 2 Muse</b> от Stable Yogi и <b>CyberRealistic XL</b> от Cyberdelia: обложки</li>
+        <li><b>YuE2 Studio</b>: проверка партитуры; <b>GTSinger</b>: голоса для обучения</li>
       </ul>
     </div>
   </section>
@@ -568,53 +582,53 @@
     <div class="wrap">
       <div class="story-langs" role="group" aria-label="Язык" translate="no"><button type="button" data-lang="en" lang="en" aria-pressed="true" title="English">EN</button><button type="button" data-lang="ru" lang="ru" aria-pressed="false" title="Русский">RU</button><button type="button" data-lang="uk" lang="uk" aria-pressed="false" title="Українська">UK</button><button type="button" data-lang="be" lang="be" aria-pressed="false" title="Беларуская">BE</button><button type="button" data-lang="el" lang="el" aria-pressed="false" title="Ελληνικά">EL</button><button type="button" data-lang="es" lang="es" aria-pressed="false" title="Español">ES</button><button type="button" data-lang="it" lang="it" aria-pressed="false" title="Italiano">IT</button></div>
       <div class="story" translate="no" lang="en" data-lang="en">
-        <h2>A little story</h2>
-        <p>Viktor Zhuromskyy, the author of Ruach Studio, does not publish it for the hype. He made it for himself. After more than half a year of struggling with Suno on paid plans, and of searching for a model worth working with (ACE-Step, MiniMax and others), he set out to build an audio studio of his own, on his own machine. He settled on YuE2: of all the open models, it is the best value and the most refined.</p>
-        <p>He did not knock the studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
-        <p class="story-end">That is the whole story. Now the studio is yours as well.</p>
+        <h2>A little story</h2>
+        <p>Viktor Zhuromskyy, the author of Ruach Studio, does not publish it for the hype. He made it for himself. After more than half a year of struggling with Suno on paid plans, and of searching for a model worth working with (ACE-Step, MiniMax and others), he set out to build an audio studio of his own, on his own machine. He settled on YuE2: of all the open models, it is the best value and the most refined.</p>
+        <p>He did not knock the studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
+        <p class="story-end">That is the whole story. Now the studio is yours as well.</p>
       </div>
       <div class="story" translate="no" lang="ru" data-lang="ru" hidden>
         <h2>Маленькая история</h2>
-        <p>Виктор Журомский, автор Ruach Studio, публикует её не ради хайпа. Он делал её для себя. После более чем полугода мучений с Suno на платных тарифах и поисков достойной модели (ACE-Step, MiniMax и другие) он взялся построить собственную аудиостудию, на своей машине. Выбор пал на YuE2: из всех открытых моделей она самая рентабельная и самая изысканная.</p>
-        <p>Студию он делал не тяп-ляп, лишь бы работало, а в своём стиле, потому что и работа у него своя: собственные переводы, подстрочники и многое другое. Он постарался вместить в неё максимум, отполировать интерфейс до блеска и сделать работу со студией не тыканьем и кликаньем среди костылей и ям, а по-настоящему продуктивной.</p>
-        <p class="story-end">Вот и вся история. Теперь эта студия и ваша.</p>
+        <p>Виктор Журомский, автор Ruach Studio, публикует её не ради хайпа. Он делал её для себя. После более чем полугода мучений с Suno на платных тарифах и поисков достойной модели (ACE-Step, MiniMax и другие) он взялся построить собственную аудиостудию, на своей машине. Выбор пал на YuE2: из всех открытых моделей она самая рентабельная и самая изысканная.</p>
+        <p>Студию он делал не тяп-ляп, лишь бы работало, а в своём стиле, потому что и работа у него своя: собственные переводы, подстрочники и многое другое. Он постарался вместить в неё максимум, отполировать интерфейс до блеска и сделать работу со студией не тыканьем и кликаньем среди костылей и ям, а по-настоящему продуктивной.</p>
+        <p class="story-end">Вот и вся история. Теперь эта студия и ваша.</p>
       </div>
       <div class="story" translate="no" lang="uk" data-lang="uk" hidden>
         <h2>Маленька історія</h2>
-        <p>Віктор Журомський, автор Ruach Studio, публікує її не заради хайпу. Він робив її для себе. Після понад пів року мук із Suno на платних тарифах і пошуків гідної моделі (ACE-Step, MiniMax та інші) він узявся збудувати власну аудіостудію, на своїй машині. Вибір упав на YuE2: з усіх відкритих моделей вона найвигідніша й найвишуканіша.</p>
-        <p>Студію він робив не абияк, аби лиш працювало, а у своєму стилі, бо й робота в нього своя: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску й зробити роботу зі студією не тицянням і клацанням серед милиць і ям, а справді продуктивною.</p>
-        <p class="story-end">Ось і вся історія. Тепер ця студія і ваша.</p>
+        <p>Віктор Журомський, автор Ruach Studio, публікує її не заради хайпу. Він робив її для себе. Після понад пів року мук із Suno на платних тарифах і пошуків гідної моделі (ACE-Step, MiniMax та інші) він узявся збудувати власну аудіостудію, на своїй машині. Вибір упав на YuE2: з усіх відкритих моделей вона найвигідніша й найвишуканіша.</p>
+        <p>Студію він робив не абияк, аби лиш працювало, а у своєму стилі, бо й робота в нього своя: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску й зробити роботу зі студією не тицянням і клацанням серед милиць і ям, а справді продуктивною.</p>
+        <p class="story-end">Ось і вся історія. Тепер ця студія і ваша.</p>
       </div>
       <div class="story" translate="no" lang="be" data-lang="be" hidden>
         <h2>Маленькая гісторыя</h2>
-        <p>Віктар Журомскі, аўтар Ruach Studio, публікуе яе не дзеля хайпу. Ён рабіў яе для сябе. Пасля больш як паўгода пакут з Suno на платных тарыфах і пошукаў годнай мадэлі (ACE-Step, MiniMax і іншыя) ён узяўся пабудаваць уласную аўдыястудыю, на сваёй машыне. Выбар упаў на YuE2: з усіх адкрытых мадэляў яна самая выгадная і самая вытанчаная.</p>
-        <p>Студыю ён рабіў не абы-як, абы працавала, а ў сваім стылі, бо і праца ў яго свая: уласныя пераклады, падрадкоўнікі і шмат іншага. Ён стараўся змясціць у яе максімум, адшліфаваць інтэрфейс да бляску і зрабіць працу са студыяй не тыцканнем і клікамі сярод мыліц і ям, а сапраўды прадуктыўнай.</p>
-        <p class="story-end">Вось і ўся гісторыя. Цяпер гэтая студыя і ваша.</p>
+        <p>Віктар Журомскі, аўтар Ruach Studio, публікуе яе не дзеля хайпу. Ён рабіў яе для сябе. Пасля больш як паўгода пакут з Suno на платных тарыфах і пошукаў годнай мадэлі (ACE-Step, MiniMax і іншыя) ён узяўся пабудаваць уласную аўдыястудыю, на сваёй машыне. Выбар упаў на YuE2: з усіх адкрытых мадэляў яна самая выгадная і самая вытанчаная.</p>
+        <p>Студыю ён рабіў не абы-як, абы працавала, а ў сваім стылі, бо і праца ў яго свая: уласныя пераклады, падрадкоўнікі і шмат іншага. Ён стараўся змясціць у яе максімум, адшліфаваць інтэрфейс да бляску і зрабіць працу са студыяй не тыцканнем і клікамі сярод мыліц і ям, а сапраўды прадуктыўнай.</p>
+        <p class="story-end">Вось і ўся гісторыя. Цяпер гэтая студыя і ваша.</p>
       </div>
       <div class="story" translate="no" lang="el" data-lang="el" hidden>
         <h2>Μια μικρή ιστορία</h2>
-        <p>Ο Viktor Zhuromskyy, ο δημιουργός του Ruach Studio, δεν το δημοσιεύει για εντυπωσιασμό. Το έφτιαξε για τον εαυτό του. Ύστερα από περισσότερους από έξι μήνες ταλαιπωρίας με το Suno σε πληρωμένα πακέτα, και αναζήτησης ενός μοντέλου που να αξίζει (ACE-Step, MiniMax και άλλα), αποφάσισε να φτιάξει ένα δικό του στούντιο ήχου, στο δικό του μηχάνημα. Κατέληξε στο YuE2: από όλα τα ανοιχτά μοντέλα είναι το πιο συμφέρον και το πιο εκλεπτυσμένο.</p>
-        <p>Δεν έστησε το στούντιο πρόχειρα, απλώς για να δουλεύει. Το έφτιαξε με το δικό του ύφος, γιατί και η δουλειά του είναι δική του: οι μεταφράσεις του, τα διάστιχα κείμενά του και πολλά άλλα. Προσπάθησε να χωρέσει σε αυτό όσο περισσότερα γινόταν, να γυαλίσει το περιβάλλον εργασίας ως την τελευταία λεπτομέρεια και να κάνει τη δουλειά μαζί του όχι άσκοπα κλικ ανάμεσα σε δεκανίκια και λακκούβες, αλλά κάτι πραγματικά παραγωγικό.</p>
-        <p class="story-end">Αυτή είναι όλη η ιστορία. Τώρα το στούντιο είναι και δικό σας.</p>
+        <p>Ο Viktor Zhuromskyy, ο δημιουργός του Ruach Studio, δεν το δημοσιεύει για εντυπωσιασμό. Το έφτιαξε για τον εαυτό του. Ύστερα από περισσότερους από έξι μήνες ταλαιπωρίας με το Suno σε πληρωμένα πακέτα, και αναζήτησης ενός μοντέλου που να αξίζει (ACE-Step, MiniMax και άλλα), αποφάσισε να φτιάξει ένα δικό του στούντιο ήχου, στο δικό του μηχάνημα. Κατέληξε στο YuE2: από όλα τα ανοιχτά μοντέλα είναι το πιο συμφέρον και το πιο εκλεπτυσμένο.</p>
+        <p>Δεν έστησε το στούντιο πρόχειρα, απλώς για να δουλεύει. Το έφτιαξε με το δικό του ύφος, γιατί και η δουλειά του είναι δική του: οι μεταφράσεις του, τα διάστιχα κείμενά του και πολλά άλλα. Προσπάθησε να χωρέσει σε αυτό όσο περισσότερα γινόταν, να γυαλίσει το περιβάλλον εργασίας ως την τελευταία λεπτομέρεια και να κάνει τη δουλειά μαζί του όχι άσκοπα κλικ ανάμεσα σε δεκανίκια και λακκούβες, αλλά κάτι πραγματικά παραγωγικό.</p>
+        <p class="story-end">Αυτή είναι όλη η ιστορία. Τώρα το στούντιο είναι και δικό σας.</p>
       </div>
       <div class="story" translate="no" lang="es" data-lang="es" hidden>
         <h2>Una pequeña historia</h2>
-        <p>Viktor Zhuromskyy, el autor de Ruach Studio, no lo publica para llamar la atención. Lo hizo para sí mismo. Tras más de medio año de sufrir con Suno en planes de pago y de buscar un modelo que mereciera la pena (ACE-Step, MiniMax y otros), se propuso construir su propio estudio de audio, en su propia máquina. Se quedó con YuE2: de todos los modelos abiertos, es el más rentable y el más refinado.</p>
-        <p>No montó el estudio de cualquier manera, solo para que funcionara. Lo hizo a su estilo, porque su trabajo también es suyo: sus traducciones, sus textos interlineales y mucho más. Procuró meter en él todo lo posible, pulir la interfaz hasta el último detalle y hacer que trabajar con el estudio no sea dar clics a ciegas entre muletas y baches, sino algo de verdad productivo.</p>
-        <p class="story-end">Esa es toda la historia. Ahora el estudio también es tuyo.</p>
+        <p>Viktor Zhuromskyy, el autor de Ruach Studio, no lo publica para llamar la atención. Lo hizo para sí mismo. Tras más de medio año de sufrir con Suno en planes de pago y de buscar un modelo que mereciera la pena (ACE-Step, MiniMax y otros), se propuso construir su propio estudio de audio, en su propia máquina. Se quedó con YuE2: de todos los modelos abiertos, es el más rentable y el más refinado.</p>
+        <p>No montó el estudio de cualquier manera, solo para que funcionara. Lo hizo a su estilo, porque su trabajo también es suyo: sus traducciones, sus textos interlineales y mucho más. Procuró meter en él todo lo posible, pulir la interfaz hasta el último detalle y hacer que trabajar con el estudio no sea dar clics a ciegas entre muletas y baches, sino algo de verdad productivo.</p>
+        <p class="story-end">Esa es toda la historia. Ahora el estudio también es tuyo.</p>
       </div>
       <div class="story" translate="no" lang="it" data-lang="it" hidden>
         <h2>Una piccola storia</h2>
-        <p>Viktor Zhuromskyy, l'autore di Ruach Studio, non lo pubblica per fare clamore. Lo ha costruito per sé. Dopo più di sei mesi di tormenti con Suno sui piani a pagamento, e di ricerche di un modello all'altezza (ACE-Step, MiniMax e altri), ha deciso di crearsi uno studio audio tutto suo, sulla sua macchina. La scelta è caduta su YuE2: fra tutti i modelli aperti è il più conveniente e il più raffinato.</p>
-        <p>Non ha messo insieme lo studio alla buona, giusto perché funzionasse. Lo ha fatto a modo suo, perché anche il suo lavoro è suo: le sue traduzioni, i suoi testi interlineari e molto altro. Ha cercato di farci stare il massimo, di rifinire l'interfaccia fino all'ultimo dettaglio e di rendere il lavoro con lo studio non un cliccare a vuoto tra stampelle e buche, ma qualcosa di davvero produttivo.</p>
-        <p class="story-end">Questa è tutta la storia. Ora lo studio è anche tuo.</p>
+        <p>Viktor Zhuromskyy, l'autore di Ruach Studio, non lo pubblica per fare clamore. Lo ha costruito per sé. Dopo più di sei mesi di tormenti con Suno sui piani a pagamento, e di ricerche di un modello all'altezza (ACE-Step, MiniMax e altri), ha deciso di crearsi uno studio audio tutto suo, sulla sua macchina. La scelta è caduta su YuE2: fra tutti i modelli aperti è il più conveniente e il più raffinato.</p>
+        <p>Non ha messo insieme lo studio alla buona, giusto perché funzionasse. Lo ha fatto a modo suo, perché anche il suo lavoro è suo: le sue traduzioni, i suoi testi interlineari e molto altro. Ha cercato di farci stare il massimo, di rifinire l'interfaccia fino all'ultimo dettaglio e di rendere il lavoro con lo studio non un cliccare a vuoto tra stampelle e buche, ma qualcosa di davvero produttivo.</p>
+        <p class="story-end">Questa è tutta la storia. Ora lo studio è anche tuo.</p>
       </div>
     </div>
   </section>
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc2 · творение <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Изменения</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кофемашина</a></span></div>
+  <div class="wrap"><span>Ruach Studio · 2.0.0-rc2 · творение <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Изменения</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кофемашина</a></span></div>
 </footer>
 
 <script>

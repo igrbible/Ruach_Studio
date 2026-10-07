@@ -34,6 +34,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > | where it runs | your GPU; your songs never leave it | their cloud |
 > | what it costs | the electricity | a subscription and credits |
 > | the score | written first, shown, editable, yours (ABC, MIDI) | hidden |
+> | the lyrics | a meter beside each line: its beats against its section's ruler, syllables by each language's own rules; the section tags offered as you type «[» | a text box; lyrics written for you on request |
 > | repeat a take | exactly: two seeds you keep | no |
 > | your own sound | train a LoRA on your songs, in the studio | no training |
 > | after the render | stems, debuzz, remaster, upscale, lyrics check, all local | stems, in the cloud |
@@ -89,6 +90,9 @@ The studio has 22 themes, kept for working in: clear, quiet, readable for hours.
 - **Its own LoRA trainer.** The studio trains adapters itself, on unquantized bf16 weights, making its own latent cache. Against Ostris' AI-Toolkit on the same set, the music half's loss agrees epoch by epoch within 0.015. The run's telemetry explains both curves and lights the epochs worth hearing first.
 
   <img src="docs/guide/train-epochs.png" alt="The epochs worth hearing first" width="100%">
+- **Lyrics that keep time.** Beside each line its beats, against the ruler of its section: verse and bridge one group, the pre-chorus and the chorus their own; a pause or an interlude inside a section opens no new group. A syllable is counted by each language's own rules (English, Russian, Ukrainian, Belarusian, Greek, Spanish, Italian; Hebrew by its vowel points; Chinese, Japanese and Korean by their signs), and the consonants that take a beat of their own count too. Type «[» at a line's start and the section tags are offered, as a code editor offers its words; stress marks astray are found; Ctrl+F finds in the box alone.
+
+  <img src="docs/guide/lyrics-meter.png" alt="The lyrics editor: each line's beats against its section's ruler" width="100%">
 - **Several cards, several jobs.** On a machine with more than one GPU each card gets its work: synthesis on one, training on others, the listener, Whisper and stems where there is room. With one card, synthesis waits while a run trains, and the page says so.
 - **The instruments YuE2 really plays.** 200 instruments probed and judged by ear, with their A/B probes, in a cheat-sheet beside the style prompt. The probes' pictures are painted by an image model: some show an instrument not quite as it really is.
 - **A guide that comes to you.** The first time the studio opens in a browser, the guide opens by itself a minute later.

@@ -85,6 +85,11 @@
   h1 { font-size: clamp(30px, 4.6vw, 52px); line-height: 1.12; margin: 0 0 18px; font-weight: 700; letter-spacing: -.01em; }
   .lead { max-width: 760px; margin: 0 auto 26px; color: var(--soft); font-size: clamp(17px, 2vw, 20px); }
   .lead b { color: var(--ink); font-weight: 600; }
+  /* HERESY 1168 (Viktor 07.10.2026: «увидел вручную перенесённые строки… исправь для правильного autowrap»): headings and the
+     lead in balanced lines, the text with no word left alone on its last line; build.py binds short words, numbers, units
+     and dashes to their neighbours with non-breaking spaces */
+  h1, h2, h3, .lead, .sub, .rc { text-wrap: balance; }
+  p, li, td, figcaption, .nums span { text-wrap: pretty; }
   .ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 10px; font-weight: 600; font-size: 15px;
          border: 1px solid var(--rule); background: var(--paper); color: var(--ink); }
@@ -233,7 +238,7 @@
   <div class="wrap hero">
     <div class="logo">{{LOGO}}</div>
     <div class="osem" translate="no"><b>OSEM</b><span class="say">Simply awesome</span><span>Open Source, Engaged &amp; Musical</span></div>
-    <h1>Songs from words, on your own machine.</h1>
+    <h1>Songs from words and chords<br>on your own machine</h1>
     <p class="lead">A whole studio around <b>YuE2</b>, the open song model. Write the style and the lyrics, and the studio
       composes, sings and renders the song on <b>your own GPU</b>. Your songs, words and settings never leave it.</p>
     <div class="ctas">
@@ -317,6 +322,14 @@
           <p>Rank 16 on 148 songs: 2.1 s a step in 12 GB. Rank 32 on 42 full songs: 6.7 s a step in 18 GB.</p>
         </div>
       </div>
+      <div class="pair">
+        <figure><img src="assets/shots/lyrics-meter.webp" width="895" height="850" alt="The lyrics editor: each line's beats against its section's ruler" loading="lazy"><figcaption>Each line's beats against its section's ruler</figcaption></figure>
+        <div>
+          <h3>Lyrics that keep time</h3>
+          <p>Beside each line its beats, against the ruler of its section: verse and bridge one group, the pre-chorus and the chorus their own. A syllable is counted by each language's own rules, and the consonants that take a beat of their own count too; a pause or an interlude inside a section opens no new group.</p>
+          <p>Type «[» at a line's start and the section tags are offered, as a code editor offers its words. Stress marks astray are found; Ctrl+F finds in the box alone.</p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -331,6 +344,7 @@
             <tr><td>where it runs</td><td>your GPU; your songs never leave it</td><td>their cloud</td></tr>
             <tr><td>what it costs</td><td>the electricity</td><td>a subscription and credits</td></tr>
             <tr><td>the score</td><td>written first, shown, editable, yours (ABC, MIDI)</td><td>hidden</td></tr>
+            <tr><td>the lyrics</td><td>a meter beside each line: its beats against its section's ruler, syllables by each language's own rules; the section tags offered as you type «[»</td><td>a text box; lyrics written for you on request</td></tr>
             <tr><td>repeat a take</td><td>exactly: two seeds you keep</td><td>no</td></tr>
             <tr><td>your own sound</td><td>train a LoRA on your songs, in the studio</td><td>no training</td></tr>
             <tr><td>after the render</td><td>stems, debuzz, remaster, upscale, lyrics check, all local</td><td>stems, in the cloud</td></tr>
