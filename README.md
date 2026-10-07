@@ -220,7 +220,25 @@ machine, and if one eats your files, that is on you. Read before you run.
 
 ## What comes next
 
-2.0.0-rc2 is the studio we make our own songs in every day. These are the larger pieces on their way, for rc3 and after:
+### Done › 2.0.0-rc2 (October 2026)
+
+- **The engine on ggml 0.26.0**, with yue2.cpp's latest: a two-minute song in 51 s on an RTX 3090 (54–61 s before).
+- **Another VAE in seconds**: every take keeps its latents, and + Standard, + Legacy, + Blend decode them again with the
+  VAE alone (about 2 s for two minutes).
+- **Lyrics that keep time**: each line's beats against its section's ruler, a syllable by each language's own rules and
+  the consonants that take a beat of their own; the section tags offered as you type «[»; stress marks astray found;
+  Ctrl+F inside a box.
+- **The Creator**: frames over the room, the VAE in the ☰ menu under the model, Max length in Sampling, Denoising steps.
+- **The Writer**: the whole notebook exported to one file and imported back, nothing written over.
+- **Open** says what of a prompt file the form could not take; copying works on the machine's address; F5 keeps a run.
+- **Windows 11**: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md), through WSL2.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### To do › rc3 and after
+
+2.0.0-rc2 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off
+until their time:
 
 - **The Artist room**: covers in three shapes at once from one seed (1:1 for the album, 16:9 for a video, 9:16 for a
   short), the title and the artist written on them, the painter of your choice, the versions of each take's picture.
@@ -235,6 +253,7 @@ machine, and if one eats your files, that is on you. Read before you run.
 - **A score editor as a DAW has one**: a piano roll, a chord lane, the lyrics over the notes, sections copied and
   moved, a MIDI keyboard to play ideas in; [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System)
   (Apache-2.0) shows the way.
+- **The interface's new words in all seven languages**: what came since rc1 is in English until the pass before 2.0.0.
 - **Native plugins** for REAPER, Waveform and Bitwig, once the studio has found its people.
 
 Issues and pull requests are welcome: they are read and answered.
