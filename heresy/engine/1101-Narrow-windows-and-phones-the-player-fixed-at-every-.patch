@@ -2,7 +2,7 @@ From 58ec085a364f1763f8fe2b045cf7f5839db95026 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 21:10:11 -0600
-Subject: [PATCH 1101/1178] Narrow windows and phones: the player fixed at
+Subject: [PATCH 1101/1179] Narrow windows and phones: the player fixed at
  every width, the log above it or away, heads and rows that fold (1142)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

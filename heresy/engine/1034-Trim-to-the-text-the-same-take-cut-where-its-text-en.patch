@@ -2,7 +2,7 @@ From 6034fe13ac9623828ec5096ae676a304fad42642 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 01:09:41 -0600
-Subject: [PATCH 1034/1178] Trim to the text: the same take, cut where its text
+Subject: [PATCH 1034/1179] Trim to the text: the same take, cut where its text
  ends
 
 A button in the take card (Make again). The lab hears the take with Whisper (the freest GPU,

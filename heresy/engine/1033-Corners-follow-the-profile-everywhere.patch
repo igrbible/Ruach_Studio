@@ -2,7 +2,7 @@ From eb7129e9ebfd7f9d8c91454f32b171432173e1d2 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 00:51:50 -0600
-Subject: [PATCH 1033/1178] Corners follow the profile everywhere
+Subject: [PATCH 1033/1179] Corners follow the profile everywhere
 
 A --r-pill token (20 px Rounded, 7 px Softer, 2 px Square) for every chip-like shape: the
 Kit own chips and engine tag (20 px fixed before), the theme picker filters, and the HERESY

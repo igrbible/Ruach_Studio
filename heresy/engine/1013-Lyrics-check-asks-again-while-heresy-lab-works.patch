@@ -1,7 +1,7 @@
 From 76daf4de158a45b236b05445b24c133e4b43413b Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 16:31:01 -0600
-Subject: [PATCH 1013/1178] Lyrics check asks again while heresy-lab works
+Subject: [PATCH 1013/1179] Lyrics check asks again while heresy-lab works
 
 HERESY 1013. heresy-lab is asynchronous now: /gloss answers at once, 202 with
 the job's state while Whisper is queued or running, the result when it is

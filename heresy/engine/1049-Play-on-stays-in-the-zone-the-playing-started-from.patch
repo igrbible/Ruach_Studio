@@ -2,7 +2,7 @@ From 944e88eb1d07c43630f04446bd4791ba6924ae28 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 13:29:29 -0600
-Subject: [PATCH 1049/1178] Play-on stays in the zone the playing started from
+Subject: [PATCH 1049/1179] Play-on stays in the zone the playing started from
 
 1052 (Viktor): started from the Collection, play-on and previous/next take
 the takes its search and filters show now; started from the takes column,

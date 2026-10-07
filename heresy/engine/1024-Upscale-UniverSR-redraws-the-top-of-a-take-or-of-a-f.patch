@@ -1,7 +1,7 @@
 From 6de933b72efd49d4df1e0ff414422d4311e796c4 Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 19:45:30 -0600
-Subject: [PATCH 1024/1178] Upscale: UniverSR redraws the top of a take or of a
+Subject: [PATCH 1024/1179] Upscale: UniverSR redraws the top of a take or of a
  file made from it
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

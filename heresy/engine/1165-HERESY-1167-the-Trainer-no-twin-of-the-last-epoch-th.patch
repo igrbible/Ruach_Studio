@@ -2,7 +2,7 @@ From 8d8fc29d1eb78ef8a6ccd4c85aa0759ae9c7d72a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Mon, 5 Oct 2026 23:51:48 -0600
-Subject: [PATCH 1165/1178] HERESY 1167: the Trainer: no twin of the last
+Subject: [PATCH 1165/1179] HERESY 1167: the Trainer: no twin of the last
  epoch, the Runs column the window's height, the log at the page's foot
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

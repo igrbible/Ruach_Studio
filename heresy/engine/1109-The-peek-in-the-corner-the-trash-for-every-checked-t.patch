@@ -2,7 +2,7 @@ From 91fe527c1d9804f64ba628061959fb3c5bfb4291 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Sat, 3 Oct 2026 11:22:10 -0600
-Subject: [PATCH 1109/1178] The peek in the corner; the trash for every checked
+Subject: [PATCH 1109/1179] The peek in the corner; the trash for every checked
  take (1151): a card's hover peek in the window's top right corner under the
  bar, never over the cards beside it; Move to the trash on a checked card
  takes every checked one; the kept shofar probes say they are not a shofar
