@@ -2,7 +2,7 @@ From 7121c0d277d145be54b38eca1ea9674a77dd5854 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Mon, 5 Oct 2026 22:02:45 -0600
-Subject: [PATCH 1163/1177] HERESY 1167: Cancel run from wherever you are,
+Subject: [PATCH 1163/1178] HERESY 1167: Cancel run from wherever you are,
  Direct by default, Guidance on one line
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

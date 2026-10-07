@@ -1,7 +1,7 @@
 From c29b3f9f0b1dedf4e55722212f4272b9eabb6b3c Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 19:18:58 -0600
-Subject: [PATCH 1022/1177] Remaster: the Debunker v6 pipeline on a take or its
+Subject: [PATCH 1022/1178] Remaster: the Debunker v6 pipeline on a take or its
  stems
 
 HERESY 1022. Post has Remaster. heresy-lab runs the Debunker v6 (lab/debunker.py,

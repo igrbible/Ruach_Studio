@@ -2,7 +2,7 @@ From 4232d0eff3e907da0d9586d7bd203d787005cdfa Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Mon, 5 Oct 2026 12:39:14 -0600
-Subject: [PATCH 1153/1177] HERESY 1167: the Writer's runs on the 27B and on
+Subject: [PATCH 1153/1178] HERESY 1167: the Writer's runs on the 27B and on
  DeepSeek flash, and what they showed
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

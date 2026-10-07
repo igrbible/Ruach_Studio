@@ -2,7 +2,7 @@ From a2c46e813e43d12b66dc835db2528950f8247085 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 21:13:30 -0600
-Subject: [PATCH 1102/1177] The line guard times the line, not the browser's
+Subject: [PATCH 1102/1178] The line guard times the line, not the browser's
  queue (1143)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

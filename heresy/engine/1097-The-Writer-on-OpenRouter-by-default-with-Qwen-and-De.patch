@@ -2,7 +2,7 @@ From da3f7f16e1f51c02bdfd5fef756db3ac1e107bb0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 20:04:31 -0600
-Subject: [PATCH 1097/1177] The Writer on OpenRouter by default with Qwen and
+Subject: [PATCH 1097/1178] The Writer on OpenRouter by default with Qwen and
  DeepSeek picks; no private address in the presets (1133); the DAWproject with
  the score as notes and the sections as markers, exported from the DAW window
  too (1134)

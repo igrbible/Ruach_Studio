@@ -2,7 +2,7 @@ From da9974072d910e9deee21694e1cbbcea3bdfa205 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Sat, 3 Oct 2026 14:01:47 -0600
-Subject: [PATCH 1116/1177] Takes dragged onto a workspace (1159); Regenerate
+Subject: [PATCH 1116/1178] Takes dragged onto a workspace (1159); Regenerate
  with a new seed (1160): a card dragged onto a workspace on the left moves
  there (the checked ones with it; Ctrl adds instead), asked first, Ctrl+Z
  gives it back; the card not draggable while its title is typed; the sheet
