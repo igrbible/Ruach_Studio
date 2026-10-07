@@ -303,7 +303,7 @@ He did not knock the studio together just to have something that runs. He built 
 
 *That is the whole story. Now the studio is yours as well.*
 
-<details><summary>Русский · Українська · Беларуская · Ελληνικά · Español · Italiano</summary>
+<details><summary>Русский</summary>
 
 #### Маленькая история
 
@@ -313,6 +313,9 @@ He did not knock the studio together just to have something that runs. He built 
 
 *Вот и вся история. Теперь эта студия и ваша.*
 
+</details>
+<details><summary>Українська</summary>
+
 #### Маленька історія
 
 Віктор Журомський, автор Ruach Studio, публікує її не заради хайпу. Він робив її для себе. Після понад пів року мук із Suno на платних тарифах і пошуків гідної моделі (ACE-Step, MiniMax та інші) він узявся збудувати власну аудіостудію, на своїй машині. Вибір упав на YuE2: з усіх відкритих моделей вона найвигідніша й найвишуканіша.
@@ -320,6 +323,9 @@ He did not knock the studio together just to have something that runs. He built 
 Студію він робив не абияк, аби лиш працювало, а у своєму стилі, бо й робота в нього своя: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску й зробити роботу зі студією не тицянням і клацанням серед милиць і ям, а справді продуктивною.
 
 *Ось і вся історія. Тепер ця студія і ваша.*
+
+</details>
+<details><summary>Беларуская</summary>
 
 #### Маленькая гісторыя
 
@@ -329,6 +335,9 @@ He did not knock the studio together just to have something that runs. He built 
 
 *Вось і ўся гісторыя. Цяпер гэтая студыя і ваша.*
 
+</details>
+<details><summary>Ελληνικά</summary>
+
 #### Μια μικρή ιστορία
 
 Ο Viktor Zhuromskyy, ο δημιουργός του Ruach Studio, δεν το δημοσιεύει για εντυπωσιασμό. Το έφτιαξε για τον εαυτό του. Ύστερα από περισσότερους από έξι μήνες ταλαιπωρίας με το Suno σε πληρωμένα πακέτα, και αναζήτησης ενός μοντέλου που να αξίζει (ACE-Step, MiniMax και άλλα), αποφάσισε να φτιάξει ένα δικό του στούντιο ήχου, στο δικό του μηχάνημα. Κατέληξε στο YuE2: από όλα τα ανοιχτά μοντέλα είναι το πιο συμφέρον και το πιο εκλεπτυσμένο.
@@ -337,6 +346,9 @@ He did not knock the studio together just to have something that runs. He built 
 
 *Αυτή είναι όλη η ιστορία. Τώρα το στούντιο είναι και δικό σας.*
 
+</details>
+<details><summary>Español</summary>
+
 #### Una pequeña historia
 
 Viktor Zhuromskyy, el autor de Ruach Studio, no lo publica para llamar la atención. Lo hizo para sí mismo. Tras más de medio año de sufrir con Suno en planes de pago y de buscar un modelo que mereciera la pena (ACE-Step, MiniMax y otros), se propuso construir su propio estudio de audio, en su propia máquina. Se quedó con YuE2: de todos los modelos abiertos, es el más rentable y el más refinado.
@@ -344,6 +356,9 @@ Viktor Zhuromskyy, el autor de Ruach Studio, no lo publica para llamar la atenci
 No montó el estudio de cualquier manera, solo para que funcionara. Lo hizo a su estilo, porque su trabajo también es suyo: sus traducciones, sus textos interlineales y mucho más. Procuró meter en él todo lo posible, pulir la interfaz hasta el último detalle y hacer que trabajar con el estudio no sea dar clics a ciegas entre muletas y baches, sino algo de verdad productivo.
 
 *Esa es toda la historia. Ahora el estudio también es tuyo.*
+
+</details>
+<details><summary>Italiano</summary>
 
 #### Una piccola storia
 
