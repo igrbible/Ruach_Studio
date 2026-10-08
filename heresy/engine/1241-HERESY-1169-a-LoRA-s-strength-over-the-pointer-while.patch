@@ -1,0 +1,71 @@
+From b80e58a6757a35afe4ab160d6eb259e30cd9454f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 12:03:45 -0600
+Subject: [PATCH 1241/1252] HERESY 1169: a LoRA's strength over the pointer
+ while it is on the slider or drags it (16 pt, exact, framed in its road's
+ colour; the label's tip aside)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «При наведении мыши на ползунок и при перетаскивании сделай тултип поверх курсора, 16pt». The Instrumental adapter's ceiling of 1.0 lives in loras/sources.json (its own limits), outside this tree.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css  |  8 ++++++++
+ tools/console/loras.js | 22 ++++++++++++++++++++++
+ 2 files changed, 30 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 137a496..aeef027 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4561,3 +4561,11 @@ body:not([data-frame]) .frame-fs { display: none; }
+ .hd-item-ico svg { width: 16px; height: 16px; display: block; }
+ .hd-check.is-on { background: color-mix(in srgb, var(--amber) 8%, transparent); }
+ .hd-check.is-on .hd-item-ico { color: var(--amber); }
++
++/* HERESY 1169 · 1242: a LoRA strength over the pointer while it hovers or drags its slider (16 pt), framed in its zone's colour */
++.lora-vtip { position: fixed; z-index: 130; transform: translate(-50%, calc(-100% - 14px)); padding: 3px 10px; border: 2px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--ink); font: 600 16pt/1.25 var(--mono); white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
++.lora-vtip[hidden] { display: none; }
++.lora-vtip.is-green { border-color: #3f9a4a; }
++.lora-vtip.is-amber { border-color: #e0b030; }
++.lora-vtip.is-red { border-color: #c8372d; color: #c8372d; }
++body.lora-vtip-on .tip { display: none !important; }
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 904b28a..4c932e4 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -481,6 +481,28 @@
+       field.addEventListener("keydown", function (e) { if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); });
+       field.addEventListener("blur", function () { finish(true); });
+     });
++    // HERESY 1169 · 1242 (Viktor 08.10.2026: «При наведении мыши на ползунок и при перетаскивании сделай тултип поверх курсора, 16pt»): the strength over the pointer, exact (0.875, not the output's 0.88), framed in its zone's colour, while the pointer is on a slider or drags it; the label's own tip stands aside meanwhile
++    var vt = null, vtOn = null, vtXY = [0, 0];
++    function vtip(range) {
++      if (!vt) { vt = document.createElement("div"); vt.className = "lora-vtip"; vt.setAttribute("aria-hidden", "true"); document.body.appendChild(vt); }
++      var v = +range.value, max = +range.max || 1, z1 = parseFloat(range.style.getPropertyValue("--z1")) / 100 * max, z2 = parseFloat(range.style.getPropertyValue("--z2")) / 100 * max;
++      var label = range.closest(".lora-half, .lora-total"), name = label && label.querySelector("span") ? label.querySelector("span").textContent : "";
++      vt.textContent = (name ? name + " " : "") + v.toFixed(3).replace(/0+$/, "").replace(/\.$/, ".0");
++      vt.className = "lora-vtip " + (v > z2 + 1e-9 ? "is-red" : v > z1 + 1e-9 ? "is-amber" : "is-green");
++      vt.style.left = vtXY[0] + "px";
++      vt.style.top = vtXY[1] + "px";
++      vt.hidden = false;
++      document.body.classList.add("lora-vtip-on");
++    }
++    function vtipOff() { if (vt) vt.hidden = true; document.body.classList.remove("lora-vtip-on"); vtOn = null; }
++    host.addEventListener("pointermove", function (event) {
++      var r = event.target.closest && event.target.closest('input[type="range"].zoned');
++      vtXY = [event.clientX, event.clientY];
++      if (r && !r.disabled) { vtOn = r; vtip(r); } else if (vtOn && !(event.buttons & 1)) vtipOff();
++    });
++    host.addEventListener("pointerleave", function (event) { if (!(event.buttons & 1)) vtipOff(); });
++    host.addEventListener("input", function (event) { if (event.target.matches && event.target.matches('input[type="range"].zoned') && vtOn) vtip(event.target); });
++    document.addEventListener("pointerup", function () { setTimeout(function () { if (vtOn && !vtOn.matches(":hover")) vtipOff(); }, 0); });
+     host.addEventListener("input", function (event) {
+       if (event.target.classList.contains("lora-total-range")) return void scaleHalf(event.target.dataset.half || "ar", parseFloat(event.target.value));   // 1166, 1167
+       var id = event.target.dataset.lora, half = event.target.dataset.half;
+-- 
+2.43.0
+

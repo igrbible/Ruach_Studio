@@ -140,7 +140,8 @@
     undoText = before;
     hooks.setLyrics(r.text);
     $("tpUndo").disabled = false;
-    $("tpNote").textContent = r.log.slice(-3).join(" · ") + " · " + r.chars + " / " + r.max;
+    var note = r.log.slice(-3).join(" · ") + " · " + r.chars + " / " + r.max;   // HERESY 1169 · 1247: a ⚠ in it drawn
+    if (window.ruachSigned) window.ruachSigned($("tpNote"), note); else $("tpNote").textContent = note;
     toast("Text made ready with “" + p.name + "”: " + r.log.length + " step" + (r.log.length === 1 ? "" : "s") + " (Undo gives the text back)");
   }
 
@@ -191,7 +192,8 @@
     readEditor();
     var r = run($("tpTestIn").value, editing);
     $("tpTestOut").textContent = r.text;
-    $("tpTestLog").textContent = r.log.join("\n") + "\n" + r.chars + " / " + r.max + " characters";
+    var said = r.log.join("\n") + "\n" + r.chars + " / " + r.max + " characters";
+    if (window.ruachSigned) window.ruachSigned($("tpTestLog"), said); else $("tpTestLog").textContent = said;
   }
 
   function init(h) {

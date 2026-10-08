@@ -126,6 +126,14 @@
     });
     return score.es > score.en && score.es >= score.it ? "es" : score.it > score.en && score.it > score.es ? "it" : "en";
   }
+  // HERESY 1169 · 1240 (Viktor 08.10.2026: «При скейле 125% именно в полной странице в редакторе съезжают хайлайтинги секций. При 100-110% - НОРМ»): a mirror wraps the lines as the box does only at the box's own width; clientWidth is a whole number, and at 125 % the box is, say, 512.6 px wide, so a line that fits in one wrapped in the other and every row after it stood one off. The width now is the box's used width (fractional) less its borders and its scrollbar
+  function innerWidth(area, cs) {
+    if (cs.boxSizing !== "border-box") return area.clientWidth;
+    var bl = parseFloat(cs.borderLeftWidth) || 0, br = parseFloat(cs.borderRightWidth) || 0;
+    var sw = Math.max(0, area.offsetWidth - area.clientWidth - Math.round(bl) - Math.round(br));
+    var w = parseFloat(cs.width) - bl - br - sw;
+    return isFinite(w) && w > 0 ? w : area.clientWidth;
+  }
   function syllables(text, lang) {
     lang = lang || latinOf(text, "");
     return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) { return n + wordSyllables(w, lang); }, 0);
@@ -301,6 +309,221 @@
     return lat ? latinOf(text, style) : "";                         // HERESY 1168: English, Spanish or Italian
   }
 
+  // HERESY 1169 (Viktor 08.10.2026: «В редактор лирики можно как в кодовом редакторе отображение номера строки? И вообще…
+  // по Alt+K маркировать строки, а по Alt+J прыгать на них. И подсвечивать тонким альфа слоем все музыкальные теги»): a code
+  // editor's aids in a lyrics box (the Creator's, beside its meter, and the Writer's). Each line's number in the box's left
+  // padding (a wrapped line numbered once, on its first row); Alt+K marks the cursor's line and unmarks it, Alt+J goes to the
+  // next mark and Alt+Shift+J to the one before (round), Alt+Shift+K clears them; a marked line's number is amber and a faint
+  // band runs along it. Marks follow the lines as text is added or taken above them, and are kept with the text they were
+  // made on (a reload brings them back, other lyrics do not). Every [tag] lies under a thin amber layer. A copy of the box's
+  // layout (as the meter's) tells where each line and each tag stands.
+  // HERESY 1169 (Viktor 08.10.2026: «в редактор нужно линтер добавить, чтобы выявлял незакрытые `[` и другие теги. Только что
+  // словил себя. Открыл `[` и не закрыл. Целый блок проебал в синтезе... И из-за этого срань пошла в конце трека»): the lyrics'
+  // brackets, line by line. Bad (red): a «[» not closed on its line (what follows it may be lost in the song), a «]» with none
+  // open, a «[» inside a tag, an empty tag. Near (amber): a round bracket left open or closed with none open on its line (an echo
+  // may run on, so it is asked about, not called wrong). A «[» still being typed on the cursor's line is left alone
+  function lint(text) {
+    var out = [], at = 0;
+    String(text || "").split("\n").forEach(function (line, n) {
+      var open = -1, round = [];
+      for (var i = 0; i < line.length; i++) {
+        var c = line.charAt(i);
+        if (c === "[") {
+          if (open >= 0) out.push({ line: n, from: at + i, to: at + i + 1, bad: true, say: "a «[» inside a tag" });
+          open = i;
+        } else if (c === "]") {
+          if (open < 0) out.push({ line: n, from: at + i, to: at + i + 1, bad: true, say: "a «]» with no «[» before it" });
+          else {
+            if (!line.slice(open + 1, i).trim()) out.push({ line: n, from: at + open, to: at + i + 1, bad: true, say: "an empty tag" });
+            open = -1;
+          }
+        } else if (open < 0 && c === "(") round.push(i);
+        else if (open < 0 && c === ")") {
+          if (round.length) round.pop();
+          else out.push({ line: n, from: at + i, to: at + i + 1, bad: false, say: "a «)» with no «(» before it" });
+        }
+      }
+      if (open >= 0) out.push({ line: n, from: at + open, to: at + line.length, bad: true, open: true, say: "a «[» not closed: what follows it may be lost in the song" });
+      round.forEach(function (i) { out.push({ line: n, from: at + i, to: at + i + 1, bad: false, say: "a «(» not closed on its line" }); });
+      at += line.length + 1;
+    });
+    return out;
+  }
+  // the faults to show: a «[» on the cursor's line is still being typed while the box has the cursor
+  function lintShown(area) {
+    var here = document.activeElement === area ? area.value.slice(0, area.selectionStart).split("\n").length - 1 : -1;
+    return lint(area.value).filter(function (f) { return !(f.open && f.line === here); });
+  }
+
+  // the editor's keys said in one place: the meter's «Keys», the Writer's lyrics label
+  var KEYS = "The lyrics editor's keys, as in mcedit:\nAlt+K  mark the cursor's line (again: unmark it)\nAlt+J  the next mark · Alt+Shift+J the one before\n" +
+    "Alt+O  clear the marks (Alt+Shift+K too)\nAlt+L  go to a line by its number\nCtrl+Y  delete the line\nAlt+↑ Alt+↓  move the line, or the lines selected\n" +
+    "[ at a line's start, or Ctrl+Space  the section tags\nCtrl+F  find in the box\nAlt+I  the instruments' and styles' cheat-sheet\nCtrl+Z  take a change back";
+  function aids(area, onChange, tipAt) {
+    if (!area || area.dataset.aids) return null;
+    area.dataset.aids = "1";
+    if (tipAt) { tipAt.dataset.tip = tr(KEYS); tipAt.classList.add("lyr-keys-at"); }
+    var wrap = area.parentNode;
+    if (!wrap.classList.contains("lyr-wrap")) {
+      wrap = document.createElement("div");
+      wrap.className = "lyr-wrap";
+      area.parentNode.insertBefore(wrap, area);
+      wrap.appendChild(area);
+    }
+    function layer(cls) { var d = document.createElement("div"); d.className = cls; d.setAttribute("aria-hidden", "true"); wrap.appendChild(d); return d; }
+    var nums = layer("lyr-nums"), tagsl = layer("lyr-tagsl"), mirror = layer("lyr-mirror");
+    var KEY = "yue2.lyrMarks." + (area.id || "lyrics"), marks = [], was = area.value, queued = false;
+    function sig(v) { var h = 0; for (var i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0; return v.length + ":" + h; }
+    function keepMarks() { store(KEY, marks.length ? JSON.stringify({ sig: sig(area.value), marks: marks }) : null); }
+    function recallMarks() { try { var o = JSON.parse(recall(KEY) || "null"); return o && o.sig === sig(area.value) && Array.isArray(o.marks) ? o.marks : null; } catch (e) { return null; } }
+    marks = recallMarks() || [];
+    function shown() { return recall("yue2.lyrNums") !== "off"; }
+    function draw() {
+      queued = false;
+      area.classList.toggle("lyr-numbered", shown());
+      if (!area.offsetParent) { nums.innerHTML = tagsl.innerHTML = ""; return; }
+      var cs = getComputedStyle(area);
+      ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+       "tabSize", "wordSpacing", "fontVariantLigatures"].forEach(function (k) { mirror.style[k] = cs[k]; });
+      mirror.style.width = innerWidth(area, cs) + "px";
+      mirror.innerHTML = area.value.split("\n").map(function (r) { return "<div>" + (r ? esc(r).replace(/\[[^\]\n]*\]/g, '<span class="lyr-tm">$&</span>') : "​") + "</div>"; }).join("");
+      var bt = parseFloat(cs.borderTopWidth) || 0, bl = parseFloat(cs.borderLeftWidth) || 0, lh = parseFloat(cs.lineHeight) || 20;
+      var H = area.clientHeight, st = area.scrollTop, kids = mirror.children, rows = [], bands = [], lints = {};
+      lintShown(area).forEach(function (f) { lints[f.line] = lints[f.line] === "bad" || f.bad ? "bad" : "near"; });   // HERESY 1169
+      for (var i = 0; i < kids.length; i++) {
+        var y = kids[i].offsetTop - st;
+        if (y < -lh) continue;
+        if (y > H) break;
+        var mk = marks.indexOf(i) >= 0;
+        if (mk) bands.push('<span class="lyr-band" style="top:' + y + "px;height:" + kids[i].offsetHeight + 'px"></span>');
+        rows.push('<div class="lyr-num' + (mk ? " is-mark" : "") + (lints[i] ? " is-lint-" + lints[i] : "") + '" style="top:' + y + "px;height:" + lh + 'px">' + (i + 1) + "</div>");
+      }
+      [nums, tagsl].forEach(function (l) { l.style.top = (area.offsetTop + bt) + "px"; l.style.left = (area.offsetLeft + bl) + "px"; l.style.height = H + "px"; });
+      nums.style.width = Math.max(0, (parseFloat(cs.paddingLeft) || 0) - 6) + "px";
+      nums.innerHTML = shown() ? rows.join("") : "";
+      tagsl.style.width = innerWidth(area, cs) + "px";
+      var mr = mirror.getBoundingClientRect(), k = mirror.offsetWidth ? mr.width / mirror.offsetWidth : 1;
+      Array.prototype.forEach.call(mirror.querySelectorAll(".lyr-tm"), function (t) {
+        Array.prototype.forEach.call(t.getClientRects(), function (r) {
+          var y = (r.top - mr.top) / k - st;
+          if (y < -lh || y > H) return;
+          bands.push('<span class="lyr-tag" style="left:' + ((r.left - mr.left) / k) + "px;top:" + y + "px;width:" + (r.width / k) + "px;height:" + (r.height / k) + 'px"></span>');
+        });
+      });
+      tagsl.innerHTML = bands.join("");
+    }
+    function later() { if (!queued) { queued = true; requestAnimationFrame(draw); } }
+    function lineAt(pos) { return area.value.slice(0, pos).split("\n").length - 1; }
+    function changed() { keepMarks(); later(); if (onChange) onChange(); }
+    // marks follow their lines: where the text changed, how many lines it gained or lost there
+    area.addEventListener("input", function () {
+      var now = area.value;
+      if (!marks.length) { var r = recallMarks(); if (r) marks = r; }
+      else if (now !== was) {
+        var p = 0, n = Math.min(was.length, now.length);
+        while (p < n && was.charCodeAt(p) === now.charCodeAt(p)) p++;
+        var at = was.slice(0, p).split("\n").length - 1, d = now.split("\n").length - was.split("\n").length, last = now.split("\n").length - 1;
+        if (d) marks = marks.filter(function (m) { return d > 0 || m <= at || m > at - d; }).map(function (m) { return m > at ? m + d : m; });
+        marks = marks.filter(function (m) { return m <= last; });
+        keepMarks();
+      }
+      was = now;
+      later();
+      if (onChange) onChange();
+    });
+    // to a line: the cursor at its start, the line in view (in the box when it scrolls, else in the frame or the page)
+    function bring(line) {
+      var start = line ? area.value.split("\n").slice(0, line).join("\n").length + 1 : 0;
+      area.focus({ preventScroll: true });
+      area.setSelectionRange(start, start);
+      draw();
+      var kid = mirror.children[line];
+      if (!kid) return;
+      var y = kid.offsetTop, cs = getComputedStyle(area), bt = parseFloat(cs.borderTopWidth) || 0, lh = parseFloat(cs.lineHeight) || 20;
+      if (area.scrollHeight > area.clientHeight + 1 && (y < area.scrollTop || y + lh > area.scrollTop + area.clientHeight)) area.scrollTop = Math.max(0, y - area.clientHeight / 3);
+      var probe = document.createElement("span");
+      probe.style.cssText = "position:absolute;width:1px;visibility:hidden;pointer-events:none;left:" + area.offsetLeft + "px;top:" + (area.offsetTop + bt + y - area.scrollTop) + "px;height:" + lh + "px";
+      wrap.appendChild(probe);
+      probe.scrollIntoView({ block: "nearest", inline: "nearest" });
+      probe.remove();
+      later();
+    }
+    function toggle() {
+      var l = lineAt(area.selectionStart), i = marks.indexOf(l);
+      if (i >= 0) marks.splice(i, 1); else marks.push(l);
+      marks.sort(function (a, b) { return a - b; });
+      changed();
+    }
+    function jump(dir) {
+      if (!marks.length) return;
+      var l = lineAt(area.selectionStart);
+      var to = dir > 0 ? marks.filter(function (m) { return m > l; })[0] : marks.filter(function (m) { return m < l; }).pop();
+      if (to === undefined) to = dir > 0 ? marks[0] : marks[marks.length - 1];
+      bring(to);
+    }
+    // HERESY 1169 (Viktor 08.10.2026: «Я в ахуе от мимики бейсиковых трейсов команд mcedit. Хочешь, добавь ещё что-то
+    // дельное»): mcedit's keys a lyric writer reaches for: Alt+L to a line by its number, Ctrl+Y the line away, Alt+O the marks
+    // away; and Alt+↑ / Alt+↓ move the line (or the lines selected) up or down, their marks with them. Each change goes in as
+    // typed (execCommand), so Ctrl+Z takes it back.
+    function typeIn(s) {
+      var ok = false;
+      try { ok = s ? document.execCommand("insertText", false, s) : document.execCommand("delete"); } catch (e) { ok = false; }
+      if (!ok) {
+        var a = area.selectionStart, b = area.selectionEnd;
+        area.value = area.value.slice(0, a) + s + area.value.slice(b);
+        area.setSelectionRange(a + s.length, a + s.length);
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+    function startOf(line) { return line ? area.value.split("\n").slice(0, line).join("\n").length + 1 : 0; }
+    function deleteLine() {
+      var v = area.value, l = lineAt(area.selectionStart), from = startOf(l), to = v.indexOf("\n", from);
+      if (to < 0) { to = v.length; if (from > 0) from -= 1; } else to += 1;     // the line and its newline (the last one: the newline before it)
+      if (from === to) return;
+      area.setSelectionRange(from, to);
+      typeIn("");
+    }
+    function moveLines(dir) {
+      var v = area.value, lines = v.split("\n"), s0 = area.selectionStart, s1 = area.selectionEnd;
+      var a = lineAt(s0), b = lineAt(s1 > s0 && v.charAt(s1 - 1) === "\n" ? s1 - 1 : s1);
+      if ((dir < 0 && a === 0) || (dir > 0 && b >= lines.length - 1)) return;
+      var other = dir < 0 ? lines[a - 1] : lines[b + 1], block = lines.slice(a, b + 1);
+      var from = startOf(dir < 0 ? a - 1 : a), to = from + (dir < 0 ? [other].concat(block) : block.concat([other])).join("\n").length;
+      var shift = dir < 0 ? -(other.length + 1) : other.length + 1;
+      area.setSelectionRange(from, to);
+      typeIn((dir < 0 ? block.concat([other]) : [other].concat(block)).join("\n"));
+      area.setSelectionRange(s0 + shift, s1 + shift);
+      var swap = dir < 0 ? a - 1 : b + 1;
+      marks = marks.map(function (m) { return m >= a && m <= b ? m + dir : m === swap ? (dir < 0 ? b : a) : m; }).sort(function (x, y) { return x - y; });
+      changed();
+    }
+    function gotoLine() {
+      var n = area.value.split("\n").length, here = lineAt(area.selectionStart) + 1;
+      var ask = window.HeresyDialog ? window.HeresyDialog.prompt(tr("Go to line (1–{0})").replace("{0}", n), String(here), { ok: tr("Go") }) : Promise.resolve(window.prompt("Line", String(here)));
+      ask.then(function (v) { var k = parseInt(v, 10); if (k >= 1) bring(Math.min(k, n) - 1); else area.focus(); });
+    }
+    area.addEventListener("keydown", function (e) {
+      if (e.isComposing || e.metaKey) return;
+      var editable = !area.readOnly && !area.disabled;
+      if (e.altKey && !e.ctrlKey) {
+        if (e.code === "KeyK") { e.preventDefault(); if (e.shiftKey) { marks = []; changed(); } else toggle(); }
+        else if (e.code === "KeyJ") { e.preventDefault(); jump(e.shiftKey ? -1 : 1); }
+        else if (e.code === "KeyO" && !e.shiftKey) { e.preventDefault(); marks = []; changed(); }
+        else if (e.code === "KeyL" && !e.shiftKey) { e.preventDefault(); gotoLine(); }
+        else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !e.shiftKey && editable) { e.preventDefault(); moveLines(e.key === "ArrowUp" ? -1 : 1); }
+      } else if (e.ctrlKey && !e.altKey && !e.shiftKey && e.code === "KeyY" && editable) { e.preventDefault(); deleteLine(); }
+    });
+    area.addEventListener("scroll", later);
+    area.addEventListener("blur", later);                          // HERESY 1169: a «[» left open shows once the cursor leaves
+    area.addEventListener("keyup", function (e) { if (/^Arrow|^Enter$|^Home$|^End$|^Page/.test(e.key)) later(); });
+    if (window.ResizeObserver) new ResizeObserver(later).observe(area);
+    window.addEventListener("resize", later);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
+    later();
+    return { draw: later, marks: function () { return marks.slice(); }, next: function () { jump(1); },
+      numbers: function (on) { store("yue2.lyrNums", on ? null : "off"); later(); } };
+  }
+
   function attach(area, opts) {
     opts = opts || {};
     var meter = opts.meter, styleBox = opts.style;
@@ -317,6 +540,7 @@
     mirror.setAttribute("aria-hidden", "true");
     wrap.appendChild(mirror);
     var last = null, queued = false;
+    var ax = aids(area, function () { if (meter) paintMeter(last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : ""))); });   // HERESY 1169
 
     function paintMeter(m) {
       if (!meter) return;
@@ -344,6 +568,21 @@
         parts.push('<button type="button" class="lyr-tog lyr-warn ' + k[2] + '" data-lyr="' + k[1] + '" data-tip="' + esc(head + "\n" + says.join("\n")) + '">' +
           esc(tr(k[3]).replace("{0}", num(list.length))) + "</button>");
       });
+      // HERESY 1169: the brackets linted, each kind a press to the next
+      var lf = lintShown(area), lbad = lf.filter(function (f) { return f.bad; }), lnear = lf.filter(function (f) { return !f.bad; });
+      [[lbad, "lint", "bad", "Tags not closed or astray: {0}"], [lnear, "lint2", "near", "Round brackets to look at: {0}"]].forEach(function (k) {
+        if (!k[0].length) return;
+        var says = k[0].slice(0, 12).map(function (f) { return tr("line {0}: {1}").replace("{0}", num(f.line + 1)).replace("{1}", tr(f.say)); });
+        if (k[0].length > 12) says.push(tr("and {0} more").replace("{0}", num(k[0].length - 12)));
+        parts.push('<button type="button" class="lyr-tog lyr-warn ' + k[2] + '" data-lyr="' + k[1] + '" data-tip="' + esc(tr("Press to go to the next one.") + "\n" + says.join("\n")) + '">' +
+          esc(tr(k[3]).replace("{0}", num(k[0].length))) + "</button>");
+      });
+      // HERESY 1169: the marks (Alt+K) and the line numbers
+      var mk = ax ? ax.marks().length : 0;
+      if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
+        esc(tr("Marks: {0}").replace("{0}", num(mk))) + "</button>");
+      parts.push('<button type="button" class="lyr-tog lyr-keys" data-lyr="keys" data-tip="' + esc(tr(KEYS)) + '">' + esc(tr("Keys")) + "</button>");   // HERESY 1169
+      parts.push('<button type="button" class="lyr-tog" data-lyr="nums" aria-pressed="' + (recall("yue2.lyrNums") !== "off") + '" data-tip="' + esc(tr("The lines' numbers in the box, as a code editor shows them (Alt+K marks a line, Alt+J goes to the next mark)")) + '">' + esc(tr("Line numbers")) + "</button>");
       parts.push('<button type="button" class="lyr-tog" data-lyr="spell" aria-pressed="' + spell + '" data-tip="' + esc(tr("The browser's spelling check in the lyrics' language; press to switch it off or on")) + '">' + esc(tr("Spelling")) + "</button>");
       if (manual) parts.push('<button type="button" class="lyr-tog" data-lyr="auto" data-tip="' + esc(tr("The box grows with the words again, as it did before you drew it")) + '">' + esc(tr("Auto height")) + "</button>");
       meter.innerHTML = parts.join("");
@@ -363,7 +602,7 @@
       var cs = getComputedStyle(area);
       ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
        "tabSize", "wordSpacing", "fontVariantLigatures"].forEach(function (k) { mirror.style[k] = cs[k]; });
-      mirror.style.width = area.clientWidth + "px";
+      mirror.style.width = innerWidth(area, cs) + "px";
       var rows = text.split("\n");
       mirror.innerHTML = rows.map(function (r) { return "<div>" + (esc(r) || "​") + "</div>"; }).join("");
       var top0 = area.offsetTop + parseFloat(cs.borderTopWidth), left = area.offsetLeft + area.clientWidth - 6;
@@ -435,7 +674,14 @@
     // HERESY 1168: to a stress mark astray: the letter and its mark selected, the line brought into view (in the box when it
     // scrolls, and in the frame or page around it when it is not seen there: under a lifted frame's sticky Generate bar too,
     // which the frame's own box reaches under; the browser itself scrolls a probe set where the line stands)
-    var visit = { stress: -1, stress2: -1 };
+    var visit = { stress: -1, stress2: -1, lint: -1, lint2: -1 };
+    function lintNext(bad) {                                  // HERESY 1169: to the next bracket fault of its kind
+      var list = lintShown(area).filter(function (f) { return !!f.bad === bad; }), k = bad ? "lint" : "lint2";
+      if (!list.length) return draw();
+      visit[k] = (visit[k] + 1) % list.length;
+      draw();
+      goTo(list[visit[k]]);
+    }
     function goTo(f) {
       area.focus({ preventScroll: true });
       area.setSelectionRange(f.from, f.to);
@@ -465,6 +711,10 @@
         goTo(list[visit[b.dataset.lyr]]);
         return;
       }
+      if (b.dataset.lyr === "mark" && ax) return ax.next();                 // HERESY 1169
+      if (b.dataset.lyr === "lint" || b.dataset.lyr === "lint2") return lintNext(b.dataset.lyr === "lint");
+      if (b.dataset.lyr === "keys") { if (window.HeresyGuide) window.HeresyGuide.open("creator", "The lyrics' meter and the phonetic hand"); return; }
+      if (b.dataset.lyr === "nums" && ax) ax.numbers(recall("yue2.lyrNums") === "off");
       if (b.dataset.lyr === "spell") store("yue2.lyrSpell", recall("yue2.lyrSpell") === "off" ? null : "off");
       if (b.dataset.lyr === "auto") {
         delete area.dataset.manual;
@@ -474,8 +724,8 @@
       draw();
     });
     later();
-    return { draw: draw, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
+    return { draw: draw, aids: ax, lintNext: lintNext, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
   }
 
-  window.HeresyLyrics = { attach: attach, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
+  window.HeresyLyrics = { attach: attach, aids: aids, lint: lint, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
 })();

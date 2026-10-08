@@ -14,11 +14,9 @@ pipeline_tag: text-to-audio
 
 # Ruach Studio · Models
 
-> ⚠️ **Work in progress.** Ruach Studio is not released yet: the files, the folders and this card may still change.
-> Its code repository opens with the release.
+> ⚠️ **Work in progress.** Ruach Studio is not released yet: the files, the folders and this card may still change. Its code repository opens with the release.
 
-Every weight Ruach Studio (its code repository opens with the release) uses, in one repository, laid out
-exactly as the studio's own folders, so one command puts each file where the studio looks for it:
+Every weight Ruach Studio (its code repository opens with the release) uses, in one repository, laid out exactly as the studio's own folders, so one command puts each file where the studio looks for it:
 
 ```bash
 cd Ruach_Studio                      # the root of the studio
@@ -31,12 +29,7 @@ or only what you need:
 hf download goldhub/Ruach_Studio_Models --local-dir . --include "models/YuE2-3B-Q8_0.gguf" "models/YuE2-Vae-F32.gguf"
 ```
 
-**Nothing here is ours.** These are the works of the people and teams credited below, re-hosted
-unchanged (the GGUF files as converted by yue2.cpp's tools, byte for byte the same as their sources'),
-so that a studio install does not have to visit a dozen repositories. Every file keeps its own
-licence; most are **non-commercial** (CC BY-NC 4.0). Using this repository you accept each licence
-of the files you take. If you are an author and want a file of yours taken down, open a discussion
-here and it goes.
+**Nothing here is ours.** These are the works of the people and teams credited below, re-hosted unchanged (the GGUF files as converted by yue2.cpp's tools, byte for byte the same as their sources'), so that a studio install does not have to visit a dozen repositories. Every file keeps its own licence; most are **non-commercial** (CC BY-NC 4.0). Using this repository you accept each licence of the files you take. If you are an author and want a file of yours taken down, open a discussion here and it goes.
 
 ---
 
@@ -62,10 +55,7 @@ here and it goes.
 | `artwork/Krea-2-Turbo/` | `text_encoder/` (Qwen3-VL-4B), `vae/` (Qwen-Image), `tokenizer/`, `scheduler/`, `model_index.json`, `transformer/config.json` (no transformer weights: the fine-tune above brings its own) | 9.4 GB | what Krea 2 needs beside its transformer | [krea/Krea-2-Turbo](https://huggingface.co/krea/Krea-2-Turbo), unchanged | Krea 2 Community License |
 | `artwork/CyberRealistic-XL-v10/` | diffusers, fp16 | 6.5 GB | the artwork's painter on cards under 16 GB (Krea 2 wants about 15 GB at Q4, 21 GB at Q8, its prompt writer included) | [CyberRealistic XL v10](https://civitai.com/models/312530) by Cyberdelia (SDXL 1.0 finetune), converted from fp32 | CreativeML Open RAIL++-M |
 
-Any LLM quant goes with either projector (`mmproj-f16` or `mmproj-Q8_0`): llama.cpp takes them as a pair.
-Measured on one 120 s excerpt (RTX 3090, peak VRAM): Q8_0 + mmproj-f16 11.3 GB, Q4_K_M + mmproj-f16 8.4 GB,
-about 5 s a track; the full bf16 model through transformers 18.3 GB. Every size heard the same tags: a
-draft to correct, not a description to trust.
+Any LLM quant goes with either projector (`mmproj-f16` or `mmproj-Q8_0`): llama.cpp takes them as a pair. Measured on one 120 s excerpt (RTX 3090, peak VRAM): Q8_0 + mmproj-f16 11.3 GB, Q4_K_M + mmproj-f16 8.4 GB, about 5 s a track; the full bf16 model through transformers 18.3 GB. Every size heard the same tags: a draft to correct, not a description to trust.
 
 ### Not here, and why
 
@@ -80,16 +70,9 @@ draft to correct, not a description to trust.
 
 ## Licences in short
 
-- **CC BY-NC 4.0** — share and adapt, with credit, **not for commercial purposes**. This covers YuE2,
-  its decoders, SheetSage2, MERT, the sliders and the LoRA here. Their licences speak of the
-  weights, not of the music made with them (YuE2's licence file: the weights, under CC BY-NC 4.0).
-- **Krea 2 Community License** — Krea 2 and Krea 2 Muse (`artwork/Krea-2-Turbo/`, `artwork/Krea-2-Muse/`). By taking
-  these files you agree to it and to Krea's [Acceptable Use Policy](https://www.krea.ai/krea-2-use-policy); its copy
-  (`LICENSE.pdf`) and the `NOTICE.txt` it asks for lie beside them. In short: use, copy and share them (with that
-  licence and notice); commercial use only while your yearly revenue stays under one million US dollars; whoever deploys
-  them must filter what is generated (section 4.2).
-- **CreativeML Open RAIL++-M** — CyberRealistic XL (from SDXL 1.0): free use; its use restrictions (Attachment A,
-  in `artwork/CyberRealistic-XL-v10/LICENSE.md`) bind everyone who uses it.
+- **CC BY-NC 4.0** — share and adapt, with credit, **not for commercial purposes**. This covers YuE2, its decoders, SheetSage2, MERT, the sliders and the LoRA here. Their licences speak of the weights, not of the music made with them (YuE2's licence file: the weights, under CC BY-NC 4.0).
+- **Krea 2 Community License** — Krea 2 and Krea 2 Muse (`artwork/Krea-2-Turbo/`, `artwork/Krea-2-Muse/`). By taking these files you agree to it and to Krea's [Acceptable Use Policy](https://www.krea.ai/krea-2-use-policy); its copy (`LICENSE.pdf`) and the `NOTICE.txt` it asks for lie beside them. In short: use, copy and share them (with that licence and notice); commercial use only while your yearly revenue stays under one million US dollars; whoever deploys them must filter what is generated (section 4.2).
+- **CreativeML Open RAIL++-M** — CyberRealistic XL (from SDXL 1.0): free use; its use restrictions (Attachment A, in `artwork/CyberRealistic-XL-v10/LICENSE.md`) bind everyone who uses it.
 - **Apache-2.0** — Qwen3-4B-Instruct-2507.
 - **MIT** — Whisper large-v3 as converted by SYSTRAN (from OpenAI's weights, themselves Apache-2.0).
 - **MIT** — Demucs (Meta AI Research).
@@ -109,8 +92,7 @@ The full texts and every file's source are in [LICENSE.md](LICENSE.md).
 - **Demucs** — Meta AI Research; **python-audio-separator** — nomadkaraoke.
 - **UniverSR** — woongzip1.
 - **Qwen2.5-Omni-7B** — the Qwen team (Alibaba); its GGUF — ggml-org, unsloth, mradermacher.
-- **Krea 2** — [Krea](https://krea.ai) (Krea 2 is licensed under the Krea 2 Community License Agreement; see
-  https://krea.ai/krea-2-licensing); its text encoder Qwen3-VL-4B and its VAE from Qwen-Image — the Qwen team.
+- **Krea 2** — [Krea](https://krea.ai) (Krea 2 is licensed under the Krea 2 Community License Agreement; see https://krea.ai/krea-2-licensing); its text encoder Qwen3-VL-4B and its VAE from Qwen-Image — the Qwen team.
 - **Krea 2 Muse** — [Stable Yogi](https://civitai.com/models/2741166), who modified Krea 2 into it.
 - **CyberRealistic XL** — Cyberdelia.
 

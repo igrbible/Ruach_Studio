@@ -1,0 +1,330 @@
+From 388b3bacab6b9f010023a122914c9230378511ba Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 13:17:29 -0600
+Subject: [PATCH 1244/1252] HERESY 1169: the Refiner's chain row in the order
+ of the work (Debuzz, Upscale, Stems, Remaster, Upscale), the stems four first
+ and from a source, the Remaster's preset and de-esser alive for the chain
+ when it splits stems
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «Апскейлер нужен в двух местах - перед разделением на стемы и в конце после ремастера… По дефолту стеммер - four».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  6 ++++
+ tools/console/heresy-derived.js | 52 ++++++++++++++++++++++++-------
+ tools/console/heresy-post.js    | 54 ++++++++++++++++++++++-----------
+ tools/console/index.html        |  8 +++--
+ 4 files changed, 89 insertions(+), 31 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 64839ba..8e5584b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2690,6 +2690,8 @@ select { padding-top: 6px; padding-bottom: 6px; }
+ @keyframes pc-flow { from { background-position: 200% 0; } to { background-position: 0 0; } }
+ .pc-st.is-running { animation: pc-blink 1.2s ease-in-out infinite; }
+ @keyframes pc-blink { 50% { opacity: .55; } }
++/* HERESY 1169: five steps in the chain now: when Run wraps to a line of its own, it keeps to the right */
++.pc-row #pcRun { margin-left: auto; }
+ #pcRun.is-magic { opacity: 1 !important; pointer-events: none; background: linear-gradient(90deg, var(--amber), var(--amber-hi), var(--amber)); background-size: 200% 100%; animation: pc-flow 2s linear infinite; }
+ 
+ /* HERESY 1059: the player fits a narrow window (and a zoomed one): the 1042 rule had brought the
+@@ -4309,6 +4311,10 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ /* the Refiner's way out: at its head's end, beside the take in hand; in Stems, at the end of the split's row */
+ .post-head .post-daw { margin-left: auto; align-self: center; }
+ .dv-actions .dv-daw { margin-left: auto; }
++/* HERESY 1169: the stems' source in the row of their buttons, its name beside it */
++.dv-actions .dv-src { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; margin: 0; }
++.dv-actions .dv-src .label { margin: 0; }
++.dv-actions .dv-src select { width: auto; max-width: 320px; }
+ /* HERESY 1169 (Viktor 07.10.2026: «в Музыканте… съехали не кнопки его, а именно <> и X»; «В композиторе по высоте вся полоса
+    идеальна»; «иконки кнопок мелкие во втором фрейме»): over the room, the take's ⇆ and ⤡ stand in its head's row as Compose's
+    do, level with the take's buttons and ending where the frame's content ends (the top right corner stays theirs in the room,
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 0ab2d3b..5e3c564 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -14,6 +14,13 @@
+   function fileUrl(name, path) { return "/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
+   var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz" };
+   var MODE = { vocals: "vocals + instrumental", four: "four stems" };
++  // HERESY 1169: a set of stems split from a file of the tree (the chain splits the debuzzed or upscaled take) says which
++  function fromWhat(src) {
++    var dir = String(src || "").replace(/^derived\//, "").split("/")[0];
++    var m = /^(debuzz|upscale)-([a-z0-9]+)-\d{8}-(\d\d)(\d\d)/.exec(dir);
++    return !m ? dir : (m[1] === "debuzz" ? "debuzzed " + m[2] + " %" : "upscaled, " + m[2]) + " \u00b7 " + m[3] + ":" + m[4];
++  }
++  function stemsFrom(m) { return m.kind === "stems" && m.source && m.source !== "the take" ? ", from " + fromWhat(m.source) : ""; }
+ 
+   function say(text, bad) {
+     $("derivedState").textContent = text || "";
+@@ -27,7 +34,7 @@
+     state.list.forEach(function (m) {
+       (m.files || []).forEach(function (f) {
+         out.push({ name: take.name, source: f.path, url: fileUrl(take.name, f.path), kind: m.kind,
+-                   label: "↳ " + f.name + " (" + (KIND[m.kind] || m.kind) + (m.mode ? ", " + (MODE[m.mode] || m.mode) : "") + ")" });
++                   label: "↳ " + f.name + " (" + (KIND[m.kind] || m.kind) + (m.mode ? ", " + (MODE[m.mode] || m.mode) : "") + stemsFrom(m) + ")" });
+       });
+     });
+     return out;
+@@ -76,7 +83,7 @@
+     });
+     state.list.forEach(function (m) {
+       html += '<div class="dv-group" data-dv-id="' + esc(m.id || "") + '" data-kind="' + esc(m.kind || "") + '"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
+-        (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
++        (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + esc(stemsFrom(m).replace(", from", " · from")) + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
+         (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
+         (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
+         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
+@@ -155,7 +162,7 @@
+   }
+   function madeLabel(m) {
+     var s = m.settings || {}, at = String(m.created || "").slice(11, 16);
+-    var what = m.kind === "stems" ? (MODE[m.mode] || m.mode || "stems")
++    var what = m.kind === "stems" ? (MODE[m.mode] || m.mode || "stems") + stemsFrom(m)
+       : m.kind === "remaster" ? (m.source && m.source !== "the take" ? (s.preset || "balanced") + " from stems" : "from the take") + (s.loudnorm !== false ? ", " + (s.lufs || -14) + " LUFS" : "")
+       : m.kind === "upscale" ? (m.mode || "upscale") + ", " + ((m.files || []).length) + " file" + ((m.files || []).length === 1 ? "" : "s")
+       : m.kind === "debuzz" ? Math.round((m.strength || 0) * 100) + " %" : m.kind;
+@@ -200,6 +207,7 @@
+         paintSources();
+         paintUpSources();
+         paintDbSources();
++        paintStSources();
+         // while Forge works on this take, look again every three seconds
+         clearTimeout(state.watch);
+         if (state.running.some(function (j) { return j.status !== "failed"; })) state.watch = setTimeout(refresh, 3000);
+@@ -212,13 +220,23 @@
+       });
+   }
+ 
++  // HERESY 1169: the stems from the take or from a debuzzed or upscaled file of it (the chain splits them so)
++  function paintStSources() {
++    var sel = $("stSource");
++    if (!sel) return;
++    var keep = sel.value;
++    sel.innerHTML = '<option value="">the take</option>' + files().filter(function (f) { return f.kind === "debuzz" || f.kind === "upscale"; }).map(function (f) {
++      return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
++    }).join("");
++    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
++  }
+   function split(mode) {
+     if (!state.take) return;
+-    var token = state.token, name = state.take.name, started = Date.now();
++    var token = state.token, name = state.take.name, started = Date.now(), src = $("stSource") ? $("stSource").value : "";
+     var ticker = setInterval(function () { say("Forge is splitting (" + MODE[mode] + ")… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
+     all(true);
+     function ask() {
+-      return fetch("/lab/stems?name=" + encodeURIComponent(name) + "&mode=" + mode).then(function (r) {
++      return fetch("/lab/stems?name=" + encodeURIComponent(name) + "&mode=" + mode + (src ? "&source=" + encodeURIComponent(src) : "")).then(function (r) {
+         return r.json().then(function (body) {
+           if (r.status === 202) {
+             if (token === state.token && !state.running.length) refresh();
+@@ -247,20 +265,29 @@
+     // HERESY 1030: a debuzzed file is a source too (the stems as a set, a debuzzed one as it is)
+     var single = files().filter(function (f) { return f.kind === "debuzz"; });
+     sel.innerHTML = '<option value="">the take</option>' + stems.map(function (m) {
+-      return '<option value="derived/' + esc(m.id) + '">stems: ' + esc(MODE[m.mode] || m.mode) + "</option>";
++      return '<option value="derived/' + esc(m.id) + '">stems: ' + esc((MODE[m.mode] || m.mode) + stemsFrom(m)) + "</option>";
+     }).join("") + single.map(function (f) {
+       return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
+     }).join("");
+     sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
+     paintLevels();
+   }
++  // HERESY 1148: the preset and the de-esser act on stems before the Debunker mixes them; on a single file (the take, a
++  // debuzzed file) it goes straight on and they would do nothing, so they are off there, and the tip says why. HERESY 1169:
++  // the chain's Stems splits a set before its remaster, so while it is on they are live for the chain as well
++  function stemsPicked() {
++    var src = $("rmSource") ? $("rmSource").value : "";
++    return state.list.some(function (x) { return x.kind === "stems" && "derived/" + x.id === src; });
++  }
++  function paintRmLocks() {
++    var on = stemsPicked() || !!($("pcStems") && $("pcStems").checked);
++    ["rmPreset", "rmDeess", "rmDeessMode"].forEach(function (id) { if ($(id)) $(id).disabled = !on; });
++  }
+   function paintLevels() {
+     var src = $("rmSource").value, box = $("rmLevels");
+     var m = state.list.filter(function (x) { return "derived/" + x.id === src; })[0];
+     box.classList.toggle("is-hidden", !m);
+-    // HERESY 1148: the preset and the de-esser act on stems before the Debunker mixes them; on a single file (the take, a
+-    // debuzzed file) it goes straight on and they would do nothing, so they are off there, and the tip says why
+-    ["rmPreset", "rmDeess", "rmDeessMode"].forEach(function (id) { if ($(id)) $(id).disabled = !m; });
++    paintRmLocks();
+     if (!m) { box.innerHTML = ""; return; }
+     var names = (m.files || []).map(function (f) { return f.name; });
+     if (names.indexOf("drums") >= 0) names = names.filter(function (n) { return n !== "instrumental"; });   // the sum of the others
+@@ -322,7 +349,7 @@
+     var s = { source: $("rmSource").value, preset: $("rmPreset").value, levels: levels,
+               cleanup: $("rmCleanup").checked, fade: parseFloat($("rmFade").value) || 0,
+               trim_start: parseFloat($("rmTrimStart").value) || 0, trim_end: parseFloat($("rmTrimEnd").value) || 0,
+-              deess: $("rmDeess").checked && !$("rmDeess").disabled, deess_mode: $("rmDeessMode").value, hz432: $("rm432").checked,
++              deess: $("rmDeess").checked && stemsPicked(), deess_mode: $("rmDeessMode").value, hz432: $("rm432").checked,
+               loudnorm: $("rmLoud").checked, lufs: parseFloat($("rmLufs").value) || -14, tp: parseFloat($("rmTp").value) || -1,
+               formats: $("rmMp3").checked ? ["wav", "flac", "mp3"] : ["wav", "flac"] };
+     return s;
+@@ -348,6 +375,7 @@
+       $("rmRun").addEventListener("click", remaster);
+       $("rmSource").addEventListener("change", paintLevels);
+       paintLevels();                                      // HERESY 1148: the take is the source until stems exist
++      document.addEventListener("change", function (event) { if (event.target && event.target.id === "pcStems") paintRmLocks(); });
+     }
+     Array.prototype.forEach.call(document.querySelectorAll("[data-dv-split]"), function (b) {
+       b.addEventListener("click", function () { split(b.dataset.dvSplit); });
+@@ -498,5 +526,7 @@
+     refresh();
+   }
+ 
+-  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings };
++  // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
++  function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
++  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess };
+ })();
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index d082c71..5e74797 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -51,13 +51,28 @@
+ 
+   // ---- HERESY 1054: the chain (Viktor): Debuzz -> Upscale (optional) -> Remaster, then the checks;
+   // run on Forge as one job (POST /lab/chain), watched here; closing the page stops nothing.
++  // HERESY 1169 (Viktor 08.10.2026: «перепроверить пайплайн и его логичность. Апскейлер нужен в двух местах - перед
++  // разделением на стемы и в конце после ремастера… По дефолту стеммер - four»): Debuzz › Upscale › Stems › Remaster ›
++  // Upscale, then the checks. The stems are split from the debuzzed (and upscaled) take, no longer from the raw one at the
++  // end, and the remaster mixes them, so its preset and de-esser work in the chain too
+   var CHAIN_KEY = "yue2.chain", chain = { timer: 0, hooks: null, watching: "" };
+-  function chainPrefs() { try { return JSON.parse(localStorage.getItem(CHAIN_KEY) || "{}"); } catch (e) { return {}; } }
++  function chainPrefs() {
++    var p;
++    try { p = JSON.parse(localStorage.getItem(CHAIN_KEY) || "{}") || {}; } catch (e) { p = {}; }
++    // the stems' kind was «vocals» only because that was the default: once, four takes its place; the upscale at the end
++    // starts as the one before the stems is
++    if (p.v !== 2) { p.stemsMode = "four"; if (p.upEnd == null) p.upEnd = !!p.upscale; p.v = 2; }
++    return p;
++  }
+   function saveChainPrefs() {
+-    var p = { strength: $("pcStrength").value, upscale: $("pcUpscale").checked, upMode: $("pcUpMode").value, inspect: $("pcInspect").checked,
+-              spectrum: $("pcSpectrum").checked, gloss: $("pcGloss").checked, stems: $("pcStems").checked, stemsMode: $("pcStemsMode").value };
++    var p = { v: 2, strength: $("pcStrength").value, upscale: $("pcUpscale").checked, upMode: $("pcUpMode").value, stems: $("pcStems").checked,
++              stemsMode: $("pcStemsMode").value, upEnd: $("pcUpEnd").checked, upEndMode: $("pcUpEndMode").value, inspect: $("pcInspect").checked,
++              spectrum: $("pcSpectrum").checked, gloss: $("pcGloss").checked };
+     try { localStorage.setItem(CHAIN_KEY, JSON.stringify(p)); } catch (e) { /* private mode */ }
+   }
++  function upModes(id, pick) {
++    return '<select id="' + id + '">' + ["subtle", "normal", "high"].map(function (m) { return "<option" + (pick === m ? " selected" : "") + ">" + m + "</option>"; }).join("") + "</select>";
++  }
+   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+   function chainMarkup() {
+     var p = chainPrefs(), box = document.createElement("section");
+@@ -66,15 +81,17 @@
+       '<div class="pc-row"><strong class="pc-cap">Chain</strong>' +
+       '<label class="pc-node is-req" data-tip="The VAE frame buzz out: needed for every YuE2 take; off for a track imported from elsewhere"><input type="checkbox" id="pcDebuzz" checked /> Debuzz ' +
+         '<select id="pcStrength">' + [50, 60, 70, 80, 90, 100].map(function (v) { return '<option value="' + v / 100 + '"' + ((p.strength || "0.8") == v / 100 ? " selected" : "") + ">" + v + " %</option>"; }).join("") + "</select></label>" +
+-      '<span class="pc-arrow">›</span><label class="pc-node" data-tip="UniverSR redraws the top of the spectrum after Debuzz: subtle above 12 kHz, normal above 8, high above 6. One variant, the original kept below the cutoff; about 1.6 times the length of the song on a 3090."><input type="checkbox" id="pcUpscale"' + (p.upscale ? " checked" : "") + ' /> Upscale ' +
+-        '<select id="pcUpMode">' + ["subtle", "normal", "high"].map(function (m) { return "<option" + (p.upMode === m ? " selected" : "") + ">" + m + "</option>"; }).join("") + "</select></label>" +
+-      '<span class="pc-arrow">›</span><span class="pc-node is-req" data-tip="With the settings of the Remaster step below">Remaster <em id="pcRmSay"></em></span>' +
++      '<span class="pc-arrow">›</span><label class="pc-node" data-tip="UniverSR redraws the top of the spectrum after Debuzz and before the stems are split: the separators hear the whole song, and every stem keeps its share of the top (without stems, it goes before the remaster). Subtle above 12 kHz, normal above 8, high above 6; one variant, the original kept below the cutoff; about 1.6 times the length of the song on a 3090."><input type="checkbox" id="pcUpscale"' + (p.upscale ? " checked" : "") + " /> Upscale " +
++        upModes("pcUpMode", p.upMode) + "</label>" +
++      '<span class="pc-arrow">›</span><label class="pc-node" data-tip="The debuzzed (and upscaled) take split into stems: four (vocals, drums, bass and the rest, with the instrumental: BS-Roformer, then htdemucs_ft) or vocals (voice and instrumental). The remaster then mixes them: its preset balances them, and the de-esser works on the voice alone. They stay in the tree, for your DAW too."><input type="checkbox" id="pcStems"' + (p.stems ? " checked" : "") + ' /> Stems <select id="pcStemsMode"><option value="four"' + (p.stemsMode !== "vocals" ? " selected" : "") +
++        '>four</option><option value="vocals"' + (p.stemsMode === "vocals" ? " selected" : "") + ">vocals</option></select></label>" +
++      '<span class="pc-arrow">›</span><span class="pc-node is-req" data-tip="With the settings of the Remaster step below: from the stems when the chain splits them (the preset and the de-esser at work), else from the file before it">Remaster <em id="pcRmSay"></em></span>' +
++      '<span class="pc-arrow">›</span><label class="pc-node" data-tip="UniverSR once more, on the remaster: the stems leave a hiss above 20 kHz and the remaster keeps almost nothing above 22 (measured on a take), so the top is drawn anew, near the first upscale\'s. If the new top passes the remaster\'s true-peak ceiling, the whole file is turned down to it."><input type="checkbox" id="pcUpEnd"' + (p.upEnd ? " checked" : "") + " /> Upscale " +
++        upModes("pcUpEndMode", p.upEndMode) + "</label>" +
+       '<span class="pc-then">then</span>' +
+       '<label class="pc-check" data-tip="Then the final file is measured for faults: a tone that will not leave, the frame buzz of the VAE, clicks, clipping, dropouts, stereo that fights itself. The Artifacts step shows them."><input type="checkbox" id="pcInspect"' + (p.inspect !== false ? " checked" : "") + " /> Artifacts</label>" +
+       '<label class="pc-check" data-tip="Then the spectrum of the final file, ready in the Spectrum step."><input type="checkbox" id="pcSpectrum"' + (p.spectrum ? " checked" : "") + " /> Spectrum</label>" +
+       '<label class="pc-check" data-tip="Whisper on the take: are the words the lyrics"><input type="checkbox" id="pcGloss"' + (p.gloss ? " checked" : "") + " /> Lyrics</label>" +
+-      '<label class="pc-check" data-tip="Then the take itself is split into stems: vocals (voice and instrumental, BS-Roformer) or four (also drums, bass and the rest, htdemucs_ft). From the take, not from the remaster."><input type="checkbox" id="pcStems"' + (p.stems ? " checked" : "") + ' /> Stems <select id="pcStemsMode"><option value="vocals"' + (p.stemsMode !== "four" ? " selected" : "") +
+-        '>vocals</option><option value="four"' + (p.stemsMode === "four" ? " selected" : "") + ">four</option></select></label>" +
+       '<span class="spacer"></span><button type="button" class="btn primary small" id="pcRun">Run the chain</button></div>' +
+       '<div class="pc-status" id="pcStatus"></div>';
+     return box;
+@@ -82,8 +99,10 @@
+   function paintRemasterSay() {
+     var D = window.HeresyDerived, s = D && D.remasterSettings ? D.remasterSettings() : null;
+     if (!s || !$("pcRmSay")) return;
+-    // HERESY 1148: no preset here: the chain remasters a single file, and the preset balances stems
+-    $("pcRmSay").textContent = (s.hz432 === false ? "440" : "432") + " Hz · " + (s.loudnorm === false ? "no loudnorm" : s.lufs + " LUFS");
++    // HERESY 1148, 1169: the preset balances stems and the de-esser works on a voice stem: said only when the chain splits them
++    var stems = $("pcStems") && $("pcStems").checked;
++    $("pcRmSay").textContent = (stems ? (s.preset || "balanced") + (s.deess ? " · de-ess" : "") + " · " : "") +
++      (s.hz432 === false ? "440" : "432") + " Hz · " + (s.loudnorm === false ? "no loudnorm" : s.lufs + " LUFS");
+   }
+   var MARK = { waiting: "·", running: "…", done: "✓", failed: "✕" };
+   var NAMES = { debuzz: "Debuzz", upscale: "Upscale", remaster: "Remaster", inspect: "Artifacts", spectrum: "Spectrum", gloss: "Lyrics", stems: "Stems" };
+@@ -97,7 +116,7 @@
+       Math.round(100 * (done + (cur ? 0.5 : 0)) / n) + '%"></i></div>' + job.steps.map(function (s) {
+       return '<span class="pc-st is-' + s.status + '" title="' + esc(s.error || s.file || "") + '">' + MARK[s.status] + " " + NAMES[s.step] + "</span>";
+     }).join('<span class="pc-arrow">›</span>') +
+-      (job.status === "done" ? '<span class="pc-say">done' + (job.final ? ": the remaster is in the tree" : "") + "</span>" : "") +
++      (job.status === "done" ? '<span class="pc-say">done' + (job.final ? (job.steps.some(function (s) { return s.end; }) ? ": the remaster, its top drawn anew, is in the tree" : ": the remaster is in the tree") : "") + "</span>" : "") +
+       (job.status === "failed" ? '<span class="pc-say is-bad">' + esc(job.error || "failed") + " · what was made before stays</span>" : "");
+     $("pcRun").disabled = job.status === "running";
+     $("pcRun").textContent = job.status === "running" ? "\u2728 Enjoy the magic\u2026 " + (done + 1) + " / " + n + (cur ? " \u00b7 " + NAMES[cur.step] : "") : "Run the chain";
+@@ -125,11 +144,12 @@
+     saveChainPrefs();
+     var D = window.HeresyDerived, body = {
+       name: state.take.name, debuzz: $("pcDebuzz").checked, strength: parseFloat($("pcStrength").value),
+-      upscale: $("pcUpscale").checked, upscale_mode: $("pcUpMode").value,
+-      // HERESY 1148: a single file has no voice stem to de-ess: the record says so instead of a de-ess that never ran
+-      remaster: D && D.remasterSettings ? Object.assign(D.remasterSettings(), { deess: false }) : {},
+-      inspect: $("pcInspect").checked, spectrum: $("pcSpectrum").checked, gloss: $("pcGloss").checked,
+-      stems: $("pcStems").checked, stems_mode: $("pcStemsMode").value };
++      upscale: $("pcUpscale").checked, upscale_mode: $("pcUpMode").value, stems: $("pcStems").checked, stems_mode: $("pcStemsMode").value,
++      // HERESY 1148, 1169: the de-esser as the Remaster step has it when the chain splits stems (a voice of its own); without
++      // them a single file has none, and the record says off instead of a de-ess that never ran
++      remaster: D && D.remasterSettings ? Object.assign(D.remasterSettings(), { deess: $("pcStems").checked && !!D.chainDeess && D.chainDeess() }) : {},
++      upscale_end: $("pcUpEnd").checked, upscale_end_mode: $("pcUpEndMode").value,
++      inspect: $("pcInspect").checked, spectrum: $("pcSpectrum").checked, gloss: $("pcGloss").checked };
+     var fr = chain.hooks.frame ? chain.hooks.frame() : null;   // HERESY 1055
+     if (fr) { body.period = fr.period; body.rate = fr.rate; }
+     $("pcRun").disabled = true;
+@@ -145,7 +165,7 @@
+     if (!bar) return;
+     bar.parentNode.insertBefore(chainMarkup(), bar);
+     $("pcRun").addEventListener("click", runChain);
+-    $("postChain").addEventListener("change", function (e) { if (e.target.id !== "pcDebuzz") saveChainPrefs(); });
++    $("postChain").addEventListener("change", function (e) { if (e.target.id !== "pcDebuzz") saveChainPrefs(); if (e.target.id === "pcStems") paintRemasterSay(); });
+     $("postChain").addEventListener("mouseenter", paintRemasterSay);
+     if ($("remasterPanel")) { $("remasterPanel").addEventListener("change", paintRemasterSay); $("remasterPanel").addEventListener("input", paintRemasterSay); }
+     paintRemasterSay();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 01fc64e..7733f8c 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1527,8 +1527,10 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Stems</span><span class="sum-say">Split on Forge: BS-Roformer for the voice, htdemucs_ft for drums, bass and the rest. Each file plays, goes into the spectrum and the lyrics check.</span></span></summary>
+         <div class="drawer-body derived-body">
+           <div class="dv-actions">
++            <!-- HERESY 1169 (Viktor 08.10.2026: «По дефолту стеммер - four»): four first; from the take or a file made from it -->
++            <label class="field dv-src" data-tip="What is split: the take, or a debuzzed or upscaled file of it (the chain splits the one before its remaster). Each source keeps its own set."><span class="label">Source</span><select id="stSource"><option value="">the take</option></select></label>
++            <button type="button" class="btn ghost small" data-dv-split="four" data-tip="BS-Roformer ep317 (SDR 12.97) for the voice, then htdemucs_ft on the instrumental: vocals, drums, bass, other and the instrumental, about 6 minutes for 7">Split: four stems</button>
+             <button type="button" class="btn ghost small" data-dv-split="vocals" data-tip="BS-Roformer ep317 (SDR 12.97): vocals and instrumental, about 4 minutes for 7">Split: vocals + instrumental</button>
+-            <button type="button" class="btn ghost small" data-dv-split="four" data-tip="The same, then htdemucs_ft on the instrumental: + drums, bass, other, about 6 minutes for 7">Split: four stems</button>
+             <span class="row-hint mono" id="derivedState"></span>
+             <!-- HERESY 1169: where the stems are made, the way out with them -->
+             <button type="button" class="btn ghost small dv-daw" data-daw-open="stems" data-tip="The take with every stem split here, into your DAW: a REAPER project or a DAWproject">Export to DAW</button>
+@@ -1542,7 +1544,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <div class="drawer-body rm-body">
+           <div class="rm-grid">
+             <label class="field" data-tip="What is remastered: the take, a set of its stems (mixed here, with the preset and the levels), or a debuzzed file."><span class="label">Source</span><select id="rmSource"><option value="">the take</option></select></label>
+-            <label class="field" data-tip="How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then."><span class="label">Preset</span>
++            <label class="field" data-tip="How the stems are balanced in the mix, in dB a stem (the levels below win over it). Only for a set of stems: a single file, the take included, has nothing to balance, and the preset is off then; the chain uses it when it splits stems."><span class="label">Preset</span>
+               <select id="rmPreset">
+                 <option value="balanced">balanced — voice forward, instruments even</option>
+                 <option value="flat">flat — every stem at 0 dB</option>
+@@ -1559,7 +1561,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <label class="field rm-num"><span class="label">Trim end at, s</span><input type="number" id="rmTrimEnd" min="0" step="0.1" value="0" data-tip="0: to the end" /></label>
+           </div>
+           <div class="rm-grid">
+-            <label class="check" data-tip="Softens the hiss of s, sh and ts on the voice stems before they are mixed. Only for a set of stems: on the take, on a single file and in the chain it is off."><input type="checkbox" id="rmDeess" /> <span>De-ess</span></label>
++            <label class="check" data-tip="Softens the hiss of s, sh and ts on the voice stems before they are mixed. Only for a set of stems: on the take or a single file it is off; in the chain, when it splits stems, it works as set here."><input type="checkbox" id="rmDeess" /> <span>De-ess</span></label>
+             <select id="rmDeessMode" aria-label="De-ess strength" data-tip="How strongly: subtle, or normal for a sharper voice."><option value="subtle">subtle</option><option value="normal">normal</option></select>
+             <label class="check" data-tip="Retune from 440 to 432 Hz (pitch and tempo together). Off keeps 440 Hz, for the public."><input type="checkbox" id="rm432" checked /> <span>432 Hz</span></label>
+           </div>
+-- 
+2.43.0
+

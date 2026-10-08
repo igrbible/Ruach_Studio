@@ -1,0 +1,165 @@
+From 0f7c752aaaec74d6d23ec871ead6637f68508e36 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 15:15:22 -0600
+Subject: [PATCH 1200/1252] HERESY 1169: what cannot be undone asks first: the
+ score removed or replaced, sampling, the sliders, the output and the look
+ reset, the artwork taken off
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The rc3 list: «Every button that cannot be undone behind a dialog». Audited every delete, purge, empty, reset and replace
+the page sends or does: the takes, the trash, the workspaces, the Writer's documents, saved styles and profiles, text
+profiles, briefs, the Trainer's runs, Clear, New song, the page settings and the queue's cancel (pressed twice) asked
+already. Seven did not, and now ask, only when something would go:
+- Remove score (a score in the field) and an example score over another (not over the same one, not into an empty field);
+- Reset sampling (a knob off its default, or the guidance set; the music's Max tokens is the song's length, Max length's);
+- the sliders' reset (a slider moved), Reset output (any field off its default), Default look and fonts (any chosen);
+- Remove current artwork (the page has no way to put it back; the take's folder keeps it).
+At the defaults, or with nothing there, they act at once. The suite's checks that press them answer the question.
+
+Kitchen suite: 395 passed, 0 failed, 7 skipped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 69 +++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 55 insertions(+), 14 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 2de6dbb..9e82e57 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -824,14 +824,25 @@
+     if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("knob-lock")) { e.preventDefault(); e.target.click(); }
+   });
+ 
++  // HERESY 1169: the resets ask first when a value set here would go; at the defaults already they simply reset
++  function askReset(changed, text) { return changed ? window.HeresyDialog.confirm(text, { ok: "Reset" }) : Promise.resolve(true); }
++  function samplingChanged() {
++    return all("input[data-group]").some(function (input) {
++      if (input.dataset.group === "semantic" && input.dataset.key === "max_tokens") return false;   // the song's length: Max length's, not a knob's
++      return Number(input.value) !== round(samplingDefault(input.dataset.group, input.dataset.key), 6);
++    }) || !!$("cfg").dataset.touched;
++  }
+   $("resetSampling").addEventListener("click", function () {
+-    all("input[data-group]").forEach(function (input) {
+-      input.value = round(samplingDefault(input.dataset.group, input.dataset.key), 6);
++    askReset(samplingChanged(), "Reset sampling to the defaults?\n\nThe values set here now are kept nowhere else.").then(function (ok) {
++      if (!ok) return;
++      all("input[data-group]").forEach(function (input) {
++        input.value = round(samplingDefault(input.dataset.group, input.dataset.key), 6);
++      });
++      $("cfg").dataset.touched = "";
++      fillCfg();
++      syncShape();
++      toast("Sampling reset to defaults");
+     });
+-    $("cfg").dataset.touched = "";
+-    fillCfg();
+-    syncShape();
+-    toast("Sampling reset to defaults");
+   });
+ 
+   /* --------------------------------------------------------- shape sliders */
+@@ -896,8 +907,12 @@
+     $(id).addEventListener("input", function () { applyShape(id); });
+   });
+   $("shapeReset").addEventListener("click", function () {
+-    Object.keys(SHAPES).forEach(function (id) { $(id).value = 2; applyShape(id); });
+-    toast("Sliders reset to the tuned defaults");
++    var moved = Object.keys(SHAPES).some(function (id) { return Number($(id).value) !== 2; });
++    askReset(moved, "Put the sliders back to the tuned defaults?\n\nThe sampling values they set now are kept nowhere else.").then(function (ok) {
++      if (!ok) return;
++      Object.keys(SHAPES).forEach(function (id) { $(id).value = 2; applyShape(id); });
++      toast("Sliders reset to the tuned defaults");
++    });
+   });
+   document.querySelector(".sampler-grid").addEventListener("input", syncShape);
+   $("cfg").addEventListener("input", syncShape);
+@@ -953,7 +968,16 @@
+   $("mp3Bitrate").addEventListener("change", function () { saveOutputChoice(); paintOutput(); });
+   ["odeSteps", "maxLength", "variations", "peakClip"].forEach(function (id) { $(id).addEventListener("input", paintOutput); });
+ 
++  function outputChanged() {
++    var off = function (id, key) { var v = parseFloat($(id).value); return isFinite(v) && v !== round(outDefault(key), 3); };
++    return off("odeSteps", "steps") || off("maxLength", "duration") || off("peakClip", "peak_clip") || (parseInt($("variations").value, 10) || 1) !== 1 ||
++      $("odeSolver").value !== "midpoint" || $("outFormat").value !== "wav24";
++  }
+   $("resetOutput").addEventListener("click", function () {
++    askReset(outputChanged(), "Reset the output to the defaults?\n\nWAV 24-bit, " + outDefault("steps") + " denoising steps, the midpoint solver, the songs up to " +
++      clock(outDefault("duration")) + ", one sound each: what is set here now is kept nowhere else.").then(function (ok) { if (ok) resetOutputNow(); });
++  });
++  function resetOutputNow() {
+     $("variations").value = 1;
+     store("yue2.output", null);
+     paintOutputDefaults();
+@@ -962,7 +986,7 @@
+     $("odeSolver").dispatchEvent(new Event("change", { bubbles: true }));
+     paintOutput();
+     toast("Output reset: WAV 24-bit, " + outDefault("steps") + " denoising steps, the midpoint solver, the songs up to " + clock(outDefault("duration")));
+-  });
++  }
+ 
+   function readOutput() {
+     var out = {};
+@@ -1496,12 +1520,20 @@
+     });
+   })();
+ 
++  // HERESY 1169 (the rc3 list: «Every button that cannot be undone behind a dialog»): a score in the form is not taken away
++  // or written over without a word (an empty field, or the same example again, is simply done)
+   all("[data-abc]").forEach(function (btn) {
+     btn.addEventListener("click", function () {
+-      var key = btn.dataset.abc;
+-      if (!key) { $("abc").value = ""; return toast("Score removed"); }
+-      $("abc").value = EXAMPLE_ABC[key];
+-      toast("Score loaded — melody mode suits covers best");
++      var key = btn.dataset.abc, now = $("abc").value.trim();
++      var go = !now || (key && now === String(EXAMPLE_ABC[key]).trim()) ? Promise.resolve(true) : window.HeresyDialog.confirm(key
++        ? "Replace the score in the form with the example?\n\nThe score there now is kept nowhere else: save the song first (the Save button above) to keep it."
++        : "Remove the score from the form?\n\nIt is kept nowhere else: save the song first (the Save button above) to keep it.", { ok: key ? "Replace" : "Remove", danger: !key });
++      go.then(function (ok) {
++        if (!ok) return;
++        if (!key) { $("abc").value = ""; return toast("Score removed"); }
++        $("abc").value = EXAMPLE_ABC[key];
++        toast("Score loaded — melody mode suits covers best");
++      });
+     });
+   });
+ 
+@@ -4947,6 +4979,11 @@
+   // with it as their cover)
+   function removeArt(name) {
+     var take = findTake(name), title = take ? displayTitle(take) : name;
++    // HERESY 1169: asked first: the page has no way to put it back (only the take's folder keeps it)
++    return window.HeresyDialog.confirm("Take the artwork off \u201c" + title + "\u201d?\n\nIt is kept beside the take, in artwork-removed/, and the take's MP3s lose it as their cover; the take's menu can paint a new one.",
++      { ok: "Take it off", danger: true }).then(function (ok) { return ok ? removeArtNow(name, title) : null; });
++  }
++  function removeArtNow(name, title) {
+     return api("/lab/art/remove?name=" + encodeURIComponent(name)).then(function () {
+       return refreshArts().then(function () { toast("The artwork is off “" + title + "”: kept beside the take, in artwork-removed/"); });
+     }).catch(function (e) { toast("Not removed: " + e.message, "bad"); });
+@@ -6694,6 +6731,10 @@
+     });
+   });
+   $("fontsReset").addEventListener("click", function () {
++    askReset(recall("yue2.fonts") !== null || recall("yue2.look") !== null,
++      "Put the look options and the fonts back to the app's own?\n\nThe theme stays; the fonts and options chosen now are kept nowhere else.").then(function (ok) { if (ok) fontsResetNow(); });
++  });
++  function fontsResetNow() {
+     store("yue2.fonts", null);
+     store("yue2.look", null);
+     applyFonts();
+@@ -6701,7 +6742,7 @@
+     paintFonts();
+     paintLook();
+     toast("The look options and fonts are back to the app's own (the theme stays)");
+-  });
++  }
+   $("fontsAll").classList.toggle("is-hidden", typeof window.queryLocalFonts !== "function");
+   $("fontsAll").addEventListener("click", function () {
+     window.queryLocalFonts().then(function (fonts) {
+-- 
+2.43.0
+

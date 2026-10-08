@@ -1,0 +1,141 @@
+From 0f56753985c8462e9c2c1f01d0d4818a1d764fb9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 11:27:55 -0600
+Subject: [PATCH 1239/1252] HERESY 1169: the lyrics' mirrors take the box's
+ fractional width (at 125 % its numbers, marks and tag highlights stood a row
+ off after a line wrapped differently); the server log stands at the left
+ while a frame is lifted, off Generate; the lifted lyrics two steps each way
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «При скейле 125% именно в полной странице в редакторе съезжают хайлайтинги секций»; «В попапе фреймов серверный лог поверх кнопки синтеза. В этом режиме смести его влево»; «В попапе лирики оставь два шага +… В минус тоже только два шага».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  3 +++
+ tools/console/app.js           | 30 ++++++++++++++++++++++++++----
+ tools/console/heresy-lyrics.js | 14 +++++++++++---
+ 3 files changed, 40 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d985897..c9ff56e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4537,3 +4537,6 @@ body:not([data-frame]) .frame-fs { display: none; }
+ /* HERESY 1169 · 1239: the lyrics over everything have their own −, + and ⟲ in their head */
+ .lyr-over-fs { display: inline-flex; gap: 4px; margin-right: 6px; }
+ .lyr-over-fs .icon-btn .ui-ico { width: 16px; height: 16px; }
++
++/* HERESY 1169 · 1240: with a frame lifted the server log stands at the left (its width and height set by placeLogDock) */
++.log-dock.is-left { right: auto; left: 16px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 6e49262..0ad5d1b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8346,7 +8346,7 @@
+       back.querySelector(".lyr-over-fs").addEventListener("click", function (e) {
+         var b = e.target.closest("[data-lyr-z]");
+         if (!b) return;
+-        var k = +b.dataset.lyrZ === 0 ? 0 : Math.max(-5, Math.min(5, lyrZoomStep() + +b.dataset.lyrZ));
++        var k = +b.dataset.lyrZ === 0 ? 0 : Math.max(-2, Math.min(2, lyrZoomStep() + +b.dataset.lyrZ));   // two steps each way (Viktor: «Третий и дальше сбивают скейл очень сильно»)
+         store("yue2.lyricsZoom", k ? String(k) : null);
+         paintLyrZoom();
+         window.dispatchEvent(new Event("resize"));
+@@ -8366,13 +8366,13 @@
+     window.dispatchEvent(new Event("resize"));   // the meter, the numbers and the marks measure their box again
+   }
+   window.ruachLyricsOver = function () { return !!lyrOver; };   // for the checks
+-  function lyrZoomStep() { var k = parseInt(recall("yue2.lyricsZoom") || "0", 10); return isFinite(k) ? Math.max(-5, Math.min(5, k)) : 0; }
++  function lyrZoomStep() { var k = parseInt(recall("yue2.lyricsZoom") || "0", 10); return isFinite(k) ? Math.max(-2, Math.min(2, k)) : 0; }
+   function paintLyrZoom() {
+     if (!lyrOver) return;
+     var k = lyrZoomStep(), z = Math.round(1.54 * Math.pow(1.1, k) * 1000) / 1000, box = lyrOver.back.querySelector(".lyr-over-box");
+     box.style.setProperty("--lyr-z", String(z));
+-    box.querySelector('[data-lyr-z="-1"]').disabled = k <= -5;
+-    box.querySelector('[data-lyr-z="1"]').disabled = k >= 5;
++    box.querySelector('[data-lyr-z="-1"]').disabled = k <= -2;
++    box.querySelector('[data-lyr-z="1"]').disabled = k >= 2;
+     box.querySelector('[data-lyr-z="0"]').disabled = k === 0;
+   }
+   $("lyricsBig").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); lyricsOver(!lyrOver); });
+@@ -8437,7 +8437,29 @@
+     if (which) $(FRAMES[which]).setAttribute("tabindex", "-1");   // the keys can stay with it (the player's clicks give them back)
+     takeColumns(which === "take");
+     window.dispatchEvent(new Event("resize"));   // the wave, the staff and the pictures measure their frame again
++    placeLogDock();
++  }
++  // HERESY 1169 · 1240 (Viktor 08.10.2026: «В попапе фреймов серверный лог поверх кнопки синтеза. В этом режиме смести его влево. Так не будет закрывать ничего»): with a frame lifted the log stands at the left, as wide as the room before the frame's bottom row of controls allows (Generate's row starts at 779 px at 100 %, 401 at 125 % and 156 at 150 % of a 1920 screen); with less than 220 px there it rises above that row
++  function placeLogDock() {
++    var d = $("logDock");
++    if (!d) return;
++    var f = document.body.dataset.frame;
++    d.classList.toggle("is-left", !!f);
++    d.style.maxWidth = "";
++    d.style.bottom = "";
++    if (!f) return;
++    requestAnimationFrame(function () {
++      var row = f === "compose" && $("generateBtn") ? $("generateBtn").parentElement : null;
++      if (!row || !row.offsetParent || document.body.dataset.frame !== f) return;
++      var kids = [].slice.call(row.children).filter(function (e) { return e.offsetParent; }), rr = row.getBoundingClientRect();
++      if (rr.top >= innerHeight || rr.bottom <= 0) return;   // the row is scrolled away: the log keeps its foot
++      var room = (kids[0] ? kids[0].getBoundingClientRect().left : rr.left) - 16 - 12;
++      if (room >= 220) d.style.maxWidth = Math.min(420, Math.floor(room)) + "px";
++      else d.style.bottom = Math.round(innerHeight - rr.top + 8) + "px";
++    });
+   }
++  var logDockTimer = 0;
++  window.addEventListener("resize", function () { if (!document.body.dataset.frame) return; clearTimeout(logDockTimer); logDockTimer = setTimeout(placeLogDock, 120); });
+   all(".frame-big").forEach(function (b) {
+     b.addEventListener("click", function () { frameOver(document.body.dataset.frame === b.dataset.frame ? null : b.dataset.frame); });
+   });
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index ed450ed..3d6d600 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -126,6 +126,14 @@
+     });
+     return score.es > score.en && score.es >= score.it ? "es" : score.it > score.en && score.it > score.es ? "it" : "en";
+   }
++  // HERESY 1169 · 1240 (Viktor 08.10.2026: «При скейле 125% именно в полной странице в редакторе съезжают хайлайтинги секций. При 100-110% - НОРМ»): a mirror wraps the lines as the box does only at the box's own width; clientWidth is a whole number, and at 125 % the box is, say, 512.6 px wide, so a line that fits in one wrapped in the other and every row after it stood one off. The width now is the box's used width (fractional) less its borders and its scrollbar
++  function innerWidth(area, cs) {
++    if (cs.boxSizing !== "border-box") return area.clientWidth;
++    var bl = parseFloat(cs.borderLeftWidth) || 0, br = parseFloat(cs.borderRightWidth) || 0;
++    var sw = Math.max(0, area.offsetWidth - area.clientWidth - Math.round(bl) - Math.round(br));
++    var w = parseFloat(cs.width) - bl - br - sw;
++    return isFinite(w) && w > 0 ? w : area.clientWidth;
++  }
+   function syllables(text, lang) {
+     lang = lang || latinOf(text, "");
+     return (text.match(/[^\s.,!?;:…—–"«»„“”()\[\]]+/g) || []).reduce(function (n, w) { return n + wordSyllables(w, lang); }, 0);
+@@ -377,7 +385,7 @@
+       var cs = getComputedStyle(area);
+       ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+        "tabSize", "wordSpacing", "fontVariantLigatures"].forEach(function (k) { mirror.style[k] = cs[k]; });
+-      mirror.style.width = area.clientWidth + "px";
++      mirror.style.width = innerWidth(area, cs) + "px";
+       mirror.innerHTML = area.value.split("\n").map(function (r) { return "<div>" + (r ? esc(r).replace(/\[[^\]\n]*\]/g, '<span class="lyr-tm">$&</span>') : "​") + "</div>"; }).join("");
+       var bt = parseFloat(cs.borderTopWidth) || 0, bl = parseFloat(cs.borderLeftWidth) || 0, lh = parseFloat(cs.lineHeight) || 20;
+       var H = area.clientHeight, st = area.scrollTop, kids = mirror.children, rows = [], bands = [], lints = {};
+@@ -393,7 +401,7 @@
+       [nums, tagsl].forEach(function (l) { l.style.top = (area.offsetTop + bt) + "px"; l.style.left = (area.offsetLeft + bl) + "px"; l.style.height = H + "px"; });
+       nums.style.width = Math.max(0, (parseFloat(cs.paddingLeft) || 0) - 6) + "px";
+       nums.innerHTML = shown() ? rows.join("") : "";
+-      tagsl.style.width = area.clientWidth + "px";
++      tagsl.style.width = innerWidth(area, cs) + "px";
+       var mr = mirror.getBoundingClientRect(), k = mirror.offsetWidth ? mr.width / mirror.offsetWidth : 1;
+       Array.prototype.forEach.call(mirror.querySelectorAll(".lyr-tm"), function (t) {
+         Array.prototype.forEach.call(t.getClientRects(), function (r) {
+@@ -594,7 +602,7 @@
+       var cs = getComputedStyle(area);
+       ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+        "tabSize", "wordSpacing", "fontVariantLigatures"].forEach(function (k) { mirror.style[k] = cs[k]; });
+-      mirror.style.width = area.clientWidth + "px";
++      mirror.style.width = innerWidth(area, cs) + "px";
+       var rows = text.split("\n");
+       mirror.innerHTML = rows.map(function (r) { return "<div>" + (esc(r) || "​") + "</div>"; }).join("");
+       var top0 = area.offsetTop + parseFloat(cs.borderTopWidth), left = area.offsetLeft + area.clientWidth - 6;
+-- 
+2.43.0
+

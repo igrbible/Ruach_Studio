@@ -1,0 +1,161 @@
+From b8a180499b7603706116473b284fd8b27dd4fb4d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 11:02:41 -0600
+Subject: [PATCH 1238/1252] =?UTF-8?q?HERESY=201169:=20the=20lifted=20lyric?=
+ =?UTF-8?q?s=20four=20tenths=20larger=20by=20default=20with=20their=20own?=
+ =?UTF-8?q?=20=E2=88=92,=20+=20and=20=E2=9F=B2=20(a=20tenth=20a=20press,?=
+ =?UTF-8?q?=20kept);=20what=20the=20take=20menu=20sends=20away=20(trash,?=
+ =?UTF-8?q?=20hide,=20out=20of=20the=20open=20workspace,=20regeneration,?=
+ =?UTF-8?q?=20a=20dislike)=20leaves=20the=20choice,=20so=20the=20bar=20of?=
+ =?UTF-8?q?=20the=20checked=20folds=20back?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «Увеличь умолчание всех текстов в таком оверлее на 40%… Ты не прикручивал ещё кнопки -+?»; «Я переместил в корзину три трека, а блок так и остался раскрытым».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  6 ++++-
+ tools/console/app.js               | 35 +++++++++++++++++++++++++++---
+ tools/console/heresy-collection.js |  8 +++++--
+ 3 files changed, 43 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a8005b1..d985897 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4472,7 +4472,7 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ .lyr-big { margin-left: 6px; vertical-align: middle; }
+ .lyr-over { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 40; display: flex; align-items: center; justify-content: center;
+   background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55)); backdrop-filter: blur(3px); }
+-.lyr-over-box { zoom: 1.1; width: calc(60vw / 1.1); height: calc((100vh - var(--playbar-h)) * .94 / 1.1); display: flex; flex-direction: column; gap: 8px;
++.lyr-over-box { zoom: var(--lyr-z, 1.54); width: calc(60vw / var(--lyr-z, 1.54)); height: calc((100vh - var(--playbar-h)) * .94 / var(--lyr-z, 1.54)); display: flex; flex-direction: column; gap: 8px;
+   padding: 12px 16px 14px; border: 1px solid var(--line-strong-a); border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 24px 80px var(--shadow-lg); }
+ .lyr-over-head { display: flex; align-items: center; gap: 8px; font: 600 15px/1.3 var(--heading); }
+ .lyr-over-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+@@ -4533,3 +4533,7 @@ body:not([data-frame]) .frame-fs { display: none; }
+ .count-slider input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; border: 0; background: var(--amber); box-shadow: 0 0 0 2px var(--panel); }
+ .count-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--amber) 45%, transparent); }
+ .count-slider input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--amber) 45%, transparent); }
++
++/* HERESY 1169 · 1239: the lyrics over everything have their own −, + and ⟲ in their head */
++.lyr-over-fs { display: inline-flex; gap: 4px; margin-right: 6px; }
++.lyr-over-fs .icon-btn .ui-ico { width: 16px; height: 16px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 0c6bd58..6e49262 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -7319,7 +7319,7 @@
+     if (list.length < 2) return regenTakes(list);
+     var secs = list.reduce(function (s, n) { var t = findTake(n); return s + ((t && t.seconds) || 0); }, 0);
+     return window.HeresyDialog.confirm("Human, " + list.length + " whole songs made again in one volley? Won't your graphics card waste away?\n\nEach is made again from its own request with new seeds, the score and the music anew: minutes on a GPU each, " + clock(secs) + " of music in all. They queue one after another; the old ones are kept in “Sourced for Regeneration”.",
+-      { ok: "Regenerate " + list.length, cancel: "Not now" }).then(function (ok) { if (ok) return regenTakes(list); });
++      { ok: "Regenerate " + list.length, cancel: "Not now" }).then(function (ok) { if (ok) return regenTakes(list).then(function () { return true; }); });
+   }
+   function regenTakes(list) {
+     var n = list.length, first = findTake(list[0]), what = n > 1 ? n + " takes" : "\u201c" + (first ? displayTitle(first) : list[0]) + "\u201d";
+@@ -7412,7 +7412,10 @@
+       HC ? { icon: "▦", label: bulk ? "Workspaces of " + bulk.length : "Workspaces", items: ws.map(function (w) {
+         var whom = bulk || [name], on = bulk ? bulkRows.length > 0 && bulkRows.every(function (x) { return (x.workspaces || []).indexOf(w) >= 0; }) : inWs.indexOf(w) >= 0;
+         var said = bulk ? " " + bulk.length : "";
+-        return { label: w, raw: true, checked: on, action: function () { HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: whom }, on ? "Taken out of “" + w + "”" + said : "Added to “" + w + "”" + said); } };
++        return { label: w, raw: true, checked: on, action: function () {
++          HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: whom }, on ? "Taken out of “" + w + "”" + said : "Added to “" + w + "”" + said);
++          if (bulk && on && HC.unselect && HC.place && HC.place() === w) HC.unselect(bulk);   // HERESY 1169 · 1239: out of the workspace open, out of the choice
++        } };
+       }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
+         var whom = bulk || [name];
+         window.HeresyDialog.prompt(bulk ? "A new workspace for the " + bulk.length + " checked takes" : "A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name" }).then(function (w) {
+@@ -7455,6 +7458,7 @@
+         var all = bulkRows.length > 0 && bulkRows.every(function (x) { return x.hidden; });
+         return { icon: "◌", label: all ? "Show " + bulk.length + " again" : "Hide " + bulk.length + " from the lists", action: function () {
+           HC.act({ op: all ? "show" : "hide", names: bulk }, all ? "Shown again: " + bulk.length : "Hidden from the lists (not deleted): " + bulk.length);
++          if (HC.unselect) HC.unselect(bulk);   // HERESY 1169 · 1239: they leave this view, as the bar's own button lets them go
+         } };
+       })() : HC ? { icon: "◌", label: row && row.hidden ? "Show again" : "Hide from the lists", action: function () {
+         HC.act({ op: row && row.hidden ? "show" : "hide", names: [name] }, row && row.hidden ? "Shown again" : "Hidden from the lists (not deleted)");
+@@ -7466,7 +7470,9 @@
+       take.session ? null : (function () {
+         var sel = here === "collection" && HC && HC.selected ? HC.selected() : [], list = sel.length > 1 && sel.indexOf(name) >= 0 ? sel : [name];
+         return { icon: "⟳", label: list.length > 1 ? "Regenerate " + list.length + " with new seeds" : "Regenerate with a new seed",
+-                 hint: list.length > 1 ? "replaces them; the old kept; asks first" : "replaces it; the old one kept", action: function () { regenAsk(list); } };
++                 hint: list.length > 1 ? "replaces them; the old kept; asks first" : "replaces it; the old one kept", action: function () {
++                   Promise.resolve(regenAsk(list)).then(function (r) { if (list.length > 1 && r !== undefined && HC && HC.unselect) HC.unselect(list); });
++                 } };
+       })(),
+       HW ? { icon: "✒", label: "Writer", items: [
+         { label: "New document from this take", action: function () {
+@@ -8322,7 +8328,11 @@
+       var wrap = area.parentNode, meter = $("lyricsMeter"), back = document.createElement("div");
+       back.className = "lyr-over";
+       back.id = "lyrOver";
++      var ui = function (n) { return window.HeresyIcons ? window.HeresyIcons.ui(n) : ""; };
+       back.innerHTML = '<div class="lyr-over-box" role="dialog" aria-label="Lyrics"><div class="lyr-over-head"><b>' + escape(tr("Lyrics")) + '</b><span class="spacer"></span>' +
++        '<span class="lyr-over-fs" role="group" aria-label="Text size"><button type="button" class="btn ghost small icon-btn" data-lyr-z="-1" aria-label="Smaller text" data-tip="Smaller text here">' + ui("text-smaller") +
++        '</button><button type="button" class="btn ghost small icon-btn" data-lyr-z="1" aria-label="Larger text" data-tip="Larger text here">' + ui("text-larger") +
++        '</button><button type="button" class="btn ghost small icon-btn" data-lyr-z="0" aria-label="The text as it starts" data-tip="The text as it starts: four tenths larger than in the form">' + ui("text-reset") + "</button></span>" +
+         '<button type="button" class="btn ghost small icon-btn" id="lyricsBack" aria-label="Back into the form" data-tip="Back into the form (Esc)">' +
+         (window.HeresyIcons ? window.HeresyIcons.ui("minimize") : "") + '</button></div><div class="lyr-over-body"></div></div>';
+       document.body.appendChild(back);
+@@ -8332,6 +8342,16 @@
+       body.appendChild(meter);
+       back.addEventListener("click", function (e) { if (e.target === back) lyricsOver(false); });
+       $("lyricsBack").addEventListener("click", function () { lyricsOver(false); });
++      // HERESY 1169 · 1239 (Viktor 08.10.2026: «Ужасно мелкий шрифт по умолчанию. Увеличь умолчание всех текстов в таком оверлее на 40%… Ты не прикручивал ещё кнопки -+?»): the box 1.54 times the form's (it was 1.1), a press a tenth up or down from there, kept in this browser
++      back.querySelector(".lyr-over-fs").addEventListener("click", function (e) {
++        var b = e.target.closest("[data-lyr-z]");
++        if (!b) return;
++        var k = +b.dataset.lyrZ === 0 ? 0 : Math.max(-5, Math.min(5, lyrZoomStep() + +b.dataset.lyrZ));
++        store("yue2.lyricsZoom", k ? String(k) : null);
++        paintLyrZoom();
++        window.dispatchEvent(new Event("resize"));
++      });
++      paintLyrZoom();
+       document.body.classList.add("lyr-over-on");
+       area.focus({ preventScroll: true });
+     } else if (!on && lyrOver) {
+@@ -8346,6 +8366,15 @@
+     window.dispatchEvent(new Event("resize"));   // the meter, the numbers and the marks measure their box again
+   }
+   window.ruachLyricsOver = function () { return !!lyrOver; };   // for the checks
++  function lyrZoomStep() { var k = parseInt(recall("yue2.lyricsZoom") || "0", 10); return isFinite(k) ? Math.max(-5, Math.min(5, k)) : 0; }
++  function paintLyrZoom() {
++    if (!lyrOver) return;
++    var k = lyrZoomStep(), z = Math.round(1.54 * Math.pow(1.1, k) * 1000) / 1000, box = lyrOver.back.querySelector(".lyr-over-box");
++    box.style.setProperty("--lyr-z", String(z));
++    box.querySelector('[data-lyr-z="-1"]').disabled = k <= -5;
++    box.querySelector('[data-lyr-z="1"]').disabled = k >= 5;
++    box.querySelector('[data-lyr-z="0"]').disabled = k === 0;
++  }
+   $("lyricsBig").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); lyricsOver(!lyrOver); });
+   document.addEventListener("keydown", function (e) {
+     if (e.key !== "Escape" || !lyrOver) return;
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 807dd75..08a0d1c 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -1197,7 +1197,9 @@
+   function rateMany(list, value) {
+     var rows = list.map(rowOf).filter(Boolean), all = rows.length && rows.every(function (r) { return r.rating === value; });
+     var v = all ? 0 : value, before = rows.map(function (r) { return r.rating; });
+-    rows.forEach(function (r) { r.rating = v; }); paint();
++    rows.forEach(function (r) { r.rating = v; });
++    if (v < 0 && !showDis()) list.forEach(function (n) { delete state.sel[n]; });   // HERESY 1169 · 1239: a dislike sends them out of the lists, so out of the choice
++    paint();
+     list.forEach(function (n) { remember(n, v); });
+     var asked = rateSeq;
+     return api("/collection", { op: "rate", names: list, value: v }).then(function (d) {
+@@ -1666,5 +1668,7 @@
+                               pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
+                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166
+                               undoable: undoable, untrash: untrash,
+-                              trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
++                              trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { ((d && d.moved) || names).forEach(function (n) { delete state.sel[n]; }); return load().then(function () { return d; }); }); },
++                              // HERESY 1169 · 1239 (Viktor 08.10.2026: «Я переместил в корзину три трека, а блок так и остался раскрытым, и не исчез обратно в "тень"»): what the menu sends away leaves the choice, as with the bar's own buttons
++                              unselect: function (names) { (names || []).forEach(function (n) { delete state.sel[n]; }); paint(); } };
+ })();
+-- 
+2.43.0
+

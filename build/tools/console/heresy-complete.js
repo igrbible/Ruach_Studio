@@ -3,26 +3,39 @@
 // особые Intro, Outro, END проверка, если уже есть в тексте»): the section tags offered as a code editor offers its words.
 //
 // A «[» typed at a line's start (spaces before it allowed) in the Creator's or the Writer's lyrics opens a list under it:
-// the sections of the cheat-sheet (heresy-instruments.js: the 110 official examples counted), the common ones first
-// (Verse, Chorus, Pre-Chorus, Bridge, Interlude, Break), then the three a song has once (Intro, Outro, End), then the rest
-// as often as the examples write them. What is typed after the «[» narrows it, from a word's start («ch» finds Chorus and
+// the sections of the cheat-sheet (heresy-instruments.js: the 110 official examples counted), in the order a song
+// goes through them, Intro to End (HERESY 1169; before, the common ones came first). What is typed after the «[» narrows it, from a word's start («ch» finds Chorus and
 // Pre-Chorus), in a Russian or Ukrainian layout too («[мук» is «[ver»); a number after it numbers the tag («v2» is
 // [Verse 2]); lyrics that number their verses are offered the next one. ↑ ↓ choose (the mouse too); Enter or Tab puts
 // the tag in on a line of its own and the cursor on the line under it (Ctrl+Z takes it back); Esc closes it (what was
-// typed stays), and so does «]» (a tag of one's own). Intro, Outro and END already in the lyrics stand at the list's end,
-// dimmed, with their line, and are not put in twice; a numbered tag already there likewise. Ctrl+Space opens the list on
+// typed stays), and so does «]» (a tag of one's own). Intro, Outro and END already in the lyrics stay in their place,
+// dimmed, with their line: ↑ ↓ and the pointer reach them and read what they are, and they are not put in twice; a numbered tag already there likewise. Ctrl+Space opens the list on
 // a «[» line, and at a line's start types the «[» itself: no Latin layout needed for it.
+//
+// HERESY 1169 (Viktor 08.10.2026: «Две колонки, высота селектора не изменяется, если только в подвал не упирается. В левой
+// фиксированной теги. А в правой красиво и крупновато - описания»; «по остальным, что не найдены в 110 примерах официальных
+// добавь и эти, но пометь как тестовые»): the tags in a column, what the one in hand is beside it (the cheat-sheet's words,
+// after Genius's guide to song sections) with how often the examples write it; the box as high whatever the list holds,
+// lower only where the player would cut it; Genius's sections none of the examples writes last, marked TEST.
 //
 //   HeresyComplete.attach(textarea) · HeresyComplete.state()   (the last for the checks)
 (function () {
   "use strict";
-  var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude", "Break"], ONCE = ["Intro", "Outro", "End"];
+  // HERESY 1169 (Viktor 07.10.2026: «Вычисти оттуда то, чего нет в оф примерах YuE2»): no Break, the examples never write it
+  // HERESY 1169 (Viktor 08.10.2026: «отсортируй их по стандартной арке произведения, начиная с Intro и заканчивая End»): the
+  // sections in the order a song goes through them, the TEST ones where they would stand; FIRST is the fallback's order
+  var ARC = ["Intro", "Instrumental Intro", "Verse", "Pre-Chorus", "Chorus", "Post-Chorus", "Refrain", "Hook", "Interlude", "Instrumental Break",
+    "Guitar Solo", "Scatting", "Yodeling", "Non-Lyrical Vocals", "Bridge", "Breakdown", "Drop", "Instrumental", "Skit", "Segue", "Part",
+    "Final Chorus", "Outro", "Fade Out", "Instrumental Outro", "End"];
+  var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude"], ONCE = ["Intro", "Outro", "End"];
   // as Viktor writes it (thirty songs of his end so; «Да, измени»), where the official examples write [End]
-  var SPELL = { End: "END" };
+  // HERESY 1169 (Viktor 08.10.2026: «Конечный тег изменил из суновского `[END]` на `[End]`»): as the official examples write it
+  var SPELL = {};
+  var TALL = 300;                                   // the two columns' height, px
   var ONCE_HEAD = { Intro: /^intro(duction)?$/, Outro: /^outro$/, End: /^ends?$/ };
   // the keys of a Russian (and Ukrainian) layout, as the Latin letters on the same keys
   var RU = "йцукенгшщзхъфывапролджэячсмитьбюё", EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`", UK = { "і": "s", "ї": "]", "є": "'", "ґ": "`" };
-  var pop = null, list = null, foot = null, box = null, items = [], at = -1, from = -1, shut = -1, query = null, mirror = null, queued = false;
+  var pop = null, list = null, about = null, foot = null, box = null, items = [], at = -1, from = -1, shut = -1, query = null, mirror = null, queued = false;
 
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
@@ -31,12 +44,10 @@
   // the tags offered, in their order: the common sections, the three a song has once, the rest as the examples count them
   function ordered() {
     var g = window.HeresyInstruments && window.HeresyInstruments.lyricTags ? window.HeresyInstruments.lyricTags()[0] : null;
-    var rows = (g ? g.rows : []).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: r[1], note: r[2] }; });
-    if (!rows.length) rows = FIRST.concat(ONCE).map(function (name) { return { name: name, n: 0, note: "" }; });
-    var by = {};
-    rows.forEach(function (r) { by[r.name] = r; });
-    return FIRST.concat(ONCE).map(function (n) { return by[n]; }).filter(Boolean)
-      .concat(rows.filter(function (r) { return FIRST.indexOf(r.name) < 0 && ONCE.indexOf(r.name) < 0; }));
+    var rows = (g ? g.rows : []).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: r[1], note: r[2], test: !r[1] }; });
+    if (!rows.length) rows = FIRST.concat(ONCE).map(function (name) { return { name: name, n: 0, note: "", test: false }; });
+    var pos = function (r) { var i = ARC.indexOf(r.name); return i < 0 ? ARC.length + rows.indexOf(r) : i; };
+    return rows.slice().sort(function (a, b) { return pos(a) - pos(b); });
   }
 
   function fold(q) {
@@ -79,12 +90,12 @@
       var name = SPELL[t.name] || t.name, next = false;
       if (num) name += " " + num;
       else if (t.name === "Verse" && have.verse) { name = "Verse " + (have.verse + 1); next = true; }
-      var it = { tag: "[" + name + "]", note: t.note, n: t.n, rank: r, k: k, next: next };
+      var it = { tag: "[" + name + "]", note: t.note, n: t.n, rank: r, k: k, next: next, test: !!t.test };
       if (ONCE.indexOf(t.name) >= 0 && have.once[t.name] !== undefined) it.there = have.once[t.name];
       else if (name !== (SPELL[t.name] || t.name) && have.named[name.toLowerCase()] !== undefined) it.there = have.named[name.toLowerCase()];
       out.push(it);
     });
-    return out.sort(function (a, b) { return ((a.there !== undefined) - (b.there !== undefined)) || (a.rank - b.rank) || (a.k - b.k); });
+    return out.sort(function (a, b) { return (a.rank - b.rank) || (a.k - b.k); });   // HERESY 1169: the arc, the once-tags in their place
   }
 
   // the «[» the cursor stands after, at its line's start, nothing but its letters between: where it is and what follows it.
@@ -103,25 +114,29 @@
     pop.className = "tc-pop";
     pop.id = "tcPop";
     pop.hidden = true;
-    pop.innerHTML = '<div class="tc-list" role="listbox" id="tcList" aria-label="Section tags"></div><div class="tc-foot" aria-live="polite"></div>';
+    pop.innerHTML = '<div class="tc-cols"><div class="tc-list" role="listbox" id="tcList" aria-label="Section tags"></div>' +
+      '<div class="tc-about" aria-live="polite"></div></div><div class="tc-foot"></div>';
     document.body.appendChild(pop);
     list = pop.querySelector(".tc-list");
+    about = pop.querySelector(".tc-about");
     foot = pop.querySelector(".tc-foot");
     pop.addEventListener("mousedown", function (e) { e.preventDefault(); });   // the box keeps the cursor
     pop.addEventListener("click", function (e) {
       var o = e.target.closest(".tc-item");
       if (o && !o.classList.contains("is-there")) accept(+o.dataset.i);
     });
-    pop.addEventListener("mousemove", function (e) {
+    pop.addEventListener("mousemove", function (e) {           // HERESY 1169: a once-tag there already is read too, not put in
       var o = e.target.closest(".tc-item");
-      if (o && !o.classList.contains("is-there") && +o.dataset.i !== at) { at = +o.dataset.i; mark(false); }
+      if (o && +o.dataset.i !== at) { at = +o.dataset.i; mark(false); }
     });
   }
 
-  function note(it) {
+  // what the examples say of it, under its words in the column beside the list
+  function count(it) {
     if (it.there !== undefined) return tr("Already in the lyrics, line {0}: a song has one").replace("{0}", it.there + 1);
-    var n = it.n ? tr("{0} times in the 110 official examples").replace("{0}", it.n) : "";
-    return [it.next ? tr("The lyrics number their verses: this is the next one") : it.note, n].filter(Boolean).join(" · ");
+    if (it.next) return tr("The lyrics number their verses: this is the next one");
+    if (it.test) return "TEST: none of the 110 official examples writes it, so YuE2 may sing it as words or pass it by. Listen before you keep it.";
+    return it.n ? tr("{0} times in the 110 official examples").replace("{0}", it.n) : "";
   }
 
   // the list drawn anew when it narrows; the one in hand only marked when the keys or the mouse move it (the rows stay, so a
@@ -129,17 +144,19 @@
   function render() {
     list.innerHTML = items.map(function (it, i) {
       var there = it.there !== undefined;
-      var say = there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.n ? "×" + it.n : "";
+      var say = there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.test ? "TEST" : it.n ? "×" + it.n : "";
       return '<div class="tc-item' + (there ? " is-there" : "") + '" role="option" id="tcOpt' + i + '" data-i="' + i + '" aria-selected="false"' +
-        (there ? ' aria-disabled="true"' : "") + '><span class="tc-tag" translate="no">' + esc(it.tag) + '</span><span class="tc-say">' + esc(say) + "</span></div>";
+        (there ? ' aria-disabled="true"' : "") + '><span class="tc-tag" translate="no">' + esc(it.tag) + '</span><span class="tc-say' + (it.test && !there && !it.next ? " tc-test" : "") + '">' + esc(say) + "</span></div>";
     }).join("");
     mark(true);
   }
   function mark(scroll) {
     Array.prototype.forEach.call(list.children, function (o, i) { o.classList.toggle("is-on", i === at); o.setAttribute("aria-selected", i === at ? "true" : "false"); });
-    var cur = items[at];
-    foot.innerHTML = (cur && note(cur) ? '<span class="tc-note">' + esc(note(cur)) + "</span>" : "") +
-      '<span class="tc-keys">' + esc(tr("↑ ↓ choose · Enter or Tab puts it in · Esc closes")) + "</span>";
+    var cur = items[at], said = cur ? count(cur) : "";
+    about.innerHTML = cur ? '<div class="tc-about-tag" translate="no">' + esc(cur.tag) + "</div>" +
+      (cur.note ? '<p class="tc-about-say">' + esc(cur.note) + "</p>" : "") +
+      (said ? '<p class="tc-about-n' + (cur.test && !cur.next ? " tc-test" : "") + '">' + esc(said) + "</p>" : "") : "";
+    foot.innerHTML = '<span class="tc-keys">' + esc(tr("↑ ↓ choose · Enter or Tab puts it in · Esc closes")) + "</span>";
     box.setAttribute("aria-expanded", "true");
     if (cur) box.setAttribute("aria-activedescendant", "tcOpt" + at); else box.removeAttribute("aria-activedescendant");
     var on = list.children[at];
@@ -151,24 +168,27 @@
 
   // how much larger the box is drawn than its own pixels (a lifted frame is zoomed 1.2)
   function scale() { var w = box.offsetWidth; return w ? box.getBoundingClientRect().width / w : 1; }
-  // where the cursor stands inside the box (relative to its padding box, its own scroll not counted): a copy of its layout
+  // where the cursor stands inside the box (relative to its padding box, its own scroll not counted): a copy of its layout,
+  // beside the box so it is drawn at the box's own zoom (HERESY 1169: in the body, at another size, it ran along a line)
   function caret() {
-    if (!mirror) {
+    if (!mirror || mirror.parentNode !== box.parentNode) {
+      if (mirror && mirror.parentNode) mirror.parentNode.removeChild(mirror);
       mirror = document.createElement("div");
       mirror.className = "tc-mirror";
       mirror.setAttribute("aria-hidden", "true");
-      document.body.appendChild(mirror);
+      box.parentNode.insertBefore(mirror, box.nextSibling);
     }
     var cs = getComputedStyle(box);
     ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "tabSize", "textTransform",
-     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent"].forEach(function (k) { mirror.style[k] = cs[k]; });
+     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent",
+     "fontKerning", "fontFeatureSettings", "fontVariationSettings", "fontStretch", "fontOpticalSizing", "textRendering"].forEach(function (k) { mirror.style[k] = cs[k]; });
     mirror.style.boxSizing = "border-box";
     mirror.style.border = "0";
     mirror.style.width = box.clientWidth + "px";
     var v = box.value, c = box.selectionStart;
     mirror.innerHTML = esc(v.slice(0, c)) + "<span>​</span>" + esc(v.slice(c)) + "​";
-    var s = mirror.querySelector("span").getBoundingClientRect(), base = mirror.getBoundingClientRect();
-    return { left: s.left - base.left, top: s.top - base.top, height: s.height };
+    var s = mirror.querySelector("span").getBoundingClientRect(), base = mirror.getBoundingClientRect(), k = scale();
+    return { left: (s.left - base.left) / k, top: (s.top - base.top) / k, height: s.height / k };
   }
   // under the cursor's line; over it when the player or the window's edge leaves no room under it
   function place() {
@@ -178,8 +198,15 @@
     var top = r.top + k * (bt + p.top - box.scrollTop), bottom = top + k * lh;
     if (bottom < r.top || top > r.bottom) return hide();              // the line scrolled out of the box's view
     var bar = document.getElementById("playbar"), floor = bar && bar.getClientRects().length ? Math.min(window.innerHeight, bar.getBoundingClientRect().top) : window.innerHeight;
-    var w = pop.offsetWidth, h = pop.offsetHeight, y = bottom + 3;
-    if (y + h > floor - 4 && top - h - 3 >= 4) y = top - h - 3;
+    // the columns as high whatever the list holds: under the line when they fit there, over it when they fit there, else
+    // lower, on the roomier side (Viktor: «высота селектора не изменяется, если только в подвал не упирается»)
+    var foot1 = foot.offsetHeight + 2, below = floor - 4 - (bottom + 3), above = top - 3 - 4, h = TALL, under = true;
+    if (below < TALL + foot1) {
+      if (above >= TALL + foot1) under = false;
+      else { under = below >= above; h = Math.max(96, (under ? below : above) - foot1); }
+    }
+    pop.style.setProperty("--tc-h", h + "px");
+    var w = pop.offsetWidth, y = under ? bottom + 3 : top - (h + foot1) - 3;
     pop.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, r.left + k * (bl + p.left - box.scrollLeft) - 10)) + "px";
     pop.style.top = Math.max(4, y) + "px";
   }
@@ -197,6 +224,7 @@
     if (!items.length) return hide();
     at = -1;
     if (keep) items.forEach(function (it, i) { if (at < 0 && it.tag === keep && it.there === undefined) at = i; });
+    if (at < 0) items.some(function (it, i) { if (it.next) { at = i; return true; } return false; });   // HERESY 1169: the next verse first
     if (at < 0) items.some(function (it, i) { if (it.there === undefined) { at = i; return true; } return false; });
     build();
     pop.hidden = false;
@@ -241,10 +269,7 @@
   }
   function move(d) {
     var n = items.length;
-    for (var s = 1; s <= n; s++) {
-      var i = ((at < 0 ? (d > 0 ? -1 : 0) : at) + d * s + n * 2) % n;
-      if (items[i].there === undefined) { at = i; break; }
-    }
+    if (n) at = ((at < 0 ? (d > 0 ? -1 : 0) : at) + d + n * 2) % n;   // HERESY 1169 (Viktor: «позволь двигаться по ним и читать»): every row
     mark(true);
   }
 

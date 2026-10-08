@@ -1,0 +1,62 @@
+From 0b4b2a4f3ea5038100b02d434a8349635c7cb0ac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 15:16:29 -0600
+Subject: [PATCH 1252/1252] HERESY 1169: a lifted frame's larger text fits its
+ selects (the key, the Writer's and the profile's widths in em, the profile's
+ row wrapping); the LoRA notes a drawn list, not a second i
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Seen on the headless pictures for Viktor 08.10.2026: at +6 «From the Write…», «as writte…», «Music · up to 8:…»; «i i» beside LoRAs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3481b6a..8ca3054 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2082,7 +2082,7 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left, bod
+ 
+ /* ------------------------------------------------ HERESY 1019: the key beside the title */
+ .title-row { flex-wrap: nowrap; align-items: flex-start; }
+-.keyfield { flex: none; width: 128px; }
++.keyfield { flex: none; width: 9.15em; }   /* HERESY 1169 · 1254: 128 px at 14 px, in em so a lifted frame's larger key fits */
+ .keyfield select { padding-left: 9px; padding-right: 4px; }
+ #songKey.is-wanted { border-style: dashed; color: var(--amber); }
+ 
+@@ -2475,7 +2475,7 @@ body.coll-dragging .coll-peek { display: none; }
+ .wr-hand-x { color: var(--dim); }
+ .wr-hand.is-on { border-color: var(--amber-dim); }
+ .wr-hand.is-on .wr-hand-name, .wr-hand.is-on .wr-hand-x { display: inline-block; }
+-.wr-hand select { width: auto; max-width: 190px; padding: 2px 6px; font-size: 14px; }
++.wr-hand select { width: auto; max-width: 13.6em; padding: 2px 6px; font-size: 14px; }   /* HERESY 1169 · 1254: 190 px at 14 px, growing with a lifted frame's text */
+ 
+ /* HERESY 1048: actions on the Collection's cards, and the studio's own menu */
+ .coll-card { flex-wrap: wrap; }
+@@ -3797,7 +3797,9 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+ 
+ /* the profile's line in one row: its menu gives way to its three buttons */
+ .k-plan #setupLibRow { flex-wrap: nowrap; margin: 0; }
+-.k-plan #setupLibRow select { flex: 1 1 160px; min-width: 0; max-width: 300px; }
++/* HERESY 1169 · 1254: in a lifted frame with larger text the profile's buttons go to the next line rather than squeeze its select */
++body[data-frame="compose"] .k-plan #setupLibRow { flex-wrap: wrap; }
++.k-plan #setupLibRow select { flex: 1 1 11.4em; min-width: 0; max-width: 21.4em; }   /* HERESY 1169 · 1254: 160–300 px at 14 px, in em so a lifted frame's larger text fits */
+ 
+ @media (min-width: 1400px) {
+   /* HERESY 1167 (Viktor: «Четыре свёрнутые в половинку блока растяни на полную ширину второй колонки»): one under another,
+@@ -4606,3 +4608,7 @@ body.lora-vtip-on .tip { display: none !important; }
+ }
+ .warn-ico { display: inline-block; width: 1em; height: 1em; margin-right: .3em; vertical-align: -.15em; background: #d9a441;
+   -webkit-mask: var(--ico-warn) center / contain no-repeat; mask: var(--ico-warn) center / contain no-repeat; }
++/* HERESY 1169 · 1254: the LoRA picker's notes drawn as a short list (their own sign, not a second i beside the section's (i)); a warning
++   among them stays the triangle */
++:root { --ico-notes: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M4 6h16'/%3E%3Cpath d='M4 12h16'/%3E%3Cpath d='M4 18h10'/%3E%3C/svg%3E"); }
++.lora-notes:not(.is-warn) { width: 12px; height: 12px; -webkit-mask-image: var(--ico-notes); mask-image: var(--ico-notes); }
+-- 
+2.43.0
+

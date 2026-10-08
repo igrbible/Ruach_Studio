@@ -1,0 +1,378 @@
+From 36d1bf1660a7a58e339d43a2c7e89f9a85be611d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 11:51:05 -0600
+Subject: [PATCH 1240/1252] =?UTF-8?q?HERESY=201169:=20the=20Librarian's=20?=
+ =?UTF-8?q?filters=20in=20a=20window=20of=20their=20own=20as=20the=20works?=
+ =?UTF-8?q?pace=20chooser=20(HeresyDialog.pick:=20groups=20of=20ticks=20wi?=
+ =?UTF-8?q?th=20icons=20and=20counts,=20AND=20=C2=B7=20OR=20=C2=B7=20NOR,?=
+ =?UTF-8?q?=20Show=20N),=20opened=20by=20Filter=20at=20the=20end=20of=20th?=
+ =?UTF-8?q?e=20search=20row;=20the=20search=20240=20to=20320=20px=20wide;?=
+ =?UTF-8?q?=20with=20a=20note=20and=20with=20artwork=20among=20the=20marks?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек. Вижу визуал так же как в попап селектре воркспейса… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  21 +++++
+ tools/console/heresy-collection.js | 126 ++++++++++++++++++-----------
+ tools/console/heresy-dialog.js     |  56 ++++++++++++-
+ tools/console/heresy-icons.js      |   3 +
+ tools/console/index.html           |  30 +------
+ 5 files changed, 158 insertions(+), 78 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index c9ff56e..137a496 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4540,3 +4540,24 @@ body:not([data-frame]) .frame-fs { display: none; }
+ 
+ /* HERESY 1169 · 1240: with a frame lifted the server log stands at the left (its width and height set by placeLogDock) */
+ .log-dock.is-left { right: auto; left: 16px; }
++
++/* HERESY 1169 · 1241 (Viktor 08.10.2026: «Фильтр прикрути как кнопку в ту же строку с поиском и сортировкой - в самый конец справа. Минимальную длину поискового поля… 240 px, макс длина - 320px»): the filters' row gone for a button at the end of the search row; their window as the workspace's chooser */
++#collBar { display: none !important; }
++#collSearch { flex: 1 1 320px; min-width: 240px; max-width: 320px; }
++.coll-filter-btn { display: inline-flex; align-items: center; gap: 6px; flex: none; }
++.coll-filter-btn .ui-ico { width: 16px; height: 16px; }
++.coll-filter-btn.is-on { border-color: var(--amber); color: var(--amber); }
++.coll-fbadge { padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 17px; font-variant-numeric: tabular-nums; color: var(--amber); background: color-mix(in srgb, var(--amber) 16%, transparent); }
++.hd-box.hd-pick { width: min(520px, 100%); }
++.hd-logic { display: flex; border: 1px solid var(--line-a); border-radius: var(--r-md); overflow: hidden; }
++.hd-logic-b { flex: 1; padding: 8px 10px; border: 0; border-right: 1px solid var(--line-a); background: none; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
++.hd-logic-b:last-child { border-right: 0; }
++.hd-logic-b:hover { background: var(--hover); color: var(--ink); }
++.hd-logic-b.is-on { background: color-mix(in srgb, var(--amber) 17%, transparent); color: var(--amber); font-weight: 600; }
++.hd-group { padding: 10px 10px 4px; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
++.hd-check { cursor: pointer; }
++.hd-check input { margin: 0; width: 16px; height: 16px; flex: none; accent-color: var(--amber); }
++.hd-item-ico { display: inline-grid; place-items: center; width: 18px; flex: none; color: var(--muted); }
++.hd-item-ico svg { width: 16px; height: 16px; display: block; }
++.hd-check.is-on { background: color-mix(in srgb, var(--amber) 8%, transparent); }
++.hd-check.is-on .hd-item-ico { color: var(--amber); }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 08a0d1c..85971fd 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -121,8 +121,30 @@
+   }
+   function frozenWs(w) { return (state.frozen || []).some(function (f) { return w === f || String(w).indexOf(f + SEP) === 0; }); }
+   function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
++  // HERESY 1169 · 1241 (Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): what can be ticked, and how a take answers each
++  var FILTERS = [
++    { label: "Made", items: [["generated", "generated", "sparkles"], ["imported", "imported", "import"], ["regenerated", "regenerated", "refresh"], ["rerendered", "re-rendered", "waveform"]] },
++    { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"]] },
++    { label: "Has", items: [["stems", "stems", "layers"], ["debuzz", "debuzz", "eraser"], ["remaster", "remaster", "sliders"], ["upscale", "upscale", "chevrons-up"]] }
++  ];
++  var DERIVED = { stems: 1, debuzz: 1, remaster: 1, upscale: 1 }, LOGIC_KEY = "yue2.collLogic";
++  function filterTest(v) {
++    if (DERIVED[v]) return function (r) { return (r.derived || []).indexOf(v) >= 0; };
++    if (v === "__liked") return function (r) { return r.rating > 0; };
++    if (v === "__disliked") return function (r) { return r.rating < 0; };
++    if (v === "__starred") return function (r) { return !!r.favorite; };
++    if (v === "__note") return function (r) { return !!r.note; };
++    if (v === "__art") return function (r) { return !!(window.HeresyArt && window.HeresyArt.url(r.name)); };
++    return function (r) { return r.kind === v; };
++  }
++  function filterOn() { return Object.keys(state.kinds).concat(Object.keys(state.derived)); }
++  function passes(r, on, logic) {
++    if (!on.length) return true;
++    var hits = on.filter(function (v) { return filterTest(v)(r); }).length;
++    return logic === "or" ? hits > 0 : logic === "nor" ? hits === 0 : hits === on.length;
++  }
+   function shown() {
+-    var m = matcher(state.q), anyDer = Object.keys(state.derived).length;
++    var m = matcher(state.q), on = filterOn(), logic = state.logic || "and";
+     var rows = state.rows.filter(function (r) {
+       if (!iceHere(r)) return false;               // HERESY 1166
+       if (state.place === "__fav" && !r.favorite) return false;
+@@ -130,14 +152,9 @@
+       if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
+       if (state.place === "__hidden") { if (!r.hidden) return false; }
+       else if (r.hidden) return false;
+-      if (r.rating < 0 && !showDis() && !state.kinds.__disliked) return false;   // HERESY 1167
++      if (r.rating < 0 && !showDis() && !(state.kinds.__disliked && logic !== "nor")) return false;   // HERESY 1167; 1241: shown when the filter asks for the disliked
+       if (state.place && state.place.charAt(0) !== "_" && !inTree(r, state.place)) return false;   // its sections too (1161)
+-      if (state.kinds.__liked && !(r.rating > 0)) return false;
+-      if (state.kinds.__disliked && !(r.rating < 0)) return false;
+-      if (state.kinds.__starred && !r.favorite) return false;   // HERESY 1168: the favourites, where you are
+-      var realKinds = Object.keys(state.kinds).filter(function (k) { return k.charAt(0) !== "_"; });
+-      if (realKinds.length && !state.kinds[r.kind]) return false;
+-      if (anyDer && !r.derived.some(function (k) { return state.derived[k]; })) return false;
++      if (!passes(r, on, logic)) return false;   // HERESY 1169 · 1241: the ticked filters, joined AND, OR or NOR
+       // HERESY 1167: a take's workspaces and sections are searched too (a section's name finds its takes)
+       return m(r.title) || m(r.name) || (r.note && m(r.note)) || r.workspaces.some(function (w) { return m(w); });
+     });
+@@ -265,7 +282,7 @@
+   }
+   function batch() { var n = perRow(); return n * Math.ceil(30 / n); }
+   function viewSig() {
+-    return [state.place, state.q, JSON.stringify(state.kinds), JSON.stringify(state.derived), recall(SORT_KEY) || "new", recall(VIEW_KEY) || "tiles"].join("|");
++    return [state.place, state.q, JSON.stringify(state.kinds), JSON.stringify(state.derived), state.logic, recall(SORT_KEY) || "new", recall(VIEW_KEY) || "tiles"].join("|");
+   }
+   function moreWatch() {
+     var g = $("collGrid"), s = $("collMore");
+@@ -329,14 +346,8 @@
+                 : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
+     }
+   }
+-  function paintHead(rows) {
+-    // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
+-    var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
+-    // HERESY 1165: the studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
+-    $("collWhere").innerHTML = " \u203a " + (placeName ? "<span>" + esc(placeName) + "</span>" : wsParts(state.place).map(function (p, i) {
+-      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>";
+-    }).join(SEP));
+-    var inPlace = state.rows.filter(function (r) {
++  function placeRows() {   // the takes of the place open (HERESY 1169 · 1241: the head's counts and the filter window's)
++    return state.rows.filter(function (r) {
+       if (state.place === "__fav") return r.favorite && !r.hidden;
+       if (state.place === "__pinned") return !!pinnedAll()[r.name] && !r.hidden;
+       if (state.place === "__none") return !r.workspaces.length && !r.hidden;
+@@ -344,6 +355,51 @@
+       if (state.place) return !r.hidden && inTree(r, state.place);     // HERESY 1161: with its sections
+       return !r.hidden;
+     }).filter(iceHere);                            // HERESY 1166: frozen takes count only in their own workspace
++  }
++  function paintFilterBtn() {
++    var b = $("collFilterBtn"), n = $("collFilterN"), on = filterOn(), lg = String(state.logic || "and").toUpperCase();
++    if (!b) return;
++    b.classList.toggle("is-on", on.length > 0);
++    n.hidden = !on.length;
++    n.textContent = on.length ? on.length + " · " + lg : "";
++    b.setAttribute("aria-label", on.length ? "Filter: " + on.length + " on, joined " + lg : "Filter");
++  }
++  function countWith(values, logic) {
++    var kinds = state.kinds, derived = state.derived, lg = state.logic;
++    state.kinds = {}; state.derived = {}; state.logic = logic;
++    values.forEach(function (v) { (DERIVED[v] ? state.derived : state.kinds)[v] = 1; });
++    var n = shown().length;
++    state.kinds = kinds; state.derived = derived; state.logic = lg;
++    return n;
++  }
++  function openFilter() {
++    var inPlace = placeRows();
++    var groups = FILTERS.map(function (g) {
++      return { label: g.label, items: g.items.map(function (it) {
++        return { value: it[0], label: it[1], icon: ico(it[2]), note: String(inPlace.filter(filterTest(it[0])).length), checked: !!(state.kinds[it[0]] || state.derived[it[0]]) };
++      }) };
++    });
++    return window.HeresyDialog.pick("Filter the takes\n\nTick what to look for. A take is shown when it has all of the ticked (AND), any of them (OR) or none of them (NOR); the numbers count the takes of this place.", groups, {
++      logic: state.logic || "and", ok: "Show", count: countWith,
++      logics: [{ value: "and", label: "All · AND", tip: "A take shows when it has every ticked thing" }, { value: "or", label: "Any · OR", tip: "A take shows when it has at least one ticked thing" },
++               { value: "nor", label: "None · NOR", tip: "A take shows when it has none of the ticked things" }]
++    }).then(function (r) {
++      if (!r) return;
++      state.kinds = {}; state.derived = {};
++      r.values.forEach(function (v) { (DERIVED[v] ? state.derived : state.kinds)[v] = 1; });
++      state.logic = r.logic || "and";
++      if (state.logic === "and") { try { localStorage.removeItem(LOGIC_KEY); } catch (e) { /* private */ } } else store(LOGIC_KEY, state.logic);   // AND, the default, leaves no key
++      paint();
++    });
++  }
++  function paintHead(rows) {
++    // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
++    var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
++    // HERESY 1165: the studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
++    $("collWhere").innerHTML = " \u203a " + (placeName ? "<span>" + esc(placeName) + "</span>" : wsParts(state.place).map(function (p, i) {
++      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>";
++    }).join(SEP));
++    var inPlace = placeRows();
+     var secs = inPlace.reduce(function (s, r) { return s + (r.seconds || 0); }, 0), hm = function (t) { var h = Math.floor(t / 3600), m = Math.round(t % 3600 / 60); return h ? h + " h " + m + " min" : m + " min"; };
+     var count = function (f) { return inPlace.filter(f).length; }, kinds = {};
+     inPlace.forEach(function (r) { kinds[r.kind] = (kinds[r.kind] || 0) + 1; });
+@@ -353,16 +409,7 @@
+     if (liked) parts.push(liked + " liked"); if (disliked) parts.push(disliked + " disliked"); if (fav) parts.push(fav + " \u2605"); if (notes) parts.push(notes + " with a note");
+     parts.push(kindsSaid);
+     parts.push(state.rows.length + " in the library");
+-    // HERESY 1169 · 1235: how many takes of this place each filter would show; the clear button while any is on
+-    Array.prototype.forEach.call(document.querySelectorAll("#collFilters .coll-chip"), function (b) {
+-      var k = b.dataset.kind || b.dataset.der;
+-      var n = count(b.dataset.der ? function (r) { return (r.derived || []).indexOf(k) >= 0; } : k === "__liked" ? function (r) { return r.rating > 0; } :
+-                    k === "__disliked" ? function (r) { return r.rating < 0; } : k === "__starred" ? function (r) { return !!r.favorite; } : function (r) { return r.kind === k; });
+-      var f = b.querySelector(".coll-fn");
+-      if (f) f.textContent = String(n);
+-      b.classList.toggle("is-none", !n && !b.classList.contains("is-on"));
+-    });
+-    $("collFClear").hidden = !(Object.keys(state.kinds).length || Object.keys(state.derived).length);
++    paintFilterBtn();   // HERESY 1169 · 1241
+     // HERESY 1166: every piece its own text, so each translates (the kinds of take as a list of their own)
+     $("collNote").innerHTML = parts.filter(function (p) { return p && p.length; }).map(function (p) {
+       return Array.isArray(p) ? p.map(function (k) { return "<span>" + esc(k) + "</span>"; }).join(", ") : "<span>" + esc(p) + "</span>";
+@@ -821,31 +868,12 @@
+     $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
+     // HERESY 1167: the disliked shown or not: the rooms' takes column's ⋯ («The disliked ones too»), one setting with this
+     window.addEventListener("ruach-disliked", function () { paint(); });
+-    Array.prototype.forEach.call(document.querySelectorAll('#collFilters [data-kind="__liked"], #collFilters [data-kind="__disliked"], #collFilters [data-kind="__starred"]'), function (b) {
+-      var svg = ico({ __liked: "like", __disliked: "dislike", __starred: "star" }[b.dataset.kind]);   // the cards' one-colour icons, not the emoji
+-      if (svg) b.innerHTML = svg;
+-    });
+-    // HERESY 1169 · 1235: each chip an icon, its word and how many takes of this place it would show (paintHead counts)
+-    Array.prototype.forEach.call(document.querySelectorAll("#collFilters .coll-chip"), function (b) {
+-      if (b.classList.contains("coll-chip-ico")) b.insertAdjacentHTML("beforeend", '<span class="coll-fn"></span>');
+-      else b.innerHTML = (b.dataset.fi ? ico(b.dataset.fi) : "") + '<span class="coll-fw">' + esc(b.textContent.trim()) + '</span><span class="coll-fn"></span>';
+-    });
+-    $("collFClear").addEventListener("click", function () {
+-      state.kinds = {}; state.derived = {};
+-      Array.prototype.forEach.call(document.querySelectorAll("#collFilters .is-on"), function (b) { b.classList.remove("is-on"); });
+-      paint();
+-    });
++    // HERESY 1169 · 1241: the filters' window, from the button at the end of the search row
++    state.logic = recall(LOGIC_KEY) || "and";
++    $("collFilterBtn").addEventListener("click", function () { openFilter(); });
+     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) {
+       b.addEventListener("click", function () { store(VIEW_KEY, b.dataset.collView); paint(); });
+     });
+-    $("collFilters").addEventListener("click", function (e) {
+-      var b = e.target.closest("[data-kind],[data-der]");
+-      if (!b) return;
+-      var bag = b.dataset.kind ? state.kinds : state.derived, k = b.dataset.kind || b.dataset.der;
+-      if (bag[k]) delete bag[k]; else bag[k] = 1;
+-      b.classList.toggle("is-on", !!bag[k]);
+-      paint();
+-    });
+     $("collSide").addEventListener("click", function (e) {
+       var more = e.target.closest("[data-ws-menu]");          // HERESY 1050
+       if (more) { e.stopPropagation(); var rc = more.getBoundingClientRect(); wsMenu(more.dataset.wsMenu, rc.left, rc.bottom + 2); return; }
+diff --git a/tools/console/heresy-dialog.js b/tools/console/heresy-dialog.js
+index 86f766d..0e929e8 100644
+--- a/tools/console/heresy-dialog.js
++++ b/tools/console/heresy-dialog.js
+@@ -119,8 +119,59 @@
+       });
+     });
+   }
++  // HERESY 1169 · 1241 (Viktor 08.10.2026: «Вижу визуал так же как в попап селектре воркспейса… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): several to tick, in groups, with how the ticked ones join; count(values, logic) says on the OK button how many it would show
++  function showPick(text, groups, opts) {
++    opts = opts || {};
++    var parts = String(text || "").split(/\n\s*\n/), title = parts.shift(), body = parts.join("\n\n"), logic = opts.logic || "";
++    return new Promise(function (resolve) {
++      var back = document.createElement("div"), before = document.activeElement;
++      back.className = "hd-back";
++      back.innerHTML = '<div class="hd-box hd-choose hd-pick" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
++        '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
++        ((opts.logics || []).length ? '<div class="hd-logic" role="radiogroup" aria-label="' + esc(opts.logicLabel || "How the ticked ones join") + '">' + opts.logics.map(function (l) {
++          return '<button type="button" role="radio" class="hd-logic-b" data-logic="' + esc(l.value) + '" aria-checked="false"' + (l.tip ? ' data-tip="' + esc(l.tip) + '"' : "") + ">" + esc(l.label) + "</button>";
++        }).join("") + "</div>" : "") +
++        '<div class="hd-list hd-pick-list">' + groups.map(function (g) {
++          return '<div class="hd-group">' + esc(g.label) + "</div>" + g.items.map(function (it) {
++            return '<label class="hd-item hd-check"><input type="checkbox" data-v="' + esc(it.value) + '"' + (it.checked ? " checked" : "") + ' /><span class="hd-item-ico" aria-hidden="true">' + (it.icon || "") +
++              '</span><span class="hd-item-label">' + esc(it.label) + "</span>" + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") + "</label>";
++          }).join("");
++        }).join("") + "</div>" +
++        '<div class="hd-acts"><button type="button" class="btn ghost small hd-clear">' + esc(opts.clear || "Clear") + '</button><span class="hd-spacer"></span>' +
++        '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + '</button><button type="button" class="btn small primary hd-yes"></button></div></div>';
++      document.body.appendChild(back);
++      var boxes = Array.prototype.slice.call(back.querySelectorAll(".hd-check input")), yes = back.querySelector(".hd-yes");
++      function values() { return boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.dataset.v; }); }
++      function paint() {
++        Array.prototype.forEach.call(back.querySelectorAll(".hd-logic-b"), function (b) { var on = b.dataset.logic === logic; b.classList.toggle("is-on", on); b.setAttribute("aria-checked", on ? "true" : "false"); });
++        boxes.forEach(function (b) { b.closest(".hd-check").classList.toggle("is-on", b.checked); });
++        var n = opts.count ? opts.count(values(), logic) : null;
++        yes.textContent = (opts.ok || "Show") + (n === null || n === undefined ? "" : " " + n);
++      }
++      function done(v) {
++        document.removeEventListener("keydown", key, true);
++        back.classList.add("is-leaving");
++        setTimeout(function () { back.remove(); }, 120);
++        if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
++        resolve(v);
++      }
++      function key(e) {
++        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(null); }
++        else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); done({ values: values(), logic: logic }); }
++      }
++      document.addEventListener("keydown", key, true);
++      back.addEventListener("mousedown", function (e) { if (e.target === back) done(null); });
++      back.addEventListener("click", function (e) { var b = e.target.closest(".hd-logic-b"); if (b) { logic = b.dataset.logic; paint(); } });
++      boxes.forEach(function (b) { b.addEventListener("change", paint); });
++      back.querySelector(".hd-clear").addEventListener("click", function () { boxes.forEach(function (b) { b.checked = false; }); paint(); });
++      back.querySelector(".hd-no").addEventListener("click", function () { done(null); });
++      yes.addEventListener("click", function () { done({ values: values(), logic: logic }); });
++      paint();
++      requestAnimationFrame(function () { back.classList.add("is-on"); (boxes[0] || yes).focus(); });
++    });
++  }
+   function queued(kind, text, value, opts) {
+-    var p = chain.then(function () { return kind === "choose" ? showChoose(text, value, opts) : show(kind, text, value, opts); });
++    var p = chain.then(function () { return kind === "choose" ? showChoose(text, value, opts) : kind === "pick" ? showPick(text, value, opts) : show(kind, text, value, opts); });
+     chain = p.then(function () {}, function () {});
+     return p;
+   }
+@@ -129,6 +180,7 @@
+     confirm: function (text, opts) { return queued("confirm", text, null, opts); },
+     prompt: function (text, value, opts) { return queued("prompt", text, value, opts); },
+     alert: function (text, opts) { return queued("alert", text, null, opts); },
+-    choose: function (text, items, opts) { return queued("choose", text, items || [], opts); }   // HERESY 1167
++    choose: function (text, items, opts) { return queued("choose", text, items || [], opts); },
++    pick: function (text, groups, opts) { return queued("pick", text, groups || [], opts); }   // HERESY 1169 · 1241   // HERESY 1167
+   };
+ })();
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 6033e02..502e367 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -85,6 +85,9 @@
+     // HERESY 1169: back and on by a quarter minute (Lucide's rewind and fast-forward, ISC)
+     rewind: '<polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/>',
+     forward: '<polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/>',
++    // HERESY 1169 · 1241: the Librarian's Filter button and its «with artwork» (Lucide's list-filter and image, ISC)
++    filter: '<path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/>',
++    image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+     // HERESY 1169 · 1235: the Librarian's filters (Lucide's sparkles, import, refresh-cw, audio-waveform, eraser, sliders-vertical, chevrons-up and filter-x, ISC)
+     sparkles: '<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+     "import": '<path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/>',
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f462770..d8dd270 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1792,6 +1792,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <option value="title">by title</option><option value="long">longest first</option></select>
+         <span class="coll-views"><button type="button" class="btn ghost small" data-coll-view="tiles">Tiles</button>
+           <button type="button" class="btn ghost small" data-coll-view="list">List</button></span>
++        <!-- HERESY 1169 · 1241 (Viktor 08.10.2026: «Фильтр прикрути как кнопку в ту же строку с поиском и сортировкой - в самый конец справа»): the filters in a window, as the workspace's chooser; the button says how many are on and how they join -->
++        <button type="button" class="btn ghost small coll-filter-btn" id="collFilterBtn" aria-haspopup="dialog" aria-label="Filter" data-tip="Filter the takes shown: tick what to look for, and whether a take needs all of it (AND), any of it (OR) or none of it (NOR)"><span data-ui="filter"></span><span>Filter</span><span class="coll-fbadge" id="collFilterN" hidden></span></button>
+       </div></div>
+     <div class="coll-layout">
+       <aside class="coll-side" id="collSide"></aside>
+@@ -1800,33 +1802,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+            data-tip="Drag to widen or narrow the workspaces; a double click folds them away"><button type="button" class="coll-fold" id="collFold">«</button></div>
+       <div class="coll-main">
+         <div class="coll-bar" id="collBar">
+-          <!-- HERESY 1169 · 1235 (Viktor 08.10.2026: «первая статичная строка фильтрации... сделай её ахуйной»): three framed groups like the bar of the checked; each chip an icon, its word and how many takes of this place it would show -->
+-          <div class="coll-filters" id="collFilters">
+-            <span class="coll-fgroup" role="group" aria-label="Made">
+-              <span class="coll-cap-inline">made</span>
+-              <button type="button" class="coll-chip" data-kind="generated" data-fi="sparkles" data-tip="Made here, from words">generated</button>
+-              <button type="button" class="coll-chip" data-kind="imported" data-fi="import" data-tip="Brought in from a file">imported</button>
+-              <button type="button" class="coll-chip" data-kind="regenerated" data-fi="refresh" data-tip="Made again from its own request with new seeds">regenerated</button>
+-              <button type="button" class="coll-chip" data-kind="rerendered" data-fi="waveform" data-tip="The same music rendered again: another decoder, a new sound, trimmed or ended">re-rendered</button>
+-            </span>
+-            <span class="coll-fgroup" role="group" aria-label="Liked">
+-              <span class="coll-cap-inline">liked</span>
+-              <!-- HERESY 1167: the cards' own one-colour icons (heresy-collection.js puts them in); a dislike hides a take, this shows them -->
+-              <button type="button" class="coll-chip coll-chip-ico" data-kind="__liked" aria-label="Liked" data-tip="Only the liked">👍</button>
+-              <button type="button" class="coll-chip coll-chip-ico" data-kind="__disliked" aria-label="Disliked" data-tip="Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them">👎</button>
+-              <!-- HERESY 1168 (Viktor 06.10.2026: «В фильтр в Воркспейсах добавь Звезду»): the favourites of the workspace in hand
+-                   (★ Favourites at the side is all of them, everywhere) -->
+-              <button type="button" class="coll-chip coll-chip-ico" data-kind="__starred" aria-label="Favourites" data-tip="Only the favourites (★), in the workspace you are in">★</button>
+-            </span>
+-            <span class="coll-fgroup" role="group" aria-label="Has">
+-              <span class="coll-cap-inline">has</span>
+-              <button type="button" class="coll-chip" data-der="stems" data-fi="layers" data-tip="Split into stems in the Refiner">stems</button>
+-              <button type="button" class="coll-chip" data-der="debuzz" data-fi="eraser" data-tip="Debuzzed in the Refiner">debuzz</button>
+-              <button type="button" class="coll-chip" data-der="remaster" data-fi="sliders" data-tip="Remastered in the Refiner">remaster</button>
+-              <button type="button" class="coll-chip" data-der="upscale" data-fi="chevrons-up" data-tip="Upscaled in the Refiner">upscale</button>
+-            </span>
+-            <button type="button" class="btn ghost small icon-btn coll-fclear" id="collFClear" data-ui="filter-x" aria-label="Clear the filters" data-tip="Clear the filters" hidden></button>
+-          </div>
++          <!-- HERESY 1169 · 1241: the filters left this row for a window of their own (Filter, at the end of the search row) -->
+         </div>
+         <div class="coll-bar" id="collTrashBar" hidden>
+           <button type="button" class="btn ghost small" id="collTSelAll">Select all</button>
+-- 
+2.43.0
+

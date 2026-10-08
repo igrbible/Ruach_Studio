@@ -1,0 +1,380 @@
+From 2fe1ba950bb7d8e9288a775784e8770cdf879c39 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 10:31:41 -0600
+Subject: [PATCH 1237/1252] =?UTF-8?q?HERESY=201169:=20Recite=20the=20lyric?=
+ =?UTF-8?q?s=20on=20the=20score=20in=20the=20form=20(heresy-recite.js;=20t?=
+ =?UTF-8?q?he=20Score=20card's=20=C2=ABLay=20the=20lyrics=20on=20this=20sc?=
+ =?UTF-8?q?ore=E2=80=A6=C2=BB):=20the=20promo's=20narrator=20for=20any=20w?=
+ =?UTF-8?q?ords,=20a=20syllable=20an=20eighth=20on=20a=20tone=20of=20each?=
+ =?UTF-8?q?=20bar's=20chord,=20breaths=20at=20commas=20and=20full=20stops,?=
+ =?UTF-8?q?=20sections=20on=20two-bar=20phrases,=20a=20vocalise=20if=20ask?=
+ =?UTF-8?q?ed;=20the=20result=20in=20the=20strict=20dialect?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «твою утилиту для генерации партитур `score`, ... прикрути её в Студию».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-recite.js | 308 +++++++++++++++++++++++++++++++++
+ tools/console/heresy-score.js  |   1 +
+ tools/console/index.html       |   7 +
+ 3 files changed, 316 insertions(+)
+ create mode 100644 tools/console/heresy-recite.js
+
+diff --git a/tools/console/heresy-recite.js b/tools/console/heresy-recite.js
+new file mode 100644
+index 0000000..bba0af4
+--- /dev/null
++++ b/tools/console/heresy-recite.js
+@@ -0,0 +1,308 @@
++// HERESY 1169 · 1238 (Viktor 08.10.2026: «твою утилиту для генерации партитур `score`, ... прикрути её в Студию»; «те утилиты, что ты имеешь во внутренней кухне, если видишь, что их можно вынести в паблик Студии, без вреда нашей кухне, - выноси смело»): the narrator of the studio's promo (heresy/tools/promo/promo_score_voice5.py) for any words. The lyrics' lines go on the bars of the score in the form: a syllable an eighth on a reciting tone of its bar's chord, a breath after a comma (an eighth) and after a full stop (a quarter), the line's last syllable a quarter on the chord tone below; each section of the lyrics starts on a two-bar phrase after a bar's rest (or after a vocalise an octave up, «(Ooh, aah)», when asked). The instruments, the chords, the key, the meter and the tempo stay as they are; the score's sections follow the lyrics' tags, an intro before the first words and an outro after the last. The tones come from the chords themselves (the promo had a table by hand), led to the nearest chord tone so the voice keeps its place; the syllables are the studio's own count in each language.
++(function () {
++  "use strict";
++
++  var NAT = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
++  var KEYS = {};
++  ["Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#"].forEach(function (k, i) { KEYS[k] = i - 7; });
++  ["Abm", "Ebm", "Bbm", "Fm", "Cm", "Gm", "Dm", "Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "A#m"].forEach(function (k, i) { KEYS[k] = i - 7; });
++  // a chord's root, third (or what stands for it) and fifth, from its symbol; longest quality first
++  var QUALITY = [["m7b5", [0, 3, 6]], ["m(maj7)", [0, 3, 7]], ["7sus4", [0, 5, 7]], ["maj7", [0, 4, 7]], ["dim7", [0, 3, 6]], ["dim", [0, 3, 6]],
++                 ["aug", [0, 4, 8]], ["sus4", [0, 5, 7]], ["sus2", [0, 2, 7]], ["m7", [0, 3, 7]], ["m6", [0, 3, 7]], ["m", [0, 3, 7]],
++                 ["7", [0, 4, 7]], ["6", [0, 4, 7]], ["", [0, 4, 7]]];
++  var TOKEN = /"([^"]*)"|(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)(\d*)(\/*)(\d*)|([zx])(\d*)(\/*)(\d*)/g;
++  var VOCALISE = { ru: "(Ооо, ааа)", uk: "(Ооо, ааа)", be: "(Ооо, ааа)", el: "(Ωωω, ααα)" };
++
++  function fail(text) { var e = new Error(text); e.recite = true; throw e; }
++  function keySig(n) {
++    var r = { C: 0, D: 0, E: 0, F: 0, G: 0, A: 0, B: 0 };
++    (n > 0 ? "FCGDAEB" : "BEADGCF").slice(0, Math.abs(n)).split("").forEach(function (l) { r[l] = n > 0 ? 1 : -1; });
++    return r;
++  }
++  var PIECES = [48, 32, 24, 16, 12, 8, 6, 4, 3, 2, 1];
++  function pieces(units) { var out = []; while (units > 0) { for (var i = 0; i < PIECES.length; i++) if (PIECES[i] <= units) { out.push(PIECES[i]); units -= PIECES[i]; break; } } return out; }
++  function len(num, slash, den) { var n = num ? +num : 1; return slash ? n / (den ? +den : Math.pow(2, slash.length)) : n; }
++  function chordTones(name) {
++    var m = /^([A-G])(#|b)?(.*?)(?:\/[A-G](?:#|b)?)?$/.exec(String(name || "").trim());
++    if (!m) return null;
++    var root = (NAT[m[1]] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0) + 12) % 12;
++    for (var i = 0; i < QUALITY.length; i++) if (m[3] === QUALITY[i][0]) return QUALITY[i][1].map(function (s) { return (root + s) % 12; });
++    return [root, (root + 4) % 12, (root + 7) % 12];
++  }
++  // a bar's chords at their offsets (in the score's units), its length, and the pitches it sings (for the voice's place)
++  function scan(bar, sig) {
++    var pos = 0, chords = [], pitches = [], m;
++    TOKEN.lastIndex = 0;
++    while ((m = TOKEN.exec(bar)) !== null) {
++      if (m[1] !== undefined) { chords.push([pos, m[1]]); continue; }
++      if (m[3]) {
++        var l = m[3].toUpperCase(), oct = m[3] === l ? 4 : 5;
++        oct += (m[4].match(/'/g) || []).length - (m[4].match(/,/g) || []).length;
++        var acc = m[2] ? { "^": 1, "^^": 2, "_": -1, "__": -2, "=": 0 }[m[2]] : sig[l];
++        pitches.push(12 * (oct + 1) + NAT[l] + acc);
++        pos += len(m[5], m[6], m[7]);
++      } else pos += len(m[9], m[10], m[11]);
++    }
++    return { chords: chords, length: pos, pitches: pitches };
++  }
++  // a voice's line as bars, a multi-bar rest (Z3) as so many whole-bar rests; and back, running whole-bar rests folded again
++  function splitBars(line) {
++    var out = [];
++    line.split("|").filter(function (x) { return x.trim(); }).forEach(function (text) {
++      var whole = /^\s*((?:"[^"]*")?)Z(\d*)\s*$/.exec(text);
++      if (!whole) { out.push(text.trim()); return; }
++      for (var n = 0; n < (+whole[2] || 1); n++) out.push((n === 0 ? whole[1] : "") + "Z");
++    });
++    return out;
++  }
++  function joinBars(texts) {
++    var out = [], run = 0;
++    texts.concat([null]).forEach(function (t) {
++      if (t === "Z") { run++; return; }
++      if (run) { out.push(run === 1 ? "Z" : "Z" + run); run = 0; }
++      if (t !== null) out.push(t);
++    });
++    return out.join("|") + "|";
++  }
++  // the lyrics as sections of sung lines (a tag inside a line is not sung); sections with no line (an [Intro], an [End]) go
++  function sectionsOf(lyrics) {
++    var out = [], cur = null;
++    String(lyrics || "").replace(/\r/g, "").split("\n").forEach(function (raw) {
++      var line = raw.trim(), tag = /^\[([^\]]+)\]$/.exec(line);
++      if (!line) return;
++      if (tag) { cur = { tag: tag[1].trim(), lines: [] }; out.push(cur); return; }
++      var sung = line.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
++      if (!sung) return;
++      if (!cur) { cur = { tag: "Verse", lines: [] }; out.push(cur); }
++      cur.lines.push(sung);
++    });
++    return out.filter(function (s) { return s.lines.length; });
++  }
++  function sectionName(tag) {
++    var w = String(tag).toLowerCase().replace(/[0-9]/g, " ").split(/\s[-–—]\s|:/)[0].trim();
++    return /^[a-z][a-z -]*$/.test(w) ? w.replace(/\s+/g, " ") : "verse";
++  }
++
++  function lay(abc, lyrics, opts) {
++    opts = opts || {};
++    var HL = window.HeresyLyrics;
++    if (!HL || !HL.syllables) fail("The lyrics' counter is not loaded");
++    var src = String(abc || "").replace(/\r/g, "").split("\n");
++    var kAt = src.findIndex(function (l) { return /^K:/.test(l); });
++    if (kAt < 0) fail("The score has no key (K:) line");
++    var first = src.findIndex(function (l, i) { return i > kAt && (/^%/.test(l) || /^V:\s*Vocal\b/.test(l)); });
++    if (first < 0) fail("The score has no Vocal voice after its key");
++    var head = src.slice(0, first), field = function (k) { var f = head.filter(function (l) { return l.indexOf(k + ":") === 0; })[0]; return f ? f.slice(k.length + 1).trim() : ""; };
++    var key = field("K"), keyN = KEYS[key];
++    if (keyN === undefined) fail("The score's key " + key + " is not one this tool reads");
++    var sig = keySig(keyN);
++    var L = /^1\/(\d+)$/.exec(field("L") || "1/8"), unit = L ? 1 / +L[1] : 0;
++    if (!unit) fail("The score's unit length (L:) is not one this tool reads");
++    var eighth = (1 / 8) / unit;
++    if (eighth < 1 || eighth !== Math.round(eighth)) fail("The score's unit (L:" + field("L") + ") is too long to write a syllable an eighth");
++    var q = /^(\d+)\/(\d+)\s*=\s*(\d+)/.exec(field("Q") || "1/4=120"), bpm = q ? +q[3] : 120, beat = q ? +q[1] / +q[2] : 1 / 4;
++    var unitSec = unit / beat * 60 / bpm;
++    var meterUnits = function (text) { var m = /^M:\s*(\d+)\/(\d+)/.exec(text); return m ? (+m[1] / +m[2]) / unit : null; };
++    var units = meterUnits("M:" + (field("M") || "4/4")) || 8 * eighth;
++    // the blocks: a section, a meter change, a vocal line, the instruments' lines
++    var blocks = [], section = null, i = first;
++    while (i < src.length) {
++      var ln = src[i];
++      if (!ln.trim()) { i++; continue; }
++      if (/^%/.test(ln)) { section = ln.slice(1).trim(); i++; continue; }
++      if (!/^V:\s*Vocal\b/.test(ln)) fail("A line of the score this tool does not read: " + ln.slice(0, 40));
++      var j = i + 1, voc = [], ins = [];
++      while (j < src.length && !/^V:\s*Ins\b/.test(src[j]) && !/^%/.test(src[j])) { if (src[j].trim()) voc.push(src[j]); j++; }
++      if (j >= src.length || !/^V:\s*Ins\b/.test(src[j])) fail("A Vocal block without its Ins block");
++      j++;
++      while (j < src.length && !/^V:\s*Vocal\b/.test(src[j]) && !/^%/.test(src[j])) { if (src[j].trim()) ins.push(src[j]); j++; }
++      var meter = voc.filter(function (l) { return /^M:/.test(l); }), insMeter = ins.filter(function (l) { return /^M:/.test(l); });
++      var vb = splitBars(voc.filter(function (l) { return !/^M:/.test(l); }).join("")), ib = splitBars(ins.filter(function (l) { return !/^M:/.test(l); }).join(""));
++      if (vb.length !== ib.length) fail("A block whose voices differ in bars (" + vb.length + " against " + ib.length + ")");
++      blocks.push({ section: section, meter: meter, insMeter: insMeter, voc: vb, ins: ib });
++      i = j;
++    }
++    if (!blocks.length) fail("The score has no bars");
++    // the bars: where each starts, its chords, the chord it starts in
++    var bars = [], t = 0, chord = null, sungPitches = [];
++    blocks.forEach(function (blk, b) {
++      if (blk.meter.length) units = meterUnits(blk.meter[blk.meter.length - 1]) || units;
++      blk.voc.forEach(function (text, k) {
++        var s = scan(text, sig), firstChord = s.chords.length && s.chords[0][0] === 0 ? s.chords[0][1] : null;
++        if (!chord) chord = firstChord || (scan(blk.ins[k], sig).chords[0] || [0, null])[1];
++        bars.push({ block: b, units: units, text: text, ins: blk.ins[k], start: t, chords: s.chords, enter: chord, sings: s.pitches.length > 0 });
++        sungPitches = sungPitches.concat(s.pitches);
++        if (s.chords.length) chord = s.chords[s.chords.length - 1][1];
++        t += units * unitSec;
++      });
++    });
++    // the voice's place: around D above middle C, where the promo's narrator spoke (a bed's own voice may be a vocalise two octaves up, so not its middle)
++    var center = opts.center || 62;
++    // where the words start: a bar asked for; else where the score's first section ends when it is an intro (a bed's own voice may sing only at its end, so not where it sings); else on bar 2, a bar to come in
++    var firstSec = blocks[0].section || "", start = opts.startBar ? Math.max(0, Math.min(bars.length - 1, opts.startBar - 1)) : -1;
++    if (start < 0 && /intro/i.test(firstSec)) start = bars.findIndex(function (b) { return blocks[b.block].section !== firstSec; });
++    if (start < 0) start = Math.min(1, bars.length - 1);
++    var sections = sectionsOf(lyrics);
++    if (!sections.length) fail("The lyrics have no line to recite");
++    var all = sections.map(function (s) { return s.lines.join(" "); }).join(" ");
++    var lang = opts.lang || (/[ўЎ]/.test(all) ? "be" : /[їєґЇЄҐ]/.test(all) ? "uk" : /[іІ]/.test(all) && !/[ыэъЫЭЪ]/.test(all) ? "uk" : /[а-яё]/i.test(all) ? "ru" :
++                             /[α-ωάέήίόύώ]/i.test(all) ? "el" : HL.latinOf ? HL.latinOf(all, opts.style || "") : "en");
++    var syl = function (w) { return HL.syllables(w, lang); };
++    var lineNotes = function (text) {
++      var seq = [];
++      text.split(/\s+/).filter(Boolean).forEach(function (w) {
++        var n = syl(w);
++        for (var k = 0; k < n; k++) seq.push([eighth, "r"]);
++        if (n && /[.!?…]["»”)]*$/.test(w)) seq.push([2 * eighth, "z"]);
++        else if (n && /[,:;—–]["»”)]*$/.test(w)) seq.push([eighth, "z"]);
++      });
++      while (seq.length && seq[seq.length - 1][1] === "z") seq.pop();
++      if (seq.length) seq[seq.length - 1] = [2 * eighth, "e"];
++      return seq;
++    };
++    // the lines on the bars: a line from the start of a bar, a section on an even bar after a bar's rest
++    var sung = {}, plan = [], dropped = [], marks = {}, at = start, gap = {}, sectionFirst = [];
++    if (start > 0) marks[0] = "intro";
++    sections.forEach(function (sec, si) {
++      if (si > 0) { var g0 = at; at += 1; if ((at - start) % 2) at++; for (var g = g0; g < at && g < bars.length; g++) gap[g] = si - 1; }
++      var placed = false;
++      sec.lines.forEach(function (line) {
++        var seq = lineNotes(line);
++        if (!seq.length) return;
++        var need = seq.reduce(function (s, n) { return s + n[0]; }, 0), room = 0;
++        for (var k = at; k < bars.length && room < need; k++) room += bars[k].units;
++        if (room < need) { dropped.push(line); return; }
++        var j = at;
++        while (seq.length) {
++          var take = [], used = 0;
++          while (seq.length && used + seq[0][0] <= bars[j].units) { used += seq[0][0]; take.push(seq.shift()); }
++          if (!take.length) { take.push([bars[j].units, seq[0][1]]); seq[0] = [seq[0][0] - bars[j].units, seq[0][1]]; }
++          sung[j] = take; j++;
++        }
++        if (!placed) { marks[at] = sectionName(sec.tag); placed = true; sectionFirst.push(si); }
++        plan.push({ bar: at, last: j - 1, start: Math.round(bars[at].start * 100) / 100, end: Math.round((bars[j - 1].start + bars[j - 1].units * unitSec) * 100) / 100, text: line, section: sec.tag });
++        at = j;
++      });
++    });
++    if (!plan.length) fail("No line of the lyrics fits on this score");
++    var lastBar = plan[plan.length - 1].last;
++    if (lastBar + 1 < bars.length) marks[lastBar + 1] = "outro";
++    // a vocalise between sections, when asked: an octave up, a half bar on the chord tone above, the rest on the reciting tone
++    if (opts.vocalise) Object.keys(gap).forEach(function (g) { var u = bars[g].units, h = Math.floor(u / 2); if (!sung[g] && g > start) sung[g] = h ? [[h, "vh"], [u - h, "vr"]] : [[u, "vh"]]; });
++    // the tones, bar by bar: the chord tone nearest the last one, the one above and the one below
++    var cur = center;
++    var tones = function (name) {
++      var pcs = chordTones(name) || chordTones(key) || [0, 4, 7], cand = [];
++      for (var p = center - 10; p <= center + 10; p++) if (pcs.indexOf(((p % 12) + 12) % 12) >= 0) cand.push(p);
++      var rec = cand.reduce(function (best, p) { return Math.abs(p - cur) < Math.abs(best - cur) ? p : best; }, cand[0]);
++      var up = cand.filter(function (p) { return p > rec; })[0], down = cand.filter(function (p) { return p < rec; }).pop();
++      cur = rec;
++      return { r: rec, h: up === undefined ? rec + 2 : up, e: down === undefined ? rec - 2 : down };
++    };
++    var spell = function (p, acc) {
++      var pc = ((p % 12) + 12) % 12, best = null;
++      "CDEFGAB".split("").forEach(function (l) {
++        for (var a = -1; a <= 1; a++) {
++          if (((NAT[l] + a) % 12 + 12) % 12 !== pc) continue;
++          var s = (a === sig[l] ? 0 : 10) + Math.abs(a) + (a < 0 && keyN >= 0 ? 1 : 0) + (a > 0 && keyN < 0 ? 1 : 0);
++          if (!best || s < best.s) best = { l: l, a: a, s: s };
++        }
++      });
++      var oct = Math.floor((p - NAT[best.l] - best.a) / 12) - 1, mark = "";
++      if (best.a !== sig[best.l] || (best.l in acc && acc[best.l] !== best.a)) { mark = best.a === 1 ? "^" : best.a === -1 ? "_" : "="; acc[best.l] = best.a; }
++      var txt = oct >= 5 ? best.l.toLowerCase() : best.l;
++      if (oct > 5) txt += new Array(oct - 5 + 1).join("'");
++      if (oct < 4) txt += new Array(4 - oct + 1).join(",");
++      return mark + txt;
++    };
++    var writeBar = function (bar, notes) {
++      var marksIn = bar.chords.slice().sort(function (a, b) { return a[0] - b[0]; }), out = "", pos = 0, acc = {};
++      var chordAt = function (p) { var c = bar.enter; bar.chords.forEach(function (x) { if (x[0] <= p + 1e-9) c = x[1]; }); return c; };
++      var put = function (end, pitch) {
++        var sign = pitch === null ? "z" : spell(pitch, acc);
++        while (pos < end - 1e-9) {
++          while (marksIn.length && marksIn[0][0] <= pos + 1e-9) out += '"' + marksIn.shift()[1] + '"';
++          var stop = Math.min.apply(null, marksIn.filter(function (x) { return x[0] < end - 1e-9; }).map(function (x) { return x[0]; }).concat([end]));
++          var ps = pieces(Math.round(stop - pos));   // only the lengths the dialect has (a 10 is an 8 tied to a 2)
++          ps.forEach(function (d, k) { out += sign + (d !== 1 ? String(d) : ""); if (pitch !== null && k < ps.length - 1) out += "-"; });
++          pos = stop;
++          if (pitch !== null && pos < end - 1e-9) out += "-";
++        }
++      };
++      notes.forEach(function (n) {
++        var role = n[1], tn = role === "z" ? null : tones(chordAt(pos));
++        var pitch = role === "z" ? null : role === "r" ? tn.r : role === "h" ? tn.h : role === "e" ? tn.e : role === "vh" ? tn.h + 12 : tn.r + 12;
++        put(pos + n[0], pitch);
++      });
++      put(bar.units, null);
++      while (marksIn.length) out += '"' + marksIn.shift()[1] + '"';
++      return out;
++    };
++    var rest = function (bar) {   // a bar nobody recites: its chords kept, a rest across
++      if (!bar.chords.length) return "Z";
++      return writeBar(bar, []);
++    };
++    // the score again: its head, then the blocks split where a new section starts
++    var out = head.slice();
++    blocks.forEach(function (blk, b) {
++      var idx = [];
++      bars.forEach(function (bar, k) { if (bar.block === b) idx.push(k); });
++      var groups = [[idx[0]]];
++      idx.slice(1).forEach(function (k) { if (k in marks || groups[groups.length - 1].length >= 4) groups.push([k]); else groups[groups.length - 1].push(k); });   // the dialect holds one to four bars a group
++      groups.forEach(function (g, n) {
++        if (g[0] in marks) out.push("% " + marks[g[0]]);
++        out.push("V: Vocal");
++        if (n === 0) out = out.concat(blk.meter);
++        out.push(joinBars(g.map(function (k) { return sung[k] ? writeBar(bars[k], sung[k]) : rest(bars[k]); })));
++        out.push("V: Ins");
++        if (n === 0) out = out.concat(blk.insMeter);
++        out.push(joinBars(g.map(function (k) { return bars[k].ins; })));
++      });
++    });
++    // the lyrics again: an intro, the sections with their lines that fit (and the vocalise after them), an outro, the end
++    var said = VOCALISE[lang] || "(Ooh, aah)", text = [];
++    if (start > 0) text.push("[Intro]");
++    sections.forEach(function (sec, si) {
++      var kept = sec.lines.filter(function (l) { return dropped.indexOf(l) < 0 && lineNotes(l).length; });
++      if (!kept.length) return;
++      text.push("[" + sec.tag + "]\n" + kept.join("\n") + (opts.vocalise && si < sections.length - 1 ? "\n" + said : ""));
++    });
++    if (lastBar + 1 < bars.length) text.push("[Outro]");
++    if (/\[(?:end|END|End)\]/.test(String(lyrics))) text.push("[End]");
++    return { abc: out.join("\n") + "\n", lyrics: text.join("\n\n") + "\n", lines: plan, dropped: dropped, bars: bars.length,
++             firstBar: plan[0].bar + 1, lastBar: lastBar + 1, key: key, bpm: bpm, seconds: Math.round(t), lang: lang };
++  }
++
++  // ---- the button in the form's Score card
++  function $(id) { return document.getElementById(id); }
++  function say(text, bad) { if (window.HeresyScore && window.HeresyScore.toast) window.HeresyScore.toast(text, bad); }
++  function clock(s) { var m = Math.floor(s / 60), r = Math.round(s % 60); return m + ":" + (r < 10 ? "0" : "") + r; }
++  function replaceText(el, text) {   // through the editor's own history, so Ctrl+Z in the box brings the old text back
++    el.focus();
++    el.select();
++    var ok = false;
++    try { ok = document.execCommand("insertText", false, text); } catch (e) { ok = false; }
++    if (!ok || el.value !== text) { el.value = text; el.dispatchEvent(new Event("input", { bubbles: true })); }
++  }
++  function init() {
++    if (!$("reciteBtn")) return;
++    $("reciteBtn").addEventListener("click", function () {
++      var r;
++      try {
++        r = lay($("abc").value, $("lyrics").value, { vocalise: $("reciteVocalise").checked, style: ($("style") || {}).value || "" });
++      } catch (e) { say(e.recite ? e.message : "The lyrics could not be laid on this score: " + e.message, true); return; }
++      var text = "Recite the lyrics on this score?\n\n" + r.lines.length + " lines on bars " + r.firstBar + "–" + r.lastBar + " of " + r.bars + " (" + r.key + ", " + r.bpm + " BPM, " + clock(r.seconds) + "): a syllable an eighth on a tone of each bar's chord, a breath after a comma and a full stop, the line's last syllable a quarter lower; the instruments, chords, key and tempo stay. The score and the lyrics in the form are replaced: Ctrl+Z in each box brings the old ones back." +
++        (r.dropped.length ? "\n\n" + r.dropped.length + " lines do not fit and are left out, from «" + r.dropped[0].slice(0, 40) + "»." : "");
++      window.HeresyDialog.confirm(text, { ok: "Recite them" }).then(function (ok) {
++        if (!ok) return;
++        replaceText($("abc"), r.abc);
++        replaceText($("lyrics"), r.lyrics);
++        var off = document.querySelector('input[name="cot"][value="off"]:checked'), full = document.querySelector('input[name="cot"][value="full"]');
++        if (off && full) full.click();   // a score is only sung in Full
++        say("Recited: " + r.lines.length + " lines on bars " + r.firstBar + "–" + r.lastBar + (off && full ? "; the planning mode is Full now" : "") + ". Generate sings them on this score");
++      });
++    });
++  }
++  window.HeresyRecite = { lay: lay, chordTones: chordTones };
++  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
++})();
+diff --git a/tools/console/heresy-score.js b/tools/console/heresy-score.js
+index 1300a2a..e6cee7c 100644
+--- a/tools/console/heresy-score.js
++++ b/tools/console/heresy-score.js
+@@ -73,6 +73,7 @@
+     formTimer = setTimeout(function () {
+       var abc = $("abc").value, s = paint($("formScoreCheck"), abc);
+       $("voiceShiftRow").classList.toggle("is-hidden", !s);
++      if ($("reciteRow")) $("reciteRow").classList.toggle("is-hidden", !s);   // HERESY 1169 · 1238
+       ["formMidi", "formMarkers"].forEach(function (id) { $(id).disabled = !s; });
+     }, 250);
+   }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 68bf8ed..f462770 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1041,6 +1041,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+                   <input type="file" id="midiIn" accept=".mid,.midi,audio/midi" hidden /></label>
+                 <select id="midiInKey" aria-label="Key for the imported score" data-tip="The key the imported notes are written in: the file's own key signature, or C when it has none; or the key you pick here."><option value="">key: from the file</option><optgroup label="minor"><option>Abm</option><option>Ebm</option><option>Bbm</option><option>Fm</option><option>Cm</option><option>Gm</option><option>Dm</option><option>Am</option><option>Em</option><option>Bm</option><option>F#m</option><option>C#m</option><option>G#m</option><option>D#m</option><option>A#m</option></optgroup><optgroup label="major"><option>Cb</option><option>Gb</option><option>Db</option><option>Ab</option><option>Eb</option><option>Bb</option><option>F</option><option>C</option><option>G</option><option>D</option><option>A</option><option>E</option><option>B</option><option>F#</option><option>C#</option></optgroup></select>
+               </div>
++              <!-- HERESY 1169 · 1238 (Viktor 08.10.2026: «твою утилиту для генерации партитур `score`, ... прикрути её в Студию»): the studio promo's narrator for any words -->
++              <div class="transpose-row is-hidden" id="reciteRow">
++                <span class="label">Recite</span>
++                <button type="button" class="btn ghost small" id="reciteBtn" data-tip="The narrator of the studio's promo, for your words: each line of the lyrics on the bars of this score, a syllable an eighth on a tone of each bar's chord, a breath after a comma and a full stop, the line's last syllable a quarter lower; each section of the lyrics starts on a two-bar phrase after a bar's rest. The instruments, chords, key and tempo stay. For spoken word, readings and rap over a bed: make the bed, write its score from the sound, then this. Asks first; Ctrl+Z in each box brings the old text back.">Lay the lyrics on this score…</button>
++                <label class="check" data-tip="Between the sections a vocalise an octave up, written into the lyrics as «(Ooh, aah)», instead of a bar's rest"><input type="checkbox" id="reciteVocalise" /> <span>Vocalise between sections</span></label>
++              </div>
+               <div class="field">
+                 <span class="label">Load an example</span>
+                 <div class="chiprow">
+@@ -2139,6 +2145,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ <script src="heresy-collection.js"></script>
+ <script src="heresy-textprep.js"></script>
+ <script src="heresy-lyrics.js"></script>
++<script src="heresy-recite.js"></script>
+ <script src="heresy-find.js"></script>
+ <script src="heresy-complete.js"></script>
+ <script src="heresy-menu.js"></script>
+-- 
+2.43.0
+

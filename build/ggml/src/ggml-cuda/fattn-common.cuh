@@ -1117,7 +1117,9 @@ void launch_fattn(
     const bool scan_mask = !use_sparse && mask && K->ne[1] % FATTN_KQ_STRIDE == 0 && (Q->ne[1] >= 1024 || Q->ne[3] > 1);
     if (scan_mask) {
         const int64_t s31 = mask->nb[1] / sizeof(half2);
-        const int64_t s33 = mask->nb[3] / sizeof(half2);
+        // Ruach Studio (HERESY 1169): one mask shared by every sequence (mask->ne[3] == 1, as the attention kernels
+        // read it) is read in place for each; its own stride ran past its end from the second sequence on
+        const int64_t s33 = mask->ne[3] == 1 ? 0 : mask->nb[3] / sizeof(half2);
 
         const dim3 blocks_num_KV_max(ntiles_x, Q->ne[3], 1);
         const dim3 block_dim_KV_max(FATTN_KQ_STRIDE/2, 1, 1);

@@ -196,12 +196,16 @@ static bool not_measures(const std::vector<NotBeat> & beats, std::vector<NotMeas
         const Span &     sp    = spans[mi];
         int              count = sp.end - sp.start;
         std::vector<int> dens, nums;
+        bool             skipped = false;
         for (int i = sp.start; i < sp.end; i++) {
-            if (beats[i].beat_id != beats[sp.start].beat_id + (i - sp.start)) {
-                return not_fail(error, "Measure " + std::to_string(mi) + ": non-consecutive beat IDs");
-            }
+            // HERESY 1169: beat numbers that skip one (the tracker's own guess of a beat it lost) failed the whole score in
+            // the reference; the measure is the beats it has, so it is written with them, an odd bar, and the log says so
+            skipped = skipped || beats[i].beat_id != beats[sp.start].beat_id + (i - sp.start);
             dens.push_back(beats[i].den);
             nums.push_back(beats[i].num);
+        }
+        if (skipped) {
+            fprintf(stderr, "[SheetSage] measure %zu: its beat numbers skip one; written with the %d beats it has\n", mi, count);
         }
         if (!sp.pickup && beats[sp.start].beat_id != 1) {
             return not_fail(error, "Measure " + std::to_string(mi) + ": full measure does not start at beat ID 1");
@@ -267,18 +271,23 @@ static bool not_grid(NotScore * s, std::string * error) {
     return true;
 }
 
-static bool not_fill(const std::vector<NotInterval> & rows,
+// HERESY 1169: what the grid cannot hold (an interval shorter than its step; in a voice, a note that short, or one that
+// lands on a note still sounding) is left out and counted, and the rest of the score stands. The reference failed the
+// whole score on the first such one: 10 of the 620 style covers had no score, and the Creator's transcription said
+// "failed" on those songs. notation_abc says the count in the log
+static void not_fill(const std::vector<NotInterval> & rows,
                      const std::vector<double> &      times,
                      const std::string &              fallback,
                      std::vector<std::string> *       out,
-                     std::string *                    error) {
+                     int *                            dropped) {
     int n = (int) times.size();
     out->assign((size_t) n, fallback);
     for (const NotInterval & r : rows) {
         int start_t = not_clampi(not_quantize(r.start, times), 0, n - 1);
         int end_t   = not_clampi(not_quantize(r.end, times), 0, n - 1);
         if (end_t <= start_t) {
-            return not_fail(error, "Interval (" + r.label + ") is shorter than the ABC subbeat grid");
+            ++*dropped;
+            continue;
         }
         for (int t = start_t; t < end_t; t++) {
             (*out)[(size_t) t] = r.label;
@@ -287,29 +296,26 @@ static bool not_fill(const std::vector<NotInterval> & rows,
     if (n > 1) {
         (*out)[(size_t) n - 1] = (*out)[(size_t) n - 2];
     }
-    return true;
 }
 
-// Notes of one voice on the grid: onset marked, sustain filled, no overlap
-static bool not_voice(const std::vector<std::array<double, 2>> & spans,
+// Notes of one voice on the grid: onset marked, sustain filled, no overlap (the one already there keeps its place)
+static void not_voice(const std::vector<std::array<double, 2>> & spans,
                       const std::vector<int> &                   pitches,
                       const std::vector<double> &                times,
                       std::vector<int> *                         out,
-                      const char *                               voice_id,
-                      std::string *                              error) {
+                      int *                                      dropped) {
     int n = (int) times.size();
     out->assign((size_t) n, 0);
     for (size_t i = 0; i < spans.size(); i++) {
         int start_t = not_clampi(not_quantize(spans[i][0], times), 0, n - 1);
         int end_t   = not_clampi(not_quantize(spans[i][1], times), 0, n - 1);
-        if (end_t <= start_t) {
-            return not_fail(error,
-                            std::string(voice_id) + ": MIDI note cannot be represented on the decoded subbeat grid");
+        bool clash  = end_t <= start_t;
+        for (int t = start_t; t < end_t && !clash; t++) {
+            clash = (*out)[(size_t) t] != 0;
         }
-        for (int t = start_t; t < end_t; t++) {
-            if ((*out)[(size_t) t] != 0) {
-                return not_fail(error, std::string(voice_id) + ": overlapping quantized melody notes");
-            }
+        if (clash) {
+            ++*dropped;
+            continue;
         }
         int sustain = pitches[i] * 2 + 2;
         for (int t = start_t; t < end_t; t++) {
@@ -317,7 +323,6 @@ static bool not_voice(const std::vector<std::array<double, 2>> & spans,
         }
         (*out)[(size_t) start_t] = sustain + 1;
     }
-    return true;
 }
 
 // ABC key signature accidentals per letter, C D E F G A B
@@ -860,6 +865,7 @@ static bool notation_abc(const std::vector<NotEvent> & events,
     if (!not_measures(s.beats, &s.measures, error) || !not_grid(&s, error)) {
         return false;
     }
+    int dropped = 0;
     for (int track = 0; track < 2; track++) {
         std::vector<std::array<double, 2>> spans;
         std::vector<int>                   pitches;
@@ -872,17 +878,17 @@ static bool notation_abc(const std::vector<NotEvent> & events,
                 }
             }
         }
-        if (!not_voice(spans, pitches, s.subbeat_times, &s.voice[track], track == 0 ? "Vocal" : "Ins", error)) {
-            return false;
-        }
+        not_voice(spans, pitches, s.subbeat_times, &s.voice[track], &dropped);
     }
-    if (!not_fill(fields[1], s.subbeat_times, fields[1][0].label, &s.key_arr, error)) {
-        return false;
-    }
+    not_fill(fields[1], s.subbeat_times, fields[1][0].label, &s.key_arr, &dropped);
     if (melody_only) {
         s.chord_arr.assign(s.subbeat_times.size(), "N");
-    } else if (!not_fill(fields[0], s.subbeat_times, "N", &s.chord_arr, error)) {
-        return false;
+    } else {
+        not_fill(fields[0], s.subbeat_times, "N", &s.chord_arr, &dropped);
+    }
+    if (dropped > 0) {
+        fprintf(stderr, "[SheetSage] %d note(s) or interval(s) the score's grid cannot hold left out (shorter than its step, "
+                        "or over a note still sounding)\n", dropped);
     }
     for (const NotInterval & r : fields[2]) {
         int t = not_clampi(not_quantize(r.start, s.subbeat_times), 0, (int) s.subbeat_times.size() - 1);

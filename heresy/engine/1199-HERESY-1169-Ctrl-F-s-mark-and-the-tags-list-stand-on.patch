@@ -1,0 +1,111 @@
+From 1d255775ffa35a550ed7f2191bd3c1d2b7a30b42 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 14:48:57 -0600
+Subject: [PATCH 1199/1252] HERESY 1169: Ctrl+F's mark and the tags list stand
+ on their letters along a line at any page zoom
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026, at 100 % and 125 % (RC3): «В редакторе выделение найденного по вертикали больше не сбегает, но по
+горизонтали бежит влево… С увеличением скейла страницы больше смещение».
+
+The copy of the box that says where a match's letters stand (and where the cursor stands, for the tags list) was laid out
+in the page's body, outside a lifted frame's zoom: its letters were drawn at another size, and on Viktor's machine their
+rounding ran the mark along a line. Both copies stand beside their box now, drawn at its own zoom (the frame's and the
+page's), their boxes read back in the box's pixels; the font's kerning, features, stretch and rendering are copied too.
+Headless did not show his drift (0.2–0.7 px with any hinting); measured against a copy in the box's own context the mark is
+off by 0 at 100 % and 125 % now. A check keeps the copy beside the box.
+
+Kitchen suite: 394 passed, 0 failed, 7 skipped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-complete.js | 15 +++++++++------
+ tools/console/heresy-find.js     | 17 +++++++++++------
+ 2 files changed, 20 insertions(+), 12 deletions(-)
+
+diff --git a/tools/console/heresy-complete.js b/tools/console/heresy-complete.js
+index 42384a8..38b4c5c 100644
+--- a/tools/console/heresy-complete.js
++++ b/tools/console/heresy-complete.js
+@@ -151,24 +151,27 @@
+ 
+   // how much larger the box is drawn than its own pixels (a lifted frame is zoomed 1.2)
+   function scale() { var w = box.offsetWidth; return w ? box.getBoundingClientRect().width / w : 1; }
+-  // where the cursor stands inside the box (relative to its padding box, its own scroll not counted): a copy of its layout
++  // where the cursor stands inside the box (relative to its padding box, its own scroll not counted): a copy of its layout,
++  // beside the box so it is drawn at the box's own zoom (HERESY 1169: in the body, at another size, it ran along a line)
+   function caret() {
+-    if (!mirror) {
++    if (!mirror || mirror.parentNode !== box.parentNode) {
++      if (mirror && mirror.parentNode) mirror.parentNode.removeChild(mirror);
+       mirror = document.createElement("div");
+       mirror.className = "tc-mirror";
+       mirror.setAttribute("aria-hidden", "true");
+-      document.body.appendChild(mirror);
++      box.parentNode.insertBefore(mirror, box.nextSibling);
+     }
+     var cs = getComputedStyle(box);
+     ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "tabSize", "textTransform",
+-     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent"].forEach(function (k) { mirror.style[k] = cs[k]; });
++     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent",
++     "fontKerning", "fontFeatureSettings", "fontVariationSettings", "fontStretch", "fontOpticalSizing", "textRendering"].forEach(function (k) { mirror.style[k] = cs[k]; });
+     mirror.style.boxSizing = "border-box";
+     mirror.style.border = "0";
+     mirror.style.width = box.clientWidth + "px";
+     var v = box.value, c = box.selectionStart;
+     mirror.innerHTML = esc(v.slice(0, c)) + "<span>​</span>" + esc(v.slice(c)) + "​";
+-    var s = mirror.querySelector("span").getBoundingClientRect(), base = mirror.getBoundingClientRect();
+-    return { left: s.left - base.left, top: s.top - base.top, height: s.height };
++    var s = mirror.querySelector("span").getBoundingClientRect(), base = mirror.getBoundingClientRect(), k = scale();
++    return { left: (s.left - base.left) / k, top: (s.top - base.top) / k, height: s.height / k };
+   }
+   // under the cursor's line; over it when the player or the window's edge leaves no room under it
+   function place() {
+diff --git a/tools/console/heresy-find.js b/tools/console/heresy-find.js
+index e307d17..9ba4fc6 100644
+--- a/tools/console/heresy-find.js
++++ b/tools/console/heresy-find.js
+@@ -163,26 +163,31 @@
+   }
+ 
+   // where the letters of a match stand inside the box (relative to its padding box, the box's own scroll not counted): a copy
+-  // as wide as the box's inside (its scroll bar left out, so its lines wrap where the box's do), its paddings, no borders
++  // as wide as the box's inside (its scroll bar left out, so its lines wrap where the box's do), its paddings, no borders.
++  // HERESY 1169 (Viktor 07.10.2026, at 100 % and 125 %: «по горизонтали бежит влево… С увеличением скейла страницы больше
++  // смещение»): the copy stands beside the box, so its letters are drawn at the box's own zoom (a lifted frame's, the page's);
++  // laid out in the body, at another size, their rounding ran the mark along a line. Its boxes are read back in the box's pixels
+   function measure(h) {
+     if (!box || !h) return null;
+-    if (!mirror) {
++    if (!mirror || mirror.parentNode !== box.parentNode) {
++      if (mirror && mirror.parentNode) mirror.parentNode.removeChild(mirror);
+       mirror = document.createElement("div");
+       mirror.className = "find-mirror";
+       mirror.setAttribute("aria-hidden", "true");
+-      document.body.appendChild(mirror);
++      box.parentNode.insertBefore(mirror, box.nextSibling);
+     }
+     var cs = getComputedStyle(box);
+     ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "tabSize", "textTransform",
+-     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent"].forEach(function (k) { mirror.style[k] = cs[k]; });
++     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent",
++     "fontKerning", "fontFeatureSettings", "fontVariationSettings", "fontStretch", "fontOpticalSizing", "textRendering"].forEach(function (k) { mirror.style[k] = cs[k]; });
+     mirror.style.boxSizing = "border-box";
+     mirror.style.border = "0";
+     mirror.style.width = box.clientWidth + "px";
+     var text = box.value;
+     mirror.innerHTML = esc(text.slice(0, h[0])) + "<mark>" + esc(text.slice(h[0], h[1])) + "</mark>" + esc(text.slice(h[1])) + "​";
+-    var mark = mirror.querySelector("mark"), base = mirror.getBoundingClientRect();
++    var mark = mirror.querySelector("mark"), base = mirror.getBoundingClientRect(), k = scale();
+     var rects = Array.prototype.map.call(mark.getClientRects(), function (q) {
+-      return { left: q.left - base.left, top: q.top - base.top, width: q.width, height: q.height };
++      return { left: (q.left - base.left) / k, top: (q.top - base.top) / k, width: q.width / k, height: q.height / k };
+     });
+     return rects.length ? { top: rects[0].top, rects: rects } : null;
+   }
+-- 
+2.43.0
+

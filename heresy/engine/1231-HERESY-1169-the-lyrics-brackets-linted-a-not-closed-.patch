@@ -1,0 +1,214 @@
+From f971e3a9cf267490db230a0eb335c293eac0ba89 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 01:54:01 -0600
+Subject: [PATCH 1231/1252] =?UTF-8?q?HERESY=201169:=20the=20lyrics'=20brac?=
+ =?UTF-8?q?kets=20linted=20(a=20=C2=AB[=C2=BB=20not=20closed,=20a=20=C2=AB?=
+ =?UTF-8?q?]=C2=BB=20astray,=20a=20tag=20in=20a=20tag,=20an=20empty=20tag:?=
+ =?UTF-8?q?=20red;=20round=20brackets=20astray:=20amber)=20and=20Generate?=
+ =?UTF-8?q?=20asks=20first;=20Viktor's=20conservative=20Russian=20recipe?=
+ =?UTF-8?q?=20a=20built-in=20profile?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «в редактор нужно линтер добавить, чтобы выявлял незакрытые `[` и другие теги. Только что словил себя. Открыл `[` и не закрыл. Целый блок проебал в синтезе... И из-за этого срань пошла в конце трека». And: «Запиши эти параметры как максимально консервативные, но в русском языке весьма идеальные. Нет ускорений, умеренная речь в рЕпе, просто чудеса». HeresyLyrics.lint reads the brackets line by line; the line numbers and the meter's bar show the faults, a press goes to the next. A «[» still being typed on the cursor's line waits for the cursor to leave. The form asks before a run with a broken tag: Go to the line, Generate as it is, Stay. The profile is Composition low, Performance low, Style influence high, 32 Midpoint steps.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  4 ++
+ tools/console/app.js            | 17 +++++++++
+ tools/console/heresy-lyrics.js  | 68 ++++++++++++++++++++++++++++++---
+ tools/console/heresy-presets.js |  7 +++-
+ 4 files changed, 90 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 0733f04..2270972 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4480,3 +4480,7 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ .lyr-over-body #lyrics { height: 100% !important; max-height: none; resize: none; overflow-y: auto; }
+ /* HERESY 1169 (Viktor 08.10.2026: «Хедер Takes имеет дохера паддинга сверху. 5-8px?»): the Creator's takes head 7 px nearer its top (18 → 11) */
+ body[data-tab="create"] #library .lib-head { padding-top: 11px; }
++/* HERESY 1169 (Viktor 08.10.2026: «линтер… выявлял незакрытые `[` и другие теги»): a line with a broken tag numbered red, one with a round
++   bracket to look at amber (over a mark's amber) */
++.lyr-num.is-lint-bad { color: var(--bad); opacity: 1; font-weight: 700; }
++.lyr-num.is-lint-near { color: #d9a441; opacity: 1; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 7f22275..964c948 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1721,8 +1721,25 @@
+     }
+   });
+ 
++  // HERESY 1169 (Viktor 08.10.2026: «Открыл `[` и не закрыл. Целый блок проебал в синтезе... И из-за этого срань пошла в конце
++  // трека»): a tag not closed or astray in the lyrics asks before the run: to the line, or as it is
++  var lintAnswered = false;
+   $("composeForm").addEventListener("submit", function (event) {
+     event.preventDefault();
++    if (!lintAnswered && window.HeresyLyrics && window.HeresyDialog) {
++      var broken = window.HeresyLyrics.lint($("lyrics").value).filter(function (f) { return f.bad; });
++      if (broken.length) {
++        window.HeresyDialog.confirm(tr("A tag in the lyrics is not closed or astray: line {0}").replace("{0}", broken[0].line + 1) + "\n\n" +
++          tr(broken[0].say) + (broken.length > 1 ? " " + tr("({0} in all)").replace("{0}", broken.length) : "") + "\n\n" +
++          tr("What follows a «[» not closed may be lost in the song, and its end may go wrong."),
++          { ok: tr("Go to the line"), alt: tr("Generate as it is"), cancel: tr("Stay") }).then(function (r) {
++            if (r === "alt") { lintAnswered = true; $("generateBtn").click(); }
++            else if (r && lyricsMeter && lyricsMeter.lintNext) lyricsMeter.lintNext(true);
++          });
++        return;
++      }
++    }
++    lintAnswered = false;
+     var body, instrumental = $("instrumental").checked;
+     try { body = buildRequest(false, instrumental); } catch (error) { return toast(error.message, "bad"); }
+     var versions = Math.max(1, Math.min(10, parseInt($("versions").value, 10) || 1));
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index 4c596fc..ed450ed 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -309,6 +309,44 @@
+   // band runs along it. Marks follow the lines as text is added or taken above them, and are kept with the text they were
+   // made on (a reload brings them back, other lyrics do not). Every [tag] lies under a thin amber layer. A copy of the box's
+   // layout (as the meter's) tells where each line and each tag stands.
++  // HERESY 1169 (Viktor 08.10.2026: «в редактор нужно линтер добавить, чтобы выявлял незакрытые `[` и другие теги. Только что
++  // словил себя. Открыл `[` и не закрыл. Целый блок проебал в синтезе... И из-за этого срань пошла в конце трека»): the lyrics'
++  // brackets, line by line. Bad (red): a «[» not closed on its line (what follows it may be lost in the song), a «]» with none
++  // open, a «[» inside a tag, an empty tag. Near (amber): a round bracket left open or closed with none open on its line (an echo
++  // may run on, so it is asked about, not called wrong). A «[» still being typed on the cursor's line is left alone
++  function lint(text) {
++    var out = [], at = 0;
++    String(text || "").split("\n").forEach(function (line, n) {
++      var open = -1, round = [];
++      for (var i = 0; i < line.length; i++) {
++        var c = line.charAt(i);
++        if (c === "[") {
++          if (open >= 0) out.push({ line: n, from: at + i, to: at + i + 1, bad: true, say: "a «[» inside a tag" });
++          open = i;
++        } else if (c === "]") {
++          if (open < 0) out.push({ line: n, from: at + i, to: at + i + 1, bad: true, say: "a «]» with no «[» before it" });
++          else {
++            if (!line.slice(open + 1, i).trim()) out.push({ line: n, from: at + open, to: at + i + 1, bad: true, say: "an empty tag" });
++            open = -1;
++          }
++        } else if (open < 0 && c === "(") round.push(i);
++        else if (open < 0 && c === ")") {
++          if (round.length) round.pop();
++          else out.push({ line: n, from: at + i, to: at + i + 1, bad: false, say: "a «)» with no «(» before it" });
++        }
++      }
++      if (open >= 0) out.push({ line: n, from: at + open, to: at + line.length, bad: true, open: true, say: "a «[» not closed: what follows it may be lost in the song" });
++      round.forEach(function (i) { out.push({ line: n, from: at + i, to: at + i + 1, bad: false, say: "a «(» not closed on its line" }); });
++      at += line.length + 1;
++    });
++    return out;
++  }
++  // the faults to show: a «[» on the cursor's line is still being typed while the box has the cursor
++  function lintShown(area) {
++    var here = document.activeElement === area ? area.value.slice(0, area.selectionStart).split("\n").length - 1 : -1;
++    return lint(area.value).filter(function (f) { return !(f.open && f.line === here); });
++  }
++
+   // the editor's keys said in one place: the meter's «Keys», the Writer's lyrics label
+   var KEYS = "The lyrics editor's keys, as in mcedit:\nAlt+K  mark the cursor's line (again: unmark it)\nAlt+J  the next mark · Alt+Shift+J the one before\n" +
+     "Alt+O  clear the marks (Alt+Shift+K too)\nAlt+L  go to a line by its number\nCtrl+Y  delete the line\nAlt+↑ Alt+↓  move the line, or the lines selected\n" +
+@@ -342,14 +380,15 @@
+       mirror.style.width = area.clientWidth + "px";
+       mirror.innerHTML = area.value.split("\n").map(function (r) { return "<div>" + (r ? esc(r).replace(/\[[^\]\n]*\]/g, '<span class="lyr-tm">$&</span>') : "​") + "</div>"; }).join("");
+       var bt = parseFloat(cs.borderTopWidth) || 0, bl = parseFloat(cs.borderLeftWidth) || 0, lh = parseFloat(cs.lineHeight) || 20;
+-      var H = area.clientHeight, st = area.scrollTop, kids = mirror.children, rows = [], bands = [];
++      var H = area.clientHeight, st = area.scrollTop, kids = mirror.children, rows = [], bands = [], lints = {};
++      lintShown(area).forEach(function (f) { lints[f.line] = lints[f.line] === "bad" || f.bad ? "bad" : "near"; });   // HERESY 1169
+       for (var i = 0; i < kids.length; i++) {
+         var y = kids[i].offsetTop - st;
+         if (y < -lh) continue;
+         if (y > H) break;
+         var mk = marks.indexOf(i) >= 0;
+         if (mk) bands.push('<span class="lyr-band" style="top:' + y + "px;height:" + kids[i].offsetHeight + 'px"></span>');
+-        rows.push('<div class="lyr-num' + (mk ? " is-mark" : "") + '" style="top:' + y + "px;height:" + lh + 'px">' + (i + 1) + "</div>");
++        rows.push('<div class="lyr-num' + (mk ? " is-mark" : "") + (lints[i] ? " is-lint-" + lints[i] : "") + '" style="top:' + y + "px;height:" + lh + 'px">' + (i + 1) + "</div>");
+       }
+       [nums, tagsl].forEach(function (l) { l.style.top = (area.offsetTop + bt) + "px"; l.style.left = (area.offsetLeft + bl) + "px"; l.style.height = H + "px"; });
+       nums.style.width = Math.max(0, (parseFloat(cs.paddingLeft) || 0) - 6) + "px";
+@@ -467,6 +506,8 @@
+       } else if (e.ctrlKey && !e.altKey && !e.shiftKey && e.code === "KeyY" && editable) { e.preventDefault(); deleteLine(); }
+     });
+     area.addEventListener("scroll", later);
++    area.addEventListener("blur", later);                          // HERESY 1169: a «[» left open shows once the cursor leaves
++    area.addEventListener("keyup", function (e) { if (/^Arrow|^Enter$|^Home$|^End$|^Page/.test(e.key)) later(); });
+     if (window.ResizeObserver) new ResizeObserver(later).observe(area);
+     window.addEventListener("resize", later);
+     if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
+@@ -519,6 +560,15 @@
+         parts.push('<button type="button" class="lyr-tog lyr-warn ' + k[2] + '" data-lyr="' + k[1] + '" data-tip="' + esc(head + "\n" + says.join("\n")) + '">' +
+           esc(tr(k[3]).replace("{0}", num(list.length))) + "</button>");
+       });
++      // HERESY 1169: the brackets linted, each kind a press to the next
++      var lf = lintShown(area), lbad = lf.filter(function (f) { return f.bad; }), lnear = lf.filter(function (f) { return !f.bad; });
++      [[lbad, "lint", "bad", "Tags not closed or astray: {0}"], [lnear, "lint2", "near", "Round brackets to look at: {0}"]].forEach(function (k) {
++        if (!k[0].length) return;
++        var says = k[0].slice(0, 12).map(function (f) { return tr("line {0}: {1}").replace("{0}", num(f.line + 1)).replace("{1}", tr(f.say)); });
++        if (k[0].length > 12) says.push(tr("and {0} more").replace("{0}", num(k[0].length - 12)));
++        parts.push('<button type="button" class="lyr-tog lyr-warn ' + k[2] + '" data-lyr="' + k[1] + '" data-tip="' + esc(tr("Press to go to the next one.") + "\n" + says.join("\n")) + '">' +
++          esc(tr(k[3]).replace("{0}", num(k[0].length))) + "</button>");
++      });
+       // HERESY 1169: the marks (Alt+K) and the line numbers
+       var mk = ax ? ax.marks().length : 0;
+       if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
+@@ -616,7 +666,14 @@
+     // HERESY 1168: to a stress mark astray: the letter and its mark selected, the line brought into view (in the box when it
+     // scrolls, and in the frame or page around it when it is not seen there: under a lifted frame's sticky Generate bar too,
+     // which the frame's own box reaches under; the browser itself scrolls a probe set where the line stands)
+-    var visit = { stress: -1, stress2: -1 };
++    var visit = { stress: -1, stress2: -1, lint: -1, lint2: -1 };
++    function lintNext(bad) {                                  // HERESY 1169: to the next bracket fault of its kind
++      var list = lintShown(area).filter(function (f) { return !!f.bad === bad; }), k = bad ? "lint" : "lint2";
++      if (!list.length) return draw();
++      visit[k] = (visit[k] + 1) % list.length;
++      draw();
++      goTo(list[visit[k]]);
++    }
+     function goTo(f) {
+       area.focus({ preventScroll: true });
+       area.setSelectionRange(f.from, f.to);
+@@ -647,6 +704,7 @@
+         return;
+       }
+       if (b.dataset.lyr === "mark" && ax) return ax.next();                 // HERESY 1169
++      if (b.dataset.lyr === "lint" || b.dataset.lyr === "lint2") return lintNext(b.dataset.lyr === "lint");
+       if (b.dataset.lyr === "keys") { if (window.HeresyGuide) window.HeresyGuide.open("creator", "The lyrics' meter and the phonetic hand"); return; }
+       if (b.dataset.lyr === "nums" && ax) ax.numbers(recall("yue2.lyrNums") === "off");
+       if (b.dataset.lyr === "spell") store("yue2.lyrSpell", recall("yue2.lyrSpell") === "off" ? null : "off");
+@@ -658,8 +716,8 @@
+       draw();
+     });
+     later();
+-    return { draw: draw, aids: ax, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
++    return { draw: draw, aids: ax, lintNext: lintNext, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
+   }
+ 
+-  window.HeresyLyrics = { attach: attach, aids: aids, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
++  window.HeresyLyrics = { attach: attach, aids: aids, lint: lint, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
+ })();
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+index a1eb82f..8869d3a 100644
+--- a/tools/console/heresy-presets.js
++++ b/tools/console/heresy-presets.js
+@@ -16,7 +16,12 @@
+     // is 15:00 at 25 a second; the engine cuts the budget to what fits beside the style and the
+     // text (HERESY 1032), and a reading that runs into that cut is marked truncated.
+     { name: "Speech · up to 15:00", builtin: true, request: { cot: "off", duration: 900, cfg_scale: 1.6, abc_sampling: ABC,
+-      semantic_sampling: Object.assign({ max_tokens: 22500 }, SEM) } }
++      semantic_sampling: Object.assign({ max_tokens: 22500 }, SEM) } },
++    // HERESY 1169 (Viktor 08.10.2026: «Запиши эти параметры как максимально консервативные, но в русском языке весьма идеальные.
++    // Нет ускорений, умеренная речь в рЕпе, просто чудеса»): Composition low, Performance low, Style influence high; 32 Midpoint
++    { name: "Russian · conservative (Viktor's)", builtin: true, request: { cot: "full", duration: 480, cfg_scale: 1.8, steps: 32, solver: "midpoint",
++      abc_sampling: Object.assign({}, ABC, { temperature: 0.85, top_p: 0.92, top_k: 40 }),
++      semantic_sampling: Object.assign({ max_tokens: 12000 }, SEM, { temperature: 0.85, top_p: 0.93, top_k: 80 }) } }
+   ];
+   var state = { styles: [], setups: [], hooks: null };
+   var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
+-- 
+2.43.0
+

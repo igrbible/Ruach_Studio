@@ -1,0 +1,51 @@
+From 507e0dbc4de53e27eeca0069b96591e8f63f6841 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 21:51:15 -0600
+Subject: [PATCH 1212/1252] HERESY 1169: two or more sound variations no longer
+ crash the engine: ggml-patches/0001 (put on by build.sh) reads flash
+ attention's shared mask in place for every sequence
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+compute-sanitizer: «Invalid __global__ read… flash_attn_mask_to_KV_max<32>… block (0,1,0)… 11,777 bytes after the nearest allocation». The scan runs when the keys are a multiple of FATTN_KQ_STRIDE (nar_kv_pad makes them so), hence the takes that crashed, on BF16 and Q8_0 alike, and wrong key limits where it did not fault.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../0001-cuda-fa-mask-scan-shared-mask.patch  | 23 +++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+ create mode 100644 ggml-patches/0001-cuda-fa-mask-scan-shared-mask.patch
+
+diff --git a/ggml-patches/0001-cuda-fa-mask-scan-shared-mask.patch b/ggml-patches/0001-cuda-fa-mask-scan-shared-mask.patch
+new file mode 100644
+index 0000000..9b0736b
+--- /dev/null
++++ b/ggml-patches/0001-cuda-fa-mask-scan-shared-mask.patch
+@@ -0,0 +1,23 @@
++Ruach Studio, HERESY 1169: CUDA flash attention, the mask scan reads a mask shared by every sequence in place
++
++With two or more sound variations the NAR asks flash attention for several sequences (Q ne[3] = M) over one mask
++(ne[3] = 1), which the attention kernels read in place for each. The scan that finds each tile's last key
++(flash_attn_mask_to_KV_max, run when the keys are a multiple of FATTN_KQ_STRIDE) stepped by the mask's nb[3],
++past its end from the second sequence on: «illegal memory access», or wrong limits where it did not fault
++(compute-sanitizer: invalid __global__ read, block (0,1,0), 11 777 bytes after the allocation).
++
++build.sh puts every patch here on build/ggml before the server is built, once.
++
++--- a/src/ggml-cuda/fattn-common.cuh
+++++ b/src/ggml-cuda/fattn-common.cuh
++@@ -1117,7 +1117,9 @@
++     const bool scan_mask = !use_sparse && mask && K->ne[1] % FATTN_KQ_STRIDE == 0 && (Q->ne[1] >= 1024 || Q->ne[3] > 1);
++     if (scan_mask) {
++         const int64_t s31 = mask->nb[1] / sizeof(half2);
++-        const int64_t s33 = mask->nb[3] / sizeof(half2);
+++        // Ruach Studio (HERESY 1169): one mask shared by every sequence (mask->ne[3] == 1, as the attention kernels
+++        // read it) is read in place for each; its own stride ran past its end from the second sequence on
+++        const int64_t s33 = mask->ne[3] == 1 ? 0 : mask->nb[3] / sizeof(half2);
++ 
++         const dim3 blocks_num_KV_max(ntiles_x, Q->ne[3], 1);
++         const dim3 block_dim_KV_max(FATTN_KQ_STRIDE/2, 1, 1);
+-- 
+2.43.0
+

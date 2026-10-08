@@ -1,0 +1,187 @@
+From bea14b3bb00afbfa250b611053b366fe3648ef41 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 00:54:08 -0600
+Subject: [PATCH 1227/1252] HERESY 1169: no measure on a paragraph: the hints,
+ the guide, the cheat-sheet and the rooms' notes flow to the edge of their
+ box; the empty lists say theirs in one paragraph
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «Снова ловлю тебя на хардкорных переносах строк… Внеси себе в устав НИКОГДА НЕ ЛОМАТЬ СТРОКУ. И дополнительно в твой покаянный TODO - пройтись по всему коду и вернуть ломанные строки в их текущие autowrap праграфы». Gone: .row-hint's 68ch, .hint's 62ch, the guide's 78ch and 80ch, the cheat-sheet's 150ch (half his 2K screen left empty), the rooms' notes' 430 px (they take the leftover of their row now, so the room's name stays whole), and the <br> inside the empty lists' sentences (the joined texts translated in the six catalogs from the pieces they had).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 15 +++++++++------
+ tools/console/app.js            |  6 +++---
+ tools/console/heresy-i18n-be.js |  3 +++
+ tools/console/heresy-i18n-el.js |  3 +++
+ tools/console/heresy-i18n-es.js |  3 +++
+ tools/console/heresy-i18n-it.js |  3 +++
+ tools/console/heresy-i18n-ru.js |  3 +++
+ tools/console/heresy-i18n-uk.js |  3 +++
+ 8 files changed, 30 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7199594..9eeeea5 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -759,7 +759,7 @@ body.is-resizing, body.is-resizing * { cursor: col-resize !important; user-selec
+   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--amber) 45%, transparent);
+   background-color: color-mix(in srgb, var(--amber) 8%, transparent);
+ }
+-.row-hint { margin: -6px 0 0; font-size: 11.5px; color: var(--dim); max-width: 68ch; }
++.row-hint { margin: -6px 0 0; font-size: 11.5px; color: var(--dim); }
+ 
+ .label {
+   font-size: 11px;
+@@ -869,7 +869,7 @@ select:disabled { opacity: .7; }
+ .drawer[open] > summary { border-bottom: 1px solid var(--line-soft); }
+ 
+ .drawer-body { padding: 15px 13px; display: flex; flex-direction: column; gap: 13px; }
+-.hint { margin: 0; font-size: 12px; color: var(--dim); max-width: 62ch; }
++.hint { margin: 0; font-size: 12px; color: var(--dim); }
+ 
+ .chiprow { display: flex; flex-wrap: wrap; gap: 7px; }
+ 
+@@ -3147,8 +3147,8 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+ .hg-body { overflow-y: auto; padding: 8px 28px 40px; font-size: 14.5px; line-height: 1.6; color: var(--ink); }
+ .hg-body h3 { margin: 26px 0 8px; font: 500 18px/1.35 var(--heading); scroll-margin-top: 10px; }
+ .hg-body h4 { margin: 18px 0 6px; font-size: 14.5px; }
+-.hg-body p { margin: 0 0 10px; max-width: 78ch; }
+-.hg-body ul, .hg-body ol { margin: 0 0 12px; padding-left: 22px; max-width: 80ch; }
++.hg-body p { margin: 0 0 10px; }
++.hg-body ul, .hg-body ol { margin: 0 0 12px; padding-left: 22px; }
+ .hg-body li { margin: 3px 0; }
+ .hg-body code { font: 12.5px var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--sunk); }
+ .hg-body pre { padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); overflow-x: auto; }
+@@ -4057,7 +4057,7 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .meta-rows dd { white-space: normal; overflow-wrap: anywhere; }
+ .meta-rows dd.num { white-space: nowrap; }
+ /* the rooms say what they are in two lines beside their names (as the Writer) */
+-.col-note.col-note-two { white-space: normal; max-width: 430px; line-height: 1.35; align-self: center; }
++.col-note.col-note-two { white-space: normal; line-height: 1.35; align-self: center; flex: 100 1 0; min-width: 0; }   /* the leftover of its row, the title whole */
+ .post-head { flex-wrap: wrap; row-gap: 4px; }
+ .post-head .post-take { font: 500 16px/1.4 var(--heading); color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46%; }
+ .post-head .post-take:empty { display: none; }
+@@ -4118,7 +4118,7 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .hi-legend .hi-lg-no { color: var(--bad); font-style: normal; font-weight: 600; }
+ .hi-more { font-size: 14.5px; color: var(--muted); }
+ .hi-more summary { cursor: pointer; color: var(--ink); width: max-content; }
+-.hi-more p { margin: 6px 0 2px; line-height: 1.5; max-width: 150ch; }
++.hi-more p { margin: 6px 0 2px; line-height: 1.5; }
+ .hi-tools input, .hi-tools select, .hi-tools label { font-size: 15px; }
+ .hi-table { font-size: 15.5px; }
+ .hi-home { font-size: 14px; }
+@@ -4436,3 +4436,6 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ .lyr-tagsl > .lyr-tag { position: absolute; border-radius: 2px; background: color-mix(in srgb, var(--amber) 15%, transparent); }
+ .lyr-tagsl > .lyr-band { position: absolute; left: 0; right: 0; background: color-mix(in srgb, var(--amber) 7%, transparent); box-shadow: inset 2px 0 0 var(--amber); }
+ .lyr-tog.lyr-marks { color: var(--amber); }
++/* HERESY 1169 (Viktor 08.10.2026: «Снова ловлю тебя на хардкорных переносах строк… НИКОГДА НЕ ЛОМАТЬ СТРОКУ… вернуть ломанные
++   строки в их текущие autowrap параграфы»): no measure on a paragraph any more (the hints' 62 and 68ch, the guide's 78 and 80ch,
++   the cheat-sheet's 150ch, the rooms' notes' 430 px): the box sets the width and the text flows to its edge */
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 6b13960..2e49767 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5655,9 +5655,9 @@
+     }).join("");
+ 
+     if (!shown.length) {
+-      var empty = STATE.favOnly ? "No favourites yet.<br>Tap ☆ on a take to keep it here."
+-        : (STATE.library ? "No takes yet.<br>Every finished song lands here."
+-                         : "The server keeps no library (start it with --outputs).<br>Songs made in this tab stay until it reloads.");
++      var empty = STATE.favOnly ? "No favourites yet. Tap ☆ on a take to keep it here."      // HERESY 1169: one paragraph, no break
++        : (STATE.library ? "No takes yet. Every finished song lands here."
++                         : "The server keeps no library (start it with --outputs). Songs made in this tab stay until it reloads.");
+       list.innerHTML = running + '<div class="lib-empty">' + empty + "</div>";
+       return;
+     }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 5ba7a47..838aec1 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1380,6 +1380,9 @@ RuachI18n.add("be", {
+ "Not removed: {0}": "Не знята: {0}",
+ "Tap ☆ on a take to keep it here.": "Націсні ☆ на сэмпле, каб трымаць яго тут.",
+ "No favourites yet.": "Абранага пакуль няма.",
++"No favourites yet. Tap ☆ on a take to keep it here.": "Абранага пакуль няма. Націсні ☆ на сэмпле, каб трымаць яго тут.",
++"No takes yet. Every finished song lands here.": "Сэмплаў пакуль няма. Сюды кладзецца кожная гатовая песня.",
++"The server keeps no library (start it with --outputs). Songs made in this tab stay until it reloads.": "Сервер не вядзе бібліятэку (запусці яго з --outputs). Песні, створаныя ў гэтай укладцы, жывуць да яе перазагрузкі.",
+ "Songs made in this tab stay until it reloads.": "Песні, створаныя ў гэтай укладцы, жывуць да яе перазагрузкі.",
+ "The server keeps no library (start it with --outputs).": "Сервер не вядзе бібліятэку (запусці яго з --outputs).",
+ "Re-rendered from another take: same music": "Перамаляваны з іншага сэмпла: тая ж музыка",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 17c5c3a..b03aee5 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1379,6 +1379,9 @@ RuachI18n.add("el", {
+ "Not removed: {0}": "Δεν αφαιρέθηκε: {0}",
+ "Tap ☆ on a take to keep it here.": "Πάτα ☆ σε μια λήψη για να την κρατάς εδώ.",
+ "No favourites yet.": "Κανένα αγαπημένο ακόμη.",
++"No favourites yet. Tap ☆ on a take to keep it here.": "Κανένα αγαπημένο ακόμη. Πάτα ☆ σε μια λήψη για να την κρατάς εδώ.",
++"No takes yet. Every finished song lands here.": "Δεν υπάρχουν ακόμη λήψεις. Κάθε ολοκληρωμένο τραγούδι καταλήγει εδώ.",
++"The server keeps no library (start it with --outputs). Songs made in this tab stay until it reloads.": "Ο διακομιστής δεν κρατά βιβλιοθήκη (ξεκίνα τον με --outputs). Τα τραγούδια που φτιάχτηκαν σε αυτή την καρτέλα μένουν μέχρι να ξαναφορτωθεί.",
+ "Songs made in this tab stay until it reloads.": "Τα τραγούδια που φτιάχτηκαν σε αυτή την καρτέλα μένουν μέχρι να ξαναφορτωθεί.",
+ "The server keeps no library (start it with --outputs).": "Ο διακομιστής δεν κρατά βιβλιοθήκη (ξεκίνα τον με --outputs).",
+ "Re-rendered from another take: same music": "Αποδόθηκε ξανά από άλλη λήψη: ίδια μουσική",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 824b6bc..25528cd 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1379,6 +1379,9 @@ RuachI18n.add("es", {
+ "Not removed: {0}": "No se quitó: {0}",
+ "Tap ☆ on a take to keep it here.": "Toca ☆ en una toma para tenerla aquí.",
+ "No favourites yet.": "Aún no hay favoritas.",
++"No favourites yet. Tap ☆ on a take to keep it here.": "Aún no hay favoritas. Toca ☆ en una toma para tenerla aquí.",
++"No takes yet. Every finished song lands here.": "Aún no hay tomas. Cada canción terminada llega aquí.",
++"The server keeps no library (start it with --outputs). Songs made in this tab stay until it reloads.": "El servidor no guarda biblioteca (inícialo con --outputs). Las canciones creadas en esta pestaña se quedan hasta que se recargue.",
+ "Songs made in this tab stay until it reloads.": "Las canciones creadas en esta pestaña se quedan hasta que se recargue.",
+ "The server keeps no library (start it with --outputs).": "El servidor no guarda biblioteca (inícialo con --outputs).",
+ "Re-rendered from another take: same music": "Re-renderizada a partir de otra toma: la misma música",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 98776e1..07c0f13 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1379,6 +1379,9 @@ RuachI18n.add("it", {
+ "Not removed: {0}": "Non tolta: {0}",
+ "Tap ☆ on a take to keep it here.": "Tocca ☆ su un take per tenerlo qui.",
+ "No favourites yet.": "Ancora nessun preferito.",
++"No favourites yet. Tap ☆ on a take to keep it here.": "Ancora nessun preferito. Tocca ☆ su un take per tenerlo qui.",
++"No takes yet. Every finished song lands here.": "Ancora nessun take. Ogni canzone finita arriva qui.",
++"The server keeps no library (start it with --outputs). Songs made in this tab stay until it reloads.": "Il server non tiene una libreria (avvialo con --outputs). Le canzoni create in questa scheda restano finché non si ricarica.",
+ "Songs made in this tab stay until it reloads.": "Le canzoni create in questa scheda restano finché non si ricarica.",
+ "The server keeps no library (start it with --outputs).": "Il server non tiene una libreria (avvialo con --outputs).",
+ "Re-rendered from another take: same music": "Ri-renderizzato da un altro take: la stessa musica",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index aa67689..5029120 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1385,6 +1385,9 @@ RuachI18n.add("ru", {
+ "Not removed: {0}": "Не снято: {0}",
+ "Tap ☆ on a take to keep it here.": "Нажми ☆ на семпле, чтобы держать его здесь.",
+ "No favourites yet.": "Избранного пока нет.",
++"No favourites yet. Tap ☆ on a take to keep it here.": "Избранного пока нет. Нажми ☆ на семпле, чтобы держать его здесь.",
++"No takes yet. Every finished song lands here.": "Семплов пока нет. Сюда ложится каждая готовая песня.",
++"The server keeps no library (start it with --outputs). Songs made in this tab stay until it reloads.": "Сервер не ведёт библиотеку (запусти его с --outputs). Песни, сделанные в этой вкладке, живут до её перезагрузки.",
+ "Songs made in this tab stay until it reloads.": "Песни, сделанные в этой вкладке, живут до её перезагрузки.",
+ "The server keeps no library (start it with --outputs).": "Сервер не ведёт библиотеку (запусти его с --outputs).",
+ "Re-rendered from another take: same music": "Перерисован из другого семпла: та же музыка",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 44e5b62..54f7ca0 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1380,6 +1380,9 @@ RuachI18n.add("uk", {
+ "Not removed: {0}": "Не знято: {0}",
+ "Tap ☆ on a take to keep it here.": "Натисни ☆ на семплі, щоб тримати його тут.",
+ "No favourites yet.": "Обраного поки немає.",
++"No favourites yet. Tap ☆ on a take to keep it here.": "Обраного поки немає. Натисни ☆ на семплі, щоб тримати його тут.",
++"No takes yet. Every finished song lands here.": "Семплів поки немає. Сюди лягає кожна готова пісня.",
++"The server keeps no library (start it with --outputs). Songs made in this tab stay until it reloads.": "Сервер не веде бібліотеку (запусти його з --outputs). Пісні, створені в цій вкладці, живуть до її перезавантаження.",
+ "Songs made in this tab stay until it reloads.": "Пісні, створені в цій вкладці, живуть до її перезавантаження.",
+ "The server keeps no library (start it with --outputs).": "Сервер не веде бібліотеку (запусти його з --outputs).",
+ "Re-rendered from another take: same music": "Перемальовано з іншого семплу: та сама музика",
+-- 
+2.43.0
+

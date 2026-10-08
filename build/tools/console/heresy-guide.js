@@ -34,6 +34,7 @@
     });
     t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, x, u) { return '<a href="' + esc(/^(https?:|#)/.test(u) ? u : src(u)) + '" target="_blank" rel="noopener">' + x + "</a>"; });
     t = t.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>");
+    t = t.replace(/\u26a0\ufe0f?[ \u00a0]?/g, '<span class="warn-ico" role="img" aria-label="Warning"></span>');   // HERESY 1169 · 1247
     return t.replace(/\u0000(\d+)\u0000/g, function (_, i) { return "<code>" + code[+i] + "</code>"; });
   }
   function render(md) {
@@ -93,17 +94,48 @@
   }
 
   // ---- the overlay
+  // HERESY 1169 · 1250 (Viktor 08.10.2026: «Попап Гайда сделай шире на 10% по hv и выше по vv. И кнопочку FULL SCREEN. И также кнопки
+  // скейла текста сделай»): the box 10 % wider and taller, − + ⟲ for the text alone (a tenth a step, two each way, as the lyrics'),
+  // ⤢ for the whole screen; both kept in this browser
+  var ZOOM = "yue2.guideZoom", FULL = "yue2.guideFull";
+  function ico(name) { return window.HeresyIcons ? window.HeresyIcons.ui(name) : ""; }
+  function zoomStep() { var k = parseInt(recall(ZOOM) || "0", 10); return isFinite(k) ? Math.max(-2, Math.min(2, k)) : 0; }
+  function paintTools() {
+    var el = state.el, k = zoomStep(), full = recall(FULL) === "1";
+    el.querySelector(".hg-box").style.setProperty("--hg-z", String(Math.round(Math.pow(1.1, k) * 1000) / 1000));
+    el.querySelector('[data-hg-z="-1"]').disabled = k <= -2;
+    el.querySelector('[data-hg-z="1"]').disabled = k >= 2;
+    el.querySelector('[data-hg-z="0"]').disabled = k === 0;
+    el.classList.toggle("is-full", full);
+    var f = el.querySelector(".hg-full");
+    f.innerHTML = ico(full ? "minimize" : "maximize");
+    f.setAttribute("aria-pressed", full ? "true" : "false");
+    f.setAttribute("aria-label", full ? "Back to the window" : "Full screen");
+    f.dataset.tip = full ? "Back to the window" : "The guide over the whole screen";
+  }
   function build() {
     var el = document.createElement("div");
     el.className = "hg-back";
-    el.innerHTML = '<div class="hg-box" role="dialog" aria-modal="true" aria-label="The guide">' +
-      '<header class="hg-head"><div translate="no"><b class="hg-title"></b><span class="hg-lead"></span></div><button type="button" class="btn ghost small hg-close" aria-label="Close the guide">✕</button></header>' +
+    el.innerHTML = '<div class="hg-box" role="dialog" aria-modal="true" aria-label="The Guide">' +
+      '<header class="hg-head"><div translate="no"><b class="hg-title"></b><span class="hg-lead"></span></div><span class="hg-tools">' +
+      '<span class="hg-fs" role="group" aria-label="Text size">' +
+      '<button type="button" class="btn ghost small icon-btn" data-hg-z="-1" aria-label="Smaller text" data-tip="Smaller text here">' + ico("text-smaller") + "</button>" +
+      '<button type="button" class="btn ghost small icon-btn" data-hg-z="1" aria-label="Larger text" data-tip="Larger text here">' + ico("text-larger") + "</button>" +
+      '<button type="button" class="btn ghost small icon-btn" data-hg-z="0" aria-label="The text as it starts" data-tip="The text as it starts">' + ico("text-reset") + "</button></span>" +
+      '<button type="button" class="btn ghost small icon-btn hg-full"></button>' +
+      '<button type="button" class="btn ghost small icon-btn hg-close" aria-label="Close the guide" data-tip="Close the guide (Esc, F1)">' + ico("x") + "</button></span></header>" +
       '<nav class="hg-tabs" role="tablist"></nav><div class="hg-main"><nav class="hg-stops" aria-label="In this part"></nav><article class="hg-body" translate="no"></article></div></div>' +
       '<div class="hg-zoom" hidden><img alt="" /></div>';
     document.body.appendChild(el);
     el.addEventListener("click", function (e) {
       var t = e.target, b;
       if (t === el || t.closest(".hg-close")) return close();
+      if ((b = t.closest("[data-hg-z]"))) {
+        var k = +b.dataset.hgZ === 0 ? 0 : Math.max(-2, Math.min(2, zoomStep() + +b.dataset.hgZ));
+        keep(ZOOM, String(k));
+        return paintTools();
+      }
+      if (t.closest(".hg-full")) { keep(FULL, recall(FULL) === "1" ? "0" : "1"); return paintTools(); }
       if ((b = t.closest("[data-hg-tab]"))) return show(b.dataset.hgTab);
       if ((b = t.closest("[data-hg-stop]"))) { var h = el.querySelector("#hg-" + b.dataset.hgStop); if (h) h.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
       if (t.matches(".hg-fig img")) { var z = el.querySelector(".hg-zoom"); z.querySelector("img").src = t.src; z.hidden = false; return; }
@@ -115,6 +147,7 @@
       if (!z.hidden) z.hidden = true; else close();
     });
     state.el = el;
+    paintTools();
   }
   function show(id, stop) {
     var tab = state.tabs.filter(function (t) { return t.id === id; })[0] || state.tabs[0];
@@ -127,7 +160,7 @@
     }).join("");
     el.querySelector(".hg-stops").innerHTML = tab.stops.map(function (s) { return '<button type="button" translate="no" data-hg-stop="' + esc(s.id) + '">' + inline(s.text) + "</button>"; }).join("");
     var body = el.querySelector(".hg-body");
-    body.innerHTML = tab.html;
+    body.innerHTML = '<div class="hg-doc">' + tab.html + "</div>";   // HERESY 1169 · 1250: the text's own zoom, the scroll box stays
     body.scrollTop = 0;
     var h = stop && body.querySelector("#hg-" + slug(stop));   // HERESY 1101: straight to one stop
     if (h) h.scrollIntoView({ block: "start" });
@@ -153,6 +186,15 @@
     var b = $("guideOpen"), m = $("guideOpenMenu");
     if (b) b.addEventListener("click", function () { open(); });
     if (m) m.addEventListener("click", function () { open(); });
+    // HERESY 1169 · 1250 (Viktor 08.10.2026: «Можешь устроить перехват браузерного F1 для вывода Гайда? Это же логичное F1. Нахер нам
+    // браузерный Help. А если нет, то Shift+F1, а в Electron'е F1»): F1, and Shift+F1, open the guide on the room you are in and close it
+    // again; the browser's own help does not come
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "F1" || e.ctrlKey || e.altKey || e.metaKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (state.el && !state.el.hidden) close(); else open();
+    }, true);
     // a browser that has never seen the studio: the guide comes by itself, once, a minute after the start
     if (!recall(SEEN)) setTimeout(function () { if (!recall(SEEN)) open("start"); }, 60000);
   }

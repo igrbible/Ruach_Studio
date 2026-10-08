@@ -1,0 +1,83 @@
+From 651af67c299e9fb55dd03fb0796b6366445688b4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 03:05:44 -0600
+Subject: [PATCH 1234/1252] =?UTF-8?q?HERESY=201169:=20End=20at=E2=80=A6=20?=
+ =?UTF-8?q?in=20the=20take's=20Make=20again=20group:=20the=20moment=20aske?=
+ =?UTF-8?q?d=20(the=20player's=20place=20offered),=20the=20same=20take=20e?=
+ =?UTF-8?q?nding=20there=20with=20its=20last=202=20s=20faded,=20from=20its?=
+ =?UTF-8?q?=20kept=20latents=20in=20seconds=20(decode=5Ffrom=20+=20end=5Fa?=
+ =?UTF-8?q?t=20+=20fade=5Fout,=20the=20music=20codes=20cut=20to=20match),?=
+ =?UTF-8?q?=20titled=20=C2=AB=C2=B7=20ends=20at=20m:ss=C2=BB;=20replayTake?=
+ =?UTF-8?q?=20keeps=20a=20title=20it=20is=20given?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «после последнего правильного затухания какая-то… хуета выскакивает на 10-15 секунд». The engine half is e862ee3.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js     | 26 +++++++++++++++++++++++++-
+ tools/console/index.html |  1 +
+ 2 files changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 8899218..23f4f7e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4439,6 +4439,30 @@
+       .then(function () { button.disabled = false; button.textContent = "Trim to the text"; });
+   });
+ 
++  // HERESY 1169 · 1233 (Viktor 08.10.2026: «после последнего правильного затухания какая-то… хуета выскакивает на 10-15 секунд»): the same take ending at a chosen moment, its last 2 s faded out; from its kept latents in seconds (the very sound, decoded again only so far), else its music codes cut there and rendered again
++  $("endAt").addEventListener("click", function () {
++    var take = STATE.take, button = this, fade = 2, at;
++    if (!take) return;
++    var here = STATE.playerTake && STATE.playerTake.name === take.name && audio.currentTime > 0 ? audio.currentTime : null;
++    window.HeresyDialog.prompt("End the take at a moment\n\n" + displayTitle(take) + " ends at which moment (m:ss)? Its last " + fade + " s fade out, and nothing after it is kept. A new take; this one stays.",
++                               here !== null ? clock(here) : "", { ok: "End it there", placeholder: "3:45" }).then(function (answer) {
++      if (answer === null) throw null;
++      at = parseClock(answer);
++      if (!isFinite(at) || at <= fade + 1 || at >= (take.seconds || 0) - 0.5) throw new Error("A moment between " + clock(fade + 2) + " and " + clock((take.seconds || 0) - 1));
++      button.disabled = true;
++      return getRequest(take);
++    }).then(function (req) {
++      var toks = String(req.semantic_tokens || "").split(",").filter(function (t) { return t.trim(); });
++      if (!toks.length) throw new Error("This take's request carries no music codes, so it cannot be re-rendered");
++      var frames = Math.min(toks.length, Math.ceil(at * FRAME_RATE));
++      var change = { semantic_tokens: toks.slice(0, frames).join(","), duration: frames / FRAME_RATE, end_at: at, fade_out: fade, title: displayTitle(take) + " \u00b7 ends at " + clock(at) };
++      if (take.latents) change.decode_from = take.name;
++      return replayTake(take, change, "Ended at " + clock(at));
++    }).then(function () { toast("Ending " + displayTitle(take) + " at " + clock(at) + "\u2026"); })
++      .catch(function (error) { if (error) toast(error.message, "bad"); })
++      .then(function () { button.disabled = false; });
++  });
++
+   $("takeActions").addEventListener("click", function (event) {
+     var take = STATE.take;
+     if (!take) return;
+@@ -4590,7 +4614,7 @@
+       body.synth_batch_size = 1;
+       Object.keys(change).forEach(function (key) { body[key] = change[key]; });
+       body.parent = take.session ? "" : take.name;
+-      body.title = displayTitle(take);
++      if (!change.title) body.title = displayTitle(take);
+       return submitJob(body, { kind: "replay", title: body.title, parent: take.name, what: what });
+     }).then(function (job) {
+       paintDecodeSwitch();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 58f9172..ca0b254 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1241,6 +1241,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <button type="button" class="btn ghost small" id="regenFrom" data-tip="Regenerate from here: everything before the chosen moment stays exactly as it is (its music codes are kept), and the music is written anew from there with a new music seed. The moment is where the player stands when this take plays; otherwise you are asked. For a song or reading that breaks down after a point.">Regenerate from…</button>
+           <button type="button" class="btn ghost small" id="transcribeTake" data-tip="SheetSage2 writes this take's own sound down as a score (the server reads the take itself; nothing is uploaded), into the form for a cover: with chords, or the melody only, as chosen under Cover a recording. Good for a reading made in Direct mode, which has no score.">Transcribe this take</button>
+           <button type="button" class="btn ghost small" id="trimToText" data-tip="For readings and songs that go on past their text: Whisper finds where the text ends, and the same take is rendered again from its own music codes cut there (+1.5 s). The same performance, without the returns and babble after the last line; only the sound stage runs.">Trim to the text</button>
++          <button type="button" class="btn ghost small" id="endAt" data-tip="End the take at a moment: its last 2 s fade out, and nothing after it is kept. For a song that runs on past its proper end (in Full, the score's leftover bars after the last words). The moment is where the player stands when this take plays; otherwise you are asked. From the take's kept latents in seconds (the very sound), else its music codes rendered again. A new take; this one stays.">End at…</button>
+         </div></div>
+         <div class="tool-group tg-refine"><span class="tool-cap">Refiner</span><div class="tool-row">
+           <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum">Spectrum</button>
+-- 
+2.43.0
+

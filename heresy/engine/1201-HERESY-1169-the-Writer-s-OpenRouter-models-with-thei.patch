@@ -1,0 +1,132 @@
+From 122868128ede1e960b8d0d9a48e8763b6266c718 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 15:28:10 -0600
+Subject: [PATCH 1201/1252] HERESY 1169: the Writer's OpenRouter models with
+ their prices, as you type
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The rc3 list: «The Writer's models with their prices, from OpenRouter's list, as you type». The page fetched OpenRouter's
+list (467 models today, CORS open) for the field's suggestions, ids alone. Each model now carries its price per million
+tokens in and out and its context: in the suggestions as you type (Chrome shows an option's label beside it), in a line
+under the field for the one chosen (amber, «not in OpenRouter's list», for a name it does not know), and in the quick
+picks' tips. A price of 0 is «free», a negative one (a router's) «the price varies». The guide in seven languages says so.
+
+Kitchen suite: 396 passed, 0 failed, 7 skipped (a check feeds a list of its own, so it does not hang on the internet).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css    |  4 ++++
+ tools/console/app.js     | 47 +++++++++++++++++++++++++++++++++++-----
+ tools/console/index.html |  4 +++-
+ 3 files changed, 48 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index bad4087..3a01385 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4188,6 +4188,10 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ #view-write :is(input[type="text"], input[type="search"], input[type="number"], input[type="password"], select):not(.tp-rules input) {
+   height: 38px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; font-size: 14px; line-height: normal; }
+ .or-key-row { flex: 1 1 100%; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
++/* HERESY 1169: the chosen OpenRouter model's price and context, under its field; amber for a name not in the list */
++.or-price { flex: 1 1 100%; margin: -4px 0 0; font-size: 12px; color: var(--muted); }
++.or-price:empty { display: none; }
++.or-price.is-off { color: #d9a441; }
+ .or-key-row .field { flex: 0 1 640px; min-width: 260px; }
+ .or-key-row .check { flex: none; height: 38px; }
+ /* HERESY 1168: the lyrics' meter (heresy-lyrics.js): beside each line its syllables against its group's ruler; under the box
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 9e82e57..c93f3ce 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -7633,22 +7633,57 @@
+     $("orModel").value = saved.orModel || "deepseek/deepseek-v4-pro";
+     saveAssist();                                     // HERESY 1167: now, with the writer and the model put back
+     all("[data-or-model]").forEach(function (b) {
+-      b.addEventListener("click", function () { $("orModel").value = b.dataset.orModel; saveAssist(); paintAssistLine(); });
++      b.addEventListener("click", function () { $("orModel").value = b.dataset.orModel; saveAssist(); paintAssistLine(); paintOrPrice(); });
+     });
++    // HERESY 1169 (the rc3 list: «The Writer's models with their prices, from OpenRouter's list, as you type»): each model with
++    // its price per million tokens in and out and its context: in the list as you type, under the field, on the quick picks
++    var OR_MODELS = {};
++    function perMillion(v) { var x = parseFloat(v); return isFinite(x) ? x * 1e6 : null; }
++    function usd(x) { return "$" + (x >= 0.1 ? x.toFixed(2) : x.toFixed(3)); }
++    function contextSize(n) { return !n ? "" : n >= 1e6 ? Math.round(n / 1e5) / 10 + "M" : Math.round(n / 1000) + "K"; }
++    function orPrice(m) {
++      var p = m.pricing || {}, i = perMillion(p.prompt), o = perMillion(p.completion);
++      if (i === null || o === null || i < 0 || o < 0) return tr("the price varies");
++      if (i === 0 && o === 0) return tr("free");
++      return tr("{0} in · {1} out per million tokens").replace("{0}", usd(i)).replace("{1}", usd(o));
++    }
++    function paintOrPrice() {
++      var id = $("orModel").value.trim(), m = OR_MODELS[id], known = Object.keys(OR_MODELS).length > 0;
++      $("orPrice").textContent = !id || !known ? "" : m
++        ? (m.name || id) + " · " + orPrice(m) + (m.context_length ? " · " + tr("{0} context").replace("{0}", contextSize(m.context_length)) : "")
++        : tr("Not in OpenRouter's list: check the name");
++      $("orPrice").classList.toggle("is-off", !!id && known && !m);
++    }
++    function takeOrModels(list) {
++      OR_MODELS = {};
++      $("orModels").innerHTML = "";
++      (list || []).slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }).forEach(function (m) {
++        OR_MODELS[m.id] = m;
++        var o = document.createElement("option");
++        o.value = m.id;
++        o.label = orPrice(m) + (m.context_length ? " · " + contextSize(m.context_length) : "");
++        $("orModels").appendChild(o);
++      });
++      all("[data-or-model]").forEach(function (b) {
++        if (b.dataset.tipBase === undefined) { b.dataset.tipBase = b.getAttribute("title") || b.dataset.tip || ""; b.removeAttribute("title"); }
++        var m = OR_MODELS[b.dataset.orModel];
++        b.dataset.tip = [b.dataset.tipBase, m ? orPrice(m) : ""].filter(Boolean).join(" · ");
++      });
++      paintOrPrice();
++    }
++    window.HeresyOrModels = { take: takeOrModels, price: orPrice };   // for the checks
+     var paintProvider = function () {
+       var or = $("assistProvider").value === "openrouter";
+       all("#assistDrawer .or-only").forEach(function (el) { el.classList.toggle("is-hidden", !or); });
+       if (or && !orListed) {
+         orListed = true;
+-        fetch(OR + "/models").then(function (r) { return r.json(); }).then(function (d) {
+-          ((d && d.data) || []).map(function (m) { return m.id; }).sort().forEach(function (id) {
+-            var o = document.createElement("option"); o.value = id; $("orModels").appendChild(o);
+-          });
+-        }).catch(function () { orListed = false; });
++        fetch(OR + "/models").then(function (r) { return r.json(); }).then(function (d) { takeOrModels((d && d.data) || []); })
++          .catch(function () { orListed = false; });
+       }
+     };
+     $("assistProvider").addEventListener("change", function () { paintProvider(); saveAssist(); paintAssistLine(); });
+     $("orModel").addEventListener("change", saveAssist);
++    $("orModel").addEventListener("input", paintOrPrice);
+     $("orKey").addEventListener("input", function () { if ($("orRemember").checked) store("yue2.orKey", this.value.trim() || null); });
+     $("orRemember").addEventListener("change", function () { store("yue2.orKey", this.checked ? ($("orKey").value.trim() || null) : null); });
+     paintProvider();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index ca4250f..077ce8a 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1349,13 +1349,15 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+               <option value="engine">Chat server under Engine (vLLM, LM Studio, Ollama)</option>
+               <option value="openrouter">OpenRouter</option>
+             </select></label>
+-          <label class="field grow or-only" data-tip="Any model of openrouter.ai/models, written provider/model; the field offers the whole list as you type. The quick picks fill it in."><span class="label">Model</span>
++          <label class="field grow or-only" data-tip="Any model of openrouter.ai/models, written provider/model; the field offers the whole list as you type, each with its price per million tokens in and out. The quick picks fill it in."><span class="label">Model</span>
+             <input type="text" id="orModel" list="orModels" placeholder="provider/model" autocomplete="off" spellcheck="false" /><datalist id="orModels"></datalist></label>
+           <div class="or-only or-picks" aria-label="Quick picks"><span class="label">Quick picks</span>
+             <button type="button" class="btn ghost small" data-or-model="deepseek/deepseek-v4-pro" title="Strong and the cheapest per word: the default">DeepSeek V4 Pro</button>
+             <button type="button" class="btn ghost small" data-or-model="deepseek/deepseek-v4.1-flash">DeepSeek V4.1 Flash</button>
+             <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-max-0902">Qwen3.8 Max</button>
+             <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-flash">Qwen3.8 Flash</button></div>
++          <!-- HERESY 1169: the chosen model's price per million tokens and its context, from OpenRouter's own list -->
++          <p class="row-hint or-only or-price" id="orPrice" aria-live="polite"></p>
+           <!-- HERESY 1168 (Viktor 06.10.2026: «И поле API Key расширь, и `Remember the key` в одну строчку с этим полем ключа») -->
+           <div class="or-only or-key-row">
+             <label class="field" data-tip="Your OpenRouter key. The page sends it to openrouter.ai and nowhere else: not to the studio, not into its settings file. Without Remember it is gone when the page closes."><span class="label">API key</span><input type="password" id="orKey" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
+-- 
+2.43.0
+

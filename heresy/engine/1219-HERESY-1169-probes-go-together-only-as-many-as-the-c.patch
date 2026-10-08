@@ -1,0 +1,62 @@
+From a8b316f06372de2bcafd4354e7e87fcea1ea8159 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 22:59:31 -0600
+Subject: [PATCH 1219/1252] HERESY 1169: probes go together only as many as the
+ card holds, by the parts measured on it (weights as their GGUF weighs, 5.25
+ GiB of KV a guided probe, the working memory by the song's length); the
+ engine's max-batch stays above, and the page says when they go one after
+ another
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «адаптивно под VRAM Tiers 32/24/16/12/8 + выбор и реальный вес GGUF'ов... и прописать формулу дефолта и максимума, дабы избежать OOM». On his 24 GB with BF16: two of 2 min at once (22.0 GiB measured), one of 5 min (two of 290–320 s peaked 23.5 GiB of 23.56).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index bc8102f..4bfdc0a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1739,6 +1739,19 @@
+     queueVersions(body, versions);
+   });
+ 
++  // HERESY 1169: what a pass of probes needs on the card, by the parts measured on a 24 GB one (07.10.2026, tmp/claude-vram):
++  // the weights as their GGUF weighs (both halves) with the decoder and the engine's base, a KV set 2.63 GiB and two of them a
++  // guided probe, the sound's and the decoder's working memory by the song's length (120 s: 4.8 GiB, 452 s: 7.2), a margin
++  var MODEL_GIB = { BF16: 6.68, Q8_0: 3.55, Q6_K: 2.74, Q5_K_M: 2.44 };
++  function fitBatchFor(vramGib, model, secs) {
++    if (!vramGib) return 99;                         // no word from the card: the engine's own limit decides
++    var room = vramGib - 0.6 - ((MODEL_GIB[model] || MODEL_GIB.BF16) + 0.4) - (3.9 + 0.0072 * secs);
++    return Math.max(1, Math.floor(room / 5.25));
++  }
++  window.ruachFitBatchFor = fitBatchFor;              // the page's tests read it
++  function fitBatch() {
++    return fitBatchFor(gpuGib(), (STATE.settings && STATE.settings.model) || "BF16", parseFloat($("maxLength").value) || outDefault("duration") || 240);
++  }
+   function queueVersions(body, versions) {
+     // HERESY 1168 (Viktor, the same night: «при начале генерации всё же не нужно схлопывать фрейм… Просто переключаться на
+     // правый, где генерация идёт. Так можно стоять в этих оверлеях Вечно»): a lifted frame turns to the take's, the run
+@@ -1747,7 +1760,13 @@
+       versions = 1;
+       toast("Loaded codes render one song; use Sound variations for more takes of it");
+     }
+-    var batch = Math.min(versions, Math.max(1, STATE.maxBatch)), passes = Math.ceil(versions / batch);
++    // HERESY 1169 (Viktor 07.10.2026: «адаптивно под VRAM… + выбор и реальный вес GGUF'ов… дабы избежать OOM»): probes go
++    // together only as many as the card holds, by the parts measured on it (fitBatchFor); the engine's max-batch stays above
++    var fits = fitBatch(), batch = Math.min(versions, Math.max(1, STATE.maxBatch), fits), passes = Math.ceil(versions / batch);
++    if (versions > 1 && fits < Math.min(versions, STATE.maxBatch)) {
++      toast("This card holds " + fits + " probe" + (fits === 1 ? "" : "s") + " of this length at once with " + (((STATE.settings && STATE.settings.model) || "BF16")) +
++        ": they go " + (fits === 1 ? "one after another" : fits + " at a time"));
++    }
+     var group = "g" + Date.now(), baseTitle = body.title, first = null, chain = Promise.resolve();
+     var variations = body.synth_batch_size || 1;
+     $("generateBtn").disabled = true;
+-- 
+2.43.0
+

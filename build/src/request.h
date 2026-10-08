@@ -85,6 +85,10 @@ struct Yue2Request {
     // here"). It counts in the duration; the song is the kept codes followed by the new ones.
     std::string semantic_keep;  // ""
 
+    // HERESY 1169 (Viktor 08.10.2026: a Full song runs on 10-15 s after its proper fade): the take ends at this second (with decode_from its kept latents are decoded only so far; 0: to the end) and fades out over its last fade_out seconds (0: no fade)
+    float end_at;    // 0
+    float fade_out;  // 0
+
     // classifier free guidance on the semantic stage. Negative applies the
     // default (HERESY 1031: 1.6 in every mode; the release had 1.01 in off mode
     // and 1.0 otherwise), and a scale of exactly 1.0 keeps a single branch.

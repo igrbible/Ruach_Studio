@@ -1,0 +1,35 @@
+From 270b8f0242f86ddd50cee534973b92b0306eaf5d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 23:40:11 -0600
+Subject: [PATCH 1221/1252] HERESY 1169: one decoder on the card: a VAE asked
+ for swaps out the idle one, as the LM and the NAR do
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Кликнул на Legacy VAE, за несколько секунд декод успешен, затем на BLEND - сразу OOM… Нужно сторожа поставить на все VAE, чтобы только один декодер в VRAM висел». Each VAE keeps its working buffer (3.1 GB for 1024-frame tiles): Standard, Legacy and Blend side by side ran his 24 GB card out of memory on the third.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/model-store.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/model-store.cpp b/src/model-store.cpp
+index 0a82518..e3bb4b8 100644
+--- a/src/model-store.cpp
++++ b/src/model-store.cpp
+@@ -294,6 +294,10 @@ VAEGGML * store_require_vae(ModelStore * s, const ModelKey & k) {
+     }
+     if (s->policy == EVICT_STRICT) {
+         evict_conflicts(s, k);
++    } else {
++        // Local addition (HERESY 1169): one decoder on the card at a time, as the LM and the NAR above. Each keeps its
++        // working buffer (3.1 GB for 1024-frame tiles), and a third one decoding beside two idle ones ran out of memory
++        evict_same_kind_idle(s, k);
+     }
+     Timer     t;
+     VAEGGML * m = new VAEGGML();
+-- 
+2.43.0
+

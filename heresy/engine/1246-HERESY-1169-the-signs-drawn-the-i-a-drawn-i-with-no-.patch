@@ -1,0 +1,246 @@
+From 73b79fd99a519d229fdc6c3f79d179d2e68b0ea5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 13:55:01 -0600
+Subject: [PATCH 1246/1252] =?UTF-8?q?HERESY=201169:=20the=20signs=20drawn:?=
+ =?UTF-8?q?=20the=20(i)=20a=20drawn=20i=20with=20no=20circle,=20smaller,?=
+ =?UTF-8?q?=20grey=20with=20a=20third=20of=20the=20theme's=20colour;=20the?=
+ =?UTF-8?q?=20=E2=9A=A0=20of=20a=20warning=20a=20drawn=20triangle=20(tips,?=
+ =?UTF-8?q?=20the=20page's=20lines,=20the=20guide,=20the=20LoRAs'=20notes)?=
+ =?UTF-8?q?;=20a=20warning's=20words=20keep=20their=20translation=20withou?=
+ =?UTF-8?q?t=20the=20sign?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «где у нас i в кружочке для тултипов, замени этот артефакт Кита на красивую svg иконку… жёлтым треуголик… переделай в правильную SVG иконку. И всюду пройдись».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 40 ++++++++++++++++++-----------
+ tools/console/app.js                | 29 ++++++++++++++++++++-
+ tools/console/heresy-gloss.js       |  3 ++-
+ tools/console/heresy-guide.js       |  1 +
+ tools/console/heresy-i18n.js        |  6 +++++
+ tools/console/heresy-instruments.js |  2 +-
+ tools/console/heresy-textprep.js    |  6 +++--
+ tools/console/loras.js              |  3 ++-
+ 8 files changed, 69 insertions(+), 21 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 83a70a8..28ae3fc 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1712,21 +1712,20 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+ /* A small (i) beside a section says what kind of thing it is (VAE, plugin,
+    model); hovering it, or a button with a model behind it, shows the tip. */
+ .info {
+-  display: inline-grid;
+-  place-items: center;
+-  width: 15px; height: 15px;
++  display: inline-block;
++  width: 7px; height: 12px;
+   margin-left: 6px;
+-  vertical-align: 1px;
+-  border: 1px solid var(--dim);
+-  border-radius: 50%;
+-  font: italic 600 10.5px/1 var(--display);
+-  letter-spacing: 0;
+-  text-transform: none;
+-  color: var(--dim);
++  vertical-align: -1px;
++  background: var(--info-ink);
++  -webkit-mask: var(--ico-info) center / contain no-repeat;
++  mask: var(--ico-info) center / contain no-repeat;
+   cursor: help;
+ }
+-.info::before { content: "i"; }   /* 1149: the letter is drawn, not written: no stray "i" in reading mode or a copy */
+-.info:hover, .info:focus-visible { color: var(--amber); border-color: var(--amber); }
++/* HERESY 1169 · 1247 (Viktor 08.10.2026: «По всей студии, где у нас i в кружочке для тултипов, замени этот артефакт Кита на красивую svg
++   иконку, и покрась её в 70% gray + основной цвет активной темы оформления… И эти информационные тултип иконки не нужно в кружочек. Просто
++   чуть меньше размером, чтобы не казались глазу, мол они - кнопки»): a drawn i, no circle, 12 px high, grey with a third of the theme's
++   own colour, that colour itself when pointed at. 1149's rule stands: the letter is drawn, not written (no stray "i" in a copy) */
++.info:hover, .info:focus-visible { background: var(--amber); }
+ .tip {
+   position: fixed;
+   z-index: 50;
+@@ -4472,9 +4471,11 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ .take-tools .tool-row { display: flex; flex-wrap: wrap; gap: 6px; }
+ /* «обрезанный параграф объяснений… нахер там не нужен»: the LoRA picker's notes in a tip beside the LoRAs' name */
+ .lora-hint { display: none; }
+-.lora-notes { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 6px; border: 1px solid var(--line-strong-a);
+-  border-radius: 50%; font: 700 10px/1 var(--mono); color: var(--muted); text-transform: none; letter-spacing: 0; cursor: help; vertical-align: middle; }
+-.lora-notes.is-warn { color: #d9a441; border-color: #d9a441; }
++.lora-notes { display: inline-block; width: 7px; height: 12px; margin-left: 6px; vertical-align: -1px; cursor: help; background: var(--info-ink);
++  -webkit-mask: var(--ico-info) center / contain no-repeat; mask: var(--ico-info) center / contain no-repeat; }
++/* HERESY 1169 · 1247 («В блоке LoRAs при неактивном адаптере в кружочке появляется жёлтым треуголик с воскл. знаком. Такое тоже переделай в
++   правильную SVG иконку»): a warning among the notes is the drawn triangle, in the warning's yellow */
++.lora-notes.is-warn { width: 14px; height: 13px; vertical-align: -2px; background: #d9a441; -webkit-mask-image: var(--ico-warn); mask-image: var(--ico-warn); }
+ .lora-notes[hidden] { display: none; }
+ /* «ещё один оверлей поверх оверлея!… поверх всего где-то 60% ширины экрана, и шрифт автоматом на 10% крупнее»: the lyrics over
+    everything (app.js lyricsOver moves the box there and back) */
+@@ -4585,3 +4586,12 @@ body:not([data-frame]) .frame-fs { display: none; }
+ .lora-vtip.is-amber { border-color: #e0b030; }
+ .lora-vtip.is-red { border-color: #c8372d; color: #c8372d; }
+ body.lora-vtip-on .tip { display: none !important; }
++/* HERESY 1169 · 1247: the drawn signs. --ico-info an i without a circle; --ico-warn Lucide's triangle-alert (ISC), for the ⚠ that leads a
++   warning in a tip, a line of the page or the guide (app.js .warn-ico), in place of the emoji font's yellow triangle */
++:root {
++  --info-ink: color-mix(in oklab, #8c8c8c 70%, var(--amber));
++  --ico-info: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='6 1 12 22'%3E%3Ccircle cx='12' cy='4' r='2.4'/%3E%3Cpath d='M8.6 9h5.2v10h2.4v2.5H7.8V19h2.4v-7.5H8.6z'/%3E%3C/svg%3E");
++  --ico-warn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
++}
++.warn-ico { display: inline-block; width: 1em; height: 1em; margin-right: .3em; vertical-align: -.15em; background: #d9a441;
++  -webkit-mask: var(--ico-warn) center / contain no-repeat; mask: var(--ico-warn) center / contain no-repeat; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 25dcdb4..2ac61e0 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -378,6 +378,32 @@
+   });
+ 
+   /* ------------------------------------------------------------ info tips */
++  // HERESY 1169 · 1247 (Viktor 08.10.2026: «В блоке LoRAs… жёлтым треуголик с воскл. знаком. Такое тоже переделай в правильную SVG
++  // иконку. И всюду пройдись и подобные артефакты замени на svg иконки»): the ⚠ that leads a warning is drawn (.warn-ico) instead of
++  // the emoji font's yellow triangle. A tip draws it in its text as it shows (translated by then); the page's own lines are written
++  // as the sign and the words apart (ruachSigned), and heresy-i18n.js finds the words' translation under the catalog's «⚠ …»
++  var SIGN = /\u26a0\ufe0f?[ \u00a0]?/;
++  function signIcon() {
++    var s = document.createElement("span");
++    s.className = "warn-ico";
++    s.setAttribute("role", "img");
++    s.setAttribute("aria-label", "Warning");
++    return s;
++  }
++  function signedInto(parent, text, before) {
++    String(text).split(SIGN).forEach(function (part, i) {
++      if (i) parent.insertBefore(signIcon(), before || null);
++      if (part) parent.insertBefore(document.createTextNode(part), before || null);
++    });
++  }
++  function signed(el, text) { el.textContent = ""; signedInto(el, text); return el; }
++  function drawSigns(root) {
++    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), found = [];
++    while (w.nextNode()) if (w.currentNode.nodeValue.indexOf("\u26a0") >= 0) found.push(w.currentNode);
++    found.forEach(function (node) { signedInto(node.parentNode, node.nodeValue, node); node.remove(); });
++  }
++  window.ruachSigned = signed;
++
+   // One floating tip for the page: [data-tip] shows its text, [data-tip-ref] a
+   // <template>. It sits on the body, so a scrolling column cannot clip it.
+   var tip = document.createElement("div");
+@@ -397,6 +423,7 @@
+       head.textContent = target.dataset.tipHead;
+       tip.insertBefore(head, tip.firstChild);
+     }
++    drawSigns(tip);   // HERESY 1169 · 1247
+     tip.classList.toggle("tip-rich", !!ref);
+     tip.classList.toggle("tip-big", target.dataset.tipSize === "big");   // HERESY 1167: the Style's WARNING, at 16 pt
+     tip.classList.add("is-on");
+@@ -7598,7 +7625,7 @@
+     var clash = sk && st && (TR.keyName(st) !== TR.keyName({ letter: sk.letter, acc: sk.acc, mode: sk.mode === -3 ? -3 : 0 }) || st.mode !== (sk.mode === -3 ? -3 : 0));
+     $("keyCheck").classList.toggle("is-hidden", !clash);
+     if (clash) {
+-      $("keyCheckText").textContent = "\u26a0 The style names " + TR.keyLabel(st) + ", the score is in " + TR.keyLabel(sk) + ". The song follows the score.";
++      signed($("keyCheckText"), "\u26a0 The style names " + TR.keyLabel(st) + ", the score is in " + TR.keyLabel(sk) + ". The song follows the score.");   // HERESY 1169 · 1247
+       $("keyToScore").textContent = "Move the score to " + TR.keyLabel(st);
+       $("keyToScore").dataset.key = TR.keyName(st);
+       $("keyToStyle").textContent = "Write " + TR.keyLabel(sk) + " in the style";
+diff --git a/tools/console/heresy-gloss.js b/tools/console/heresy-gloss.js
+index 3e7bd62..3e845b5 100644
+--- a/tools/console/heresy-gloss.js
++++ b/tools/console/heresy-gloss.js
+@@ -38,8 +38,9 @@
+     if (r.loop) {
+       var warn = document.createElement("p");
+       warn.className = "gloss-loop";
+-      warn.textContent = "⚠ Whisper went round on one text (“" + r.loop.text + "” ×" + r.loop.times +
++      var said = "⚠ Whisper went round on one text (“" + r.loop.text + "” ×" + r.loop.times +
+         "): this measurement says nothing about the song. Press Listen again.";
++      if (window.ruachSigned) window.ruachSigned(warn, said); else warn.textContent = said;   // HERESY 1169 · 1247: the sign drawn
+       box.appendChild(warn);
+     }
+     var bars = document.createElement("div");
+diff --git a/tools/console/heresy-guide.js b/tools/console/heresy-guide.js
+index 246836d..aab7c44 100644
+--- a/tools/console/heresy-guide.js
++++ b/tools/console/heresy-guide.js
+@@ -34,6 +34,7 @@
+     });
+     t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, x, u) { return '<a href="' + esc(/^(https?:|#)/.test(u) ? u : src(u)) + '" target="_blank" rel="noopener">' + x + "</a>"; });
+     t = t.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>");
++    t = t.replace(/\u26a0\ufe0f?[ \u00a0]?/g, '<span class="warn-ico" role="img" aria-label="Warning"></span>');   // HERESY 1169 · 1247
+     return t.replace(/\u0000(\d+)\u0000/g, function (_, i) { return "<code>" + code[+i] + "</code>"; });
+   }
+   function render(md) {
+diff --git a/tools/console/heresy-i18n.js b/tools/console/heresy-i18n.js
+index f90948e..af2325d 100644
+--- a/tools/console/heresy-i18n.js
++++ b/tools/console/heresy-i18n.js
+@@ -122,6 +122,12 @@
+   function render(en) {
+     if (lang === "en") return en;
+     var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(en), tr = m[2] ? look(m[2]) : null;
++    // HERESY 1169 · 1247: the page draws a warning's ⚠ apart (app.js .warn-ico) and writes its words alone; the catalog keeps them
++    // under «⚠ …», so they are looked up there and given back without the sign
++    if (tr === null && m[2] && m[2].charAt(0) !== "\u26a0") {
++      var signed = look("\u26a0 " + m[2]);
++      if (signed !== null) tr = signed.replace(/^\u26a0\ufe0f?[ \u00a0]?/, "");
++    }
+     if (tr === null && MISS && /[A-Za-z]{2}/.test(m[2])) { var k = norm(m[2]); if (!MISS.has(k)) MISS.set(k, CUR); }
+     return tr === null ? en : m[1] + tr + m[3];
+   }
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 600bcd7..3e42524 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -384,7 +384,7 @@
+       '<button type="button" class="btn ghost small" id="hiClose">Close</button></div>' +
+       // HERESY 1167 (Viktor: «Дизайн аудио шпаргалки пересмотри. Там в голове навалено сплошными потоками»): the head in parts:
+       // the warning in a line, a legend of four, how the probes were made folded
+-      '<p class="hi-warn"><b>⚠ A name in the style is a request, not a promise.</b> What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.</p>' +
++      '<p class="hi-warn"><b><span class="warn-ico" role="img" aria-label="Warning"></span>A name in the style is a request, not a promise.</b> What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.</p>' +
+       '<ul class="hi-legend">' +
+       '<li><b>Click a name</b><span>it goes into the Style prompt and onto the clipboard</span></li>' +
+       '<li><b>▶ A · ▶ B</b><span>its two probes, their seeds under them</span></li>' +
+diff --git a/tools/console/heresy-textprep.js b/tools/console/heresy-textprep.js
+index 00658e4..be1cbd0 100644
+--- a/tools/console/heresy-textprep.js
++++ b/tools/console/heresy-textprep.js
+@@ -140,7 +140,8 @@
+     undoText = before;
+     hooks.setLyrics(r.text);
+     $("tpUndo").disabled = false;
+-    $("tpNote").textContent = r.log.slice(-3).join(" · ") + " · " + r.chars + " / " + r.max;
++    var note = r.log.slice(-3).join(" · ") + " · " + r.chars + " / " + r.max;   // HERESY 1169 · 1247: a ⚠ in it drawn
++    if (window.ruachSigned) window.ruachSigned($("tpNote"), note); else $("tpNote").textContent = note;
+     toast("Text made ready with “" + p.name + "”: " + r.log.length + " step" + (r.log.length === 1 ? "" : "s") + " (Undo gives the text back)");
+   }
+ 
+@@ -191,7 +192,8 @@
+     readEditor();
+     var r = run($("tpTestIn").value, editing);
+     $("tpTestOut").textContent = r.text;
+-    $("tpTestLog").textContent = r.log.join("\n") + "\n" + r.chars + " / " + r.max + " characters";
++    var said = r.log.join("\n") + "\n" + r.chars + " / " + r.max + " characters";
++    if (window.ruachSigned) window.ruachSigned($("tpTestLog"), said); else $("tpTestLog").textContent = said;
+   }
+ 
+   function init(h) {
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 4c932e4..30d1c9a 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -396,7 +396,8 @@
+     if (!n) return;
+     var warn = list.some(function (x) { return x.charAt(0) === "\u26a0"; });
+     n.hidden = !list.length;
+-    n.textContent = warn ? "\u26a0" : "i";
++    n.textContent = "";   // HERESY 1169 · 1247: drawn by the stylesheet (.lora-notes, .is-warn), not the emoji or a letter
++    n.setAttribute("aria-label", warn ? "A warning on the LoRAs" : "Notes on the LoRAs");
+     n.classList.toggle("is-warn", warn);
+     n.dataset.tip = list.join("\n");
+   }
+-- 
+2.43.0
+

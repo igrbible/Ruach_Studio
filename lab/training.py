@@ -49,6 +49,14 @@ def _safe_dir(base, name):
     return d
 
 
+def _voice(d):
+    """HERESY 1169: the voice measured on a raw folder (voice_kind.py keeps it beside the songs), or None."""
+    try:
+        return json.loads((d / "voice-kind.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 def datasets(kit):
     """The raw folders and the prepared sets, with what the trainer needs to know."""
     P = paths(kit)
@@ -57,7 +65,7 @@ def datasets(kit):
         if d.is_dir():
             files = [f for f in d.rglob("*") if f.suffix.lower() in AUDIO]
             raw.append({"name": d.name, "tracks": len(files), "bytes": sum(f.stat().st_size for f in files),
-                        "captions": sum(1 for f in files if f.with_suffix(".txt").is_file())})
+                        "captions": sum(1 for f in files if f.with_suffix(".txt").is_file()), "voice": _voice(d)})
     prepared = []
     for d in sorted(P["prepared"].iterdir()) if P["prepared"].is_dir() else []:
         man = d / "dataset.json"
@@ -802,6 +810,47 @@ def listen(kit, spec, gpu_picker):
             job.update(status="failed", error=str(e))
     threading.Thread(target=work, daemon=True).start()
     return dict(job, name=name)
+
+
+VOICE = {}           # raw folder name -> its voice measure (HERESY 1169)
+
+
+def measure_voice(kit, spec):
+    """HERESY 1169 (Viktor 05.10.2026: «Ты можешь у Тренера прикрутить… что определяет тип голоса? Мужской или женский,
+    регистр? Нам не нужны Имена человеков, а нужны именно их тональности»). spec: {name, voice: "" | male | female,
+    mode: speech | sung}: voice_kind.py over the raw folder, in a thread (pYIN on twelve tracks, a minute or so); the
+    result kept beside the songs as voice-kind.json, where the folder list reads it."""
+    P = paths(kit)
+    name = str(spec.get("name", ""))
+    d = _safe_dir(P["raw"], name)
+    voice = spec.get("voice") if spec.get("voice") in ("male", "female") else None
+    mode = "sung" if spec.get("mode") == "sung" else "speech"
+    with LOCK:
+        job = VOICE.get(name)
+        if job and job["status"] == "running":
+            return dict(job, name=name)
+        job = {"status": "running", "started": time.time(), "mode": mode}
+        VOICE[name] = job
+
+    def work():
+        try:
+            import voice_kind
+            r = voice_kind.measure(d, voice=voice, mode=mode)
+            if r.get("error"):
+                job.update(status="failed", error=r["error"], ended=time.time())
+                return
+            (d / "voice-kind.json").write_text(json.dumps(r, indent=1), encoding="utf-8")
+            job.update(status="done", result=r, ended=time.time())
+        except Exception as e:  # noqa: BLE001: said in the job, never lost
+            job.update(status="failed", error=str(e), ended=time.time())
+    threading.Thread(target=work, daemon=True).start()
+    return dict(job, name=name)
+
+
+def voice_status(kit, name):
+    P = paths(kit)
+    d = _safe_dir(P["raw"], name)
+    return dict(VOICE.get(name) or {"status": "none"}, name=name, kept=_voice(d))
 
 
 def listen_status(kit, name):

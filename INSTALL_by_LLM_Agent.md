@@ -1,19 +1,13 @@
 # Installing Ruach Studio · for an AI agent
 
-You are installing Ruach Studio for a person, on their Linux machine. Read `INSTALL.md` first: it is the same install
-for people. This file adds what an agent needs: what to check before each step, what success looks like, where to
-stop and ask, and what never to do.
+You are installing Ruach Studio for a person, on their Linux machine. Read `INSTALL.md` first: it is the same install for people. This file adds what an agent needs: what to check before each step, what success looks like, where to stop and ask, and what never to do.
 
 ## Rules
 
-- **Ask before anything large or lasting**: a download over 1 GB, installing system packages (`sudo`), enabling
-  services, `loginctl enable-linger`. Say the size and what it is for.
-- **Never** run the studio as root, never put a token or key in a file of the repository, never set
-  `RUACH_ALLOW_PUBLIC` (it opens the studio past the private network) unless the person asks in those words.
-- **Never** set `CUDA_VISIBLE_DEVICES` for the studio: it picks its cards itself and refuses a card another heavy
-  program holds. To give it another card: `YUE2CPP_GPU=N` for `start.sh`, or Engine → GPUs in the page.
-- Downloads come pinned (`heresy/hf-revisions.txt`, `tools/hf-revisions.txt`) and are checked after; do not fetch
-  models from elsewhere "to save time". The models' licences are mostly non-commercial: tell the person once.
+- **Ask before anything large or lasting**: a download over 1 GB, installing system packages (`sudo`), enabling services, `loginctl enable-linger`. Say the size and what it is for.
+- **Never** run the studio as root, never put a token or key in a file of the repository, never set `RUACH_ALLOW_PUBLIC` (it opens the studio past the private network) unless the person asks in those words.
+- **Never** set `CUDA_VISIBLE_DEVICES` for the studio: it picks its cards itself and refuses a card another heavy program holds. To give it another card: `YUE2CPP_GPU=N` for `start.sh`, or Engine → GPUs in the page.
+- Downloads come pinned (`heresy/hf-revisions.txt`, `tools/hf-revisions.txt`) and are checked after; do not fetch models from elsewhere "to save time". The models' licences are mostly non-commercial: tell the person once.
 - If a step fails, read its output, fix the cause, run the step again. Every step is safe to repeat.
 
 ## 0 · Check the machine
@@ -28,9 +22,7 @@ command -v git ffmpeg curl
 df -h .                                    # 70 GB free or more
 ```
 
-Missing pieces: tell the person, with the command (`sudo apt install git cmake ninja-build build-essential
-python3.12-venv ffmpeg curl`; CUDA 12.8 from NVIDIA's repository). With less than 12 GB of GPU memory, say that only
-short songs on the smallest model will run.
+Missing pieces: tell the person, with the command (`sudo apt install git cmake ninja-build build-essential python3.12-venv ffmpeg curl`; CUDA 12.8 from NVIDIA's repository). With less than 12 GB of GPU memory, say that only short songs on the smallest model will run.
 
 ## 1 · Python
 
@@ -38,8 +30,7 @@ short songs on the smallest model will run.
 ./lab/install-venv.sh
 ```
 
-Success: its last line starts with `ok torch` and says `cuda True`. It also clones `vendor/UniverSR` (the upscale's
-code) at the commit the studio was tested with.
+Success: its last line starts with `ok torch` and says `cuda True`. It also clones `vendor/UniverSR` (the upscale's code) at the commit the studio was tested with.
 
 ## 2 · Models
 
@@ -48,9 +39,7 @@ code) at the commit the studio was tested with.
 ./fetch-models.sh             # after the person agreed to the size
 ```
 
-Success: the last line counts `missing 0 · failed 0`. On 12–16 GB cards, `./fetch-models.sh --quant Q8_0` (or `Q6_K`,
-`Q5_K_M`) instead of the BF16 model. The extras (`heresy/fetch-heresy.sh --listener`, `--artwork`, `--trainer`) only
-when the person wants them; each asks with its size.
+Success: the last line counts `missing 0 · failed 0`. On 12–16 GB cards, `./fetch-models.sh --quant Q8_0` (or `Q6_K`, `Q5_K_M`) instead of the BF16 model. The extras (`heresy/fetch-heresy.sh --listener`, `--artwork`, `--trainer`) only when the person wants them; each asks with its size.
 
 ## 3 · Build
 
@@ -58,8 +47,7 @@ when the person wants them; each asks with its size.
 ./build.sh --server --no-restart
 ```
 
-Success: `build/build/yue-server` exists and `build/tools/public/index.html` was written. The first build of the engine
-compiles CUDA kernels for the card in the machine: a few minutes (two on a 32-core machine), mostly silent.
+Success: `build/build/yue-server` exists and `build/tools/public/index.html` was written. The first build of the engine compiles CUDA kernels for the card in the machine: a few minutes (two on a 32-core machine), mostly silent.
 
 ## 4 · Run
 
@@ -71,8 +59,7 @@ curl -s http://127.0.0.1:41867/api/v1/health      # {"lab": true, "engine": {...
 curl -s http://127.0.0.1:41867/api/v1 | head -c 200   # the studio's version
 ```
 
-Then give the person the address `start.sh` printed (`journalctl --user -u ruach-studio | grep -m1 http`), and say:
-the **?** in the bar is the guide.
+Then give the person the address `start.sh` printed (`journalctl --user -u ruach-studio | grep -m1 http`), and say: the **?** in the bar is the guide.
 
 ## 5 · A first song, to prove it
 
@@ -87,8 +74,7 @@ curl -s -X POST -H "Content-Type: application/json" \
 
 ## 6 · The tests, when the person wants them
 
-They need `flac` and `metaflac` (the FLAC test), Node.js 22+ and Chrome or Chromium (the page tests): ask before installing
-any. None touches the person's songs, settings or services.
+They need `flac` and `metaflac` (the FLAC test), Node.js 22+ and Chrome or Chromium (the page tests): ask before installing any. None touches the person's songs, settings or services.
 
 ```bash
 tools/test-real.sh                   # expect: 6 passed, 0 failed
@@ -100,6 +86,4 @@ tools/test_downloaders.sh            # expect: 14 passed (offline)
 
 ## If it goes wrong
 
-`journalctl --user -u ruach-studio -n 80` and `journalctl --user -u heresy-lab -n 80` say why. `INSTALL.md` has the
-common cases. The engine refusing a card names the program that holds it: ask the person before stopping anything of
-theirs.
+`journalctl --user -u ruach-studio -n 80` and `journalctl --user -u heresy-lab -n 80` say why. `INSTALL.md` has the common cases. The engine refusing a card names the program that holds it: ask the person before stopping anything of theirs.

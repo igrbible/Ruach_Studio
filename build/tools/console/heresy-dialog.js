@@ -1,5 +1,6 @@
 // HERESY 1057 (Viktor): the studio's own dialogs instead of the browser's confirm() and prompt().
-// HeresyDialog.confirm(text, {ok, cancel, danger, must}) -> Promise<boolean>; must: one of the two buttons and nothing else
+// HeresyDialog.confirm(text, {ok, cancel, alt, danger, must}) -> Promise<boolean|"alt">; alt: a third button between the two
+// (HERESY 1169), its answer "alt"; must: one of the buttons and nothing else
 // answers (Esc and a click beside the box do not), for a choice the page cannot make for you (HERESY 1166)
 // HeresyDialog.prompt(text, value, {ok, placeholder, max}) -> Promise<string|null>
 // HeresyDialog.choose(text, items, {cancel, more, filter}) -> Promise<value|null> (HERESY 1167): a list to pick from, one
@@ -23,6 +24,7 @@
         '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
         (kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' : "") +
         '<div class="hd-acts">' + (kind === "alert" ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
+        (opts.alt && kind === "confirm" ? '<button type="button" class="btn ghost small hd-alt">' + esc(opts.alt) + "</button>" : "") +
         '<button type="button" class="btn small ' + (opts.danger ? "danger-fill" : "primary") + ' hd-yes">' + esc(opts.ok || (kind === "prompt" ? "OK" : opts.danger ? "Delete" : "OK")) + "</button></div></div>";
       document.body.appendChild(back);
       var input = back.querySelector(".hd-input");
@@ -32,17 +34,29 @@
         back.classList.add("is-leaving");
         setTimeout(function () { back.remove(); }, 120);
         if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
-        resolve(kind === "prompt" ? (yes ? input.value : null) : !!yes);
+        resolve(kind === "prompt" ? (yes ? input.value : null) : yes === "alt" ? "alt" : !!yes);
       }
+      // HERESY 1169 (Viktor: «По кнопкам в F5 диалоге - добавь LEFT/RIGHT клавиатурными передвижение по кнопкам»): ← and → go along
+      // the buttons; Enter presses the one in focus (with arrows it may be another than Yes), else Yes as before
       function key(e) {
+        var buttons = Array.prototype.slice.call(back.querySelectorAll(".hd-acts button")), at = buttons.indexOf(document.activeElement);
         if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (!opts.must) done(false); }
-        else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); done(true); }
+        else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && document.activeElement !== input && buttons.length > 1) {
+          e.preventDefault(); e.stopPropagation();
+          var to = at < 0 ? buttons.length - 1 : (at + (e.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
+          buttons[to].focus();
+        }
+        else if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault(); e.stopPropagation();
+          if (at >= 0 && !buttons[at].classList.contains("hd-yes")) buttons[at].click(); else done(true);
+        }
       }
       document.addEventListener("keydown", key, true);
       back.addEventListener("mousedown", function (e) { if (e.target === back && !opts.must) done(false); });
       back.querySelector(".hd-yes").addEventListener("click", function () { done(true); });
-      var no = back.querySelector(".hd-no");
+      var no = back.querySelector(".hd-no"), alt = back.querySelector(".hd-alt");
       if (no) no.addEventListener("click", function () { done(false); });
+      if (alt) alt.addEventListener("click", function () { done("alt"); });
       requestAnimationFrame(function () { back.classList.add("is-on"); (input || back.querySelector(".hd-yes")).focus(); if (input) input.select(); });
     });
   }
@@ -105,8 +119,59 @@
       });
     });
   }
+  // HERESY 1169 · 1241 (Viktor 08.10.2026: «Вижу визуал так же как в попап селектре воркспейса… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): several to tick, in groups, with how the ticked ones join; count(values, logic) says on the OK button how many it would show
+  function showPick(text, groups, opts) {
+    opts = opts || {};
+    var parts = String(text || "").split(/\n\s*\n/), title = parts.shift(), body = parts.join("\n\n"), logic = opts.logic || "";
+    return new Promise(function (resolve) {
+      var back = document.createElement("div"), before = document.activeElement;
+      back.className = "hd-back";
+      back.innerHTML = '<div class="hd-box hd-choose hd-pick" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+        '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
+        ((opts.logics || []).length ? '<div class="hd-logic" role="radiogroup" aria-label="' + esc(opts.logicLabel || "How the ticked ones join") + '">' + opts.logics.map(function (l) {
+          return '<button type="button" role="radio" class="hd-logic-b" data-logic="' + esc(l.value) + '" aria-checked="false"' + (l.tip ? ' data-tip="' + esc(l.tip) + '"' : "") + ">" + esc(l.label) + "</button>";
+        }).join("") + "</div>" : "") +
+        '<div class="hd-list hd-pick-list">' + groups.map(function (g) {
+          return '<div class="hd-group">' + esc(g.label) + "</div>" + g.items.map(function (it) {
+            return '<label class="hd-item hd-check"><input type="checkbox" data-v="' + esc(it.value) + '"' + (it.checked ? " checked" : "") + ' /><span class="hd-item-ico" aria-hidden="true">' + (it.icon || "") +
+              '</span><span class="hd-item-label">' + esc(it.label) + "</span>" + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") + "</label>";
+          }).join("");
+        }).join("") + "</div>" +
+        '<div class="hd-acts"><button type="button" class="btn ghost small hd-clear">' + esc(opts.clear || "Clear") + '</button><span class="hd-spacer"></span>' +
+        '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + '</button><button type="button" class="btn small primary hd-yes"></button></div></div>';
+      document.body.appendChild(back);
+      var boxes = Array.prototype.slice.call(back.querySelectorAll(".hd-check input")), yes = back.querySelector(".hd-yes");
+      function values() { return boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.dataset.v; }); }
+      function paint() {
+        Array.prototype.forEach.call(back.querySelectorAll(".hd-logic-b"), function (b) { var on = b.dataset.logic === logic; b.classList.toggle("is-on", on); b.setAttribute("aria-checked", on ? "true" : "false"); });
+        boxes.forEach(function (b) { b.closest(".hd-check").classList.toggle("is-on", b.checked); });
+        var n = opts.count ? opts.count(values(), logic) : null;
+        yes.textContent = (opts.ok || "Show") + (n === null || n === undefined ? "" : " " + n);
+      }
+      function done(v) {
+        document.removeEventListener("keydown", key, true);
+        back.classList.add("is-leaving");
+        setTimeout(function () { back.remove(); }, 120);
+        if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
+        resolve(v);
+      }
+      function key(e) {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(null); }
+        else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); done({ values: values(), logic: logic }); }
+      }
+      document.addEventListener("keydown", key, true);
+      back.addEventListener("mousedown", function (e) { if (e.target === back) done(null); });
+      back.addEventListener("click", function (e) { var b = e.target.closest(".hd-logic-b"); if (b) { logic = b.dataset.logic; paint(); } });
+      boxes.forEach(function (b) { b.addEventListener("change", paint); });
+      back.querySelector(".hd-clear").addEventListener("click", function () { boxes.forEach(function (b) { b.checked = false; }); paint(); });
+      back.querySelector(".hd-no").addEventListener("click", function () { done(null); });
+      yes.addEventListener("click", function () { done({ values: values(), logic: logic }); });
+      paint();
+      requestAnimationFrame(function () { back.classList.add("is-on"); (boxes[0] || yes).focus(); });
+    });
+  }
   function queued(kind, text, value, opts) {
-    var p = chain.then(function () { return kind === "choose" ? showChoose(text, value, opts) : show(kind, text, value, opts); });
+    var p = chain.then(function () { return kind === "choose" ? showChoose(text, value, opts) : kind === "pick" ? showPick(text, value, opts) : show(kind, text, value, opts); });
     chain = p.then(function () {}, function () {});
     return p;
   }
@@ -115,6 +180,7 @@
     confirm: function (text, opts) { return queued("confirm", text, null, opts); },
     prompt: function (text, value, opts) { return queued("prompt", text, value, opts); },
     alert: function (text, opts) { return queued("alert", text, null, opts); },
-    choose: function (text, items, opts) { return queued("choose", text, items || [], opts); }   // HERESY 1167
+    choose: function (text, items, opts) { return queued("choose", text, items || [], opts); },
+    pick: function (text, groups, opts) { return queued("pick", text, groups || [], opts); }   // HERESY 1169 · 1241   // HERESY 1167
   };
 })();

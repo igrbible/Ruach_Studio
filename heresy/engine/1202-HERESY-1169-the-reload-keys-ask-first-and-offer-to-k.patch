@@ -1,0 +1,136 @@
+From 488eb881d8e47fc05ae13954bbb3992cddd125dd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 16:05:23 -0600
+Subject: [PATCH 1202/1252] HERESY 1169: the reload keys ask first and offer to
+ keep the song in the Writer; Shift+Tab is the Creator's frames key
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Для F5 добавляем блокер с диалогом и чреватостью… Можно предложить автоматическое сохранение композера в
+комнату Писателя»; «Помимо F5 можно ещё Ctrl+Shift+R»; «Давай шорткат Shift+Tab блокируем для обратного хождения по полям,
+а именно для переключения между композером и Исполнителем… когда фрейм опущен… подымает оверлей во фрейме композера… всегда
+в композере. Это главная кузня».
+
+- F5, Shift+F5, Ctrl+R and Ctrl+Shift+R ask first: what a reload takes (the boxes' undo history, a lifted frame, the music
+  playing, a writer's answer on its way, an upload under way) and what it keeps (the form, a run with its clock, the
+  library, the notebook). With a song in the form: «Save to the Writer, then reload» (the document in hand gets a version,
+  or one is made; a failed save keeps the page), «Reload», «Stay»; without one: «Reload», «Stay». Ctrl+F5 reloads at once;
+  in the Librarian F5 still reads the library again. HeresyDialog.confirm takes an `alt`, a third answer.
+- In the Creator, Shift+Tab switches a lifted frame to the other and, none lifted, lifts the form's; coming back into a
+  frame the cursor stands where it stood. A dialog, a menu, the find bar and the tags list keep their own; the other rooms
+  keep the fields' way back.
+
+The guide's keys table in seven languages. Kitchen suite: 398 passed, 0 failed, 7 skipped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js           | 48 ++++++++++++++++++++++++++++++++++
+ tools/console/heresy-dialog.js |  9 ++++---
+ 2 files changed, 54 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index c93f3ce..fee54c6 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8098,8 +8098,56 @@
+     if (!f || (event.target.closest && event.target.closest("input, select, textarea"))) return;
+     setTimeout(function () { if (!f.contains(document.activeElement)) f.focus({ preventScroll: true }); }, 0);
+   });
++  // HERESY 1169 (Viktor 07.10.2026: «Давай шорткат Shift+Tab блокируем для обратного хождения по полям, а именно для
++  // переключения между композером и Исполнителем. И когда фрейм опущен, из обычной страницы… эта комбинация подымает оверлей во
++  // фрейме композера… В общем, всегда в композере. Это главная кузня»): in the Creator, Shift+Tab is the frames' key, not the
++  // fields' way back: a frame lifted turns to the other one, none lifted lifts the form's. Coming back into a frame, the cursor
++  // stands where it stood; a dialog, a menu or the find bar keep their own Shift+Tab
++  var frameFocus = {};
++  window.addEventListener("keydown", function (event) {
++    if (event.key !== "Tab" || !event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || document.body.dataset.tab !== "create") return;
++    var over = document.querySelectorAll(".hd-back, .menu-pop:not(.is-hidden), .hm-menu, .hz-view, .ds-back, .hi-back, .cmp-back, .hg-back, .dw-back, .coll-sheet, .find-bar, .tc-pop");
++    if (Array.prototype.some.call(over, function (e) { return e.getClientRects().length > 0; })) return;
++    event.preventDefault();
++    var now = document.body.dataset.frame || null, to = now === "compose" ? "take" : "compose", here = document.activeElement;
++    Object.keys(FRAMES).forEach(function (k) { if (here && here !== document.body && $(FRAMES[k]).contains(here) && here !== $(FRAMES[k])) frameFocus[k] = here; });
++    frameOver(to);
++    var keep = frameFocus[to], view = $(FRAMES[to]);
++    if (keep && document.contains(keep) && view.contains(keep)) keep.focus({ preventScroll: true });
++    else view.focus({ preventScroll: true });
++  }, true);
+   // Esc puts the frame back, unless a menu, a dialog or the staff's full screen is open over it: those close first, by their
+   // own Esc (this runs before them, while they are still there)
++  // HERESY 1169 (Viktor 07.10.2026: «Для F5 добавляем блокер с диалогом и чреватостью, хотя кеш браузера у меня держит
++  // изменения в текстах. Можно предложить автоматическое сохранение композера в комнату Писателя»): the reload keys ask first,
++  // saying what a reload takes and what it keeps, and with a song in the form they offer to keep it in the Writer before
++  // (the document in hand gets a version, or a new one is made); Ctrl+F5 reloads at once; in the Librarian F5 reads the
++  // library again, as before
++  var reloading = false;
++  window.addEventListener("keydown", function (event) {
++    // (Viktor: «Помимо F5 можно ещё Ctrl+Shift+R»): F5 and Shift+F5, Ctrl+R and Ctrl+Shift+R; Ctrl+F5 is the reload at once
++    var f5 = event.key === "F5" && !event.ctrlKey && !event.metaKey && !event.altKey;
++    var ctrlR = (event.ctrlKey || event.metaKey) && !event.altKey && event.code === "KeyR";
++    if ((!f5 && !ctrlR) || (f5 && !event.shiftKey && document.body.dataset.tab === "collection") || reloading) return;
++    event.preventDefault();
++    if (document.querySelector(".hd-back:not(.is-leaving)")) return;   // a dialog is open already (this one too)
++    var song = !!($("style").value.trim() || $("lyrics").value.trim());
++    window.HeresyDialog.confirm("Reload the page?\n\n" +
++      "It takes: the boxes' undo history, a lifted frame, the music playing, a writer's answer still on its way, an upload under way.\n\n" +
++      "It keeps: the song in the form (its words and its knobs), a run under way (it comes back with its clock), the library, the Writer's notebook." +
++      (song ? "\n\nSave to the Writer keeps this song there as well before the reload: a new version of the document in hand, or a document of its own." : "") +
++      "\n\nCtrl+F5 reloads at once.",
++      { ok: song ? "Save to the Writer, then reload" : "Reload", alt: song ? "Reload" : "", cancel: "Stay" }).then(function (answer) {
++      if (!answer) return;
++      reloading = true;
++      var save = answer === true && song && window.HeresyWriter;
++      Promise.resolve(save ? window.HeresyWriter.fromCreate(false) : true).then(function (kept) {
++        if (save && !kept) { reloading = false; return; }          // not saved (the toast says why): the page stays
++        saveDraft();
++        location.reload();
++      });
++    });
++  }, true);
+   // HERESY 1168 (Viktor: «ты говорил, что перехватишь F5 в Библиотеке»): F5 in the Librarian reads the library again and
+   // leaves the page as it is, the music playing on; Ctrl+F5 or Shift+F5 still reload the page
+   window.addEventListener("keydown", function (event) {
+diff --git a/tools/console/heresy-dialog.js b/tools/console/heresy-dialog.js
+index 3631a40..1f6b4d6 100644
+--- a/tools/console/heresy-dialog.js
++++ b/tools/console/heresy-dialog.js
+@@ -1,5 +1,6 @@
+ // HERESY 1057 (Viktor): the studio's own dialogs instead of the browser's confirm() and prompt().
+-// HeresyDialog.confirm(text, {ok, cancel, danger, must}) -> Promise<boolean>; must: one of the two buttons and nothing else
++// HeresyDialog.confirm(text, {ok, cancel, alt, danger, must}) -> Promise<boolean|"alt">; alt: a third button between the two
++// (HERESY 1169), its answer "alt"; must: one of the buttons and nothing else
+ // answers (Esc and a click beside the box do not), for a choice the page cannot make for you (HERESY 1166)
+ // HeresyDialog.prompt(text, value, {ok, placeholder, max}) -> Promise<string|null>
+ // HeresyDialog.choose(text, items, {cancel, more, filter}) -> Promise<value|null> (HERESY 1167): a list to pick from, one
+@@ -23,6 +24,7 @@
+         '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
+         (kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' : "") +
+         '<div class="hd-acts">' + (kind === "alert" ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
++        (opts.alt && kind === "confirm" ? '<button type="button" class="btn ghost small hd-alt">' + esc(opts.alt) + "</button>" : "") +
+         '<button type="button" class="btn small ' + (opts.danger ? "danger-fill" : "primary") + ' hd-yes">' + esc(opts.ok || (kind === "prompt" ? "OK" : opts.danger ? "Delete" : "OK")) + "</button></div></div>";
+       document.body.appendChild(back);
+       var input = back.querySelector(".hd-input");
+@@ -32,7 +34,7 @@
+         back.classList.add("is-leaving");
+         setTimeout(function () { back.remove(); }, 120);
+         if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
+-        resolve(kind === "prompt" ? (yes ? input.value : null) : !!yes);
++        resolve(kind === "prompt" ? (yes ? input.value : null) : yes === "alt" ? "alt" : !!yes);
+       }
+       function key(e) {
+         if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (!opts.must) done(false); }
+@@ -41,8 +43,9 @@
+       document.addEventListener("keydown", key, true);
+       back.addEventListener("mousedown", function (e) { if (e.target === back && !opts.must) done(false); });
+       back.querySelector(".hd-yes").addEventListener("click", function () { done(true); });
+-      var no = back.querySelector(".hd-no");
++      var no = back.querySelector(".hd-no"), alt = back.querySelector(".hd-alt");
+       if (no) no.addEventListener("click", function () { done(false); });
++      if (alt) alt.addEventListener("click", function () { done("alt"); });
+       requestAnimationFrame(function () { back.classList.add("is-on"); (input || back.querySelector(".hd-yes")).focus(); if (input) input.select(); });
+     });
+   }
+-- 
+2.43.0
+

@@ -131,8 +131,15 @@ def build(kit, outputs, name, midi=None, cache=None):
     bpm, num, den = tempo_meter(req)
     # the take's own audio, whatever the engine wrote (WAV from the page, MP3 by the engine's default): HERESY 1116
     sources = [("Mix", "mix", next((d / f for f in ("audio.wav", "audio.flac", "audio.mp3") if (d / f).is_file()), d / "audio.wav"))]
+    # HERESY 1169: a take may hold several sets of one kind (split from the take, from its debuzzed or upscaled file):
+    # the newest of each kind goes in, the others would only double its tracks
+    newest = {}
     for man in sorted(d.glob("derived/stems-*/manifest.json")):
         m = json.load(open(man, encoding="utf-8"))
+        kind = m.get("mode") or "vocals"
+        if kind not in newest or str(m.get("created") or "") >= str(newest[kind].get("created") or ""):
+            newest[kind] = m
+    for m in (newest[k] for k in sorted(newest)):
         for f in m.get("files", []):
             p = d / f["path"]
             if p.is_file():

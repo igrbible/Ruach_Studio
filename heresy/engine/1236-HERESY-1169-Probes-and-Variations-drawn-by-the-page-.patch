@@ -1,0 +1,71 @@
+From e8638f13b3503b7ee7409886848ce6616731de6a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 09:47:18 -0600
+Subject: [PATCH 1236/1252] HERESY 1169: Probes and Variations drawn by the
+ page (a track filled to the thumb, a round thumb; no frame or field behind in
+ any Chrome or theme); the status dot clicked while Compose is lifted turns it
+ to the Musician's frame
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «Убери border вокруг позлунков»; «При клике в плеере на кружок зелёный/красный… пусть переключается во фрейм музыканта».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 10 ++++++++++
+ tools/console/app.js  | 12 +++++++++---
+ 2 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3555428..a8005b1 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4523,3 +4523,13 @@ body:not([data-frame]) .frame-fs { display: none; }
+ .coll-fgroup .coll-chip.is-on .coll-fn { color: var(--amber); background: color-mix(in srgb, var(--amber) 18%, transparent); }
+ .coll-fgroup .coll-chip.is-none:not(:hover) { opacity: .5; }
+ .coll-fclear[hidden] { display: none; }
++
++/* HERESY 1169 · 1236 (Viktor 08.10.2026: «Убери border вокруг позлунков. В ночной не видел теме, а теперь увидел»): Probes and Variations drawn by the page, not by the browser (his Chrome framed the native ones in the day theme, a headless one did not): a track filled to the thumb in the theme's accent and a round thumb; no frame and no field behind, the same in every Chrome and theme */
++.count-slider input[type="range"] { -webkit-appearance: none; appearance: none; height: 18px; padding: 0; border: 0; outline: 0; box-shadow: none; background: transparent; accent-color: auto; cursor: pointer; }
++.count-slider input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--amber) 0, var(--amber) var(--fill, 0%), color-mix(in srgb, var(--ink) 14%, transparent) var(--fill, 0%)); }
++.count-slider input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 14%, transparent); }
++.count-slider input[type="range"]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--amber); }
++.count-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -5px; border-radius: 50%; border: 0; background: var(--amber); box-shadow: 0 0 0 2px var(--panel); }
++.count-slider input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; border: 0; background: var(--amber); box-shadow: 0 0 0 2px var(--panel); }
++.count-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--amber) 45%, transparent); }
++.count-slider input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--amber) 45%, transparent); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index aa8e4c9..0c6bd58 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -987,6 +987,10 @@
+     var songs = +$("versions").value || 1, sounds = +$("variations").value || 1, takes = songs * sounds;
+     $("versionsOut").textContent = songs;
+     $("variationsOut").textContent = sounds;
++    ["versions", "variations"].forEach(function (id) {               // HERESY 1169 · 1236: the track filled to the thumb (the page draws it)
++      var el = $(id), lo = +el.min || 0, hi = +el.max || 1;
++      el.style.setProperty("--fill", ((+el.value - lo) / Math.max(1, hi - lo) * 100) + "%");
++    });
+     $("takesTotal").textContent = takes + (takes === 1 ? " take" : " takes");   // the catalogs know «{0} takes»
+   }
+   ["versions", "variations"].forEach(function (id) { $(id).addEventListener("input", paintCounts); });
+@@ -5339,9 +5343,11 @@
+   // HERESY 1165 (Viktor: «Кликание по кружочку… на регенерации как минимум не работает»): the run and the take are shown
+   // in the Creator; from another room the click showed them there, unseen
+   $("statusPill").addEventListener("click", function () {
+-    var s = this.dataset.s;
+-    if ((s === "rendering" || s === "queued") && STATE.running) { if (document.body.dataset.tab !== "create") setTab("create"); $("backToRun").click(); }
+-    else if ((s === "playing" || s === "paused") && STATE.playerTake) { if (document.body.dataset.tab !== "create") setTab("create"); openTake(STATE.playerTake.name); }
++    var s = this.dataset.s, shown = false;
++    if ((s === "rendering" || s === "queued") && STATE.running) { if (document.body.dataset.tab !== "create") setTab("create"); $("backToRun").click(); shown = true; }
++    else if ((s === "playing" || s === "paused") && STATE.playerTake) { if (document.body.dataset.tab !== "create") setTab("create"); openTake(STATE.playerTake.name); shown = true; }
++    // HERESY 1169 · 1236 (Viktor 08.10.2026: «При клике в плеере на кружок зелёный/красный, при открытом оверлее с активным фреймом композитора пусть переключается во фрейм музыканта»): the run or the take it shows is the Musician's, so a lifted Compose turns to it
++    if (shown && document.body.dataset.frame === "compose") frameOver("take");
+   });
+   audio.addEventListener("timeupdate", function () {
+     $("timeNow").textContent = clock(audio.currentTime);
+-- 
+2.43.0
+

@@ -1,0 +1,94 @@
+From 12d21fdd7fa2b4111ecad33e1249c81266d46f5e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 13:42:28 -0600
+Subject: [PATCH 1245/1252] =?UTF-8?q?HERESY=201169:=20the=20lyrics'=20?=
+ =?UTF-8?q?=E2=88=92=20and=20+=20scale=20the=20text=20alone=20(the=20overl?=
+ =?UTF-8?q?ay's=20box=20stays=20at=201.54);=20a=20lifted=20frame's=20text?=
+ =?UTF-8?q?=20up=20to=20+6=20pt=20in=20three=20steps,=20and=20its=20fields?=
+ =?UTF-8?q?=20and=20lists=20grow=20with=20it=20(Title,=20Style,=20the=20se?=
+ =?UTF-8?q?lects)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «В Lyrics можно + и - только в самой зоне текста… В попапе фреймов всё скейлится с 4-мя шагами… Опусти до 3-х. Поле Title остаётся почему-то прежним размером. Дропдаун селекторы тоже».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css |  9 ++++++++-
+ tools/console/app.js  | 17 ++++++++++++-----
+ 2 files changed, 20 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 8e5584b..83a70a8 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4487,6 +4487,10 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ .lyr-over-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+ .lyr-over-body > .lyr-wrap { flex: 1; min-height: 0; }
+ .lyr-over-body #lyrics { height: 100% !important; max-height: none; resize: none; overflow-y: auto; }
++/* HERESY 1169 · 1246 («В Lyrics можно + и - только в самой зоне текста, а не весь интерфейс?»): − and + scale the text and its numbers,
++   a tenth a step (app.js sets --lyr-t); the copies under it measure the text's own size, so the marks and tags follow */
++.lyr-over-body #lyrics { font-size: calc((12.5px + var(--fs, 0pt)) * var(--lyr-t, 1)); }
++.lyr-over-body .lyr-num { font-size: calc((10.5px + var(--fs, 0pt)) * var(--lyr-t, 1)); }
+ /* HERESY 1169 (Viktor 08.10.2026: «Хедер Takes имеет дохера паддинга сверху. 5-8px?»): the Creator's takes head 7 px nearer its top (18 → 11) */
+ body[data-tab="create"] #library .lib-head { padding-top: 11px; }
+ /* HERESY 1169 (Viktor 08.10.2026: «линтер… выявлял незакрытые `[` и другие теги»): a line with a broken tag numbered red, one with a round
+@@ -4497,7 +4501,10 @@ body[data-tab="create"] #library .lib-head { padding-top: 11px; }
+    font size is calc(N + var(--fs, 0pt)) since the build (build.sh); --fs is the page's (☰) and, in a lifted frame, the page's and the
+    frame's together. The frame's buttons show only while a frame is up */
+ :root { --fs-g: 0pt; --fs-f: 0pt; --fs: var(--fs-g); }
+-body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take { --fs: calc(var(--fs-g) + var(--fs-f)); }
++body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take { --fs: calc(var(--fs-g) + var(--fs-f)); font-size: calc(14px + var(--fs)); }
++/* HERESY 1169 · 1246 (Viktor 08.10.2026: «Поле Title остаётся почему-то прежним размером. Дропдаун селекторы тоже остаётся прежним
++   кеглем»): fields, selects and plain text take their size from above (font: inherit), and what is inherited is the size the body
++   worked out, outside the frame; so a lifted frame has its own, the body's 14px with the frame's steps on it */
+ .fs-btns { display: inline-flex; gap: 4px; }
+ .frame-fs { display: inline-flex; margin-right: 10px; }
+ body:not([data-frame]) .frame-fs { display: none; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 0ad5d1b..25dcdb4 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8288,8 +8288,15 @@
+   // шрифтов и их лимитов сам решить, где порог»): every font size of the stylesheets is calc(N + var(--fs)) since the build, so
+   // the text grows and the layout stays. --fs-g is the page's (☰: −2…+4 pt by 1), --fs-f a lifted frame's on top of it (−4…+8
+   // by 2); both are this browser's (yue2.textSize), as the look is: each screen keeps its own
+-  var TEXT = { g: { min: -2, max: 4, step: 1 }, f: { min: -4, max: 8, step: 2 } };
+-  function textSizes() { try { return JSON.parse(recall("yue2.textSize") || "{}") || {}; } catch (e) { return {}; } }
++  // HERESY 1169 · 1246 (Viktor 08.10.2026: «В попапе фреймов всё скейлится с 4-мя шагами. Очень много. Опусти до 3-х»): the frame's
++  // own up to +6 (three steps of 2); a size kept from before is held to the range
++  var TEXT = { g: { min: -2, max: 4, step: 1 }, f: { min: -4, max: 6, step: 2 } };
++  function textSizes() {
++    var t;
++    try { t = JSON.parse(recall("yue2.textSize") || "{}") || {}; } catch (e) { t = {}; }
++    Object.keys(TEXT).forEach(function (w) { if (typeof t[w] === "number") t[w] = Math.max(TEXT[w].min, Math.min(TEXT[w].max, t[w])); });
++    return t;
++  }
+   function paintTextSize() {
+     var t = textSizes(), root = document.documentElement;
+     ["g", "f"].forEach(function (w) { if (t[w]) root.style.setProperty("--fs-" + w, t[w] + "pt"); else root.style.removeProperty("--fs-" + w); });
+@@ -8342,7 +8349,7 @@
+       body.appendChild(meter);
+       back.addEventListener("click", function (e) { if (e.target === back) lyricsOver(false); });
+       $("lyricsBack").addEventListener("click", function () { lyricsOver(false); });
+-      // HERESY 1169 · 1239 (Viktor 08.10.2026: «Ужасно мелкий шрифт по умолчанию. Увеличь умолчание всех текстов в таком оверлее на 40%… Ты не прикручивал ещё кнопки -+?»): the box 1.54 times the form's (it was 1.1), a press a tenth up or down from there, kept in this browser
++      // HERESY 1169 · 1239 (Viktor 08.10.2026: «Ужасно мелкий шрифт по умолчанию. Увеличь умолчание всех текстов в таком оверлее на 40%… Ты не прикручивал ещё кнопки -+?»): the box 1.54 times the form's (it was 1.1), a press a tenth up or down from there, kept in this browser. HERESY 1169 · 1246 («В Lyrics можно + и - только в самой зоне текста, а не весь интерфейс?»): the press scales the text alone, its numbers along; the box, its buttons and the meter stay at 1.54
+       back.querySelector(".lyr-over-fs").addEventListener("click", function (e) {
+         var b = e.target.closest("[data-lyr-z]");
+         if (!b) return;
+@@ -8369,8 +8376,8 @@
+   function lyrZoomStep() { var k = parseInt(recall("yue2.lyricsZoom") || "0", 10); return isFinite(k) ? Math.max(-2, Math.min(2, k)) : 0; }
+   function paintLyrZoom() {
+     if (!lyrOver) return;
+-    var k = lyrZoomStep(), z = Math.round(1.54 * Math.pow(1.1, k) * 1000) / 1000, box = lyrOver.back.querySelector(".lyr-over-box");
+-    box.style.setProperty("--lyr-z", String(z));
++    var k = lyrZoomStep(), z = Math.round(Math.pow(1.1, k) * 1000) / 1000, box = lyrOver.back.querySelector(".lyr-over-box");
++    box.style.setProperty("--lyr-t", String(z));
+     box.querySelector('[data-lyr-z="-1"]').disabled = k <= -2;
+     box.querySelector('[data-lyr-z="1"]').disabled = k >= 2;
+     box.querySelector('[data-lyr-z="0"]').disabled = k === 0;
+-- 
+2.43.0
+

@@ -1,0 +1,268 @@
+From 1df9db38f0f6eeb815acfd58c43b1a8d048fd2b7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 23:40:11 -0600
+Subject: [PATCH 1222/1252] =?UTF-8?q?HERESY=201169:=20the=20cheat-sheet's?=
+ =?UTF-8?q?=20click=20seen=20and=20copied,=20its=20text=20selectable;=20th?=
+ =?UTF-8?q?e=20tags=20under=20=C2=AB[=C2=BB=20one=20width,=20without=20[Br?=
+ =?UTF-8?q?eak]=20and=20[Inst]?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «В шпаргалке по стилям и инструментам проблемка. Не работает кликание, вставка, копирование». A click did put a name into the Style prompt, but its words showed under the sheet (toasts at 40, the sheet at 70) and the prompt is under the sheet too: the toasts stand over every window now (the pointer goes through them), a name the prompt holds is marked in the sheet, a click copies the name too (the page's own copy, which works over plain http; «· copied» only when it did), and the sheet's text selects again.
+
+«Ширину зафиксируй в дропдауне подстановки по `[`»: 460 px whatever the note says, the note two lines high. «те суно теги `[Break]`, если уж нет их в оф. примерах… Они не работают»: [Break] and the studio's own [Inst] are gone from the sheet and the list.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 13 +++++++++
+ tools/console/heresy-complete.js    |  7 +++--
+ tools/console/heresy-i18n-be.js     |  2 +-
+ tools/console/heresy-i18n-el.js     |  2 +-
+ tools/console/heresy-i18n-es.js     |  2 +-
+ tools/console/heresy-i18n-it.js     |  2 +-
+ tools/console/heresy-i18n-ru.js     |  2 +-
+ tools/console/heresy-i18n-uk.js     |  2 +-
+ tools/console/heresy-instruments.js | 45 ++++++++++++++++++++++-------
+ 9 files changed, 57 insertions(+), 20 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 283780e..4c88200 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4381,3 +4381,16 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+   top: calc((100vh - var(--playbar-h)) * .015 / var(--frame-zoom)); height: calc((100vh - var(--playbar-h)) * .97 / var(--frame-zoom)); }
+ body[data-frame] :is(#view-compose, #view-take) > .col-head { padding-top: 13px; padding-bottom: 9px; }
+ body[data-frame="compose"] .compose > .submit-bar { padding-top: 9px; padding-bottom: 10px; }
++/* HERESY 1169 (Viktor 07.10.2026: «В шпаргалке по стилям и инструментам проблемка. Не работает кликание, вставка,
++   копирование»): a click on a name did put it into the Style prompt, but its words showed under the sheet (the toasts stood at
++   40, the sheet at 70) and nothing else moved in sight: the toasts stand over every window now, the pointer going through them
++   to what is under; a name the prompt holds is marked in the sheet, as a pen marks it; the sheet's words select and copy
++   again (1148 had stopped the page's own words from selecting) */
++.toasts { z-index: 200; pointer-events: none; }
++.hi-tag.is-in { background: color-mix(in srgb, var(--amber) 24%, transparent); border-radius: 2px;
++  box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 24%, transparent); }
++.hi-box :is(.hi-table, .hi-warn, .hi-legend, .hi-more) { -webkit-user-select: text; user-select: text; }
++/* HERESY 1169 (Viktor 07.10.2026: «Ширину зафиксируй в дропдауне подстановки по `[`»): the list as wide whatever the tag in
++   hand says of itself, and its note two lines high always, so neither the box nor its rows move as the choice moves */
++.tc-pop { width: min(460px, calc(100vw - 8px)); }
++.tc-note { min-height: 2.8em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+diff --git a/tools/console/heresy-complete.js b/tools/console/heresy-complete.js
+index 38b4c5c..ef85650 100644
+--- a/tools/console/heresy-complete.js
++++ b/tools/console/heresy-complete.js
+@@ -4,7 +4,7 @@
+ //
+ // A «[» typed at a line's start (spaces before it allowed) in the Creator's or the Writer's lyrics opens a list under it:
+ // the sections of the cheat-sheet (heresy-instruments.js: the 110 official examples counted), the common ones first
+-// (Verse, Chorus, Pre-Chorus, Bridge, Interlude, Break), then the three a song has once (Intro, Outro, End), then the rest
++// (Verse, Chorus, Pre-Chorus, Bridge, Interlude), then the three a song has once (Intro, Outro, End), then the rest
+ // as often as the examples write them. What is typed after the «[» narrows it, from a word's start («ch» finds Chorus and
+ // Pre-Chorus), in a Russian or Ukrainian layout too («[мук» is «[ver»); a number after it numbers the tag («v2» is
+ // [Verse 2]); lyrics that number their verses are offered the next one. ↑ ↓ choose (the mouse too); Enter or Tab puts
+@@ -16,7 +16,8 @@
+ //   HeresyComplete.attach(textarea) · HeresyComplete.state()   (the last for the checks)
+ (function () {
+   "use strict";
+-  var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude", "Break"], ONCE = ["Intro", "Outro", "End"];
++  // HERESY 1169 (Viktor 07.10.2026: «Вычисти оттуда то, чего нет в оф примерах YuE2»): no Break, the examples never write it
++  var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude"], ONCE = ["Intro", "Outro", "End"];
+   // as Viktor writes it (thirty songs of his end so; «Да, измени»), where the official examples write [End]
+   var SPELL = { End: "END" };
+   var ONCE_HEAD = { Intro: /^intro(duction)?$/, Outro: /^outro$/, End: /^ends?$/ };
+@@ -138,7 +139,7 @@
+   function mark(scroll) {
+     Array.prototype.forEach.call(list.children, function (o, i) { o.classList.toggle("is-on", i === at); o.setAttribute("aria-selected", i === at ? "true" : "false"); });
+     var cur = items[at];
+-    foot.innerHTML = (cur && note(cur) ? '<span class="tc-note">' + esc(note(cur)) + "</span>" : "") +
++    foot.innerHTML = '<span class="tc-note">' + esc(cur ? note(cur) : "") + "</span>" +      // HERESY 1169: always, two lines high
+       '<span class="tc-keys">' + esc(tr("↑ ↓ choose · Enter or Tab puts it in · Esc closes")) + "</span>";
+     box.setAttribute("aria-expanded", "true");
+     if (cur) box.setAttribute("aria-activedescendant", "tcOpt" + at); else box.removeAttribute("aria-activedescendant");
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 7c75d09..5ba7a47 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2753,7 +2753,7 @@ RuachI18n.add("be", {
+ "⚠ A name in the style is a request, not a promise.": "⚠ Назва ў стылі — просьба, а не абяцанне.",
+ "What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "▶ A і ▶ B іграюць тое, што YuE2 дае на гэтую назву, прыкладна дзевяць разоў з дзесяці: вер вуху, а не назве.",
+ "Click a name": "Націсні на назву",
+-"it goes into the Style prompt": "яна ідзе ў промпт стылю",
++"it goes into the Style prompt and onto the clipboard": "яна ідзе ў промпт стылю і ў буфер абмену",
+ "its two probes, their seeds under them": "дзве яго пробы, іх сіды пад імі",
+ "the ear heard it and kept it;": "вуха яго пачула і пакінула;",
+ "red": "чырвоным",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 2b9dd66..17c5c3a 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2752,7 +2752,7 @@ RuachI18n.add("el", {
+ "⚠ A name in the style is a request, not a promise.": "⚠ Ένα όνομα στο ύφος είναι αίτημα, όχι υπόσχεση.",
+ "What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "Ό,τι παίζουν τα ▶ A και ▶ B είναι αυτό που δίνει το YuE2 γι' αυτό, περίπου εννιά φορές στις δέκα: εμπιστέψου το αυτί, όχι το όνομα.",
+ "Click a name": "Κάνε κλικ σε ένα όνομα",
+-"it goes into the Style prompt": "μπαίνει στο prompt ύφους",
++"it goes into the Style prompt and onto the clipboard": "μπαίνει στο prompt ύφους και στο πρόχειρο",
+ "its two probes, their seeds under them": "οι δύο δοκιμές του, οι σπόροι τους από κάτω",
+ "the ear heard it and kept it;": "το αυτί το άκουσε και το κράτησε·",
+ "red": "κόκκινο",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 394c90f..824b6bc 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2752,7 +2752,7 @@ RuachI18n.add("es", {
+ "⚠ A name in the style is a request, not a promise.": "⚠ Un nombre en el estilo es una petición, no una promesa.",
+ "What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "Lo que suenan ▶ A y ▶ B es lo que YuE2 da para ese nombre, unas nueve veces de cada diez: fíate del oído, no del nombre.",
+ "Click a name": "Haz clic en un nombre",
+-"it goes into the Style prompt": "va al prompt de estilo",
++"it goes into the Style prompt and onto the clipboard": "va al prompt de estilo y al portapapeles",
+ "its two probes, their seeds under them": "sus dos pruebas, sus semillas debajo",
+ "the ear heard it and kept it;": "el oído lo oyó y lo guardó;",
+ "red": "en rojo",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 200d38b..98776e1 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2752,7 +2752,7 @@ RuachI18n.add("it", {
+ "⚠ A name in the style is a request, not a promise.": "⚠ Un nome nello stile è una richiesta, non una promessa.",
+ "What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "Ciò che suonano ▶ A e ▶ B è quello che YuE2 dà per quel nome, circa nove volte su dieci: fidati dell'orecchio, non del nome.",
+ "Click a name": "Fai clic su un nome",
+-"it goes into the Style prompt": "va nel prompt di stile",
++"it goes into the Style prompt and onto the clipboard": "va nel prompt di stile e negli appunti",
+ "its two probes, their seeds under them": "le sue due prove, i loro semi sotto",
+ "the ear heard it and kept it;": "l'orecchio l'ha sentito e tenuto;",
+ "red": "in rosso",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 3444ca4..aa67689 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2758,7 +2758,7 @@ RuachI18n.add("ru", {
+ "⚠ A name in the style is a request, not a promise.": "⚠ Название в стиле — просьба, а не обещание.",
+ "What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "▶ A и ▶ B играют то, что YuE2 даёт на это название, примерно девять раз из десяти: верь уху, а не названию.",
+ "Click a name": "Нажми на название",
+-"it goes into the Style prompt": "оно уходит в промпт стиля",
++"it goes into the Style prompt and onto the clipboard": "оно уходит в промпт стиля и в буфер обмена",
+ "its two probes, their seeds under them": "две его пробы, их сиды под ними",
+ "the ear heard it and kept it;": "ухо его услышало и оставило;",
+ "red": "красным",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 5bf29d9..44e5b62 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2753,7 +2753,7 @@ RuachI18n.add("uk", {
+ "⚠ A name in the style is a request, not a promise.": "⚠ Назва в стилі — прохання, а не обіцянка.",
+ "What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.": "▶ A і ▶ B грають те, що YuE2 дає на цю назву, приблизно дев'ять разів із десяти: вір вуху, а не назві.",
+ "Click a name": "Натисни на назву",
+-"it goes into the Style prompt": "вона йде в промпт стилю",
++"it goes into the Style prompt and onto the clipboard": "вона йде в промпт стилю і в буфер обміну",
+ "its two probes, their seeds under them": "дві його проби, їхні сіди під ними",
+ "the ear heard it and kept it;": "вухо його почуло й залишило;",
+ "red": "червоним",
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 7df6fd3..a6a52fd 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -214,6 +214,8 @@
+   // в читшит максимальный список музыкальных тегов/маркеров для промпта лирики»): the lyrics' tags, as the 110 official
+   // examples write them (how often, counted 07.10.2026), and Viktor's phonetic hand. A click puts a tag into the
+   // lyrics where the cursor stands, on a line of its own; a mark of the hand goes in where the cursor stands.
++  // HERESY 1169 (Viktor 07.10.2026: «те суно теги `[Break]`, если уж нет их в оф. примерах… Они не работают. Вычисти оттуда
++  // то, чего нет в оф примерах YuE2»): only what the examples write; [Break] and the studio's own [Inst] are gone
+   var LYRIC_TAGS = [
+     { group: "Sections YuE2 knows (×: how often the 110 official examples write it)", rows: [
+       ["[Verse]", 145, "Verse 1, Verse 2… a numbered one counts as the same"], ["[Chorus]", 187, "the hook the song comes back to"],
+@@ -221,8 +223,7 @@
+       ["[Intro]", 21, "its lines are seldom sung: put a spoken intro under [Interlude] or [Verse]"], ["[Interlude]", 18, "Viktor: a pause in rap, a brake on speech that runs ahead"],
+       ["[Final Chorus]", 9, ""], ["[End]", 7, "Ends too"], ["[Instrumental Break]", 9, "with what plays: «Instrumental Break - Horns»"],
+       ["[Guitar Solo]", 8, "Drum Solo, Keyboard Solo, Solo"], ["[Refrain]", 4, "Refrain 1…4"], ["[Post-Chorus]", 3, ""], ["[Breakdown]", 2, ""],
+-      ["[Fade Out]", 2, "Fadeout, Instrumental fade out"], ["[Hook]", 1, ""], ["[Drop]", 1, "Beat drops – …"], ["[Instrumental]", 1, ""],
+-      ["[Inst]", 0, "the studio's own short name of an instrumental part"], ["[Break]", 0, "Viktor's: a pause in rap"]] },
++      ["[Fade Out]", 2, "Fadeout, Instrumental fade out"], ["[Hook]", 1, ""], ["[Drop]", 1, "Beat drops – …"], ["[Instrumental]", 1, ""]] },
+     { group: "A section and how it is sung (after a dash or a colon)", rows: [
+       ["[Verse 1 – Male voice (raspy, relaxed)]", 1, ""], ["[Chorus – Both voices (call & response)]", 1, ""], ["[Pre-Chorus – Sung softly]", 1, ""],
+       ["[Verse 1 – Melodic Rap / Spoken Rhythmically]", 1, ""], ["[Intro – Muse (whispered)]", 1, ""], ["[Intro – Warlord (spoken/half-sung)]", 1, ""],
+@@ -262,7 +263,7 @@
+   }
+   function addLyricTag(tag, hand) {
+     var ly = $("lyrics");
+-    if (!ly || !tag) return;
++    if (!ly || !tag) return "";
+     var at = ly.selectionStart, end = ly.selectionEnd, v = ly.value, ins = tag;
+     if (hand) ins = tag === "( )" ? "()" : tag;
+     else {
+@@ -273,9 +274,29 @@
+     var caret = at + ins.length - (hand && tag === "( )" ? 1 : 0);
+     ly.setSelectionRange(caret, caret);
+     ly.dispatchEvent(new Event("input", { bubbles: true }));
+-    state.hooks.toast("Into the lyrics: " + tag);
++    return "Into the lyrics: " + tag;
++  }
++  // HERESY 1169 (Viktor 07.10.2026: «В шпаргалке по стилям и инструментам проблемка. Не работает кликание, вставка,
++  // копирование»): the click did put a name into the Style prompt, but its words showed under the sheet (the toasts stand over
++  // it now) and the prompt is under the sheet too: a name the prompt holds is marked in the sheet itself, at once on a click
++  function markIn() {
++    var st = $("style"), v = st ? fold(st.value) : "";
++    Array.prototype.forEach.call(document.querySelectorAll("#hiTable [data-hi-tag]"), function (b) {
++      var f = fold(b.dataset.hiTag);
++      b.classList.toggle("is-in", !!v && !!f && v.indexOf(f) >= 0);
++    });
+   }
+-  function paint() {
++  // and a name clicked goes onto the clipboard as well (its pointer always said copy), the page's own way, which works over
++  // plain http too (app.js ruachCopyText); the words say whether the clipboard took it
++  function said(words, text) {
++    if (!words) return;
++    var put = window.ruachCopyText || function (x) { return navigator.clipboard.writeText(x); };
++    Promise.resolve().then(function () { return put(text); })
++      .then(function () { return true; }, function () { return false; })
++      .then(function (ok) { state.hooks.toast(words + (ok ? " \u00b7 copied" : "")); });
++  }
++  function paint() { paintTable(); markIn(); }
++  function paintTable() {
+     Array.prototype.forEach.call(document.querySelectorAll("[data-hi-tab]"), function (b) { b.classList.toggle("is-on", b.dataset.hiTab === state.tab); });
+     $("hiFam").hidden = $("hiHeardBox").hidden = state.tab !== "instruments";
+     if (state.tab === "styles") return paintStyles();
+@@ -311,7 +332,7 @@
+       // the warning in a line, a legend of four, how the probes were made folded
+       '<p class="hi-warn"><b>⚠ A name in the style is a request, not a promise.</b> What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.</p>' +
+       '<ul class="hi-legend">' +
+-      '<li><b>Click a name</b><span>it goes into the Style prompt</span></li>' +
++      '<li><b>Click a name</b><span>it goes into the Style prompt and onto the clipboard</span></li>' +
+       '<li><b>▶ A · ▶ B</b><span>its two probes, their seeds under them</span></li>' +
+       '<li><b class="hi-lg-ok">✓ heard</b><span>the ear heard it and kept it; <em class="hi-lg-no">red</em>: not played when named alone</span></li>' +
+       // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
+@@ -333,9 +354,9 @@
+       var t = e.target.closest("[data-hi-tag]"), p = e.target.closest("[data-hi-play]"), a = e.target.closest("[data-hi-art]"), tb = e.target.closest("[data-hi-tab]");
+       if (tb) { state.tab = tb.dataset.hiTab; return paint(); }
+       if (a && window.HeresyArt) return window.HeresyArt.show(a.dataset.hiArt, Array.prototype.map.call($("hiTable").querySelectorAll("[data-hi-art]"), function (b) { return b.dataset.hiArt; }));
+-      if (t) return addTag(t.dataset.hiTag);
++      if (t) return said(addTag(t.dataset.hiTag), t.dataset.hiTag);
+       var lt = e.target.closest("[data-hi-lyr]");
+-      if (lt) return addLyricTag(lt.dataset.hiLyr, !!lt.dataset.hiHand);   // HERESY 1168
++      if (lt) return said(addLyricTag(lt.dataset.hiLyr, !!lt.dataset.hiHand), lt.dataset.hiLyr);   // HERESY 1168
+       if (p) { var take = state.hooks.findTake(p.dataset.hiPlay); if (take) state.hooks.playNow(take); else state.hooks.toast("The probe is not in the library now", "bad"); }
+     });
+     $("hiSearch").addEventListener("input", function () { state.q = this.value; paint(); });
+@@ -343,14 +364,16 @@
+     $("hiHeard").addEventListener("change", function () { state.heard = this.checked; paint(); });
+     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !back.hidden) close(); });
+   }
++  // what a click did, in words (said() says them once the clipboard has answered)
+   function addTag(tag) {
+     var st = $("style");
+-    if (!st || !tag) return;
++    if (!st || !tag) return "";
+     var v = st.value.replace(/\s+$/, "");
+-    if (fold(v).indexOf(fold(tag)) >= 0) return state.hooks.toast("“" + tag + "” is in the style already");
++    if (fold(v).indexOf(fold(tag)) >= 0) return ("“" + tag + "” is in the style already");
+     st.value = v ? v.replace(/[.,;]?$/, ", ") + tag : tag;
+     st.dispatchEvent(new Event("input", { bubbles: true }));
+-    state.hooks.toast("Into the style: " + tag);
++    markIn();
++    return "Into the style: " + tag;
+   }
+   function open(q, tab) {
+     if (!$("hiBack")) build();
+-- 
+2.43.0
+

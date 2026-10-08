@@ -430,6 +430,20 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         ~LoraScope() { p->loras.reset(); }
     } lora_scope = { p };
     p->last_error.clear();
+    g_nar_error.clear();   // HERESY 1169
+    g_vae_error.clear();
+    // HERESY 1169: the music's KV sets were allocated as a request asked and never given back: after two guided probes four
+    // sets (10.75 GB at the whole window) stayed, and a long song's sound found no room after them. More than two (one
+    // guided probe, what most runs ask) go when this request is done, whichever way it ends; the next one asks for its own
+    struct KvTrim {
+        Qw3lmKvCache * kv;
+        ~KvTrim() {
+            if (kv->n_sets > 2) {
+                fprintf(stderr, "[LM-KV] Released %d sets: the next run allocates what it needs\n", kv->n_sets);
+                qw3lm_kv_free(kv);
+            }
+        }
+    } kv_trim{ &p->kv };
     p->broken_score.clear();
     if (!r.loras.empty()) {
         std::string error;
@@ -764,7 +778,23 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                 int gm = std::min(group, M - g0);
                 if (!nar_solve(nar, &p->kv, block.data() + span * (size_t) g0, frames, gm, ar_len, i, r.steps, dbg,
                                cancelled, cancel_data, r.solver)) {
-                    return false;
+                    // HERESY 1169: out of memory with several at once: one at a time, before the run gives up
+                    bool ok = false;
+                    if (gm > 1 && !g_nar_error.empty()) {
+                        fprintf(stderr, "[NAR] Song %d: %d variations did not fit at once; one at a time\n", i, gm);
+                        g_nar_error.clear();
+                        ok = true;
+                        for (int j = 0; j < gm && ok; j++) {
+                            ok = nar_solve(nar, &p->kv, block.data() + span * (size_t) (g0 + j), frames, 1, ar_len, i, r.steps,
+                                           dbg, cancelled, cancel_data, r.solver);
+                        }
+                    }
+                    if (!ok) {
+                        if (!g_nar_error.empty()) {
+                            p->last_error = g_nar_error;
+                        }
+                        return false;
+                    }
                 }
             }
             for (int j = 0; j < M; j++) {
@@ -790,6 +820,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         song.T_audio = vae_ggml_decode_tiled(vae, song.latents.data(), song.T_lat, song.audio.data(), max_T_audio,
                                              p->params.vae_core, p->params.vae_halo, cancelled, cancel_data);
         if (song.T_audio < 0) {
+            if (!g_vae_error.empty()) {
+                p->last_error = g_vae_error;   // HERESY 1169
+            }
             return false;
         }
         song.audio.resize((size_t) 2 * song.T_audio);
@@ -832,9 +865,13 @@ static bool pipeline_decode_latents(Yue2Pipeline * p, const std::string & vae_na
     fprintf(stderr, "[VAE] Kept latents: %d frames, decoded again by %s\n", song->T_lat,
             vae_name.empty() ? "the default decoder" : vae_name.c_str());
     song->audio.assign((size_t) 2 * max_T_audio, 0.0f);
+    g_vae_error.clear();   // HERESY 1169
     song->T_audio = vae_ggml_decode_tiled(vae, song->latents.data(), song->T_lat, song->audio.data(), max_T_audio,
                                           p->params.vae_core, p->params.vae_halo, cancelled, cancel_data);
     if (song->T_audio < 0) {
+        if (!g_vae_error.empty()) {
+            p->last_error = g_vae_error;
+        }
         return false;
     }
     song->audio.resize((size_t) 2 * song->T_audio);

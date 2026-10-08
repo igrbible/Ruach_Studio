@@ -16,7 +16,12 @@
     // is 15:00 at 25 a second; the engine cuts the budget to what fits beside the style and the
     // text (HERESY 1032), and a reading that runs into that cut is marked truncated.
     { name: "Speech · up to 15:00", builtin: true, request: { cot: "off", duration: 900, cfg_scale: 1.6, abc_sampling: ABC,
-      semantic_sampling: Object.assign({ max_tokens: 22500 }, SEM) } }
+      semantic_sampling: Object.assign({ max_tokens: 22500 }, SEM) } },
+    // HERESY 1169 (Viktor 08.10.2026: «Запиши эти параметры как максимально консервативные, но в русском языке весьма идеальные.
+    // Нет ускорений, умеренная речь в рЕпе, просто чудеса»): Composition low, Performance low, Style influence high; 32 Midpoint
+    { name: "Russian · conservative (Viktor's)", builtin: true, request: { cot: "full", duration: 480, cfg_scale: 1.8, steps: 32, solver: "midpoint",
+      abc_sampling: Object.assign({}, ABC, { temperature: 0.85, top_p: 0.92, top_k: 40 }),
+      semantic_sampling: Object.assign({ max_tokens: 12000 }, SEM, { temperature: 0.85, top_p: 0.93, top_k: 80 }) } }
   ];
   var state = { styles: [], setups: [], hooks: null };
   var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();

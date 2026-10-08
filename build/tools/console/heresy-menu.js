@@ -7,10 +7,32 @@
 (function () {
   "use strict";
 
-  var root = null, stack = [], anchor = null;
+  var root = null, stack = [], anchor = null, tipEl = null;
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 
+  // HERESY 1169 · 1248 (Viktor 08.10.2026: «Мышечное меню… твои мини подсказки на некоторых опциях срезают текст… урезана до R. Лучше прямо
+  // с боку от меню выводить небольшой тултип при наведении указателя мыши на ту или иную команду, а inline подсказки вообще оттуда убрать и
+  // держать это контекстное меню аккуратным»): an item's hint is not written in its row; pointed at or reached by the keys, it shows beside
+  // the menu, level with the item, on the side with room, in the page's language as it is written
+  function hintShow(entry, b) {
+    var it = entry.items[+b.dataset.i];
+    if (!it || !it.hint || it.items) { hintHide(); return; }
+    if (!tipEl) {
+      tipEl = document.createElement("div");
+      tipEl.className = "hm-tip";
+      tipEl.setAttribute("role", "tooltip");
+      document.body.appendChild(tipEl);
+    }
+    tipEl.textContent = window.RuachI18n ? window.RuachI18n.t(it.hint) : it.hint;
+    tipEl.hidden = false;
+    var m = entry.el.getBoundingClientRect(), r = b.getBoundingClientRect(), w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+    tipEl.style.left = (m.right + 6 + w <= window.innerWidth - 6 ? m.right + 6 : Math.max(6, m.left - 6 - w)) + "px";
+    tipEl.style.top = Math.max(6, Math.min(r.top + r.height / 2 - h / 2, window.innerHeight - h - 6)) + "px";
+  }
+  function hintHide() { if (tipEl) tipEl.hidden = true; }
+
   function close() {
+    hintHide();
     stack.forEach(function (m) { m.el.remove(); });
     stack = [];
     if (root) { document.removeEventListener("keydown", onKey, true); root = null; }
@@ -26,7 +48,7 @@
       return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + '" role="menuitem" data-i="' + i + '"' +
         (it.disabled ? " disabled" : "") + (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + ">" +
         '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label"' + (it.raw ? ' translate="no"' : "") + ">" + esc(it.label) + "</span>" +
-        (it.items ? '<span class="hm-more">›</span>' : it.hint ? '<span class="hm-hint">' + esc(it.hint) + "</span>" : "") + "</button>";
+        (it.items ? '<span class="hm-more">›</span>' : "") + "</button>";   // HERESY 1169 · 1248: the hint beside the menu (hintShow), not in the row
     }).join("");
     document.body.appendChild(el);
     var entry = { el: el, items: items, level: level };
@@ -48,6 +70,8 @@
         if (it.items) openSub(entry, b, it); else trim(level);
       }, 140);
     });
+    el.addEventListener("focusin", function (e) { var b = e.target.closest(".hm-item"); if (b) hintShow(entry, b); });   // the pointer focuses too
+    el.addEventListener("mouseleave", hintHide);
     el.addEventListener("contextmenu", function (e) { e.preventDefault(); });
     return entry;
   }

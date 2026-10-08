@@ -294,6 +294,10 @@ VAEGGML * store_require_vae(ModelStore * s, const ModelKey & k) {
     }
     if (s->policy == EVICT_STRICT) {
         evict_conflicts(s, k);
+    } else {
+        // Local addition (HERESY 1169): one decoder on the card at a time, as the LM and the NAR above. Each keeps its
+        // working buffer (3.1 GB for 1024-frame tiles), and a third one decoding beside two idle ones ran out of memory
+        evict_same_kind_idle(s, k);
     }
     Timer     t;
     VAEGGML * m = new VAEGGML();

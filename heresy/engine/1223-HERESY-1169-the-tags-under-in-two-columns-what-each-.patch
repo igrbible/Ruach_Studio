@@ -1,0 +1,249 @@
+From ae4e50f256ec88c1e738b73971966df9c8c5fc4f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 00:02:13 -0600
+Subject: [PATCH 1223/1252] =?UTF-8?q?HERESY=201169:=20the=20tags=20under?=
+ =?UTF-8?q?=20=C2=AB[=C2=BB=20in=20two=20columns,=20what=20each=20section?=
+ =?UTF-8?q?=20is=20beside=20the=20list=20(after=20Genius's=20guide),=20the?=
+ =?UTF-8?q?=20box=20one=20size;=20Genius's=20sections=20the=20examples=20n?=
+ =?UTF-8?q?ever=20write=20marked=20TEST?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «Вот нашёл документ… https://genius.com/Genius-song-sections-and-headers-guide-annotated. Пройдись по нему и вычлени для всех наших тегов YuE2 описаловки и поправь всё в попапе выбора тега… Две колонки, высота селектора не изменяется, если только в подвал не упирается. В левой фиксированной теги. А в правой красиво и крупновато - описания. И также по остальным, что не найдены в 110 примерах официальных добавь и эти, но пометь как тестовые».
+
+The descriptions are our own words. The counts were taken again on the 110 examples by one rule: a header's name before a dash, a colon or its number, in any case. [Instrumental Intro] (5) turned up among them. Instrumental Outro, Skit, Segue, Part, Scatting, Yodeling and Non-Lyrical Vocals are TEST: offered last and amber in the sheet. The columns are 300 px high whatever the list holds, lower only where the player would cut them.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 18 +++++++---
+ tools/console/heresy-complete.js    | 52 ++++++++++++++++++++---------
+ tools/console/heresy-instruments.js | 47 ++++++++++++++++++++------
+ 3 files changed, 87 insertions(+), 30 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 4c88200..83efaa3 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4390,7 +4390,17 @@ body[data-frame="compose"] .compose > .submit-bar { padding-top: 9px; padding-bo
+ .hi-tag.is-in { background: color-mix(in srgb, var(--amber) 24%, transparent); border-radius: 2px;
+   box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 24%, transparent); }
+ .hi-box :is(.hi-table, .hi-warn, .hi-legend, .hi-more) { -webkit-user-select: text; user-select: text; }
+-/* HERESY 1169 (Viktor 07.10.2026: «Ширину зафиксируй в дропдауне подстановки по `[`»): the list as wide whatever the tag in
+-   hand says of itself, and its note two lines high always, so neither the box nor its rows move as the choice moves */
+-.tc-pop { width: min(460px, calc(100vw - 8px)); }
+-.tc-note { min-height: 2.8em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
++/* HERESY 1169 (Viktor 07.10.2026: «Ширину зафиксируй в дропдауне подстановки по `[`»; 08.10: «Две колонки, высота селектора не
++   изменяется, если только в подвал не упирается. В левой фиксированной теги. А в правой красиво и крупновато - описания»): the
++   tags in a column of their own, what the one in hand is beside it, larger; the box as wide and as high whatever it holds,
++   lower only where the player would cut it (heresy-complete.js sets --tc-h); TEST: none of the 110 examples writes it */
++.tc-pop { width: min(620px, calc(100vw - 8px)); max-width: calc(100vw - 8px); }
++.tc-cols { display: grid; grid-template-columns: 236px minmax(0, 1fr); height: var(--tc-h, 300px); }
++.tc-cols > .tc-list { max-height: none; height: 100%; border-right: 1px solid var(--line-a); }
++.tc-about { overflow-y: auto; padding: 12px 16px 14px; display: grid; align-content: start; gap: 8px; }
++.tc-about-tag { font: 600 15px/1.35 var(--mono); color: var(--amber); overflow-wrap: anywhere; }
++.tc-about-say { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink); }
++.tc-about-n { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
++.tc-test, .hi-test { color: #d9a441; }
++.tc-item .tc-say.tc-test, .hi-test { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; }
++tr.is-test .hi-tag { color: #d9a441; }
+diff --git a/tools/console/heresy-complete.js b/tools/console/heresy-complete.js
+index ef85650..e8a3da7 100644
+--- a/tools/console/heresy-complete.js
++++ b/tools/console/heresy-complete.js
+@@ -13,6 +13,12 @@
+ // dimmed, with their line, and are not put in twice; a numbered tag already there likewise. Ctrl+Space opens the list on
+ // a «[» line, and at a line's start types the «[» itself: no Latin layout needed for it.
+ //
++// HERESY 1169 (Viktor 08.10.2026: «Две колонки, высота селектора не изменяется, если только в подвал не упирается. В левой
++// фиксированной теги. А в правой красиво и крупновато - описания»; «по остальным, что не найдены в 110 примерах официальных
++// добавь и эти, но пометь как тестовые»): the tags in a column, what the one in hand is beside it (the cheat-sheet's words,
++// after Genius's guide to song sections) with how often the examples write it; the box as high whatever the list holds,
++// lower only where the player would cut it; Genius's sections none of the examples writes last, marked TEST.
++//
+ //   HeresyComplete.attach(textarea) · HeresyComplete.state()   (the last for the checks)
+ (function () {
+   "use strict";
+@@ -20,10 +26,11 @@
+   var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude"], ONCE = ["Intro", "Outro", "End"];
+   // as Viktor writes it (thirty songs of his end so; «Да, измени»), where the official examples write [End]
+   var SPELL = { End: "END" };
++  var TALL = 300;                                   // the two columns' height, px
+   var ONCE_HEAD = { Intro: /^intro(duction)?$/, Outro: /^outro$/, End: /^ends?$/ };
+   // the keys of a Russian (and Ukrainian) layout, as the Latin letters on the same keys
+   var RU = "йцукенгшщзхъфывапролджэячсмитьбюё", EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`", UK = { "і": "s", "ї": "]", "є": "'", "ґ": "`" };
+-  var pop = null, list = null, foot = null, box = null, items = [], at = -1, from = -1, shut = -1, query = null, mirror = null, queued = false;
++  var pop = null, list = null, about = null, foot = null, box = null, items = [], at = -1, from = -1, shut = -1, query = null, mirror = null, queued = false;
+ 
+   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+@@ -32,8 +39,8 @@
+   // the tags offered, in their order: the common sections, the three a song has once, the rest as the examples count them
+   function ordered() {
+     var g = window.HeresyInstruments && window.HeresyInstruments.lyricTags ? window.HeresyInstruments.lyricTags()[0] : null;
+-    var rows = (g ? g.rows : []).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: r[1], note: r[2] }; });
+-    if (!rows.length) rows = FIRST.concat(ONCE).map(function (name) { return { name: name, n: 0, note: "" }; });
++    var rows = (g ? g.rows : []).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: r[1], note: r[2], test: !r[1] }; });
++    if (!rows.length) rows = FIRST.concat(ONCE).map(function (name) { return { name: name, n: 0, note: "", test: false }; });
+     var by = {};
+     rows.forEach(function (r) { by[r.name] = r; });
+     return FIRST.concat(ONCE).map(function (n) { return by[n]; }).filter(Boolean)
+@@ -80,12 +87,12 @@
+       var name = SPELL[t.name] || t.name, next = false;
+       if (num) name += " " + num;
+       else if (t.name === "Verse" && have.verse) { name = "Verse " + (have.verse + 1); next = true; }
+-      var it = { tag: "[" + name + "]", note: t.note, n: t.n, rank: r, k: k, next: next };
++      var it = { tag: "[" + name + "]", note: t.note, n: t.n, rank: r, k: k, next: next, test: !!t.test };
+       if (ONCE.indexOf(t.name) >= 0 && have.once[t.name] !== undefined) it.there = have.once[t.name];
+       else if (name !== (SPELL[t.name] || t.name) && have.named[name.toLowerCase()] !== undefined) it.there = have.named[name.toLowerCase()];
+       out.push(it);
+     });
+-    return out.sort(function (a, b) { return ((a.there !== undefined) - (b.there !== undefined)) || (a.rank - b.rank) || (a.k - b.k); });
++    return out.sort(function (a, b) { return ((a.there !== undefined) - (b.there !== undefined)) || (a.test - b.test) || (a.rank - b.rank) || (a.k - b.k); });
+   }
+ 
+   // the «[» the cursor stands after, at its line's start, nothing but its letters between: where it is and what follows it.
+@@ -104,9 +111,11 @@
+     pop.className = "tc-pop";
+     pop.id = "tcPop";
+     pop.hidden = true;
+-    pop.innerHTML = '<div class="tc-list" role="listbox" id="tcList" aria-label="Section tags"></div><div class="tc-foot" aria-live="polite"></div>';
++    pop.innerHTML = '<div class="tc-cols"><div class="tc-list" role="listbox" id="tcList" aria-label="Section tags"></div>' +
++      '<div class="tc-about" aria-live="polite"></div></div><div class="tc-foot"></div>';
+     document.body.appendChild(pop);
+     list = pop.querySelector(".tc-list");
++    about = pop.querySelector(".tc-about");
+     foot = pop.querySelector(".tc-foot");
+     pop.addEventListener("mousedown", function (e) { e.preventDefault(); });   // the box keeps the cursor
+     pop.addEventListener("click", function (e) {
+@@ -119,10 +128,12 @@
+     });
+   }
+ 
+-  function note(it) {
++  // what the examples say of it, under its words in the column beside the list
++  function count(it) {
+     if (it.there !== undefined) return tr("Already in the lyrics, line {0}: a song has one").replace("{0}", it.there + 1);
+-    var n = it.n ? tr("{0} times in the 110 official examples").replace("{0}", it.n) : "";
+-    return [it.next ? tr("The lyrics number their verses: this is the next one") : it.note, n].filter(Boolean).join(" · ");
++    if (it.next) return tr("The lyrics number their verses: this is the next one");
++    if (it.test) return "TEST: none of the 110 official examples writes it, so YuE2 may sing it as words or pass it by. Listen before you keep it.";
++    return it.n ? tr("{0} times in the 110 official examples").replace("{0}", it.n) : "";
+   }
+ 
+   // the list drawn anew when it narrows; the one in hand only marked when the keys or the mouse move it (the rows stay, so a
+@@ -130,17 +141,19 @@
+   function render() {
+     list.innerHTML = items.map(function (it, i) {
+       var there = it.there !== undefined;
+-      var say = there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.n ? "×" + it.n : "";
++      var say = there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.test ? "TEST" : it.n ? "×" + it.n : "";
+       return '<div class="tc-item' + (there ? " is-there" : "") + '" role="option" id="tcOpt' + i + '" data-i="' + i + '" aria-selected="false"' +
+-        (there ? ' aria-disabled="true"' : "") + '><span class="tc-tag" translate="no">' + esc(it.tag) + '</span><span class="tc-say">' + esc(say) + "</span></div>";
++        (there ? ' aria-disabled="true"' : "") + '><span class="tc-tag" translate="no">' + esc(it.tag) + '</span><span class="tc-say' + (it.test && !there && !it.next ? " tc-test" : "") + '">' + esc(say) + "</span></div>";
+     }).join("");
+     mark(true);
+   }
+   function mark(scroll) {
+     Array.prototype.forEach.call(list.children, function (o, i) { o.classList.toggle("is-on", i === at); o.setAttribute("aria-selected", i === at ? "true" : "false"); });
+-    var cur = items[at];
+-    foot.innerHTML = '<span class="tc-note">' + esc(cur ? note(cur) : "") + "</span>" +      // HERESY 1169: always, two lines high
+-      '<span class="tc-keys">' + esc(tr("↑ ↓ choose · Enter or Tab puts it in · Esc closes")) + "</span>";
++    var cur = items[at], said = cur ? count(cur) : "";
++    about.innerHTML = cur ? '<div class="tc-about-tag" translate="no">' + esc(cur.tag) + "</div>" +
++      (cur.note ? '<p class="tc-about-say">' + esc(cur.note) + "</p>" : "") +
++      (said ? '<p class="tc-about-n' + (cur.test && !cur.next ? " tc-test" : "") + '">' + esc(said) + "</p>" : "") : "";
++    foot.innerHTML = '<span class="tc-keys">' + esc(tr("↑ ↓ choose · Enter or Tab puts it in · Esc closes")) + "</span>";
+     box.setAttribute("aria-expanded", "true");
+     if (cur) box.setAttribute("aria-activedescendant", "tcOpt" + at); else box.removeAttribute("aria-activedescendant");
+     var on = list.children[at];
+@@ -182,8 +195,15 @@
+     var top = r.top + k * (bt + p.top - box.scrollTop), bottom = top + k * lh;
+     if (bottom < r.top || top > r.bottom) return hide();              // the line scrolled out of the box's view
+     var bar = document.getElementById("playbar"), floor = bar && bar.getClientRects().length ? Math.min(window.innerHeight, bar.getBoundingClientRect().top) : window.innerHeight;
+-    var w = pop.offsetWidth, h = pop.offsetHeight, y = bottom + 3;
+-    if (y + h > floor - 4 && top - h - 3 >= 4) y = top - h - 3;
++    // the columns as high whatever the list holds: under the line when they fit there, over it when they fit there, else
++    // lower, on the roomier side (Viktor: «высота селектора не изменяется, если только в подвал не упирается»)
++    var foot1 = foot.offsetHeight + 2, below = floor - 4 - (bottom + 3), above = top - 3 - 4, h = TALL, under = true;
++    if (below < TALL + foot1) {
++      if (above >= TALL + foot1) under = false;
++      else { under = below >= above; h = Math.max(96, (under ? below : above) - foot1); }
++    }
++    pop.style.setProperty("--tc-h", h + "px");
++    var w = pop.offsetWidth, y = under ? bottom + 3 : top - (h + foot1) - 3;
+     pop.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, r.left + k * (bl + p.left - box.scrollLeft) - 10)) + "px";
+     pop.style.top = Math.max(4, y) + "px";
+   }
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index a6a52fd..edbcb08 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -215,15 +215,41 @@
+   // examples write them (how often, counted 07.10.2026), and Viktor's phonetic hand. A click puts a tag into the
+   // lyrics where the cursor stands, on a line of its own; a mark of the hand goes in where the cursor stands.
+   // HERESY 1169 (Viktor 07.10.2026: «те суно теги `[Break]`, если уж нет их в оф. примерах… Они не работают. Вычисти оттуда
+-  // то, чего нет в оф примерах YuE2»): only what the examples write; [Break] and the studio's own [Inst] are gone
++  // то, чего нет в оф примерах YuE2»): only what the examples write; [Break] and the studio's own [Inst] are gone.
++  // HERESY 1169 (Viktor 08.10.2026: «Вот нашёл документ… https://genius.com/Genius-song-sections-and-headers-guide-annotated.
++  // Пройдись по нему и вычлени для всех наших тегов YuE2 описаловки… И также по остальным, что не найдены в 110 примерах
++  // официальных добавь и эти, но пометь как тестовые»): what each section is, in our words after Genius's guide to song
++  // sections, recounted on the 110 examples (build/tools/webui/example: a header's name before a dash, a colon or its number,
++  // any case; Prechorus, Ends, Fadeout and Instrumental Introduction with theirs). Genius's sections none of them writes
++  // come last with 0: TEST, YuE2 may sing them as words or pass them by
+   var LYRIC_TAGS = [
+-    { group: "Sections YuE2 knows (×: how often the 110 official examples write it)", rows: [
+-      ["[Verse]", 145, "Verse 1, Verse 2… a numbered one counts as the same"], ["[Chorus]", 187, "the hook the song comes back to"],
+-      ["[Pre-Chorus]", 61, "Prechorus too (8)"], ["[Bridge]", 47, "measured with the verses in the meter"], ["[Outro]", 37, ""],
+-      ["[Intro]", 21, "its lines are seldom sung: put a spoken intro under [Interlude] or [Verse]"], ["[Interlude]", 18, "Viktor: a pause in rap, a brake on speech that runs ahead"],
+-      ["[Final Chorus]", 9, ""], ["[End]", 7, "Ends too"], ["[Instrumental Break]", 9, "with what plays: «Instrumental Break - Horns»"],
+-      ["[Guitar Solo]", 8, "Drum Solo, Keyboard Solo, Solo"], ["[Refrain]", 4, "Refrain 1…4"], ["[Post-Chorus]", 3, ""], ["[Breakdown]", 2, ""],
+-      ["[Fade Out]", 2, "Fadeout, Instrumental fade out"], ["[Hook]", 1, ""], ["[Drop]", 1, "Beat drops – …"], ["[Instrumental]", 1, ""]] },
++    { group: "Sections (×: how often the 110 official examples write one; TEST: none does, Genius's guide to song sections names it)", rows: [
++      ["[Verse]", 163, "The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the studio offers the next number."],
++      ["[Chorus]", 201, "The part the song comes back to, the same words and melody each time, with the line people remember and sing along."],
++      ["[Pre-Chorus]", 63, "The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Also written Prechorus."],
++      ["[Bridge]", 56, "Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. The meter counts it with the verses."],
++      ["[Outro]", 46, "The ending: a last line repeated as the music fades, or the chorus once more with a change that resolves the song."],
++      ["[Intro]", 34, "The opening before the first verse, mostly music. YuE2 seldom sings its lines: put a spoken intro under [Interlude] or [Verse]."],
++      ["[Interlude]", 18, "A passage of another feel between parts, often without words. Viktor's use: a pause in rap that brakes speech running ahead."],
++      ["[Final Chorus]", 11, "The last chorus, usually the biggest: more voices, more power, now and then a key change."],
++      ["[Instrumental Break]", 11, "The instruments alone between sections, for variety or to build into the next one. Name what plays: «Instrumental Break - Horns»."],
++      ["[Guitar Solo]", 8, "One instrument steps forward with a long melody of its own while the rest backs it. The examples also write Drum Solo, Keyboard Solo and plain Solo."],
++      ["[End]", 7, "The song's last mark: the music stops here. Viktor writes [END]; the examples also write Ends."],
++      ["[Instrumental Intro]", 5, "An opening played without voices. Also written Instrumental Introduction."],
++      ["[Refrain]", 4, "A line or two repeated unchanged at the end of each verse: part of the verse, not a section of its own as a chorus is."],
++      ["[Post-Chorus]", 3, "A short part right after the chorus that carries its energy on (a chant, a riff, a tag line) before the next verse."],
++      ["[Breakdown]", 2, "The music cut to its bones: heavy, simple riffs and pounding drums (metal and its kin), or a stripped beat in dance music."],
++      ["[Fade Out]", 2, "The music fades to silence. Also written Fadeout; Instrumental Fade Out once."],
++      ["[Hook]", 1, "The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now."],
++      ["[Drop]", 1, "Dance and electronic music: the moment beat and bass hit after a build-up."],
++      ["[Instrumental]", 1, "A part, or a whole song, played without singing."],
++      ["[Instrumental Outro]", 0, "An ending played without voices."],
++      ["[Skit]", 0, "A short scene acted out apart from the song: voices and something happening, not singing."],
++      ["[Segue]", 0, "A spoken or played passage that joins two songs within one track."],
++      ["[Part]", 0, "One of the songs a long track is made of, numbered in Roman numerals (Part I, Part II); the verses keep counting across the parts."],
++      ["[Scatting]", 0, "Wordless syllables sung like an instrument, as in jazz."],
++      ["[Yodeling]", 0, "Quick leaps between chest and head voice, as in an alpine yodel."],
++      ["[Non-Lyrical Vocals]", 0, "Voices without words: oohs, aahs, hums, a vocalise."]] },
+     { group: "A section and how it is sung (after a dash or a colon)", rows: [
+       ["[Verse 1 – Male voice (raspy, relaxed)]", 1, ""], ["[Chorus – Both voices (call & response)]", 1, ""], ["[Pre-Chorus – Sung softly]", 1, ""],
+       ["[Verse 1 – Melodic Rap / Spoken Rhythmically]", 1, ""], ["[Intro – Muse (whispered)]", 1, ""], ["[Intro – Warlord (spoken/half-sung)]", 1, ""],
+@@ -252,10 +278,11 @@
+       if (!rows.length) return;
+       n += rows.length;
+       html += '<tr class="hi-fam"><th colspan="4">' + esc(g.group) + " <em>" + rows.length + "</em></th></tr>" + rows.map(function (r) {
+-        return '<tr class="is-heard"><td class="hi-name"><button type="button" class="hi-tag" data-hi-lyr="' + esc(r[0]) + '"' + (g.hand ? ' data-hi-hand="1"' : "") +
++        return '<tr class="' + (r[1] || g.hand ? "is-heard" : "is-test") + '"><td class="hi-name"><button type="button" class="hi-tag" data-hi-lyr="' + esc(r[0]) + '"' + (g.hand ? ' data-hi-hand="1"' : "") +
+           ' translate="no" data-tip="' + (g.hand ? "into the lyrics, where the cursor stands" : "into the lyrics, on a line of its own") + '">' + esc(g.hand ? (r[3] ? r[0] + "  ·  " + r[3] : r[0]) : r[0]) + "</button></td>" +
+           '<td class="hi-say" colspan="2"><div>' + esc(r[2]) + "</div></td>" +
+-          '<td class="hi-plays mono">' + (r[1] ? "×" + esc(String(r[1])) : "") + "</td></tr>";
++          '<td class="hi-plays mono">' + (r[1] ? "×" + esc(String(r[1])) : g.hand ? "" :
++            '<span class="hi-test" data-tip="None of the 110 official examples writes it: YuE2 may sing it as words or pass it by">TEST</span>') + "</td></tr>";
+       }).join("");
+     });
+     $("hiTable").innerHTML = html || '<tr><td class="row-hint">Nothing matches.</td></tr>';
+-- 
+2.43.0
+

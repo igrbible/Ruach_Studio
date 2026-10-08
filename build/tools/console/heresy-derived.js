@@ -14,6 +14,13 @@
   function fileUrl(name, path) { return "/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
   var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz" };
   var MODE = { vocals: "vocals + instrumental", four: "four stems" };
+  // HERESY 1169: a set of stems split from a file of the tree (the chain splits the debuzzed or upscaled take) says which
+  function fromWhat(src) {
+    var dir = String(src || "").replace(/^derived\//, "").split("/")[0];
+    var m = /^(debuzz|upscale)-([a-z0-9]+)-\d{8}-(\d\d)(\d\d)/.exec(dir);
+    return !m ? dir : (m[1] === "debuzz" ? "debuzzed " + m[2] + " %" : "upscaled, " + m[2]) + " \u00b7 " + m[3] + ":" + m[4];
+  }
+  function stemsFrom(m) { return m.kind === "stems" && m.source && m.source !== "the take" ? ", from " + fromWhat(m.source) : ""; }
 
   function say(text, bad) {
     $("derivedState").textContent = text || "";
@@ -27,7 +34,7 @@
     state.list.forEach(function (m) {
       (m.files || []).forEach(function (f) {
         out.push({ name: take.name, source: f.path, url: fileUrl(take.name, f.path), kind: m.kind,
-                   label: "↳ " + f.name + " (" + (KIND[m.kind] || m.kind) + (m.mode ? ", " + (MODE[m.mode] || m.mode) : "") + ")" });
+                   label: "↳ " + f.name + " (" + (KIND[m.kind] || m.kind) + (m.mode ? ", " + (MODE[m.mode] || m.mode) : "") + stemsFrom(m) + ")" });
       });
     });
     return out;
@@ -76,7 +83,7 @@
     });
     state.list.forEach(function (m) {
       html += '<div class="dv-group" data-dv-id="' + esc(m.id || "") + '" data-kind="' + esc(m.kind || "") + '"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
-        (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
+        (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + esc(stemsFrom(m).replace(", from", " · from")) + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
         (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
         (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
@@ -155,7 +162,7 @@
   }
   function madeLabel(m) {
     var s = m.settings || {}, at = String(m.created || "").slice(11, 16);
-    var what = m.kind === "stems" ? (MODE[m.mode] || m.mode || "stems")
+    var what = m.kind === "stems" ? (MODE[m.mode] || m.mode || "stems") + stemsFrom(m)
       : m.kind === "remaster" ? (m.source && m.source !== "the take" ? (s.preset || "balanced") + " from stems" : "from the take") + (s.loudnorm !== false ? ", " + (s.lufs || -14) + " LUFS" : "")
       : m.kind === "upscale" ? (m.mode || "upscale") + ", " + ((m.files || []).length) + " file" + ((m.files || []).length === 1 ? "" : "s")
       : m.kind === "debuzz" ? Math.round((m.strength || 0) * 100) + " %" : m.kind;
@@ -200,6 +207,7 @@
         paintSources();
         paintUpSources();
         paintDbSources();
+        paintStSources();
         // while Forge works on this take, look again every three seconds
         clearTimeout(state.watch);
         if (state.running.some(function (j) { return j.status !== "failed"; })) state.watch = setTimeout(refresh, 3000);
@@ -212,13 +220,23 @@
       });
   }
 
+  // HERESY 1169: the stems from the take or from a debuzzed or upscaled file of it (the chain splits them so)
+  function paintStSources() {
+    var sel = $("stSource");
+    if (!sel) return;
+    var keep = sel.value;
+    sel.innerHTML = '<option value="">the take</option>' + files().filter(function (f) { return f.kind === "debuzz" || f.kind === "upscale"; }).map(function (f) {
+      return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
+    }).join("");
+    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
+  }
   function split(mode) {
     if (!state.take) return;
-    var token = state.token, name = state.take.name, started = Date.now();
+    var token = state.token, name = state.take.name, started = Date.now(), src = $("stSource") ? $("stSource").value : "";
     var ticker = setInterval(function () { say("Forge is splitting (" + MODE[mode] + ")… " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
     all(true);
     function ask() {
-      return fetch("/lab/stems?name=" + encodeURIComponent(name) + "&mode=" + mode).then(function (r) {
+      return fetch("/lab/stems?name=" + encodeURIComponent(name) + "&mode=" + mode + (src ? "&source=" + encodeURIComponent(src) : "")).then(function (r) {
         return r.json().then(function (body) {
           if (r.status === 202) {
             if (token === state.token && !state.running.length) refresh();
@@ -247,20 +265,29 @@
     // HERESY 1030: a debuzzed file is a source too (the stems as a set, a debuzzed one as it is)
     var single = files().filter(function (f) { return f.kind === "debuzz"; });
     sel.innerHTML = '<option value="">the take</option>' + stems.map(function (m) {
-      return '<option value="derived/' + esc(m.id) + '">stems: ' + esc(MODE[m.mode] || m.mode) + "</option>";
+      return '<option value="derived/' + esc(m.id) + '">stems: ' + esc((MODE[m.mode] || m.mode) + stemsFrom(m)) + "</option>";
     }).join("") + single.map(function (f) {
       return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
     }).join("");
     sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
     paintLevels();
   }
+  // HERESY 1148: the preset and the de-esser act on stems before the Debunker mixes them; on a single file (the take, a
+  // debuzzed file) it goes straight on and they would do nothing, so they are off there, and the tip says why. HERESY 1169:
+  // the chain's Stems splits a set before its remaster, so while it is on they are live for the chain as well
+  function stemsPicked() {
+    var src = $("rmSource") ? $("rmSource").value : "";
+    return state.list.some(function (x) { return x.kind === "stems" && "derived/" + x.id === src; });
+  }
+  function paintRmLocks() {
+    var on = stemsPicked() || !!($("pcStems") && $("pcStems").checked);
+    ["rmPreset", "rmDeess", "rmDeessMode"].forEach(function (id) { if ($(id)) $(id).disabled = !on; });
+  }
   function paintLevels() {
     var src = $("rmSource").value, box = $("rmLevels");
     var m = state.list.filter(function (x) { return "derived/" + x.id === src; })[0];
     box.classList.toggle("is-hidden", !m);
-    // HERESY 1148: the preset and the de-esser act on stems before the Debunker mixes them; on a single file (the take, a
-    // debuzzed file) it goes straight on and they would do nothing, so they are off there, and the tip says why
-    ["rmPreset", "rmDeess", "rmDeessMode"].forEach(function (id) { if ($(id)) $(id).disabled = !m; });
+    paintRmLocks();
     if (!m) { box.innerHTML = ""; return; }
     var names = (m.files || []).map(function (f) { return f.name; });
     if (names.indexOf("drums") >= 0) names = names.filter(function (n) { return n !== "instrumental"; });   // the sum of the others
@@ -322,7 +349,7 @@
     var s = { source: $("rmSource").value, preset: $("rmPreset").value, levels: levels,
               cleanup: $("rmCleanup").checked, fade: parseFloat($("rmFade").value) || 0,
               trim_start: parseFloat($("rmTrimStart").value) || 0, trim_end: parseFloat($("rmTrimEnd").value) || 0,
-              deess: $("rmDeess").checked && !$("rmDeess").disabled, deess_mode: $("rmDeessMode").value, hz432: $("rm432").checked,
+              deess: $("rmDeess").checked && stemsPicked(), deess_mode: $("rmDeessMode").value, hz432: $("rm432").checked,
               loudnorm: $("rmLoud").checked, lufs: parseFloat($("rmLufs").value) || -14, tp: parseFloat($("rmTp").value) || -1,
               formats: $("rmMp3").checked ? ["wav", "flac", "mp3"] : ["wav", "flac"] };
     return s;
@@ -348,6 +375,7 @@
       $("rmRun").addEventListener("click", remaster);
       $("rmSource").addEventListener("change", paintLevels);
       paintLevels();                                      // HERESY 1148: the take is the source until stems exist
+      document.addEventListener("change", function (event) { if (event.target && event.target.id === "pcStems") paintRmLocks(); });
     }
     Array.prototype.forEach.call(document.querySelectorAll("[data-dv-split]"), function (b) {
       b.addEventListener("click", function () { split(b.dataset.dvSplit); });
@@ -498,5 +526,7 @@
     refresh();
   }
 
-  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings };
+  // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
+  function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
+  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess };
 })();

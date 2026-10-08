@@ -1,0 +1,42 @@
+From ed259d7cb9739fc38797677848d27cac44e6058a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 22:27:14 -0600
+Subject: [PATCH 1215/1252] HERESY 1169: the studio's questions read about four
+ pixels larger and wider (title 20, words 17, buttons 15); the Style's WARNING
+ tip four points smaller (12pt)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Пройдись через темплейт твоих всплывающих окон, и сделай крупнее шрифты… Если стоит 12, поднять на 16pt»; «предупреждение WARNING в стиле… массивный размер тултипа. Его как раз уменьшить на 4 пункта».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 04bcafe..3cfd8e1 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4360,3 +4360,16 @@ body[data-frame] :is(#view-compose, #view-take) > .col-head > .frame-tools { mar
+ .upd-line { margin: 0 0 10px; font-size: 14px; color: var(--ink); }
+ .upd-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
+ .upd-row select { width: auto; }
++/* HERESY 1169 (Viktor 07.10.2026: «Пройдись через темплейт твоих всплывающих окон, и сделай крупнее шрифты. На то они и
++   всплывающие, притянуть к себе внимание и дать человеку осознанно сделать тот или иной шаг. Если стоит 12, поднять на 16pt»):
++   every question of the studio reads about four pixels larger, and wider for it (the 💎 window keeps its own sizes) */
++.hd-box { width: min(560px, 100%); }
++.hd-box.hd-choose { width: min(640px, 100%); }
++.hd-title { font-size: 20px; }
++.hd-body { font-size: 17px; }
++.hd-acts .btn { font-size: 15px; height: auto; padding: 7px 14px; }
++.hd-item { font-size: 16px; }
++.hd-item-note { font-size: 14px; }
++.hd-input { font-size: 16px; }
++/* «А вот предупреждение WARNING в стиле… массивный размер тултипа. Его как раз уменьшить на 4 пункта» */
++.tip.tip-big { font-size: 12pt; }
+-- 
+2.43.0
+

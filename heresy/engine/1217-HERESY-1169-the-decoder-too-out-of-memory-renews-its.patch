@@ -1,0 +1,98 @@
+From 6f8563e21e7d648c4b3e531f0ff4a20d09230315 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 22:42:38 -0600
+Subject: [PATCH 1217/1252] HERESY 1169: the decoder too: out of memory renews
+ its scheduler (the next request asserted in the old one) and says why with
+ the card's numbers
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Found by holding 10.5 GB of GPU1 and asking a 452 s sound: the VAE's tile failed to allocate, the job said only «generation failed», and the next request killed the engine.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/pipeline.h |  8 ++++++++
+ src/vae.h      | 22 ++++++++++++++++++++++
+ 2 files changed, 30 insertions(+)
+
+diff --git a/src/pipeline.h b/src/pipeline.h
+index ca3c97f..cedef1f 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -431,6 +431,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+     } lora_scope = { p };
+     p->last_error.clear();
+     g_nar_error.clear();   // HERESY 1169
++    g_vae_error.clear();
+     // HERESY 1169: the music's KV sets were allocated as a request asked and never given back: after two guided probes four
+     // sets (10.75 GB at the whole window) stayed, and a long song's sound found no room after them. More than two (one
+     // guided probe, what most runs ask) go when this request is done, whichever way it ends; the next one asks for its own
+@@ -819,6 +820,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+         song.T_audio = vae_ggml_decode_tiled(vae, song.latents.data(), song.T_lat, song.audio.data(), max_T_audio,
+                                              p->params.vae_core, p->params.vae_halo, cancelled, cancel_data);
+         if (song.T_audio < 0) {
++            if (!g_vae_error.empty()) {
++                p->last_error = g_vae_error;   // HERESY 1169
++            }
+             return false;
+         }
+         song.audio.resize((size_t) 2 * song.T_audio);
+@@ -861,9 +865,13 @@ static bool pipeline_decode_latents(Yue2Pipeline * p, const std::string & vae_na
+     fprintf(stderr, "[VAE] Kept latents: %d frames, decoded again by %s\n", song->T_lat,
+             vae_name.empty() ? "the default decoder" : vae_name.c_str());
+     song->audio.assign((size_t) 2 * max_T_audio, 0.0f);
++    g_vae_error.clear();   // HERESY 1169
+     song->T_audio = vae_ggml_decode_tiled(vae, song->latents.data(), song->T_lat, song->audio.data(), max_T_audio,
+                                           p->params.vae_core, p->params.vae_halo, cancelled, cancel_data);
+     if (song->T_audio < 0) {
++        if (!g_vae_error.empty()) {
++            p->last_error = g_vae_error;
++        }
+         return false;
+     }
+     song->audio.resize((size_t) 2 * song->T_audio);
+diff --git a/src/vae.h b/src/vae.h
+index 2f57edf..c6d4ade 100644
+--- a/src/vae.h
++++ b/src/vae.h
+@@ -372,6 +372,27 @@ static struct ggml_tensor * vae_ggml_build_graph(struct ggml_context * ctx,
+ 
+ // Core compute: ensure graph cached, set input, run. Returns T_audio or -1.
+ // Output remains in m->graph_output for caller to read as needed.
++// HERESY 1169: why the decoder stopped, in words for the job (pipeline_generate and the decode of kept latents put it in
++// last_error); after a failed allocation the scheduler is renewed, as the NAR's is: the next request asserted in the old one
++inline std::string g_vae_error;
++static void vae_out_of_memory(VAEGGML * m, int T_latent) {
++    size_t             free_b = 0, total_b = 0;
++    ggml_backend_dev_t dev    = ggml_backend_get_device(m->backend);
++    if (dev) {
++        ggml_backend_dev_memory(dev, &free_b, &total_b);
++    }
++    char msg[400];
++    snprintf(msg, sizeof msg,
++             "Out of GPU memory for decoding the sound: %.1f of %.1f GB free for a tile of %d frames. A smaller copy of the "
++             "model (Q8_0) or fewer probes at once leaves it room.",
++             free_b / 1e9, total_b / 1e9, T_latent);
++    g_vae_error = msg;
++    fprintf(stderr, "[VAE] %s\n", msg);
++    ggml_backend_sched_free(m->sched);
++    BackendPair bp = { m->backend, m->cpu_backend, m->backend != m->cpu_backend };
++    m->sched       = backend_sched_new(bp, 8192);
++}
++
+ static int vae_ggml_compute(VAEGGML *     m,
+                             const float * latent,    // [T_full, 64] time-major
+                             int           T_latent,  // window length to decode
+@@ -414,6 +435,7 @@ static int vae_ggml_compute(VAEGGML *     m,
+             m->graph_ctx = NULL;
+             m->graph_buf = NULL;
+             m->graph_T   = 0;
++            vae_out_of_memory(m, T_latent);
+             return -1;
+         }
+ 
+-- 
+2.43.0
+

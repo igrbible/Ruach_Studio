@@ -1,0 +1,113 @@
+From 5358484a1ffdc57c9de372ee584612bccd22b0da Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 22:34:34 -0600
+Subject: [PATCH 1216/1252] HERESY 1169: out of memory no longer kills the
+ engine: the NAR renews its scheduler after a failed allocation and says why
+ with the card's numbers; variations that do not fit at once go one at a time;
+ KV sets past two are given back when a run ends
+
+A failed graph allocation left the scheduler half-reserved and the next request asserted in it. After two guided probes four KV sets (10.75 GB at the whole window) stayed for good, and a 300 s sound after them found no room (measured on GPU1, 24 GB, BF16).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/nar.h      | 26 ++++++++++++++++++++++++++
+ src/pipeline.h | 31 ++++++++++++++++++++++++++++++-
+ 2 files changed, 56 insertions(+), 1 deletion(-)
+
+diff --git a/src/nar.h b/src/nar.h
+index 508014e..44802ea 100644
+--- a/src/nar.h
++++ b/src/nar.h
+@@ -329,6 +329,31 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
+ // Build the velocity graph of M variations of a T_lat frame block over the
+ // AR prefix of KV set kv_set. The frame inputs hold for a shape (T_lat,
+ // ar_len), the graph itself is rebuilt at every evaluation.
++// HERESY 1169: why the sound half stopped, in words for the job (pipeline_generate puts it in last_error)
++inline std::string g_nar_error;
++
++// HERESY 1169: out of memory. A failed allocation left the scheduler half-reserved and the next request asserted in it,
++// killing the engine with the job: a new scheduler, the inputs built anew at the next evaluation, and the reason with the
++// card's own numbers
++static void nar_out_of_memory(Yue2NAR * n, int T_lat, int M) {
++    size_t             free_b = 0, total_b = 0;
++    ggml_backend_dev_t dev    = ggml_backend_get_device(n->backend);
++    if (dev) {
++        ggml_backend_dev_memory(dev, &free_b, &total_b);
++    }
++    char msg[480];
++    snprintf(msg, sizeof msg,
++             "Out of GPU memory for the sound: %.1f of %.1f GB free when %d variation%s of %d s needed more. A smaller copy of "
++             "the model (Q8_0) or fewer probes at once leaves it room.",
++             free_b / 1e9, total_b / 1e9, M, M == 1 ? "" : "s", T_lat / 25);
++    g_nar_error = msg;
++    fprintf(stderr, "[NAR] %s\n", msg);
++    ggml_backend_sched_free(n->sched);
++    BackendPair bp = { n->backend, n->cpu_backend, n->use_flash_attn };
++    n->sched       = backend_sched_new(bp, YUE2_NAR_GRAPH_NODES);
++    n->graph_T     = -1;
++}
++
+ static bool nar_build_graph(Yue2NAR * n, const Qw3lmKvCache * kv, int T_lat, int M, int ar_len, int kv_set) {
+     bool                  new_shape = (n->graph_T != T_lat || n->graph_ar != ar_len);
+     bool                  new_key   = new_shape || n->graph_M != M || n->graph_set != kv_set;
+@@ -491,6 +516,7 @@ static bool nar_velocity(Yue2NAR *            n,
+     ggml_backend_sched_reset(n->sched);
+     if (!ggml_backend_sched_alloc_graph(n->sched, n->graph)) {
+         fprintf(stderr, "[NAR] FATAL: graph alloc failed for T_lat=%d\n", T_lat);
++        nar_out_of_memory(n, T_lat, M);
+         return false;
+     }
+ 
+diff --git a/src/pipeline.h b/src/pipeline.h
+index 297cb18..ca3c97f 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -430,6 +430,19 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+         ~LoraScope() { p->loras.reset(); }
+     } lora_scope = { p };
+     p->last_error.clear();
++    g_nar_error.clear();   // HERESY 1169
++    // HERESY 1169: the music's KV sets were allocated as a request asked and never given back: after two guided probes four
++    // sets (10.75 GB at the whole window) stayed, and a long song's sound found no room after them. More than two (one
++    // guided probe, what most runs ask) go when this request is done, whichever way it ends; the next one asks for its own
++    struct KvTrim {
++        Qw3lmKvCache * kv;
++        ~KvTrim() {
++            if (kv->n_sets > 2) {
++                fprintf(stderr, "[LM-KV] Released %d sets: the next run allocates what it needs\n", kv->n_sets);
++                qw3lm_kv_free(kv);
++            }
++        }
++    } kv_trim{ &p->kv };
+     p->broken_score.clear();
+     if (!r.loras.empty()) {
+         std::string error;
+@@ -764,7 +777,23 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                 int gm = std::min(group, M - g0);
+                 if (!nar_solve(nar, &p->kv, block.data() + span * (size_t) g0, frames, gm, ar_len, i, r.steps, dbg,
+                                cancelled, cancel_data, r.solver)) {
+-                    return false;
++                    // HERESY 1169: out of memory with several at once: one at a time, before the run gives up
++                    bool ok = false;
++                    if (gm > 1 && !g_nar_error.empty()) {
++                        fprintf(stderr, "[NAR] Song %d: %d variations did not fit at once; one at a time\n", i, gm);
++                        g_nar_error.clear();
++                        ok = true;
++                        for (int j = 0; j < gm && ok; j++) {
++                            ok = nar_solve(nar, &p->kv, block.data() + span * (size_t) (g0 + j), frames, 1, ar_len, i, r.steps,
++                                           dbg, cancelled, cancel_data, r.solver);
++                        }
++                    }
++                    if (!ok) {
++                        if (!g_nar_error.empty()) {
++                            p->last_error = g_nar_error;
++                        }
++                        return false;
++                    }
+                 }
+             }
+             for (int j = 0; j < M; j++) {
+-- 
+2.43.0
+

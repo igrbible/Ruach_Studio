@@ -1,0 +1,1050 @@
+From 409511b4e8cc15ca7b7ada166576e62dfb760c9c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 14:37:27 -0600
+Subject: [PATCH 1250/1252] =?UTF-8?q?HERESY=201169:=20the=20page's=20Engli?=
+ =?UTF-8?q?sh=20headings=20in=20title=20case=20(Supply=20Your=20Own=20Scor?=
+ =?UTF-8?q?e,=20Cover=20or=20Remix,=20Score=20Planner,=20The=20Song=20Now?=
+ =?UTF-8?q?=E2=80=A6),=20each=20new=20heading=20a=20key=20of=20its=20own?=
+ =?UTF-8?q?=20in=20the=20six=20catalogs?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «В английском как базовом нашем языке, по правилам оформления заголовков исправь сущ. и прил., чобы начинались с заглавной. `The guide` > `The Guide` и т.п.».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            |  2 +-
+ tools/console/heresy-i18n-be.js | 19 +++++++++++++++++
+ tools/console/heresy-i18n-el.js | 19 +++++++++++++++++
+ tools/console/heresy-i18n-es.js | 19 +++++++++++++++++
+ tools/console/heresy-i18n-it.js | 19 +++++++++++++++++
+ tools/console/heresy-i18n-ru.js | 19 +++++++++++++++++
+ tools/console/heresy-i18n-uk.js | 19 +++++++++++++++++
+ tools/console/index.html        | 38 ++++++++++++++++-----------------
+ 8 files changed, 134 insertions(+), 20 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index ed6c151..7159b08 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4745,7 +4745,7 @@
+     STATE.take = null;
+     $("takeBody").classList.add("is-hidden");
+     $("takeEmpty").classList.remove("is-hidden");
+-    $("takeTitle").textContent = "Smithery is Idle";   // HERESY 1167: the frame shows a run or a chosen take
++    $("takeTitle").textContent = "Smithery Is Idle";   // HERESY 1167: the frame shows a run or a chosen take
+     $("takeTitle").setAttribute("translate", "yes");
+     $("takeEyebrow").textContent = "no run yet";
+     $("takeActions").innerHTML = "";
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 93aa54c..da33b37 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -48,6 +48,7 @@ RuachI18n.add("be", {
+ "Load a document from the Writer": "Загрузіць дакумент з Пісьменніка",
+ "Save to Writer…": "Захаваць у Пісьменніку…",
+ "Start from an idea": "Пачаць з ідэі",
++"Start from an Idea": "Пачаць з ідэі",
+ "A local chat model writes the title, style and lyrics from one line.": "Лакальная чат-мадэль піша назву, стыль і тэкст з аднаго радка.",
+ "Idea": "Ідэя",
+ "About Idea": "Пра ідэю",
+@@ -150,8 +151,10 @@ RuachI18n.add("be", {
+ "Forget the codes: Generate writes new music from the prompt": "Забыць коды: «Стварыць» напіша новую музыку з промпту",
+ "Drop codes": "Скінуць коды",
+ "Cover or remix": "Кавер або рэмікс",
++"Cover or Remix": "Кавер або рэмікс",
+ "Reuse a melody and change the style.": "Узяць мелодыю і змяніць стыль.",
+ "From a recording": "З запісу",
++"From a Recording": "З запісу",
+ "About transcription": "Пра транскрыпцыю",
+ "its tune only, not the words or the singer": "толькі напеў, не словы і не спявак",
+ "Recording": "Запіс",
+@@ -165,6 +168,7 @@ RuachI18n.add("be", {
+ "▶ Listen": "▶ Слухаць",
+ "Ready. Runs on the server, in its queue like a song.": "Гатова. Ідзе на серверы, у яго чарзе, як песня.",
+ "From one of your takes": "З твайго сэмпла",
++"From One of Your Takes": "З твайго сэмпла",
+ "About covers from a take": "Пра каверы з сэмпла",
+ "its melody, in a new style": "яго мелодыя ў новым стылі",
+ "Melody from": "Мелодыя з",
+@@ -174,6 +178,7 @@ RuachI18n.add("be", {
+ "About Drop the chord symbols, so the new style can rebuild the harmony": "Пра зняцце акордавых сімвалаў",
+ "Use this melody": "Узяць гэту мелодыю",
+ "Supply your own score": "Свая партытура",
++"Supply Your Own Score": "Свая партытура",
+ "Bring an ABC score, for covers and edits.": "Прынесці партытуру ABC — для кавераў і правак.",
+ "Score": "Партытура",
+ "About Score": "Пра партытуру",
+@@ -226,6 +231,7 @@ RuachI18n.add("be", {
+ "loose ↔ focused on your style and lyrics": "вольна ↔ строга па тваім стылі і тэксце",
+ "Reset sliders": "Скінуць паўзункі",
+ "Score planner": "Планавальнік партытуры",
++"Score Planner": "Планавальнік партытуры",
+ "Temperature": "Тэмпература",
+ "About temperature": "Пра тэмпературу",
+ "About top p": "Пра top p",
+@@ -241,10 +247,12 @@ RuachI18n.add("be", {
+ "Max tokens": "Макс. токенаў",
+ "About max tokens": "Пра максімум токенаў",
+ "Music tokens": "Музычныя токены",
++"Music Tokens": "Музычныя токены",
+ "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds. ✓ Leave it.": "Песня не можа скончыцца раней за гэтую колькасць музычных токенаў. 25 у секунду: тыповыя 200 — гэта 8 секунд.\n✓ Пакінь так.",
+ "About Guidance (CFG)": "Пра guidance (CFG)",
+ "Reset sampling": "Скінуць сэмплінг",
+ "Sound and output": "Гук і вывад",
++"Sound and Output": "Гук і вывад",
+ "WAV 24-bit": "WAV 24 біты",
+ "Denoising steps": "Крокі расшумлення",
+ "About Denoising steps": "Пра крокі расшумлення",
+@@ -299,6 +307,7 @@ RuachI18n.add("be", {
+ "Spectrum": "Спектр",
+ "This take in the Refiner: Whisper against the lyrics": "Гэты сэмпл у Гранільшчыку: Whisper супраць тэксту",
+ "Lyrics check": "Праверка тэксту",
++"Lyrics Check": "Праверка тэксту",
+ "Files": "Файлы",
+ "The replay request (.json): prompt, score, codes and both seeds": "Запыт для паўтору (.json): промпт, партытура, коды і абодва сіды",
+ "Request": "Запыт",
+@@ -419,6 +428,7 @@ RuachI18n.add("be", {
+ "Lo-fi": "Лоў-фай",
+ "Soft swung drums, mellow keys and gentle tape warmth": "Мяккія свінгавыя барабаны, аксамітныя клавішы і лёгкае стужачнае цяпло",
+ "Local chat server": "Лакальны чат-сервер",
++"Local Chat Server": "Лакальны чат-сервер",
+ "not set": "не зададзены",
+ "Test connection": "Праверыць сувязь",
+ "Address": "Адрас",
+@@ -479,6 +489,7 @@ RuachI18n.add("be", {
+ "List all my fonts": "Паказаць усе мае шрыфты",
+ "Default look": "Выгляд па змаўчанні",
+ "Server log": "Лог сервера",
++"Server Log": "Лог сервера",
+ "live": "ужывую",
+ "Follow": "Сачыць",
+ "About Follow": "Пра сачэнне",
+@@ -538,12 +549,15 @@ RuachI18n.add("be", {
+ "From the Creator": "З Творцы",
+ "All": "Усе",
+ "Takes made from it": "Сэмплы з яе",
++"Takes Made from It": "Сэмплы з яе",
+ "Versions": "Версіі",
+ "The song now": "Песня зараз",
++"The Song Now": "Песня зараз",
+ "Edit in the Creator": "Правіць у Творцы",
+ "Style": "Стыль",
+ "the key, meter and tempo the style must agree with": "танальнасць, памер і тэмп, з якімі павінен узгадняцца стыль",
+ "Writing room": "Пакой пісьма",
++"Writing Room": "Пакой пісьма",
+ "The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.": "Чат-мадэль чытае твой стыль, тэкст і партытуру, потым накідае або правіць іх. Ты праглядаеш, перш чым нешта зменіцца.",
+ "Writer: OpenRouter, with your key; the brief and the song go to openrouter.ai.": "Пісьменнік: OpenRouter з тваім ключом; брыф і песня ідуць на openrouter.ai.",
+ "What's the song about?": "Пра што песня?",
+@@ -585,6 +599,7 @@ RuachI18n.add("be", {
+ "Use style": "Узяць стыль",
+ "Raw response": "Сыры адказ",
+ "Text profiles": "Тэкставыя профілі",
++"Text Profiles": "Тэкставыя профілі",
+ "Profile to edit": "Профіль для праўкі",
+ "Save as…": "Захаваць як…",
+ "[Intro] first": "[Intro] у пачатку",
+@@ -608,6 +623,7 @@ RuachI18n.add("be", {
+ "Comes out": "Выходзіць",
+ "pick a take on the right": "абяры сэмпл справа",
+ "Import a track": "Імпарт трэка",
++"Import a Track": "Імпарт трэка",
+ "File": "Файл",
+ "blank: the file's name": "пуста: імя файла",
+ "optional: the lyrics check matches against them": "неабавязкова: праверка тэксту зверае з ім",
+@@ -694,6 +710,7 @@ RuachI18n.add("be", {
+ "Karaoke timing": "Таймінг караоке",
+ "Time the lines": "Размеціць радкі па часе",
+ "Made from this take": "Створана з гэтага сэмпла",
++"Made from This Take": "Створана з гэтага сэмпла",
+ "Search: words, or * and ? as wildcards": "Пошук: словы або * і ? як падстаноўкі",
+ "Sort": "Сартаванне",
+ "newest first": "спачатку новыя",
+@@ -2455,6 +2472,7 @@ RuachI18n.add("be", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Меладычны дэт-метал, музычная палова (чэкпойнт кроку 600). Упішы яе трыгер deathmetal у стыль. Картка не раіць сілу: пачні з 1.0 і зменшы, калі вакал развальваецца.",
+ "Instrument probes": "Пробы інструментаў",
+ "Trained here": "Натрэніраваныя тут",
++"Trained Here": "Натрэніраваныя тут",
+ "From Hugging Face": "З Hugging Face",
+ "The GPU roles changed and are not saved": "Ролі відэакарт зменены і не захаваны",
+ "Save them, or leave the cards as they were.": "Захавай іх або пакінь карты як былі.",
+@@ -2519,6 +2537,7 @@ RuachI18n.add("be", {
+ "Takes list height": "Вышыня спіса сэмплаў",
+ "Drag to resize · double-click for the default height": "Цягні, каб змяніць памер · падвойны пстрык — вышыня па змаўчанні",
+ "Smithery is Idle": "Кузня адпачывае",
++"Smithery Is Idle": "Кузня адпачывае",
+ "{0} styles · {1} heard by ear": "Стыляў: {0} · пачута на слых: {1}",
+ "✓ kept · not heard by ear yet": "✓ пакінута · на слых яшчэ не праслухана",
+ "✓ heard · {0}": "✓ пачута · {0}",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 5de297b..92e0b35 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -47,6 +47,7 @@ RuachI18n.add("el", {
+ "Load a document from the Writer": "Φόρτωση εγγράφου από τον Συγγραφέα",
+ "Save to Writer…": "Αποθήκευση στον Συγγραφέα…",
+ "Start from an idea": "Ξεκίνα από μια ιδέα",
++"Start from an Idea": "Ξεκίνα από μια ιδέα",
+ "A local chat model writes the title, style and lyrics from one line.": "Ένα τοπικό μοντέλο συνομιλίας γράφει τον τίτλο, το ύφος και τους στίχους από μία γραμμή.",
+ "Idea": "Ιδέα",
+ "About Idea": "Σχετικά με την ιδέα",
+@@ -149,8 +150,10 @@ RuachI18n.add("el", {
+ "Forget the codes: Generate writes new music from the prompt": "Ξέχασε τους κώδικες: η «Παραγωγή» γράφει νέα μουσική από το prompt",
+ "Drop codes": "Απόρριψη κωδίκων",
+ "Cover or remix": "Διασκευή ή remix",
++"Cover or Remix": "Διασκευή ή remix",
+ "Reuse a melody and change the style.": "Ξαναχρησιμοποίησε μια μελωδία και άλλαξε το ύφος.",
+ "From a recording": "Από ηχογράφηση",
++"From a Recording": "Από ηχογράφηση",
+ "About transcription": "Σχετικά με τη μεταγραφή",
+ "its tune only, not the words or the singer": "μόνο η μελωδία της, όχι οι λέξεις ή ο τραγουδιστής",
+ "Recording": "Ηχογράφηση",
+@@ -164,6 +167,7 @@ RuachI18n.add("el", {
+ "▶ Listen": "▶ Ακρόαση",
+ "Ready. Runs on the server, in its queue like a song.": "Έτοιμο. Τρέχει στον διακομιστή, στην ουρά του όπως ένα τραγούδι.",
+ "From one of your takes": "Από μια λήψη σου",
++"From One of Your Takes": "Από μια λήψη σου",
+ "About covers from a take": "Σχετικά με διασκευές από λήψη",
+ "its melody, in a new style": "η μελωδία της, σε νέο ύφος",
+ "Melody from": "Μελωδία από",
+@@ -173,6 +177,7 @@ RuachI18n.add("el", {
+ "About Drop the chord symbols, so the new style can rebuild the harmony": "Σχετικά με το «Αφαίρεση των συμβόλων συγχορδιών, ώστε το νέο ύφος να ξαναχτίσει την αρμονία»",
+ "Use this melody": "Χρήση αυτής της μελωδίας",
+ "Supply your own score": "Δική σου παρτιτούρα",
++"Supply Your Own Score": "Δική σου παρτιτούρα",
+ "Bring an ABC score, for covers and edits.": "Φέρε μια παρτιτούρα ABC, για διασκευές και επεξεργασίες.",
+ "Score": "Παρτιτούρα",
+ "About Score": "Σχετικά με την παρτιτούρα",
+@@ -225,6 +230,7 @@ RuachI18n.add("el", {
+ "loose ↔ focused on your style and lyrics": "χαλαρή ↔ προσηλωμένη στο ύφος και στους στίχους σου",
+ "Reset sliders": "Επαναφορά ρυθμιστικών",
+ "Score planner": "Σχεδιαστής παρτιτούρας",
++"Score Planner": "Σχεδιαστής παρτιτούρας",
+ "Temperature": "Θερμοκρασία",
+ "About temperature": "Σχετικά με τη θερμοκρασία",
+ "About top p": "Σχετικά με το top p",
+@@ -240,10 +246,12 @@ RuachI18n.add("el", {
+ "Max tokens": "Μέγιστα tokens",
+ "About max tokens": "Σχετικά με τα μέγιστα tokens",
+ "Music tokens": "Μουσικά tokens",
++"Music Tokens": "Μουσικά tokens",
+ "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds. ✓ Leave it.": "Το τραγούδι δεν μπορεί να τελειώσει πριν από τόσα μουσικά tokens. 25 το δευτερόλεπτο: η προεπιλογή 200 είναι 8 δευτερόλεπτα. ✓ Άφησέ το.",
+ "About Guidance (CFG)": "Σχετικά με την καθοδήγηση (CFG)",
+ "Reset sampling": "Επαναφορά δειγματοληψίας",
+ "Sound and output": "Ήχος και έξοδος",
++"Sound and Output": "Ήχος και έξοδος",
+ "WAV 24-bit": "WAV 24-bit",
+ "Denoising steps": "Βήματα αποθορυβοποίησης",
+ "About Denoising steps": "Σχετικά με τα βήματα αποθορυβοποίησης",
+@@ -298,6 +306,7 @@ RuachI18n.add("el", {
+ "Spectrum": "Φάσμα",
+ "This take in the Refiner: Whisper against the lyrics": "Αυτή η λήψη στον Γυαλιστή: Whisper απέναντι στους στίχους",
+ "Lyrics check": "Έλεγχος στίχων",
++"Lyrics Check": "Έλεγχος στίχων",
+ "Files": "Αρχεία",
+ "The replay request (.json): prompt, score, codes and both seeds": "Το αίτημα επανάληψης (.json): prompt, παρτιτούρα, κώδικες και οι δύο σπόροι",
+ "Request": "Αίτημα",
+@@ -418,6 +427,7 @@ RuachI18n.add("el", {
+ "Lo-fi": "Lo-fi",
+ "Soft swung drums, mellow keys and gentle tape warmth": "Απαλά τύμπανα με swing, γλυκά πλήκτρα και ήπια ζεστασιά ταινίας",
+ "Local chat server": "Τοπικός διακομιστής συνομιλίας",
++"Local Chat Server": "Τοπικός διακομιστής συνομιλίας",
+ "not set": "δεν έχει οριστεί",
+ "Test connection": "Δοκιμή σύνδεσης",
+ "Address": "Διεύθυνση",
+@@ -478,6 +488,7 @@ RuachI18n.add("el", {
+ "List all my fonts": "Εμφάνιση όλων των γραμματοσειρών μου",
+ "Default look": "Προεπιλεγμένη εμφάνιση",
+ "Server log": "Αρχείο καταγραφής διακομιστή",
++"Server Log": "Αρχείο καταγραφής διακομιστή",
+ "live": "ζωντανά",
+ "Follow": "Παρακολούθηση",
+ "About Follow": "Σχετικά με την παρακολούθηση",
+@@ -537,12 +548,15 @@ RuachI18n.add("el", {
+ "From the Creator": "Από τον Δημιουργό",
+ "All": "Όλα",
+ "Takes made from it": "Λήψεις από αυτό",
++"Takes Made from It": "Λήψεις από αυτό",
+ "Versions": "Εκδόσεις",
+ "The song now": "Το τραγούδι τώρα",
++"The Song Now": "Το τραγούδι τώρα",
+ "Edit in the Creator": "Επεξεργασία στον Δημιουργό",
+ "Style": "Ύφος",
+ "the key, meter and tempo the style must agree with": "η τονικότητα, το μέτρο και το τέμπο με τα οποία πρέπει να συμφωνεί το ύφος",
+ "Writing room": "Δωμάτιο γραφής",
++"Writing Room": "Δωμάτιο γραφής",
+ "The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.": "Το μοντέλο συνομιλίας διαβάζει το ύφος, τους στίχους και την παρτιτούρα σου, και μετά τα σχεδιάζει ή τα αναθεωρεί. Εσύ ελέγχεις πριν αλλάξει οτιδήποτε.",
+ "Writer: OpenRouter, with your key; the brief and the song go to openrouter.ai.": "Συγγραφέας: OpenRouter, με το κλειδί σου· το brief και το τραγούδι πηγαίνουν στο openrouter.ai.",
+ "What's the song about?": "Για τι είναι το τραγούδι;",
+@@ -584,6 +598,7 @@ RuachI18n.add("el", {
+ "Use style": "Χρήση ύφους",
+ "Raw response": "Ακατέργαστη απάντηση",
+ "Text profiles": "Προφίλ κειμένου",
++"Text Profiles": "Προφίλ κειμένου",
+ "Profile to edit": "Προφίλ για επεξεργασία",
+ "Save as…": "Αποθήκευση ως…",
+ "[Intro] first": "[Intro] πρώτα",
+@@ -607,6 +622,7 @@ RuachI18n.add("el", {
+ "Comes out": "Βγαίνει",
+ "pick a take on the right": "διάλεξε μια λήψη στα δεξιά",
+ "Import a track": "Εισαγωγή κομματιού",
++"Import a Track": "Εισαγωγή κομματιού",
+ "File": "Αρχείο",
+ "blank: the file's name": "κενό: το όνομα του αρχείου",
+ "optional: the lyrics check matches against them": "προαιρετικό: ο έλεγχος στίχων συγκρίνει με αυτούς",
+@@ -693,6 +709,7 @@ RuachI18n.add("el", {
+ "Karaoke timing": "Χρονισμός καραόκε",
+ "Time the lines": "Χρονισμός των γραμμών",
+ "Made from this take": "Φτιαγμένα από αυτή τη λήψη",
++"Made from This Take": "Φτιαγμένα από αυτή τη λήψη",
+ "Search: words, or * and ? as wildcards": "Αναζήτηση: λέξεις, ή * και ? ως μπαλαντέρ",
+ "Sort": "Ταξινόμηση",
+ "newest first": "νεότερα πρώτα",
+@@ -2454,6 +2471,7 @@ RuachI18n.add("el", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Μελωδικό death metal, μουσικό μισό (το checkpoint του βήματος 600). Βάλε τη λέξη ενεργοποίησής της deathmetal στο ύφος. Η κάρτα δεν δίνει συμβουλή έντασης: ξεκίνα από 1.0 και χαμήλωσέ τη αν τα φωνητικά διαλύονται.",
+ "Instrument probes": "Δοκιμές οργάνων",
+ "Trained here": "Εκπαιδευμένοι εδώ",
++"Trained Here": "Εκπαιδευμένοι εδώ",
+ "From Hugging Face": "Από το Hugging Face",
+ "The GPU roles changed and are not saved": "Οι ρόλοι των GPU άλλαξαν και δεν αποθηκεύτηκαν",
+ "Save them, or leave the cards as they were.": "Αποθήκευσέ τους ή άφησε τις κάρτες όπως ήταν.",
+@@ -2518,6 +2536,7 @@ RuachI18n.add("el", {
+ "Takes list height": "Ύψος της λίστας λήψεων",
+ "Drag to resize · double-click for the default height": "Σύρε για αλλαγή μεγέθους · διπλό κλικ για το προεπιλεγμένο ύψος",
+ "Smithery is Idle": "Το σιδηρουργείο ησυχάζει",
++"Smithery Is Idle": "Το σιδηρουργείο ησυχάζει",
+ "{0} styles · {1} heard by ear": "Στυλ: {0} · ακούστηκαν με το αυτί: {1}",
+ "✓ kept · not heard by ear yet": "✓ κρατήθηκε · δεν ακούστηκε ακόμη με το αυτί",
+ "✓ heard · {0}": "✓ ακούστηκε · {0}",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 4020164..d228de6 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -47,6 +47,7 @@ RuachI18n.add("es", {
+ "Load a document from the Writer": "Cargar un documento del Escritor",
+ "Save to Writer…": "Guardar en el Escritor…",
+ "Start from an idea": "Empezar por una idea",
++"Start from an Idea": "Empezar por una idea",
+ "A local chat model writes the title, style and lyrics from one line.": "Un modelo de chat local escribe el título, el estilo y la letra a partir de una línea.",
+ "Idea": "Idea",
+ "About Idea": "Sobre la idea",
+@@ -149,8 +150,10 @@ RuachI18n.add("es", {
+ "Forget the codes: Generate writes new music from the prompt": "Olvidar los códigos: «Generar» escribe música nueva a partir del prompt",
+ "Drop codes": "Soltar los códigos",
+ "Cover or remix": "Versión o remezcla",
++"Cover or Remix": "Versión o remezcla",
+ "Reuse a melody and change the style.": "Reutiliza una melodía y cambia el estilo.",
+ "From a recording": "Desde una grabación",
++"From a Recording": "Desde una grabación",
+ "About transcription": "Sobre la transcripción",
+ "its tune only, not the words or the singer": "solo su melodía, no la letra ni el cantante",
+ "Recording": "Grabación",
+@@ -164,6 +167,7 @@ RuachI18n.add("es", {
+ "▶ Listen": "▶ Escuchar",
+ "Ready. Runs on the server, in its queue like a song.": "Listo. Se ejecuta en el servidor, en su cola, como una canción.",
+ "From one of your takes": "Desde una de tus tomas",
++"From One of Your Takes": "Desde una de tus tomas",
+ "About covers from a take": "Sobre las versiones desde una toma",
+ "its melody, in a new style": "su melodía, en un estilo nuevo",
+ "Melody from": "Melodía de",
+@@ -173,6 +177,7 @@ RuachI18n.add("es", {
+ "About Drop the chord symbols, so the new style can rebuild the harmony": "Sobre «Quitar los símbolos de acordes, para que el nuevo estilo reconstruya la armonía»",
+ "Use this melody": "Usar esta melodía",
+ "Supply your own score": "Tu propia partitura",
++"Supply Your Own Score": "Tu propia partitura",
+ "Bring an ABC score, for covers and edits.": "Trae una partitura ABC, para versiones y ediciones.",
+ "Score": "Partitura",
+ "About Score": "Sobre la partitura",
+@@ -225,6 +230,7 @@ RuachI18n.add("es", {
+ "loose ↔ focused on your style and lyrics": "libre ↔ ceñida a tu estilo y tu letra",
+ "Reset sliders": "Restablecer deslizadores",
+ "Score planner": "Planificador de la partitura",
++"Score Planner": "Planificador de la partitura",
+ "Temperature": "Temperatura",
+ "About temperature": "Sobre la temperatura",
+ "About top p": "Sobre top p",
+@@ -240,10 +246,12 @@ RuachI18n.add("es", {
+ "Max tokens": "Tokens máximos",
+ "About max tokens": "Sobre los tokens máximos",
+ "Music tokens": "Tokens musicales",
++"Music Tokens": "Tokens musicales",
+ "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds. ✓ Leave it.": "La canción no puede terminar antes de estos tokens musicales. 25 por segundo: el valor por defecto, 200, son 8 segundos. ✓ Déjalo así.",
+ "About Guidance (CFG)": "Sobre la guía (CFG)",
+ "Reset sampling": "Restablecer el muestreo",
+ "Sound and output": "Sonido y salida",
++"Sound and Output": "Sonido y salida",
+ "WAV 24-bit": "WAV 24 bits",
+ "Denoising steps": "Pasos de eliminación de ruido",
+ "About Denoising steps": "Sobre los pasos de eliminación de ruido",
+@@ -298,6 +306,7 @@ RuachI18n.add("es", {
+ "Spectrum": "Espectro",
+ "This take in the Refiner: Whisper against the lyrics": "Esta toma en el Pulidor: Whisper contra la letra",
+ "Lyrics check": "Revisión de la letra",
++"Lyrics Check": "Revisión de la letra",
+ "Files": "Archivos",
+ "The replay request (.json): prompt, score, codes and both seeds": "La petición para repetirla (.json): prompt, partitura, códigos y las dos semillas",
+ "Request": "Petición",
+@@ -418,6 +427,7 @@ RuachI18n.add("es", {
+ "Lo-fi": "Lo-fi",
+ "Soft swung drums, mellow keys and gentle tape warmth": "Batería suave con swing, teclados tenues y una ligera calidez de cinta",
+ "Local chat server": "Servidor de chat local",
++"Local Chat Server": "Servidor de chat local",
+ "not set": "sin configurar",
+ "Test connection": "Probar la conexión",
+ "Address": "Dirección",
+@@ -478,6 +488,7 @@ RuachI18n.add("es", {
+ "List all my fonts": "Mostrar todas mis fuentes",
+ "Default look": "Aspecto por defecto",
+ "Server log": "Registro del servidor",
++"Server Log": "Registro del servidor",
+ "live": "en vivo",
+ "Follow": "Seguir",
+ "About Follow": "Sobre «Seguir»",
+@@ -537,12 +548,15 @@ RuachI18n.add("es", {
+ "From the Creator": "Desde el Creador",
+ "All": "Todos",
+ "Takes made from it": "Tomas creadas a partir de él",
++"Takes Made from It": "Tomas creadas a partir de él",
+ "Versions": "Versiones",
+ "The song now": "La canción ahora",
++"The Song Now": "La canción ahora",
+ "Edit in the Creator": "Editar en el Creador",
+ "Style": "Estilo",
+ "the key, meter and tempo the style must agree with": "la tonalidad, el compás y el tempo con los que debe concordar el estilo",
+ "Writing room": "Sala de escritura",
++"Writing Room": "Sala de escritura",
+ "The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.": "El modelo de chat lee tu estilo, tu letra y tu partitura, y luego los redacta o los revisa. Tú revisas antes de que cambie nada.",
+ "Writer: OpenRouter, with your key; the brief and the song go to openrouter.ai.": "Escritor: OpenRouter, con tu clave; el brief y la canción van a openrouter.ai.",
+ "What's the song about?": "¿De qué trata la canción?",
+@@ -584,6 +598,7 @@ RuachI18n.add("es", {
+ "Use style": "Usar el estilo",
+ "Raw response": "Respuesta en bruto",
+ "Text profiles": "Perfiles de texto",
++"Text Profiles": "Perfiles de texto",
+ "Profile to edit": "Perfil a editar",
+ "Save as…": "Guardar como…",
+ "[Intro] first": "[Intro] al principio",
+@@ -607,6 +622,7 @@ RuachI18n.add("es", {
+ "Comes out": "Sale",
+ "pick a take on the right": "elige una toma a la derecha",
+ "Import a track": "Importar una pista",
++"Import a Track": "Importar una pista",
+ "File": "Archivo",
+ "blank: the file's name": "vacío: el nombre del archivo",
+ "optional: the lyrics check matches against them": "opcional: la revisión de la letra se compara con ella",
+@@ -693,6 +709,7 @@ RuachI18n.add("es", {
+ "Karaoke timing": "Sincronía karaoke",
+ "Time the lines": "Sincronizar las líneas",
+ "Made from this take": "Creado a partir de esta toma",
++"Made from This Take": "Creado a partir de esta toma",
+ "Search: words, or * and ? as wildcards": "Buscar: palabras, o * y ? como comodines",
+ "Sort": "Orden",
+ "newest first": "lo más nuevo primero",
+@@ -2454,6 +2471,7 @@ RuachI18n.add("es", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Death metal melódico, mitad musical (el checkpoint del paso 600). Pon su activador deathmetal en el estilo. La ficha no da consejo de intensidad: empieza en 1.0 y bájala si las voces se desmoronan.",
+ "Instrument probes": "Pruebas de instrumentos",
+ "Trained here": "Entrenados aquí",
++"Trained Here": "Entrenados aquí",
+ "From Hugging Face": "De Hugging Face",
+ "The GPU roles changed and are not saved": "Los papeles de las GPU cambiaron y no se han guardado",
+ "Save them, or leave the cards as they were.": "Guárdalos o deja las tarjetas como estaban.",
+@@ -2518,6 +2536,7 @@ RuachI18n.add("es", {
+ "Takes list height": "Altura de la lista de tomas",
+ "Drag to resize · double-click for the default height": "Arrastra para cambiar el tamaño · doble clic para la altura por defecto",
+ "Smithery is Idle": "La forja descansa",
++"Smithery Is Idle": "La forja descansa",
+ "{0} styles · {1} heard by ear": "Estilos: {0} · escuchados de oído: {1}",
+ "✓ kept · not heard by ear yet": "✓ conservado · aún no escuchado de oído",
+ "✓ heard · {0}": "✓ escuchado · {0}",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 2faaa4a..0a2907d 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -47,6 +47,7 @@ RuachI18n.add("it", {
+ "Load a document from the Writer": "Carica un documento dallo Scrittore",
+ "Save to Writer…": "Salva nello Scrittore…",
+ "Start from an idea": "Parti da un'idea",
++"Start from an Idea": "Parti da un'idea",
+ "A local chat model writes the title, style and lyrics from one line.": "Un modello di chat locale scrive titolo, stile e testo partendo da una riga.",
+ "Idea": "Idea",
+ "About Idea": "Sull'idea",
+@@ -149,8 +150,10 @@ RuachI18n.add("it", {
+ "Forget the codes: Generate writes new music from the prompt": "Dimentica i codici: «Genera» scrive musica nuova dal prompt",
+ "Drop codes": "Scarta i codici",
+ "Cover or remix": "Cover o remix",
++"Cover or Remix": "Cover o remix",
+ "Reuse a melody and change the style.": "Riusa una melodia e cambia lo stile.",
+ "From a recording": "Da una registrazione",
++"From a Recording": "Da una registrazione",
+ "About transcription": "Sulla trascrizione",
+ "its tune only, not the words or the singer": "solo la sua melodia, non le parole né il cantante",
+ "Recording": "Registrazione",
+@@ -164,6 +167,7 @@ RuachI18n.add("it", {
+ "▶ Listen": "▶ Ascolta",
+ "Ready. Runs on the server, in its queue like a song.": "Pronto. Gira sul server, nella sua coda, come una canzone.",
+ "From one of your takes": "Da uno dei tuoi take",
++"From One of Your Takes": "Da uno dei tuoi take",
+ "About covers from a take": "Sulle cover da un take",
+ "its melody, in a new style": "la sua melodia, in uno stile nuovo",
+ "Melody from": "Melodia da",
+@@ -173,6 +177,7 @@ RuachI18n.add("it", {
+ "About Drop the chord symbols, so the new style can rebuild the harmony": "Su «Togli i simboli degli accordi, così il nuovo stile ricostruisce l'armonia»",
+ "Use this melody": "Usa questa melodia",
+ "Supply your own score": "La tua partitura",
++"Supply Your Own Score": "La tua partitura",
+ "Bring an ABC score, for covers and edits.": "Porta una partitura ABC, per cover e modifiche.",
+ "Score": "Partitura",
+ "About Score": "Sulla partitura",
+@@ -225,6 +230,7 @@ RuachI18n.add("it", {
+ "loose ↔ focused on your style and lyrics": "libera ↔ fedele al tuo stile e al tuo testo",
+ "Reset sliders": "Ripristina gli slider",
+ "Score planner": "Pianificatore della partitura",
++"Score Planner": "Pianificatore della partitura",
+ "Temperature": "Temperatura",
+ "About temperature": "Sulla temperatura",
+ "About top p": "Su top p",
+@@ -240,10 +246,12 @@ RuachI18n.add("it", {
+ "Max tokens": "Token massimi",
+ "About max tokens": "Sui token massimi",
+ "Music tokens": "Token musicali",
++"Music Tokens": "Token musicali",
+ "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds. ✓ Leave it.": "La canzone non può finire prima di questi token musicali. 25 al secondo: il predefinito, 200, sono 8 secondi. ✓ Lascialo così.",
+ "About Guidance (CFG)": "Sulla guida (CFG)",
+ "Reset sampling": "Ripristina il campionamento",
+ "Sound and output": "Suono e uscita",
++"Sound and Output": "Suono e uscita",
+ "WAV 24-bit": "WAV 24 bit",
+ "Denoising steps": "Passi di riduzione del rumore",
+ "About Denoising steps": "Sui passi di riduzione del rumore",
+@@ -298,6 +306,7 @@ RuachI18n.add("it", {
+ "Spectrum": "Spettro",
+ "This take in the Refiner: Whisper against the lyrics": "Questo take nel Rifinitore: Whisper contro il testo",
+ "Lyrics check": "Verifica del testo",
++"Lyrics Check": "Verifica del testo",
+ "Files": "File",
+ "The replay request (.json): prompt, score, codes and both seeds": "La richiesta per ripeterla (.json): prompt, partitura, codici ed entrambi i semi",
+ "Request": "Richiesta",
+@@ -418,6 +427,7 @@ RuachI18n.add("it", {
+ "Lo-fi": "Lo-fi",
+ "Soft swung drums, mellow keys and gentle tape warmth": "Batteria morbida con swing, tastiere delicate e un leggero calore da nastro",
+ "Local chat server": "Server di chat locale",
++"Local Chat Server": "Server di chat locale",
+ "not set": "non impostato",
+ "Test connection": "Prova la connessione",
+ "Address": "Indirizzo",
+@@ -478,6 +488,7 @@ RuachI18n.add("it", {
+ "List all my fonts": "Mostra tutti i miei caratteri",
+ "Default look": "Aspetto predefinito",
+ "Server log": "Log del server",
++"Server Log": "Log del server",
+ "live": "in diretta",
+ "Follow": "Segui",
+ "About Follow": "Su «Segui»",
+@@ -537,12 +548,15 @@ RuachI18n.add("it", {
+ "From the Creator": "Dal Creatore",
+ "All": "Tutti",
+ "Takes made from it": "Take nati da questo",
++"Takes Made from It": "Take nati da questo",
+ "Versions": "Versioni",
+ "The song now": "La canzone ora",
++"The Song Now": "La canzone ora",
+ "Edit in the Creator": "Modifica nel Creatore",
+ "Style": "Stile",
+ "the key, meter and tempo the style must agree with": "la tonalità, il metro e il tempo con cui lo stile deve concordare",
+ "Writing room": "Stanza di scrittura",
++"Writing Room": "Stanza di scrittura",
+ "The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.": "Il modello di chat legge il tuo stile, il testo e la partitura, poi li abbozza o li rivede. Tu controlli prima che cambi qualcosa.",
+ "Writer: OpenRouter, with your key; the brief and the song go to openrouter.ai.": "Scrittore: OpenRouter, con la tua chiave; il brief e la canzone vanno su openrouter.ai.",
+ "What's the song about?": "Di cosa parla la canzone?",
+@@ -584,6 +598,7 @@ RuachI18n.add("it", {
+ "Use style": "Usa lo stile",
+ "Raw response": "Risposta grezza",
+ "Text profiles": "Profili del testo",
++"Text Profiles": "Profili del testo",
+ "Profile to edit": "Profilo da modificare",
+ "Save as…": "Salva come…",
+ "[Intro] first": "[Intro] all'inizio",
+@@ -607,6 +622,7 @@ RuachI18n.add("it", {
+ "Comes out": "Esce",
+ "pick a take on the right": "scegli un take a destra",
+ "Import a track": "Importa una traccia",
++"Import a Track": "Importa una traccia",
+ "File": "File",
+ "blank: the file's name": "vuoto: il nome del file",
+ "optional: the lyrics check matches against them": "facoltativo: la verifica del testo lo usa come riferimento",
+@@ -693,6 +709,7 @@ RuachI18n.add("it", {
+ "Karaoke timing": "Tempi del karaoke",
+ "Time the lines": "Sincronizza le righe",
+ "Made from this take": "Nato da questo take",
++"Made from This Take": "Nato da questo take",
+ "Search: words, or * and ? as wildcards": "Cerca: parole, o * e ? come caratteri jolly",
+ "Sort": "Ordina",
+ "newest first": "prima i più recenti",
+@@ -2454,6 +2471,7 @@ RuachI18n.add("it", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Death metal melodico, metà musicale (il checkpoint del passo 600). Metti il suo trigger deathmetal nello stile. La scheda non dà consigli sull'intensità: parti da 1.0 e abbassala se la voce crolla.",
+ "Instrument probes": "Prove degli strumenti",
+ "Trained here": "Addestrati qui",
++"Trained Here": "Addestrati qui",
+ "From Hugging Face": "Da Hugging Face",
+ "The GPU roles changed and are not saved": "I ruoli delle GPU sono cambiati e non sono salvati",
+ "Save them, or leave the cards as they were.": "Salvali, oppure lascia le schede come erano.",
+@@ -2518,6 +2536,7 @@ RuachI18n.add("it", {
+ "Takes list height": "Altezza dell'elenco dei take",
+ "Drag to resize · double-click for the default height": "Trascina per ridimensionare · doppio clic per l'altezza predefinita",
+ "Smithery is Idle": "La fucina riposa",
++"Smithery Is Idle": "La fucina riposa",
+ "{0} styles · {1} heard by ear": "Stili: {0} · ascoltati a orecchio: {1}",
+ "✓ kept · not heard by ear yet": "✓ conservato · non ancora ascoltato a orecchio",
+ "✓ heard · {0}": "✓ ascoltato · {0}",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 61c115c..76119fd 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -47,6 +47,7 @@ RuachI18n.add("ru", {
+ "Load a document from the Writer": "Загрузить документ из Писателя",
+ "Save to Writer…": "Сохранить в Писателе…",
+ "Start from an idea": "Начать с идеи",
++"Start from an Idea": "Начать с идеи",
+ "A local chat model writes the title, style and lyrics from one line.": "Локальная чат-модель пишет название, стиль и текст из одной строки.",
+ "Idea": "Идея",
+ "About Idea": "Об идее",
+@@ -149,8 +150,10 @@ RuachI18n.add("ru", {
+ "Forget the codes: Generate writes new music from the prompt": "Забыть коды: «Создать» напишет новую музыку из промпта",
+ "Drop codes": "Сбросить коды",
+ "Cover or remix": "Кавер или ремикс",
++"Cover or Remix": "Кавер или ремикс",
+ "Reuse a melody and change the style.": "Взять мелодию и сменить стиль.",
+ "From a recording": "Из записи",
++"From a Recording": "Из записи",
+ "About transcription": "О транскрипции",
+ "its tune only, not the words or the singer": "только напев, не слова и не певец",
+ "Recording": "Запись",
+@@ -164,6 +167,7 @@ RuachI18n.add("ru", {
+ "▶ Listen": "▶ Слушать",
+ "Ready. Runs on the server, in its queue like a song.": "Готово. Идёт на сервере, в его очереди, как песня.",
+ "From one of your takes": "Из твоего семпла",
++"From One of Your Takes": "Из твоего семпла",
+ "About covers from a take": "О каверах из семпла",
+ "its melody, in a new style": "его мелодия в новом стиле",
+ "Melody from": "Мелодия из",
+@@ -173,6 +177,7 @@ RuachI18n.add("ru", {
+ "About Drop the chord symbols, so the new style can rebuild the harmony": "О снятии аккордовых символов",
+ "Use this melody": "Взять эту мелодию",
+ "Supply your own score": "Своя партитура",
++"Supply Your Own Score": "Своя партитура",
+ "Bring an ABC score, for covers and edits.": "Принести партитуру ABC — для каверов и правок.",
+ "Score": "Партитура",
+ "About Score": "О партитуре",
+@@ -225,6 +230,7 @@ RuachI18n.add("ru", {
+ "loose ↔ focused on your style and lyrics": "свободно ↔ строго по твоему стилю и тексту",
+ "Reset sliders": "Сбросить ползунки",
+ "Score planner": "Планировщик партитуры",
++"Score Planner": "Планировщик партитуры",
+ "Temperature": "Температура",
+ "About temperature": "О температуре",
+ "About top p": "О top p",
+@@ -240,10 +246,12 @@ RuachI18n.add("ru", {
+ "Max tokens": "Макс. токенов",
+ "About max tokens": "О максимуме токенов",
+ "Music tokens": "Музыкальные токены",
++"Music Tokens": "Музыкальные токены",
+ "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds.\n✓ Leave it.": "Песня не может закончиться раньше этого числа музыкальных токенов. 25 в секунду: стандартные 200 — это 8 секунд.\n✓ Оставь так.",
+ "About Guidance (CFG)": "О guidance (CFG)",
+ "Reset sampling": "Сбросить сэмплинг",
+ "Sound and output": "Звук и вывод",
++"Sound and Output": "Звук и вывод",
+ "WAV 24-bit": "WAV 24 бита",
+ "Denoising steps": "Шаги расшумления",
+ "About Denoising steps": "О шагах расшумления",
+@@ -298,6 +306,7 @@ RuachI18n.add("ru", {
+ "Spectrum": "Спектр",
+ "This take in the Refiner: Whisper against the lyrics": "Этот семпл в Огранщике: Whisper против текста",
+ "Lyrics check": "Проверка текста",
++"Lyrics Check": "Проверка текста",
+ "Files": "Файлы",
+ "The replay request (.json): prompt, score, codes and both seeds": "Запрос для повтора (.json): промпт, партитура, коды и оба сида",
+ "Request": "Запрос",
+@@ -418,6 +427,7 @@ RuachI18n.add("ru", {
+ "Lo-fi": "Лоу-фай",
+ "Soft swung drums, mellow keys and gentle tape warmth": "Мягкие свингующие барабаны, бархатные клавиши и лёгкое ленточное тепло",
+ "Local chat server": "Локальный чат-сервер",
++"Local Chat Server": "Локальный чат-сервер",
+ "not set": "не задан",
+ "Test connection": "Проверить связь",
+ "Address": "Адрес",
+@@ -478,6 +488,7 @@ RuachI18n.add("ru", {
+ "List all my fonts": "Показать все мои шрифты",
+ "Default look": "Вид по умолчанию",
+ "Server log": "Лог сервера",
++"Server Log": "Лог сервера",
+ "live": "в реальном времени",
+ "Follow": "Следить",
+ "About Follow": "О слежении",
+@@ -537,12 +548,15 @@ RuachI18n.add("ru", {
+ "From the Creator": "Из Творца",
+ "All": "Все",
+ "Takes made from it": "Семплы из неё",
++"Takes Made from It": "Семплы из неё",
+ "Versions": "Версии",
+ "The song now": "Песня сейчас",
++"The Song Now": "Песня сейчас",
+ "Edit in the Creator": "Править в Творце",
+ "Style": "Стиль",
+ "the key, meter and tempo the style must agree with": "тональность, размер и темп, с которыми должен согласоваться стиль",
+ "Writing room": "Комната письма",
++"Writing Room": "Комната письма",
+ "The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.": "Чат-модель читает твой стиль, текст и партитуру, затем набрасывает или правит их. Ты смотришь, прежде чем что-то изменится.",
+ "Writer: OpenRouter, with your key; the brief and the song go to openrouter.ai.": "Писатель: OpenRouter с твоим ключом; бриф и песня уходят на openrouter.ai.",
+ "What's the song about?": "О чём песня?",
+@@ -584,6 +598,7 @@ RuachI18n.add("ru", {
+ "Use style": "Взять стиль",
+ "Raw response": "Сырой ответ",
+ "Text profiles": "Текстовые профили",
++"Text Profiles": "Текстовые профили",
+ "Profile to edit": "Профиль для правки",
+ "Save as…": "Сохранить как…",
+ "[Intro] first": "[Intro] в начале",
+@@ -607,6 +622,7 @@ RuachI18n.add("ru", {
+ "Comes out": "Выходит",
+ "pick a take on the right": "выбери семпл справа",
+ "Import a track": "Импорт трека",
++"Import a Track": "Импорт трека",
+ "File": "Файл",
+ "blank: the file's name": "пусто: имя файла",
+ "optional: the lyrics check matches against them": "необязательно: проверка текста сверяет с ним",
+@@ -693,6 +709,7 @@ RuachI18n.add("ru", {
+ "Karaoke timing": "Тайминг караоке",
+ "Time the lines": "Разметить строки по времени",
+ "Made from this take": "Сделано из этого семпла",
++"Made from This Take": "Сделано из этого семпла",
+ "Search: words, or * and ? as wildcards": "Поиск: слова или * и ? как подстановки",
+ "Sort": "Сортировка",
+ "newest first": "сначала новые",
+@@ -2462,6 +2479,7 @@ RuachI18n.add("ru", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Мелодичный дэт-метал, музыкальная половина (чекпоинт шага 600). Впиши её триггер deathmetal в стиль. Карточка не советует силу: начни с 1.0 и убавь, если вокал разваливается.",
+ "Instrument probes": "Пробы инструментов",
+ "Trained here": "Обучены здесь",
++"Trained Here": "Обучены здесь",
+ "From Hugging Face": "С Hugging Face",
+ "The GPU roles changed and are not saved": "Роли видеокарт изменены и не сохранены",
+ "Save them, or leave the cards as they were.": "Сохрани их или оставь карты как были.",
+@@ -2526,6 +2544,7 @@ RuachI18n.add("ru", {
+ "Takes list height": "Высота списка семплов",
+ "Drag to resize · double-click for the default height": "Тяни, чтобы изменить размер · двойной щелчок — высота по умолчанию",
+ "Smithery is Idle": "Кузница отдыхает",
++"Smithery Is Idle": "Кузница отдыхает",
+ "{0} styles · {1} heard by ear": "Стилей: {0} · услышано на слух: {1}",
+ "✓ kept · not heard by ear yet": "✓ оставлено · на слух ещё не прослушано",
+ "✓ heard · {0}": "✓ услышано · {0}",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 8940dda..39a3186 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -48,6 +48,7 @@ RuachI18n.add("uk", {
+ "Load a document from the Writer": "Завантажити документ із Письменника",
+ "Save to Writer…": "Зберегти в Письменнику…",
+ "Start from an idea": "Почати з ідеї",
++"Start from an Idea": "Почати з ідеї",
+ "A local chat model writes the title, style and lyrics from one line.": "Локальна чат-модель пише назву, стиль і текст з одного рядка.",
+ "Idea": "Ідея",
+ "About Idea": "Про ідею",
+@@ -150,8 +151,10 @@ RuachI18n.add("uk", {
+ "Forget the codes: Generate writes new music from the prompt": "Забути коди: «Створити» напише нову музику з промпту",
+ "Drop codes": "Скинути коди",
+ "Cover or remix": "Кавер або ремікс",
++"Cover or Remix": "Кавер або ремікс",
+ "Reuse a melody and change the style.": "Взяти мелодію й змінити стиль.",
+ "From a recording": "Із запису",
++"From a Recording": "Із запису",
+ "About transcription": "Про транскрипцію",
+ "its tune only, not the words or the singer": "лише наспів, не слова й не співак",
+ "Recording": "Запис",
+@@ -165,6 +168,7 @@ RuachI18n.add("uk", {
+ "▶ Listen": "▶ Слухати",
+ "Ready. Runs on the server, in its queue like a song.": "Готово. Іде на сервері, у його черзі, як пісня.",
+ "From one of your takes": "Із твого семплу",
++"From One of Your Takes": "Із твого семплу",
+ "About covers from a take": "Про кавери із семплу",
+ "its melody, in a new style": "його мелодія в новому стилі",
+ "Melody from": "Мелодія з",
+@@ -174,6 +178,7 @@ RuachI18n.add("uk", {
+ "About Drop the chord symbols, so the new style can rebuild the harmony": "Про зняття акордових символів",
+ "Use this melody": "Взяти цю мелодію",
+ "Supply your own score": "Своя партитура",
++"Supply Your Own Score": "Своя партитура",
+ "Bring an ABC score, for covers and edits.": "Принести партитуру ABC — для каверів і правок.",
+ "Score": "Партитура",
+ "About Score": "Про партитуру",
+@@ -226,6 +231,7 @@ RuachI18n.add("uk", {
+ "loose ↔ focused on your style and lyrics": "вільно ↔ суворо за твоїм стилем і текстом",
+ "Reset sliders": "Скинути повзунки",
+ "Score planner": "Планувальник партитури",
++"Score Planner": "Планувальник партитури",
+ "Temperature": "Температура",
+ "About temperature": "Про температуру",
+ "About top p": "Про top p",
+@@ -241,10 +247,12 @@ RuachI18n.add("uk", {
+ "Max tokens": "Макс. токенів",
+ "About max tokens": "Про максимум токенів",
+ "Music tokens": "Музичні токени",
++"Music Tokens": "Музичні токени",
+ "The song cannot end before this many music tokens. 25 per second: the default 200 is 8 seconds. ✓ Leave it.": "Пісня не може закінчитися раніше цього числа музичних токенів. 25 на секунду: типові 200 — це 8 секунд.\n✓ Лиши так.",
+ "About Guidance (CFG)": "Про guidance (CFG)",
+ "Reset sampling": "Скинути семплінг",
+ "Sound and output": "Звук і вивід",
++"Sound and Output": "Звук і вивід",
+ "WAV 24-bit": "WAV 24 біти",
+ "Denoising steps": "Кроки розшумлення",
+ "About Denoising steps": "Про кроки розшумлення",
+@@ -299,6 +307,7 @@ RuachI18n.add("uk", {
+ "Spectrum": "Спектр",
+ "This take in the Refiner: Whisper against the lyrics": "Цей семпл в Огранювачі: Whisper проти тексту",
+ "Lyrics check": "Перевірка тексту",
++"Lyrics Check": "Перевірка тексту",
+ "Files": "Файли",
+ "The replay request (.json): prompt, score, codes and both seeds": "Запит для повтору (.json): промпт, партитура, коди й обидва сіди",
+ "Request": "Запит",
+@@ -419,6 +428,7 @@ RuachI18n.add("uk", {
+ "Lo-fi": "Лоу-фай",
+ "Soft swung drums, mellow keys and gentle tape warmth": "М'які свінгові барабани, оксамитові клавіші й легке стрічкове тепло",
+ "Local chat server": "Локальний чат-сервер",
++"Local Chat Server": "Локальний чат-сервер",
+ "not set": "не задано",
+ "Test connection": "Перевірити зв'язок",
+ "Address": "Адреса",
+@@ -479,6 +489,7 @@ RuachI18n.add("uk", {
+ "List all my fonts": "Показати всі мої шрифти",
+ "Default look": "Типовий вигляд",
+ "Server log": "Лог сервера",
++"Server Log": "Лог сервера",
+ "live": "наживо",
+ "Follow": "Стежити",
+ "About Follow": "Про стеження",
+@@ -538,12 +549,15 @@ RuachI18n.add("uk", {
+ "From the Creator": "З Творця",
+ "All": "Усі",
+ "Takes made from it": "Семпли з неї",
++"Takes Made from It": "Семпли з неї",
+ "Versions": "Версії",
+ "The song now": "Пісня зараз",
++"The Song Now": "Пісня зараз",
+ "Edit in the Creator": "Правити в Творці",
+ "Style": "Стиль",
+ "the key, meter and tempo the style must agree with": "тональність, розмір і темп, з якими має узгоджуватися стиль",
+ "Writing room": "Кімната письма",
++"Writing Room": "Кімната письма",
+ "The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.": "Чат-модель читає твій стиль, текст і партитуру, потім накидає або править їх. Ти переглядаєш, перш ніж щось зміниться.",
+ "Writer: OpenRouter, with your key; the brief and the song go to openrouter.ai.": "Письменник: OpenRouter з твоїм ключем; бриф і пісня йдуть на openrouter.ai.",
+ "What's the song about?": "Про що пісня?",
+@@ -585,6 +599,7 @@ RuachI18n.add("uk", {
+ "Use style": "Взяти стиль",
+ "Raw response": "Сира відповідь",
+ "Text profiles": "Текстові профілі",
++"Text Profiles": "Текстові профілі",
+ "Profile to edit": "Профіль для правки",
+ "Save as…": "Зберегти як…",
+ "[Intro] first": "[Intro] на початку",
+@@ -608,6 +623,7 @@ RuachI18n.add("uk", {
+ "Comes out": "Виходить",
+ "pick a take on the right": "обери семпл праворуч",
+ "Import a track": "Імпорт треку",
++"Import a Track": "Імпорт треку",
+ "File": "Файл",
+ "blank: the file's name": "порожньо: ім'я файлу",
+ "optional: the lyrics check matches against them": "необов'язково: перевірка тексту звіряє з ним",
+@@ -694,6 +710,7 @@ RuachI18n.add("uk", {
+ "Karaoke timing": "Таймінг караоке",
+ "Time the lines": "Розмітити рядки за часом",
+ "Made from this take": "Створено з цього семплу",
++"Made from This Take": "Створено з цього семплу",
+ "Search: words, or * and ? as wildcards": "Пошук: слова або * і ? як підстановки",
+ "Sort": "Сортування",
+ "newest first": "спершу нові",
+@@ -2455,6 +2472,7 @@ RuachI18n.add("uk", {
+ "Melodic death metal, music half (the step-600 checkpoint). Put its trigger deathmetal in the style. The card gives no strength advice: start at 1.0 and lower it if vocals fall apart.": "Мелодійний дет-метал, музична половина (чекпоінт кроку 600). Впиши її тригер deathmetal у стиль. Картка не радить силу: почни з 1.0 і зменш, якщо вокал розвалюється.",
+ "Instrument probes": "Проби інструментів",
+ "Trained here": "Натреновані тут",
++"Trained Here": "Натреновані тут",
+ "From Hugging Face": "З Hugging Face",
+ "The GPU roles changed and are not saved": "Ролі відеокарт змінено й не збережено",
+ "Save them, or leave the cards as they were.": "Збережи їх або лиши карти як були.",
+@@ -2519,6 +2537,7 @@ RuachI18n.add("uk", {
+ "Takes list height": "Висота списку семплів",
+ "Drag to resize · double-click for the default height": "Тягни, щоб змінити розмір · подвійне клацання — типова висота",
+ "Smithery is Idle": "Кузня відпочиває",
++"Smithery Is Idle": "Кузня відпочиває",
+ "{0} styles · {1} heard by ear": "Стилів: {0} · почуто на слух: {1}",
+ "✓ kept · not heard by ear yet": "✓ залишено · на слух ще не прослухано",
+ "✓ heard · {0}": "✓ почуто · {0}",
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 6f3c7c6..108f877 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -506,7 +506,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ 
+     <div class="card wide eg-log">
+       <div class="pane-head">
+-        <h3>Server log</h3>
++        <h3>Server Log</h3>
+         <span class="pill" id="logState">connecting</span>
+         <div class="spacer"></div>
+         <label class="check small-check"><input type="checkbox" id="logFollow" checked /> <span>Follow</span></label>
+@@ -601,7 +601,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         lyrics. The browser talks to the chat server directly.</p>
+       <div class="writer-pane" id="paneServer">
+         <div class="pane-head">
+-          <h4 class="mini">Local chat server</h4>
++          <h4 class="mini">Local Chat Server</h4>
+           <span class="pill" id="chatState">not set</span>
+           <div class="spacer"></div>
+           <button type="button" class="btn ghost small" id="chatTest">Test connection</button>
+@@ -647,7 +647,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <span class="lora-card-note" id="loraCardNote"></span></div>
+       <!-- HERESY 1166 (Viktor: «раздели блок LoRA на два: ЛОКАЛЬНЫЕ оттрененные… и второй — те чужие адаптеры из HF»):
+            those with no web link to a source were trained here; the others came from Hugging Face -->
+-      <div class="lora-group" id="loraGroupLocal" hidden><h4 class="lora-sub">Trained here</h4><ul class="lora-list" id="loraCardLocal"></ul></div>
++      <div class="lora-group" id="loraGroupLocal" hidden><h4 class="lora-sub">Trained Here</h4><ul class="lora-list" id="loraCardLocal"></ul></div>
+       <div class="lora-group" id="loraGroupHub"><h4 class="lora-sub">From Hugging Face <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span></h4><ul class="lora-list" id="loraCard"></ul></div>
+     </div>
+ 
+@@ -793,7 +793,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     <!-- HERESY 1016: the Kit's idea writer is retired (its code stays dormant); its structure
+          templates live on in the Write tab's writing room -->
+     <details class="drawer" id="museDrawer" hidden>
+-      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Start from an idea</span><span class="sum-say">A local chat model writes the title, style and lyrics from one line.</span></span></summary>
++      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Start from an Idea</span><span class="sum-say">A local chat model writes the title, style and lyrics from one line.</span></span></summary>
+       <div class="drawer-body">
+         <section class="muse" id="muse">
+           <label class="field">
+@@ -968,11 +968,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         </section>
+         <section class="k-card k-more">
+           <details class="drawer" id="coverDrawer">
+-            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Cover or remix</span><span class="sum-say">Reuse a melody and change the style.</span></span></summary>
++            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Cover or Remix</span><span class="sum-say">Reuse a melody and change the style.</span></span></summary>
+             <div class="drawer-body cover-body">
+               <!-- two ways in, the same shape: a heading with its short note, one control per line, the button on the left -->
+               <section class="cover-part">
+-                <h4 class="mini">From a recording <span class="info" tabindex="-1" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe" data-tip-head="its tune only, not the words or the singer"></span></h4>
++                <h4 class="mini">From a Recording <span class="info" tabindex="-1" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe" data-tip-head="its tune only, not the words or the singer"></span></h4>
+                 <label class="field"><span class="label">Recording</span>
+                   <input type="file" id="coverFile" accept=".wav,.mp3,.flac,.m4a,.ogg,.opus,.aac" /></label>
+                 <label class="field"><span class="label">Transcribe</span>
+@@ -989,7 +989,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+                 </div>
+               </section>
+               <section class="cover-part">
+-                <h4 class="mini">From one of your takes <span class="info" tabindex="-1" role="img" aria-label="About covers from a take"
++                <h4 class="mini">From One of Your Takes <span class="info" tabindex="-1" role="img" aria-label="About covers from a take"
+                     data-tip="Take the melody from a song you already made and render it somewhere else entirely: a ballad as a techno track, a German song in English. The run switches to Melody only." data-tip-head="its melody, in a new style"></span></h4>
+                 <label class="field"><span class="label">Melody from</span>
+                   <select id="coverTake"></select></label>
+@@ -1004,7 +1004,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           </details>
+ 
+           <details class="drawer" id="scoreDrawer">
+-            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Supply your own score</span><span class="sum-say">Bring an ABC score, for covers and edits.</span></span></summary>
++            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Supply Your Own Score</span><span class="sum-say">Bring an ABC score, for covers and edits.</span></span></summary>
+             <div class="drawer-body score-body">
+               <label class="field">
+                 <span class="label" data-head="ABC notation, followed in Full plan and Melody only">Score</span>
+@@ -1102,11 +1102,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+               </div>
+               <div class="sampler-grid">
+                 <div class="sampler">
+-                  <h4><span class="dot patina"></span> Score planner</h4>
++                  <h4><span class="dot patina"></span> Score Planner</h4>
+                   <div class="knobs" data-group="abc"></div>
+                 </div>
+                 <div class="sampler">
+-                  <h4><span class="dot amber"></span> Music tokens</h4>
++                  <h4><span class="dot amber"></span> Music Tokens</h4>
+                   <div class="knobs" data-group="semantic"></div>
+                 </div>
+               </div>
+@@ -1124,7 +1124,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+                    разделом в блок Sampling (переименовать в Sampling and Denoising)… Зачем носить монеты в разных карманах»): the
+                    sound half's denoising and the output under the sampling, one drawer; Sound variations went to Generate's row -->
+               <div class="out-sub">
+-                <h4><span class="dot dim"></span> Sound and output</h4>
++                <h4><span class="dot dim"></span> Sound and Output</h4>
+                 <div class="out-grid">
+                   <label class="field"><span class="label" data-head="sound solver">Denoising steps</span>
+                     <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
+@@ -1192,7 +1192,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <!-- take / run --------------------------------------------------------- -->
+   <section class="col take-col" id="view-take">
+     <div class="col-head">
+-      <h2 id="takeTitle">Smithery is Idle</h2>
++      <h2 id="takeTitle">Smithery Is Idle</h2>
+       <button type="button" class="btn primary small is-hidden" id="playHere" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too.">▶ Play this song</button>
+       <span class="col-note" id="takeEyebrow">no run yet</span>
+       <div class="spacer"></div>
+@@ -1370,7 +1370,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+               <div class="wr-params" id="wrParams"></div><pre class="mono wr-params-json" id="wrParamsJson" hidden></pre></div>
+           </div>
+           <div class="wr-lower">
+-            <section><h3 class="wr-cap">Takes made from it <span class="dim" id="wrTakesN"></span></h3><div id="wrTakes"></div></section>
++            <section><h3 class="wr-cap">Takes Made from It <span class="dim" id="wrTakesN"></span></h3><div id="wrTakes"></div></section>
+             <section><h3 class="wr-cap">Versions <span class="dim" id="wrVersionsN"></span></h3><div class="wr-versions" id="wrVersions"></div></section>
+           </div>
+         </div>
+@@ -1378,7 +1378,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     </div>
+     <div class="write-grid">
+       <section class="panel write-current">
+-        <div class="panel-head"><h3>The song now</h3><div class="spacer"></div>
++        <div class="panel-head"><h3>The Song Now</h3><div class="spacer"></div>
+           <button type="button" class="btn ghost small" data-goto-tab="create">Edit in the Creator</button></div>
+         <div class="write-cur"><span class="label">Title</span><p id="curTitle"></p></div>
+         <div class="write-cur"><span class="label">Style <em id="curStyleSize"></em></span><pre id="curStyle"></pre></div>
+@@ -1388,7 +1388,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <div class="write-room">
+     <!-- HERESY 1010: YuE2 Studio's songwriting assistant (heresy-assist.js), with the current song as context -->
+     <details class="drawer" id="assistDrawer" open>
+-      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Writing room</span><span class="sum-say">The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.</span></span></summary>
++      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Writing Room</span><span class="sum-say">The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.</span></span></summary>
+       <div class="drawer-body assist">
+         <p class="assist-line" id="assistLine" data-s="">Asking the chat server…</p>   <!-- HERESY 1110 -->
+         <label class="field">
+@@ -1473,7 +1473,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     </details>
+       <!-- HERESY 1043: text profiles — rules and shape, with a live preview -->
+       <details class="drawer tp-editor" id="tpEditor">
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Text profiles</span><span class="sum-say">How a pasted text is made ready to read: replacement rules in order (literal or regular expression), then the shape — [Intro], [Verse] at blank lines, [Interlude] after long paragraphs. Applied from the Lyrics field.</span></span></summary>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Text Profiles</span><span class="sum-say">How a pasted text is made ready to read: replacement rules in order (literal or regular expression), then the shape — [Intro], [Verse] at blank lines, [Interlude] after long paragraphs. Applied from the Lyrics field.</span></span></summary>
+         <div class="drawer-body">
+           <div class="lib-row">
+             <select id="tpEdPick" aria-label="Profile to edit"></select>
+@@ -1505,7 +1505,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <button type="button" class="btn ghost small post-daw" id="postDaw" data-icon="daw" data-tip="The take in hand out of the studio: the mixed track as it is, or the whole take into your DAW (with its stems, once they are split here)" disabled>Export to DAW</button></div>
+     <!-- HERESY 1023: a track from elsewhere (a SUNO track…) becomes a take, and every tool here works on it -->
+     <details class="drawer" id="importPanel">
+-      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Import a track</span><span class="sum-say">WAV, FLAC, MP3… from anywhere: it becomes a take in the library (48 kHz 24-bit), marked imported, ready for stems, remaster and the rest.</span></span></summary>
++      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Import a Track</span><span class="sum-say">WAV, FLAC, MP3… from anywhere: it becomes a take in the library (48 kHz 24-bit), marked imported, ready for stems, remaster and the rest.</span></span></summary>
+       <div class="drawer-body imp-body">
+         <div class="rm-grid">
+           <label class="field"><span class="label">File</span><input type="file" id="impFile" accept=".wav,.flac,.mp3,.m4a,.ogg,.aif,.aiff,audio/*" /></label>
+@@ -1669,7 +1669,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ 
+       <!-- HERESY 1011: Whisper against the lyrics, run on Forge by heresy-lab (heresy-gloss.js) -->
+       <details class="drawer" id="glossPanel" open>
+-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics Check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
+         <div class="drawer-body gloss-body">
+           <div class="gloss-bar-row">
+             <select id="glossSource" aria-label="What Whisper listens to" data-tip="The take as it is, or a stem of it: on the vocal stem Whisper hears the words without the music"><option value="">the take</option></select>
+@@ -1694,7 +1694,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       </details>
+ 
+       <!-- HERESY 1030: the tree of what is made from this take, under every step (heresy-derived.js) -->
+-      <section class="dv-tree-box" aria-label="Made from this take"><h3 class="dv-tree-title">Made from this take</h3><div id="derivedTree"></div></section>
++      <section class="dv-tree-box" aria-label="Made from This Take"><h3 class="dv-tree-title">Made from This Take</h3><div id="derivedTree"></div></section>
+ 
+   </section>
+ 
+-- 
+2.43.0
+

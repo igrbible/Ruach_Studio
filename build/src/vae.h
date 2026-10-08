@@ -372,6 +372,27 @@ static struct ggml_tensor * vae_ggml_build_graph(struct ggml_context * ctx,
 
 // Core compute: ensure graph cached, set input, run. Returns T_audio or -1.
 // Output remains in m->graph_output for caller to read as needed.
+// HERESY 1169: why the decoder stopped, in words for the job (pipeline_generate and the decode of kept latents put it in
+// last_error); after a failed allocation the scheduler is renewed, as the NAR's is: the next request asserted in the old one
+inline std::string g_vae_error;
+static void vae_out_of_memory(VAEGGML * m, int T_latent) {
+    size_t             free_b = 0, total_b = 0;
+    ggml_backend_dev_t dev    = ggml_backend_get_device(m->backend);
+    if (dev) {
+        ggml_backend_dev_memory(dev, &free_b, &total_b);
+    }
+    char msg[400];
+    snprintf(msg, sizeof msg,
+             "Out of GPU memory for decoding the sound: %.1f of %.1f GB free for a tile of %d frames. A smaller copy of the "
+             "model (Q8_0) or fewer probes at once leaves it room.",
+             free_b / 1073741824.0, total_b / 1073741824.0, T_latent);
+    g_vae_error = msg;
+    fprintf(stderr, "[VAE] %s\n", msg);
+    ggml_backend_sched_free(m->sched);
+    BackendPair bp = { m->backend, m->cpu_backend, m->backend != m->cpu_backend };
+    m->sched       = backend_sched_new(bp, 8192);
+}
+
 static int vae_ggml_compute(VAEGGML *     m,
                             const float * latent,    // [T_full, 64] time-major
                             int           T_latent,  // window length to decode
@@ -414,6 +435,7 @@ static int vae_ggml_compute(VAEGGML *     m,
             m->graph_ctx = NULL;
             m->graph_buf = NULL;
             m->graph_T   = 0;
+            vae_out_of_memory(m, T_latent);
             return -1;
         }
 

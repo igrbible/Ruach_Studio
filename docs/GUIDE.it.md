@@ -31,22 +31,22 @@ YuE2 ha **due metà**, e quasi tutto ciò che regoli nello studio mira a una del
 
 ![La barra: le stanze, lo spazio e i pochi pulsanti che usi sempre](guide/bar.png)
 
-Le stanze aprono la barra; il logo sta al centro; a destra, lo spazio, la spia del motore (verde: pronto; ambra: al lavoro; rossa: qualcosa non è andato) e i pochi pulsanti. Il puntatore sulla spia (o un clic) apre **cosa gira e cosa aspetta**: le canzoni, le rigenerazioni e il lavoro del laboratorio sulle schede video (copertine, stem, upscale, Whisper). Ciò che aspetta esce dalla sua coda con la sua ✕, premuta due volte (la prima pressione chiede conferma); ciò che gira già si ferma dove è mostrato: una canzone nella sua esecuzione, un addestramento nell'Addestratore.
+Le stanze aprono la barra nell'ordine del lavoro: Creatore, Scrittore, Rifinitore, il posto dell'Artista (in grigio: la stanza delle immagini per le tue canzoni arriva in una prossima versione) e Bibliotecario; il logo sta al centro, l'Addestratore subito dopo; a destra, lo spazio, la spia del motore (verde: pronto; ambra: al lavoro; rossa: qualcosa non è andato) e i pochi pulsanti. Il puntatore sulla spia (o un clic) apre **cosa gira e cosa aspetta**: le canzoni, le rigenerazioni e il lavoro del laboratorio sulle schede video (copertine, stem, upscale, Whisper). Ciò che aspetta esce dalla sua coda con la sua ✕, premuta due volte (la prima pressione chiede conferma); ciò che gira già si ferma dove è mostrato: una canzone nella sua esecuzione, un addestramento nell'Addestratore.
 
 - **Spazio**: lo spazio in mano. L'elenco dei take mostra solo quello, e ogni nuovo take vi finisce dentro. *Tutti gli spazi* mostra tutto. Dove la barra è stretta (il logo senza le sue parole), se ne va anche la parola *Spazio*; il selettore resta.
 - **IT** (le due lettere della lingua): la pagina in un'altra lingua, salvata con le tue impostazioni: English, Русский, Українська, Беларуская, Ελληνικά, Español, Italiano, ognuna chiamata con le sue parole. Numeri e date seguono la lingua, e questa guida si apre in essa.
 - **☀ / ☾**: giorno, notte o come dice il sistema.
-- **Salva** un prompt (tutto ciò che la generazione invierebbe) come JSON o YAML e **Apri** per riprenderlo; **Svuota** le parole (titolo, stile, testo, partitura, seed) senza toccare il resto, oppure inizia una **Nuova canzone** (anche modalità, campionamento, slider e LoRA ai predefiniti; *Suono e uscita* resta). **Apri** dice cosa di un file il modulo non ha potuto accogliere e cosa tiene al suo posto.
-- **DAW**: la via d'uscita dallo studio. O la traccia mixata così com'è (WAV, FLAC, MP3), o l'intero take nella tua DAW, dove il resto avviene fuori dallo studio. La pagina trova REAPER, Waveform e Bitwig sulla macchina dello studio, oppure indichi tu la tua. Ogni take esce dal suo menu (clic destro): *Esporta in una DAW → Progetto REAPER* o *DAWproject* (Waveform, Bitwig, Studio One, Cubase), la tua DAW per prima; la scheda DAW di questa guida dice cosa c'è dentro.
-- **?**: questa guida, aperta sulla stanza in cui sei.
-- **☰**: il resto. La scheda video e la sua memoria, la copia del modello, i temi, aprire un prompt salvato, esempi, rilasciare il modello, la stanza del Motore e questa guida.
+- Nell'intestazione di Composizione: **Salva** un prompt (tutto ciò che la generazione invierebbe) come JSON o YAML e **Apri** per riprenderlo; **Svuota** le parole (titolo, stile, testo, partitura, seed) senza toccare il resto, oppure inizia una **Nuova canzone** (anche modalità, campionamento, slider e LoRA ai predefiniti; *Suono e uscita* resta). **Apri** dice cosa di un file il modulo non ha potuto accogliere e cosa tiene al suo posto.
+- **Esporta in una DAW** (nel ☰, e nel Rifinitore: accanto al take in mano e nei suoi Stem): la via d'uscita dallo studio. O la traccia mixata così com'è (WAV, FLAC, MP3), o l'intero take nella tua DAW, dove il resto avviene fuori dallo studio. La pagina trova REAPER, Waveform e Bitwig sulla macchina dello studio, oppure indichi tu la tua. Ogni take esce dal suo menu (clic destro): *Esporta in una DAW → Progetto REAPER* o *DAWproject* (Waveform, Bitwig, Studio One, Cubase), la tua DAW per prima; la scheda DAW di questa guida dice cosa c'è dentro.
+- **Rilascia il modello**: toglie subito dalla memoria della GPU ogni modello inattivo; tinto di rosso finché un modello è caricato.
+- **☰**: il resto. La scheda video e la sua memoria, la copia del modello, il decodificatore del suono (VAE), **Esporta in una DAW**, i temi, la stanza del Motore e questa guida. **Text size** lì imposta la dimensione del testo di tutta la pagina da −2 a +4 pt (la disposizione resta), e una cornice sollevata ha i suoi −, + e ⟲ sopra (da −4 a +6 pt); ogni schermo tiene il suo.
 
 ![Dietro il ☰](guide/more-menu.png)
 
 ### La tua prima canzone, in sei passi <!-- #your-first-song-in-six-steps -->
 
 1. Dalle un **Titolo** e scegli la **Tonalità** se ne hai una in mente (o lascia *come è scritta*).
-2. Scrivi il **Prompt di stile**: lingua, genere, voce, strumenti, tempo. Una o due righe semplici bastano. Il ♪ lì accanto elenca 200 strumenti con ciò che YuE2 suona davvero (vedi *Creatore*).
+2. Scrivi lo **Stile**: lingua, genere, voce, strumenti, tempo. Una o due righe semplici bastano. Il ♪ lì accanto elenca 200 strumenti con ciò che YuE2 suona davvero (vedi *Creatore*).
 3. Incolla il **Testo** con i tag di sezione su righe a sé: `[Verse]`, `[Chorus]`, `[Bridge]`, `[Outro]`.
 4. Lascia **Piano completo** come modalità di pianificazione: YuE2 scrive prima melodia e accordi, poi la canzone.
 5. Premi **Genera canzone**. L'esecuzione mostra le sue fasi: la partitura, i token musicali, il suono, la decodifica.
@@ -56,10 +56,10 @@ Le stanze aprono la barra; il logo sta al centro; a destra, lo spazio, la spia d
 
 ### Il lettore, i take e il log del server <!-- #the-player-the-takes-and-the-server-log -->
 
-- **Il lettore** in basso: la forma d'onda da un lato all'altro, una nuvola morbida con la parte già ascoltata nel colore d'accento (un clic salta lì); sotto, il take (la sua copertina quando ce l'ha, il titolo, le prime parole dello stile, 👍 👎 ★), poi **casuale**, precedente, riproduci, successivo e **ripeti** (spento · tutto l'elenco di nuovo · questo take di nuovo, segnato 1), poi il tempo (un clic sulla durata totale lo trasforma nel tempo rimanente), *riproduci al clic* (un clic in un elenco riproduce subito il take), *continua a riprodurre* (quando un take finisce, parte il successivo dell'elenco), la **velocità** (da 0.50× a 2.00×, l'intonazione conservata), il volume e un punto di stato (pulsa mentre suona un take). Ciò che non ti serve in quel momento resta tenue finché non arriva il puntatore; ogni icona dice cosa fa quando il puntatore ci si posa. Il puntatore sulla forma d'onda mostra il tempo a cui salterebbe un clic. I tasti multimediali della tastiera e di una cuffia governano il lettore, e il pannello multimediale del desktop mostra il take.
+- **Il lettore** in basso: la forma d'onda da un lato all'altro, una nuvola morbida con la parte già ascoltata nel colore d'accento (un clic salta lì); sotto, il take (la sua copertina quando ce l'ha, il titolo, le prime parole dello stile, 👍 👎 ★), poi **casuale**, precedente, riproduci, successivo e **ripeti** (spento · tutto l'elenco di nuovo · questo take di nuovo, segnato 1), poi il tempo (un clic sulla durata totale lo trasforma nel tempo rimanente), *riproduci al clic* (un clic in un elenco riproduce subito il take), *continua a riprodurre* (quando un take finisce, parte il successivo dell'elenco), la **velocità** (da 0.50× a 2.00×, l'intonazione conservata), il volume e un punto di stato (pulsa mentre suona un take). Ciò che non ti serve in quel momento resta tenue finché non arriva il puntatore; ogni icona dice cosa fa quando il puntatore ci si posa. Il puntatore sulla forma d'onda mostra il tempo a cui salterebbe un clic. I tasti multimediali della tastiera e di una cuffia governano il lettore, e il pannello multimediale del desktop mostra il take. ⏪ e ⏩ vanno al segno precedente o successivo ogni 15 secondi da 0:00, ← e → ai segni di 5 secondi (con Shift, di 30). La pillola di stato all'estremità destra del lettore (verde mentre suona un take, del colore d'accento mentre se ne fa uno) apre il take o l'esecuzione; con Compose sollevato sopra la stanza, gira la cornice su quella del take.
 - **La linea verso lo studio** appare accanto al log del server (*Forge · 85 ms*, o *qui* sulla stessa macchina). Quando lo studio è lontano, un mi piace, un preferito o un fissaggio si vedono subito e lo studio li conferma soltanto.
 - **Take** a destra: cerca con parole, `*` e `?`; *Preferiti*; richiudi la colonna con »; ⋯ per le azioni proprie dell'elenco.
-- **Il log del server** sta proprio sopra il lettore in ogni stanza: chiuso, mostra l'ultima cosa detta dal motore (in rosso quando qualcosa non è andato); aperto, dieci righe, *Segui*, *Copia* e la via al log completo nel Motore.
+- **Il log del server** sta proprio sopra il lettore in ogni stanza: chiuso, mostra l'ultima cosa detta dal motore (in rosso quando qualcosa non è andato); aperto, dieci righe, *Segui*, *Copia* e la via al log completo nel Motore. Con una cornice sollevata sopra la stanza, sta a sinistra, lontano dai pulsanti della cornice.
 
 ![Il log del server, aperto](guide/log-dock.png)
 
@@ -71,12 +71,12 @@ Le stanze aprono la barra; il logo sta al centro; a destra, lo spazio, la spia d
 
 - **Parti da un'idea**: una riga sulla canzone; il modello di chat dello Scrittore abbozza il titolo, lo stile e il testo (*Scrivi il brief*).
 - **Titolo**, **Tonalità**: la tonalità entra nella partitura (`K:`). Con una partitura nel modulo, una nuova tonalità la sposta lì; senza, la scelta aspetta e sposterà la partitura che arriva.
-- **Seme musicale** e **Seme sonoro**: i dadi delle due metà. Vuoto è casuale; un numero ripete un take. Tieni il seme musicale e cambia quello sonoro per sentire la stessa canzone resa in modo diverso.
-- **Prompt di stile**: lingua, genere, voce, strumenti, tempo. *Salva stile…* lo conserva con un nome.
+- **Seme musicale** e **Seme sonoro**: i dadi delle due metà. Vuoto è casuale; un numero ripete un take. Tieni il seme musicale e cambia quello sonoro per sentire la stessa canzone resa in modo diverso. Stanno per primi in *Campionamento e riduzione del rumore*.
+- **Stile**: lingua, genere, voce, strumenti, tempo. *Salva stile…* lo conserva con un nome.
 
 ### Il prontuario degli strumenti ♪ <!-- #the-instruments-cheat-sheet -->
 
-Il ♪ accanto allo stile apre una tabella di 200 strumenti che lo studio ha provato: la loro famiglia, la loro terra, come suonano (in inglese e in russo) e le parole che li chiamano. ▶ A e ▶ B riproducono due prove di 60 secondi di ciascuno. Il verdetto di ogni riga lo dà un orecchio umano: sentito, in dubbio o **NOT IDENTIFIED IN YUE2** (YuE2 non lo conosce; serve un prompt più elaborato). Un clic mette il nome dello strumento nello stile.
+Il ♪ accanto allo stile apre una tabella di 200 strumenti che lo studio ha provato: la loro famiglia, la loro terra, come suonano (in inglese e in russo) e le parole che li chiamano. ▶ A e ▶ B riproducono due prove di 60 secondi di ciascuno. Il verdetto di ogni riga lo dà un orecchio umano: sentito, in dubbio o **NOT IDENTIFIED IN YUE2** (YuE2 non lo conosce; serve un prompt più elaborato). Un clic copia il nome e chiede dove va: in fondo allo stile su una riga sua, o al suo posto; un nome che lo stile ha già è segnato nella tabella, e il testo della tabella si può selezionare e copiare.
 
 **È YuE2 a decidere quando entra uno strumento.** Una riga di stile è una richiesta, non un ordine: per quanto insisti, il modello porta dentro uno strumento dove il suo addestramento dice che la canzone lo vuole, e il seme decide moltissimo. Lo stesso prompt ha dato un take con lo strumento e uno senza. Ascolta più semi prima di giudicare uno strumento.
 
@@ -86,22 +86,24 @@ Il ♪ accanto allo stile apre una tabella di 200 strumenti che lo studio ha pro
 
 ### Testo e profili del testo <!-- #lyrics-and-text-profiles -->
 
-- Tag di sezione su righe a sé; YuE2 conosce `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Inst]`, `[Outro]`.
+- Tag di sezione su righe a sé; YuE2 conosce `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Outro]`.
 - **Profilo del testo**: incolla un testo intero, scegli un profilo, *Applica*: le sue regole (pulizia, fonetica) e la sua forma (`[Intro]`, `[Verse]` alle righe vuote, `[Interlude]` dopo i paragrafi lunghi) lo rendono pronto da leggere. *Annulla* riporta il testo indietro. I profili si creano nello Scrittore.
 
 ### Il contatore del testo e la mano fonetica <!-- #the-lyrics-meter-and-the-phonetic-hand -->
 
 - **Il contatore** accanto al testo: ogni riga, le sue sillabe in una barra contro il righello del suo gruppo — strofa e ponte un gruppo, il pre-ritornello il suo, il ritornello il suo, ogni altra sezione la sua. Una pausa, un break, un silenzio, un interludio, un preludio o un passaggio strumentale dentro una sezione cantata non apre un gruppo: il suo nome sta accanto, tenue, e il righello della sezione prosegue. I tag non si contano mai: una riga di soli tag (`[Break] [Silence]`) non conta, un tag dentro una riga resta fuori dal conto. Il righello sta alla lunghezza abituale del gruppo; entro una sillaba la barra è verde, a due o tre ambra, oltre rossa. Ciò che è tra parentesi tonde è disegnato tratteggiato dopo la barra: YuE2 può cantarlo. Sotto la casella: caratteri, sillabe e righe del testo, i tag, le parentesi e la mano fonetica; il correttore del browser nella lingua del testo (lì si spegne); una casella allungata a mano tiene la sua altezza fino ad *Altezza automatica*.
+- **Numeri di riga e segni**: il riquadro del testo numera le sue righe come un editor di codice (una riga che va a capo, una volta, sulla sua prima riga visiva; *Line numbers* sotto il riquadro li spegne). **Alt+K** segna la riga del cursore o toglie il segno, **Alt+J** va al segno successivo, **Alt+Shift+J** a quello prima, **Alt+Shift+K** li toglie tutti; il numero di una riga segnata è ambra, e i segni seguono le loro righe quando scrivi sopra. Ogni [tag] sta sotto un sottile strato ambra. Il testo dello Scrittore ha lo stesso. Come in mcedit: **Alt+O** toglie anch'esso i segni, **Alt+L** va a una riga per numero, **Ctrl+Y** cancella la riga, **Alt+↑** e **Alt+↓** spostano la riga (o le righe selezionate) col suo segno. *Keys* sotto il riquadro li elenca tutti, e l'etichetta LYRICS dello Scrittore li dice al passaggio del puntatore. **⤢** accanto a Lyrics solleva il riquadro sopra tutto, al 60 % della larghezza dello schermo e di quattro decimi più grande, con tutto questo e con i suoi −, + e ⟲ per la dimensione del testo (restano in questo browser); Esc lo rimette a posto.
+- **Parentesi controllate**: una «[» non chiusa nella sua riga, una «]» senza aperta, una «[» dentro un tag e un tag vuoto colorano di rosso il numero della riga, e *Tags not closed or astray* sotto il riquadro va dall'una alla successiva; una parentesi tonda lasciata aperta o chiusa senza aperta è ambra (un'eco può continuare). Una «[» ancora in scrittura resta tranquilla finché il cursore non lascia la sua riga. **Genera chiede prima** quando un tag è rotto: ciò che segue una «[» non chiusa può perdersi nella canzone e la sua fine storcersi; *Go to the line* o *Generate as it is*.
 - **Accenti fuori posto**: un segno non su una vocale — a inizio riga, dopo uno spazio o un segno, su una consonante, un secondo sulla stessa lettera, o un ´ staccato al suo posto — mostra un pulsante rosso sotto il riquadro (*Stress marks off a vowel*) e un segno davanti al conteggio della riga; il pulsante li seleziona uno alla volta. Una parola con due segni ne riceve uno ambra: voluto o una svista? Nel conteggio il segno d'accento non è una sillaba; ע e una vocale latina dentro una parola russa sì. Una sillaba è un suono vocalico, una nota, e ogni lingua si conta con le sue regole: in russo, ucraino e bielorusso una lettera vocale (e poiché il contatore misura il tempo di una riga, una parola senza vocale — с, в, к, з, й, ў — e un'occlusiva davanti a un'affricata dentro una parola — глу-п-цо́в — prendono un battito proprio, disegnato più chiaro: «Я же вижу глупцо́в с приду́рческим планом» sono 12 sillabe e 2 di questi battiti, 14); in greco αι, ει, οι, ου, αυ, ευ sono una (la dieresi o l'accento le separano: τσά-ι); in spagnolo e in italiano una i o u debole si unisce alla vicina (cie-lo, cuo-re), due forti sono due (po-e-ta), e non contano la i di ciao, giorno, figlio né la u di qu e gu; in inglese una e finale muta non conta (make, ma ta-ble); l'ebraico conta i suoi punti vocalici; cinese, giapponese e coreano un segno per sillaba. Le parole latine si contano come inglesi, spagnole o italiane: dal nome della lingua nello stile, altrimenti dalle parolette del testo stesso.
 - **Ctrl+F** nel testo o nello stile (e nei riquadri dello Scrittore) cerca solo in quel riquadro: Invio e Maiusc+Invio scorrono le corrispondenze, Esc dal campo di ricerca riporta il cursore con la corrispondenza selezionata; dal riquadro stesso (se hai cliccato altrove) chiude la ricerca e lascia il cursore dov'è, e ciò che scrivi intanto non sposta la vista. Il segno d'accento non ostacola la ricerca, ё è е, e о e а trovano anche ע e le o e a latine.
-- **Tag dopo «[»**: un «[» all'inizio di una riga del testo (del Creatore o dello Scrittore) apre i tag di sezione, come un editor di codice suggerisce le parole: prima Verse, Chorus, Pre-Chorus, Bridge, Interlude, Break, poi Intro, Outro, END, poi il resto. Le lettere dopo il «[» restringono l'elenco (anche con la tastiera russa o ucraina), un numero numera il tag (`v2` è `[Verse 2]`), e se il testo numera le strofe si offre la successiva. ↑ ↓ scelgono, Invio o Tab mettono il tag su una riga sua (Ctrl+Z lo toglie), Esc o `]` chiudono l'elenco. Intro, Outro ed END già nel testo stanno in fondo, tenui, con la loro riga. Ctrl+Spazio apre l'elenco, e all'inizio di una riga scrive il «[» stesso.
+- **Tag dopo «[»**: un «[» all'inizio di una riga del testo (del Creatore o dello Scrittore) apre i tag di sezione, come un editor di codice suggerisce le parole, nell'ordine in cui una canzone li attraversa, da Intro a End. Le lettere dopo il «[» restringono l'elenco (anche con la tastiera russa o ucraina), un numero numera il tag (`v2` è `[Verse 2]`), e se il testo numera le strofe si offre la successiva. ↑ ↓ scelgono, Invio o Tab mettono il tag su una riga sua (Ctrl+Z lo toglie), Esc o `]` chiudono l'elenco. Intro, Outro ed End già nel testo restano al loro posto, tenui, con la loro riga: ↑ ↓ ci arrivano e si legge che cosa sono, ma non si mettono due volte. Ctrl+Spazio apre l'elenco, e all'inizio di una riga scrive il «[» stesso. L'elenco sta in due colonne: i tag e, accanto, che cos'è quello in mano (con parole nostre, secondo la guida di Genius alle sezioni delle canzoni) e quante volte lo scrivono i 110 esempi ufficiali; il riquadro mantiene la sua misura mentre l'elenco si restringe. Le sezioni che nessuno di essi scrive sono segnate TEST.
 - **La mano fonetica** (di Viktor, da SUNO; YuE2 la segue allo stesso modo):
   - **Un segno d'accento** (l'acuto combinante, U+0301) dopo una vocale: `обе́щано`, `сули́т`. Tiene in oltre il 95 % delle righe.
   - **Una vocale tonica maiuscola** spinge l'accento dove lo vuole la rima, contro il dizionario: `базилиО́`.
   - **ע (ayin) dentro una parola russa** si canta come una o/a morbida, come il parlato vivo dice la o atona: `кעмо́рка`, `пעле́но`, `Ка́рлע`. Frena anche il rap che accelera sempre di più.
   - **Una o latina dentro una parola russa** canta una o dura e aperta dove il modello direbbe a: `Кo дну`.
   - **Una vocale allungata** (`о-о-о`, `БУ… РА… ТИ… НО`) tiene una nota; dove la musica ha spazio per lei, non in ogni riga.
-  - **[Interlude] e [Break]** tra le parti fanno pause nel rap e frenano il parlato che accelera sempre di più (non sempre).
+  - **[Interlude]** tra le parti fa una pausa nel rap e frena il parlato che accelera sempre di più (non sempre).
   - **Le parentesi tonde** possono essere cantate (così nelle prime prese di «Buratino»): eco, controcanto; anche una didascalia tra parentesi può suonare.
   - **Una parola ebraica con i suoi punti vocalici** (`רוּחַ`) il modello la dice meglio che in traslitterazione.
 
@@ -121,25 +123,27 @@ Ogni forza sta su una **strada**: il verde è sicuro, il giallo è il suo limite
 - la metà sonora fino a 1.0 nel verde, 1.5 di limite;
 - **Musica, nell'insieme**: gli adattatori impilati si sommano. Ognuno può stare nel proprio verde e la somma rompere comunque la partitura. Misurato su take reali: integra fino a **2.25** nell'insieme, rotta da **2.5**. La barra sotto gli adattatori mostra la somma sulla stessa strada.
 
-**Doppio clic** su un numero per scrivere una forza esatta. Le indicazioni sotto il blocco dicono ciò che conta: una parola trigger che manca nello stile, un adattatore addestrato in un'altra modalità di pianificazione, una forza oltre il suo limite.
+**Doppio clic** su un numero per scrivere una forza esatta. Le indicazioni sotto il blocco dicono ciò che conta: una parola trigger che manca nello stile, un adattatore addestrato in un'altra modalità di pianificazione, una forza oltre il suo limite. Mentre il puntatore sta su un cursore o lo trascina, la forza esatta compare sopra il puntatore, nel colore della sua strada. L'adattatore Instrumental si ferma a 1.0, da dove parte: più su le sue partiture deragliano.
 
-> **Un adattatore di partitura strumentale con parole da cantare.** Un adattatore del genere pianifica partiture *senza linea vocale*. A 1.00 ha dato un take con una sola nota in 127 battute vocali: il cantante parlava sopra due battute in loop. Con un testo, tienilo basso, da 0.3 a 0.5. Il blocco LoRA lo segnala quando succede.
+> **Un adattatore di partitura strumentale con parole da cantare.** Un adattatore del genere pianifica partiture *senza linea vocale*. A 1.00 ha dato un take con una sola nota in 127 battute vocali: il cantante parlava sopra due battute in loop. Con un testo, tienilo basso, da 0.3 a 0.5. Il ⚠ accanto al nome LoRA lo segnala quando succede.
 
 ### Profili e modalità di pianificazione <!-- #profiles-and-planning-modes -->
 
 - **Profilo** imposta in un colpo la modalità, la durata, il campionamento, la guida, i passi, il VAE, gli slider, le LoRA e l'uscita; i testi e i semi restano. *Salva profilo…* conserva le manopole attuali con un nome.
 - **Modalità di pianificazione**:
-  - **Piano completo**: prima si scrivono melodia e accordi (una partitura modificabile), poi la canzone. La scelta migliore per canzoni nuove.
+  - **Piano completo**, quella predefinita: prima si scrivono melodia e accordi (una partitura modificabile), poi la canzone. La scelta migliore per canzoni nuove.
   - **Solo melodia**: un piano della melodia, accompagnamento libero. Consigliato per le cover.
   - **Diretto**: direttamente dal testo e dallo stile, senza partitura. Gli adattatori addestrati senza partitura vanno qui.
-  - **Strumentale**: senza voci, la ricetta ufficiale di YuE2.
+  - **Strumentale**: senza voci, la ricetta ufficiale di YuE2. Sta a destra nella riga della modalità di pianificazione.
+- **Piano completo o Diretto.** La parola di Viktor dopo una settimana di canzoni: Diretto è il colpo o la cilecca di SUNO (circa due take buoni su cento, secondo il suo conto); Piano completo è la strada per tutti, anche senza leggere una nota di ABC: i tag sono rispettati, il suono si assesta, la dizione regge e il tempo si può prevedere. Misurato sul suo rap, quattordici take per modo con Whisper in ascolto: il miglior take di tutti è stato uno in Piano completo con la sua ricetta conservativa (l'84 % delle parole sentite, il 76 % nell'ultimo quarto). Dove Piano completo cede, cede alla fine: un take dura quanto la sua partitura, e il piano può avere meno sezioni del testo (allora gli ultimi versi restano fuori, o se ne ricanta uno precedente); dopo le ultime parole suonano le battute che avanzano nella partitura, e quelli sono i 10–15 s dopo la giusta dissolvenza di una canzone, non la guida (CFG). Ascolta la fine di un take in Piano completo: *End at…* taglia una coda, *Rigenera da…* riscrive una fine persa.
 
 ### Cover, remix e la tua partitura <!-- #covers-remixes-and-your-own-score -->
 
 - **Cover o remix**: prendi la melodia di una registrazione (*Trascrivi*: solo la sua melodia, non le parole né il cantante), o la melodia di uno dei tuoi take, e dalle un nuovo stile.
 - **La tua partitura**: una partitura ABC, seguita in Piano completo e in Solo melodia. Trasponila (alla più vicina, in su o in giù), sposta una voce per gradi della scala, importa un file MIDI (una linea melodica per voce), esporta MIDI o marcatori per una DAW, carica un esempio, rendila strumentale.
+- **Recitare il testo su una partitura** (*Lay the lyrics on this score…*, sotto la partitura quando si legge): il narratore del promo dello studio, per le tue parole. Ogni riga va sulle battute della partitura, una sillaba un ottavo su un suono dell'accordo della sua battuta, un respiro dopo una virgola e un punto, l'ultima sillaba della riga un quarto più in basso; ogni sezione comincia su una frase di due battute dopo una battuta di pausa, o dopo un vocalizzo se lo spunti. Strumenti, accordi, tonalità e tempo restano; le sezioni della partitura seguono i tuoi tag, con un intro e un outro intorno. Per spoken word, letture e rap su una base: fai la base, *Scrivila dal suono*, poi questo; chiede prima, e Ctrl+Z in ogni casella riporta il testo di prima.
 
-### Campionamento <!-- #sampling -->
+### Campionamento e riduzione del rumore <!-- #sampling-and-denoising -->
 
 ![Campionamento: il pianificatore della partitura e i token musicali, i limiti dei token bloccati](guide/sampling.png)
 
@@ -149,11 +153,14 @@ I valori predefiniti sono già tarati. Le tre righe di **forma** (Composizione, 
 - **Token minimi** e **Token massimi** sono **bloccati** contro una modifica involontaria: fai clic sul 🔒 accanto al nome per cambiarli, e di nuovo per bloccarli. I minimi sono fusibili: una partitura non può finire prima di 200 token, la musica non prima di 750 (30 secondi; una durata richiesta più breve lo abbassa a quella durata). Il massimo della musica appare come **Durata massima**, in tempo (25 token al secondo), senza lucchetto: è al più la durata della canzone, e si imposta solo qui («Suono e uscita» non ha un campo per la durata).
 - Ogni manopola è tenuta entro limiti sensati; un valore oltre viene riportato indietro, e la pagina lo dice.
 - **Guida (CFG)**: 1.6 per impostazione predefinita in ogni modalità.
-- **Passi di riduzione del rumore** e **Risolutore** per la metà sonora (*Reset output* li riporta entrambi); **Variazioni sonore** rende la stessa musica da 1 a 9 volte con un suono diverso; **Formato**: WAV a 24 bit, 16 bit, 32 bit in virgola mobile o MP3.
+- **Suono e uscita**, la sezione inferiore dello stesso blocco: **Passi di riduzione del rumore** e **Risolutore** per la metà sonora, **Formato** (WAV a 24 bit, 16 bit, 32 bit in virgola mobile o MP3 con il suo bitrate) e **Taglio dei picchi**; *Ripristina l'uscita* li riporta.
 
-### Pianifica solo la partitura, e Genera <!-- #plan-score-only-and-generate -->
+**Una ricetta prudente per il russo** (di Viktor, a orecchio): Composition *low*, Performance *low*, Style influence *high*: il pianificatore della partitura a temperatura 0.85, top-p 0.92, top-k 40, i token musicali a 0.85, 0.93, 80, le penalità di ripetizione 1.005 e 1.3 su una finestra di 100, guida (CFG) 1.8; 32 passi di riduzione del rumore con Midpoint. Nessuna accelerazione, rap a un ritmo moderato. È il profilo integrato *Russian · conservative (Viktor's)*.
 
-- **Pianifica solo la partitura** scrive la partitura e si ferma: leggila, modificala, e allora *Genera* rende esattamente quella partitura. Una partitura già presente nel campo viene prima cancellata.
+### Crea la partitura ABC, e Genera <!-- #create-abc-score-and-generate -->
+
+- **Crea la partitura ABC** scrive la partitura e si ferma: leggila, modificala, e allora *Genera* rende esattamente quella partitura. Una partitura già presente nel campo viene sostituita, dopo una domanda.
+- **Prove** e **Variazioni**, accanto a Genera: Prove è quante prove, in ognuna la musica viene scritta da capo, ognuna con il proprio seed musicale (seed, seed + 1…); il motore ne scrive insieme quante il suo batch consente, le altre nei passaggi successivi. Variazioni è quante volte viene reso il suono di ogni prova dalla sua unica musica, ognuna con il proprio seed sonoro, lo stesso per ogni prova: ognuna costa all'incirca il tempo di un suono, quasi nulla di memoria. Prove × Variazioni è quanti take escono: 2 × 4 = 8.
 - **Genera canzone** fa tutto. L'esecuzione mostra le sue fasi man mano.
 
 ### Babele nella partitura <!-- #babel-in-the-score -->
@@ -166,11 +173,13 @@ Quando la metà musicale scrive spazzatura al posto di una partitura (gli adatta
 
 ![Un take: scaricare, rifare, post-produzione, file](guide/take-head.png)
 
+- **L'intestazione**: ▶ e i pulsanti del take nella prima riga (👍 👎 ☆, il Bibliotecario, rinomina, elimina), e in fondo ⇆ e ⤡, che sollevano una cornice sopra la stanza; sotto, il titolo su una riga; più sotto, come è stato fatto.
 - **Scarica**: WAV, FLAC (gli stessi campioni, circa tre quarti della dimensione), MP3 al bitrate che scegli.
-- **Rifai**: *Nuovo take* (un take nuovo dalla stessa richiesta), *Usa come base* (la richiesta di nuovo nel modulo), *Rifai il suono* (la stessa musica, suono nuovo), *Rigenera da…* (tieni l'inizio, riscrivi il resto), *Trascrivi questo take*, *Taglia al testo* (taglia una coda dopo l'ultima riga cantata).
+- **Rifai**: *Nuovo take* (un take nuovo dalla stessa richiesta), *Usa come base* (la richiesta di nuovo nel modulo), *Rifai il suono* (la stessa musica, suono nuovo), *Rigenera da…* (tieni l'inizio, riscrivi il resto), *Trascrivi questo take*, *Taglia al testo* (taglia una coda dopo l'ultima riga cantata), *End at…* (il take finisce nel momento che scegli, con gli ultimi 2 s in dissolvenza; dai suoi latenti conservati, in pochi secondi).
 - **Rifinitore**: *Spettro*, *Verifica del testo*. **File**: la richiesta e la partitura.
 - **Nota**: cosa funziona, cosa sistemare, dove va.
 - La scheda sotto dice come è stato fatto: modalità, formato, VAE, modello, passi, la forma, gli slider, le LoRA con le loro forze, entrambi i semi (copiali per ripeterlo).
+- **Sopra la stanza** (⤡) il take sta in due colonne: cosa farne, il suo stile e il suo testo a sinistra; come è stato fatto, il suo VAE e la sua partitura a destra. Un take nuovo si apre con Style e Lyrics chiusi; gli strumenti stanno in gruppi incorniciati.
 
 ![Come è stato fatto un take](guide/take-info.png)
 
@@ -202,7 +211,7 @@ Come un testo incollato diventa pronto da leggere: regole di sostituzione in ord
 Un modello di chat legge il tuo stile, il tuo testo e la tua partitura, poi li abbozza o li rivede. **Nulla cambia finché non lo applichi.**
 
 - **Di cosa parla la canzone?** o cosa cambiare; **Aiutami con** lo stile, il testo o entrambi; **Struttura**: l'ordine delle sezioni per un testo nuovo.
-- Il modello: un server di chat locale (vLLM, LM Studio, Ollama: qualunque cosa con un endpoint di chat `/v1`, impostato nel Motore) o qualsiasi modello di OpenRouter con la sua chiave API.
+- Il modello: un server di chat locale (vLLM, LM Studio, Ollama: qualunque cosa con un endpoint di chat `/v1`, impostato nel Motore) o qualsiasi modello di OpenRouter con la sua chiave API. Il suo campo suggerisce tutta la lista di OpenRouter mentre scrivi, ogni modello con il suo prezzo per milione di token in entrata e in uscita e il suo contesto; il prezzo di quello scelto sta sotto il campo, e un nome che la lista non conosce viene segnalato.
 - *Crea una bozza*, poi **Applica la bozza**, **Usa il testo** o **Usa lo stile**; *Annulla* torna indietro.
 
 ## Rifinitore <!-- #refiner -->
@@ -225,15 +234,15 @@ WAV, FLAC, MP3… da ovunque: diventa un take della libreria (48 kHz, 24 bit), s
 
 ![La catena e i passi](guide/post-steps.png)
 
-La **catena** esegue più passi in un colpo: *Antironzio → Upscale → Remaster*, poi uno qualsiasi tra *Artefatti*, *Spettro*, *Testo*, *Stem*. Uno per uno:
+La **catena** esegue più passi in un colpo: *Antironzio → Upscale → Stem → Remaster → Upscale*, poi uno qualsiasi tra *Artefatti*, *Spettro*, *Testo*. Gli stem si separano dal take dopo l'Antironzio (e l'Upscale) e il remaster li mixa, così il suo preset e il de-esser agiscono anche nella catena; il primo upscale fa sentire ai separatori l'intera canzone, l'ultimo ridisegna la parte alta che lasciano gli stem e il remaster (un fruscio sopra i 20 kHz, quasi nulla sopra i 22). Gli stem sono quattro, se non scegli altrimenti. Uno per uno:
 
 1. **Spettro**: spettrogramma, spettro medio, energia per bande; sovrapponi un altro take per confrontare.
 2. **Artefatti**: un tono che non se ne va, il ronzio a 25 frame del VAE negli acuti, clic, clipping, buchi, uno stereo che si fa la guerra da solo. Un clic su un tempo riproduce da lì.
 3. **Antironzio**: il decoder di YuE2 scrive il suono in frame di 1920 campioni, 25 al secondo, e i suoi acuti tremano con essi. Questo passo toglie la parte legata a quell'orologio dei frame sopra i 2 kHz. 80 % è la scelta dell'orecchio; 100 % assottiglia l'attacco.
 4. **Testo**: Whisper ascolta e confronta ciò che sente con il tuo testo, minuto per minuto; *Sincronizza le righe* per i tempi del karaoke. Sullo stem vocale sente le parole senza la musica.
-5. **Stem**: voce + strumentale (BS-Roformer), o quattro stem (+ htdemucs_ft per batteria, basso e il resto).
-6. **Remaster**: mixa gli stem o usa il take così com'è; pulizia, de-esser, a scelta riaccordatura 440 → 432 Hz, loudness (LUFS) e true peak. Ogni passata è un nuovo ramo. Il preset e il de-esser agiscono sugli stem prima del mix: con il take o un qualsiasi file singolo come sorgente (e nella catena) sono spenti.
-7. **Upscale**: UniverSR ridisegna la parte alta dello spettro; l'originale resta campione per campione sotto il taglio.
+5. **Stem**: quattro stem (BS-Roformer per la voce, poi htdemucs_ft per batteria, basso e il resto; anche lo strumentale), o voce + strumentale. *Sorgente* è il take o un suo file dopo l'Antironzio o l'Upscale, ogni sorgente con il suo set; nella tua DAW va il set più recente di ogni tipo.
+6. **Remaster**: mixa gli stem o usa il take così com'è; pulizia, de-esser, a scelta riaccordatura 440 → 432 Hz, loudness (LUFS) e true peak. Ogni passata è un nuovo ramo. Il preset e il de-esser agiscono sugli stem prima del mix: con il take o un qualsiasi file singolo come sorgente sono spenti, e nella catena agiscono quando essa separa gli stem.
+7. **Upscale**: UniverSR ridisegna la parte alta dello spettro; l'originale resta campione per campione sotto il taglio. Su un remaster (l'ultimo passo della catena) l'intero file si abbassa se la nuova parte alta supera il tetto di true peak del remaster.
 
 ## Bibliotecario <!-- #librarian -->
 
@@ -242,15 +251,15 @@ La **catena** esegue più passi in un colpo: *Antironzio → Upscale → Remaste
 ![Il Bibliotecario](guide/studio-collection.png)
 
 - **L'intestazione** nomina la raccolta aperta (*Bibliotecario › Fosforida*) e ciò che contiene: take, ore, mi piace, preferiti, note, come sono stati fatti.
-- **Spazi** a sinistra: Tutti, Preferiti, Senza spazio, i tuoi spazi, *+ Nuovo spazio*; Nascosti e il Cestino, in *Lontano dagli occhi*. Clic destro su uno spazio per i suoi **blocchi** (*Blocca l'eliminazione dello spazio*, *Blocca l'eliminazione dei take*): un 🔒 accanto al suo nome, e niente di ciò che contiene va nel cestino.
+- **Spazi** a sinistra: Tutti, Preferiti, Senza spazio, i tuoi spazi, *+ Nuovo spazio*; Nascosti e il Cestino, in *Lontano dagli occhi*. Clic destro su uno spazio per i suoi **blocchi** (*Blocca l'eliminazione dello spazio*, *Blocca l'eliminazione dei take*): un 🔒 accanto al suo nome, e niente di ciò che contiene va nel cestino. Gli spazi 💎 (i set pubblici dello studio) stanno in fondo all'albero, per nome, e gli 💎 … LoRA più in basso di tutti.
 - **Cerca** con parole, `*` e `?`; **ordina** per più nuovi, più vecchi, per titolo, più lunghi; **Riquadri** o **Elenco**: tutti e tre nella riga dell'intestazione, accanto ai conteggi.
 - **Una scheda** porta la copertina del suo take nell'angolo in alto a destra, accanto al titolo, quando ce l'ha (*Disegna la copertina* nel menu del take); un clic mostra l'immagine intera sopra lo studio, dove ‹ › e i tasti freccia scorrono le immagini delle schede mostrate, ▶ riproduce il suo take ed Esc chiude. La scheda che suona brilla dei picchi della canzone stessa.
 - **Take freschi**: un take che non hai ancora riprodotto porta una leggera linea tratteggiata; il suo primo ascolto la toglie. Un take rigenerato porta un'etichetta *regen* e conserva la sua nota, il suo mi piace e la sua stella.
 - **La colonna degli spazi**: trascinane il bordo per allargarla o restringerla; « la richiude, e le schede guadagnano una colonna in più.
 - **Sezioni**: uno spazio può avere sezioni, al massimo due livelli di profondità (⋯ accanto al suo nome → *Nuova sezione…*), per ordinare ciò che contiene senza un nuovo spazio ogni volta. Uno spazio mostra anche i take delle sue sezioni. Tutto ciò da cui il Rifinitore ricava qualcosa va da solo nella sezione *Rifiniti* dei suoi spazi.
 - **Trascina una scheda su uno spazio** a sinistra per spostarla lì (tutte le selezionate, quando è selezionata); tieni premuto **Ctrl** per aggiungerla lì e lasciarla anche qui. Lo studio chiede prima, e Ctrl+Z la riporta indietro.
-- **Take fissati**: fino a quattro in ogni spazio, in una striscia del loro tono sopra le schede (clic destro su un take → *Fissa qui*; × lo sgancia). Quando selezioni dei take, la barra dei selezionati prende il posto della striscia, così le schede non si spostano mai.
-- **Filtri**: come è stato fatto (generato, importato, rigenerato, ri-renderizzato), con mi piace o no, cosa ha (stem, antironzio, remaster, upscale).
+- **Take fissati**: fino a quattro in ogni spazio, in una striscia del loro tono sopra le schede (clic destro su un take → *Fissa qui*; × lo sgancia). Quando selezioni dei take, la barra dei selezionati prende il posto della striscia, così le schede non si spostano mai. Quella barra è una fila di icone incorniciate: la scelta, i segni, gli spazi, l'esportazione e il cestino in fondo; ognuna si dice al passaggio del puntatore.
+- **Filtro** (il pulsante in fondo alla riga di ricerca) apre una finestra come la scelta dello spazio: spunta cosa cercare in tre gruppi (come è stato fatto: generato, importato, rigenerato, ri-renderizzato; segnato: mi piace, non mi piace, preferiti, con una nota, con copertina; cosa ha: stem, antironzio, remaster, upscale), ognuno con quanti take del posto, e come si uniscono gli spuntati: tutti (AND), uno qualsiasi (OR) o nessuno (NOR). *Show* li applica; il pulsante poi dice quanti sono attivi e come si uniscono.
 - **Seleziona** più take, come in un file manager: selezionane uno, e da lì un clic in qualunque punto di un'altra scheda la seleziona a sua volta (Shift: tutto l'intervallo). Un trascinamento nello spazio vuoto tra le schede disegna una banda che seleziona ciò che tocca; **Ctrl+trascinamento** la disegna da qualunque punto e conserva ciò che era già selezionato. La barra dei selezionati galleggia sopra il lettore: preferito, aggiungi a uno spazio, sposta in uno spazio, togli da questo, nascondi, esporta uno ZIP, nel cestino.
 - **Il cestino** restituisce, o cancella per sempre dopo la tua conferma.
 
@@ -258,13 +267,13 @@ La **catena** esegue più passi in un colpo: *Antironzio → Upscale → Remaste
 
 ![Clic destro su un take](guide/collection-menu.png)
 
-**Rigenera con un nuovo seme** (sopra lo Scrittore nel menu del take): il take rifatto con tutto ciò con cui era stato fatto, ma con semi nuovi; il nuovo eredita gli spazi e la nota del vecchio, e il vecchio aspetta nella sezione *Sorgente della rigenerazione* del suo spazio (il suo spazio non lo mostra tra i propri) finché non la svuoti; il nuovo conserva la sua nota, il suo mi piace, la sua stella e la sua immagine. Una prova esce con i suoi due minuti interi. Riproduci, apri nel Creatore o nel Rifinitore, il foglio (la sua partitura), la scheda tecnica (tutto ciò con cui è stato fatto: lo stile e il testo, la partitura disegnata, ogni manopola, le LoRA e gli slider con le loro forze; un take in modalità Diretto non ha partitura, e *Scrivila dal suono* ne chiede una al trascrittore), mi piace, non mi piace, preferito, una nota, rinomina, **spazi** (un take può stare in più spazi), **sposta in** uno spazio (su una scheda selezionata: ogni take selezionato, fuori dallo spazio aperto), nascondi, manda allo Scrittore, copia, scarica, **esporta in una DAW** (progetto REAPER o DAWproject, su qualsiasi take: con i suoi stem una volta che il Rifinitore li ha separati), nel cestino.
+**Rigenera con un nuovo seme** (sopra lo Scrittore nel menu del take): il take rifatto con tutto ciò con cui era stato fatto, ma con semi nuovi; il nuovo eredita gli spazi e la nota del vecchio, e il vecchio aspetta nella sezione *Sorgente della rigenerazione* del suo spazio (il suo spazio non lo mostra tra i propri) finché non la svuoti; il nuovo conserva la sua nota, il suo mi piace, la sua stella e la sua immagine. Una prova esce con i suoi due minuti interi. Riproduci, apri nel Creatore o nel Rifinitore, il foglio (la sua partitura), la scheda tecnica (tutto ciò con cui è stato fatto: lo stile e il testo, la partitura disegnata, ogni manopola, le LoRA e gli slider con le loro forze; un take in modalità Diretto non ha partitura, e *Scrivila dal suono* ne chiede una al trascrittore), mi piace, non mi piace, preferito, una nota, rinomina, **spazi** (un take può stare in più spazi), **sposta in** uno spazio (su una scheda selezionata: ogni take selezionato, fuori dallo spazio aperto), nascondi, manda allo Scrittore, copia, scarica, **esporta in una DAW** (progetto REAPER o DAWproject, su qualsiasi take: con i suoi stem una volta che il Rifinitore li ha separati), nel cestino. **Su una scheda selezionata, con altre selezionate**, il menu agisce su tutte, e la sua testata dice su quante: mi piace, non mi piace, preferito, copertina, togliere la copertina, spazi, nascondi, uno ZIP; le copertine di più take e la rigenerazione di più take chiedono prima, perché costano minuti di una scheda video.
 
-**Disegna la copertina**: un piccolo modello linguistico (Qwen3-4B) legge lo stile e le parole del take e scrive un prompt per un'immagine; un modello SDXL (CyberRealistic XL) la dipinge, a 768 px, in circa mezzo minuto su una scheda da 16 GB. Si vede nel lettore, sulla scheda, nel pannello multimediale del desktop e dentro l'MP3 che scarichi (come sua copertina). Quando un take ha la sua immagine, il menu dice *Apri la copertina* (sopra la pagina, come un clic sull'immagine della scheda o sul quadrato del lettore) e *Ridisegna la copertina* (un nuovo prompt e una nuova immagine). I due modelli arrivano con `heresy/fetch-heresy.sh --artwork` (14 GB, chiede prima).
+**Disegna la copertina**: un piccolo modello linguistico (Qwen3-4B) legge lo stile e le parole del take e scrive un prompt per un'immagine; un modello SDXL (CyberRealistic XL) la dipinge, a 768 px, in circa mezzo minuto su una scheda da 16 GB. Si vede nel lettore, sulla scheda, nel pannello multimediale del desktop e dentro l'MP3 che scarichi (come sua copertina). Quando un take ha la sua immagine, il menu dice *Apri la copertina* (sopra la pagina, come un clic sull'immagine della scheda o sul quadrato del lettore) e *Ridisegna la copertina* (un nuovo prompt e una nuova immagine; la vecchia resta accanto al take, in `artwork-removed/`). I due modelli arrivano con `heresy/fetch-heresy.sh --artwork` (14 GB, chiede prima).
 
 ### Gli strumenti sotto lo stile <!-- #the-instruments-under-the-style -->
 
-Sotto il Prompt di stile, lo studio nomina ciò che il tuo prompt chiede: un chip per ogni strumento e stile del prontuario che trova, colorato secondo ciò che ha trovato l'orecchio (verde sentito, ambra in dubbio, rosso non suonato con quel nome) e con l'immagine dello strumento. Posa il puntatore su uno per la sua scheda: l'immagine, la sua terra, come suona, ▶ A e ▶ B con i loro semi. Un clic mostra l'immagine intera. **Alt+I** apre il prontuario da qualunque punto.
+Sotto il campo Stile, lo studio nomina ciò che il tuo prompt chiede: un chip per ogni strumento e stile del prontuario che trova, colorato secondo ciò che ha trovato l'orecchio (verde sentito, ambra in dubbio, rosso non suonato con quel nome) e con l'immagine dello strumento. Posa il puntatore su uno per la sua scheda: l'immagine, la sua terra, come suona, ▶ A e ▶ B con i loro semi. Un clic mostra l'immagine intera. **Alt+I** apre il prontuario da qualunque punto.
 
 ### Copertine: cosa le disegna, cosa non sa fare, un altro pittore <!-- #artwork-what-draws-it-what-it-cannot-another-painter -->
 
@@ -300,6 +309,8 @@ Una LoRA è un piccolo adattatore sopra entrambe le metà. **Lo stile viene sopr
 ### 1 Materiale <!-- #1-material -->
 
 Metti una cartella di canzoni in `datasets/raw/` e sceglila. Scegli quali tracce entrano, dai a ciascuna il suo testo (trovato accanto per nome quando c'è) e, se le serve, uno stile tutto suo. Le tracce sotto i 30 secondi restano fuori per impostazione predefinita; quelle lunghe vanno bene (la metà musicale si addestra sull'intera canzone).
+
+**Voce**: *Measure the voice* ascolta fino a dodici tracce della cartella e dice, sul parlato, se la voce è maschile o femminile e il suo registro (basso, baritono, baritenore, tenore; contralto, mezzo, soprano), con l'altezza del parlato, e propone per il set un nome fatto di questo, come sono chiamati gli adattatori di voce pubblicati (`voice-ru-m-baritenor-117`): nessun nome di persona. Sul canto dà l'estensione cantata e lascia la voce al tuo orecchio. Dove l'altezza da sola non decide (140–175 Hz parlando), di' ♂ o ♀ e misura di nuovo. È una bozza da misura: decide l'orecchio, e la voce con cui poi canta YuE2 può stare più in alto o più in basso.
 
 ### 2 Il set <!-- #2-the-set -->
 
@@ -385,6 +396,7 @@ Su una macchina con più schede, dai a ciascuna il suo lavoro: lo **studio** (la
 - **Scrittore**: l'indirizzo del server di chat locale (vLLM, LM Studio, Ollama), *Prova la connessione*.
 - **Aspetto**: 22 temi (scelti per crearci dentro: chiari e quieti), gli angoli, i tre caratteri (testo, titoli, numeri).
 - **Log del server**: il log intero; **Informazioni**: ogni progetto su cui poggia lo studio, con il suo link.
+- **Aggiornamenti**: le versioni di Ruach Studio su GitHub rispetto a questa: ogni quanto guardare (ogni giorno, settimana, mese, mai), anche le candidate, e quando ne esce una, chiedere o aggiornarsi da sola quando nulla è in corso (solo dove lo studio è un clone del suo repository; altrove dice come aggiornare a mano). Uno studio nuovo, e ogni aggiornamento, offre i set 💎 che non ha ancora.
 
 ## DAW <!-- #daw -->
 
@@ -397,7 +409,7 @@ Lo studio consegna una canzone in uno di due modi, e solo in questi due:
 1. **La traccia mixata**, così come l'ha fatta lo studio e rifinita il Rifinitore: WAV, FLAC o MP3, senza DAW in mezzo.
 2. **L'intero take nella tua DAW**, come progetto di quella DAW: da lì in poi tutto avviene fuori dallo studio. Non rientra né audio né progetto: lo studio non legge il progetto di una DAW (REAPER può dargli ciò di cui una canzone è fatta: le sue parole e una melodia).
 
-Il pulsante **DAW** nella barra apre questa scelta. La pagina mostra quali DAW ha la macchina dello studio (REAPER, Waveform, Bitwig), con le loro versioni. Quando lo studio gira su un computer diverso da quello della tua DAW (un server a casa, un portatile in viaggio), segna la tua con *Uso questa*.
+**Esporta in una DAW** apre questa scelta: nel ☰ o nel Rifinitore, accanto al take in mano. La pagina mostra quali DAW ha la macchina dello studio (REAPER, Waveform, Bitwig), con le loro versioni. Quando lo studio gira su un computer diverso da quello della tua DAW (un server a casa, un portatile in viaggio), segna la tua con *Uso questa*.
 
 | DAW | cosa le dà lo studio | stato |
 |---|---|---|
@@ -424,7 +436,7 @@ Nessuno dei tre è necessario: il progetto prende ciò che c'è e dice cosa gli 
 
 ### REAPER: esportare e aprire <!-- #reaper-export-and-open -->
 
-1. Apri il take (nel Creatore, nel Rifinitore o nel Bibliotecario), poi **DAW → REAPER → Esporta il take**; oppure clic destro su qualsiasi take → **Scarica → Progetto REAPER**.
+1. Apri il take (nel Creatore, nel Rifinitore o nel Bibliotecario), poi **Esporta in una DAW → REAPER → Esporta il take**; oppure clic destro su qualsiasi take → **Scarica → Progetto REAPER**.
 2. Lo studio impacchetta il take: l'audio come WAV a 24 bit a 48 kHz, così una canzone di sette minuti con due stem pesa circa 350 MB. Il browser salva `TITLE.reaper.zip`.
 3. Scompattalo dove vuoi, per intero: `TITLE/TITLE.RPP` e `TITLE/audio/` restano uno accanto all'altro.
 4. Apri `TITLE.RPP` in REAPER (File → Open project, o un doppio clic).
@@ -471,6 +483,163 @@ Clic destro su un take → **Scarica → DAWproject**, o *Esporta il take* sulla
 
 Tutto quanto sopra è anche l'API dello studio: `POST /api/v1/takes/NAME/reaper` impacchetta il progetto e dice dove prenderlo. Vedi **docs/API.md**: canzoni, lavori, take, segni, spazi, e un server MCP per gli agenti.
 
+## Partitura <!-- #score -->
+
+In Piano completo la metà musicale scrive una partitura prima che suoni una sola nota, e la canzone la segue battuta per battuta; con La tua partitura la partitura è tua. Questa scheda la legge riga per riga: il dialetto che scrivono YuE2 e SheetSage2, come le sue due voci si dividono le battute e come cambiarle senza rompere la canzone.
+
+### Che cosa fa la partitura <!-- #what-the-score-does -->
+
+La partitura è testo ABC: un'intestazione, poi la canzone in gruppi da una a quattro battute, ogni gruppo una volta per la voce (**Vocal**) e una per gli strumenti (**Ins**), su un'unica griglia di battute. Il motore la legge prima della musica: le note della voce portano le parole, gli accordi guidano l'armonia, le battute danno il tempo.
+
+- **Un take dura quanto la sua partitura.** Sei take in Piano completo sono finiti entro 0.5–5 s dalla durata della loro partitura. Anche le battute dopo le ultime parole suonano: quella è una coda (*End at…* la taglia, oppure togli quelle battute dalla partitura).
+- **Ciò che manca nella partitura non si canta.** Se il piano ha meno sezioni del testo, le ultime strofe restano fuori o ne torna una precedente.
+- **Lo studio la legge con rigore.** Ciò che il controllo non conosce lo rifiuta, e dice dove: il gruppo, la voce, la battuta. Il motore forse suona comunque una partitura così, ma il MIDI, i marcatori, lo spostamento di una voce e la recitazione vogliono il dialetto nativo.
+
+### L'intestazione <!-- #the-head -->
+
+Otto righe, sempre queste, in quest'ordine:
+
+```
+X:1
+T:
+M:4/4
+L:1/16
+Q:1/4=85
+V: Vocal clef=treble name="Vocal Melody" snm="Vocal"
+V: Ins clef=treble name="Ins Melody" snm="Inst."
+K:D#m
+```
+
+- `X:1` e un `T:` vuoto così come sono: il titolo vive nel modulo.
+- `M:` il metro come frazione: `4/4`, `3/4`, `6/8`, `2/4`; il denominatore una potenza di due.
+- `L:` l'unità: una nota senza numero dura tanto. YuE2 scrive `L:1/16`, una semicroma, e tutto quello che segue si conta in essa.
+- `Q:1/4=` il tempo: semiminime al minuto, un numero intero.
+- Le due righe `V:` parola per parola: il motore riconosce le voci da esse.
+- `K:` la tonalità: una maggiore con il suo nome (C, G, D, A, E, B, F#, C#, F, Bb, Eb, Ab, Db, Gb, Cb) o una minore con m (Am, Em, Bm, F#m, C#m, G#m, D#m, A#m, Dm, Gm, Cm, Fm, Bbm, Ebm, Abm). Un'altra grafia della stessa tonalità viene rifiutata: `Eb`, non `D#`.
+
+### Gruppi, voci e battute <!-- #groups-voices-and-bars -->
+
+Dopo l'intestazione la canzone va in gruppi:
+
+```
+% verse
+V: Vocal
+"Gm"B2B2B2B2B2B2B2G2|"Eb"B2B2B2B2B2B2B2F2|"F"F2F2F2F2F2G2F2F2|"Gm"G4z12|
+V: Ins
+Z4|
+```
+
+- Un gruppo: un commento di sezione dove comincia una sezione (`% verse`), poi `V: Vocal` e una riga da una a quattro battute, poi `V: Ins` e una riga con **lo stesso numero di battute**. Ogni riga finisce con `|`; niente `||`, niente ritornelli.
+- `Z` è un'intera battuta di pausa, `Z2`, `Z3`, `Z4` altrettante battute; `z` è una pausa con una durata, come una nota.
+- Un nuovo metro o una nuova tonalità arrivano come riga `M:` o `K:` subito dopo la riga `V:` di un gruppo, uguale nelle due voci: il controllo vuole le due voci su un'unica griglia e in un'unica tonalità in ogni istante. Dentro una battuta un cambio di tonalità si scrive `[K:Em]`.
+
+### Le note e le loro durate <!-- #notes-and-their-lengths -->
+
+- Le lettere sono altezze: `C D E F G A B` l'ottava dal do centrale (C4), in minuscolo `c d e f g a b` l'ottava sopra; `'` alza una lettera di un'ottava e `,` la abbassa: `B,` è B3, `c'` è C6.
+- `^` diesis, `_` bemolle, `=` bequadro (`^^` e `__` doppi): un'alterazione vale per quella lettera fino alla fine della battuta. I diesis e i bemolli della tonalità non vogliono segno.
+- Il numero dopo una nota è la sua durata in unità (con `L:1/16`): `1` una semicroma, `2` una croma, `3` una croma puntata, `4` una semiminima, `6` una semiminima puntata, `8` una minima, `12` una minima puntata, `16` una semibreve; `24`, `32` e `48` per le più lunghe. Solo queste: un'altra durata sono due note legate (`F4-F` per cinque).
+- `-` lega una nota alla successiva della stessa altezza, anche attraverso la stanghetta: una nota tenuta, una sillaba.
+- **Ogni battuta torna esattamente con il suo metro**: con `L:1/16` sedici unità in 4/4, dodici in 3/4 e in 6/8. Una battuta con un'unità in meno o in più viene rifiutata, con i suoi numeri.
+
+### Accordi <!-- #chords -->
+
+- Un accordo è il suo nome tra virgolette prima della nota dove comincia: `"Gm"B2`. Dura fino al successivo. Gli accordi vivono solo in **Vocal** (in Ins il controllo li rifiuta): sono l'armonia della band, non le note del cantante.
+- Un nome è una fondamentale (da A a G, con `#` o `b`) e uno tra: maggiore (niente), `m`, `dim`, `aug`, `7`, `maj7`, `m7`, `dim7`, `m7b5`, `sus4`, `sus2`, `6`, `m6`, `7sus4`, `m(maj7)`; un basso dopo una barra: `C/E`.
+- Una pausa può portare un accordo: `"Bmaj7"z16` è una battuta di quell'accordo con la voce in silenzio, come in un'introduzione.
+- Con gli accordi una partitura si suona in **Piano completo**; senza nessuno, in **Solo melodia** (un piano della melodia, l'accompagnamento libero). Il motore lo capisce dalla partitura stessa.
+
+### Sezioni <!-- #sections -->
+
+- `% intro`, `% verse`, `% chorus`, `% bridge`, `% outro` su una riga propria prima di un gruppo segnano dove comincia una sezione. Arrivano nella tua DAW come marcatori (*Marcatori*, e dentro il progetto di REAPER), ed è in esse che il piano incontra il tuo testo.
+- Dai alla partitura le sezioni del tuo testo, nel loro ordine, ciascuna con spazio per le sue righe. Il pianificatore a volte ne scrive meno: su un rap lungo, da 2 a 17 sezioni per le 32 del testo. Aggiungile, o accorcia il testo, prima di *Genera*.
+
+### Tempo <!-- #time -->
+
+- Una battuta dura le sue semiminime × 60 ÷ il tempo, in secondi (il tempo conta semiminime): in 4/4 a 85 BPM 2.82 s, a 103 BPM 2.33 s; in 3/4 a 90 BPM 2 s.
+- La canzone dura le sue battute × questo. La riga del controllo sotto la partitura lo dice: `✓ Native YuE2 score · Em · 90 BPM · 3/4 · 11 bars · 0:22 · 0 sections`.
+- Una riga di testo vuole il tempo delle sue sillabe: a una croma per sillaba una battuta di 4/4 ne contiene 8, a una semicroma 16 (un rap: le strofe di «Buratino» di Viktor vanno così: `FFFFFEEEE2zDDDDD`).
+- Perché la canzone finisca prima, togli battute alla fine della partitura, nelle due voci; per un finale, aggiungi battute lì.
+
+### Lo spazio della voce: Vocal <!-- #the-voice-s-space-vocal -->
+
+- Vocal è ciò che si canta: più o meno una sillaba per nota, una nota legata una sillaba tenuta, pause dove il cantante respira. La tabella del controllo dice quante note, quante al minuto, l'estensione e per quanto del tempo la voce suona.
+- Note e sillabe: con più note che sillabe il modello stira le sillabe su di esse o ne aggiunge di sue; con meno, stringe le parole. Il contatore del testo in Composizione misura ogni riga con il tempo che occupa: dai alla riga più o meno altrettante note.
+- Il rap è denso (semicrome su una o due altezze: lo porta il ritmo), una ballata ha note lunghe. Lascia una pausa alla fine di una riga: lì la voce respira e gli strumenti rispondono.
+- Lo spostamento di voce sotto la partitura (*Sposta*) muove Vocal per gradi della scala (una terza, una quarta, un'ottava) dove sta troppo alta o troppo bassa per il cantante; gli accordi e Ins restano.
+
+### Lo spazio degli strumenti: Ins <!-- #the-instruments-space-ins -->
+
+- Ins è la riga propria degli strumenti: il riff dell'introduzione, le risposte tra le frasi, un assolo, il finale. Una melodia, non gli accordi (quelli stanno in Vocal): una riga, e YuE2 arrangia la band intorno a essa.
+- **Sotto la voce Ins per lo più tace.** Le cover ufficiali tengono `Z4` sotto ogni gruppo cantato e suonano nell'introduzione, tra le sezioni e alla fine; i take di Viktor in Piano completo fanno lo stesso (un arpeggio nell'introduzione, `Z4` sotto le strofe, un riempimento nei passaggi). Un Ins affollato sotto una riga cantata è una seconda melodia contro la voce, e le partiture native lo evitano.
+- Il controllo lo riassume come **Ins : Vocal**, le note dell'una contro quelle dell'altra: sopra 1.5 la maggior parte delle note la portano gli strumenti, sotto 0.67 la voce, in mezzo più o meno pari.
+- Uno strumentale: Vocal tace (`Z`) per tutta la canzone e Ins porta la melodia. *Rendila strumentale* sposta la melodia vocale di una partitura in Ins (la ricetta ufficiale) e spunta *Strumentale*. Un adattatore di partitura strumentale a piena forza con parole da cantare dà una voce senza note: tienilo basso quando c'è un testo (Creatore › VAE, slider e LoRA).
+
+### Cambiarla nello studio <!-- #changing-it-in-the-studio -->
+
+- **Crea la partitura ABC**, leggila e cambiala, poi **Genera**: la via più sicura verso la partitura che vuoi. Oppure scrivi la tua in *La tua partitura*.
+- Il controllo sotto la partitura la legge mentre scrivi: ✓ con la tonalità, il tempo, il metro, le battute, la durata e le sezioni, una tabella per voce e la riga **Ins : Vocal**; oppure ✗ con che cosa non va e dove: `group 3, Ins, bar 9: duration 15/4 quarter notes != meter duration 4`.
+- **Tonalità** sposta tutta la partitura (alla più vicina, su o giù); *Sposta* sposta solo Vocal o solo Ins, per gradi della scala.
+- **MIDI** verso fuori per una DAW (una traccia per voce, le sezioni come marcatori) e verso dentro da una (una riga melodica per voce); **Marcatori**: le sezioni con i loro secondi, come CSV.
+- *Scrivila dal suono* e *Trascrivi questo take*: SheetSage2 ascolta una registrazione e ne scrive melodia e accordi in questo dialetto (con gli accordi, o solo la melodia, come scegli in *Cover o remix*).
+- *Lay the lyrics on this score…*: le tue righe sulle battute della partitura; la scheda seguente racconta da dove viene.
+- La partitura del take come pentagramma, a schermo intero, stampata in PDF: Creatore › La partitura.
+
+### Quando il controllo dice di no <!-- #when-the-check-says-no -->
+
+| dice | significa | fai |
+|---|---|---|
+| `duration … != meter duration …` | una battuta non torna | conta le sue unità: 16 in 4/4 con `L:1/16` |
+| `unsupported duration 5` | una durata fuori da 1 2 3 4 6 8 12 16 24 32 48 | legane due: `F4-F` |
+| `voices have different measure counts` | Vocal e Ins hanno un numero diverso di battute in un gruppo | dai alla più corta battute `Z` |
+| `Native chord symbols belong in Vocal, not Ins` | un accordo in Ins | spostalo in Vocal, nella stessa battuta |
+| `unresolved tie at end of score` | l'ultima nota è legata al nulla | togli il suo `-` |
+| `tie changes pitch` | una legatura tra due altezze | lega un'altezza solo a sé stessa |
+| `Unsupported key` | una tonalità fuori dall'elenco | la stessa tonalità come la scrive l'elenco: `Eb`, non `D#` |
+| `expected 1–4 measures` | una riga con più di quattro battute | dividi il gruppo in due |
+| `Preserve native Vocal and Ins voice definitions` | l'intestazione è cambiata | le otto righe qui sopra |
+
+## Voci su una partitura <!-- #voices -->
+
+Come il promo dello studio ha avuto il suo suono: un narratore dice le righe del promo sopra una base musicale, voci di donna cantano tra le righe, ogni riga vicino al momento che la sua scena chiedeva, tutto in un solo take. Il metodo vale per ogni recitato, lettura o rap su una base; *Lay the lyrics on this score…* ne fa per te la parte centrale.
+
+### La base e il suo orologio <!-- #the-bed-and-its-clock -->
+
+- Prima la musica senza parole: take nello stile della base (per il promo un trailer epico, D#m, 103 BPM, 128 s), finché uno suona giusto.
+- Poi, su di esso, *Scrivila dal suono*: SheetSage2 scrive la partitura propria della base, i suoi accordi e le sue battute. Quella partitura è l'orologio: a 103 BPM in 4/4 una battuta dura 2.33 s e una semicroma 0.146 s, quindi, finché il metro resta, la battuta n comincia a n × 2.33 s.
+- Cantata in Piano completo su quella partitura, la nuova canzone tiene quell'orologio: gli stessi accordi nelle stesse battute, e le parole dove la partitura le mette.
+
+### Una riga sulle sue battute <!-- #a-line-on-its-bars -->
+
+- Ogni riga aveva un momento in cui dirsi: la sua scena. Va alla battuta che comincia più vicino a quel momento; se lì suona ancora la riga precedente, alla successiva libera.
+- La riga diventa note: una sillaba per croma su un tono dell'accordo della sua battuta, il nome accentato una semiminima più in alto, un respiro dopo una virgola (una croma) e dopo un punto (una semiminima), l'ultima sillaba della riga una semiminima e più in basso. Un narratore vuole poche altezze: bastano i toni dell'accordo, e gli accordi vengono dalla base.
+- Alla prima battuta della riga la partitura riceve il suo commento di sezione e il testo la stessa etichetta: `% verse` là, `[Verse]` qui. Una riga per sezione: il piano e il testo si incontrano uno a uno, e niente resta fuori.
+- Le parole che il modello accentua male hanno i segni di Viktor: un accento acuto sulla vocale tonica (обе́щано), il nome scritto come suona (рУ́ах in russo, רוּ-אַח in inglese).
+
+### Due voci in un take <!-- #two-voices-in-one-take -->
+
+- Il narratore e le donne sono un solo take, non un missaggio. Lo stile li nomina entrambi: `male baritone narrator, spoken word, clear English diction, female a cappella vocalise, oooh aaah, epic cinematic trailer`, e il tempo, `103 bpm`.
+- Il testo dà ogni riga e dopo di essa, tra parentesi, il vocalizzo: `(Ooh, aah)`. Nei take del promo l'hanno cantato le donne.
+- La partitura dà al vocalizzo note sue nelle battute tra le righe: una minima sul tono alto dell'accordo, poi il resto della battuta sul suo tono di recitazione, due ottave sopra le note del narratore. Il vocalizzo proprio della base resta alla fine: il finale tiene le battute della base con le loro note.
+- Un adattatore di voce può dare una voce al narratore; tienilo basso (sono bastati 0.45 sulla metà musicale e 0.3 su quella sonora), o si prende la musica.
+
+### Molti take, poi il migliore <!-- #many-takes-then-the-best -->
+
+- Sei seed per lingua, Piano completo, guida 1.6, la durata fissata ai 128 s della base, la partitura e il testo così come sono. Ogni take dice le sue righe un po' a modo suo: uno cade più vicino, un altro parla più chiaro.
+- Dove sono davvero le righe: Rifinitore › Testo › *Sincronizza le righe* dà il tempo di Whisper per ogni riga, parola per parola. I segmenti propri di Whisper sono troppo grossolani per questo: un segmento spesso comincia sul vocalizzo prima di una riga.
+- Confronta il tempo di ogni riga con la sua battuta: nel take migliore del promo 7 righe su 11 sono cominciate entro 1.5 s dalla loro battuta (1.7 s in media, la più lontana 7.5 s); gli altri take si sono allontanati di più. La partitura guida la voce, non la inchioda.
+- Mettili in fila: prima le righe entro 1.5 s, poi le righe sentite, poi la distanza media; ascolta i primi.
+
+### Il doppio anello <!-- #the-double-ring -->
+
+- La parola di Viktor: prima sistemare le tracce, poi adattare il video a esse, anche se le loro durate differiscono. Così l'immagine segue il take: una scena compare poco prima della sua riga, una didascalia mentre se ne dicono le parole, e la scheda finale resta fino all'ultimo secondo del take.
+- Una riga non deve quindi cadere sulla sua battuta al decimo di secondo: il video si sposta verso di essa. Lo stesso vale senza video: una lettura al passo di alcune slide, un rap sulle sezioni di un beat.
+
+### Nello studio ora <!-- #in-the-studio-now -->
+
+- *Lay the lyrics on this score…* (Creatore › Cover, remix e la tua partitura) fa la parte della riga sulle battute per ogni partitura nel modulo: le tue sezioni, una sillaba per croma sui toni dell'accordo, i respiri, un'introduzione e un finale, il vocalizzo quando lo spunti.
+- *Sincronizza le righe* (Rifinitore › Testo) dà il tempo di ogni riga; *End at…* finisce un take dopo la sua ultima riga.
+- Non ancora nello studio: ogni riga a un secondo che scegli (i momenti delle scene del promo) e l'ordinamento dei take per distanza. Il promo lo ha fatto con script suoi.
+
 ## Scorciatoie e trucchi <!-- #shortcuts -->
 
 **Nel Bibliotecario:** **Ctrl+A** seleziona ogni take mostrato, **Esc** nessuno, **Canc** manda i selezionati nel cestino (chiede prima), **Ctrl+Z** annulla l'ultima modifica (uno spostamento, uno spazio, il nascondere, un fissaggio, i segni, il cestino); la pillola sopra il lettore offre lo stesso Annulla per dieci secondi.
@@ -483,10 +652,16 @@ Tutto quanto sopra è anche l'API dello studio: `POST /api/v1/takes/NAME/reaper`
 | **←** **→** (con **Shift**: 30 s) | ovunque tranne un campo di testo o un menu | 5 secondi indietro o avanti |
 | **M** | ovunque tranne un campo di testo | suono spento e acceso |
 | i tasti multimediali | la tastiera, una cuffia, il pannello multimediale del desktop | riproduci, pausa, precedente, successivo |
+| **Ctrl+Alt+1** … **9** | ovunque | **1** Creatore, **2** Scrittore, **3** Rifinitore, **5** Bibliotecario, **7** Addestratore, **8** fuori, nella tua DAW, **9** il Motore; il **4** è tenuto per la stanza dell'Artista, il **6** per una stanza che verrà (Ctrl+1…9 sono le schede del browser stesso) |
 | **Esc** | ovunque | chiude ciò che è aperto: un menu, una finestra di dialogo, la guida, una vista a schermo intero, la stanza del Motore |
+| **F1** (o **Shift+F1**) | ovunque | questa guida, sulla stanza in cui sei; di nuovo per chiuderla (l'aiuto del browser non compare) |
+| **Maiusc+Tab** | il Creatore | il tasto dei riquadri, non il ritorno indietro tra i campi: un riquadro sollevato passa all'altro, e se nessuno è sollevato si solleva quello del modulo (Compose); una finestra di dialogo, un menu e la barra di ricerca tengono il loro Maiusc+Tab |
+| **F5**, **Ctrl+R**, **Ctrl+Maiusc+R** | ovunque tranne il Bibliotecario | chiedono prima e dicono cosa si porta via il ricaricamento e cosa tiene; con una canzone nel modulo, *Save to the Writer, then reload* la salva anche nello Scrittore; **Ctrl+F5** ricarica subito (nel Bibliotecario **F5** rilegge la biblioteca) |
 | **Invio** / **Esc** | una finestra di dialogo, una rinomina sul posto, un valore digitato di una LoRA | conferma / annulla; in una finestra con testo lungo **Shift+Invio** va a capo |
 | **Invio** | *Parti da un'idea* | il modello di chat abbozza la canzone; **Shift+Invio** va a capo |
 | **Ctrl+S** | lo Scrittore | salva subito il documento |
+| **Alt+K** · **Alt+J** | il testo, del Creatore e dello Scrittore | segnare la riga del cursore o togliere il segno · andare al segno successivo (**Alt+Shift+J** a quello prima, **Alt+Shift+K** li toglie tutti) |
+| **Alt+O** · **Alt+L** · **Ctrl+Y** · **Alt+↑ ↓** | il testo, come in mcedit | togliere i segni · andare a una riga per numero · cancellare la riga · spostare la riga (o quelle selezionate) |
 | **↑ ↓** · **→** · **←** | un menu | muoversi · aprire un sottomenu · uscirne |
 | **frecce** | il selettore dei temi | muoversi tra i temi |
 | **+** **−** **0** | un pentagramma o uno spettro a schermo intero | ingrandisci, rimpicciolisci, torna ad adattare; **Ctrl+rotellina** ingrandisce dove sta il puntatore |

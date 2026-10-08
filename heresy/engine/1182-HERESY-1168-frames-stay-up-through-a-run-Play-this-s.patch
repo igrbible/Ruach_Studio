@@ -2,7 +2,7 @@ From b8a6921f6009f1677266379a3946ac5223ac5fc5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Tue, 6 Oct 2026 23:42:29 -0600
-Subject: [PATCH 1182/1198] HERESY 1168: frames stay up through a run; Play
+Subject: [PATCH 1182/1252] HERESY 1168: frames stay up through a run; Play
  this song while a song is made and after; F5 in the Librarian; copying on the
  machine's address; the Writer's fields one height
 MIME-Version: 1.0

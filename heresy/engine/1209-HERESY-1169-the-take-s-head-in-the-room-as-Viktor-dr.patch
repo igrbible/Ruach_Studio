@@ -1,0 +1,335 @@
+From f58659b8ea1e11b2631c4fbfc01467583928e598 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 21:06:57 -0600
+Subject: [PATCH 1209/1252] =?UTF-8?q?HERESY=201169:=20the=20take's=20head?=
+ =?UTF-8?q?=20in=20the=20room=20as=20Viktor=20drew=20it=20(=E2=96=B6=20and?=
+ =?UTF-8?q?=20its=20buttons=20with=20=E2=A4=A1=20on=20the=20first=20row,?=
+ =?UTF-8?q?=20the=20title=20across,=20its=20numbers=20under=20it),=20?=
+ =?UTF-8?q?=F0=9F=91=8D=20=F0=9F=91=8E=20beside=20=E2=98=86,=20=E2=87=86?=
+ =?UTF-8?q?=20=E2=A4=A1=20kept=20apart=20over=20the=20room;=20Songs=20?=
+ =?UTF-8?q?=C3=97=20Sounds=20sliders=20by=20Generate;=20Sound=20and=20outp?=
+ =?UTF-8?q?ut=20is=20Sampling=20and=20Denoising's=20lower=20section;=20the?=
+ =?UTF-8?q?=20two=20resets=20alike?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «иконки вверх вровень с full screen кнопкой и выровнять их влево, а ниже… тайтл трека, с обрезкой конца»; «не хватает лайка/дизлайка до полного счастья»; «смести их блок влево хотя бы на 40-50pt»; «вынести sound variations… бок о бок к Takes… ползунками целочисленными»; «блок Sound and output… нижним разделом в блок Sampling (переименовать в Sampling and Denoising)»; «обе кнопки Reset… привести в общий стиль». The Sounds ceiling stays 9 here until the engine's measure gives it its number.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |  30 ++++++++
+ tools/console/app.js               |  38 +++++++---
+ tools/console/heresy-collection.js |   3 +-
+ tools/console/index.html           | 108 ++++++++++++++++-------------
+ 4 files changed, 123 insertions(+), 56 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 8e70259..c22def7 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4313,3 +4313,33 @@ body[data-frame="take"] #view-take > .col-head > .frame-tools { position: static
+ /* HERESY 1169 (Viktor 07.10.2026: «A run is in progress… забирает лишнюю строку с футера… можно поднять в уровень с кнопкой
+    Generate»): the bar's note on the bar's own row, left of Takes; a line of its own only where the row has no room for it */
+ .submit-note { order: -1; flex: 1 1 260px; min-width: 0; }
++/* HERESY 1169 (Viktor 07.10.2026: «в правый фрейм в компактном режиме… название трека с кнопкой воспроизведения… вверху, и
++   сдвигают наши выстраданные иконки. Предлагаю иконки вверх вровень с full screen кнопкой и выровнять их влево, а ниже…
++   тайтл трека, с обрезкой конца… ниже статистика»): in the room the take's head is three rows: ▶ and its buttons from the
++   left with ⇆ ⤡ at the right end of the first (the corner 1168 asked for, level with them now), the title across on one
++   line, its numbers under it */
++body:not([data-frame="take"]) #view-take > .col-head { padding-right: 22px; align-items: center; }
++@media (max-width: 1500px) { body:not([data-frame="take"]) #view-take > .col-head { padding-right: 16px; } }
++body:not([data-frame="take"]) #view-take > .col-head > #playHere { order: 1; }
++body:not([data-frame="take"]) #view-take > .col-head > #takeActions { order: 2; }
++body:not([data-frame="take"]) #view-take > .col-head > :is(#backToRun, #cancelAway) { order: 3; }
++body:not([data-frame="take"]) #view-take > .col-head > .frame-tools { position: static; order: 4; margin-left: auto; }
++body:not([data-frame="take"]) #view-take > .col-head > .spacer { display: none; }
++body:not([data-frame="take"]) #view-take > .col-head > #takeTitle { order: 10; flex: 1 1 100%; }
++/* over the room (Viktor: «смести их блок влево хотя бы на 40-50pt… чел на кнопку <> тыкнуть пытается, а тыкнул на
++   корзину»): ⇆ ⤡ kept apart from the buttons before them, in both frames; 👍 👎 pressed as the star is */
++body[data-frame] :is(#view-compose, #view-take) > .col-head > .frame-tools { margin-left: 28px; }
++:is(#likeTake, #dislikeTake)[aria-pressed="true"] > :is(.ui-like, .ui-dislike) { fill-opacity: 1; }
++/* HERESY 1169: Songs × Sounds on Generate's row, integer sliders with their numbers, and the takes they make */
++.count-slider { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); flex: none; white-space: nowrap; }
++.count-slider input[type="range"] { width: 96px; height: auto; padding: 0; accent-color: var(--amber); }
++.count-slider .cs-val { min-width: 1.3em; text-align: right; font: 600 13px/1 var(--mono); color: var(--ink); }
++.cs-total { font: 12.5px/1 var(--mono); color: var(--muted); white-space: nowrap; flex: none; }
++/* Sampling's lower section: the sound half and the output (the old Sound and output drawer), and the two resets alike */
++.dot.dim { background: var(--dim); }
++.out-sub { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft, var(--line-a)); }
++.out-sub > h4 { margin: 0 0 10px; }
++.out-sub .out-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }               /* under the two samplers, column for column */
++#advDrawer .out-sub .out-grid > .field:has(> #odeSolver) { grid-column: auto; }   /* over 1168's span: two columns here */
++.reset-btn { min-width: 128px; justify-content: center; }
++#advDrawer .reset-cell { padding-top: 0; align-self: center; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index aa19e33..0aff6b3 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -951,16 +951,13 @@
+     $("bitrateField").classList.toggle("is-hidden", format !== "mp3");
+     var parts = [FORMAT_LABELS[format] + (format === "mp3" ? " " + $("mp3Bitrate").value + " kbps" : "")];
+     var steps = parseInt($("odeSteps").value, 10), length = parseFloat($("maxLength").value);
+-    var variations = parseInt($("variations").value, 10) || 1;
+     if (isFinite(steps) && steps !== outDefault("steps")) parts.push(steps + " steps");
+     if (isFinite(length) && length !== outDefault("duration")) parts.push("up to " + clock(length));
+-    if (variations > 1) parts.push(variations + " sounds each");
+     $("outSummary").textContent = parts.map(tr).join(" · ");   // HERESY 1166
+     var notes = [];
+     // HERESY 1167: the music's ceiling is Max length itself now; the window is the other cap
+     notes.push("Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.");
+     if (format === "wav32") notes.push("WAV 32 is raw float: peak clip is ignored.");
+-    if (variations > 1) notes.push("Each song renders " + variations + " times with sound seeds seed, seed + 1\u2026; the music is written once.");
+     $("outHint").textContent = notes.map(tr).join(" ");
+     syncMusicCeiling();                               // HERESY 1167: the music's Max length follows
+   }
+@@ -971,19 +968,27 @@
+ 
+   $("outFormat").addEventListener("change", function () { saveOutputChoice(); paintOutput(); });
+   $("mp3Bitrate").addEventListener("change", function () { saveOutputChoice(); paintOutput(); });
+-  ["odeSteps", "maxLength", "variations", "peakClip"].forEach(function (id) { $(id).addEventListener("input", paintOutput); });
++  ["odeSteps", "maxLength", "peakClip"].forEach(function (id) { $(id).addEventListener("input", paintOutput); });
++  // HERESY 1169: Songs × Sounds beside Generate, and how many takes that makes
++  function paintCounts() {
++    var songs = +$("versions").value || 1, sounds = +$("variations").value || 1, takes = songs * sounds;
++    $("versionsOut").textContent = songs;
++    $("variationsOut").textContent = sounds;
++    $("takesTotal").textContent = "= " + takes + (takes === 1 ? " take" : " takes");
++  }
++  ["versions", "variations"].forEach(function (id) { $(id).addEventListener("input", paintCounts); });
++  paintCounts();
+ 
+   function outputChanged() {
+     var off = function (id, key) { var v = parseFloat($(id).value); return isFinite(v) && v !== round(outDefault(key), 3); };
+-    return off("odeSteps", "steps") || off("maxLength", "duration") || off("peakClip", "peak_clip") || (parseInt($("variations").value, 10) || 1) !== 1 ||
++    return off("odeSteps", "steps") || off("maxLength", "duration") || off("peakClip", "peak_clip") ||
+       $("odeSolver").value !== "midpoint" || $("outFormat").value !== "wav24";
+   }
+   $("resetOutput").addEventListener("click", function () {
+     askReset(outputChanged(), "Reset the output to the defaults?\n\nWAV 24-bit, " + outDefault("steps") + " denoising steps, the midpoint solver, the songs up to " +
+-      clock(outDefault("duration")) + ", one sound each: what is set here now is kept nowhere else.").then(function (ok) { if (ok) resetOutputNow(); });
++      clock(outDefault("duration")) + ": what is set here now is kept nowhere else.").then(function (ok) { if (ok) resetOutputNow(); });
+   });
+   function resetOutputNow() {
+-    $("variations").value = 1;
+     store("yue2.output", null);
+     paintOutputDefaults();
+     // HERESY 1168 (Viktor 07.10.2026: «Reset output не обнуляет выбор резолвера»): the solver back to midpoint too
+@@ -1449,6 +1454,7 @@
+     syncShape();
+     $("versions").value = 1;
+     $("variations").value = 1;
++    paintCounts();
+     STATE.sliderChoice = [];
+     paintSliders();
+     YueLoras.set([]);
+@@ -1839,6 +1845,7 @@
+     }
+     if (typeof req.peak_clip === "number") $("peakClip").value = req.peak_clip;
+     $("versions").value = typeof req.lm_batch_size === "number" ? Math.max(1, Math.min(10, req.lm_batch_size)) : 1;
++    paintCounts();
+     var tokens = typeof req.semantic_tokens === "string" ? req.semantic_tokens.trim() : "";
+     setCodes(tokens ? { tokens: tokens, from: opts.fromTake || null, title: opts.codesTitle || $("title").value,
+                         frames: countCodes(tokens) } : null);
+@@ -3938,7 +3945,14 @@
+     $("takeTitle").textContent = displayTitle(take);
+     $("takeTitle").setAttribute("translate", "no");
+     // Favourite, Rename and Delete as small icons on the title line (Delete asks first)
+-    $("takeActions").innerHTML =
++    // HERESY 1169 (Viktor 07.10.2026: «У Музыканта есть звезда фаворита, не хватает лайка/дизлайка до полного счастья»): the
++    // take's own 👍 and 👎, the same mark as the player's and the cards' (HeresyCollection), in the player's order
++    var HCh = window.HeresyCollection, rated = HCh && !take.session ? HCh.rating(take.name) : 0, IC = window.HeresyIcons;
++    $("takeActions").innerHTML = (HCh && !take.session
++      ? '<button type="button" class="btn ghost small icon-act" id="likeTake" data-rate="1" aria-pressed="' + (rated > 0) + '" aria-label="Like" data-tip="Like">' +
++        (IC ? IC.ui("like") : "👍") + "</button>" +
++        '<button type="button" class="btn ghost small icon-act" id="dislikeTake" data-rate="-1" aria-pressed="' + (rated < 0) + '" aria-label="Dislike" data-tip="Dislike">' +
++        (IC ? IC.ui("dislike") : "👎") + "</button>" : "") +
+       '<button type="button" class="btn ghost small icon-act' + (take.favorite ? " is-on" : "") + '" id="favTake" aria-pressed="' +
+       (take.favorite ? "true" : "false") + '" aria-label="Favourite" data-tip="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '">' +
+       (window.HeresyIcons ? window.HeresyIcons.ui("star") : take.favorite ? "★" : "☆") + "</button>" +   // HERESY 1169: drawn, as Compose's
+@@ -4350,6 +4364,12 @@
+     var take = STATE.take;
+     if (!take) return;
+     if (event.target.closest("#favTake")) toggleFavorite(take);
++    var rateBtn = event.target.closest("#likeTake, #dislikeTake"), HCr = window.HeresyCollection;
++    if (rateBtn && HCr && !take.session) {                       // HERESY 1169: as the player's (rateNow): at once, the lab confirms
++      var value = +rateBtn.dataset.rate, sent = HCr.rate(take.name, HCr.rating(take.name) === value ? 0 : value);
++      paintRate();
++      sent.then(function () { paintRate(); paintLibrary(); }, function (e) { paintRate(); toast(e.message, "bad"); });
++    }
+     if (event.target.closest("#renameTake")) startRename();
+     if (event.target.closest("#libTake") && window.HeresyCollection) { setTab("collection"); window.HeresyCollection.reveal(take.name); }   // HERESY 1167
+     if (event.target.closest("#deleteTake")) deleteTake(take);
+@@ -7029,6 +7049,8 @@
+   /* ---------------------------------------------- HERESY 1042: like, dislike, favourite in the player */
+   function paintRate() {
+     var take = STATE.playerTake ? findTake(STATE.playerTake.name) || STATE.playerTake : null, HC = window.HeresyCollection;
++    var held = STATE.take && HC && $("likeTake") ? HC.rating(STATE.take.name) : 0;     // HERESY 1169: the take's head follows too
++    if ($("likeTake")) { $("likeTake").setAttribute("aria-pressed", held > 0 ? "true" : "false"); $("dislikeTake").setAttribute("aria-pressed", held < 0 ? "true" : "false"); }
+     $("pbRate").hidden = !take || take.session;
+     if (!take) return;
+     var r = HC ? HC.rating(take.name) : 0;
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 300b7ff..d874e51 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -1159,7 +1159,8 @@
+   }
+ 
+   // HERESY 1042: likes, as SUNO has them (the player sets them)
+-  function rating(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.rating || 0 : 0; }
++  // HERESY 1169: a take without a row here (the Creator's take head, another workspace's take) reads what rate() remembered
++  function rating(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.rating || 0 : rated[name] ? rated[name].v || 0 : 0; }
+   // HERESY 1108: many takes rated at once; all of them rated so already: taken back to none
+   function rateMany(list, value) {
+     var rows = list.map(rowOf).filter(Boolean), all = rows.length && rows.every(function (r) { return r.rating === value; });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index da2f168..571bbbd 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1047,7 +1047,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           </details>
+ 
+           <details class="drawer" id="advDrawer">
+-            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sampling</span><span class="sum-say">The defaults are tuned; change them to experiment.</span></span></summary>
++            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sampling and Denoising</span><span class="sum-say" id="outSummary">WAV 24-bit</span></span></summary>
+             <div class="drawer-body">
+               <div class="shape" id="shape">
+                 <label class="shape-row"><span class="shape-name" data-head="familiar ↔ unexpected melody and chords">Composition</span>
+@@ -1077,58 +1077,66 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+                   <input type="number" id="cfg" step="0.01" placeholder="default" />
+                 </label>
+                 <div class="field grow reset-cell">
+-                  <button type="button" class="btn ghost" id="resetSampling">Reset sampling</button>
++                  <button type="button" class="btn ghost small reset-btn" id="resetSampling">Reset sampling</button>
+                 </div>
+               </div>
+-            </div>
+-          </details>
+-
+-          <details class="drawer" id="outDrawer">
+-            <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sound and output</span><span class="sum-say" id="outSummary">WAV 24-bit</span></span></summary>
+-            <div class="drawer-body">
+-              <div class="out-grid">
+-                <label class="field"><span class="label" data-head="sound solver">Denoising steps</span>
+-                  <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
+-                <label class="field"><span class="label" data-head="sound ODE">Solver</span>
+-                  <select id="odeSolver">
+-                    <option value="midpoint">Midpoint · release</option>
+-                    <option value="multistep">Multistep · 1 call/step</option>
+-                    <option value="heun">Heun</option>
+-                    <option value="euler">Euler · draft</option>
+-                  </select></label>
+-                <label class="field"><span class="label" data-head="seconds">Max length</span>
+-                  <input type="number" id="maxLength" step="10" /></label>
+-                <label class="field"><span class="label" data-head="1–9">Sound variations</span>
+-                  <input type="number" id="variations" step="1" max="9" value="1" /></label>
+-                <label class="field"><span class="label">Format <span class="info" tabindex="-1" role="img" aria-label="About the output format" data-tip-ref="tip-output"></span></span>
+-                  <select id="outFormat">
+-                    <option value="wav24">WAV 24-bit</option>
+-                    <option value="wav16">WAV 16-bit</option>
+-                    <option value="wav32">WAV 32-bit float</option>
+-                    <option value="mp3">MP3</option>
+-                  </select></label>
+-                <label class="field" id="bitrateField"><span class="label" data-head="kbps">MP3 bitrate</span>
+-                  <select id="mp3Bitrate">
+-                    <option value="96">96</option><option value="128">128</option><option value="160">160</option>
+-                    <option value="192">192</option><option value="256">256</option><option value="320">320</option>
+-                  </select></label>
+-                <label class="field"><span class="label" data-head="per million">Peak clip</span>
+-                  <input type="number" id="peakClip" step="1" /></label>
+-              </div>
+-              <div class="field-row">
+-                <p class="row-hint grow" id="outHint"></p>
+-                <button type="button" class="btn ghost small" id="resetOutput">Reset output</button>
++              <!-- HERESY 1169 (Viktor 07.10.2026: «блок Sound and uotput, оставшиеся в нём регуляторы/селекторы перенести нижним
++                   разделом в блок Sampling (переименовать в Sampling and Denoising)… Зачем носить монеты в разных карманах»): the
++                   sound half's denoising and the output under the sampling, one drawer; Sound variations went to Generate's row -->
++              <div class="out-sub">
++                <h4><span class="dot dim"></span> Sound and output</h4>
++                <div class="out-grid">
++                  <label class="field"><span class="label" data-head="sound solver">Denoising steps</span>
++                    <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
++                  <label class="field"><span class="label" data-head="sound ODE">Solver</span>
++                    <select id="odeSolver">
++                      <option value="midpoint">Midpoint · release</option>
++                      <option value="multistep">Multistep · 1 call/step</option>
++                      <option value="heun">Heun</option>
++                      <option value="euler">Euler · draft</option>
++                    </select></label>
++                  <label class="field"><span class="label" data-head="seconds">Max length</span>
++                    <input type="number" id="maxLength" step="10" /></label>
++                  <label class="field"><span class="label">Format <span class="info" tabindex="-1" role="img" aria-label="About the output format" data-tip-ref="tip-output"></span></span>
++                    <select id="outFormat">
++                      <option value="wav24">WAV 24-bit</option>
++                      <option value="wav16">WAV 16-bit</option>
++                      <option value="wav32">WAV 32-bit float</option>
++                      <option value="mp3">MP3</option>
++                    </select></label>
++                  <label class="field" id="bitrateField"><span class="label" data-head="kbps">MP3 bitrate</span>
++                    <select id="mp3Bitrate">
++                      <option value="96">96</option><option value="128">128</option><option value="160">160</option>
++                      <option value="192">192</option><option value="256">256</option><option value="320">320</option>
++                    </select></label>
++                  <label class="field"><span class="label" data-head="per million">Peak clip</span>
++                    <input type="number" id="peakClip" step="1" /></label>
++                </div>
++                <div class="field-row">
++                  <p class="row-hint grow" id="outHint"></p>
++                  <button type="button" class="btn ghost small reset-btn" id="resetOutput">Reset output</button>
++                </div>
+               </div>
+             </div>
+           </details>
++
+         </section>
+       </div>
+ 
+       <!-- how many takes and the two actions (one size) together on the right; a note under them only when it matters -->
+       <div class="submit-bar">
+         <div class="submit-actions">
+-          <label class="versions">
+-            <span>Takes <span class="info" tabindex="-1" role="img" aria-label="About takes" data-tip-ref="tip-versions"></span></span><input type="number" id="versions" min="1" max="10" step="1" value="1" /></label>
++          <!-- HERESY 1169 (Viktor 07.10.2026: «Takes с полем ввода. Нет дефолта и нет сторожа. Я ввёл 100 и прокатило»; «вынести sound
++               variations… бок о бок к Takes… ползунками целочисленными»): what Generate makes, said as it is: Songs (other music, a
++               music seed each; the engine writes max-batch of them at a time) times Sounds (each song's sound again, a sound seed
++               each, all at once: what fills the card), and how many takes that is -->
++          <label class="versions count-slider">
++            <span>Songs <span class="info" tabindex="-1" role="img" aria-label="About songs" data-tip-ref="tip-versions"></span></span>
++            <input type="range" id="versions" min="1" max="10" step="1" value="1" /><output class="cs-val" id="versionsOut" for="versions">1</output></label>
++          <label class="count-slider">
++            <span>Sounds <span class="info" tabindex="-1" role="img" aria-label="About sounds" data-tip-ref="tip-variations"></span></span>
++            <input type="range" id="variations" min="1" max="9" step="1" value="1" /><output class="cs-val" id="variationsOut" for="variations">1</output></label>
++          <span class="cs-total" id="takesTotal" aria-live="polite">= 1 take</span>
+           <button type="button" class="btn ghost" id="planBtn"
+             title="Write only the score (seconds, no audio). Check its sections, then Generate renders exactly that score.">Plan score only</button>
+           <button type="submit" class="btn primary" id="generateBtn">
+@@ -2038,13 +2046,19 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     <dt>Peak clip</dt><dd>normalises to the peak left after ignoring this many samples per million;
+       0 is the true peak</dd>
+   </dl>
+-  <p>Sound variations render the same music with seeds sound&nbsp;+&nbsp;1, +&nbsp;2&hellip; side by side.</p>
+ </template>
+ <template id="tip-versions">
+-  <span class="tip-kind">Takes</span>
+-  <p>How many songs to make from this prompt: separate songs, each with its own music seed (seed, seed&nbsp;+&nbsp;1&hellip;).
+-    The server writes up to <strong data-fill="max-batch">1</strong> side by side in one pass; more are
+-    queued as further passes.</p>
++  <span class="tip-kind">Songs</span>
++  <p>How many different songs Generate makes from this prompt, each with its own music seed (seed, seed&nbsp;+&nbsp;1&hellip;).
++    The server writes up to <strong data-fill="max-batch">1</strong> side by side in one pass; more wait as further passes, so
++    a larger number only takes longer.</p>
++</template>
++<template id="tip-variations">
++  <span class="tip-kind">Sounds</span>
++  <p>How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed&nbsp;+&nbsp;1&hellip;,
++    the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the
++    ceiling follows the card, the model copy and the song's length.</p>
++  <p>Songs &times; Sounds is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
+ </template>
+ <script src="heresy-dialog.js"></script>
+ <script src="heresy-settings.js"></script>
+-- 
+2.43.0
+

@@ -1,17 +1,10 @@
 # HERESY · what this fork adds to yue2-kit
 
-> The patch log of **Ruach Studio** (once "YuE2 OS"). The guide to the whole is HERETICA-GUIDE.md.
-> Grown with every patch.
-> Maintainers: **Viktor Zhuromskyy (ЙирмиЙа́Ѓу)** with Claude (Anthropic), HERETICAL TANDEM™.
+> The patch log of **Ruach Studio** (once "YuE2 OS"). The guide to the whole is HERETICA-GUIDE.md. Grown with every patch. Maintainers: **Viktor Zhuromskyy (ЙирмиЙа́Ѓу)** with Claude (Anthropic), HERETICAL TANDEM™.
 
-This is [IronWolve/yue2-kit](https://github.com/IronWolve/yue2-kit) **v12** running
-[ServeurpersoCom/yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) `603be27` with the Kit's
-58 patches, plus our own work on top. Nothing upstream is edited in place: every change is a
-numbered patch (from **1001**, so it never collides with the Kit's own numbering) or a file of
-ours in the Kit root. You can read, drop or re-apply any single one.
+This is [IronWolve/yue2-kit](https://github.com/IronWolve/yue2-kit) **v12** running [ServeurpersoCom/yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) `603be27` with the Kit's 58 patches, plus our own work on top. Nothing upstream is edited in place: every change is a numbered patch (from **1001**, so it never collides with the Kit's own numbering) or a file of ours in the Kit root. You can read, drop or re-apply any single one.
 
-We make long songs (6–8 minutes), in Russian and other non-English languages, on three RTX 3090.
-Most of what follows came from that: measured on real takes, not guessed.
+We make long songs (6–8 minutes), in Russian and other non-English languages, on three RTX 3090. Most of what follows came from that: measured on real takes, not guessed.
 
 ---
 
@@ -53,10 +46,7 @@ whisper/      Whisper large-v3 (CTranslate2, float16), 2.9 GB
 build.sh      the page (read from disk by the server), the server when its C++ changed, the restart when idle
 ```
 
-The page is part of `build/` (`build/tools/console`); `build.sh` inlines it into one file,
-`build/tools/public/index.html`, which the server reads from disk at every load (HERESY 1130): a page
-built anew shows on a reload. It inlines any `heresy-*.js` module that `index.html` names, so new
-modules need no edit of the build script.
+The page is part of `build/` (`build/tools/console`); `build.sh` inlines it into one file, `build/tools/public/index.html`, which the server reads from disk at every load (HERESY 1130): a page built anew shows on a reload. It inlines any `heresy-*.js` module that `index.html` names, so new modules need no edit of the build script.
 
 ```bash
 ./build.sh --patches    # heresy/apply.sh, the page, the server when its C++ changed
@@ -69,11 +59,7 @@ modules need no edit of the build script.
 ## The patches
 
 ### 1001 · Eight-minute songs
-Score tokens 4096 → **6144**, music tokens 9000 → **12000**, duration 360 → **480 s** (25 music
-tokens a second). Changed in the engine (`src/sampling.h`, `src/request.cpp`) and on the page
-together: the page takes its defaults from the engine's `/props`, so a page-only change did
-nothing. 8192 score tokens leave the lyrics too little of the 24,576-token context. The prompt
-counter reads the live knobs instead of constants.
+Score tokens 4096 → **6144**, music tokens 9000 → **12000**, duration 360 → **480 s** (25 music tokens a second). Changed in the engine (`src/sampling.h`, `src/request.cpp`) and on the page together: the page takes its defaults from the engine's `/props`, so a page-only change did nothing. 8192 score tokens leave the lyrics too little of the 24,576-token context. The prompt counter reads the live knobs instead of constants.
 
 ### 1002 · The form survives a reload
 Title, style, lyrics, seeds and every knob are kept per browser and restored after F5.
@@ -81,9 +67,7 @@ Title, style, lyrics, seeds and every knob are kept per browser and restored aft
 ### 1003 · Sound steps up to 160
 
 ### 1004 · Sound solvers
-`solver`: **midpoint** (the release, 2 network calls a step), **multistep** (Adams–Bashforth 2,
-1 call), **Heun** (2 calls), **Euler** (1 call). Measured on one song against a 160-step
-midpoint reference, fixed noise, 20 s (SNR, dB — higher is closer):
+`solver`: **midpoint** (the release, 2 network calls a step), **multistep** (Adams–Bashforth 2, 1 call), **Heun** (2 calls), **Euler** (1 call). Measured on one song against a 160-step midpoint reference, fixed noise, 20 s (SNR, dB — higher is closer):
 
 | steps | euler | midpoint | heun | multistep |
 |---|---|---|---|---|
@@ -92,165 +76,102 @@ midpoint reference, fixed noise, 20 s (SNR, dB — higher is closer):
 | 32 | 25.6 | **46.8** | 40.7 | 36.1 |
 | 64 | 31.0 | 52.9 | 52.1 | 47.8 |
 
-Midpoint 32 (the release) is already past audibility; Heun is not better at the same cost.
-Solvers shape only the sound, never the words: those are fixed before (see *Where things live*).
+Midpoint 32 (the release) is already past audibility; Heun is not better at the same cost. Solvers shape only the sound, never the words: those are fixed before (see *Where things live*).
 
 ### 1005 · Sampling tips that say what goes wrong
-Every sampler knob, the guidance and the shape cards: default, ✓ what to try, ⚠ what breaks
-past it, with the measurement or source. Tip type 12 → 14 px.
+Every sampler knob, the guidance and the shape cards: default, ✓ what to try, ⚠ what breaks past it, with the measurement or source. Tip type 12 → 14 px.
 
 ### 1006 · Form comfort
-Title on its own line, seeds side by side; lyrics under the style; Style, Lyrics, VAE, Sliders
-and LoRAs fold; the text boxes grow to 8 and 16 lines; a knob off its default gets an amber
-frame; a favicon (treble clef with A4, glyphs from Noto Music, SIL OFL); no 404 probes against
-vLLM.
+Title on its own line, seeds side by side; lyrics under the style; Style, Lyrics, VAE, Sliders and LoRAs fold; the text boxes grow to 8 and 16 lines; a knob off its default gets an amber frame; a favicon (treble clef with A4, glyphs from Noto Music, SIL OFL); no 404 probes against vLLM.
 
 ### 1007 · Spectrum, full screen, the staff on paper
-- **Spectrum** in the take card: our *Audio Spectral Comparator v3* ported to the page with the
-  same method — STFT Hann 2048/2048 with scipy's scaling, floor −80 dB, log or linear frequency;
-  Welch average spectrum with SUB…AIR zones; band energy with Δ. Another take can be laid over.
-  A click plays from there.
-- **Full-screen viewer**: Ctrl+wheel zooms around the pointer, drag and wheel scroll, + − 0 Esc.
-  Raster pictures are redrawn at every zoom, not stretched.
-- The **staff** engraves at 1050 wide (was 700) and **prints on US Letter**, portrait or
-  landscape, one system per SVG so a page never breaks inside a system.
+- **Spectrum** in the take card: our *Audio Spectral Comparator v3* ported to the page with the same method — STFT Hann 2048/2048 with scipy's scaling, floor −80 dB, log or linear frequency; Welch average spectrum with SUB…AIR zones; band energy with Δ. Another take can be laid over. A click plays from there.
+- **Full-screen viewer**: Ctrl+wheel zooms around the pointer, drag and wheel scroll, + − 0 Esc. Raster pictures are redrawn at every zoom, not stretched.
+- The **staff** engraves at 1050 wide (was 700) and **prints on US Letter**, portrait or landscape, one system per SVG so a page never breaks inside a system.
 
 ### 1008 · `yue-synth --no-fa-lm`
-Flash attention off in the music half (AR) only, for experiments. Without FA the sound half of a
-7-minute song needs a 15.9 GB attention buffer and does not fit a 24 GB card.
+Flash attention off in the music half (AR) only, for experiments. Without FA the sound half of a 7-minute song needs a 15.9 GB attention buffer and does not fit a 24 GB card.
 
 ### 1009 · Player and card
-Previous / next take and **Play on**: when a take ends the next one down the list starts. The
-take card's Prompt and Lyrics start folded. The style counter flags what the official examples
-never hold.
+Previous / next take and **Play on**: when a take ends the next one down the list starts. The take card's Prompt and Lyrics start folded. The style counter flags what the official examples never hold.
 
 ### 1010 · `/lab/` on the Kit's own port
-`GET /lab/<path>` is passed to heresy-lab on `127.0.0.1:41870`: one origin, one port to reach
-over a VPN, no CORS.
+`GET /lab/<path>` is passed to heresy-lab on `127.0.0.1:41870`: one origin, one port to reach over a VPN, no CORS.
 
 ### 1011 · Writing room and lyrics check
-- **Writing room**: the songwriting assistant of
-  [YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio) (Apache License 2.0) — its `songwriter.md` **verbatim** and
-  its five tasks (song, lyrics, style, review, adapt) with the current title, style, lyrics and
-  score as context, standing writing preferences, a JSON draft with notes that are never sung,
-  apply all / lyrics / style and undo. One rule added and measured: *style against the score*.
-- **Lyrics check**: Whisper large-v3 on the server, loaded for one take and gone from VRAM after
-  (~17 s for 7 minutes on a 3090); per-minute match to the lyrics, the furthest line reached,
-  returns back, every heard segment beside its closest lyric line. A Whisper loop on one text
-  is flagged as a void measurement.
+- **Writing room**: the songwriting assistant of [YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio) (Apache License 2.0) — its `songwriter.md` **verbatim** and its five tasks (song, lyrics, style, review, adapt) with the current title, style, lyrics and score as context, standing writing preferences, a JSON draft with notes that are never sung, apply all / lyrics / style and undo. One rule added and measured: *style against the score*.
+- **Lyrics check**: Whisper large-v3 on the server, loaded for one take and gone from VRAM after (~17 s for 7 minutes on a 3090); per-minute match to the lyrics, the furthest line reached, returns back, every heard segment beside its closest lyric line. A Whisper loop on one text is flagged as a void measurement.
 
 ### 1012 · Writers and softer style rules
-OpenRouter beside the local chat server; one-click addresses for vLLM, LM Studio and Ollama; an
-empty field in a draft means *unchanged* and never wipes the form; style length up to ~1,600
-characters and ASCII `->` accepted, the Unicode arrow flagged.
+OpenRouter beside the local chat server; one-click addresses for vLLM, LM Studio and Ollama; an empty field in a draft means *unchanged* and never wipes the form; style length up to ~1,600 characters and ASCII `->` accepted, the Unicode arrow flagged.
 
 ### 1013 · heresy-lab is asynchronous
-A request never waits for a job: `202` with the job's state while it runs, the result when done;
-the page asks again every two seconds. Long jobs (stems, AudioSR) need nothing else.
+A request never waits for a job: `202` with the job's state while it runs, the result when done; the page asks again every two seconds. Long jobs (stems, AudioSR) need nothing else.
 
 ### 1014 · Three workspaces: Create, Write, Post
-Tabs in the top bar. **Create** is the Kit as it was; **Write** is the writing room at full size
-with the song in the form beside it; **Post** is what is done to a finished take — Spectrum and
-Lyrics check, with places for Stems and AudioSR. The takes list stays in all three, and the take
-card's *Post* row opens that take there.
+Tabs in the top bar. **Create** is the Kit as it was; **Write** is the writing room at full size with the song in the form beside it; **Post** is what is done to a finished take — Spectrum and Lyrics check, with places for Stems and AudioSR. The takes list stays in all three, and the take card's *Post* row opens that take there.
 
 ### 1015 · Themes: igr.bible by day and by night
-*Scroll & Brick* (the default) and *Scroll by Lamplight*, from YuE2 Studio: background and accent
-as Studio defines them, the rest derived with Studio's own mixes, every text colour pushed until
-it clears 4.5:1 on every surface. A day / night / as-the-system button; day and night keep their
-own themes.
+*Scroll & Brick* (the default) and *Scroll by Lamplight*, from YuE2 Studio: background and accent as Studio defines them, the rest derived with Studio's own mixes, every text colour pushed until it clears 4.5:1 on every surface. A day / night / as-the-system button; day and night keep their own themes.
 
 ### 1016 · Form trimming
-The Kit's idea writer retired (its section templates live on in the writing room's *Structure*);
-an adapter shows only the slider of the half it has; Guidance (CFG) lost its long hint; the (i)
-marks left the tab order, so TAB goes from field to field.
+The Kit's idea writer retired (its section templates live on in the writing room's *Structure*); an adapter shows only the slider of the half it has; Guidance (CFG) lost its long hint; the (i) marks left the tab order, so TAB goes from field to field.
 
 ### 1017 · A top bar that fits at 120%
-Icons (Font Awesome 6 Free outlines, CC BY 4.0, taken from the fonts igr.bible ships; our own sun,
-since theirs reads as a gear at 17 px); the theme button a palette and a dot; the takes list
-folds to a 40 px strip on the right.
+Icons (Font Awesome 6 Free outlines, CC BY 4.0, taken from the fonts igr.bible ships; our own sun, since theirs reads as a gear at 17 px); the theme button a palette and a dot; the takes list folds to a 40 px strip on the right.
 
 ### 1018 · Keys
-`heresy-transpose.js` moves a score to any key: every note by the same semitones and a fixed
-number of letters, against both key signatures and bar-scoped accidentals; chord symbols move
-too; it checks every note it moved (byte-identical to the Python transposer of our B♭ minor
-experiment, and D minor → B♭ minor → D minor returns the original). A style naming another key
-than the score's is flagged with *Move the score to …* / *Write … in the style*. Adapter rows
-line up again: the name with its trigger word small under it, the sliders, remove.
+`heresy-transpose.js` moves a score to any key: every note by the same semitones and a fixed number of letters, against both key signatures and bar-scoped accidentals; chord symbols move too; it checks every note it moved (byte-identical to the Python transposer of our B♭ minor experiment, and D minor → B♭ minor → D minor returns the original). A style naming another key than the score's is flagged with *Move the score to …* / *Write … in the style*. Adapter rows line up again: the name with its trigger word small under it, the sliders, remove.
 
 ### 1019 · The song's key beside the title
-With a score in the form, a choice moves it; with none, the choice waits and moves the next
-score that arrives (a plan, a Retake, a transcription). In Full mode the model writes its own
-score and may ignore a key named in the style: this makes the key a choice of the user's.
+With a score in the form, a choice moves it; with none, the choice waits and moves the next score that arrives (a plan, a Retake, a transcription). In Full mode the model writes its own score and may ignore a key named in the style: this makes the key a choice of the user's.
 
 ### 1020 · Spectrum measured on the server
-heresy-lab computes it (`lab/spectrum_job.py`, numpy, 48 kHz) and sends a block of about 10 MB (gzipped
-until 1166) instead of the whole take: 36 s → 9.6 s the first time, 5.5 s from the cache, over a phone line.
+heresy-lab computes it (`lab/spectrum_job.py`, numpy, 48 kHz) and sends a block of about 10 MB (gzipped until 1166) instead of the whole take: 36 s → 9.6 s the first time, 5.5 s from the cache, over a phone line.
 
 ---
 
 ### 1021 · Stems and the tree of what is made from a take
-BS-Roformer ep317 (voice) and htdemucs_ft (drums, bass, other) in the lab. Everything made from a
-take lives in `outputs/TAKE/derived/ID/` with a manifest; the page shows it as a tree, and any file
-of it goes to the spectrum, the lyrics check or the next step. The proxy passes Range, so the
-players seek; the spectrum is drawn up to 3840 px wide.
+BS-Roformer ep317 (voice) and htdemucs_ft (drums, bass, other) in the lab. Everything made from a take lives in `outputs/TAKE/derived/ID/` with a manifest; the page shows it as a tree, and any file of it goes to the spectrum, the lyrics check or the next step. The proxy passes Range, so the players seek; the spectrum is drawn up to 3840 px wide.
 
 ### 1022 · Remaster: the Debunker v6
-Viktor's SUNO post-processing pipeline on a take or its stems: preset mix, cleanup and fade,
-de-ess, 432 Hz (off keeps 440, for the public), loudness in two passes (measured, then a linear
-gain; 48 kHz out). Loudness in and out are measured, so A/B is honest.
+Viktor's SUNO post-processing pipeline on a take or its stems: preset mix, cleanup and fade, de-ess, 432 Hz (off keeps 440, for the public), loudness in two passes (measured, then a linear gain; 48 kHz out). Loudness in and out are measured, so A/B is honest.
 
 ### 1023 · Import a track from elsewhere
 WAV, FLAC, MP3… (a SUNO track) becomes a take, 48 kHz 24-bit, marked imported; lyrics optional.
 
 ### 1024 · Upscale: UniverSR
-Subtle / Normal / High / Extreme redraw above 12 / 8 / 6 / 4 kHz; the original kept below the
-cutoff by default; 20 s chunks with 1 s equal-power crossfades (no step at a join beyond the
-difference between two renders, measured).
+Subtle / Normal / High / Extreme redraw above 12 / 8 / 6 / 4 kHz; the original kept below the cutoff by default; 20 s chunks with 1 s equal-power crossfades (no step at a join beyond the difference between two renders, measured).
 
 ### 1025 · Artifacts
-Held tones named as notes (a drone is music, a 17 kHz whine is not), the VAE's frame buzz per
-30 s, click candidates, clipping, dropouts, DC, stereo per band, loudness. CPU, cached.
+Held tones named as notes (a drone is music, a 17 kHz whine is not), the VAE's frame buzz per 30 s, click candidates, clipping, dropouts, DC, stereo per band, loudness. CPU, cached.
 
 ### 1026 · YuE2 OS
-The logo (the favicon's treble clef; the OS plate inverts by night), no web links in the
-workspace (they live in the Engine room), the take's ID in its card, a player that follows a
-click in the list, toasts that stay longer, a style field that no longer jumps while typing.
+The logo (the favicon's treble clef; the OS plate inverts by night), no web links in the workspace (they live in the Engine room), the take's ID in its card, a player that follows a click in the list, toasts that stay longer, a style field that no longer jumps while typing.
 
 ### 1027 · Settings on disk
-The page's settings mirrored to `~/.config/yue2_os/settings.json` (see HERETICA-GUIDE §3): merged
-per key, a mass disappearance never erases the file, nothing written when the file could not be
-read at load. A reset button in the Engine room. The GPU memory preset stays as chosen.
+The page's settings mirrored to `~/.config/yue2_os/settings.json` (see HERETICA-GUIDE §3): merged per key, a mass disappearance never erases the file, nothing written when the file could not be read at load. A reset button in the Engine room. The GPU memory preset stays as chosen.
 
 ### 1028 · The score: check, MIDI, one voice moved
-`abc_tools.py` ported to JS (counts equal to the Python on three takes): notes per voice, range,
-the Ins : Vocal ratio; MIDI out (a track per voice, sections as markers) and in; a marker CSV;
-one voice moved by scale steps. **Fix:** the 1018 transposer left a note after a rest (`zd`) where
-it was — 1 to 11 wrong notes a score; now 0 of 2883 in 15 transpositions.
+`abc_tools.py` ported to JS (counts equal to the Python on three takes): notes per voice, range, the Ins : Vocal ratio; MIDI out (a track per voice, sections as markers) and in; a marker CSV; one voice moved by scale steps. **Fix:** the 1018 transposer left a note after a rest (`zd`) where it was — 1 to 11 wrong notes a score; now 0 of 2883 in 15 transpositions.
 
 ### 1029 · Post as numbered steps
 One tool at a time, in the order the work goes; a step is ticked once done for the take in hand.
 
 ### 1030 · Debuzz
-The VAE writes 1920 samples a frame; its highs ripple with the frame clock (the "metallic
-buzz"). Debuzz divides that ripple out above 2 kHz (80 % by Viktor's ear), measuring it in and
-out against control periods; on a track the VAE did not make it finds none.
+The VAE writes 1920 samples a frame; its highs ripple with the frame clock (the "metallic buzz"). Debuzz divides that ripple out above 2 kHz (80 % by Viktor's ear), measuring it in and out against control periods; on a track the VAE did not make it finds none.
 
 ### 1031 · Viktor's stable sampling as the defaults
-Score 0.95 · 0.95 · 50; music 0.9 · 0.95 · 100, penalty 1.3 over 100; guidance 1.6 in every mode.
-The wanted key now follows a new plan over an old score.
+Score 0.95 · 0.95 · 50; music 0.9 · 0.95 · 100, penalty 1.3 over 100; guidance 1.6 in every mode. The wanted key now follows a new plan over an old score.
 
 ### 1032 · Library of styles and profiles; Speech up to 15:00
-Saved styles and profiles on disk (`presets.json`); built-in Music (8:00) and Speech (15:00,
-Direct). The engine cuts a music budget that does not fit beside the prompt instead of failing.
-**Fix:** the guidance field filled itself with 1.0, so 1031's 1.6 never went out.
+Saved styles and profiles on disk (`presets.json`); built-in Music (8:00) and Speech (15:00, Direct). The engine cuts a music budget that does not fit beside the prompt instead of failing. **Fix:** the guidance field filled itself with 1.0, so 1031's 1.6 never went out.
 
 ### 1033 · Corners follow the profile everywhere
 A `--r-pill` token; every chip, step and badge follows Rounded / Softer / Square.
 
 ### 1034 · Trim to the text
-A reading that goes on after its text ends is cut where Whisper hears the last words
-(`lab/textend_job.py`), re-rendered from its own codes up to there: the same take, shorter.
+A reading that goes on after its text ends is cut where Whisper hears the last words (`lab/textend_job.py`), re-rendered from its own codes up to there: the same take, shorter.
 
 ### 1035 · Examples as a menu
 A random official demo, or one of ours by name: the Readings (Jude, John 1 in four languages).
@@ -259,1418 +180,700 @@ A random official demo, or one of ours by name: the Readings (Jude, John 1 in fo
 `/transcribe?take=NAME` reads the take's own `audio.wav`; nothing goes up from the browser.
 
 ### 1037 · Regenerate from here
-`semantic_keep` keeps a take's music up to a moment; from there the model writes anew. The
-music budget is cut to what fits beside the prompt instead of failing.
+`semantic_keep` keeps a take's music up to a moment; from there the model writes anew. The music budget is cut to what fits beside the prompt instead of failing.
 
 ### 1038 · Trim only when the end can be trusted
-**Fix:** a trim cut live Greek text when Whisper misplaced the end. Now the end must be heard
-with confidence, or the take stays whole and says why.
+**Fix:** a trim cut live Greek text when Whisper misplaced the end. Now the end must be heard with confidence, or the take stays whole and says why.
 
 ### 1039 · Sound variations of a long song
-**Fix:** several sound variations of an 8-minute song aborted the server (CUDA illegal memory
-access): the NAR's attention outgrew 2³¹ elements. Variations now go in groups that fit
-(heads × variations × frames × (score length + frames + 256) < 2³¹).
+**Fix:** several sound variations of an 8-minute song aborted the server (CUDA illegal memory access): the NAR's attention outgrew 2³¹ elements. Variations now go in groups that fit (heads × variations × frames × (score length + frames + 256) < 2³¹).
 
 ### 1040 · Titles, and play on click
-Titles up to 80 characters, cleaned of invisible bidi and zero-width controls (they can make a
-file name read other than it is). A click on a take plays it, with a switch to turn that off.
+Titles up to 80 characters, cleaned of invisible bidi and zero-width controls (they can make a file name read other than it is). A click on a take plays it, with a switch to turn that off.
 
 ### 1041 · The Collection
-A fourth tab: every take as a tile or a row; search with `*` and `?`; filters by what a take is
-(generated, imported, regenerated, re-rendered) and what is made from it; workspaces, as SUNO
-has them, with the one in hand in the header (new takes land in it); many takes at once
-(favourite, add, hide, ZIP export in FLAC or WAV); the trash in the page (`trash/DATE/TAKE`),
-given back until emptied, emptied by itself after 7, 14 or 28 days only when chosen.
+A fourth tab: every take as a tile or a row; search with `*` and `?`; filters by what a take is (generated, imported, regenerated, re-rendered) and what is made from it; workspaces, as SUNO has them, with the one in hand in the header (new takes land in it); many takes at once (favourite, add, hide, ZIP export in FLAC or WAV); the trash in the page (`trash/DATE/TAKE`), given back until emptied, emptied by itself after 7, 14 or 28 days only when chosen.
 
 ### 1042 · Like, dislike, favourite
 In the player and on every card; "All Workspaces" for the whole library.
 
 ### 1043 · Text profiles
-A pasted text made ready to read: replacement rules in order (literal or regular expression),
-then the shape: `[Intro]`, `[Verse]` at blank lines, `[Interlude]` after a long paragraph, up to
-10 000 characters. Built in: plain reading, and LCV (from Viktor's own bash preparation script).
-Edited with a live preview in the Writer tab; kept in `presets.json`.
+A pasted text made ready to read: replacement rules in order (literal or regular expression), then the shape: `[Intro]`, `[Verse]` at blank lines, `[Interlude]` after a long paragraph, up to 10 000 characters. Built in: plain reading, and LCV (from Viktor's own bash preparation script). Edited with a live preview in the Writer tab; kept in `presets.json`.
 
 ### 1044 · A note on every take
 Viktor's own words on a take, in its card, the Collection and the sheet.
 
 ### 1045 · Ruach Studio
-The name and the dove over a staff, in the header and the Engine room; Write becomes Writer;
-the play buttons in the Collection follow the player.
+The name and the dove over a staff, in the header and the Engine room; Write becomes Writer; the play buttons in the Collection follow the player.
 
 ### 1046 · Peek and sheet
-In the Collection, a hover of 400 ms shows the style and the first lyrics; a click opens the
-take's sheet in place. Create or Post only by choice.
+In the Collection, a hover of 400 ms shows the style and the first lyrics; a click opens the take's sheet in place. Create or Post only by choice.
 
 ### 1047 · The Writer's notebook
-Documents of four parts: STYLE, LYRICS, NOTES (Markdown) and PARAMS (every knob of the form).
-Both ways with Create: "Save to Writer" keeps the song as tuned, "Load into Create" puts it
-back and puts the document in hand; takes made meanwhile are linked to it. Typing autosaves; a
-sitting is one version; "Keep this version" keeps one by name; a version is read, restored or
-copied as a new document. `KIT/writer/ID.json`; a deleted one goes to `writer/.trash/`.
+Documents of four parts: STYLE, LYRICS, NOTES (Markdown) and PARAMS (every knob of the form). Both ways with Create: "Save to Writer" keeps the song as tuned, "Load into Create" puts it back and puts the document in hand; takes made meanwhile are linked to it. Typing autosaves; a sitting is one version; "Keep this version" keeps one by name; a version is read, restored or copied as a new document. `KIT/writer/ID.json`; a deleted one goes to `writer/.trash/`.
 
 ### 1048 · The studio's own menu
-A right-click on any take (or ⋯): play, Create, Post, sheet, like, dislike, favourite, note,
-rename, workspaces, hide, Writer, copy, download, to the trash. Cards carry like, dislike,
-favourite and Post; a Post button in the takes column. Tiles four across.
+A right-click on any take (or ⋯): play, Create, Post, sheet, like, dislike, favourite, note, rename, workspaces, hide, Writer, copy, download, to the trash. Cards carry like, dislike, favourite and Post; a Post button in the takes column. Tiles four across.
 
 ### 1049 · Rename in place
 A pencil by the title on a card, a click on the sheet's title.
 
 ### 1050 · Workspaces renamed and deleted
-Deleting asks what becomes of the takes: they stay unsorted, move into another workspace, or go
-to the trash with it (sparing those in another workspace). Selected takes move between
-workspaces.
+Deleting asks what becomes of the takes: they stay unsorted, move into another workspace, or go to the trash with it (sparing those in another workspace). Selected takes move between workspaces.
 
 ### 1051 · Drawn player icons
-Play, pause, previous, next, like, dislike, star after Lucide (ISC); no ring or plate behind them,
-the icon itself larger.
+Play, pause, previous, next, like, dislike, star after Lucide (ISC); no ring or plate behind them, the icon itself larger.
 
 ### 1052 · Play-on stays in its zone
-Started from the Collection, play-on and ⏮⏭ follow what its search and filters show; started
-from the takes column, the column.
+Started from the Collection, play-on and ⏮⏭ follow what its search and filters show; started from the takes column, the column.
 
 ### 1053 · The player hears FLAC
-`listen.flac` is written beside `audio.wav` when a take is saved (lossless, 70–74 % of the
-bytes at 24 bit; 6.9 GB against 9.8 GB over the whole library), or at a take's first listen;
-`/library/listen` serves it as a file, so seeking is native. Downloads stay the WAV.
+`listen.flac` is written beside `audio.wav` when a take is saved (lossless, 70–74 % of the bytes at 24 bit; 6.9 GB against 9.8 GB over the whole library), or at a take's first listen; `/library/listen` serves it as a file, so seeking is native. Downloads stay the WAV.
 
 ### 1054 · Run the chain
-One row above Post's steps: Debuzz (every YuE2 take; off for an import) → Upscale (optional) →
-Remaster with the Remaster step's settings (432 Hz, LUFS, preset), then Artifacts and Spectrum on
-the final file, the lyrics on the take, stems. One job on the GPU box, each step on the file the
-one before made; the page only watches.
+One row above Post's steps: Debuzz (every YuE2 take; off for an import) → Upscale (optional) → Remaster with the Remaster step's settings (432 Hz, LUFS, preset), then Artifacts and Spectrum on the final file, the lyrics on the take, stems. One job on the GPU box, each step on the file the one before made; the page only watches.
 
 ### 1055 · Debuzz frame from /props
 The fold period is the model's own (`sample_rate / frame_rate`), not 1920 written in.
 
 ### 1056 · Karaoke timing
-Whisper with word times (cached apart from the lyrics check) gives every sung word its moment, for
-the lyrics shown with the song.
+Whisper with word times (cached apart from the lyrics check) gives every sung word its moment, for the lyrics shown with the song.
 
 ### 1057 · The studio's own dialogs
 `heresy-dialog.js` instead of the browser's `confirm()` and `prompt()`: in the theme, keyboard first.
 
 ### 1058 · Collection details
-Every dropdown in the studio's dress (no native arrow, a drawn chevron); a note is a mark at the
-row's end, so cards keep one height; the card that sounds pulses; buttons say what they will do;
-"Not in a workspace" as a place.
+Every dropdown in the studio's dress (no native arrow, a drawn chevron); a note is a mark at the row's end, so cards keep one height; the card that sounds pulses; buttons say what they will do; "Not in a workspace" as a place.
 
 ### 1059 · The datasheet and "Open in"
-Everything a take was made with, as Create shows it, without going there; "Open in Collection"
-brings the take into sight, flashed; the menu offers the other rooms only.
+Everything a take was made with, as Create shows it, without going there; "Open in Collection" brings the take into sight, flashed; the menu offers the other rooms only.
 
 ### 1060 · Progress in Post
-A bar under every job in the tree and a floating card while the GPU box works; estimated from the
-rates measured, since the lab says running or queued, not how far.
+A bar under every job in the tree and a floating card while the GPU box works; estimated from the rates measured, since the lab says running or queued, not how far.
 
 ### 1061 · The tree's files from the engine
-A file of a take's tree (`derived/…`) is served by the engine itself, with native Range: big ones
-play and seek, where the lab's proxy failed.
+A file of a take's tree (`derived/…`) is served by the engine itself, with native Range: big ones play and seek, where the lab's proxy failed.
 
 ### 1062 · The staff on white pages
 As printed, in every theme and full screen; Full screen at the end of its row.
 
 ### 1063 · Train: LoRA adapters for YuE2
-A wizard: a raw folder of `datasets/raw/` → its tracks (in or out, lyrics matched by version name
-and cleaned to YuE2's sections, a style of their own) → the set (`datasets/prepared/NAME/`, 48 kHz
-WAV + captions in AI-Toolkit's YuE2 form) → a kind of adapter (style, voice, language, artist) and
-its knobs → the run. Underneath for now: Ostris' AI-Toolkit (MIT), one LoRA over both experts; the
-engine loads its LoRAs as they are. The guide: `LORA-TRAINING.md`.
+A wizard: a raw folder of `datasets/raw/` → its tracks (in or out, lyrics matched by version name and cleaned to YuE2's sections, a style of their own) → the set (`datasets/prepared/NAME/`, 48 kHz WAV + captions in AI-Toolkit's YuE2 form) → a kind of adapter (style, voice, language, artist) and its knobs → the run. Underneath for now: Ostris' AI-Toolkit (MIT), one LoRA over both experts; the engine loads its LoRAs as they are. The guide: `LORA-TRAINING.md`.
 
 ### 1064 · The player says why
-A song that does not start says why: press ▶ (autoplay), the connection dropped, or the file
-really cannot be played; an aborted load says nothing.
+A song that does not start says why: press ▶ (autoplay), the connection dropped, or the file really cannot be played; an aborted load says nothing.
 
 ### 1065 · Dropdowns
-The focused box keeps the field's colour (the theme's focus fill painted the whole box and its
-`background` shorthand reset the chevron's geometry: restated); a dropdown in a row of buttons is
-as tall as they are.
+The focused box keeps the field's colour (the theme's focus fill painted the whole box and its `background` shorthand reset the chevron's geometry: restated); a dropdown in a row of buttons is as tall as they are.
 
 ### 1066 · The run's VRAM peak
-Sampled every 5 s on the run's own GPU, kept with the run: the figure the trainer's VRAM gate is
-built on.
+Sampled every 5 s on the run's own GPU, kept with the run: the figure the trainer's VRAM gate is built on.
 
 ### 1067 · Epochs and history
-A checkpoint per epoch, every one kept; steps rounded up to whole epochs. Every step into
-`loss_log.db`; a card a run in Runs: its set, knobs, time, speed, VRAM peak, the flow loss and
-`ar_ce` drawn, a warning when the AR learns the songs by heart, and its epochs, each one into
-`loras/RUN/RUN-eNNN.safetensors` on a click (a hard link: no second copy).
+A checkpoint per epoch, every one kept; steps rounded up to whole epochs. Every step into `loss_log.db`; a card a run in Runs: its set, knobs, time, speed, VRAM peak, the flow loss and `ar_ce` drawn, a warning when the AR learns the songs by heart, and its epochs, each one into `loras/RUN/RUN-eNNN.safetensors` on a click (a hard link: no second copy).
 
 ### 1068 · The listener
-`lab/listener.py`: Qwen2.5-Omni-7B (its thinker only) writes a line of style tags a track, a draft
-for the captions; 18.3 GB at bf16, 42 songs in 6 minutes.
+`lab/listener.py`: Qwen2.5-Omni-7B (its thinker only) writes a line of style tags a track, a draft for the captions; 18.3 GB at bf16, 42 songs in 6 minutes.
 
 ### 1069 · The instruments cheat-sheet
-The ♪ beside the Style prompt: 174 instruments the probes asked YuE2 for, by family, with home,
-sound (en, ru) and the words for a style; a click puts a name into the style, ▶ A / ▶ B play its
-60 s probes. The ear's verdict per row: heard (kept in the workspace "Instrumental Probe"),
-questioned (a flag of the author's), NOT IDENTIFIED IN YUE2 (red), not judged yet. The Writer's
-assistant is told both lists.
+The ♪ beside the Style prompt: 174 instruments the probes asked YuE2 for, by family, with home, sound (en, ru) and the words for a style; a click puts a name into the style, ▶ A / ▶ B play its 60 s probes. The ear's verdict per row: heard (kept in the workspace "Instrumental Probe"), questioned (a flag of the author's), NOT IDENTIFIED IN YUE2 (red), not judged yet. The Writer's assistant is told both lists.
 
 ### 1070 · Workspace locks
-Right-click a workspace: Lock / Unlock Workspace Deletion, Lock / Unlock Tracks Deletion; a 🔒 by
-its name. The lab keeps locked takes out of the trash and says so; the page will not delete them
-for good.
+Right-click a workspace: Lock / Unlock Workspace Deletion, Lock / Unlock Tracks Deletion; a 🔒 by its name. The lab keeps locked takes out of the trash and says so; the page will not delete them for good.
 
 ### 1071 · Auto and Manual
-The GPU memory presets went: the page guessed one from the knobs, and 24 and 32 GB differed only
-by "Keep models loaded", so a 24 GB card showed "32 GB · more than this GPU". Auto fits the
-backbone, context and VAE tiles to the GPU found; Manual leaves the knobs to you.
+The GPU memory presets went: the page guessed one from the knobs, and 24 and 32 GB differed only by "Keep models loaded", so a 24 GB card showed "32 GB · more than this GPU". Auto fits the backbone, context and VAE tiles to the GPU found; Manual leaves the knobs to you.
 
 ### 1072 · Runs in units of their own
-A training run is the systemd unit `ruach-train-RUN`, not the lab's child: restarting the lab
-killed its whole cgroup and the run with it. The lab watches the unit, finds running runs again
-when it starts, and collects the LoRA when a run ends; the same name goes on from its last
-checkpoint.
+A training run is the systemd unit `ruach-train-RUN`, not the lab's child: restarting the lab killed its whole cgroup and the run with it. The lab watches the unit, finds running runs again when it starts, and collects the LoRA when a run ends; the same name goes on from its last checkpoint.
 
 ### 1073 · GTSinger
-`lab/gtsinger.py` turns one language of GTSinger (CC BY-NC-SA 4.0) into a raw folder: WAV, lyrics,
-and its own style (`NAME.style.txt`, which the wizard reads).
+`lab/gtsinger.py` turns one language of GTSinger (CC BY-NC-SA 4.0) into a raw folder: WAV, lyrics, and its own style (`NAME.style.txt`, which the wizard reads).
 
 ### 1074 · DAWproject
-Download → DAWproject on a take: its mix and stems as 24-bit WAV tracks, the tempo and meter of
-its score, for openDAW (File → Import → DAWproject…), Bitwig, Studio One. Packed into the take's
-`derived/dawproject/` and served by the engine.
+Download → DAWproject on a take: its mix and stems as 24-bit WAV tracks, the tempo and meter of its score, for openDAW (File → Import → DAWproject…), Bitwig, Studio One. Packed into the take's `derived/dawproject/` and served by the engine.
 
 ### 1075 · The DAW button
-openDAW beside the studio in a tab of its own (`ruach-daw` unit, `tools/serve-opendaw.py` with the
-COOP/COEP headers it needs); the address is a page setting.
+openDAW beside the studio in a tab of its own (`ruach-daw` unit, `tools/serve-opendaw.py` with the COOP/COEP headers it needs); the address is a page setting.
 
 ### 1076 · The trainer's VRAM gate
-Every run keeps the peak of its card; the need of a base is the largest peak measured with it. A card
-smaller than that closes the Train button and says why, with the measured number; nothing is guessed.
+Every run keeps the peak of its card; the need of a base is the largest peak measured with it. A card smaller than that closes the Train button and says why, with the measured number; nothing is guessed.
 
 ### 1077 · The listener through llama.cpp
-A GGUF listener (Qwen2.5-Omni-7B at Q8_0 or Q4_K_M with its audio projector) runs through
-`vendor/llama.cpp` (`llama-mtmd-cli --mmproj`): 11.3 and 8.4 GiB instead of 18.3 at bf16, the same tags.
+A GGUF listener (Qwen2.5-Omni-7B at Q8_0 or Q4_K_M with its audio projector) runs through `vendor/llama.cpp` (`llama-mtmd-cli --mmproj`): 11.3 and 8.4 GiB instead of 18.3 at bf16, the same tags.
 
 ### 1078 · The listener in the wizard
-Omni hears 120 s of every track of a set and drafts its style; the drafts are corrected in place and
-written into the captions as "trigger, the track's tags. the shared line"; earlier drafts kept aside.
+Omni hears 120 s of every track of a set and drafts its style; the drafts are corrected in place and written into the captions as "trigger, the track's tags. the shared line"; earlier drafts kept aside.
 
 ### 1079 · `fetch-heresy.sh --listener`
 Q8_0, Q4_K_M or bf16, asked first with its size: a 7–22 GB download is never a surprise.
 
 ### 1080 · One environment
-`.venv` in the studio's root for everything Python (the lab, the trainer, the tools); every script
-names it.
+`.venv` in the studio's root for everything Python (the lab, the trainer, the tools); every script names it.
 
 ### 1081 · LoRA strengths with care
-The music half (AR) of an adapter capped at 0.75 (a score adapter excepted); a strength typed exactly
-on a double-click (1081b: the field is wide enough to be read); an emptied knob shows its default.
+The music half (AR) of an adapter capped at 0.75 (a score adapter excepted); a strength typed exactly on a double-click (1081b: the field is wide enough to be read); an emptied knob shows its default.
 
 ### 1082 · Create's takes carry the Collection's marks
 Likes, dislikes and workspace tags on the takes in Create's column, as in the Collection.
 
 ### 1083 · Our own trainer, stage 1
-`lab/trainer/`: the YuE2 network and the Comfy-Org loader (int8 convrot unpacked exactly), a LoRA in
-AI-Toolkit's key names, the training loop; exact against AI-Toolkit in float32 (`PARITY.md`).
+`lab/trainer/`: the YuE2 network and the Comfy-Org loader (int8 convrot unpacked exactly), a LoRA in AI-Toolkit's key names, the training loop; exact against AI-Toolkit in float32 (`PARITY.md`).
 
 ### 1084 · The strength road
-Each strength slider a road from green (safe) to yellow (its limit) to red: measured limits per
-adapter (`sources.json` may set its own), stricter for adapters trained here; past the limit, said.
+Each strength slider a road from green (safe) to yellow (its limit) to red: measured limits per adapter (`sources.json` may set its own), stricter for adapters trained here; past the limit, said.
 
 ### 1085 · Two trainers
-`training.py` runs `engine: ruach` (the studio's own, bf16 by default: nothing quantized) or
-`ai-toolkit` (the reference); each in its own unit.
+`training.py` runs `engine: ruach` (the studio's own, bf16 by default: nothing quantized) or `ai-toolkit` (the reference); each in its own unit.
 
 ### 1086 · The trainer needs nothing of AI-Toolkit
-`lab/trainer/cache.py` makes a set's latent cache itself (the VAE in float32, the MERT head's codec
-tokens); the trainer reads only that. `fetch-heresy.sh --trainer bf16|int8` fetches its base. The Train
-room says by name what the chosen trainer lacks.
+`lab/trainer/cache.py` makes a set's latent cache itself (the VAE in float32, the MERT head's codec tokens); the trainer reads only that. `fetch-heresy.sh --trainer bf16|int8` fetches its base. The Train room says by name what the chosen trainer lacks.
 
 ### 1087 · Babel in the score
-The engine judges the score the music half wrote before any music is built on it: `M:`, `L:` and `K:`
-present and clean, `Q:` a tempo, never three colons in a row (calibrated on the studio's takes: every
-good one passes, every broken one is caught). A broken one stops the run; the page says why, which
-adapters weighed on the music half and how far past their limits, shows what was written, and can
-bring the strengths into the green. `score_guard: false` in a request lets a run through anyway.
+The engine judges the score the music half wrote before any music is built on it: `M:`, `L:` and `K:` present and clean, `Q:` a tempo, never three colons in a row (calibrated on the studio's takes: every good one passes, every broken one is caught). A broken one stops the run; the page says why, which adapters weighed on the music half and how far past their limits, shows what was written, and can bring the strengths into the green. `score_guard: false` in a request lets a run through anyway.
 
 ### 1088 · Floors as fuses
-A score may not end before 200 tokens (the broken ones ended at 40–54), the music not before 750
-(30 s; a shorter requested length lowers it). Min and Max tokens are locked against a stray edit (the
-lock opens them); every sampling knob is held inside sane bounds and says so when it pulls a value back.
-An old draft's floors (32, 200) become the new ones.
+A score may not end before 200 tokens (the broken ones ended at 40–54), the music not before 750 (30 s; a shorter requested length lowers it). Min and Max tokens are locked against a stray edit (the lock opens them); every sampling knob is held inside sane bounds and says so when it pulls a value back. An old draft's floors (32, 200) become the new ones.
 
 ### 1089 · The music half together
-Stacked adapters add up: a strength may sit in its own green and the sum still break the score.
-Measured on the takes: whole at 1.55, 1.75 and 2.25 together, broken at 2.5, 2.5 and 3.1. A road for
-the sum under the adapters (green to 1.75, yellow to 2.25, red past it). Plan score only clears a score
-already in the field instead of refusing.
+Stacked adapters add up: a strength may sit in its own green and the sum still break the score. Measured on the takes: whole at 1.55, 1.75 and 2.25 together, broken at 2.5, 2.5 and 3.1. A road for the sum under the adapters (green to 1.75, yellow to 2.25, red past it). Plan score only clears a score already in the field instead of refusing.
 
 ### 1090 · The Train room on par
-Live runs on top (progress, time left, speed, both losses); the steps in a row as in Post, one open at
-a time; Telemetry: tiles, both halves' curves with what they mean, a cursor reading, the epochs (into
-`loras/`, out of it, or downloaded under their `loras/` name); every run a card in a column (Active,
-All, Archived, Trash; archive, delete to `trash/training/` with its adapters asked about, restore,
-delete for good). The player steps down to a strip in this room; what plays plays on. The lab's proxy
-passes adapters over 100 MB.
+Live runs on top (progress, time left, speed, both losses); the steps in a row as in Post, one open at a time; Telemetry: tiles, both halves' curves with what they mean, a cursor reading, the epochs (into `loras/`, out of it, or downloaded under their `loras/` name); every run a card in a column (Active, All, Archived, Trash; archive, delete to `trash/training/` with its adapters asked about, restore, delete for good). The player steps down to a strip in this room; what plays plays on. The lab's proxy passes adapters over 100 MB.
 
 ### 1091 · Which card does what
-Engine → GPUs: every card with its memory and what runs on it now; the studio on one card (`start.sh` takes
-it from `user/gpus.json` at its next start; a button restarts it when it is idle), training only on the cards
-given to it, the lab's other jobs (listener, Whisper, stems, remaster, upscale) on theirs. While a run trains
-on the studio's own card, a synthesis does not start: the page says why and offers Train. Defaults: the studio
-on GPU0, training on the other cards (on GPU0 too when it is the only one), jobs on all. The Train room's
-start dialog says when the run may take the studio's card. In the Telemetry, the reading under the cursor has
-a line of its own, so the block keeps its height.
+Engine → GPUs: every card with its memory and what runs on it now; the studio on one card (`start.sh` takes it from `user/gpus.json` at its next start; a button restarts it when it is idle), training only on the cards given to it, the lab's other jobs (listener, Whisper, stems, remaster, upscale) on theirs. While a run trains on the studio's own card, a synthesis does not start: the page says why and offers Train. Defaults: the studio on GPU0, training on the other cards (on GPU0 too when it is the only one), jobs on all. The Train room's start dialog says when the run may take the studio's card. In the Telemetry, the reading under the cursor has a line of its own, so the block keeps its height.
 
 ### 1092 · A short bar
-After the workspace only day/night, Save, Clear and the DAW; the card and its memory, the model, themes,
-Open, examples, Unload and the Engine behind the ☰, each with its words. The ☰ is not a menu of the old
-kind: the menus it holds (examples, the themes) open inside it.
+After the workspace only day/night, Save, Clear and the DAW; the card and its memory, the model, themes, Open, examples, Unload and the Engine behind the ☰, each with its words. The ☰ is not a menu of the old kind: the menus it holds (examples, the themes) open inside it.
 
 ### 1093 · The epochs worth hearing first
-In the Telemetry, green: the first epoch whose sound loss has settled (within 15 % of the run's span above
-its floor), the one with the lowest sound loss, and the last before the music half knows the songs by heart
-(ar_ce under 0.3); said as a guess read off the curves, the ear decides. The epochs in loras/ are amber with
-their ✓, green ticks under the curves for the candidates.
+In the Telemetry, green: the first epoch whose sound loss has settled (within 15 % of the run's span above its floor), the one with the lowest sound loss, and the last before the music half knows the songs by heart (ar_ce under 0.3); said as a guess read off the curves, the ear decides. The epochs in loras/ are amber with their ✓, green ticks under the curves for the candidates.
 
 ### 1094 · The server log in every room
-Right above the player, 600 px wide: folded to one line (the last thing the engine said, in its colour),
-unfolded to ten with Follow, Copy and the way to Engine's whole log; the same stream, not a second one.
+Right above the player, 600 px wide: folded to one line (the last thing the engine said, in its colour), unfolded to ten with Follow, Copy and the way to Engine's whole log; the same stream, not a second one.
 
 ### 1095 · An instrumental score adapter with words to sing
-A score adapter that plans instrumentals, above 0.5 in a mode that writes a score, with lyrics to sing: said
-in the LoRA block (measured at 1.00: one note in 127 vocal bars, the music looping on two bars). Low, 0.3–0.5,
-for a sung song (Viktor, by ear).
+A score adapter that plans instrumentals, above 0.5 in a mode that writes a score, with lyrics to sing: said in the LoRA block (measured at 1.00: one note in 127 vocal bars, the music looping on two bars). Low, 0.3–0.5, for a sung song (Viktor, by ear).
 
 ### 1096 · The guide, in the studio
-`docs/GUIDE.md`, room by room, is also the studio's own guide: the **?** in the bar (and Guide in the ☰) opens
-it as an overlay on the room you are in, one tab per room, its stops on the left, pictures large on a click.
-The lab serves `docs/` at `/lab/guide/`. A browser that has never seen the studio gets it by itself a minute
-after the start, once. The pictures: Viktor's day theme at 1920×1080, crops at 125 %; the Kit's screenshots
-went to the trash.
+`docs/GUIDE.md`, room by room, is also the studio's own guide: the **?** in the bar (and Guide in the ☰) opens it as an overlay on the room you are in, one tab per room, its stops on the left, pictures large on a click. The lab serves `docs/` at `/lab/guide/`. A browser that has never seen the studio gets it by itself a minute after the start, once. The pictures: Viktor's day theme at 1920×1080, crops at 125 %; the Kit's screenshots went to the trash.
 
 ### 1097 · Five rooms with names
-Creator, Writer, Refiner (was Post), Librarian (was Collection), LoRA Trainer (was Train); Viktor's names,
-02.10. The words on the page follow; the tab ids and the stored settings stay as they were.
+Creator, Writer, Refiner (was Post), Librarian (was Collection), LoRA Trainer (was Train); Viktor's names, 02.10. The words on the page follow; the tab ids and the stored settings stay as they were.
 
 ### 1098 · The Librarian says what it holds
-The heading names the collection open (*Librarian › Fosforida*) and counts it: takes (and how many shown),
-hours, liked, disliked, ★, with a note, how they were made, and how many sit in the library.
+The heading names the collection open (*Librarian › Fosforida*) and counts it: takes (and how many shown), hours, liked, disliked, ★, with a note, how they were made, and how many sit in the library.
 
 ### 1099 · Themes to work in
-53 → 22: Viktor's two, the classic editor themes and the quiet ones; the 31 loud, glossy and novelty ones are gone
-(their archive too, by Viktor's hand). Families: All, Favorites, Classic, Soft.
-"Not a beauty salon but a working tool: clear and elegant" (Viktor, 02.10).
+53 → 22: Viktor's two, the classic editor themes and the quiet ones; the 31 loud, glossy and novelty ones are gone (their archive too, by Viktor's hand). Families: All, Favorites, Classic, Soft. "Not a beauty salon but a working tool: clear and elegant" (Viktor, 02.10).
 
 ### 1100 · Starter sets, Forge, a proper ?
-- **Starter sets** in the LoRA Trainer's Material step: GTSinger joined into songs, Russian (one alto, 148 tracks) and
-  English (two altos and a tenor, 514), each whole and as a 100 MB slice, on Hugging Face
-  (`goldhub/Ruach_Studio_Starter_Sets`, CC BY-NC-SA 4.0 like GTSinger). Fetched only after the size and the terms
-  are shown and agreed, into `tmp/starter/` and into `datasets/raw/` only when whole (`lab/starter.py`). The two
-  slices also travel with the code in `datasets/raw/`; the rest of `datasets/` stays home (gitignore).
+- **Starter sets** in the LoRA Trainer's Material step: GTSinger joined into songs, Russian (one alto, 148 tracks) and English (two altos and a tenor, 514), each whole and as a 100 MB slice, on Hugging Face (`goldhub/Ruach_Studio_Starter_Sets`, CC BY-NC-SA 4.0 like GTSinger). Fetched only after the size and the terms are shown and agreed, into `tmp/starter/` and into `datasets/raw/` only when whole (`lab/starter.py`). The two slices also travel with the code in `datasets/raw/`; the rest of `datasets/` stays home (gitignore).
 - **Forge**, not Forge, in every word of the page and the lab: the machine's public name (Viktor, 02.10).
 - **The guide's ?** is Font Awesome 4.7's question mark (SIL OFL 1.1), drawn like the bar's other icons, also in the ☰.
 - **yt-dlp** in the lab's requirements (instrument sets from long recordings); ffmpeg and node said as system needs.
 
 ### 1101 · Speed, selection as in Plasma, ranks said
-- **The player's speed**, 0.5× to 2×, the pitch kept; kept like the volume (a new source would reset it: both
-  rates are set).
-- **The Librarian selects as a file manager does** (Viktor: "повадки, как в Плазме под Кедами"): once a card is
-  checked, a click anywhere on another checks it (Shift: the range); a drag on the empty space draws a band that
-  checks what it touches, Ctrl+drag from anywhere and adding to what was checked; the page scrolls on at the edges.
+- **The player's speed**, 0.5× to 2×, the pitch kept; kept like the volume (a new source would reset it: both rates are set).
+- **The Librarian selects as a file manager does** (Viktor: "повадки, как в Плазме под Кедами"): once a card is checked, a click anywhere on another checks it (Shift: the range); a drag on the empty space draws a band that checks what it touches, Ctrl+drag from anywhere and adding to what was checked; the page scrolls on at the edges.
 - **Move to** beside the workspaces' pins in a take's menu; on a checked card, for every checked take.
 - **The note icon** lost its own tooltip: the hover card already shows the note.
-- **Ranks said where they are chosen**: beside the trainer's rank, its share of the weights it adapts and its size
-  (measured on YuE2: 224 matrices, 2048 wide, 1.41 B weights a half; r16 1 %, r64 4 %, r128 8 %, r256 17 %); the
-  field stops at 128; *How to choose ›* opens the guide at its new stop on ranks and the other knobs.
-- **The guide**: YuE2 decides when an instrument comes in (the seed decides a lot: hear several); an instrument that
-  plays but not as a live one is the work of an instrument LoRA; both in the troubleshooting too.
+- **Ranks said where they are chosen**: beside the trainer's rank, its share of the weights it adapts and its size (measured on YuE2: 224 matrices, 2048 wide, 1.41 B weights a half; r16 1 %, r64 4 %, r128 8 %, r256 17 %); the field stops at 128; *How to choose ›* opens the guide at its new stop on ranks and the other knobs.
+- **The guide**: YuE2 decides when an instrument comes in (the seed decides a lot: hear several); an instrument that plays but not as a live one is the work of an instrument LoRA; both in the troubleshooting too.
 
 ### 1102 · openDAW out, the way out of the studio in
-Viktor: web DAWs are not the way. openDAW is gone (its unit, its clone, its server; install-units.sh removes the
-unit where it was installed). The DAW button opens the way out: the mixed track as it is, or the whole take into
-the user's own DAW, where the rest happens outside the studio; nothing comes back in. REAPER first, Waveform next,
-others by pull request. `lab/dawbridge.py` finds them on the studio's machine without starting them (REAPER's
-version from its whatsnew.txt, Waveform's from dpkg); a DAW on another computer is named by the user. DAWproject
-(Bitwig, Studio One, Cubase) stays in a take's menu.
+Viktor: web DAWs are not the way. openDAW is gone (its unit, its clone, its server; install-units.sh removes the unit where it was installed). The DAW button opens the way out: the mixed track as it is, or the whole take into the user's own DAW, where the rest happens outside the studio; nothing comes back in. REAPER first, Waveform next, others by pull request. `lab/dawbridge.py` finds them on the studio's machine without starting them (REAPER's version from its whatsnew.txt, Waveform's from dpkg); a DAW on another computer is named by the user. DAWproject (Bitwig, Studio One, Cubase) stays in a take's menu.
 
 ### 1103 · Pins, and a strip that never moves the cards
-Above the Librarian's grid a strip of fixed height: the place's pinned takes (four at most, in their own tone;
-right-click → *Pin here*, × to unpin; kept in collection.json, renamed and deleted with their workspace), and the bar
-of the checked in the same place when something is checked: the cards stay where they were. Search, sort and the
-view moved up into the heading line beside the counts (Viktor: it stood half empty).
+Above the Librarian's grid a strip of fixed height: the place's pinned takes (four at most, in their own tone; right-click → *Pin here*, × to unpin; kept in collection.json, renamed and deleted with their workspace), and the bar of the checked in the same place when something is checked: the cards stay where they were. Search, sort and the view moved up into the heading line beside the counts (Viktor: it stood half empty).
 
 ### 1104 · The take as a REAPER project
-`lab/rpp.py`, from the DAW landing (*Export the take*) or a take's menu (Download → REAPER project): a ZIP with
-TITLE.RPP beside audio/: the mix (muted when there are stems) and every stem on its own track, the score as MIDI (the
-page writes it from the ABC, the lab packs it; one track a voice), the tempo and meter the way REAPER itself saves
-them (TEMPO and the tempo envelope's first point), the lyrics as empty items carrying each line and the sections as
-regions when Whisper has timed the take, the recipe in the project's notes. Checked by REAPER 7.81 itself, not only
-written: a Lua script opened the projects under a virtual display (Xvfb, its own config file) and reported 71 bpm in
-2/4, the stems, 577 and 398 notes, the regions. REAPER applies the tempo map a few UI cycles after loading: asked at
-once it says 120 (a measurement error of ours, first taken for a fault of the file).
+`lab/rpp.py`, from the DAW landing (*Export the take*) or a take's menu (Download → REAPER project): a ZIP with TITLE.RPP beside audio/: the mix (muted when there are stems) and every stem on its own track, the score as MIDI (the page writes it from the ABC, the lab packs it; one track a voice), the tempo and meter the way REAPER itself saves them (TEMPO and the tempo envelope's first point), the lyrics as empty items carrying each line and the sections as regions when Whisper has timed the take, the recipe in the project's notes. Checked by REAPER 7.81 itself, not only written: a Lua script opened the projects under a virtual display (Xvfb, its own config file) and reported 71 bpm in 2/4, the stems, 577 and 398 notes, the regions. REAPER applies the tempo map a few UI cycles after loading: asked at once it says 120 (a measurement error of ours, first taken for a fault of the file).
 
 ### 1105 · Pinned, whole names, favourites in step, a glass player, gold checks, keys
 - **Pinned** on the Librarian's left: every take pinned anywhere; an unpin is seen at once (a far lab answers later).
 - A workspace name the column cuts is shown whole over the grid while the pointer is on it; the column keeps its width.
-- A favourite set in the player, on a card or in a menu shows everywhere at once (the player's star used to wait for
-  the next reload of the cards).
+- A favourite set in the player, on a card or in a menu shows everywhere at once (the player's star used to wait for the next reload of the cards).
 - The player is 20 % see-through, the page blurred under it; the speed box no longer eats the waveform.
-- Checkboxes and radios in the theme's colour, never the browser's blue: `--check` where a theme names one (Viktor's
-  two: dark gold beside the brick), else the theme's accent.
+- Checkboxes and radios in the theme's colour, never the browser's blue: `--check` where a theme names one (Viktor's two: dark gold beside the brick), else the theme's accent.
 - The guide's own tab **Shortcuts & tricks**, read from the code: every key and mouse gesture the page answers.
-- README: FEATURESET and an honest table of where Ruach Studio's YuE2 beats SUNO and where it does not;
-  OSEM (say it: awesome) · Open Source, Engaged & Musical (Viktor kept this one; OSMGSU went).
+- README: FEATURESET and an honest table of where Ruach Studio's YuE2 beats SUNO and where it does not; OSEM (say it: awesome) · Open Source, Engaged & Musical (Viktor kept this one; OSMGSU went).
 
 ### 1106 · The player of fosforida.quest
-Viktor's own player (WEBSITES/fosforida.quest, Player.astro) with everything of ours inside, drawn by our own canvas
-(no wavesurfer): the waveform across the whole bar; under it a cover tile (one hue from the take's name, until covers
-are drawn), the title and the style's first words, 👍 👎 ★; shuffle, ⏮, play, ⏭, repeat (off · the list · this take,
-marked 1), both new; the time, play-on-click and play-on as icons with tips, the speed, the volume, the state. Every
-play, pause, previous, next drawn as a thin outline (Lucide's shapes, ISC), the cards' too: "легко и не удушающе".
+Viktor's own player (WEBSITES/fosforida.quest, Player.astro) with everything of ours inside, drawn by our own canvas (no wavesurfer): the waveform across the whole bar; under it a cover tile (one hue from the take's name, until covers are drawn), the title and the style's first words, 👍 👎 ★; shuffle, ⏮, play, ⏭, repeat (off · the list · this take, marked 1), both new; the time, play-on-click and play-on as icons with tips, the speed, the volume, the state. Every play, pause, previous, next drawn as a thin outline (Lucide's shapes, ISC), the cards' too: "легко и не удушающе".
 
 ### 1107 · The guard of the line
-`heresy-net.js`: the round trip to the studio every 20 s (the engine's /health, the middle of five), beside the
-server log (*Forge · 85 ms*; *here* on the same machine). Likes and dislikes join pins and favourites: seen at once,
-confirmed by the studio, taken back when refused. Measured 02.10: the laptop on a phone's line through the VPN,
-0.3–0.9 s a round trip; the engine itself, while rendering, answers /health in 2–6 s: the page's lag then is the
-engine's, and the marks no longer wait for it.
+`heresy-net.js`: the round trip to the studio every 20 s (the engine's /health, the middle of five), beside the server log (*Forge · 85 ms*; *here* on the same machine). Likes and dislikes join pins and favourites: seen at once, confirmed by the studio, taken back when refused. Measured 02.10: the laptop on a phone's line through the VPN, 0.3–0.9 s a round trip; the engine itself, while rendering, answers /health in 2–6 s: the page's lag then is the engine's, and the marks no longer wait for it.
 
 ### 1108 · Mass actions as in Plasma
-Ctrl+drag turns over what it crosses (a second pass unchecks); 👍 👎 ★ on a checked card, or on the bar of the checked
-(👍 👎 new there), act on every checked take, and take the mark back when all have it; taking several out of a
-workspace asks first (the trash always did).
+Ctrl+drag turns over what it crosses (a second pass unchecks); 👍 👎 ★ on a checked card, or on the bar of the checked (👍 👎 new there), act on every checked take, and take the mark back when all have it; taking several out of a workspace asks first (the trash always did).
 
 ### 1109 · No CUDA_VISIBLE_DEVICES for the engine
-Viktor: most have one card; who has more knows the kitchen. start.sh no longer sets it; a studio card other than
-the first is named to the engine as GGML_BACKEND=CUDAn (CUDA_DEVICE_ORDER=PCI_BUS_ID keeps n = nvidia-smi's); the lab
-reads either, and neither means the first card. Measured before: the engine computes on CUDA0 alone, but opens a
-context of 256 MiB on every visible card as it lists them (the page asks): on a three-card machine 512 MiB of the
-training cards go to the studio. The lab's own jobs still get their card by CUDA_VISIBLE_DEVICES, one each.
+Viktor: most have one card; who has more knows the kitchen. start.sh no longer sets it; a studio card other than the first is named to the engine as GGML_BACKEND=CUDAn (CUDA_DEVICE_ORDER=PCI_BUS_ID keeps n = nvidia-smi's); the lab reads either, and neither means the first card. Measured before: the engine computes on CUDA0 alone, but opens a context of 256 MiB on every visible card as it lists them (the page asks): on a three-card machine 512 MiB of the training cards go to the studio. The lab's own jobs still get their card by CUDA_VISIBLE_DEVICES, one each.
 
 ### 1110 · The Writing room says where its words come from
-A line at the top of the room: the writer (the chat server under Engine, or OpenRouter), its address and model, and
-whether it answers, checked on entering the Writer; red when it does not, with what to do. The room stands first in
-its column. (02.10: neither vLLM on Forge, 8008 nor 8009, was running: the room was silent about it until asked.)
+A line at the top of the room: the writer (the chat server under Engine, or OpenRouter), its address and model, and whether it answers, checked on entering the Writer; red when it does not, with what to do. The room stands first in its column. (02.10: neither vLLM on Forge, 8008 nor 8009, was running: the room was silent about it until asked.)
 
 ### 1111 · The player, lighter still
-No ring round play; the speeds with two decimals (0.50×…2.00×); the state a dot without words (the tip says them),
-larger, beating while a take plays, 60 % see-through otherwise; shuffle, repeat, the skips, the toggles, the speed,
-the volume, the marks and the time faint until the pointer comes. Ours on top: the system's media keys, a headset's
-buttons and the desktop's media panel drive the player (Media Session); the pointer over the waveform shows the time
-a click would jump to; ← → seek 5 s (Shift: 30 s), M mutes; a click on the total shows the time left.
+No ring round play; the speeds with two decimals (0.50×…2.00×); the state a dot without words (the tip says them), larger, beating while a take plays, 60 % see-through otherwise; shuffle, repeat, the skips, the toggles, the speed, the volume, the marks and the time faint until the pointer comes. Ours on top: the system's media keys, a headset's buttons and the desktop's media panel drive the player (Media Session); the pointer over the waveform shows the time a click would jump to; ← → seek 5 s (Shift: 30 s), M mutes; a click on the total shows the time left.
 
 ### 1112 · The GPU guard, and services that always come back
-`lab/gpu_guard.py` (Viktor: "жёсткий сторож с фолбеками, во избежание OOM"): a card is given to the studio's work
-only with at least 70 % of its memory free and no other program on it; a vLLM or anyone's own run keeps the card out
-whatever it leaves. The studio's own processes are known by running from its folder. The lab tries the role's cards
-first, then (for its jobs) any card that passes; training stays on its cards, and a card named by hand passes the
-guard too; none will do: refused aloud, card by card. start.sh picks the engine's card through it and says so.
-Proved 02.10 with a stranger's CUDA context on GPU1: refused, by name and pid. The units: Restart=always,
-StartLimitIntervalSec=0: up again after any fall, without end. The root's systemd/ is now the git copy (the old one
-still carried openDAW's unit). docs/FINISH-LINE.md: the living list of what is left.
+`lab/gpu_guard.py` (Viktor: "жёсткий сторож с фолбеками, во избежание OOM"): a card is given to the studio's work only with at least 70 % of its memory free and no other program on it; a vLLM or anyone's own run keeps the card out whatever it leaves. The studio's own processes are known by running from its folder. The lab tries the role's cards first, then (for its jobs) any card that passes; training stays on its cards, and a card named by hand passes the guard too; none will do: refused aloud, card by card. start.sh picks the engine's card through it and says so. Proved 02.10 with a stranger's CUDA context on GPU1: refused, by name and pid. The units: Restart=always, StartLimitIntervalSec=0: up again after any fall, without end. The root's systemd/ is now the git copy (the old one still carried openDAW's unit). docs/FINISH-LINE.md: the living list of what is left.
 
 ### 1113 · The guard as a laptop needs it; Unload in the bar
-Viktor: on a laptop the desktop's own (X11, a browser, CopyQ, GoldenDict) keep a quarter of the card busy and are
-legitimate; banning the card for them would leave the studio dead for most users. Now a card closes only to a heavy
-stranger (a program not of the studio above 2 GiB: a vLLM's kind) or when our job does not fit (start.sh asks 8 GB
-for the engine's weights and their cache). What our trainer or our inference holds is ours: a stranger starting after
-it and finding no room is not the studio's to prevent. Unload moved into the bar before ☰, tinted the theme's red at
-20 % while a model sits in the card's memory, its tip saying how much. Omni's pass over the 60 s probes: 32 of 293
-moved to "Instrumental Probe" (both answers agreeing); the rest wait for the ear.
+Viktor: on a laptop the desktop's own (X11, a browser, CopyQ, GoldenDict) keep a quarter of the card busy and are legitimate; banning the card for them would leave the studio dead for most users. Now a card closes only to a heavy stranger (a program not of the studio above 2 GiB: a vLLM's kind) or when our job does not fit (start.sh asks 8 GB for the engine's weights and their cache). What our trainer or our inference holds is ours: a stranger starting after it and finding no room is not the studio's to prevent. Unload moved into the bar before ☰, tinted the theme's red at 20 % while a model sits in the card's memory, its tip saying how much. Omni's pass over the 60 s probes: 32 of 293 moved to "Instrumental Probe" (both answers agreeing); the rest wait for the ear.
 
 ### 1114 · This machine and private networks only
-Viktor: most machines stand open to the internet on every port. The engine answers 127/8, 10/8, 172.16/12,
-192.168/16, 169.254/16, 100.64/10 (carrier-grade NAT, Tailscale's), ::1, fc00::/7, fe80::/10 and IPv4 in IPv6
-dress; anyone else gets 403 with the reason (RUACH_ALLOW_PUBLIC=1 opens it). The lab listens on 127.0.0.1 only
-(LAB_HOST overrides): the page reaches it through the engine. 22 addresses tested both ways.
+Viktor: most machines stand open to the internet on every port. The engine answers 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16, 100.64/10 (carrier-grade NAT, Tailscale's), ::1, fc00::/7, fe80::/10 and IPv4 in IPv6 dress; anyone else gets 403 with the reason (RUACH_ALLOW_PUBLIC=1 opens it). The lab listens on 127.0.0.1 only (LAB_HOST overrides): the page reaches it through the engine. 22 addresses tested both ways.
 
 ### 1115 · Tones and washes
-Every theme gave flat colours only (no gradient anywhere in themes.css). Now each theme's accent and ground give a
-ramp (--tone-1…4, --wash-1…2, --shade-1, mixed in OKLab so the steps look even) and the surfaces carry it faintly:
-the bar and the rooms' heads a fading wash, the player a tone from the top, the cards a breath of the accent
-(deeper hovered, checked, playing), pins and drawers their own shade; the waveform's played part runs from the
-accent's brighter tone at the peaks to its own at the middle. In every theme, without a line added to any theme.
+Every theme gave flat colours only (no gradient anywhere in themes.css). Now each theme's accent and ground give a ramp (--tone-1…4, --wash-1…2, --shade-1, mixed in OKLab so the steps look even) and the surfaces carry it faintly: the bar and the rooms' heads a fading wash, the player a tone from the top, the cards a breath of the accent (deeper hovered, checked, playing), pins and drawers their own shade; the waveform's played part runs from the accent's brighter tone at the peaks to its own at the middle. In every theme, without a line added to any theme.
 
 ### 1116 · The API and the MCP server
-One door for scripts, DAWs and agents on this machine and its network (Viktor: "не в интернет, а для локальных
-сервисов машины или сети"): the engine's /api/… goes to `lab/api.py`. `/api/v1`: health (the engine, the lab, the
-guard's verdict per card), songs (make one: style, lyrics, mode direct/full/melody, instrumental, duration, seeds,
-adapters, the workspace it lands in), jobs (state, takes, cancel), takes (list, one with what it was made with, its
-audio, marks, the REAPER project), workspaces (list; add, take out, move). OpenAPI 3.1 at /api/v1/openapi.json. A
-token only when RUACH_API_TOKEN is set, and only of callers not on the machine. WAV 24 by default, as the page asks
-(the engine's own default is MP3); the REAPER and DAWproject exports take whatever audio a take has.
-`extras/ruach-mcp.py`: the API as an MCP server (generate_song, job_status, cancel_job, list_takes, get_take,
-mark_take, list_workspaces, file_takes, export_reaper, studio_health), the SDK's v1 and v2 both. Proved 02.10: a
-client listed the ten tools and made a 15 s song through them in 9 s. The page now files only the runs it started:
-a run from elsewhere (the API, another browser) used to land in whatever workspace the open page had in hand.
+One door for scripts, DAWs and agents on this machine and its network (Viktor: "не в интернет, а для локальных сервисов машины или сети"): the engine's /api/… goes to `lab/api.py`. `/api/v1`: health (the engine, the lab, the guard's verdict per card), songs (make one: style, lyrics, mode direct/full/melody, instrumental, duration, seeds, adapters, the workspace it lands in), jobs (state, takes, cancel), takes (list, one with what it was made with, its audio, marks, the REAPER project), workspaces (list; add, take out, move). OpenAPI 3.1 at /api/v1/openapi.json. A token only when RUACH_API_TOKEN is set, and only of callers not on the machine. WAV 24 by default, as the page asks (the engine's own default is MP3); the REAPER and DAWproject exports take whatever audio a take has. `extras/ruach-mcp.py`: the API as an MCP server (generate_song, job_status, cancel_job, list_takes, get_take, mark_take, list_workspaces, file_takes, export_reaper, studio_health), the SDK's v1 and v2 both. Proved 02.10: a client listed the ten tools and made a 15 s song through them in 9 s. The page now files only the runs it started: a run from elsewhere (the API, another browser) used to land in whatever workspace the open page had in hand.
 
 ### 1117 · Lines that breathe
-Viktor: "никаких 100% жёстких линий… всё должно дышать… Незаметная, но вездесущая". Every line of the page takes its
-theme's colour at 40 % (`--line-a`, `--line-strong-a`), the accents' at 60 % (`--amber-a`); a hover still sharpens a
-line, and the keyboard's focus rings keep their full strength (to be found). The search field is a field like the
-others (it had the browser's raw border), as tall as the sort beside it.
+Viktor: "никаких 100% жёстких линий… всё должно дышать… Незаметная, но вездесущая". Every line of the page takes its theme's colour at 40 % (`--line-a`, `--line-strong-a`), the accents' at 60 % (`--amber-a`); a hover still sharpens a line, and the keyboard's focus rings keep their full strength (to be found). The search field is a field like the others (it had the browser's raw border), as tall as the sort beside it.
 
 ### 1118 · The cloud, the rubato, one light
-The waveform is one blended cloud instead of bars: the peaks as a smooth envelope, mirrored, drawn in three soft
-layers (haze, body, core), the quiet lifted a little; drawn once per song, size and theme into two sprites, cut at
-the playhead each frame. Its strengths come from `HeresyWave` (the console: `HeresyWave.set({rest, restNight,
-played})`, for Viktor to try values live). The card that sounds glows with the song's own peaks (rubato): quick to
-rise, slow to fall, measured against the song's own quiet and loud. The Librarian's cards share one light fixed to
-the window, falling from the top left; a state (hover, checked, playing) is a tint over it, not a second light.
+The waveform is one blended cloud instead of bars: the peaks as a smooth envelope, mirrored, drawn in three soft layers (haze, body, core), the quiet lifted a little; drawn once per song, size and theme into two sprites, cut at the playhead each frame. Its strengths come from `HeresyWave` (the console: `HeresyWave.set({rest, restNight, played})`, for Viktor to try values live). The card that sounds glows with the song's own peaks (rubato): quick to rise, slow to fall, measured against the song's own quiet and loud. The Librarian's cards share one light fixed to the window, falling from the top left; a state (hover, checked, playing) is a tint over it, not a second light.
 
 ### 1119 · The logo
-From Viktor's draft: RUACH · the winged woman · [STUDIO]. She is white, out of a cloud in the accent (darkened a
-quarter: a dark cloud by day, embers by night) that reaches over the words' inner ends; RUACH in Montserrat Black,
-STUDIO at 460 (OFL, turned to paths). In the bar's dead centre, out of the flow; she descends below the bar's edge (a
-tab cannot draw above the window). Too narrow for the words: the woman alone on her square, then at the bar's start.
-The icon: her on a full square of the cloud, the outer feathers cut by its edges; the favicon is its 64 px. The
-logo lives on a clock of its own, ten steps a second (SMIL cost a quarter of a core, measured; this a fifth of
-that), still for those who ask for less motion, asleep in a hidden tab. Sources in `heresy/brand/` (make_logo.py,
-make_icon.py, Inkscape copies). `rebuild.sh` now does it all: patches, page, server, and the restart when idle.
+From Viktor's draft: RUACH · the winged woman · [STUDIO]. She is white, out of a cloud in the accent (darkened a quarter: a dark cloud by day, embers by night) that reaches over the words' inner ends; RUACH in Montserrat Black, STUDIO at 460 (OFL, turned to paths). In the bar's dead centre, out of the flow; she descends below the bar's edge (a tab cannot draw above the window). Too narrow for the words: the woman alone on her square, then at the bar's start. The icon: her on a full square of the cloud, the outer feathers cut by its edges; the favicon is its 64 px. The logo lives on a clock of its own, ten steps a second (SMIL cost a quarter of a core, measured; this a fifth of that), still for those who ask for less motion, asleep in a hidden tab. Sources in `heresy/brand/` (make_logo.py, make_icon.py, Inkscape copies). `rebuild.sh` now does it all: patches, page, server, and the restart when idle.
 
 ### 1120 · Artwork for takes
-Viktor: "просто иконка в плеере, в карточке и в mp3 файле… спойлер на багажнике нашего Руах-Феррари". Asked for in a
-take's menu (*Draw artwork*), never on its own: Qwen3-4B-Instruct-2507 writes one picture prompt from the take's style
-and words, CyberRealistic XL v10 (an SDXL finetune, CreativeML Open RAIL++-M) paints it once, 1024 px, 28 steps,
-kept at 768 px (`lab/art_job.py`, a process of its own on a card the guard gives; 14.2 GB of VRAM at the peak, about
-27 s). It shows in the player's square, under a card's play button, in the desktop's media panel, and in the MP3
-download as its front cover (the engine makes the MP3 again when the artwork is newer). The API: GET and POST
-/api/v1/takes/NAME/artwork; the MCP server's eleventh tool, draw_artwork. The models: `artwork/` at the root, from
-`heresy/fetch-heresy.sh --artwork` (14 GB, asked first).
+Viktor: "просто иконка в плеере, в карточке и в mp3 файле… спойлер на багажнике нашего Руах-Феррари". Asked for in a take's menu (*Draw artwork*), never on its own: Qwen3-4B-Instruct-2507 writes one picture prompt from the take's style and words, CyberRealistic XL v10 (an SDXL finetune, CreativeML Open RAIL++-M) paints it once, 1024 px, 28 steps, kept at 768 px (`lab/art_job.py`, a process of its own on a card the guard gives; 14.2 GB of VRAM at the peak, about 27 s). It shows in the player's square, under a card's play button, in the desktop's media panel, and in the MP3 download as its front cover (the engine makes the MP3 again when the artwork is newer). The API: GET and POST /api/v1/takes/NAME/artwork; the MCP server's eleventh tool, draw_artwork. The models: `artwork/` at the root, from `heresy/fetch-heresy.sh --artwork` (14 GB, asked first).
 
 ### 1121 · The rooms open the bar
-The engine's lamp leaves the bar's start and its word: the rooms come first; the lamp alone follows the workspace,
-its words in the tip.
+The engine's lamp leaves the bar's start and its word: the rooms come first; the lamp alone follows the workspace, its words in the tip.
 
 ### 1122 · REAPER inside
-`extras/reaper/`: three ReaScript actions (Lua) that reach the studio through its API, from its own machine or another
-on the network; the way stays one way (out of the studio). *Generate here* makes a song and lays it on a new track at
-the time selection (the lyrics from the selected items' notes, which the exported project keeps); *Bring a take*
-finds one in the Librarian by words; *Settings* holds the address, the token, the workspace. Checked by REAPER 7.81
-under Xvfb against the studio on another machine (`heresy/tools/reaper-harness.lua`): 20 s made and placed in 12 s.
+`extras/reaper/`: three ReaScript actions (Lua) that reach the studio through its API, from its own machine or another on the network; the way stays one way (out of the studio). *Generate here* makes a song and lays it on a new track at the time selection (the lyrics from the selected items' notes, which the exported project keeps); *Bring a take* finds one in the Librarian by words; *Settings* holds the address, the token, the workspace. Checked by REAPER 7.81 under Xvfb against the studio on another machine (`heresy/tools/reaper-harness.lua`): 20 s made and placed in 12 s.
 
 ### 1123 · The DAW window finds its take; the piano keys
-The window offered nothing with a take playing ("open a take first"): it now takes the one open in the Creator, else
-the one in the player, else the one checked in the Librarian. The DAW button is a piano keyboard (Viktor: «🎹, так
-понятнее, чем иконка настроек»), drawn as a solid glyph like its neighbours.
+The window offered nothing with a take playing ("open a take first"): it now takes the one open in the Creator, else the one in the player, else the one checked in the Librarian. The DAW button is a piano keyboard (Viktor: «🎹, так понятнее, чем иконка настроек»), drawn as a solid glyph like its neighbours.
 
 ### 1124–1128 · The Librarian's details
-The datasheet's lyrics reach down to where the parameters end; the Takes column has the Librarian's filters in every
-room (liked, without the disliked, with a note, the hidden ones too, shown faded with *Show again* in their menu);
-the workspaces column scrolls on its own above the player and the Takes column past the floating log; the datasheet
-shows LoRAs as a take keeps them (music and sound strengths) and sliders with theirs.
+The datasheet's lyrics reach down to where the parameters end; the Takes column has the Librarian's filters in every room (liked, without the disliked, with a note, the hidden ones too, shown faded with *Show again* in their menu); the workspaces column scrolls on its own above the player and the Takes column past the floating log; the datasheet shows LoRAs as a take keeps them (music and sound strengths) and sliders with theirs.
 
 ### 1129 · The Refiner's progress up top
-What runs shows where the eye already is: in the room's head (always in sight), at the top of the step's own block,
-as a beating dot on its tab, and first in the tree (the tree grows upward). The floating card that sat over the log
-is gone. Each step shows what it made for the take (chips that find it in the tree), and the step open lights its
-own branches there.
+What runs shows where the eye already is: in the room's head (always in sight), at the top of the step's own block, as a beating dot on its tab, and first in the tree (the tree grows upward). The floating card that sat over the log is gone. Each step shows what it made for the take (chips that find it in the tree), and the step open lights its own branches there.
 
 ### 1130 · The page from disk; one build script
-Viktor: «Система Студии для локальной машины и максимум локальной сети. Нахера нам билдить gz?» The server reads the
-page from disk at every load (RUACH_PAGE, set by start.sh, which also builds it when it is missing or older than its
-sources): a page built anew shows on a reload, with no server build, no restart, no gzip. The embedded copy is only
-the fallback, refreshed when the server itself is built. `build.sh` is the one build script (the page; the server
-when its C++ changed, then the restart when the studio is idle; `--patches`, `--server`, `--no-restart`);
-`build-page.sh` and `rebuild.sh` retired.
+Viktor: «Система Студии для локальной машины и максимум локальной сети. Нахера нам билдить gz?» The server reads the page from disk at every load (RUACH_PAGE, set by start.sh, which also builds it when it is missing or older than its sources): a page built anew shows on a reload, with no server build, no restart, no gzip. The embedded copy is only the fallback, refreshed when the server itself is built. `build.sh` is the one build script (the page; the server when its C++ changed, then the restart when the studio is idle; `--patches`, `--server`, `--no-restart`); `build-page.sh` and `rebuild.sh` retired.
 
 ### 1131 · The score in the datasheet
-Drawn and open, its ABC under it (the folded block of 1126 showed an empty fold for Direct takes). A Direct take writes
-no score: *Write it from the sound* asks the engine's transcriber (SheetSage2) on the take's own audio; the sheet
-watches that job itself (the page never adopts it, so the Creator's cover form is not touched), and the lab keeps
-the score beside the take (`score-from-sound.abc`).
+Drawn and open, its ABC under it (the folded block of 1126 showed an empty fold for Direct takes). A Direct take writes no score: *Write it from the sound* asks the engine's transcriber (SheetSage2) on the take's own audio; the sheet watches that job itself (the page never adopts it, so the Creator's cover form is not touched), and the lab keeps the score beside the take (`score-from-sound.abc`).
 
 ### 1132 · The Refiner's own column
-In the Refiner the Takes column holds what was refined, the newest refine first (the lab's `/refined` index; a running
-job counts as now); *Refined* beside *Favourites* turns to every take for a new one. F5 in the Refiner brings back
-the take it was refining (Viktor: «обновил страницу и потерялся полностью»).
+In the Refiner the Takes column holds what was refined, the newest refine first (the lab's `/refined` index; a running job counts as now); *Refined* beside *Favourites* turns to every take for a new one. F5 in the Refiner brings back the take it was refining (Viktor: «обновил страницу и потерялся полностью»).
 
 ### 1133 · No private address; the Writer on OpenRouter by default
-start.sh prints the machine's own address (the first `hostname -I`), the chat presets name this machine (vLLM :8000,
-LM Studio, Ollama), the docs and the MCP and REAPER examples say 127.0.0.1. With no chat server set, the Writer
-starts on OpenRouter (Viktor: Qwen and DeepSeek): DeepSeek V4 Pro by default, quick picks DeepSeek V4.1 Flash,
-Qwen3.8 Max, Qwen3.8 Flash (ids read from OpenRouter's list, 02.10.2026). Set ones stay as they are.
+start.sh prints the machine's own address (the first `hostname -I`), the chat presets name this machine (vLLM :8000, LM Studio, Ollama), the docs and the MCP and REAPER examples say 127.0.0.1. With no chat server set, the Writer starts on OpenRouter (Viktor: Qwen and DeepSeek): DeepSeek V4 Pro by default, quick picks DeepSeek V4.1 Flash, Qwen3.8 Max, Qwen3.8 Flash (ids read from OpenRouter's list, 02.10.2026). Set ones stay as they are.
 
 ### 1134 · The DAWproject as full as the REAPER project
-The score as note tracks (one a voice, the page's MIDI of the ABC), the sections as markers once the take is timed,
-the style and the lyrics in its notes; checked against the format's own Project.xsd (xmllint: validates). Waveform 14
-imports it, as Bitwig, Studio One and Cubase do; the DAW window's Waveform and Bitwig cards export it. Waveform 13 (the
-newest on Linux) reads only its own .trkarch archives: their binary project file waits for a check in Waveform itself.
+The score as note tracks (one a voice, the page's MIDI of the ABC), the sections as markers once the take is timed, the style and the lyrics in its notes; checked against the format's own Project.xsd (xmllint: validates). Waveform 14 imports it, as Bitwig, Studio One and Cubase do; the DAW window's Waveform and Bitwig cards export it. Waveform 13 (the newest on Linux) reads only its own .trkarch archives: their binary project file waits for a check in Waveform itself.
 
 ### 1135 · Undo and the keyboard in the Librarian
-As a file manager has them: Ctrl+A checks every take shown, Esc none, Delete sends the checked to the trash (asked),
-Ctrl+Z gives back the last change. A pill above the player says what was done, with its Undo, for ten seconds: a move,
-adding to or taking out of a workspace, hiding or showing, a pin, a mark on several takes, a trash move (the takes
-come back from today's folder of the trash with their workspaces and marks). Never while typing or with a window open.
+As a file manager has them: Ctrl+A checks every take shown, Esc none, Delete sends the checked to the trash (asked), Ctrl+Z gives back the last change. A pill above the player says what was done, with its Undo, for ten seconds: a move, adding to or taking out of a workspace, hiding or showing, a pin, a mark on several takes, a trash move (the takes come back from today's folder of the trash with their workspaces and marks). Never while typing or with a window open.
 
 ### 1136 · 2.0.0-alpha, said in one place
-`VERSION` at the root; start.sh says it in its first line, the API beside its own (`/api/v1` → `studio`), the Engine
-room's About beside the name. `CHANGELOG.md`, `INSTALL.md` and `INSTALL_by_LLM_Agent.md` at the root.
-`heresy/tools/make-release.sh` assembles the public tree: the root as the repository, only what the studio's git
-repositories track, yue2.cpp with every patch as a plain folder, the patches kept as text (the built page's binary
-diffs out: 54 MB → 2.2 MB), the places the studio fills empty, and a scan for anything of this machine.
+`VERSION` at the root; start.sh says it in its first line, the API beside its own (`/api/v1` → `studio`), the Engine room's About beside the name. `CHANGELOG.md`, `INSTALL.md` and `INSTALL_by_LLM_Agent.md` at the root. `heresy/tools/make-release.sh` assembles the public tree: the root as the repository, only what the studio's git repositories track, yue2.cpp with every patch as a plain folder, the patches kept as text (the built page's binary diffs out: 54 MB → 2.2 MB), the places the studio fills empty, and a scan for anything of this machine.
 
 ### 1137 · What a fresh install found
-The release cloned into a clean folder and installed as a stranger would: `lab/requirements.txt` named UniverSR by a
-relative path pip cannot take (it worked here only because it was installed by hand long ago); `install-venv.sh` now
-clones it at its tested commit and installs it, and no longer rewrites the repository's lock. `build.sh` configures
-cmake itself on a fresh clone (CUDA, flash attention, the card's own architecture); its words are English for
-everyone. Then: venv 1:33, models checked (missing 0), the engine built in about two minutes, the services up on
-ports of their own beside the running studio, a 20 s song made through its API and filed in its workspace.
+The release cloned into a clean folder and installed as a stranger would: `lab/requirements.txt` named UniverSR by a relative path pip cannot take (it worked here only because it was installed by hand long ago); `install-venv.sh` now clones it at its tested commit and installs it, and no longer rewrites the repository's lock. `build.sh` configures cmake itself on a fresh clone (CUDA, flash attention, the card's own architecture); its words are English for everyone. Then: venv 1:33, models checked (missing 0), the engine built in about two minutes, the services up on ports of their own beside the running studio, a 20 s song made through its API and filed in its workspace.
 
 ### 1138 · The original in the tree; every version compared
-The take is a node of the Refiner's tree like its branches (it plays, its FLAC downloads). *Compare all* (or
-*Compare* on any branch) opens every version in one player, as SUNO switches versions: the original, then debuzz,
-remasters, upscales, stems; a click or its number (1–9) plays it from the same second, Space plays and pauses, ← →
-five seconds. Each version is its own audio element: the one coming in seeks and starts before the one going out stops.
+The take is a node of the Refiner's tree like its branches (it plays, its FLAC downloads). *Compare all* (or *Compare* on any branch) opens every version in one player, as SUNO switches versions: the original, then debuzz, remasters, upscales, stems; a click or its number (1–9) plays it from the same second, Space plays and pauses, ← → five seconds. Each version is its own audio element: the one coming in seeks and starts before the one going out stops.
 
 ### 1139 · Waveform 14 at least
-Viktor: «Обновляемся на Waveform14 и закрепляем как минимум». The DAW window and the guide ask Waveform 14 or newer (it
-opens the studio's DAWproject); Waveform 13 is no longer supported.
+Viktor: «Обновляемся на Waveform14 и закрепляем как минимум». The DAW window and the guide ask Waveform 14 or newer (it opens the studio's DAWproject); Waveform 13 is no longer supported.
 
 ### 1140 · The guard's verdict in Engine → GPUs
-Each card's row says what the GPU guard says of it this moment: *open*, with what is free (the desktop's small programs
-named in the tip), or *closed* and by whose service (a program not of the studio holding more than 2 GiB).
+Each card's row says what the GPU guard says of it this moment: *open*, with what is free (the desktop's small programs named in the tip), or *closed* and by whose service (a program not of the studio holding more than 2 GiB).
 
 ### 1141 · Whisper on the CPU when no card can take it
-The lyrics check and karaoke timing used to be refused when the guard gave no card; now they run on the CPU (int8, 16
-threads) and say so in the result. Measured: 15 s of audio heard in 7.9 s after a 6.4 s load. Stems stay on a card (on
-a CPU they would take tens of minutes a song), refused aloud with the card's reason.
+The lyrics check and karaoke timing used to be refused when the guard gave no card; now they run on the CPU (int8, 16 threads) and say so in the result. Measured: 15 s of audio heard in 7.9 s after a 6.4 s load. Stems stay on a card (on a CPU they would take tens of minutes a song), refused aloud with the card's reason.
 
 ### 1142 · Narrow windows and phones
-Measured at 390 and 768 px in every room: the player fell below the screen under 1150 px (an old rule of the Kit made it
-sticky without a bottom), the floating log sat where its controls are, the room heads' notes did not wrap, the
-Librarian's tools and the Refiner tree's rows ran past the edge. Now the player is fixed at every width, the log sits
-above it (and steps aside on a phone, where Engine has the whole log), the heads wrap, the tree's rows fold (the
-player across, the buttons under it), and a phone's player keeps the transport and the time (its own keys do the
-volume). Nothing runs past the edge in any room at 390 px.
+Measured at 390 and 768 px in every room: the player fell below the screen under 1150 px (an old rule of the Kit made it sticky without a bottom), the floating log sat where its controls are, the room heads' notes did not wrap, the Librarian's tools and the Refiner tree's rows ran past the edge. Now the player is fixed at every width, the log sits above it (and steps aside on a phone, where Engine has the whole log), the heads wrap, the tree's rows fold (the player across, the buttons under it), and a phone's player keeps the transport and the time (its own keys do the volume). Nothing runs past the edge in any room at 390 px.
 
 ### 1143 · The line's time, not the browser's queue
-The line guard (1107) timed its ping from the call to the answer, so a ping queued behind the browser's six connections
-a host (the log stream, the audio, the polls during a render) read as 2–6 s of distance. It now takes the request's
-own time on the wire (Resource Timing: its start to the first byte). Measured from the laptop over the VPN: 186 ms.
+The line guard (1107) timed its ping from the call to the answer, so a ping queued behind the browser's six connections a host (the log stream, the audio, the polls during a render) read as 2–6 s of distance. It now takes the request's own time on the wire (Resource Timing: its start to the first byte). Measured from the laptop over the VPN: 186 ms.
 
 ### 1144 · The Refiner on the API
-`/api/v1/takes/NAME/derived` (the tree, every file with its url), `/file?path=`, and the steps: `stems`, `debuzz`,
-`remaster`, `upscale`, `lyrics-check`, each answering 202 with its job while it runs. The MCP server's twelfth tool,
-`refine_take`, waits for a step and returns the tree. Proved on a test take: a debuzz started, landed, its file fetched.
+`/api/v1/takes/NAME/derived` (the tree, every file with its url), `/file?path=`, and the steps: `stems`, `debuzz`, `remaster`, `upscale`, `lyrics-check`, each answering 202 with its job while it runs. The MCP server's twelfth tool, `refine_take`, waits for a step and returns the tree. Proved on a test take: a debuzz started, landed, its file fetched.
 
 ### 1145 · A melody from REAPER, the score of the song
-*Generate here* takes the selected MIDI items as the song's melody: their notes in the time selection (or the items'
-own span) go to the studio as one standard MIDI file, a track per REAPER track from the top, the project's tempo and
-meter there, the key when a take has REAPER's key snap on a major or minor scale. The lab reads it as the Creator's
-MIDI import does (`lab/midi_score.py`, a port of `HeresyAbc.fromMidi`) and checks the score with YuE2 Studio's own
-reader (`lab/abc_tools.py`, Apache-2.0, as it is): it must parse and give back the very notes it was written from.
-On the API: `midi_b64` (with `midi_key`, `midi_ins`) on `POST /songs`, and `POST /score/from-midi` to see the score
-first; the MCP server's `generate_song` takes `midi_file`. The song is made in melody mode, placed where the melody
-starts, and the new item's notes say how the melody was read. Measured:
+*Generate here* takes the selected MIDI items as the song's melody: their notes in the time selection (or the items' own span) go to the studio as one standard MIDI file, a track per REAPER track from the top, the project's tempo and meter there, the key when a take has REAPER's key snap on a major or minor scale. The lab reads it as the Creator's MIDI import does (`lab/midi_score.py`, a port of `HeresyAbc.fromMidi`) and checks the score with YuE2 Studio's own reader (`lab/abc_tools.py`, Apache-2.0, as it is): it must parse and give back the very notes it was written from. On the API: `midi_b64` (with `midi_key`, `midi_ins`) on `POST /songs`, and `POST /score/from-midi` to see the score first; the MCP server's `generate_song` takes `midi_file`. The song is made in melody mode, placed where the melody starts, and the new item's notes say how the melody was read. Measured:
 
-- **The port against the page**: 3,336 cases (the Library's 17 scores through the page's own MIDI writer, 400 made-up
-  files with odd grids and meters, chords, overlaps, running status, SysEx, no tempo, broken key signatures, each read
-  with eight keys): the same score byte for byte, or both refusing for the same reason. Different only where meant: no
-  key in the file (the page writes C, the lab guesses; with C asked, the same) and a file cut short (the lab refuses,
-  the page read past its end).
-- **A bug of the page it found**: after a SysEx event the page's reader landed one byte short (`p += rv()` read `p`
-  before `rv()` moved it), and every time after it was garbage; DAW files often open with a GM reset. Fixed there.
-- **The key from the notes** (Krumhansl's profiles, each pitch weighed by its length), on the Library's 17 scores: 14
-  the key written, 1 its relative (the same signature), 2 one accidental off. C, the page's default, is right once.
-- **REAPER, end to end** (7.81 under Xvfb, the harness writing the melody itself): 8 bars on *Lead vocal*, chords on
-  *Piano*, a 19 s song placed at the selection's start 10–14 s after the click; all 20 notes reached the score as
-  written (a dotted one, one held over a bar line). A waltz (3/4 at 90, no time selection) placed at the items' start.
-- **Who carries the tune.** Each take written back from its sound by the transcriber and compared with the line given
-  (the line a whole tone up as the control: 35% at most). The score steers every take; but the chords' top notes as the
-  instruments' melody let an instrument take the tune: one melody, an accordion waltz style, seeds 11 · 22 · 33 —
-  instruments 90% · voice 95% · instruments 95%; the sung line alone — voice 90 · 90 · 100%. A gusli ballad style
-  kept it in the voice either way (4 of 4). So a chord track gives no Ins line here (`midi_ins: keep` keeps it, as
-  the page does); its notes still count for the key.
-- **The transcriber's bar 1**: in 5 of 16 takes the score written from the sound began about a bar early (2.2 s; a
-  bar is 2.4 s), while a pitch track of the vocal stem heard the voice on time (E G A B in bar 1, as given). The
-  datasheet's *score from its sound* can be shifted by a bar.
-- **A score the API dropped**: `abc` with no mode went to the engine in direct mode, which makes the music without a
-  score, and nothing said so. Now a score picks `melody` (no chord symbols) or `full` itself; `direct` with a score is
-  refused, with the reason.
+- **The port against the page**: 3,336 cases (the Library's 17 scores through the page's own MIDI writer, 400 made-up files with odd grids and meters, chords, overlaps, running status, SysEx, no tempo, broken key signatures, each read with eight keys): the same score byte for byte, or both refusing for the same reason. Different only where meant: no key in the file (the page writes C, the lab guesses; with C asked, the same) and a file cut short (the lab refuses, the page read past its end).
+- **A bug of the page it found**: after a SysEx event the page's reader landed one byte short (`p += rv()` read `p` before `rv()` moved it), and every time after it was garbage; DAW files often open with a GM reset. Fixed there.
+- **The key from the notes** (Krumhansl's profiles, each pitch weighed by its length), on the Library's 17 scores: 14 the key written, 1 its relative (the same signature), 2 one accidental off. C, the page's default, is right once.
+- **REAPER, end to end** (7.81 under Xvfb, the harness writing the melody itself): 8 bars on *Lead vocal*, chords on *Piano*, a 19 s song placed at the selection's start 10–14 s after the click; all 20 notes reached the score as written (a dotted one, one held over a bar line). A waltz (3/4 at 90, no time selection) placed at the items' start.
+- **Who carries the tune.** Each take written back from its sound by the transcriber and compared with the line given (the line a whole tone up as the control: 35% at most). The score steers every take; but the chords' top notes as the instruments' melody let an instrument take the tune: one melody, an accordion waltz style, seeds 11 · 22 · 33 — instruments 90% · voice 95% · instruments 95%; the sung line alone — voice 90 · 90 · 100%. A gusli ballad style kept it in the voice either way (4 of 4). So a chord track gives no Ins line here (`midi_ins: keep` keeps it, as the page does); its notes still count for the key.
+- **The transcriber's bar 1**: in 5 of 16 takes the score written from the sound began about a bar early (2.2 s; a bar is 2.4 s), while a pitch track of the vocal stem heard the voice on time (E G A B in bar 1, as given). The datasheet's *score from its sound* can be shifted by a bar.
+- **A score the API dropped**: `abc` with no mode went to the engine in direct mode, which makes the music without a score, and nothing said so. Now a score picks `melody` (no chord symbols) or `full` itself; `direct` with a score is refused, with the reason.
 
 ### 1146 · The Kit's own tests, green again
-The Kit's page test (`tools/cdp-console.mjs`, against the mock) and its real-server test (`tools/test-real.sh`, the engine on
-the CPU and a 1 s song) had not run since the studio grew out of the Kit: 166 of 203 page checks passed, then the run stopped.
-Each failure was read against the page and settled one of two ways: a design of ours, the check rewritten with its HERESY
-number (the bar, About, Auto and Manual, 22 themes, the dot of the player, the Refiner's group, Viktor's sampling defaults,
-the example menu, the studio's own dialog, LoRA halves and caps, the retired idea writer skipped with its reason), or a
-fault, mended. Now: **314 passed, 0 failed, 8 skipped** (page) and **6 of 6** (real server, its page 14 of 14).
+The Kit's page test (`tools/cdp-console.mjs`, against the mock) and its real-server test (`tools/test-real.sh`, the engine on the CPU and a 1 s song) had not run since the studio grew out of the Kit: 166 of 203 page checks passed, then the run stopped. Each failure was read against the page and settled one of two ways: a design of ours, the check rewritten with its HERESY number (the bar, About, Auto and Manual, 22 themes, the dot of the player, the Refiner's group, Viktor's sampling defaults, the example menu, the studio's own dialog, LoRA halves and caps, the retired idea writer skipped with its reason), or a fault, mended. Now: **314 passed, 0 failed, 8 skipped** (page) and **6 of 6** (real server, its page 14 of 14).
 
 What they found, besides the SysEx of 1145:
-- **A long style hidden after Retake, Reuse, Open and Edit and re-render.** These fill the form after a fetch, when the
-  click's own refit has run; the style box kept its old height with `overflow-y: hidden`, so the rest of the style was cut
-  off with no scrollbar until the next click (text set by script: the box stayed at 87 px over 936 px of it). They now
-  refit every box: after Retake, a take's 838-character style comes back at 199 px, scrolling.
+- **A long style hidden after Retake, Reuse, Open and Edit and re-render.** These fill the form after a fetch, when the click's own refit has run; the style box kept its old height with `overflow-y: hidden`, so the rest of the style was cut off with no scrollbar until the next click (text set by script: the box stayed at 87 px over 936 px of it). They now refit every box: after Retake, a take's 838-character style comes back at 199 px, scrolling.
 - **The score's head ran past the take column** at 1280 px (its last button 54 px out): it wraps.
-- **Ten controls of the form, the take, the bar and the log had no help**: tips written from what each does; a tip on a
-  control's own label (the MIDI Import button's) counts as its help.
-- **The real-server test reached the studio's own lab** (its server forwards /lab/ to 41870): on its first run tonight its
-  page loaded Viktor's page settings and saved them back with its own Creator draft and the Legacy VAE. Restored from the
-  lab's one-step-back copy within minutes (the damaged file kept beside it). The test server now gets a lab port nobody
-  listens on, and the test's proof that it touched nothing covers `user/` too.
-- **The mock had grown stale**: the Kit's sampling defaults (a default song read "lowest" and "high" on our sliders) and no
-  `/library/listen`; both as the engine has them now.
-- **The test browser plays muted**: never into anyone's speakers, and on a machine without a sound card an unmuted headless
-  Chrome's audio clock stands still.
+- **Ten controls of the form, the take, the bar and the log had no help**: tips written from what each does; a tip on a control's own label (the MIDI Import button's) counts as its help.
+- **The real-server test reached the studio's own lab** (its server forwards /lab/ to 41870): on its first run tonight its page loaded Viktor's page settings and saved them back with its own Creator draft and the Legacy VAE. Restored from the lab's one-step-back copy within minutes (the damaged file kept beside it). The test server now gets a lab port nobody listens on, and the test's proof that it touched nothing covers `user/` too.
+- **The mock had grown stale**: the Kit's sampling defaults (a default song read "lowest" and "high" on our sliders) and no `/library/listen`; both as the engine has them now.
+- **The test browser plays muted**: never into anyone's speakers, and on a machine without a sound card an unmuted headless Chrome's audio clock stands still.
 
-The studio's own player (play on click, play on) has a check of its own, `heresy/tools/check-player.mjs`, on a fresh page:
-late in the Kit's long run a take sits fully buffered at `readyState` 1 and never plays on (not understood yet). The Kit's
-FLAC test needs the reference `flac` and `metaflac` (not on Forge); its downloaders test passes (14).
+The studio's own player (play on click, play on) has a check of its own, `heresy/tools/check-player.mjs`, on a fresh page: late in the Kit's long run a take sits fully buffered at `readyState` 1 and never plays on (not understood yet). The Kit's FLAC test needs the reference `flac` and `metaflac` (not on Forge); its downloaders test passes (14).
 
 ### 1147 · The logo loses only its words; FLAC needs nothing more
-Viktor, 03.10: the wide logo approved; the square for the favicon, not for the bar: «Для бара возьми главный логотип,
-убери из него текст и сделай его 1.4:1… Так тень Девы останется прежней и лого при скейле страницы будет терять
-только свой текст». `heresy/brand/make_compact.py` cuts the bar's copy to 1.4 : 1 around her, its own height kept, the
-words out and the cloud fading at the sides (no hard edge); in the page it takes the square's place from 1659 px down,
-at the same 62 px. Measured by day and by night at 1920, 1500 and 1300 px: she is drawn at 42.08 × 57.21 px in the full
-logo and in the compact alike; the bar stays 52 px and one row (at 1100 px too). Inkscape copies, day and night, beside.
+Viktor, 03.10: the wide logo approved; the square for the favicon, not for the bar: «Для бара возьми главный логотип, убери из него текст и сделай его 1.4:1… Так тень Девы останется прежней и лого при скейле страницы будет терять только свой текст». `heresy/brand/make_compact.py` cuts the bar's copy to 1.4 : 1 around her, its own height kept, the words out and the cloud fading at the sides (no hard edge); in the page it takes the square's place from 1659 px down, at the same 62 px. Measured by day and by night at 1920, 1500 and 1300 px: she is drawn at 42.08 × 57.21 px in the full logo and in the compact alike; the bar stays 52 px and one row (at 1100 px too). Inkscape copies, day and night, beside.
 
-FLAC: the studio needs nothing more for it (the engine encodes it itself, the Refiner and the exports through ffmpeg);
-`flac` and `metaflac` serve only the Kit's FLAC test, now that they are on Forge 18 of 18. README, INSTALL and the
-agent's guide say so, with the tests and what each gives here.
+FLAC: the studio needs nothing more for it (the engine encodes it itself, the Refiner and the exports through ffmpeg); `flac` and `metaflac` serve only the Kit's FLAC test, now that they are on Forge 18 of 18. README, INSTALL and the agent's guide say so, with the tests and what each gives here.
 
-The artwork upload carries the painter alone (6.5 GB, CyberRealistic XL v10 as diffusers, which its author publishes
-on Civitai only); the prompt writer comes from Qwen's own repository, so the repo card lists it as not here.
+The artwork upload carries the painter alone (6.5 GB, CyberRealistic XL v10 as diffusers, which its author publishes on Civitai only); the prompt writer comes from Qwen's own repository, so the repo card lists it as not here.
 
 ### 1148 · The page learns languages; a tip for every control; out to a DAW from any take
-**Languages** (Viktor, 01.10 and 03.10: English by default; Russian, Ukrainian, Belarusian, Greek, Chinese, Spanish,
-Italian; no Hebrew: «не будем мучить интерфейс с перекладкой в RTL»). `heresy-i18n.js` translates the page as it is:
-catalogs keyed by its English (`heresy-i18n-LANG.js`), text nodes and the title, placeholder, aria-label, data-tip and
-alt attributes, looked up as they appear (a MutationObserver, only while a language other than English is on) and again
-when the language changes; `{0}`… for the parts that change; nothing under `[translate=no]`, nothing a catalog lacks
-(it stays English, whole). The choice is `yue2.lang`, mirrored to `user/settings.json` with every `yue2.*` key, so F5
-and a cleared browser keep it; the head hides the page for the first pass (2.5 s at most) so a reload shows no English
-first. The bar's two-letter button opens the languages, each named in its own words. The logo's words follow
-(«В русском РУАХ СТУДИЯ, укр. РУАХ СТУДІЯ, греч. ΠΝΕΥΜΑ ΣΤΟΥΝΤΙΟ, и т.п. но никаких spirit»): `src/brand/make_words.py`
-sets РУАХ СТУДИЯ, РУАХ СТУДІЯ, РУАХ СТУДЫЯ, ΠΝΕΥΜΑ ΣΤΟΥΝΤΙΟ, 鲁阿赫 工作室, RUAJ ESTUDIO, RUACH STUDIO (Italian) as paths
-(Montserrat; Noto Sans for Greek; Noto Sans CJK SC for Chinese), the woman and the cloud where they are, a word never
-wider than RUACH (the bar's breakpoints were measured on it); every language's logo also as files in `src/brand/i18n/`.
-Three buttons read their own words back as data ("Inspect again", "Listen again", "Time again"): they read the English
-now (`RuachI18n.en`). Russian holds the rooms and the bar so far; the catalogs come next. `heresy/tools/check-i18n.mjs`:
-14 checks (a reload in Russian, the logo, attributes, later text, text the catalog lacks, `[translate=no]`, back).
+**Languages** (Viktor, 01.10 and 03.10: English by default; Russian, Ukrainian, Belarusian, Greek, Chinese, Spanish, Italian; no Hebrew: «не будем мучить интерфейс с перекладкой в RTL»). `heresy-i18n.js` translates the page as it is: catalogs keyed by its English (`heresy-i18n-LANG.js`), text nodes and the title, placeholder, aria-label, data-tip and alt attributes, looked up as they appear (a MutationObserver, only while a language other than English is on) and again when the language changes; `{0}`… for the parts that change; nothing under `[translate=no]`, nothing a catalog lacks (it stays English, whole). The choice is `yue2.lang`, mirrored to `user/settings.json` with every `yue2.*` key, so F5 and a cleared browser keep it; the head hides the page for the first pass (2.5 s at most) so a reload shows no English first. The bar's two-letter button opens the languages, each named in its own words. The logo's words follow («В русском РУАХ СТУДИЯ, укр. РУАХ СТУДІЯ, греч. ΠΝΕΥΜΑ ΣΤΟΥΝΤΙΟ, и т.п. но никаких spirit»): `src/brand/make_words.py` sets РУАХ СТУДИЯ, РУАХ СТУДІЯ, РУАХ СТУДЫЯ, ΠΝΕΥΜΑ ΣΤΟΥΝΤΙΟ, 鲁阿赫 工作室, RUAJ ESTUDIO, RUACH STUDIO (Italian) as paths (Montserrat; Noto Sans for Greek; Noto Sans CJK SC for Chinese), the woman and the cloud where they are, a word never wider than RUACH (the bar's breakpoints were measured on it); every language's logo also as files in `src/brand/i18n/`. Three buttons read their own words back as data ("Inspect again", "Listen again", "Time again"): they read the English now (`RuachI18n.en`). Russian holds the rooms and the bar so far; the catalogs come next. `heresy/tools/check-i18n.mjs`: 14 checks (a reload in Russian, the logo, attributes, later text, text the catalog lacks, `[translate=no]`, back).
 
-**A tip for every control.** The 70 controls of the studio's own rooms without one: 40 tips for 42 of them, from what each
-does in the code (the remaster's chain of filters, the trainer's options as `lab/training.py` reads them, where the
-OpenRouter key goes); 28 say all in their label (a title, a search, a sort) and are listed as such in `help.js`. The page
-test holds the rooms to it now (its skip became a check).
+**A tip for every control.** The 70 controls of the studio's own rooms without one: 40 tips for 42 of them, from what each does in the code (the remaster's chain of filters, the trainer's options as `lab/training.py` reads them, where the OpenRouter key goes); 28 say all in their label (a title, a search, a sort) and are listed as such in `help.js`. The page test holds the rooms to it now (its skip became a check).
 
-**The remaster says what it does.** The preset and the de-esser act on stems before the Debunker mixes them; on the take
-or any single file it goes straight on, and both did nothing, silently. They are off there now, with the tip saying why;
-the chain (which remasters one file) no longer names a preset and records no de-ess. «Fade out» faded in as well: it is
-*Fade in and out*; Cleanup runs with a fade anyway, and its tip says so.
+**The remaster says what it does.** The preset and the de-esser act on stems before the Debunker mixes them; on the take or any single file it goes straight on, and both did nothing, silently. They are off there now, with the tip saying why; the chain (which remasters one file) no longer names a preset and records no de-ess. «Fade out» faded in as well: it is *Fade in and out*; Cleanup runs with a fade anyway, and its tip says so.
 
-**Out to a DAW from any take** (Viktor: «прикрути Export to DAW… как лучше?»; on every take, refined or not: a DAW is a
-refiner too). *Export to DAW* in a take's menu: REAPER project and DAWproject, the user's own DAW first, saying whether
-stems go with it; Download keeps the take's own files. Ardour out (it opens no DAWproject); Bitwig's Flatpak found.
+**Out to a DAW from any take** (Viktor: «прикрути Export to DAW… как лучше?»; on every take, refined or not: a DAW is a refiner too). *Export to DAW* in a take's menu: REAPER project and DAWproject, the user's own DAW first, saying whether stems go with it; Download keeps the take's own files. Ardour out (it opens no DAWproject); Bitwig's Flatpak found.
 
-**The page is no document to select** (Viktor: «защита от случайного выделения текста мышью, и Ctrl+A только в полях
-ввода»): text selects in fields, the log, the guide, notes and the take's id only; Ctrl+A works in a field one types into
-and nowhere else (by the key's place, so in the Cyrillic layout too). Measured: a double click on a card selects nothing,
-Ctrl+A outside a field 0 characters, in the style box its text.
+**The page is no document to select** (Viktor: «защита от случайного выделения текста мышью, и Ctrl+A только в полях ввода»): text selects in fields, the log, the guide, notes and the take's id only; Ctrl+A works in a field one types into and nowhere else (by the key's place, so in the Cyrillic layout too). Measured: a double click on a card selects nothing, Ctrl+A outside a field 0 characters, in the style box its text.
 
-**The Librarian and the bar.** In the tiles the check box went down into the play column, on the likes' line (the title
-starts 48 px from the card's edge, one column narrower); the list keeps its one line. WORKSPACE leaves the bar with the
-logo's words (from 1659 px down; «так бар продолжит дышать»); a room's name never wraps ("LoRA Trainer" did, at Viktor's
-zoom); the browser's ResizeObserver note is no longer a red "Page error".
+**The Librarian and the bar.** In the tiles the check box went down into the play column, on the likes' line (the title starts 48 px from the card's edge, one column narrower); the list keeps its one line. WORKSPACE leaves the bar with the logo's words (from 1659 px down; «так бар продолжит дышать»); a room's name never wraps ("LoRA Trainer" did, at Viktor's zoom); the browser's ResizeObserver note is no longer a red "Page error".
 
-**The cheat-sheet** carries Viktor's verdicts: the shofar («Сделаны многократные пробы, но безуспешно. YuE2 не знает шофар»),
-its v3 (B near a Yemenite shofar, a battle cry, no more), v5 (dross with a spark of heavy rock), the natural horn (not
-like a horn), the bassoon (no such reed; both probes deleted); the shofar's probes are kept and listed with the prompts
-they were made with, a click puts one into the style. The approved workspace is "Instrumental Probe" (to hear:
-"… 60s"; to make again: "… FAILED, to REGENERATE").
+**The cheat-sheet** carries Viktor's verdicts: the shofar («Сделаны многократные пробы, но безуспешно. YuE2 не знает шофар»), its v3 (B near a Yemenite shofar, a battle cry, no more), v5 (dross with a spark of heavy rock), the natural horn (not like a horn), the bassoon (no such reed; both probes deleted); the shofar's probes are kept and listed with the prompts they were made with, a click puts one into the style. The approved workspace is "Instrumental Probe" (to hear: "… 60s"; to make again: "… FAILED, to REGENERATE").
 
-Beside: the logo's sources in `src/brand/` (Viktor: «SVG файлы положи в проект в src/»), the root's `src` a link as `docs`
-and `extras`, the release copying it; DAW marked experimental (README, guide, the DAW window), README with the three
-DAWs' pages, trials and prices, every dependency, Viktor's machines; the OpenRouter calls titled "Ruach Studio" (were
-"YuE2 Kit"); the Hugging Face check (the starter sets clean; in the models one `.gitattributes` of a mirrored repo, which
-`upload-artwork.sh` now removes in the same write session that uploads the painter and the card).
+Beside: the logo's sources in `src/brand/` (Viktor: «SVG файлы положи в проект в src/»), the root's `src` a link as `docs` and `extras`, the release copying it; DAW marked experimental (README, guide, the DAW window), README with the three DAWs' pages, trials and prices, every dependency, Viktor's machines; the OpenRouter calls titled "Ruach Studio" (were "YuE2 Kit"); the Hugging Face check (the starter sets clean; in the models one `.gitattributes` of a mirrored repo, which `upload-artwork.sh` now removes in the same write session that uploads the painter and the card).
 
-Training (Viktor: «Ты вчера запускал тренировку адаптеров для Шофара и Дудука? Если нет, запусти»): not run yesterday;
-now the **duduk** (`duduk-yt-r16`, GPU1: the 5 stretches of his source that do not repeat, 12.6 min, a duduk over a drone
-to CLAP in every window) and the **shofar** (`shofar-yt-r16`, GPU2: 9 stretches, 37.8 min, chosen by his ear from 20
-clips, where CLAP heard only worship music and pads and the listener said no to all but a few). Both ours, bf16, r16,
-AR weight 0.5. A lesson kept: for an instrument YuE2 does not know, the machines that would sort its sound do not know it
-either; the ear sorts.
+Training (Viktor: «Ты вчера запускал тренировку адаптеров для Шофара и Дудука? Если нет, запусти»): not run yesterday; now the **duduk** (`duduk-yt-r16`, GPU1: the 5 stretches of his source that do not repeat, 12.6 min, a duduk over a drone to CLAP in every window) and the **shofar** (`shofar-yt-r16`, GPU2: 9 stretches, 37.8 min, chosen by his ear from 20 clips, where CLAP heard only worship music and pads and the listener said no to all but a few). Both ours, bf16, r16, AR weight 0.5. A lesson kept: for an instrument YuE2 does not know, the machines that would sort its sound do not know it either; the ear sorts.
 
 Tests: the page 316 passed, 0 failed, 7 skipped (was 314/0/8); check-i18n 14/0; check-player 3/0; the real server 6/6.
 
 ### 1149 · The bar gives way by what it holds; the (i) drawn, not written; the instruments the styles named
-**The bar** (Viktor: «даже при 1920×1080 WORKSPACE упирается в лого», with his screenshot). His Chrome is at about 110 %:
-the page is 1741 px wide, and the right side came 14 px from the logo. A width breakpoint cannot see a workspace's long
-name; `fitBar` measures: within 18 px of the centred logo the word WORKSPACE goes, then the workspace box narrows to
-150 px; again on a resize, a language, the fonts arriving and a change of the workspaces. Measured with the longest
-name: at 2560 and 1920 (100 %) the word stays (420 and 100 px to spare), at 1700 it goes (68 px).
+**The bar** (Viktor: «даже при 1920×1080 WORKSPACE упирается в лого», with his screenshot). His Chrome is at about 110 %: the page is 1741 px wide, and the right side came 14 px from the logo. A width breakpoint cannot see a workspace's long name; `fitBar` measures: within 18 px of the centred logo the word WORKSPACE goes, then the workspace box narrows to 150 px; again on a resize, a language, the fonts arriving and a change of the workspaces. Measured with the longest name: at 2560 and 1920 (100 %) the word stays (420 and 100 px to spare), at 1700 it goes (68 px).
 
-**The (i)** of every help mark is drawn by CSS (`::before`), not written in the page: Chrome's reading mode, which Viktor
-opened by chance, read «Model ithe backbone file» (the mark's letter and the hint glued), and a copy took the letter
-too. All 72 marks: none written, all drawn; each keeps `role=img` and its "About …" for a screen reader. Reading mode
-itself is the browser's: no page can switch it off (offered: the browser's right-click menu off outside fields and
-links, Shift+right-click keeping it).
+**The (i)** of every help mark is drawn by CSS (`::before`), not written in the page: Chrome's reading mode, which Viktor opened by chance, read «Model ithe backbone file» (the mark's letter and the hint glued), and a copy took the letter too. All 72 marks: none written, all drawn; each keeps `role=img` and its "About …" for a screen reader. Reading mode itself is the browser's: no page can switch it off (offered: the browser's right-click menu off outside fields and links, Shift+right-click keeping it).
 
-**The cheat-sheet's source** (`heresy/tools/instruments_src.py`) holds what 1148 wrote into the page by hand (Viktor's
-verdicts, the kept probes' prompts) and writes the page's DATA itself (`--page FILE`): regenerated, the 174 entries
-are byte for byte the hand-written ones.
+**The cheat-sheet's source** (`heresy/tools/instruments_src.py`) holds what 1148 wrote into the page by hand (Viktor's verdicts, the kept probes' prompts) and writes the page's DATA itself (`--page FILE`): regenerated, the 174 entries are byte for byte the hand-written ones.
 
-**The instruments Viktor's styles name and no probe asked** («Самбука?»; read in `ALL STYLES — YuE2.md`): sambuca as his
-styles name it (plucked strings of a hollow body) and as what it was (a small triangular harp, Daniel's sabbeka),
-crystal singing bowls (the sheet had the metal ones), a whole string section (it had a quartet), birdsong, cicadas, a
-rushing river and a waterfall (PARDES and "Я вернулась" lay nature under the music). The tsymbaly were there already
-(the hammered dulcimer's tag). 14 probes as every probe60 (direct, 60 s, seeds 5101/6101 and 5102/6102) into his
-to-hear workspace, each with a note as the others have. His ear's first word: the sambuca as his styles name it, to be
-made again; as the triangular harp, kept in the pool. He heard darbuka-b play a darbuka and a sambuca in duo.
+**The instruments Viktor's styles name and no probe asked** («Самбука?»; read in `ALL STYLES — YuE2.md`): sambuca as his styles name it (plucked strings of a hollow body) and as what it was (a small triangular harp, Daniel's sabbeka), crystal singing bowls (the sheet had the metal ones), a whole string section (it had a quartet), birdsong, cicadas, a rushing river and a waterfall (PARDES and "Я вернулась" lay nature under the music). The tsymbaly were there already (the hammered dulcimer's tag). 14 probes as every probe60 (direct, 60 s, seeds 5101/6101 and 5102/6102) into his to-hear workspace, each with a note as the others have. His ear's first word: the sambuca as his styles name it, to be made again; as the triangular harp, kept in the pool. He heard darbuka-b play a darbuka and a sambuca in duo.
 
 ### 1150 · One row for the player where the logo is compact; the verdicts on the styles' instruments
-**The player** (Viktor: «при скейле, когда лого минимальное, компактируем плеер, сдвигаю верхнюю часть с волной в базовый
-ряд — перед кнопками воспроизведения»): from 1659 px down (where the bar's logo has lost its words) to 601 px, the
-waveform moves into the player's row, before the transport: the take, the waveform, the transport, the rest. The player is
-70 px instead of 124, and the page takes the height back (`--playbar-h`). Measured: at 1600, 1366 and 1100 px one row, the
-waveform 643, 409 and 589 px wide and 40 high, left of the play button; at 1920 and on a phone (500 px) the two rows as
-before. The waveform draws itself to its box, so nothing else changed.
+**The player** (Viktor: «при скейле, когда лого минимальное, компактируем плеер, сдвигаю верхнюю часть с волной в базовый ряд — перед кнопками воспроизведения»): from 1659 px down (where the bar's logo has lost its words) to 601 px, the waveform moves into the player's row, before the transport: the take, the waveform, the transport, the rest. The player is 70 px instead of 124, and the page takes the height back (`--playbar-h`). Measured: at 1600, 1366 and 1100 px one row, the waveform 643, 409 and 589 px wide and 40 high, left of the play button; at 1920 and on a phone (500 px) the two rows as before. The waveform draws itself to its box, so nothing else changed.
 
-**Viktor's ear on the new probes:** the sambuca as his styles name it fails; asked for as the ancient triangular harp
-(sabbeka) it works; birdsong fails. In the sheet as his verdicts. His rule for making a rejected probe again: change the
-style as well as the seed (a new phrasing, as sambuca-v2 found the sambuca where "sambuca strings" did not).
+**Viktor's ear on the new probes:** the sambuca as his styles name it fails; asked for as the ancient triangular harp (sabbeka) it works; birdsong fails. In the sheet as his verdicts. His rule for making a rejected probe again: change the style as well as the seed (a new phrasing, as sambuca-v2 found the sambuca where "sambuca strings" did not).
 
 ### 1151 · The peek in the corner; the trash takes every checked take; the duduk adapter heard
-**The peek** (Viktor: «попап тултип при наведении на карточку перенести в фиксированный правый верхний угол? Так никому
-мешать не будет»): a card's hover peek stands in the window's top right corner, 10 px under the bar, never over the cards
-beside the one hovered. Measured on the real Librarian: 16 px from the right, its top 10 px under the bar.
+**The peek** (Viktor: «попап тултип при наведении на карточку перенести в фиксированный правый верхний угол? Так никому мешать не будет»): a card's hover peek stands in the window's top right corner, 10 px under the bar, never over the cards beside the one hovered. Measured on the real Librarian: 16 px from the right, its top 10 px under the bar.
 
-**The trash, for every checked take** («При выделенных нескольких карточках Move to Trash пусть всё выделение убирает в
-корзину»): on a checked card the menu's item reads «Move 2 to the trash…» and takes them all, with its undo, as *Move to*
-did already; on an unchecked card, that card alone.
+**The trash, for every checked take** («При выделенных нескольких карточках Move to Trash пусть всё выделение убирает в корзину»): on a checked card the menu's item reads «Move 2 to the trash…» and takes them all, with its undo, as *Move to* did already; on an unchecked card, that card alone.
 
-**The duduk adapter** (`duduk-yt-r16`, ours, bf16, r16, 1000 steps on 12.6 minutes of his source): the music half's loss
-fell from 3.8 to 0.58 without learning the set by heart, the sound half's was lowest at step 800. Epochs 80, 160 and 200 in
-`loras/duduk-yt-r16/`, and an A/B by ear in "LoRA A-B · Duduk": the probe's own prompt and seeds, without the adapter and
-with each epoch. Viktor: «Дудук теперь у нас настоящий, в полном спектре»; the take he moved to the approved
-"Instrumental Probe LoRA" first was the one without the adapter («ab-duduk-base-a отлично звучит»), so what the adapter
-adds is for the epochs' takes to tell. A new workspace for that: "Instrumental Probe LoRA" (Viktor's). The kept shofar
-probes, now among the approved ("Instruments Probe" renamed "Instrumental Probe"), say they are not a shofar.
+**The duduk adapter** (`duduk-yt-r16`, ours, bf16, r16, 1000 steps on 12.6 minutes of his source): the music half's loss fell from 3.8 to 0.58 without learning the set by heart, the sound half's was lowest at step 800. Epochs 80, 160 and 200 in `loras/duduk-yt-r16/`, and an A/B by ear in "LoRA A-B · Duduk": the probe's own prompt and seeds, without the adapter and with each epoch. Viktor: «Дудук теперь у нас настоящий, в полном спектре»; the take he moved to the approved "Instrumental Probe LoRA" first was the one without the adapter («ab-duduk-base-a отлично звучит»), so what the adapter adds is for the epochs' takes to tell. A new workspace for that: "Instrumental Probe LoRA" (Viktor's). The kept shofar probes, now among the approved ("Instruments Probe" renamed "Instrumental Probe"), say they are not a shofar.
 
 ### 1152 · A failed verdict stays failed; 💎 marks what goes public
-**Failed is failed** (Viktor: «Пробы шофара в approved — это ложность… Добавляй эти треки в шпаргалку, но пометки сделай.
-Это далеко не шофар. Tested, Failed. Other pipe/horn discovered.»). His rename put the kept shofar probes among the
-approved, and the sheet showed «✓ kept» beside them. A verdict can now be a failure (`FAILED` in
-`heresy/tools/instruments_src.py`): the row is red wherever its probes stand, never "kept", and the Writer is told the
-name is not played. The shofar and its seven phrasings carry his words; failed too: the natural horn, the bassoon, the
-sambuca as named, birdsong. The duduk, which has no 60 s probe and so read NOT IDENTIFIED, carries his word after the
-A/B: a real duduk, in full spectrum, with its own adapter. Read on the real sheet: 8 shofar rows red with his words, the
-sambuca as the triangular harp «✓ kept · Works».
+**Failed is failed** (Viktor: «Пробы шофара в approved — это ложность… Добавляй эти треки в шпаргалку, но пометки сделай. Это далеко не шофар. Tested, Failed. Other pipe/horn discovered.»). His rename put the kept shofar probes among the approved, and the sheet showed «✓ kept» beside them. A verdict can now be a failure (`FAILED` in `heresy/tools/instruments_src.py`): the row is red wherever its probes stand, never "kept", and the Writer is told the name is not played. The shofar and its seven phrasings carry his words; failed too: the natural horn, the bassoon, the sambuca as named, birdsong. The duduk, which has no 60 s probe and so read NOT IDENTIFIED, carries his word after the A/B: a real duduk, in full spectrum, with its own adapter. Read on the real sheet: 8 shofar rows red with his words, the sambuca as the triangular harp «✓ kept · Works».
 
-**💎** (Viktor: «добавляю в approved воркспейсы, которые мы добавляем в репо и для подтягивания в свежий сетап студии —
-💎 эмоджи»): a workspace named with 💎 first is approved and published. The sheet finds its approved workspace with the
-💎 or without it.
+**💎** (Viktor: «добавляю в approved воркспейсы, которые мы добавляем в репо и для подтягивания в свежий сетап студии — 💎 эмоджи»): a workspace named with 💎 first is approved and published. The sheet finds its approved workspace with the 💎 or without it.
 
 ### 1153 · The page in Russian
-`heresy-i18n-ru.js`: 999 entries and 18 patterns, the page's own words taken from it as it stands (the strings were
-extracted from the page and numbered, the Russian written by number, so no English key was typed again and none can
-miss by an apostrophe). Every room, the bar, the player, the Engine, the drawers' descriptions and the long tips of the
-form (sampling, guidance, the solver, the style and the lyrics). Read on the page in Russian: of 1 202 strings 117 stay
-English, and they are names and data (fonts, models, LoRAs and their files, addresses, the mock's takes).
+`heresy-i18n-ru.js`: 999 entries and 18 patterns, the page's own words taken from it as it stands (the strings were extracted from the page and numbered, the Russian written by number, so no English key was typed again and none can miss by an apostrophe). Every room, the bar, the player, the Engine, the drawers' descriptions and the long tips of the form (sampling, guidance, the solver, the style and the lyrics). Read on the page in Russian: of 1 202 strings 117 stay English, and they are names and data (fonts, models, LoRAs and their files, addresses, the mock's takes).
 
-The terms, for Viktor's word: the rooms Творец · Писатель · Огранщик · Библиотекарь · Тренер LoRA; take = дубль;
-workspace = пространство; score = партитура; seed = сид; Debuzz = Антигул; Refine = Огранить; Retake = Новый дубль;
-Reuse = Взять в форму; the user is «вы»; no word of the root «раб» (a build check refuses one: «Доработанная» became
-«Настроенная»).
+The terms, for Viktor's word: the rooms Творец · Писатель · Огранщик · Библиотекарь · Тренер LoRA; take = дубль; workspace = пространство; score = партитура; seed = сид; Debuzz = Антигул; Refine = Огранить; Retake = Новый дубль; Reuse = Взять в форму; the user is «вы»; no word of the root «раб» (a build check refuses one: «Доработанная» became «Настроенная»).
 
-The core learned three things on the way: a key matches whatever line breaks and indents the page source gave its text;
-a textarea's placeholder and title translate while what is typed in it never does; and what the user wrote or the
-machine said keeps its words whatever they are (take titles and styles, notes, workspace names, the logs, the Writer's
-documents, the cheat-sheet's style words and probe prompts). A pattern meant for the Trainer's summary («style · rank 32
-· bf16») caught the LoRA cards and half-translated them; it now knows the four kinds by name.
+The core learned three things on the way: a key matches whatever line breaks and indents the page source gave its text; a textarea's placeholder and title translate while what is typed in it never does; and what the user wrote or the machine said keeps its words whatever they are (take titles and styles, notes, workspace names, the logs, the Writer's documents, the cheat-sheet's style words and probe prompts). A pattern meant for the Trainer's summary («style · rank 32 · bf16») caught the LoRA cards and half-translated them; it now knows the four kinds by name.
 
 ### 1154 · The studio is its own canvas; the artwork beside the title; probes of two minutes; Russian on «ты»
-**No browser menu** (Viktor: «убрать браузерное меню вне полей и ссылок — абсолютное ДА. По всей студии. Как в ComfyUI —
-всё — собственный канвас как система в окне браузера»): a right click gives the browser's menu only in a field or on a link
-(paste, copy, open in a new tab); elsewhere the studio's own menu or nothing. Shift+right-click still gives the browser's.
+**No browser menu** (Viktor: «убрать браузерное меню вне полей и ссылок — абсолютное ДА. По всей студии. Как в ComfyUI — всё — собственный канвас как система в окне браузера»): a right click gives the browser's menu only in a field or on a link (paste, copy, open in a new tab); elsewhere the studio's own menu or nothing. Shift+right-click still gives the browser's.
 
-**The artwork** (Viktor: «не в кнопку плей, а справа от заголовка трека. Видишь, карточка испортилась?»): in the play
-button it made the button 44 px and threw the tile's columns out. It stands now in the card's top right corner beside the
-title, a link to the whole picture; the play button is the play button again (30 px, the check box under it). In the
-list, a small one before the buttons. **The take's menu**: Move to above Pin here («подними над Pin»).
+**The artwork** (Viktor: «не в кнопку плей, а справа от заголовка трека. Видишь, карточка испортилась?»): in the play button it made the button 44 px and threw the tile's columns out. It stands now in the card's top right corner beside the title, a link to the whole picture; the play button is the play button again (30 px, the check box under it). In the list, a small one before the buttons. **The take's menu**: Move to above Pin here («подними над Pin»).
 
-**Probes of two minutes** («YuE2 не успевает ввести инструмент»: the crystal bowls came in at the 30th second, a handbell
-in the last one): every probe made again runs 120 s, titled probe120-, with more sections to fill, on a seed of its own,
-its style made stronger (the instrument named from the very first second to the end, and what it does). 49 queued, the
-duduk first: the 39 waiting in "Instrumental Probe FAILED, to REGENERATE" (only the letter that failed), the duduk, and
-the shaman's instruments Viktor asked for («Шаманские инструменты подумай, якутский губной»): khomus (the Yakut jaw harp),
-the Siberian shaman drum, morin khuur, igil, now in the sheet too. The sheet hears a probe120 before the 60 s one it
-replaces. Verdicts: the cowbell approved but «не колокол, а электрогитара с реверб процессором»; the didgeridoo's B, «очень
-под шаманский вибро».
+**Probes of two minutes** («YuE2 не успевает ввести инструмент»: the crystal bowls came in at the 30th second, a handbell in the last one): every probe made again runs 120 s, titled probe120-, with more sections to fill, on a seed of its own, its style made stronger (the instrument named from the very first second to the end, and what it does). 49 queued, the duduk first: the 39 waiting in "Instrumental Probe FAILED, to REGENERATE" (only the letter that failed), the duduk, and the shaman's instruments Viktor asked for («Шаманские инструменты подумай, якутский губной»): khomus (the Yakut jaw harp), the Siberian shaman drum, morin khuur, igil, now in the sheet too. The sheet hears a probe120 before the 60 s one it replaces. Verdicts: the cowbell approved but «не колокол, а электрогитара с реверб процессором»; the didgeridoo's B, «очень под шаманский вибро».
 
-**Russian, Viktor's terms**: take = семпл (every case), Reuse = «Взять за основу», the user is «ты» (phrases with their
-verbs first: «пока ты их не сменишь», «куда скажешь»; then the words; a check refuses any «вы» or «дубль» left).
+**Russian, Viktor's terms**: take = семпл (every case), Reuse = «Взять за основу», the user is «ты» (phrases with their verbs first: «пока ты их не сменишь», «куда скажешь»; then the words; a check refuses any «вы» or «дубль» left).
 
 ### 1155 · The artwork over the page; the peek over the bar; Redraw artwork
-**The artwork over the page** (Viktor: «Клик открывает в новой вкладке. Сделай оверлеем. Не уходим из студии в другие
-окна и вкладки, если не нужно»): the card's picture, the player's square and *Open the artwork* in the take's menu show
-the whole picture over the studio, the player left free below it. ‹ › and the arrow keys walk the pictures of the cards
-shown, ▶ plays the take whose picture it is, Space still plays and pauses; Esc, × or a click beside it closes. What still
-opens a tab is what has to: the sites of the projects we stand on, the training's log, the score sent to the printer.
+**The artwork over the page** (Viktor: «Клик открывает в новой вкладке. Сделай оверлеем. Не уходим из студии в другие окна и вкладки, если не нужно»): the card's picture, the player's square and *Open the artwork* in the take's menu show the whole picture over the studio, the player left free below it. ‹ › and the arrow keys walk the pictures of the cards shown, ▶ plays the take whose picture it is, Space still plays and pauses; Esc, × or a click beside it closes. What still opens a tab is what has to: the sites of the projects we stand on, the training's log, the score sent to the printer.
 
-**The take's menu** (Viktor: «Для Draw Artwork, когда есть иллюстрация, заменяй на Redraw Artwork»): *Draw artwork*
-while there is none; *Open the artwork* and *Redraw artwork* once there is (the submenu gone). The page asks the lab every
-20 s, while it is in sight, which takes have pictures: drawn meanwhile (a batch, the API, another browser), they reach the
-cards in place (nothing else repainted: a rename being typed survives) and the menu says Redraw.
+**The take's menu** (Viktor: «Для Draw Artwork, когда есть иллюстрация, заменяй на Redraw Artwork»): *Draw artwork* while there is none; *Open the artwork* and *Redraw artwork* once there is (the submenu gone). The page asks the lab every 20 s, while it is in sight, which takes have pictures: drawn meanwhile (a batch, the API, another browser), they reach the cards in place (nothing else repainted: a rename being typed survives) and the menu says Redraw.
 
-**The peek over the bar** (Viktor: «Тултип покрывает первый ряд карточек… меньше по высоте. И тултип смести прямо поверх
-бара, он же временный»): from the window's top, over the bar, no lower than where the cards begin (measured on the
-Librarian at 1700 × 1000: 184 px tall, the cards from 276); the style in three lines, the note in two, the words without
-empty lines and a run of bare section tags on one line (an instrumental's whole text: [Intro] [Verse] [Outro]).
+**The peek over the bar** (Viktor: «Тултип покрывает первый ряд карточек… меньше по высоте. И тултип смести прямо поверх бара, он же временный»): from the window's top, over the bar, no lower than where the cards begin (measured on the Librarian at 1700 × 1000: 184 px tall, the cards from 276); the style in three lines, the note in two, the words without empty lines and a run of bare section tags on one line (an instrumental's whole text: [Intro] [Verse] [Outro]).
 
 ### 1156 · Artwork that looks at itself; the painter on a link; the sheet's pictures, seeds and styles; probes of their full length
-**The critic** (Viktor: «У нас же есть VLM? Пропускать через VLM вместе с промптом, и регенерить по адаптации промпта самой
-VLM»; the duduk's picture was a board on a table): a picture whose subject is named (an instrument's probe, by its title)
-is looked at by Omni, the listener's model (Qwen2.5-Omni-7B Q8_0 through llama.cpp, the Q8_0 projector reads pictures as
-well as sound: 5.7 s a look). It looks blind, the picture and the subject only, and says what it sees before it judges:
-with the prompt before it, it said the prompt back («a duduk resting on a woven rug») over a board. When the subject is
-not there, Omni writes the prompt again from the prompt and what it saw, and the painter tries again, three pictures at
-most. Measured by eye on known pictures: the board NO, an empty table NO, the didgeridoo and the harp YES; a wooden pipe
-on a carpet YES (lenient: a 7B critic catches the empty picture, not every wrong instrument). Songs keep the first
-picture, as before: judged by its first phrase, «a storm with a woman of harp strings» was rewritten into «a glowing harp».
+**The critic** (Viktor: «У нас же есть VLM? Пропускать через VLM вместе с промптом, и регенерить по адаптации промпта самой VLM»; the duduk's picture was a board on a table): a picture whose subject is named (an instrument's probe, by its title) is looked at by Omni, the listener's model (Qwen2.5-Omni-7B Q8_0 through llama.cpp, the Q8_0 projector reads pictures as well as sound: 5.7 s a look). It looks blind, the picture and the subject only, and says what it sees before it judges: with the prompt before it, it said the prompt back («a duduk resting on a woven rug») over a board. When the subject is not there, Omni writes the prompt again from the prompt and what it saw, and the painter tries again, three pictures at most. Measured by eye on known pictures: the board NO, an empty table NO, the didgeridoo and the harp YES; a wooden pipe on a carpet YES (lenient: a 7B critic catches the empty picture, not every wrong instrument). Songs keep the first picture, as before: judged by its first phrase, «a storm with a woman of harp strings» was rewritten into «a glowing harp».
 
-**What the painter does not know** (Viktor: «что не знает, то не генерит. Так же как с cat и hat»): the cheat-sheet now
-says how 94 rare instruments look, in plain visual words (art_looks.json, from instruments_src.py), and where they are at
-home; the prompter is told both (the duduk in an Armenian courtyard, not «a lone duduk on a weathered wooden table» eight
-times over), the critic the first, and what stands in for them (ordinary ceramic bowls for crystal ones: «в
-probe120-crystal-singing-bowls-b — обычные керамические глубокие тарелки»; a violin and a live horse for the morin khuur).
-A picture whose subject the critic did not find in three is kept, marked ≈ a guess (in the overlay and the sheet): the
-morin khuur came out a violin each time. The prompts begin with their subject and stay under 50 words: CLIP reads 77
-tokens and drops the rest (a 79-token prompt lost its last words).
+**What the painter does not know** (Viktor: «что не знает, то не генерит. Так же как с cat и hat»): the cheat-sheet now says how 94 rare instruments look, in plain visual words (art_looks.json, from instruments_src.py), and where they are at home; the prompter is told both (the duduk in an Armenian courtyard, not «a lone duduk on a weathered wooden table» eight times over), the critic the first, and what stands in for them (ordinary ceramic bowls for crystal ones: «в probe120-crystal-singing-bowls-b — обычные керамические глубокие тарелки»; a violin and a live horse for the morin khuur). A picture whose subject the critic did not find in three is kept, marked ≈ a guess (in the overlay and the sheet): the morin khuur came out a violin each time. The prompts begin with their subject and stay under 50 words: CLIP reads 77 tokens and drops the rest (a 79-token prompt lost its last words).
 
-**The painter on a link** (Viktor: «на нашу модель дать рядом относительный симлинк SDXL-Artwork-Model, чтобы на этот
-симлинк можно было бы посадить другие веса SDXL»; «SDXL — лёгкая и качественная. Никаких FLUX»): the studio paints with
-whatever artwork/SDXL-Artwork-Model points at (fetch-heresy.sh makes it, → CyberRealistic-XL-v10): a diffusers folder or
-one .safetensors file (the parts' configs from our folder, offline); anything not an SDXL (SD 1.5, SD 3, FLUX) is refused
-with what it is, before a minute is spent. The guide's new section *Artwork* says it, with the disclaimer.
+**The painter on a link** (Viktor: «на нашу модель дать рядом относительный симлинк SDXL-Artwork-Model, чтобы на этот симлинк можно было бы посадить другие веса SDXL»; «SDXL — лёгкая и качественная. Никаких FLUX»): the studio paints with whatever artwork/SDXL-Artwork-Model points at (fetch-heresy.sh makes it, → CyberRealistic-XL-v10): a diffusers folder or one .safetensors file (the parts' configs from our folder, offline); anything not an SDXL (SD 1.5, SD 3, FLUX) is refused with what it is, before a minute is spent. The guide's new section *Artwork* says it, with the disclaimer.
 
-**Remove current artwork** (Viktor: «В меню мыши Remove current Artwork»): the picture off the take, kept beside it
-(artwork-removed/), and the MP3s made with it as their cover dropped (the server makes an MP3 again only for a newer
-picture: a cover gone would have stayed inside them). The approved workspaces' takes drawn by a batch, one at a time.
+**Remove current artwork** (Viktor: «В меню мыши Remove current Artwork»): the picture off the take, kept beside it (artwork-removed/), and the MP3s made with it as their cover dropped (the server makes an MP3 again only for a newer picture: a cover gone would have stayed inside them). The approved workspaces' takes drawn by a batch, one at a time.
 
-**The sheet** (Viktor: «на странице шпаргалки будет возможность увидеть картинку»; «В шпаргалке указываем seed на каждый
-A/B»; «красным по белому предупреждаем, что инструменты на 90% звучат, как в A/B семплах»): each instrument's picture
-(an approved probe's first, whole over the page at a click); under ▶ A and ▶ B the music and sound seeds, as text (64-bit
-seeds are past what a page's numbers hold exact: a seed rounded is another seed); a warning in red: a name is a request,
-not a promise, and some superb probes agree in A and B yet are not the instrument named. A tab **Styles** («в новую
-вкладку стилей»): 35 rows, his genres (the Fosforida styles, his takes', УКРАЇНА's military march and Мавка's trance),
-the modes of major and minor on one trio (harp, viola, cello: the minor family on B♭, the major on D♭, as his styles),
-and what the instrument probes gave instead (the orchestral cymbals, «Это оркестр»; the cicadas, «не инструмент, а целый
-стиль»). A style is heard once its probe stands in «💎 Musical Styles».
+**The sheet** (Viktor: «на странице шпаргалки будет возможность увидеть картинку»; «В шпаргалке указываем seed на каждый A/B»; «красным по белому предупреждаем, что инструменты на 90% звучат, как в A/B семплах»): each instrument's picture (an approved probe's first, whole over the page at a click); under ▶ A and ▶ B the music and sound seeds, as text (64-bit seeds are past what a page's numbers hold exact: a seed rounded is another seed); a warning in red: a name is a request, not a promise, and some superb probes agree in A and B yet are not the instrument named. A tab **Styles** («в новую вкладку стилей»): 35 rows, his genres (the Fosforida styles, his takes', УКРАЇНА's military march and Мавка's trance), the modes of major and minor on one trio (harp, viola, cello: the minor family on B♭, the major on D♭, as his styles), and what the instrument probes gave instead (the orchestral cymbals, «Это оркестр»; the cicadas, «не инструмент, а целый стиль»). A style is heard once its probe stands in «💎 Musical Styles».
 
-**Probes of their full length** (Viktor: «Для проб стилей сто процентов 120 секунд»; «Таргетим в пробы 120 сек, но держим
-близкое — полторы и выше»): the music half ends where its structure does, the duration being only a ceiling (a «two
-minutes» probe of five sections came out 34–62 s; 25 of 45 style probes under 120 s). The API's songs take min_seconds:
-the music may not end before it (the engine's own floor, 750 frames, raised). And a song asked of the API is filed into
-its workspace for as long as it waits (the watch gave up after an hour: a queue of fifty two-minute probes outlives one),
-remembered on disk, so a lab restarted meanwhile files it still.
+**Probes of their full length** (Viktor: «Для проб стилей сто процентов 120 секунд»; «Таргетим в пробы 120 сек, но держим близкое — полторы и выше»): the music half ends where its structure does, the duration being only a ceiling (a «two minutes» probe of five sections came out 34–62 s; 25 of 45 style probes under 120 s). The API's songs take min_seconds: the music may not end before it (the engine's own floor, 750 frames, raised). And a song asked of the API is filed into its workspace for as long as it waits (the watch gave up after an hour: a queue of fifty two-minute probes outlives one), remembered on disk, so a lab restarted meanwhile files it still.
 
 ### 1157 · The lab's work in the Server log; the lamp pulses while any card works; no cut logo
-**The log** (Viktor: «SDXL рисовалка не идёт в системный лог. Перепроверь логирование всех GPU активностей»): the Server
-log is the engine's own stderr, and the lab's work never reached it. The lab now keeps a log of its own: every job
-(artwork, stems, remaster, upscale, debuzz, Whisper's timing and check, spectrum, inspection) and every training run and
-listening, as it waits, starts (on which card), ends or fails (the artwork with what the critic saw); the page merges it
-into the Server log as «[Lab] …» lines (GET /activity?since=N).
+**The log** (Viktor: «SDXL рисовалка не идёт в системный лог. Перепроверь логирование всех GPU активностей»): the Server log is the engine's own stderr, and the lab's work never reached it. The lab now keeps a log of its own: every job (artwork, stems, remaster, upscale, debuzz, Whisper's timing and check, spectrum, inspection) and every training run and listening, as it waits, starts (on which card), ends or fails (the artwork with what the critic saw); the page merges it into the Server log as «[Lab] …» lines (GET /activity?since=N).
 
-**The lamp** («Зелёную точку в баре анимируй всегда, когда идёт GPU активность в студии, и тултипом при наведении running
-jobs status»): it pulses while anything works on a card: amber for the engine's songs, green for the lab's work while the
-engine rests; its tip lists what runs, on which card, how far (a training's step, a job's minutes).
+**The lamp** («Зелёную точку в баре анимируй всегда, когда идёт GPU активность в студии, и тултипом при наведении running jobs status»): it pulses while anything works on a card: amber for the engine's songs, green for the lab's work while the engine rests; its tip lists what runs, on which card, how far (a training's step, a job's minutes).
 
-**The logo** («обрезанное лого на высоких скейлах… Вообще не пляшет… Может вообще убрать логотип в таких случаях?»): where
-it would lose its words (1659 px and narrower), it goes whole.
+**The logo** («обрезанное лого на высоких скейлах… Вообще не пляшет… Может вообще убрать логотип в таких случаях?»): where it would lose its words (1659 px and narrower), it goes whole.
 
 ### 1158 · What the style names, under the style
-Viktor: «В Творце/Creator подумай, как удобнее шпаргалку вызывать и попапить картинки нами одобренных инструментов».
-Under the Style prompt, a chip for each instrument and style the prompt names (the sheet's names, the longest first so
-«Celtic harp» is not also «harp»; a name in brackets only when it is one, so «sopilka (low)» does not catch «low
-drone»), coloured by the sheet's verdict and wearing the instrument's picture; the pointer on one shows its card (the
-picture, its home, its verdict, how it sounds, ▶ A and ▶ B with their seeds); a click shows the picture whole, or opens
-the sheet at that name. Alt+I opens the sheet from anywhere, whatever the keyboard's language. Tried on КРИК's style:
-fourteen chips, and the one in red is the sambuca, which the sheet says YuE2 does not play by that name.
+Viktor: «В Творце/Creator подумай, как удобнее шпаргалку вызывать и попапить картинки нами одобренных инструментов». Under the Style prompt, a chip for each instrument and style the prompt names (the sheet's names, the longest first so «Celtic harp» is not also «harp»; a name in brackets only when it is one, so «sopilka (low)» does not catch «low drone»), coloured by the sheet's verdict and wearing the instrument's picture; the pointer on one shows its card (the picture, its home, its verdict, how it sounds, ▶ A and ▶ B with their seeds); a click shows the picture whole, or opens the sheet at that name. Alt+I opens the sheet from anywhere, whatever the keyboard's language. Tried on КРИК's style: fourteen chips, and the one in red is the sambuca, which the sheet says YuE2 does not play by that name.
 
 ### 1159 · Takes dragged onto a workspace; the shofar's adapter in the sheet
-**Drag and drop** (Viktor: «Drag&Drop для перемещения выбранного в другой воркспейс… С диалогом подтверждения, чтобы не
-произошло случайного перемещения треков»): a card dragged onto a workspace on the left moves there, all the checked ones
-when it is checked; with Ctrl it is added there and stays here. Asked first, always (what, where to, and out of where:
-the workspace open, or every other one from All Workspaces); Ctrl+Z gives it back. A title being renamed in place keeps
-the mouse for its text (the card is not draggable meanwhile).
+**Drag and drop** (Viktor: «Drag&Drop для перемещения выбранного в другой воркспейс… С диалогом подтверждения, чтобы не произошло случайного перемещения треков»): a card dragged onto a workspace on the left moves there, all the checked ones when it is checked; with Ctrl it is added there and stays here. Asked first, always (what, where to, and out of where: the workspace open, or every other one from All Workspaces); Ctrl+Z gives it back. A title being renamed in place keeps the mouse for its text (the card is not draggable meanwhile).
 
-**The shofar** (Viktor, the A/B «LoRA A-B · Shofar»: e110 «АХУЙ, такого шофарист не слышал. Целая медитация. Это сто
-процентов йеменский шофар, рог антилопы, двухметровый»; e167 «переучился. Слаб и тонок»; e066 «не доучен. смесь с
-трубой»; base «НОЛЬ»): the sheet says YuE2 does not know it and its adapter does, at epoch 110; the epochs beside it
-(99, 121) made for his ear.
+**The shofar** (Viktor, the A/B «LoRA A-B · Shofar»: e110 «АХУЙ, такого шофарист не слышал. Целая медитация. Это сто процентов йеменский шофар, рог антилопы, двухметровый»; e167 «переучился. Слаб и тонок»; e066 «не доучен. смесь с трубой»; base «НОЛЬ»): the sheet says YuE2 does not know it and its adapter does, at epoch 110; the epochs beside it (99, 121) made for his ear.
 
 ### 1160 · Regenerate with a new seed
-Viktor: «Над писателем в меню — регенерировать этот же трек, но с другим случайным зерном. И тогда я меньше просить тебя
-буду. Авто замена существующего. Новая часть среди воркспейсов — Sourced for Regeneration». In the take's menu, above
-the Writer: *Regenerate with a new seed* (on a checked card in the Librarian, every checked take). The lab makes it again
-from its own request with new seeds (its codes and the score its plan wrote dropped; a score the user brought kept), and
-when the new take lands it takes the old one's places, its workspaces and its note, and the old one moves to the
-workspace «Sourced for Regeneration», kept until he empties it. A probe runs its two minutes, not ended before 90 s.
-Watched by the lab, not the page, and remembered on disk: the swap happens with the page closed and across a restart;
-the activity log says each one. Tried on a take of mine: queued, landed 31 s later, swapped.
+Viktor: «Над писателем в меню — регенерировать этот же трек, но с другим случайным зерном. И тогда я меньше просить тебя буду. Авто замена существующего. Новая часть среди воркспейсов — Sourced for Regeneration». In the take's menu, above the Writer: *Regenerate with a new seed* (on a checked card in the Librarian, every checked take). The lab makes it again from its own request with new seeds (its codes and the score its plan wrote dropped; a score the user brought kept), and when the new take lands it takes the old one's places, its workspaces and its note, and the old one moves to the workspace «Sourced for Regeneration», kept until he empties it. A probe runs its two minutes, not ended before 90 s. Watched by the lab, not the page, and remembered on disk: the swap happens with the page closed and across a restart; the activity log says each one. Tried on a take of mine: queued, landed 31 s later, swapped.
 
 ### 1161 · Sections in a workspace; the Refiner's work filed by itself
-Viktor: «В воркспейсы можно один уровень подразделов? Максимум два. Так сортировка по отборам в воркспейсе будет
-доступна и не нужно будет плодить их каждый раз. Туда же можно автоматом создавать подразделы при факте работы с
-рефайнером». A section is a workspace named by its path, «Parent / Section», two levels below a workspace at most (a third
-is refused aloud). On the left it stands under its workspace, indented, by its own name; a workspace shows its sections'
-takes too and counts each once; the workspace in hand takes them in as well. *New section…* in a workspace's ⋯ menu;
-renaming a workspace carries its sections (and their locks and pins) along, deleting it takes them with it (the takes
-stay), a merge waits until its sections are merged or gone. A section of an approved workspace is approved (💎 by its
-root). When the Refiner has made something of a take (stems, a remaster, an upscale, debuzz), the take goes into the
-section «Refined» of each workspace it stands in, made when first needed, and the activity log says so. Tried on a
-workspace of mine: made, shown, its take counted once in the parent, a drag onto it asked and declined, deleted again.
+Viktor: «В воркспейсы можно один уровень подразделов? Максимум два. Так сортировка по отборам в воркспейсе будет доступна и не нужно будет плодить их каждый раз. Туда же можно автоматом создавать подразделы при факте работы с рефайнером». A section is a workspace named by its path, «Parent / Section», two levels below a workspace at most (a third is refused aloud). On the left it stands under its workspace, indented, by its own name; a workspace shows its sections' takes too and counts each once; the workspace in hand takes them in as well. *New section…* in a workspace's ⋯ menu; renaming a workspace carries its sections (and their locks and pins) along, deleting it takes them with it (the takes stay), a merge waits until its sections are merged or gone. A section of an approved workspace is approved (💎 by its root). When the Refiner has made something of a take (stems, a remaster, an upscale, debuzz), the take goes into the section «Refined» of each workspace it stands in, made when first needed, and the activity log says so. Tried on a workspace of mine: made, shown, its take counted once in the parent, a drag onto it asked and declined, deleted again.
 
 ### 1162 · AGPL; the logo kerned and its cloud lighter; fresh cards; regens keep their marks; the workspaces column folds
-**The licence** (Viktor: «AGPL-3.0-or-later однозначно»; the logo and the name apart, «и все аудио генерации с наших
-репо воркспейсов»): the code under the GNU AGPL, version 3 or later (`LICENSE`, the FSF's text); the logo, the name and
-the audio and pictures we publish under CC BY-NC-ND 4.0 (`LICENSE-ASSETS.md`); README, CHANGELOG, the release copies both.
+**The licence** (Viktor: «AGPL-3.0-or-later однозначно»; the logo and the name apart, «и все аудио генерации с наших репо воркспейсов»): the code under the GNU AGPL, version 3 or later (`LICENSE`, the FSF's text); the logo, the name and the audio and pictures we publish under CC BY-NC-ND 4.0 (`LICENSE-ASSETS.md`); README, CHANGELOG, the release copies both.
 
-**The logo** (Viktor: «Тень под Девой в логотипах очень агрессивная. Осветли её на добрых 40%»; «В РУАХ… кернинг нулевой
-между У и А. Учитывай это во всех языках. Для других сойдёт, но не для Виктора»): the cloud is the accent with a breath
-of white instead of a quarter of black (OKLab lightness 0.32 → 0.45 on the default accent; the written-in copies
-#5f0f1d → #942736 by day, #a24b4b → #f17777 by night). The words keep their font's own kerning (kern.py: the GPOS pairs,
-the variable font set to the logo's weight first): РУАХ had 0 where Montserrat gives Р·У −25, У·А −40, А·Х −40; RUACH
-U·A −15, A·C −10; every language. make_all.sh makes every file of the logo again, the icon's pictures and the page's
-words; the page's two inline logos and its favicon put in by a transform checked to give back the old ones exactly.
+**The logo** (Viktor: «Тень под Девой в логотипах очень агрессивная. Осветли её на добрых 40%»; «В РУАХ… кернинг нулевой между У и А. Учитывай это во всех языках. Для других сойдёт, но не для Виктора»): the cloud is the accent with a breath of white instead of a quarter of black (OKLab lightness 0.32 → 0.45 on the default accent; the written-in copies #5f0f1d → #942736 by day, #a24b4b → #f17777 by night). The words keep their font's own kerning (kern.py: the GPOS pairs, the variable font set to the logo's weight first): РУАХ had 0 where Montserrat gives Р·У −25, У·А −40, А·Х −40; RUACH U·A −15, A·C −10; every language. make_all.sh makes every file of the logo again, the icon's pictures and the page's words; the page's two inline logos and its favicon put in by a transform checked to give back the old ones exactly.
 
-**Fresh cards** (Viktor: «карточку помечать лёгкой пунктирной обводкой и снимать её при первом же проигрывании трека. То же
-самое и на новые треки»): a take made since this came and never played wears a light dashed line, in the Librarian and
-in the Creator's list; its first play takes it off (the collection keeps what was played).
+**Fresh cards** (Viktor: «карточку помечать лёгкой пунктирной обводкой и снимать её при первом же проигрывании трека. То же самое и на новые треки»): a take made since this came and never played wears a light dashed line, in the Librarian and in the Creator's list; its first play takes it off (the collection keeps what was played).
 
-**Regenerations** («При риджене оставляй в новой версии пометки»; «Помечаем в карточке реджены»; «Sourced for regen давай
-как подкатегорию исходного воркспейса»): the new take gets the old one's note, like, star and picture (a dislike stays
-behind: it is why a take is made again), and a «regen» badge naming what it came from; the old one goes into the
-section «Sourced for Regeneration» of its workspace, which its workspace does not show among its own. The regenerations
-made before moved there; the one workspace of that name gone.
+**Regenerations** («При риджене оставляй в новой версии пометки»; «Помечаем в карточке реджены»; «Sourced for regen давай как подкатегорию исходного воркспейса»): the new take gets the old one's note, like, star and picture (a dislike stays behind: it is why a take is made again), and a «regen» badge naming what it came from; the old one goes into the section «Sourced for Regeneration» of its workspace, which its workspace does not show among its own. The regenerations made before moved there; the one workspace of that name gone.
 
-**One picture for an A/B pair** («Для A/B семплов зачем нам мучиться с двумя картинками?»): the other letter of a pair
-gets the picture its partner has instead of a new one; a picture drawn for one goes to the other when it has none.
+**One picture for an A/B pair** («Для A/B семплов зачем нам мучиться с двумя картинками?»): the other letter of a pair gets the picture its partner has instead of a new one; a picture drawn for one goes to the other when it has none.
 
-**The workspaces column** («возможность перетягивать, менять ширину, и схлопывать эту колонку… при схлопнутой добавлять
-ещё одну колонку в тайл карточек»): its edge dragged sets the width (kept); « folds it away and the tiles take one
-column more; a double click on the edge or Enter folds too.
+**The workspaces column** («возможность перетягивать, менять ширину, и схлопывать эту колонку… при схлопнутой добавлять ещё одну колонку в тайл карточек»): its edge dragged sets the width (kept); « folds it away and the tiles take one column more; a double click on the edge or Enter folds too.
 
-**And**: Hidden showed nothing (its cards wore .is-hidden, which is the page's display:none; renamed); the small
-dropdowns 12 → 14 px («добавь 2pt уверенно. Пусть будет кратное значение»); the sheet: an instrument with no probe at
-all plain red text, nothing to press («а вдруг YuE3 добавит»); an instrument shapes the style of the whole piece; a
-crackle like a worn record is an unlucky seed; the gong failed; the orchestral cymbals renamed by him probe60-orchestral
-(Styles → Orchestral), my full-length takes of them on the same seeds style120-orchestral, the genre style120-symphonic-
-orchestral, and the cymbals asked again without the word. The 36 rejected probes made again went to the trash (his word);
-the duduk's epochs 40, 120, 140, 180 and the B of bugle, frame drum and kalimba made.
+**And**: Hidden showed nothing (its cards wore .is-hidden, which is the page's display:none; renamed); the small dropdowns 12 → 14 px («добавь 2pt уверенно. Пусть будет кратное значение»); the sheet: an instrument with no probe at all plain red text, nothing to press («а вдруг YuE3 добавит»); an instrument shapes the style of the whole piece; a crackle like a worn record is an unlucky seed; the gong failed; the orchestral cymbals renamed by him probe60-orchestral (Styles → Orchestral), my full-length takes of them on the same seeds style120-orchestral, the genre style120-symphonic- orchestral, and the cymbals asked again without the word. The 36 rejected probes made again went to the trash (his word); the duduk's epochs 40, 120, 140, 180 and the B of bugle, frame drum and kalimba made.
 
 ### 1163 · Russian for the day's new words; SDXL Turbo and its kin
-**Russian** (Viktor, in the Russian page: «Многое не пересведено пока ещё»; his screenshot showed the bulk bar in
-English): 42 strings by hand: the bulk bar (Добавить в пространство…, Переместить в пространство…, Выбрано: N), the
-take's new items (Открыть обложку, Перерисовать обложку, Снять обложку, Перегенерировать с новым зерном), New section…,
-the sheet's tabs, groups and red warning, the lamp's tip, the column's edge, the drag's question, the «реджен» badge.
-The menus, toasts and dialogs at large still wait for their pass (FINISH-LINE).
+**Russian** (Viktor, in the Russian page: «Многое не пересведено пока ещё»; his screenshot showed the bulk bar in English): 42 strings by hand: the bulk bar (Добавить в пространство…, Переместить в пространство…, Выбрано: N), the take's new items (Открыть обложку, Перерисовать обложку, Снять обложку, Перегенерировать с новым зерном), New section…, the sheet's tabs, groups and red warning, the lamp's tip, the column's edge, the drag's question, the «реджен» badge. The menus, toasts and dialogs at large still wait for their pass (FINISH-LINE).
 
-**SDXL Turbo** (Viktor: «SDXL Turbo файнтюны будут так же работать?»): they load, being SDXL, but want a few steps and
-little guidance, and at the studio's 28 steps and 5.5 they come out burnt. A painter whose name says Turbo, Lightning,
-Hyper or LCM is painted with 8 steps, guidance 2 and Euler ancestral (trailing timesteps); any painter with what
-artwork/SDXL-Artwork-Model.json beside the link says ({"steps", "cfg", "sampler"}); each artwork.json says what it was
-painted with.
+**SDXL Turbo** (Viktor: «SDXL Turbo файнтюны будут так же работать?»): they load, being SDXL, but want a few steps and little guidance, and at the studio's 28 steps and 5.5 they come out burnt. A painter whose name says Turbo, Lightning, Hyper or LCM is painted with 8 steps, guidance 2 and Euler ancestral (trailing timesteps); any painter with what artwork/SDXL-Artwork-Model.json beside the link says ({"steps", "cfg", "sampler"}); each artwork.json says what it was painted with.
 
 ### 1164 · РУАХ set by eye
-Viktor, after 1162: «Между У и А ещё 20–25% убери воздуха. В общий кернинг в РУАХ добавь 5%». РУАХ (ru, uk, be) gets 5 % of
-its em more between every two letters, and the air between У and А, measured on the letters (the mean ink-to-ink
-distance across the rows both fill), 22.5 % less than at 1162: 324.7 → 251.6 font units; Р·У 285 → 335, А·Х 259 → 309.
-make_words.py measures it on the outlines (TUNE), so another font keeps the rule, not a number. The other words keep
-their fonts' spacing («Для других сойдёт»).
+Viktor, after 1162: «Между У и А ещё 20–25% убери воздуха. В общий кернинг в РУАХ добавь 5%». РУАХ (ru, uk, be) gets 5 % of its em more between every two letters, and the air between У and А, measured on the letters (the mean ink-to-ink distance across the rows both fill), 22.5 % less than at 1162: 324.7 → 251.6 font units; Р·У 285 → 335, А·Х 259 → 309. make_words.py measures it on the outlines (TUNE), so another font keeps the rule, not a number. The other words keep their fonts' spacing («Для других сойдёт»).
 
 ### 1165 · What waits, off its queue; the run from any room; regenerations seen at once; the overlay's hollow play
-**The queue under the lamp** (Viktor: «В баре тултипом под красную/зелёную — вывод списка очереди, и возможность удалить из
-очереди то или иное ожидающее действо»): the engine's lamp opens, on hover or a click, what runs and what waits: the songs
-(this page's, and the regenerations the lab queued: the engine's log names a run only when it begins, so the lab lists
-the ones still waiting, from what its watchers read anyway: `GET /activity` → `queue`) and the lab's work on the cards.
-A waiting one comes off its queue by its ✕, pressed twice: a song by the engine's cancel (it is skipped when its turn
-comes), a lab job by `POST /jobs/cancel {key}` — the jobs that wait for the lab's one heavy lock take it through
-`turn(job)` now, and one taken off ends *failed: taken off the queue* when its turn comes, which every poller of the page
-already shows and stops on (a new request starts it anew). What runs is refused there: it stops where it is shown. The
-list is built again only when what it holds changes, the times in place: the lamp repaints every half second, and a
-button replaced under the pointer between press and release loses its click (measured: a 600 ms click armed it).
+**The queue under the lamp** (Viktor: «В баре тултипом под красную/зелёную — вывод списка очереди, и возможность удалить из очереди то или иное ожидающее действо»): the engine's lamp opens, on hover or a click, what runs and what waits: the songs (this page's, and the regenerations the lab queued: the engine's log names a run only when it begins, so the lab lists the ones still waiting, from what its watchers read anyway: `GET /activity` → `queue`) and the lab's work on the cards. A waiting one comes off its queue by its ✕, pressed twice: a song by the engine's cancel (it is skipped when its turn comes), a lab job by `POST /jobs/cancel {key}` — the jobs that wait for the lab's one heavy lock take it through `turn(job)` now, and one taken off ends *failed: taken off the queue* when its turn comes, which every poller of the page already shows and stops on (a new request starts it anew). What runs is refused there: it stops where it is shown. The list is built again only when what it holds changes, the times in place: the lamp repaints every half second, and a button replaced under the pointer between press and release loses its click (measured: a 600 ms click armed it).
 
-**The context menu and the log** (Viktor: «Если консоль серверного лога открыта и там движение, убивается фокус курсора на
-мышином меню»): the menu closed on any scroll anywhere, and the log dock following its new lines scrolls itself every
-moment. Now, as the tips already did, only a scroll that moves what the menu was opened over closes it.
+**The context menu and the log** (Viktor: «Если консоль серверного лога открыта и там движение, убивается фокус курсора на мышином меню»): the menu closed on any scroll anywhere, and the log dock following its new lines scrolls itself every moment. Now, as the tips already did, only a scroll that moves what the menu was opened over closes it.
 
-**The player's dot** (Viktor: «Кликание по кружочку… на регенерации как минимум не работает»): *Click to watch it* showed
-the run in the Creator's own view, unseen from the Librarian; it goes to the Creator first now (and *Click to open it*
-too).
+**The player's dot** (Viktor: «Кликание по кружочку… на регенерации как минимум не работает»): *Click to watch it* showed the run in the Creator's own view, unseen from the Librarian; it goes to the Creator first now (and *Click to open it* too).
 
-**Regenerations in the Librarian** (Viktor: «В Instrumental Probe FAILED, to REGENERATE какая-то аномалия. Не вижу, или
-что перегенерилось»): the lab files a regenerated take a moment after the engine ends it; the page read its takes again
-then, not the workspaces, so the old card stayed where the new one stood, and a second Regenerate on it made one more
-version from the take already set aside, which landed in no workspace (and the old one in a top-level «Sourced for
-Regeneration»). The page reads the Librarian again whenever the lab says it filed (never under a title being typed);
-a take regenerated from a «Sourced for Regeneration» section lands in that section's parent. The one misfiled kantele-b
-put where it belongs, the stray workspace taken away (its one take stays in its section).
+**Regenerations in the Librarian** (Viktor: «В Instrumental Probe FAILED, to REGENERATE какая-то аномалия. Не вижу, или что перегенерилось»): the lab files a regenerated take a moment after the engine ends it; the page read its takes again then, not the workspaces, so the old card stayed where the new one stood, and a second Regenerate on it made one more version from the take already set aside, which landed in no workspace (and the old one in a top-level «Sourced for Regeneration»). The page reads the Librarian again whenever the lab says it filed (never under a title being typed); a take regenerated from a «Sourced for Regeneration» section lands in that section's parent. The one misfiled kantele-b put where it belongs, the stray workspace taken away (its one take stays in its section).
 
-**The artwork overlay** (Viktor: «В оверлее картинок сделай такие же эстетичные полые кнопки воспроизведения как и везде»):
-its play is the cards' hollow one, light on the overlay's dark in both themes. **Fresh cards** (Viktor: «в regen очень
-жирная кайма»): the dashed outline 1pt, was 1.5 px.
+**The artwork overlay** (Viktor: «В оверлее картинок сделай такие же эстетичные полые кнопки воспроизведения как и везде»): its play is the cards' hollow one, light on the overlay's dark in both themes. **Fresh cards** (Viktor: «в regen очень жирная кайма»): the dashed outline 1pt, was 1.5 px.
 
-**LoRA epochs and the shofar's picture** (Viktor 03.10): published and kept — the duduk e080, e140, e160, e180, e200 (the
-run's last file), the shofar e099, e110, e121, e167 (its last); e040 and e120 of the duduk and e066 of the shofar taken
-out of loras/ by the Trainer's own *Out of loras/* (their checkpoints stay in the runs). The painter drew a ram for the
-shofar every time; his own picture (`shofar.webp`, 768 px) is the artwork of every take made with the shofar adapter, the
-drawn ones kept in each take's `artwork-removed/`. **The LoRA repo** (his «эти чекпоинты оформляй в репо»):
-`heresy/tools/upload-loras.sh` stages goldhub/Ruach_Studio_LoRAs in `tmp/hf-loras/` (the nine epochs as hard links, the
-last file of each run under its epoch's name; the newest take of each title in «💎 Instrumental Probe LoRA» as a 320k
-MP3 with its cover, and the picture; the card `heresy/docs/hf-loras-README.md` with a table of the samples' seeds made
-from their requests) and uploads it with his write token (`--stage` only stages). **Regenerate with its own seeds**
-(`POST /regen {names, same_seeds: true}`; his rule: before publishing, the approved probes again «с теми же сидами
-карточек, по 2 минуты всё»): the duduk's eight 60-second A/B samples made again at full length on 5101/6101 and
-5102/6102, filed as a regeneration (the 60-second ones in «💎 Instrumental Probe LoRA / Sourced for Regeneration»); an
-A/B sample (`ab-…`) now counts as a probe: 120 s, not ended before 90.
+**LoRA epochs and the shofar's picture** (Viktor 03.10): published and kept — the duduk e080, e140, e160, e180, e200 (the run's last file), the shofar e099, e110, e121, e167 (its last); e040 and e120 of the duduk and e066 of the shofar taken out of loras/ by the Trainer's own *Out of loras/* (their checkpoints stay in the runs). The painter drew a ram for the shofar every time; his own picture (`shofar.webp`, 768 px) is the artwork of every take made with the shofar adapter, the drawn ones kept in each take's `artwork-removed/`. **The LoRA repo** (his «эти чекпоинты оформляй в репо»): `heresy/tools/upload-loras.sh` stages goldhub/Ruach_Studio_LoRAs in `tmp/hf-loras/` (the nine epochs as hard links, the last file of each run under its epoch's name; the newest take of each title in «💎 Instrumental Probe LoRA» as a 320k MP3 with its cover, and the picture; the card `heresy/docs/hf-loras-README.md` with a table of the samples' seeds made from their requests) and uploads it with his write token (`--stage` only stages). **Regenerate with its own seeds** (`POST /regen {names, same_seeds: true}`; his rule: before publishing, the approved probes again «с теми же сидами карточек, по 2 минуты всё»): the duduk's eight 60-second A/B samples made again at full length on 5101/6101 and 5102/6102, filed as a regeneration (the 60-second ones in «💎 Instrumental Probe LoRA / Sourced for Regeneration»); an A/B sample (`ab-…`) now counts as a probe: 120 s, not ended before 90.
 
-**Translation groundwork** (the turnkey translation, under way): a catalog entry may now give its language's plural
-forms ({one, few, many, other}, Intl.PluralRules on the key's first number: 1 трек, 2 трека, 5 треков), a part
-`{#0}` takes a number only (so "{#0} MB" never swallows a longer text that ends in MB), and the parts of a pattern are
-looked up in turn (a pattern inside a pattern, three deep); workspace names, LoRA and font names, repositories and
-take titles in the menus are kept as typed (`translate="no"`: an `<option>` without a value is its own text, so a
-translated workspace name would have moved takes to a workspace that does not exist); the LoRA and VAE tiles and their
-tips are translated piece by piece where they are made and drawn again when the language changes.
+**Translation groundwork** (the turnkey translation, under way): a catalog entry may now give its language's plural forms ({one, few, many, other}, Intl.PluralRules on the key's first number: 1 трек, 2 трека, 5 треков), a part `{#0}` takes a number only (so "{#0} MB" never swallows a longer text that ends in MB), and the parts of a pattern are looked up in turn (a pattern inside a pattern, three deep); workspace names, LoRA and font names, repositories and take titles in the menus are kept as typed (`translate="no"`: an `<option>` without a value is its own text, so a translated workspace name would have moved takes to a workspace that does not exist); the LoRA and VAE tiles and their tips are translated piece by piece where they are made and drawn again when the language changes.
 
 ### 1166 · The studio in seven languages, turnkey; the Librarian past 2K; the 💎 sets from Hugging Face
-**Every language whole** (Viktor: «Заканчивай под ключь с переводами интерфейса и текстами по всей студии»): the page in
-Russian, Ukrainian, Belarusian, Greek, Spanish and Italian beside the English, every key the page has in each (2,429):
-the Russian by hand, the others built by `build_tr_cat.py` from the translators' tables, so no key is retyped; a
-translation must carry its key's parts and its language's own plural forms (one/few/many/other in Ukrainian and
-Belarusian, one/many/other in Spanish and Italian, one/other in Greek), else nothing is written. What the code itself
-says was English in a translated page: its toasts, dialogs, menus, hints and tips, found by a scan of the code and by
-harvesting the real page in each language (every room, menu, sheet, dialog, overlay and pane), from 1,107 untranslated
-texts down to the names, units and the cheat-sheet's own notes; what the code glued from words, names and numbers is
-made of translated pieces where it is made, and drawn again when the language changes; names stay as typed
-(`translate="no"`). The rich tips of `<template>` and the recaps of `kit/loras/sources.json` are translated in their
-tips. No word of the root «раб/роб» in Ukrainian and Belarusian, none of δουλ- in Greek (its own «раб»). Chinese was
-made and called off (Viktor: «Отмена по китайской»): out of the page and of the language list, its tables shelved.
+**Every language whole** (Viktor: «Заканчивай под ключь с переводами интерфейса и текстами по всей студии»): the page in Russian, Ukrainian, Belarusian, Greek, Spanish and Italian beside the English, every key the page has in each (2,429): the Russian by hand, the others built by `build_tr_cat.py` from the translators' tables, so no key is retyped; a translation must carry its key's parts and its language's own plural forms (one/few/many/other in Ukrainian and Belarusian, one/many/other in Spanish and Italian, one/other in Greek), else nothing is written. What the code itself says was English in a translated page: its toasts, dialogs, menus, hints and tips, found by a scan of the code and by harvesting the real page in each language (every room, menu, sheet, dialog, overlay and pane), from 1,107 untranslated texts down to the names, units and the cheat-sheet's own notes; what the code glued from words, names and numbers is made of translated pieces where it is made, and drawn again when the language changes; names stay as typed (`translate="no"`). The rich tips of `<template>` and the recaps of `kit/loras/sources.json` are translated in their tips. No word of the root «раб/роб» in Ukrainian and Belarusian, none of δουλ- in Greek (its own «раб»). Chinese was made and called off (Viktor: «Отмена по китайской»): out of the page and of the language list, its tables shelved.
 
-**Numbers and dates in the language** (`RuachI18n.locales`): 24 576 in Russian, 24,576 in English; Belarusian borrows
-Russian's formats (Chrome has no Belarusian dates), and the Writer's dates go numeric there, so no Russian month shows.
-`{#N}` takes a number grouped by plain spaces too, and its plural reads it whole. **Icon buttons follow the language**:
-`HeresyIcons.dress()` takes a button's words in English (`RuachI18n.en`, and `enAttr` for its title); it ran after the
-translator's first pass, so a page loaded in another language had pinned its icons' tips to that language.
+**Numbers and dates in the language** (`RuachI18n.locales`): 24 576 in Russian, 24,576 in English; Belarusian borrows Russian's formats (Chrome has no Belarusian dates), and the Writer's dates go numeric there, so no Russian month shows. `{#N}` takes a number grouped by plain spaces too, and its plural reads it whole. **Icon buttons follow the language**: `HeresyIcons.dress()` takes a button's words in English (`RuachI18n.en`, and `enAttr` for its title); it ran after the translator's first pass, so a page loaded in another language had pinned its icons' tips to that language.
 
-**The guide in every language**: `heresy-guide.js` reads `docs/GUIDE.<lang>.md` (else the English); the whole guide in
-each of the six, in the page's own words, every heading ending in the English one's id (`<!-- #id -->`), so the
-page's links into the guide find the same stop in every language (checked in each: «Babel in the score» from the
-Creator); the same images, code and numbers, checked by a script against the English.
+**The guide in every language**: `heresy-guide.js` reads `docs/GUIDE.<lang>.md` (else the English); the whole guide in each of the six, in the page's own words, every heading ending in the English one's id (`<!-- #id -->`), so the page's links into the guide find the same stop in every language (checked in each: «Babel in the score» from the Creator); the same images, code and numbers, checked by a script against the English.
 
-**Russian made consistent on the way**: the Writer's notebook «блокнот» throughout (it was also «тетрадь»), PARAMS
-«ПАРАМЕТРЫ», the theme tip naming the day and night themes as the list does, «Какую DAW ты используешь?», the fonts
-button named as it is; two homonyms parted in English (the inspection's "pitch", the Train dialog's "Start training").
+**Russian made consistent on the way**: the Writer's notebook «блокнот» throughout (it was also «тетрадь»), PARAMS «ПАРАМЕТРЫ», the theme tip naming the day and night themes as the list does, «Какую DAW ты используешь?», the fonts button named as it is; two homonyms parted in English (the inspection's "pitch", the Train dialog's "Start training").
 
-**The Librarian past 2K** (Viktor, at 4K: «давай сделаем богаче замощение канваса с карточками. 6 карточке в 4K
-разрешении. Pinned оставляем 4 макс.»; on the List: «Делай две колонки выше 2K разрешения»): the tiles take more
-columns instead of wider cards, 5 from 2880 px and 6 from 3360 px (at 3840 a card is 584 px, about as wide as at 2K),
-one more while the workspaces column is folded; the pinned strip takes the same columns, so its four at most stand
-over the cards. The List in two columns from 2880 px, read row by row as the tiles are (a long list read down one
-column, then the other, would hide its second half); 2560 and below as they were (two would fit at 2560 too: 1131 px
-a row).
+**The Librarian past 2K** (Viktor, at 4K: «давай сделаем богаче замощение канваса с карточками. 6 карточке в 4K разрешении. Pinned оставляем 4 макс.»; on the List: «Делай две колонки выше 2K разрешения»): the tiles take more columns instead of wider cards, 5 from 2880 px and 6 from 3360 px (at 3840 a card is 584 px, about as wide as at 2K), one more while the workspaces column is folded; the pinned strip takes the same columns, so its four at most stand over the cards. The List in two columns from 2880 px, read row by row as the tiles are (a long list read down one column, then the other, would hide its second half); 2560 and below as they were (two would fit at 2560 too: 1131 px a row).
 
-**Unpin where it was pinned** (Viktor: «Unpin исчез после появления обложки в карточке, что закреплена. И в меню нет
-Unpin»; «Анпинить можно только в воркспейсе, где прикреплено»): the take had been moved out of the workspace that pinned
-it, and its pin stayed there, where nothing could reach it. The lab now keeps a workspace's pins to its own takes (its
-sections' too) on every change, and shows them so before the file heals; the Pinned view's menu has Unpin, from every
-place the take is pinned in.
+**Unpin where it was pinned** (Viktor: «Unpin исчез после появления обложки в карточке, что закреплена. И в меню нет Unpin»; «Анпинить можно только в воркспейсе, где прикреплено»): the take had been moved out of the workspace that pinned it, and its pin stayed there, where nothing could reach it. The lab now keeps a workspace's pins to its own takes (its sections' too) on every change, and shows them so before the file heals; the Pinned view's menu has Unpin, from every place the take is pinned in.
 
-**The 💎 workspaces for the public** (Viktor: «смело переименовывай все треки в законченных 💎 воркспейсах. Под единый
-стиль»; «Мои вердикты в читшите музыкальном делай на английском»): every take of «💎 Instrumental Probe», «… LoRA»,
-«💎 Musical Styles» and «💎 Voice Types» renamed to one style («Hang Drum · A», «Dorian · B», «Bass · sung · A»), the
-notes in English with the Russian as a second paragraph, his own words kept beside their English; no covers for the
-styles and the voices (his word). The cheat-sheet: the verdicts in English, the oboe failed («К сожалению, oboe нет в
-YuE2»), fifteen palette instruments added (the grand piano by its lid, helmet and table gusli, kantele, the kinnor, the
-nevel, the kithara, the lyre of Ur, the psaltery plucked and bowed, the concert zither, the cimbalom, the gudok): 200.
-The public titles live with the sheet's data (`heresy/tools/instruments_src.py`: `title_of`, `style_title`, no two
-alike), and the sheet finds a probe by its old title, its public title or its folder's name, which a rename never
-changes. A take made again keeps the old one's title.
+**The 💎 workspaces for the public** (Viktor: «смело переименовывай все треки в законченных 💎 воркспейсах. Под единый стиль»; «Мои вердикты в читшите музыкальном делай на английском»): every take of «💎 Instrumental Probe», «… LoRA», «💎 Musical Styles» and «💎 Voice Types» renamed to one style («Hang Drum · A», «Dorian · B», «Bass · sung · A»), the notes in English with the Russian as a second paragraph, his own words kept beside their English; no covers for the styles and the voices (his word). The cheat-sheet: the verdicts in English, the oboe failed («К сожалению, oboe нет в YuE2»), fifteen palette instruments added (the grand piano by its lid, helmet and table gusli, kantele, the kinnor, the nevel, the kithara, the lyre of Ur, the psaltery plucked and bowed, the concert zither, the cimbalom, the gudok): 200. The public titles live with the sheet's data (`heresy/tools/instruments_src.py`: `title_of`, `style_title`, no two alike), and the sheet finds a probe by its old title, its public title or its folder's name, which a rename never changes. A take made again keeps the old one's title.
 
-**About** (Viktor: «В Engine логотип заменить. Все наши восходящие HF репозитории добавь в колонку Ruach Studio, через
-пустую строку»; «После лого новая строка»): the bar's own logo, its words in the page's language, the tagline under it;
-our four Hugging Face repositories under Ruach Studio's credits, a line's space between.
+**About** (Viktor: «В Engine логотип заменить. Все наши восходящие HF репозитории добавь в колонку Ruach Studio, через пустую строку»; «После лого новая строка»): the bar's own logo, its words in the page's language, the tagline under it; our four Hugging Face repositories under Ruach Studio's credits, a line's space between.
 
-**The Engine's LoRAs in two groups** (Viktor: «раздели блок LoRA на два: ЛОКАЛЬНЫЕ оттрененные… и второй — те чужие
-адаптеры из HF»): *Trained here*, the files with no web link to a source, and *From Hugging Face*, the add-on badge
-with them.
+**The Engine's LoRAs in two groups** (Viktor: «раздели блок LoRA на два: ЛОКАЛЬНЫЕ оттрененные… и второй — те чужие адаптеры из HF»): *Trained here*, the files with no web link to a source, and *From Hugging Face*, the add-on badge with them.
 
-**Leaving the Engine page** (Viktor: «единственная возможность уйти с неё, либо кнопка «Назад к сочинению», либо F5.
-Добавь кликание по бару Студии… если в GPU что-то изменил, но не сохранил, требовать в попап диалоге действие —
-сохранить/игнорировать»): a room in the bar and the logo leave it as Back and Esc do; GPU roles changed and not saved
-are saved or put back first, in a dialog only its two buttons answer.
+**Leaving the Engine page** (Viktor: «единственная возможность уйти с неё, либо кнопка «Назад к сочинению», либо F5. Добавь кликание по бару Студии… если в GPU что-то изменил, но не сохранил, требовать в попап диалоге действие — сохранить/игнорировать»): a room in the bar and the logo leave it as Back and Esc do; GPU roles changed and not saved are saved or put back first, in a dialog only its two buttons answer.
 
-**Music, together** (Viktor: «В Креаторе ползунок Music Together не работает. Подсчёт общей силы не работает. Сам по
-скрину посчитай»): the bar was counted when the form was painted and never while a strength was dragged; his screen
-showed 3.55, the five adapters' first strengths (1.0 + 0.75 + 0.6 × 3), over 1.55 on the sliders. It follows every
-strength now, and it is a slider of its own: dragged, it moves every music strength at once, each in proportion to where
-it stood, none past its own max, the 0.005 grid's remainders shared so the sum lands where it is let go.
+**Music, together** (Viktor: «В Креаторе ползунок Music Together не работает. Подсчёт общей силы не работает. Сам по скрину посчитай»): the bar was counted when the form was painted and never while a strength was dragged; his screen showed 3.55, the five adapters' first strengths (1.0 + 0.75 + 0.6 × 3), over 1.55 on the sliders. It follows every strength now, and it is a slider of its own: dragged, it moves every music strength at once, each in proportion to where it stood, none past its own max, the 0.005 grid's remainders shared so the sum lands where it is let go.
 
-**The Engine page in his rows** (Viktor: «как всё ужать и передвинуть, чтобы на 1080p всё встало красиво и не таким
-длинным полотенцем… Ты всё замерь и пересмотри»): from 1400 px one grid of thirty columns, so thirds, fifths and sixths
-share it: Server over Hardware beside the log (1/3 · 2/3, the log filling the height), Compute | GPUs (2/5 · 3/5),
-Appearance | Writer (4/6 · 2/6), VAEs | LoRAs (1/6 · 5/6), Sliders, About; the cards in that order in the source, so the
-keys walk them as they are seen; narrower, the flex rows as before. At 1920×1080 the page went from 3 975 px to 3 187.
-About in one band of three columns (his word: «RUACH STUDIO | YuE2 + ggml + yue2.cpp | Sound decoders, Sliders, Loras.
-В колонке YuE2 — логотип так же, как в первой наш»): ours with the layout it took after, then the model, the engine and
-the tensor library under YuE2's own mark, then the add-ons. The mark is M-A-P's (the one on map-yue2.github.io), traced
-from the picture Viktor downloaded (a beige ground, much air): each ink split from the ground, traced, cropped, 17.8 KB
-inline; the word takes the theme's ink, the circle and the ² a terracotta drawn a little toward it. The files, for a light
-and a dark ground, in `src/brand/yue2/`.
+**The Engine page in his rows** (Viktor: «как всё ужать и передвинуть, чтобы на 1080p всё встало красиво и не таким длинным полотенцем… Ты всё замерь и пересмотри»): from 1400 px one grid of thirty columns, so thirds, fifths and sixths share it: Server over Hardware beside the log (1/3 · 2/3, the log filling the height), Compute | GPUs (2/5 · 3/5), Appearance | Writer (4/6 · 2/6), VAEs | LoRAs (1/6 · 5/6), Sliders, About; the cards in that order in the source, so the keys walk them as they are seen; narrower, the flex rows as before. At 1920×1080 the page went from 3 975 px to 3 187. About in one band of three columns (his word: «RUACH STUDIO | YuE2 + ggml + yue2.cpp | Sound decoders, Sliders, Loras. В колонке YuE2 — логотип так же, как в первой наш»): ours with the layout it took after, then the model, the engine and the tensor library under YuE2's own mark, then the add-ons. The mark is M-A-P's (the one on map-yue2.github.io), traced from the picture Viktor downloaded (a beige ground, much air): each ink split from the ground, traced, cropped, 17.8 KB inline; the word takes the theme's ink, the circle and the ² a terracotta drawn a little toward it. The files, for a light and a dark ground, in `src/brand/yue2/`.
 
-**The 💎 workspaces from Hugging Face** (Viktor: «Воркспейсы с 💎 — именно эти идут в соответствующие репозитории. И
-допиши код подтягивания этих воркспейсов из репо, по запросу пользователя, и если такой существует, спрашивать о
-восстановлении оригинальной копией, и краткий быстрый гайд в попап оверлее… Вдруг чел туда своего напишет, а мы
-перезатрём всё»). A published workspace is a folder of its repo: each take as MP3 320k with its cover, and
-`workspace.json` (the takes with their titles, notes and sections, the meta and the request of each: seeds, settings,
-music codes). `heresy/tools/publish-workspaces.sh` writes and uploads it (private; it stops while takes under 90 s are
-there, by his rule that approved probes are made again at full length first); `lab/diamond.py` lists the sets and
-fetches one on the user's word: through `tmp/diamond/` into `outputs/` (meta.json last, so the library sees a take only
-whole) and into the Collection, locked. The Librarian's «💎 From Hugging Face…» shows each set (here or not, its takes and
-size, or the hub's own words when it is not published) with one button. A set whose name is here already is never
-written over unasked: the lab answers 409, and the page asks, saying how to keep yours: rename it, then Get, and the
-original comes in beside it. Restoring brings back the takes it lacks, the published titles (through the engine) and
-notes, the published takes in the workspace (what was added leaves it and stays in the library; sections of its own
-stay). Checked against the real private repo in a sandbox studio (Get: 20 takes, 99 MB in 19 s; asked again: 409;
-Restore after a stray take, a note, a lost take and a changed title: one take fetched, the rest put back), and the dialog
-in each language with the lab's answers stubbed. «💎 Instrumental Probe LoRA» is published in
-`goldhub/Ruach_Studio_LoRAs/samples`; the three others wait for their full-length takes and for Viktor's word on where
-(datasets named after his bucket, `…_WS`, are the default; the bucket itself needs a newer hub client).
+**The 💎 workspaces from Hugging Face** (Viktor: «Воркспейсы с 💎 — именно эти идут в соответствующие репозитории. И допиши код подтягивания этих воркспейсов из репо, по запросу пользователя, и если такой существует, спрашивать о восстановлении оригинальной копией, и краткий быстрый гайд в попап оверлее… Вдруг чел туда своего напишет, а мы перезатрём всё»). A published workspace is a folder of its repo: each take as MP3 320k with its cover, and `workspace.json` (the takes with their titles, notes and sections, the meta and the request of each: seeds, settings, music codes). `heresy/tools/publish-workspaces.sh` writes and uploads it (private; it stops while takes under 90 s are there, by his rule that approved probes are made again at full length first); `lab/diamond.py` lists the sets and fetches one on the user's word: through `tmp/diamond/` into `outputs/` (meta.json last, so the library sees a take only whole) and into the Collection, locked. The Librarian's «💎 From Hugging Face…» shows each set (here or not, its takes and size, or the hub's own words when it is not published) with one button. A set whose name is here already is never written over unasked: the lab answers 409, and the page asks, saying how to keep yours: rename it, then Get, and the original comes in beside it. Restoring brings back the takes it lacks, the published titles (through the engine) and notes, the published takes in the workspace (what was added leaves it and stays in the library; sections of its own stay). Checked against the real private repo in a sandbox studio (Get: 20 takes, 99 MB in 19 s; asked again: 409; Restore after a stray take, a note, a lost take and a changed title: one take fetched, the rest put back), and the dialog in each language with the lab's answers stubbed. «💎 Instrumental Probe LoRA» is published in `goldhub/Ruach_Studio_LoRAs/samples`; the three others wait for their full-length takes and for Viktor's word on where (datasets named after his bucket, `…_WS`, are the default; the bucket itself needs a newer hub client).
 
-**The Writer knows what the probes found** (Viktor: «И не забудь, мы по всем инструментам хотели для комнаты Писателя
-для LLM дописать в уставы знакомые YuE2 инструменты, как минимум те стили музыкальные, что нагенерили, и т.п.»): the
-writing room's charter, besides the instruments heard and those not (1069), is told the instruments only our adapters
-play (the shofar at epoch 110, the duduk's breath), the 35 styles kept in «💎 Musical Styles» by their own words, and
-the voices of «💎 Voice Types» by the words that gave each (fifteen sung, nine spoken); the four not given (a boy treble
-came out a girl, an old man a woman, an old woman a young contralto, and no children at all), the metallic buzz on high
-female voices and choirs (a dry, close vocal against it), and how the spoken probes asked for speech with no singing.
-The voices and the adapters live in the sheet's source with the rest (`instruments_src.py`: `VOICES`, `ADAPTERS`), the
-styles count when their probes stand in a 💎 workspace; the charter is about 16,000 characters.
+**The Writer knows what the probes found** (Viktor: «И не забудь, мы по всем инструментам хотели для комнаты Писателя для LLM дописать в уставы знакомые YuE2 инструменты, как минимум те стили музыкальные, что нагенерили, и т.п.»): the writing room's charter, besides the instruments heard and those not (1069), is told the instruments only our adapters play (the shofar at epoch 110, the duduk's breath), the 35 styles kept in «💎 Musical Styles» by their own words, and the voices of «💎 Voice Types» by the words that gave each (fifteen sung, nine spoken); the four not given (a boy treble came out a girl, an old man a woman, an old woman a young contralto, and no children at all), the metallic buzz on high female voices and choirs (a dry, close vocal against it), and how the spoken probes asked for speech with no singing. The voices and the adapters live in the sheet's source with the rest (`instruments_src.py`: `VOICES`, `ADAPTERS`), the styles count when their probes stand in a 💎 workspace; the charter is about 16,000 characters.
 
-**A frozen workspace** (Viktor: «Деактивация воркспейса. Замораживаются все треки в этом представлении, никаких
-действий по ним, в `All Workspaces` и в поиске не отображаются. Сам деактивированный воркспейс немного засЕривается как
-неактивный»; and of the API tests' workspace: «я бы сделал неактивным… удалять его невовремя»): ⋯ → Freeze… The lab
-keeps it so: nothing changes a take frozen with it (a take in no workspace that is not frozen) or its membership, its
-sections with it: no like, note, hide, pin, move, rename, merge, deletion, trash or regeneration, each refused in words;
-a move from elsewhere never takes a take out of it; a take also in a living workspace lives on there. The Librarian
-greys the workspace (❄) and shows its takes only inside it, greyed, heard and read (Play, the datasheet), nothing
-else; they leave All Workspaces, the search and the counts. Unfreeze in its menu brings everything back. «API test ·
-Claude» frozen (20 takes; All Workspaces 620 → 600). Checked: the lab's rules on a sandbox collection (17 checks),
-the page on the real studio, the words in the seven languages.
+**A frozen workspace** (Viktor: «Деактивация воркспейса. Замораживаются все треки в этом представлении, никаких действий по ним, в `All Workspaces` и в поиске не отображаются. Сам деактивированный воркспейс немного засЕривается как неактивный»; and of the API tests' workspace: «я бы сделал неактивным… удалять его невовремя»): ⋯ → Freeze… The lab keeps it so: nothing changes a take frozen with it (a take in no workspace that is not frozen) or its membership, its sections with it: no like, note, hide, pin, move, rename, merge, deletion, trash or regeneration, each refused in words; a move from elsewhere never takes a take out of it; a take also in a living workspace lives on there. The Librarian greys the workspace (❄) and shows its takes only inside it, greyed, heard and read (Play, the datasheet), nothing else; they leave All Workspaces, the search and the counts. Unfreeze in its menu brings everything back. «API test · Claude» frozen (20 takes; All Workspaces 620 → 600). Checked: the lab's rules on a sandbox collection (17 checks), the page on the real studio, the words in the seven languages.
 
-**The sheet against his verdicts, and our two LoRA sets on it** (Viktor: «гайд по инструментам полностью пересмотри и
-сверь с тем, что я одобрил + наши два набора LoRA — Дудук и Шофар»): read row by row against «💎 Instrumental Probe»:
-200 instruments, 159 heard, 6 kept with his own words (the cowbell that is an electric guitar, the accordion like a
-harmonica, the didgeridoo's B, the sambuca as a harp, the duduk, the cicadas a style), 35 not identified: his «Tested,
-Failed» (the oboe, the shofar's eight attempts, the natural horn, the sambuca's strings) and the instruments whose
-probes he took out; none waits. The duduk's and the shofar's rows carry their adapter's A/B by epoch from «💎
-Instrumental Probe LoRA»: the engine alone, then e080 to e200 for the duduk; e099, e110, e121 and e167 for the shofar,
-▶ A and ▶ B with their seeds and his marks (e110 liked twice, e167 disliked twice).
+**The sheet against his verdicts, and our two LoRA sets on it** (Viktor: «гайд по инструментам полностью пересмотри и сверь с тем, что я одобрил + наши два набора LoRA — Дудук и Шофар»): read row by row against «💎 Instrumental Probe»: 200 instruments, 159 heard, 6 kept with his own words (the cowbell that is an electric guitar, the accordion like a harmonica, the didgeridoo's B, the sambuca as a harp, the duduk, the cicadas a style), 35 not identified: his «Tested, Failed» (the oboe, the shofar's eight attempts, the natural horn, the sambuca's strings) and the instruments whose probes he took out; none waits. The duduk's and the shofar's rows carry their adapter's A/B by epoch from «💎 Instrumental Probe LoRA»: the engine alone, then e080 to e200 for the duduk; e099, e110, e121 and e167 for the shofar, ▶ A and ▶ B with their seeds and his marks (e110 liked twice, e167 disliked twice).
 
-**Slider curves** (Viktor: «по кривым… либо было flat, как сейчас (как базовое состояние), и кривую в виде
-арки/параболы, либо амплитуду вручную мышкой двигая вспышки и затухания по слайдеру»; «Slider curves делай и тестируй.
-В гайды также добавь концепт»): a slider's strength runs through the song along its curve. In the request a slider may
-carry `curve`, points `[t, k]` (t the music from its first frame to the end of its budget, k the share of the strength)
-or a name (`flat`, `arch`, `rise`, `fall`); none is flat, as before. In the engine the gain became a one-number tensor the
-graph reads, set before each step to gain × curve(t), eased between two points by half a cosine, so the static decode
-graph is never rebuilt; the kept part of a song made again from a point counts in t; the curve goes back into the
-take's request, so a take made again runs the same; the log gives each curve at the song's quarters and where it stands
-every 250 steps. In the Creator a slider's row shows its curve small; a click opens its editor: Flat, Arch, Draw (a point
-dragged up for a flare, down for a fade, along the song; a double-click adds one, on a point takes it out). Tested on two
-throwaway servers beside the studio: a flat slider writes the very same 750 music tokens on the new binary and the one
-before; an arch and a drawn dip run their schedule. The guide says it in the seven languages.
+**Slider curves** (Viktor: «по кривым… либо было flat, как сейчас (как базовое состояние), и кривую в виде арки/параболы, либо амплитуду вручную мышкой двигая вспышки и затухания по слайдеру»; «Slider curves делай и тестируй. В гайды также добавь концепт»): a slider's strength runs through the song along its curve. In the request a slider may carry `curve`, points `[t, k]` (t the music from its first frame to the end of its budget, k the share of the strength) or a name (`flat`, `arch`, `rise`, `fall`); none is flat, as before. In the engine the gain became a one-number tensor the graph reads, set before each step to gain × curve(t), eased between two points by half a cosine, so the static decode graph is never rebuilt; the kept part of a song made again from a point counts in t; the curve goes back into the take's request, so a take made again runs the same; the log gives each curve at the song's quarters and where it stands every 250 steps. In the Creator a slider's row shows its curve small; a click opens its editor: Flat, Arch, Draw (a point dragged up for a flare, down for a fade, along the song; a double-click adds one, on a point takes it out). Tested on two throwaway servers beside the studio: a flat slider writes the very same 750 music tokens on the new binary and the one before; an arch and a drawn dip run their schedule. The guide says it in the seven languages.
 
-**Smaller, the same evening**: the cover's overlay as large as its picture (Viktor: «при 1024 обложке попап растягивался
-до 1024x1024»), and the painter keeps its 1024 px (it kept 768); the workspaces' « no longer sits on the Librarian's
-filters (Viktor: «Сделай отступ от кнопочки сворачивания»; the other rooms' fold buttons measured, 10 px and more); a
-voice probe is a probe too when made again (it came back at its old 40 s).
+**Smaller, the same evening**: the cover's overlay as large as its picture (Viktor: «при 1024 обложке попап растягивался до 1024x1024»), and the painter keeps its 1024 px (it kept 768); the workspaces' « no longer sits on the Librarian's filters (Viktor: «Сделай отступ от кнопочки сворачивания»; the other rooms' fold buttons measured, 10 px and more); a voice probe is a probe too when made again (it came back at its old 40 s).
 
-**The server log, read while it runs** (Viktor: «кнопочку полной распашки консоли на всю высоту, и чекбокс автопрокрутки
-по дефолту, — не возможно во время активности прокрутить и глянуть, что до этого»): the unfolded dock's ⤢ gives the log the
-window's full height (⤡ back; kept as chosen); Follow stays on by default, and a scroll up by hand lets go of it (it unticks)
-until you are back at the newest line (it ticks again). While you read, the lines under your eye stay put: the oldest go
-only past five times the count, and the view moves back by what went. The same in Engine's log. Checked live with the
-regenerations writing: 180 → 829 px at 1080p, 400 → 411 lines arrived and the view held.
+**The server log, read while it runs** (Viktor: «кнопочку полной распашки консоли на всю высоту, и чекбокс автопрокрутки по дефолту, — не возможно во время активности прокрутить и глянуть, что до этого»): the unfolded dock's ⤢ gives the log the window's full height (⤡ back; kept as chosen); Follow stays on by default, and a scroll up by hand lets go of it (it unticks) until you are back at the newest line (it ticks again). While you read, the lines under your eye stay put: the oldest go only past five times the count, and the view moves back by what went. The same in Engine's log. Checked live with the regenerations writing: 180 → 829 px at 1080p, 400 → 411 lines arrived and the view held.
 
-**Nothing gzipped** (Viktor: «Мы договорились избавиться от index.html.gz и других .gz, потому что это локальный сервис
-и нам нет смысла экономить на сжатии файлов»): the server carries no copy of the page any more (no xxd header, no
-`tools/public/index.html.gz` in git, no 406 without gzip); it reads `build/tools/public/index.html` from disk, from
-RUACH_PAGE or else beside its own build, and a page not built yet answers 503 with what to run. `build.sh` lost its
-gzip line, the lab's spectrum goes as it is (`cache/*.spec`, about 10 MB for 7 minutes) and the page reads it without
-unpacking (and a spectrum overtaken by another take no longer leaves its "Forge is measuring…" over the newer one's
-result). The patches to 1166 still carry the old page as binary; the release strips it, as before.
+**Nothing gzipped** (Viktor: «Мы договорились избавиться от index.html.gz и других .gz, потому что это локальный сервис и нам нет смысла экономить на сжатии файлов»): the server carries no copy of the page any more (no xxd header, no `tools/public/index.html.gz` in git, no 406 without gzip); it reads `build/tools/public/index.html` from disk, from RUACH_PAGE or else beside its own build, and a page not built yet answers 503 with what to run. `build.sh` lost its gzip line, the lab's spectrum goes as it is (`cache/*.spec`, about 10 MB for 7 minutes) and the page reads it without unpacking (and a spectrum overtaken by another take no longer leaves its "Forge is measuring…" over the newer one's result). The patches to 1166 still carry the old page as binary; the release strips it, as before.
 
-**A photograph says whose it is** (Viktor: «Instrument pictures одобряю. Тримай и апскейли их до нашего стандартного
-1024x1024»): where the painter could only guess an instrument, its probes get a photograph from Wikimedia Commons,
-squared to 1024 (trimmed on a plain ground, else its middle; 4x_ClearRealityV1 first where the original is small). Its
-`artwork.json` carries the source, file, page, licence, author and a `credit` line; the lab lists the credits with the
-pictures (`/lab/arts` → `credits`), and the overlay shows it under the picture («Picture: author · licence · Wikimedia
-Commons», the page one click away), in the seven languages. The picture it replaces is kept in `artwork-removed/`.
+**A photograph says whose it is** (Viktor: «Instrument pictures одобряю. Тримай и апскейли их до нашего стандартного 1024x1024»): where the painter could only guess an instrument, its probes get a photograph from Wikimedia Commons, squared to 1024 (trimmed on a plain ground, else its middle; 4x_ClearRealityV1 first where the original is small). Its `artwork.json` carries the source, file, page, licence, author and a `credit` line; the lab lists the credits with the pictures (`/lab/arts` → `credits`), and the overlay shows it under the picture («Picture: author · licence · Wikimedia Commons», the page one click away), in the seven languages. The picture it replaces is kept in `artwork-removed/`.
 
-**The 💎 sets in one bucket** (Viktor: «Упаковывай воркспейсы 💎 в goldhub/Ruach_Studio_Instruments_Probe_WS бакет.
-Поставил его в private»): the four published workspaces live in that Storage Bucket, a folder each (`instrumental-probe-
-lora/`, `instrumental-probe/`, `musical-styles/`, `voice-types/`: the takes as MP3 320k with their covers, and
-`workspace.json`). A bucket is known only to huggingface_hub 2.x, and the studio's is pinned at 0.36 (transformers 4.57
-holds it under 1.0), so the lab reads the bucket over plain HTTPS: `workspace.json` and each file from
-`/buckets/…/resolve/…`, the token sent to the Hub only, never to the signed address the bytes come from (a header is
-latin-1 only: a 💎 in the User-Agent stopped the first try). `heresy/tools/publish-workspaces.sh` fills it with an hf of
-its own (2.1.1 in `tmp/hf-buckets-venv`, set up at its first run) and a write token (`HF_HOME`), `sync --delete` inside
-the set's folder. The About card's link says «Probes, styles and voices».
+**The 💎 sets in one bucket** (Viktor: «Упаковывай воркспейсы 💎 в goldhub/Ruach_Studio_Instruments_Probe_WS бакет. Поставил его в private»): the four published workspaces live in that Storage Bucket, a folder each (`instrumental-probe- lora/`, `instrumental-probe/`, `musical-styles/`, `voice-types/`: the takes as MP3 320k with their covers, and `workspace.json`). A bucket is known only to huggingface_hub 2.x, and the studio's is pinned at 0.36 (transformers 4.57 holds it under 1.0), so the lab reads the bucket over plain HTTPS: `workspace.json` and each file from `/buckets/…/resolve/…`, the token sent to the Hub only, never to the signed address the bytes come from (a header is latin-1 only: a 💎 in the User-Agent stopped the first try). `heresy/tools/publish-workspaces.sh` fills it with an hf of its own (2.1.1 in `tmp/hf-buckets-venv`, set up at its first run) and a write token (`HF_HOME`), `sync --delete` inside the set's folder. The About card's link says «Probes, styles and voices».
 
 ### 1167 · The Creator as a kitchen; the LoRA repo in four rooms
 
-**The Creator as a kitchen** (Viktor 05.10.2026: «Левую промптинг генерации на 2/3 слева как основную, разделить её на
-две колонки по 1/3, всё пересмотреть и реорганизовать. Статистику/карту трека реально нужно на 1/3 ширины справа…
-[дубли] во втором фрейме 1/3 ширины вниз этого фрейма под-фреймом… Каждую секцию отчётливо обособить… карточным
-абажуром. Схлопнутые блоки… более контрастно»; on the draft: «Одобряю», the takes folded to the right, the player
-minimal): the form regrouped, no field changed, into two columns of barely raised cards, the words (the song with the
-Writer's document, the style, the lyrics) and the machine (the profile, the plan and the seeds, the sound, the adapters,
-the four drawers two by two). From 1600 px they stand side by side over two thirds of the room; the last third is the
-take over its takes, a line between them to drag (Home or a double-click for the default; kept as a share of the
-height), the takes in compact cards of two lines, folded to a strip at the right edge with its word on its side. Every
-adapter not in use waits behind one line, «Add a LoRA» with its count, remembered open or closed; folded parts and
-closed drawers stand on a firmer ground with the chevron in the accent. The Creator's player is one row from 1660 px,
-as the scaled-up page has it. Below 1600 px the three columns and their grips stay. A tip reached by the keyboard now
-stays while the pointer only passes (the kitchen scrolls under a still pointer when a field takes the focus). At 2560
-the kitchen fits without a scroll; at 1920 it scrolls by about 430 px. Made beside the studio first (a worktree on
-:41994), merged after his look.
+**The Creator as a kitchen** (Viktor 05.10.2026: «Левую промптинг генерации на 2/3 слева как основную, разделить её на две колонки по 1/3, всё пересмотреть и реорганизовать. Статистику/карту трека реально нужно на 1/3 ширины справа… [дубли] во втором фрейме 1/3 ширины вниз этого фрейма под-фреймом… Каждую секцию отчётливо обособить… карточным абажуром. Схлопнутые блоки… более контрастно»; on the draft: «Одобряю», the takes folded to the right, the player minimal): the form regrouped, no field changed, into two columns of barely raised cards, the words (the song with the Writer's document, the style, the lyrics) and the machine (the profile, the plan and the seeds, the sound, the adapters, the four drawers two by two). From 1600 px they stand side by side over two thirds of the room; the last third is the take over its takes, a line between them to drag (Home or a double-click for the default; kept as a share of the height), the takes in compact cards of two lines, folded to a strip at the right edge with its word on its side. Every adapter not in use waits behind one line, «Add a LoRA» with its count, remembered open or closed; folded parts and closed drawers stand on a firmer ground with the chevron in the accent. The Creator's player is one row from 1660 px, as the scaled-up page has it. Below 1600 px the three columns and their grips stay. A tip reached by the keyboard now stays while the pointer only passes (the kitchen scrolls under a still pointer when a field takes the focus). At 2560 the kitchen fits without a scroll; at 1920 it scrolls by about 430 px. Made beside the studio first (a worktree on :41994), merged after his look.
 
-**The LoRA repo in four rooms** (Viktor 05.10.2026: «Для репо LoRA, пока ещё не поздно, сделай структуру: instruments,
-styles, vocals (певчие), voices (говорящие)»): goldhub/Ruach_Studio_LoRAs holds `instruments/` (the duduk and the shofar
-with their A/B samples), `styles/`, `vocals/` (singing voices) and `voices/` (speaking voices), the last three with a
-README each until their adapters come. `heresy/tools/upload-loras.sh` stages it so; the old top-level folders left the
-repo once each of their files had its copy under `instruments/`. The studio's `loras/` is unchanged: an adapter's folder
-goes there as it comes.
+**The LoRA repo in four rooms** (Viktor 05.10.2026: «Для репо LoRA, пока ещё не поздно, сделай структуру: instruments, styles, vocals (певчие), voices (говорящие)»): goldhub/Ruach_Studio_LoRAs holds `instruments/` (the duduk and the shofar with their A/B samples), `styles/`, `vocals/` (singing voices) and `voices/` (speaking voices), the last three with a README each until their adapters come. `heresy/tools/upload-loras.sh` stages it so; the old top-level folders left the repo once each of their files had its copy under `instruments/`. The studio's `loras/` is unchanged: an adapter's folder goes there as it comes.
 
 ### 1168 · Frames over the Creator; the lyrics' meter and its stress marks; F5, copying, Clear and New song set right
 
-**Frames over the room** (Viktor 06.10.2026: «прикрути на каждый фрейм — левый и правый — разворот этого фрейма на "полный
-экран"… с увеличением масштаба всего фрейма здесь на добрых 20%… кнопку переключения между фреймами»; later: «при начале
-генерации всё же не нужно схлопывать фрейм… Просто переключаться на правый, где генерация идёт… И кликами на плеер чтобы не
-убегал фокус»): the form and the take each lift over the room, 95 % of the screen above the player and a fifth larger, with
-a button to the other frame; Esc, a click beside it or another room puts it back. Generate turns a lifted frame to the
-take's, where the run shows; Retake, Reuse and a score into the form bring the form's frame; the player's clicks keep the
-frame and give the keys back to it; the take's frame tools sit in its top right corner.
+**Frames over the room** (Viktor 06.10.2026: «прикрути на каждый фрейм — левый и правый — разворот этого фрейма на "полный экран"… с увеличением масштаба всего фрейма здесь на добрых 20%… кнопку переключения между фреймами»; later: «при начале генерации всё же не нужно схлопывать фрейм… Просто переключаться на правый, где генерация идёт… И кликами на плеер чтобы не убегал фокус»): the form and the take each lift over the room, 95 % of the screen above the player and a fifth larger, with a button to the other frame; Esc, a click beside it or another room puts it back. Generate turns a lifted frame to the take's, where the run shows; Retake, Reuse and a score into the form bring the form's frame; the player's clicks keep the frame and give the keys back to it; the take's frame tools sit in its top right corner.
 
-**The Score card with no score** («Туда только кнопку "Сгенерить партитуру из звука"»): a take without a score shows that
-button alone, the tools coming with a score. **Stars:** ★ among the Librarian's filters (the favourites in the workspace in
-hand); the Takes' star drawn as the thumbs. **The (i) notes** («везде, где есть (i), и если там после идёт микро
-подсказка, либо убирай её, либо в тултип»): 23 short notes after an (i) are their tips' bold first lines; the Style bar's
-hint goes. **The trash and the player:** a take moved to the trash, any way, leaves the player at once. **Play this song**
-hides while a song is made and offers the finished one when the player only holds it.
+**The Score card with no score** («Туда только кнопку "Сгенерить партитуру из звука"»): a take without a score shows that button alone, the tools coming with a score. **Stars:** ★ among the Librarian's filters (the favourites in the workspace in hand); the Takes' star drawn as the thumbs. **The (i) notes** («везде, где есть (i), и если там после идёт микро подсказка, либо убирай её, либо в тултип»): 23 short notes after an (i) are their tips' bold first lines; the Style bar's hint goes. **The trash and the player:** a take moved to the trash, any way, leaves the player at once. **Play this song** hides while a song is made and offers the finished one when the player only holds it.
 
-**F5:** in the Librarian it reads the library again and keeps the page and the music (Ctrl+F5 reloads); a run's clock goes
-on through a reload («стоит во время генерации нажать F5, счётчик времени обнуляется»); a run brought back by F5 lands in
-the workspace in hand and plays when done; a setting goes to the settings file at once. **Copying** («Кнопка копирования в
-буфер не копирует»): opened by the machine's address (http://192.168.…) the page has no clipboard API from the browser; its
-own copy stands in. **The Writer's fields** one height and dress, the API key wide with «Remember» beside it. **Clear and
-New song** («чем она отличается от `Start new song`? Это нужно утрясти»): Clear takes the words (title, style, lyrics,
-score), both seeds and loaded codes; New song puts the mode, sampling, sliders and LoRAs back to the defaults as well; Sound
-and output stays with both.
+**F5:** in the Librarian it reads the library again and keeps the page and the music (Ctrl+F5 reloads); a run's clock goes on through a reload («стоит во время генерации нажать F5, счётчик времени обнуляется»); a run brought back by F5 lands in the workspace in hand and plays when done; a setting goes to the settings file at once. **Copying** («Кнопка копирования в буфер не копирует»): opened by the machine's address (http://192.168.…) the page has no clipboard API from the browser; its own copy stands in. **The Writer's fields** one height and dress, the API key wide with «Remember» beside it. **Clear and New song** («чем она отличается от `Start new song`? Это нужно утрясти»): Clear takes the words (title, style, lyrics, score), both seeds and loaded codes; New song puts the mode, sampling, sliders and LoRAs back to the defaults as well; Sound and output stays with both.
 
-**The lyrics' meter** («нужна не только рифма, но и длина строк… вертикальную линейку, которая по куплету+мосту будет
-едино мерить. По при-корусу и корусу — отдельно… спелл чекер… подсчёт символов… ручную растяжку поля»): beside each line
-its syllables against its group's ruler (verse and bridge one group; the pre-chorus, the chorus and every other section
-their own; the ruler at the median; green, amber, red), what is in round brackets hatched after (it may be sung); under the
-box the counts, the tags, the brackets and the phonetic hand, the browser's spelling check in the lyrics' language, a height
-drawn by hand kept. The 110 official examples' tags are known (a tag's head names its section; who sings or what the song
-is opens none); a section with no words shows its name alone. **Stress marks astray** («вшей ещё проверку проёбов с x301.
-Что не на гласных, в пустоте, на пробеле»): a mark off a vowel (at a line's start, after a space or a sign, on a consonant,
-doubled, a spacing ´) in red, a word with two in amber, a button that selects each in turn. The count, measured on his
-lyrics (2,033 lines): stress marks move none of it and ע counts; a decomposed «й», a composed Latin ó and Belarusian ў,
-counted wrong before, count right. **The cheat-sheet's Lyrics tags:** a third tab with the sections as the official
-examples write them, counted, who sings, the instrumental cues, the meta-tags and his phonetic hand; a click puts a tag
-into the lyrics.
+**The lyrics' meter** («нужна не только рифма, но и длина строк… вертикальную линейку, которая по куплету+мосту будет едино мерить. По при-корусу и корусу — отдельно… спелл чекер… подсчёт символов… ручную растяжку поля»): beside each line its syllables against its group's ruler (verse and bridge one group; the pre-chorus, the chorus and every other section their own; the ruler at the median; green, amber, red), what is in round brackets hatched after (it may be sung); under the box the counts, the tags, the brackets and the phonetic hand, the browser's spelling check in the lyrics' language, a height drawn by hand kept. The 110 official examples' tags are known (a tag's head names its section; who sings or what the song is opens none); a section with no words shows its name alone. **Stress marks astray** («вшей ещё проверку проёбов с x301. Что не на гласных, в пустоте, на пробеле»): a mark off a vowel (at a line's start, after a space or a sign, on a consonant, doubled, a spacing ´) in red, a word with two in amber, a button that selects each in turn. The count, measured on his lyrics (2,033 lines): stress marks move none of it and ע counts; a decomposed «й», a composed Latin ó and Belarusian ў, counted wrong before, count right. **The cheat-sheet's Lyrics tags:** a third tab with the sections as the official examples write them, counted, who sings, the instrumental cues, the meta-tags and his phonetic hand; a click puts a tag into the lyrics.
 
-**The guide:** the meter and his phonetic hand (the stress mark, a capital stressed vowel, ע, the Latin o, a stretched
-vowel, [Interlude] and [Break], round brackets, Hebrew with its points) and Save, Open, Clear and New song as they are, in
-all seven languages. The interface's new words are English only until the pass before 2.0.0 (Viktor: «Добавочные языки
-интерфейса давай в самую последнюю очередь перед финальным релизом 2.0.0»). Patches 1180–1194.
+**The guide:** the meter and his phonetic hand (the stress mark, a capital stressed vowel, ע, the Latin o, a stretched vowel, [Interlude] and [Break], round brackets, Hebrew with its points) and Save, Open, Clear and New song as they are, in all seven languages. The interface's new words are English only until the pass before 2.0.0 (Viktor: «Добавочные языки интерфейса давай в самую последнюю очередь перед финальным релизом 2.0.0»). Patches 1180–1194.
 
-**Open** («О том, что сброшено, Open молчит… это нужно допилить»): a prompt file's places the form could not hold (a
-field no prompt has, an unknown mode, solver, VAE, slider or adapter, a number that is none, a knob past its bounds) are
-listed in the toast, each with what the form holds instead; a file the page saved opens as before.
+**Open** («О том, что сброшено, Open молчит… это нужно допилить»): a prompt file's places the form could not hold (a field no prompt has, an unknown mode, solver, VAE, slider or adapter, a number that is none, a knob past its bounds) are listed in the toast, each with what the form holds instead; a file the page saved opens as before.
 
-**Another VAE in seconds** («должны лишь готовые латенты за 5-7 секунд декодироваться»; «ты как-то сохранял готовые
-латенты. Вот прикрутить бы этот код к движку»): the Kit's VAE buttons on a take sent its replay with another decoder,
-and the whole sound stage ran again. The engine now keeps each take's acoustic latents beside its audio (latents.f32, the
-layout of its own tensor dumps, about 3 MB for eight minutes); a request with decode_from runs the VAE alone on them.
-Measured on an RTX 3090: 120 s of a song decoded again in 2.1 s (1.0 s of decoding), the same VAE giving the same sound
-to the sample, Legacy and Blend 1.6 s each; a take made before refused with that said, and the page renders its sound
-again with its button saying so. **The VAE** is chosen in the ☰ menu under the model («Выбор VAE переносим в бар в
-спадающее меню прямо под выбор модели»), the Composer's block gone. **Max length** («То поле в блоке семплера вообще
-нужно убрать и передавать туда секундное значение»): read first the other way round, the music's Max tokens hidden;
-Viktor from the road: «В Sound and Output поле max length так и осталось». The «sampler's block» was Sound and output (the
-solver is its sampler): Max length lives in Sampling now, the music's time, editable with no lock, the request's duration
-following it; Sound and output has no length field. Setting it, the duration is written before the bounds' guard runs,
-which re-syncs the ceiling from it (written after, the old length pulled the new one straight back). **Denoising steps**
-for ODE steps («замени на понятное DENOISING STEPS»); *Reset output* puts the solver back to midpoint too («не обнуляет
-выбор резолвера»). **The text profile** is off while the Creator's profile is music («деактивируй текстовый профиль,
-потому что он чисто для начитки»).
+**Another VAE in seconds** («должны лишь готовые латенты за 5-7 секунд декодироваться»; «ты как-то сохранял готовые латенты. Вот прикрутить бы этот код к движку»): the Kit's VAE buttons on a take sent its replay with another decoder, and the whole sound stage ran again. The engine now keeps each take's acoustic latents beside its audio (latents.f32, the layout of its own tensor dumps, about 3 MB for eight minutes); a request with decode_from runs the VAE alone on them. Measured on an RTX 3090: 120 s of a song decoded again in 2.1 s (1.0 s of decoding), the same VAE giving the same sound to the sample, Legacy and Blend 1.6 s each; a take made before refused with that said, and the page renders its sound again with its button saying so. **The VAE** is chosen in the ☰ menu under the model («Выбор VAE переносим в бар в спадающее меню прямо под выбор модели»), the Composer's block gone. **Max length** («То поле в блоке семплера вообще нужно убрать и передавать туда секундное значение»): read first the other way round, the music's Max tokens hidden; Viktor from the road: «В Sound and Output поле max length так и осталось». The «sampler's block» was Sound and output (the solver is its sampler): Max length lives in Sampling now, the music's time, editable with no lock, the request's duration following it; Sound and output has no length field. Setting it, the duration is written before the bounds' guard runs, which re-syncs the ceiling from it (written after, the old length pulled the new one straight back). **Denoising steps** for ODE steps («замени на понятное DENOISING STEPS»); *Reset output* puts the solver back to midpoint too («не обнуляет выбор резолвера»). **The text profile** is off while the Creator's profile is music («деактивируй текстовый профиль, потому что он чисто для начитки»).
 
-**The Writer's backup** («глобальный экспорт/импорт всех данных скопом для бекапа»): the whole notebook in one file and
-back, nothing written over. **Ctrl+F in a box** («перехватывать Ctrl+F, чтобы искать… только в активном блоке»): the
-lyrics', the style's and the Writer's boxes find in themselves, the match marked over the box; stress marks, ё, ע and
-the Latin o and a do not stand in the way. Viktor's first try found two faults, mended the same hour: in a Russian
-layout Ctrl+F comes as «а», so the key is read (KeyF), not its letter; in a lifted frame (zoomed 1.2) the mark floated,
-now measured in the box's own pixels and drawn at its scale. **The training keeps ע** («Оставляй ע как есть»).
+**The Writer's backup** («глобальный экспорт/импорт всех данных скопом для бекапа»): the whole notebook in one file and back, nothing written over. **Ctrl+F in a box** («перехватывать Ctrl+F, чтобы искать… только в активном блоке»): the lyrics', the style's and the Writer's boxes find in themselves, the match marked over the box; stress marks, ё, ע and the Latin o and a do not stand in the way. Viktor's first try found two faults, mended the same hour: in a Russian layout Ctrl+F comes as «а», so the key is read (KeyF), not its letter; in a lifted frame (zoomed 1.2) the mark floated, now measured in the box's own pixels and drawn at its scale. **The training keeps ע** («Оставляй ע как есть»).
 
-**Upstream** («По репо апстримов подтяни патчи, особенно с ggml+yue2-cpp»): yue2.cpp's five commits since our base (its
-ggml fork rebased on ggml 0.26.0, 147 commits: CUDA kernels and fixes among them; Windows build scripts; a CMake policy
-range), taken as commits of ours so the patch series stays one line. Measured: his two-minute recipe in 51 s on GPU1,
-54–61 s on the engine before. The official YuE2 repository's code changes since 10.09 are its own Python's (UTF-8 I/O,
-batches, an example's line endings) and its instrumental recipe, which the studio's Instrumental already follows.
-**Windows 11**: INSTALL_WINDOWS.md, through WSL2, said to be untried by us.
+**Upstream** («По репо апстримов подтяни патчи, особенно с ggml+yue2-cpp»): yue2.cpp's five commits since our base (its ggml fork rebased on ggml 0.26.0, 147 commits: CUDA kernels and fixes among them; Windows build scripts; a CMake policy range), taken as commits of ours so the patch series stays one line. Measured: his two-minute recipe in 51 s on GPU1, 54–61 s on the engine before. The official YuE2 repository's code changes since 10.09 are its own Python's (UTF-8 I/O, batches, an example's line endings) and its instrumental recipe, which the studio's Instrumental already follows. **Windows 11**: INSTALL_WINDOWS.md, through WSL2, said to be untried by us.
 
-**Tags under a «[»** («при наборе `[` появлялись как в кодовых IDE подсказки с выбором, Enter и вставка? Базовые в самом
-начале — Verse, Bridge, etc, но на особые Intro, Outro, END проверка, если уже есть в тексте»): heresy-complete.js, on the
-Creator's and the Writer's lyrics. The cheat-sheet's sections (lyricTags()), the common ones first, then the three a song has
-once, then the rest as the examples count them; narrowed from a word's start, in a Russian or Ukrainian layout too; a typed
-number numbers the tag, numbered verses are offered the next; Enter or Tab inserts by the browser's own typing, so Ctrl+Z
-takes it back; Intro, Outro and End already there (his [END] too) last and dimmed with their line. Ctrl+Space opens it and,
-at a line's start, types the «[» itself (no Latin layout for it). It inserts the official examples' [End]; his songs write
-[END] (30 of them), which counts as there.
+**Tags under a «[»** («при наборе `[` появлялись как в кодовых IDE подсказки с выбором, Enter и вставка? Базовые в самом начале — Verse, Bridge, etc, но на особые Intro, Outro, END проверка, если уже есть в тексте»): heresy-complete.js, on the Creator's and the Writer's lyrics. The cheat-sheet's sections (lyricTags()), the common ones first, then the three a song has once, then the rest as the examples count them; narrowed from a word's start, in a Russian or Ukrainian layout too; a typed number numbers the tag, numbered verses are offered the next; Enter or Tab inserts by the browser's own typing, so Ctrl+Z takes it back; Intro, Outro and End already there (his [END] too) last and dimmed with their line. Ctrl+Space opens it and, at a line's start, types the «[» itself (no Latin layout for it). It inserts the official examples' [End]; his songs write [END] (30 of them), which counts as there.
 
-**The meter by the sung sections** («игнорирование подсчётов, если в строке два [] тега типа [Break] [Silence]»; «Счёт по
-базису реальных вокальных секций. Даже если внутри паузные, интерлюдия/прелюдия, общее продолжаем по главному тегу
-секции»): every [tag] of a line is a tag, never sung (a line of tags alone none, a tag inside a line left out); a pause,
-break, silence, interlude, prelude or instrumental cue inside a sung section opens no group (dimmed, the section's ruler
-goes on); before the first sung section an intro's lines keep their own. **A syllable** («Считает гласные, а нужно считать
-слоги… Я|же|ви|жу|глу|п|цо́в|с|при|ду́р|чес|ким|пла|ном… 15 долей. Сможешь унифицировать счётчики и для всех языков»): in
-Russian a syllable is one vowel letter, and the meter counted that; his split is fourteen parts, two with no vowel (п, с),
-consonants that take time but are no syllable: глуп-цо́в спри-ду́р-чес-ким, twelve. Elsewhere it was wrong, and is mended:
-Spanish and Italian went by English (a final e silent: «noche» one), Greek lost its diaeresis, Hebrew counted ע and the
-shin's dot, Chinese counted nothing. Each language by its own rules now; the Latin words' language from the style, else from
-the lyrics' small words (the spelling check follows it).
+**The meter by the sung sections** («игнорирование подсчётов, если в строке два [] тега типа [Break] [Silence]»; «Счёт по базису реальных вокальных секций. Даже если внутри паузные, интерлюдия/прелюдия, общее продолжаем по главному тегу секции»): every [tag] of a line is a tag, never sung (a line of tags alone none, a tag inside a line left out); a pause, break, silence, interlude, prelude or instrumental cue inside a sung section opens no group (dimmed, the section's ruler goes on); before the first sung section an intro's lines keep their own. **A syllable** («Считает гласные, а нужно считать слоги… Я|же|ви|жу|глу|п|цо́в|с|при|ду́р|чес|ким|пла|ном… 15 долей. Сможешь унифицировать счётчики и для всех языков»): in Russian a syllable is one vowel letter, and the meter counted that; his split is fourteen parts, two with no vowel (п, с), consonants that take time but are no syllable: глуп-цо́в спри-ду́р-чес-ким, twelve. Elsewhere it was wrong, and is mended: Spanish and Italian went by English (a final e silent: «noche» one), Greek lost its diaeresis, Hebrew counted ע and the shin's dot, Chinese counted nothing. Each language by its own rules now; the Latin words' language from the style, else from the lyrics' small words (the spelling check follows it).
 
-**Seen, asked of the page** («Твоя подсветка работает при ровном скейле в 100%. На 110% уже съехала вниз»): not the zoom.
-A lifted frame's sticky Generate bar is 70 px, and the frame's own box reaches under it; a match was taken for seen down to
-48 px above the frame's foot, so in the 22 px between nothing scrolled and the mark stood on the bar; at 110 % his line fell
-there. Measured with a real browser zoom (the profile's zoom level): at 100 % and at 110 % a line put under the bar left the
-mark on it. Now whether a line is seen is asked of the page (what stands at that point), the browser scrolls a probe into
-the middle of every box on the way, and a mark is drawn only on words seen; the stress marks' button likewise. **The view
-stays** («Если активен виджет поиска… встал курсором на другом месте, и единое движение клавишами… переносит оттуда на
-место поиска»): words typed in the box count the matches again and do not move the view; Esc from the box closes the bar
-and leaves the cursor; Esc in the find bar or the tags' list of a lifted frame closes them and keeps the frame. **The
-solver** spans two columns of Sound and output while the MP3 bitrate is hidden («Расширь селектор солвера на две колонки,
-чтобы была симетрия»). Patches 1196–1197.
+**Seen, asked of the page** («Твоя подсветка работает при ровном скейле в 100%. На 110% уже съехала вниз»): not the zoom. A lifted frame's sticky Generate bar is 70 px, and the frame's own box reaches under it; a match was taken for seen down to 48 px above the frame's foot, so in the 22 px between nothing scrolled and the mark stood on the bar; at 110 % his line fell there. Measured with a real browser zoom (the profile's zoom level): at 100 % and at 110 % a line put under the bar left the mark on it. Now whether a line is seen is asked of the page (what stands at that point), the browser scrolls a probe into the middle of every box on the way, and a mark is drawn only on words seen; the stress marks' button likewise. **The view stays** («Если активен виджет поиска… встал курсором на другом месте, и единое движение клавишами… переносит оттуда на место поиска»): words typed in the box count the matches again and do not move the view; Esc from the box closes the bar and leaves the cursor; Esc in the find bar or the tags' list of a lifted frame closes them and keeps the frame. **The solver** spans two columns of Sound and output while the MP3 bitrate is hidden («Расширь селектор солвера на две колонки, чтобы была симетрия»). Patches 1196–1197.
 
-**Consonant beats** (to my offer to draw «согласные доли» as the brackets are drawn: «Допиши одиночные согласные доли,
-потому что мы не меряем по реальным слогам между 2 и 4 символами, а по реальной затрате времени на произношение»): the
-meter measures the time a line takes. In Russian, Ukrainian and Belarusian words, a word with no vowel (с, в, к, з, й, ў)
-and a stop right after a vowel closed against an affricate (п|ц, т|ч, д|ц; not сердце's silent д, whose stop follows a
-consonant) are beats of their own, counted with the line's syllables (its bar, its number, the group's ruler) and drawn
-lighter at the bar's end; under the box the syllables stay syllables, the consonant beats counted beside them. His line
-«Я же вижу глупцо́в с приду́рческим планом» is 12 and 2: 14, his own split. The rule inside a word is narrow on purpose
-(his one example: глу|п|цо́в; not г|д in когда, not к|т in доктор): widened when his ear asks. **[END]**: the tags list
-writes it as his songs do («Да, измени»); the cheat-sheet keeps the official examples' [End]. Patch 1198.
+**Consonant beats** (to my offer to draw «согласные доли» as the brackets are drawn: «Допиши одиночные согласные доли, потому что мы не меряем по реальным слогам между 2 и 4 символами, а по реальной затрате времени на произношение»): the meter measures the time a line takes. In Russian, Ukrainian and Belarusian words, a word with no vowel (с, в, к, з, й, ў) and a stop right after a vowel closed against an affricate (п|ц, т|ч, д|ц; not сердце's silent д, whose stop follows a consonant) are beats of their own, counted with the line's syllables (its bar, its number, the group's ruler) and drawn lighter at the bar's end; under the box the syllables stay syllables, the consonant beats counted beside them. His line «Я же вижу глупцо́в с приду́рческим планом» is 12 and 2: 14, his own split. The rule inside a word is narrow on purpose (his one example: глу|п|цо́в; not г|д in когда, not к|т in доктор): widened when his ear asks. **[END]**: the tags list writes it as his songs do («Да, измени»); the cheat-sheet keeps the official examples' [End]. Patch 1198.
+
+### 1169 · RC3 begins: Ctrl+F's mark along the line; the visiting card and the README after rc2
+
+**Ctrl+F along the line** (Viktor 07.10.2026, at 100 % and 125 %: «выделение найденного по вертикали больше не сбегает, но по горизонтали бежит влево… С увеличением скейла страницы больше смещение. Или просто остаётся на фиксированом месте»): the copy of the box that says where a match's letters stand (and the tags list's copy that says where the cursor stands) was laid out in the page's body, outside a lifted frame's zoom, its letters drawn at another size; on his machine their rounding ran the mark along a line. Both copies stand beside their box now, at its own zoom, read back in its pixels, with the font's kerning, features, stretch and rendering copied too. Headless never showed his drift (0.2–0.7 px with any hinting, so the fix is judged by his eye); against a copy in the box's own context the mark is off by 0 at 100 % and 125 %. Patch 1199.
+
+**The visiting card** after rc2 went out: «на русский переключил и увидел вручную перенесённые строки… исправь для правильного autowrap»: no line was broken by hand; the browser hung a one-letter word at a line's end (…текст, а), dropped a model's number to the next line (RTX / 3090), ended paragraphs in one word. Headings and the lead in balanced lines, the text with no lone last word (text-wrap), and site/build.py binds short words, the particles, numbers with their units, models with their numbers and dashes with non-breaking spaces, in every language. The heading as he wrote it: «Песни из слов и аккордов / на твоей собственной машине», no full stop, no comma, in all seven. The lyrics editor with his screenshot («Добавь скриншот редактора на сайт и в репо… в WHY RUACH STUDIO'S YuE2 BEATS SUNO… добавь эту фичу»; the adapters out of the frame), its picture's height following its width («ты зажал пикселами высоту вместо auto»); the little story without its language buttons («Переключатели языков в литтл стори уже не нужен же»). The README's What comes next split into Done › 2.0.0-rc2 and To do › rc3 and after («Ты проморгал What comes next»).
+
+**What cannot be undone asks first** (the rc3 list: «Every button that cannot be undone behind a dialog»). Every delete, purge, empty, reset and replace the page sends or does was read through: the takes, the trash, the workspaces, the Writer's documents, saved styles and profiles, text profiles, briefs, the Trainer's runs and purges, Clear, New song, the page settings and the queue's cancel (pressed twice) asked already; the Writer's restore keeps the version before. Seven did not: Remove score and an example score over another, Reset sampling, the sliders' reset, Reset output, Default look and fonts, Remove current artwork. They ask now, and only when something would go (a score in the field, a knob off its default, a font chosen): at the defaults they act at once, so a reset at rest costs no click. The music's Max tokens is left out of the sampling question: it is the song's length, Max length's (it stands at 9,000 for 6:00, off the knob's default, from the page's first moment). Patch 1200.
+
+**The Writer's models with their prices** (the rc3 list: «The Writer's models with their prices, from OpenRouter's list, as you type»): the page already fetched OpenRouter's list (467 models on 07.10, CORS open, no key needed) into the field's suggestions, ids alone. Each now carries its price per million tokens in and out and its context, in the suggestion's label (Chrome shows it beside the id), in a line under the field for the chosen one (amber for a name the list does not know) and in the quick picks' tips; 0 is «free», a router's negative price «the price varies». A check feeds a list of its own (HeresyOrModels.take), so the suite does not lean on the internet. Patch 1201.
+
+**The reload keys ask first** («Для F5 добавляем блокер с диалогом и чреватостью… Можно предложить автоматическое сохранение композера в комнату Писателя»; «Помимо F5 можно ещё Ctrl+Shift+R»): F5, Shift+F5, Ctrl+R and Ctrl+Shift+R open the studio's dialog (a third button now, `alt`): what a reload takes and keeps, and with a song in the form «Save to the Writer, then reload» (HeresyWriter.fromCreate: the document in hand gets a version, or one is made; a failed save keeps the page). Ctrl+F5 is the reload at once; the Librarian's F5 reads the library, as before. **Shift+Tab** («для переключения между композером и Исполнителем… всегда в композере. Это главная кузня») is the Creator's frames key: a lifted frame turns to the other, none lifted lifts the form's, the cursor coming back where it stood; dialogs, menus, the find bar and the tags list keep their own, the other rooms the fields' way back. Patch 1202.
+
+**One shape for the icon buttons** (the rc3 list): four shapes were found (framed tools at 5px, frameless icons at 3px from 25 to 31 px, rating chips at 7px, circles); Viktor chose the framed one, «2px закругление… меняется цвет рамки… зумить иконку… процентов десять», the player's buttons and the knobs' locks left alone. **New song** («замени на иконку… в два раза шире… смеженную/двойную»): our solid glyph, a plus and beamed notes, twice as wide, the button 72 px. Patch 1203.
+
+**Ctrl+Alt+1…6** («к каждой комнате по её порядку можно прикрутить Ctrl+1»): Ctrl+1…9 never reach a page in Chrome or Firefox (their tabs), Alt+1…9 neither on Linux; Ctrl+Alt+digit does, by its code in any layout and on the number pad. Each presses the bar's own button, the Engine sixth. Ctrl+1…6 wait for the desktop app («Да Ctrl+цифра в Electron»). Patch 1204.
+
+**The rooms' numbers by his plan** («Распределим всё, как по плану… Если всё же планируешь интеграцию DAW в Огранщика… EMPTY 6 на будущее»): the DAW lives inside the Refiner, so Ctrl+Alt+1 Creator, 2 Writer, 3 Refiner, 4 the Artist room (kept, it says so), 5 Librarian, 6 kept, 7 Trainer, 8 the bar's DAW (out of the studio into REAPER, Waveform, Bitwig), 9 Engine. Patch 1205 (over 1204's six).
+
+**The score writer leaves out what its grid cannot hold** (Viktor 07.10.2026: «Для стилей сгенери недостающие обложки партитур»; «только партитурные обложки, для всех 620»). 10 of the 620 style takes had no score cover: SheetSage2 heard them (261 to 611 events), and the ABC writer, ported line for line from the reference, failed the whole score on one note («MIDI note cannot be represented on the decoded subbeat grid»), one chord interval («shorter than the ABC subbeat grid») or a measure whose beat numbers skipped one («non-consecutive beat IDs»). The Creator's «Transcribe this take» failed on such songs the same way. `src/notation.h` now leaves such a note or interval out and logs the count (one in each of the nine); a note landing on one still sounding is left out too, the one there keeps its place; a measure whose numbers skip is written with the beats it has, an odd bar, and logged (measure 28 of French House: seven beats). Only the failure paths changed. Patches 1206 and 1207.
+
+**The bar by the order of the work** (Viktor: «Творец → Писатель → Огранщик → (Художник) → Библиотекарь ЛОГО Trainer»; «нереализованные оставь grayed out & non-clicable… хороший тизер»). The Artist's place in `#tabs`, greyed, without `data-tab` (a click stays; Ctrl+Alt+4 says it is kept), named by the page's language in app.js: the catalogs' «Artist» is the Trainer's performer («Артист»), the room is his «Художник». The Trainer in a nav of its own, `#tabsSide`: from 1660 px (where the logo is) absolute, right of the TALL bar's logo, `calc(50% + 54px * var(--logo-aspect) + 18px)` with the aspect from the logo's viewBox (fitBar), so it stays put while the logo grows and shrinks with --bar-h (1167: «абы только не сбивал лево/право»); below that it follows the rooms. fitBar measures the workspace against the pill. The rooms are `.topbar [data-tab]` now (app.js, heresy-gpus.js, guide-shots, check-i18n). **Export to DAW** (`#dawOpen`) moved into ☰ (it shuts the menu); the Refiner has `#postDaw` at its head's end (a take of the library) and one at the end of Stems' split row; all open the same DAW window.
+
+**The frames' heads as one** (Viktor: «в Музыканте… съехали не кнопки его, а именно <> и X»; «иконки кнопок мелкие во втором фрейме»). Over the room the take's ⇆ and ⤡ leave the corner (1168 keeps them there in the room, where the head wraps) for the head's row. Measured at 1920 px they stood 11 px over the take's buttons and 12 px past the content's edge; now both frames' ⤡ end at 1835 with the content, and the take's buttons are Compose's 44 × 36 with 20 px icons (☆ and ✎ were the font's glyphs; Lucide's star and pencil now). The note under Generate («A run is in progress…») on Generate's row, left of Takes; «Style prompt» is «Style». The guide's bar section says what the bar holds now (the Save/Open/Clear bullet points to Compose's head, «?» gave its place to Unload model), in all seven languages. Patch 1208.
+
+**The 💎 sets, complete.** The bucket held 71 of Musical Styles' 620 takes, without covers: after the evening batch of 05.10 the set was never published again. `workspace_export.py` takes `ENGINE` (a spare engine makes the MP3s) and `RUACH_WS_HOME` (sections kept home), and a voice adapter of a named reader goes out as `voice-adapter-not-published-N`; Viktor's own adapter keeps its name there on purpose, so that guard-own-voice.sh still sees it. Published 07.10 evening by his word («Еретика тоже лей… Имена же вычищены?» — they were: 0 in workspace.json): musical-styles 1242 files (620 MP3, 620 scores), instrumental-probe 684 (346 MP3, 336 covers); the mirror first, then `hf buckets sync --delete`. «Буратино-Еретик» was sung with two named readers' adapters, not his first adapter as he thought; asked again with the facts, he let it go («там тональности… не распознаваемые голоса»).
+
+**The take's head as he drew it, Songs × Sounds, one drawer** (Viktor: «иконки вверх вровень с full screen кнопкой и выровнять их влево, а ниже… тайтл трека, с обрезкой конца… ниже статистика»; «не хватает лайка/дизлайка»; «смести их блок влево хотя бы на 40-50pt… тыкнул на корзину»; «Takes… Нет дефолта и нет сторожа. Я ввёл 100 и прокатило»; «вынести sound variations… бок о бок к Takes… ползунками целочисленными»; «Sound and output… нижним разделом в блок Sampling (переименовать в Sampling and Denoising)»). In the room the take's head is three rows by `order` (▶ and #takeActions, then .frame-tools static with `margin-left: auto`: the 1168 corner holds, level with the buttons, at the content's edge; the title `flex: 1 1 100%` with its ellipsis; the numbers). 👍 👎 in #takeActions through HeresyCollection.rate as the player's; `rating()` reads what `rate()` remembered when the take has no row there. Over the room `.frame-tools` stands 28 px (×1.2) off the buttons before it. Songs (`#versions`) and Sounds (`#variations`) are range inputs by Generate with their numbers and «N takes» (the catalogs' «{0} takes»); Reset output leaves Sounds. The output's fields are Sampling's lower section («Sound and output», two columns under the two samplers); the drawer's summary says the output; the renamed words in the six catalogs, so nothing translated fell back to English. Patches 1209 and 1210.
+
+**What the card holds, measured** (Viktor: «прогнать тест на моём GPU, увидеть лимит… прописать формулу дефолта и максимума»; tmp/claude-vram/, a spare engine on GPU1 with an outputs folder of its own). The engine's own figures: AR weights 4131.5 MB (BF16) / 2195.1 (Q8_0), NAR 2698.0 / 1433.5, VAE 126.7, **a KV set 2688 MB** at the whole window (24 576), one per song and **two under guidance**, allocated as asked and never given back. BF16 on 24 GB: two songs at once (4 sets, 10.75 GB) peaked at 22 565 MiB for 120 s, and a 300 s sound after it found no 1 GB for the NAR graph; the engine did not survive the next request. Sounds hardly move the memory (BF16 300 s: 16 437 MiB at 1 and at 2; Q8_0 452 s: 16 611 at 1, 17 123 at 9, 17 minutes), they cost time. Two sounds of one take (probe120-claves-a, BF16) crash the engine in CONCAT («illegal memory access») at any M ≥ 2 while other takes run M = 2…9: a bug of that take's shape, to find. More of it, 21:10–21:40: a whole 452 s song on BF16 peaks at 18 889 MiB (161 s); two sounds crash the engine on more takes than the probe, on BF16 and on Q8_0 alike («illegal memory access» or «the function failed to launch» at the NAR graph with variations ≥ 2: T_lat 3000, prefix 3094, key pad 48; T_lat 1374, prefix 1468, key pad 228), so the variations' graph is wrong for some window shapes, not the weights: compute-sanitizer next. --fp16-matmul is off.
+
+**Updates, and the 💎 sets offered** (Viktor 07.10.2026: «проверка на обновления — раз в сутки, неделю, месяц, никогда, кнопка "проверить сейчас"… обновить автоматом, вручную. Попап для пользователя нового, скажем, через сутки»; «если у пользователя не скачаны мои 💎 Воркспейсы, тоже попапом предложить скачать их»). lab/updates.py (lab ac4a5d6): GitHub's releases (no token; a release ranks above its candidates: 2.0.0-rc2 < -rc3 < 2.0.0) against VERSION, the last answer in user/updates.json; an update runs only in a clean clone of igrbible/Ruach_Studio, in a unit of its own (ruach-update: fetch, checkout the tag, build.sh, restart the units), refused while a job runs; on this Forge (no git at the root) it says to update by hand. heresy-updates.js: the Engine's Updates card, the page's schedule (12 s after load), the window (Update now or the release page / Later / Skip this version), the question how often after a day, the 💎 offer when a published set is not here (once a version, «Don't ask again» for good). Nothing shows without the lab. Patch 1211.
+
+**Two or more variations crashed the engine; ggml's mask scan.** compute-sanitizer on the crashing request (probe120-claves, M=2): «Invalid __global__ read of size 4… flash_attn_mask_to_KV_max<32>… block (0,1,0)… 11,777 bytes after the nearest allocation». The NAR asks flash attention for M sequences over one mask (ne[3] = 1); the scan that finds each tile's last key runs when the keys are a multiple of FATTN_KQ_STRIDE (nar_kv_pad makes them so, for the grouped-query path) and stepped by the mask's nb[3]: from the second variation on it read past the mask, crashing where that page was unmapped and cutting attention short with a wrong limit where it was not. ggml is a submodule of the yue2.cpp author's fork, so the fix is a patch file of ours, build/ggml-patches/0001 (`s33 = mask->ne[3] == 1 ? 0 : …`), which build.sh puts on before the server is built (once; one that no longer fits is said). Checked on GPU1 with fresh engines: claves M=2 BF16 and Q8_0, M=9, a whole 120 s take at M=4 and 452 s at M=2, all done. Patch 1212.
+
+**Probes × Variations, by his names** («Переименовываем Takes в Probes (Пробы)», «пусть будет Variations»; «Songs запутает каждого»), the takes in a column of 13ch so 9 → 10 does not move the row; the Variations tip and the guide say what was measured (time, hardly any memory), not what I had guessed. ⏪ ⏩ in the player (Lucide's rewind and fast-forward) and the arrow keys go to whole multiples of 15 s and 5 s from 0:00 (Viktor: «как в видеоплеерах по аналогу ключевых фреймов»); back from under a second past a mark goes one further. Patch 1213.
+
+**Small things he caught** («Подсказка по макс продолжительности выскочила из отключенного тобою поля»; «По кнопкам в F5 диалоге - добавь LEFT/RIGHT»; «если нет предыдущего трека в списке - перемотка на начало текущего»): the 24,576-token window is Max length's own tip, Sound and output no longer says it, the floor's tip no longer points at a field that left; a question's ← → go along its buttons and Enter presses the focused one (it pressed Yes whatever had the focus); ⏮ on the list's first take goes to 0:00. Patch 1214.
+
+**The questions larger** (Viktor: «Пройдись через темплейт твоих всплывающих окон, и сделай крупнее шрифты. На то они и всплывающие… Если стоит 12, поднять на 16pt»; «WARNING в стиле… уменьшить на 4 пункта»): HeresyDialog's title 16 → 20 px, words 13.5 → 17, buttons 12 → 15 (with room), the list's rows 16, its box 480 → 560 (the chooser 640); the 💎 window keeps its own; `.tip.tip-big` 16 → 12pt. Patch 1215.
+
+**Out of memory, survived and said** (Viktor: «Я так и знал, что даже на 24GB на BF16 с длинной песней будет OOM. У меня это уже было. Одобряю твою правку движка… при OOM сторож ловит падение и предлагает… с BF16 на Q8, с честным предупреждением»). Three holes, each measured on GPU1 first. ① `qw3lm_kv_sets` only grew: after two guided probes four sets (10.75 GB at the whole 24 576 window) stayed for good, and a 300 s sound after them found no room; now `pipeline_generate` gives back more than two sets when it ends, whichever way (a destructor; never mid-run: probe i's NAR reads set i), and the same 300 s sound runs (16 443 MiB). ② A failed graph allocation left the NAR's and the VAE's scheduler half-reserved and the next request asserted in it, killing the engine: both renew it now (`nar_out_of_memory`, `vae_out_of_memory`) and say why in the job («Out of GPU memory for decoding the sound: 0.4 of 23.6 GB free for a tile of 1040 frames…»), checked by holding 10.5 GB of the card with a stranger's tensor: the 452 s run failed in words and the engine answered the next request. Variations that do not fit at once are solved one at a time before the run gives up. ③ The page offers the next smaller copy on that failure (BF16 → Q8_0 → Q6_K → Q5_K_M, only the ones installed), Keep leaves it. Patches 1216–1218.
+
+**Probes at once by the card** (Viktor: «адаптивно под VRAM Tiers 32/24/16/12/8 + выбор и реальный вес GGUF'ов… формулу дефолта и максимума, дабы избежать OOM»). `fitBatchFor(GiB, model, seconds)` = ⌊(VRAM − 0.6 − (GGUF GiB + 0.4) − (3.9 + 0.0072·s)) / 5.25⌋, at least 1: the weights as their file weighs (BF16 6.68, Q8_0 3.55, Q6_K 2.74, Q5_K_M 2.44 GiB) with the decoder and the engine's base, a guided probe's two KV sets 5.25 GiB at the whole window, the sound's and the decoder's working memory by the length (measured 4.8 GiB at 120 s, 7.2 at 452). queueVersions writes min(probes, max-batch, fit) per pass and says when the card made it fewer. 24 GB BF16: 2 at 120 s (22.0 GiB measured), 1 at 300 s (23.5 of 23.56 measured: the edge), Q8_0 2 at 480 s; a 16 GB card cannot hold BF16 at all, and the out-of-memory window offers Q8_0. Patch 1219.
+
+**Frames 97 %** (Viktor: «Давай увеличим до 97%, и постарайся в шапках и подвале хоть немножечко, но немного ужать, но не превратить в микрофильм»): a lifted frame 97 % × 97 % of the screen above the player, its head's padding 13/9 px, Generate's bar 9/10. Patch 1220.
+
+**One decoder on the card** (Viktor: «Кликнул на Legacy VAE, за несколько секунд декод успешен, затем на BLEND - сразу OOM… Нужно сторожа поставить на все VAE, чтобы только один декодер в VRAM висел»): his log had three VAEs loaded and the third's 3168.65 MiB working buffer refused. `store_require_vae` now swaps out the idle decoder before it loads another (`evict_same_kind_idle`, as the LM and the NAR already did). On GPU1 a 120 s take decoded again by Legacy, Blend, Standard and Blend: 3 s each, «Swap out VAE» before every load, the card at 14 813 MiB after each, as after the first. Patch 1221.
+
+**The cheat-sheet's click** (Viktor: «В шпаргалке по стилям и инструментам проблемка. Не работает кликание, вставка, копирование»; «Да, я из попап фрейма работаю сейчас»). Measured with real clicks at his laptop's 1536×864, over plain http, in the room and in a lifted frame. The name did go into the Style prompt, and a lyrics tag into the lyrics. But the toast saying so stood under the sheet (z-index 40 < 70, the sheet's ▶ column on top of it), the prompt is under the sheet too, and the sheet's words did not select (1148's `user-select: none`). Now the toasts stand at 200 and let the pointer through to what is under them. The names the prompt holds are marked (`.is-in`, amber as a pen). A click copies the name too, through `ruachCopyText`; «· copied» is said only when the browser took it: a click from a script is refused, a real one is not, so the suite clicks for real. The sheet's table, warning, legend and notes select again. Patch 1222.
+
+**The tags under «[»** (Viktor: «Ширину зафиксируй в дропдауне подстановки по `[`»; «те суно теги `[Break]`, если уж нет их в оф. примерах… Они не работают»): the list is 460 px whatever the chosen tag's note says, and the note always two lines high, so neither the box nor its rows move as the choice moves. [Break] and [Inst] (0 of the 110 official examples) are gone from the sheet, the list and the guide; the trainer's caption cleaner still names instrumental parts [Inst], a question for him. Patch 1222.
+
+**The tags under «[» in two columns** (Viktor 08.10.2026: «Вот нашёл документ… https://genius.com/Genius-song-sections-and-headers-guide-annotated. Пройдись по нему и вычлени для всех наших тегов YuE2 описаловки… Две колонки, высота селектора не изменяется, если только в подвал не упирается… И также по остальным, что не найдены в 110 примерах официальных добавь и эти, но пометь как тестовые»). What each section is, in our words after Genius's Song Sections & Headers Guide, stands beside the list in 15 px. The counts are taken again on the 110 examples by one rule: a header's name before a dash, a colon or its number, in any case. That gives Chorus 201, Verse 163, Pre-Chorus 63 with Prechorus, Bridge 56, Outro 46 and Intro 34, and [Instrumental Intro] (5 with Instrumental Introduction) turned up among them. Genius's sections none of the examples writes (Instrumental Outro, Skit, Segue, Part, Scatting, Yodeling, Non-Lyrical Vocals) are offered last, marked TEST, and are amber in the sheet. The columns are 300 px high whatever the list holds, lower only where the player would cut them. Patch 1223.
+
+**The take over the room in two columns** (Viktor 07.10.2026: «Давай лучше в попапе доделаем Музыканта. Тоже дадим ему две колонки»; the plan he called GOOD: «Слева действия (скачать, сделать ещё, Огранщик, файлы, заметка), справа карта «как сделан», VAE, промпт. Во время генерации остаётся на весь фрейм»). Grid areas could not hold two columns of their own (one column's tall block stretches the other's rows), so `takeColumns` in `frameOver` moves the blocks into two flex columns while the take's frame is up and puts each back where it stood when it goes down. The room's card keeps its DOM, and the prompt and the lyrics go back into `.word-row`. A run (`.is-running`) lays the columns one under the other and hides the panels as before. Patch 1224.
+
+**A voice's kind in the Trainer** (Viktor 05.10.2026: «Ты можешь у Тренера прикрутить… что определяет тип голоса? Мужской или женский, регистр? Нам не нужны Имена человеков, а нужны именно их тональности»; the README's To do «measured on speech and on singing, shown beside the set, with a name to give it»). `lab/voice_kind.py` (1167, pYIN over twelve tracks, twenty seconds each) gains a sung mode: the range sung as notes (10th, 50th and 90th percentile), male or female only when the middle is under 200 Hz or over 300 Hz, no register (the melody, not the voice, sets the pitch there). `POST /train/voice` measures a raw folder in a thread (about half a minute; 2.8 s on three clips of eight seconds) and keeps `voice-kind.json` beside the songs; `/train/datasets` carries it. The Material step shows it on each folder, in the picked folder's line (speech or singing taken from the lyrics' section tags, ♂ ♀ or by pitch, *Measure again*), beside the sets made from it, and offers *Name the set voice-ru-m-baritenor-117* (the lyrics' letters give the language), as the published voice adapters are named. Patch 1225, lab.
+
+**The lyrics box as a code editor** (Viktor 08.10.2026: «В редактор лирики можно как в кодовом редакторе отображение номера строки? И вообще… по Alt+K маркировать строки, а по Alt+J прыгать на них. И подсвечивать тонким альфа слоем все музыкальные теги»). `HeresyLyrics.aids(area)` puts three layers over a lyrics box: the numbers in its left padding (40 px), a layer of the tags' boxes and the marked lines' bands, and a copy of its layout to measure them by (as the meter's). A line's number stands on its first row, a tag's box is read from the copy's spans (`getClientRects`, so a wrapped tag gets two). Marks are line numbers kept with a signature of the text: an edit moves them by the lines gained or lost after the first changed character, and a mark on a line taken out goes with it. A reload brings them back when the text is the same. Alt+K, Alt+J, Alt+Shift+J and Alt+Shift+K are on the box itself; the meter's bar says *Marks: N* (a press goes to the next) and switches the numbers. The Creator's box and the Writer's have it. Patch 1226.
+
+**НИКОГДА НЕ ЛОМАТЬ СТРОКУ** (Viktor 08.10.2026: «Снова ловлю тебя на хардкорных переносах строк… Внеси себе в устав НИКОГДА НЕ ЛОМАТЬ СТРОКУ. И дополнительно в твой покаянный TODO - пройтись по всему коду и вернуть ломанные строки в их текущие autowrap праграфы»). The page lost its measures: `.row-hint` 68ch, `.hint` 62ch, the guide's paragraphs 78ch and its lists 80ch, the cheat-sheet's «How the probes were made» 150ch (his screenshot: half his 2K screen empty beside it), and the rooms' notes 430 px. Those notes now take the leftover of their row (`flex: 100 1 0`), so the room's name stays whole. The empty lists' `<br>` inside a sentence became a space, and their joined texts were translated from the pieces the catalogs had. The docs had been written wrapped at 120 characters: CHANGELOG, README, INSTALL, API, HERESY.md, the guides and the plans, 19 files. A script made every paragraph, list item and quote one line, checking block by block before it wrote (the same words, the same first line of every block); code, tables and front matter were left as they were. Patch 1227.
+
+**The songwriting instructions' sentences whole** (the same word). The Writer's instructions, taken from YuE2 Studio, broke thirteen sentences with a newline in the middle («emotional arc,\nvocal direction», «Custom performance tags are\nexperimental»); *Read the complete songwriting instructions* showed them so, and the model read them so. A newline after a letter or a comma, before a lower-case letter, is a space now; the breaks between the rules stay. No other script of the page had one. Patch 1228.
+
+**The arc, the once-tags read, mcedit's keys** (Viktor 08.10.2026: «В подсказках тегов… отсортируй их по стандартной арке произведения, начиная с Intro и заканчивая End. Также ты правильно деактивируешь единственные вхождения в промпт лирики, но позволь двигаться по ним и читать шпаргалку/описание. Я в ахуе от мимики бейсиковых трейсов команд mcedit. Хочешь, добавь ещё что-то дельное. И обязательно обнови описаловки/хелпы и читшиты по редактору. Это основное стойбище каждого Писателя»). The tags under «[» are sorted along `ARC`: Intro, Instrumental Intro, Verse, Pre-Chorus, Chorus, Post-Chorus, Refrain, Hook, Interlude, Instrumental Break, Guitar Solo, the three sung TEST ones, Bridge, Breakdown, Drop, Instrumental, Skit, Segue, Part, Final Chorus, Outro, Fade Out, Instrumental Outro and End. Typed letters still rank a name's start before a later word's, and the arc orders each rank. The next verse is in hand when the lyrics number theirs, else the first tag that can go in. A once-tag already in the lyrics keeps its place: ↑ ↓ and the pointer reach it and its column reads «Already in the lyrics, line N», but Enter and a click leave the lyrics as they are. In the lyrics box, as mcedit has them: Alt+O clears the marks (mcedit's BookmarkFlush; Alt+Shift+K stays), Alt+L asks for a line and goes there, Ctrl+Y deletes the line, and Alt+↑ / Alt+↓ move the line or the lines selected with their marks. Every change goes in through `execCommand`, so Ctrl+Z takes it back. mcedit's Alt+I (the mark before) stays the cheat-sheet's key here; Alt+Shift+J does that. The meter's *Keys* lists the editor's keys and opens the guide at the lyrics' part, and the Writer's LYRICS label carries the same list. Patch 1229.
+
+**The Musician compact, Compose tidier, the lyrics over everything** (Viktor 08.10.2026, 01:30–01:40, a list of his with two screenshots: «В Музыканте перенеси Score в правую колонку, Prompt переименуй в Style и перенеси в левую поверх Lyrics. ПО умолчанию оба блока закрыты. Минимальное отображение всей карты трека… Секции кнопок под DOWNLOADS, MAKE AGAIN, REFINER определи в собственные обрамлённые приятные в UIX блоки… ещё один оверлей поверх оверлея!… нужен диалоговый попап, спрашивающий, что мы делаем. Переписываем или добавляем в конец… Блок с обеими SEEDs настаиваю перенести в блок Sampling and Denoising… Instrumental… в ту же строку, что и Planning Mode… выключка вправо… обрезанный параграф объяснений… нахер там не нужен»; «Хедер Takes имеет дохера паддинга сверху»). `takeColumns` lays the left column as tools, note, Style, lyrics and the right as the card, the VAE, the sound and the score, and puts the score back last when the frame goes down. Style and Lyrics were folded by default already, but the page kept what he had opened, so `openTake` folds them again for every other take. The tool groups are framed in a grid (`auto-fit, minmax(150px, 1fr)`), and Make again, with six buttons, takes a row of its own. The seeds' row moved whole into the Sampling drawer's first part, keeping its ids, so every check that sets them works as before; the seeds tip's check opens the drawer first. Instrumental sits in the planning head's row, and its «no vocals, the official YuE2 recipe» was already the first line of its (i). The LoRA picker's notes go into a tip beside the LoRAs' name, marked ⚠ when one warns, and the paragraph stays in the page hidden, so whatever reads it reads it. In the cheat-sheet a name is copied on the click itself (the browser takes a copy only from the user's gesture), then `HeresyDialog` asks: *Add at the end* puts it on a line of its own, *Replace the style* takes the whole Style. A name already in the Style is only copied, and into an empty Style it goes without the question. A lyrics tag's toast names the line it went to. *⤢* beside Lyrics moves the box with its meter into an overlay (z 40, over the frames, under the «[» list, the find bar, the sheet, the questions and the toasts), 60 % wide at `zoom: 1.1`. Esc, ⤡, a click beside it or another room puts it back where it stood. The Creator's Takes head is 11 px from its top (18 before). Patch 1230.
+
+**The lyrics' linter, and his recipe** (Viktor 08.10.2026, 01:45: «в редактор нужно линтер добавить, чтобы выявлял незакрытые `[` и другие теги. Только что словил себя. Открыл `[` и не закрыл. Целый блок проебал в синтезе... И из-за этого срань пошла в конце трека»; 01:50: «Запиши эти параметры как максимально консервативные, но в русском языке весьма идеальные. Нет ускорений, умеренная речь в рЕпе, просто чудеса… Это в гайд можно оформить по тюнингу синтеза»). `HeresyLyrics.lint(text)` reads the brackets line by line, since a tag lives on one line. Red: a «[» not closed, a «]» with none open, a «[» inside a tag, an empty tag. Amber: a round bracket open or closed alone on its line, because an echo may run on. The line numbers take the colours, and the meter's bar counts each kind; a press goes to the next and selects it. A «[» on the cursor's line is left alone while the box has the cursor (it is being typed, and the «[» list is open on it); it shows on blur and on the arrows. The form's submit asks first when a red one is there: the dialog's title names the first line, *Go to the line* takes the cursor there, and *Generate as it is* sends the run once. His recipe is the slider shortcuts' *low*, *low* and *high* (0.85 / 0.92 / 40 for the score, 0.85 / 0.93 / 80 for the music tokens, CFG 1.8) with 32 Midpoint steps. It is a third built-in profile, *Russian · conservative (Viktor's)*, and a paragraph at the end of the guide's Sampling and Denoising in seven languages. Patch 1231.
+
+**The text's size, the Librarian's bar, [End], the 💎 at the foot** (Viktor 07.10.2026: «три кнопочки svg -, +, reset для скейла… В минус шагом 2pt до минус 4, а в плюс… до макс 8pt… глобальный скейл шрифтов с минус 2 и плюс до 4… в спадающее меню в баре»; «По скейлингу шрифтов и их лимитов сам решить, где порог»; 08.10: «в Комнате Библиотекаря наведи порядок с кнопками и SVG иконками. Там сейчас безобразие»; «Конечный тег изменил из суновского `[END]` на `[End]`»; «всё, что с начальным диамандом 💎, чтобы алфавитно шло вниз древа… И суфиксные `💎 ... LoRA` гони в самый низ как вечное правило»). The page step of `build.sh` (and its copy in heresy) writes every font size of app.css and themes.css, in px or pt and never 0, as `calc(N + var(--fs, 0pt))`, the `font` shorthand's size too: 462 places. `--fs` is `--fs-g` on the page and `--fs-g + --fs-f` in a lifted frame. ☰'s *Text size* steps the page by 1 pt from −2 to +4 and shows its number; three icons in each frame's tools step the frame by 2 pt from −4 to +8 on top of it and show only while a frame is up. Both are kept in this browser (`yue2.textSize`), set before the first paint, so each screen keeps its own. Pictured at +4 in every room and at +8 in both frames: the text grows, the layout holds, and only the narrow selects cut their words, as they do at any size. The bar of the checked was four text buttons, three emoji and two selects wrapping onto two lines; it is groups of framed icons now (select all, clear · 👍 👎 ☆ · add, move, take out, hide · format, *with what is made from them* as an icon toggle, export ZIP · and the trash at the end), all Lucide's, each saying itself in its tip. Hide turns to Show again in its tip and icon among the hidden. The «[» list writes [End] (SPELL emptied); his old [END] is still the song's end. `treeOrder` ranks the plain workspaces first, the 💎 ones next and the 💎 … LoRA ones last, by name without the 💎. Patch 1232.
+
+**End at…, and where the tail after a Full song's proper end comes from** (Viktor 08.10.2026: «после последнего правильного затухания какая-то гемморойная галюциногенная хуета выскакивает на 10-15 секунд… Уверен, что проблема в CFG»). Measured on his 01:14 take (Full, CFG 1.8): Whisper hears the last words at 4:55; the score's vocal voice rests through its last 40 bars while the instruments loop C C Am Am Em Em Em Em to bar 146; the engine plays them, dropping to −25 dB for 5–10 s three times (the fade one hears) and coming back loud for about 10 s each time, and stops at bar 139. Takes at the default guidance (−1 in a request is 1.6, HERESY 1031) end the same way, so it is the plan's leftover bars, not the guidance. The engine takes `end_at` (with `decode_from` the kept latents are decoded only so far: 8.4 s for 5:54 on a 3090) and `fade_out` (a half cosine over the last seconds, in both the decode and the render jobs; both written into a take's request only when used); the page's End at… asks the moment (the player's place offered), cuts the music codes to match and titles the take «· ends at m:ss». Tested on a copy of that take on GPU1: 354.52 s, the last half second at −64 dB against −42 in the original, the first 5:30 correlating 0.99998 with it (the level 1.3 % apart: the normalization's peak is taken over what is kept).
+
+**The Librarian's filters, its menu on the checked, a redraw that keeps** (Viktor 08.10.2026, 03:00: «первая статичная строка фильтрации... сделай её ахуйной»; «Перепройдись по нему и всё, что может быть применено массово, оформи на tracks selection. Те же генерации обложек на выделенных треках… И то, что реально сможет убить ресурсы GPU и время, всё в попап диалоги… `Человече, ты запрашиваешь генерацию обложек на 00 треков одним залпом? Твоя видеокарта не схудится?`»; «перепроверь, или мы не удаляем старые картинки с редженом новых»). The filter row is three framed groups like the bar of the checked (a caption cell, the chips joined into one control, each with a Lucide icon and a count over the same takes the head counts; none: dimmed; a filter-x button while any is on). The take's menu, opened on a checked card with others checked, heads itself «N checked» and turns Like, Dislike, Favourite, Artwork, Remove artwork, Workspaces, Hide and Download (a ZIP, the bar's export) on all of them, as Move, Regenerate and the trash already did; single-take lines (play, open, note, rename, copy, the Writer, a DAW) stay the clicked take's. Artwork for several asks first in his words (Russian catalog: verbatim) and offers to draw only those without, or to redraw all; the pictures are drawn one after another (drawArt quiet, one toast at the start and one at the end). Regenerating several asks the same way, with the music's length in all. The redraw: art_async wrote the new artwork.jpg over the old one, which was gone; it now moves the old picture and its .json into artwork-removed/TIME as art_remove does. The suite opens the menu from the Creator's column with the Librarian's choice stood in for (the mock keeps no collection) and checks that «Not now» sends nothing.
+
+**The sliders drawn by the page, the status dot to the Musician** (Viktor 08.10.2026, morning: «Убери border вокруг позлунков. В ночной не видел теме, а теперь увидел»; «При клике в плеере на кружок зелёный/красный, при открытом оверлее с активным фреймом композитора пусть переключается во фрейм музыканта»). His desktop Chrome drew a thin frame in the theme's line colour around the native range inputs of Probes and Variations in the day theme; the page's CSS gives them no border, outline or shadow, and a headless Chrome for Testing draws none, at 1920 and at 2560, lifted or not (measured with tools/claude-slider-probe.mjs). So they are the page's own now (appearance none, a 6 px track filled to the thumb by --fill, which paintCounts sets, a 16 px thumb in the accent with a ring of the panel's colour; focus-visible a second ring), the same in every browser and theme. The status pill's click opened the take or showed the run in the take column, behind a lifted Compose; it now turns the lifted frame to the take's (frameOver("take")) when it showed something.
+
+**The guide: Full or Direct, and the night's tools** (Viktor 08.10.2026, 01:40: «В гайд добавь, и это проверено неоднократно... Direct редим - дешманский SUNO стиль неопределённой HIT&MISS в соотношении 2:100 успешных генераций. Идеал даже для тех, кто не понимает ABC партитурирование, всё гнать в FULL режиме… Сам проверь по последним Full пробам. И сверь с последними Direct»). A paragraph after the planning modes, the same line in all seven guides: his word as his, the measure as measured (14 against 14, Whisper: the best take of all a Full one with his recipe, 84 % of the words and 76 % in the last quarter; Full's weak spot the end, as a take is as long as its score and the plan may hold fewer sections than the text), the tail explained, and End at… and Regenerate from… for a Full take's end. Beside it: End at… in Make again, the Librarian's filters counted and cleared, the menu on the checked takes (its head says how many; artwork and regeneration of several asked first), the redraw that keeps the old picture in artwork-removed/, the player's status dot that turns a lifted Compose to the take. The checker keeps the roots out (uk «робиться» and be «робіцца» became «творять» and «твораць»). The README's What comes next: the four pieces rc3 has done (the Writer's prices, the dialogs, the icon shape, a voice's kind) left To do for a Done section of their own, with the lyrics editor and End at….
+
+**Recite: the promo's narrator in the studio** (Viktor 08.10.2026, 03:00: «И пожалуйста, твою утилиту для генерации партитур `score`, ... прикрути её в Студию»; «те утилиты, что ты имеешь во внутренней кухне, если видишь, что их можно вынести в паблик Студии, без вреда нашей кухне, - выноси смело»). heresy/tools/promo/promo_score_voice5.py laid the promo's lines on «Promo bed · C»'s own score with a hand-made table of tones per chord and one take's numbers written in; heresy-recite.js does it for any score in the form and any lyrics: the head kept, the blocks read (a section, a meter change, the Vocal line, the Ins lines), each bar's chords at their offsets; the words from the bar after the score's intro (not where its own voice first sings: a bed's voice may be a vocalise at its very end, which put the promo's words on bar 51 of 56), else from bar 2; a line from a bar's start, a section on an even bar after a bar's rest; a syllable an eighth (the studio's own count, the language told by its letters: ў be, ї є ґ uk, Cyrillic ru, Greek el, else Latin), a breath after a comma (an eighth) and a full stop (a quarter), the line's last syllable a quarter on the chord tone below. The reciting tone is the chord tone nearest the last one around D above middle C (the bed's own voice sat two octaves up, which put the first try on f' to a'), the up and down tones its neighbours in the chord; accidentals written against the key and the bar so far; lengths only the dialect's (1 2 3 4 6 8 12 16 24 32 48, a 10 an 8 tied to a 2) and one to four bars a group, as the strict reader asks. On the promo bed: five Russian lines on bars 17–33 of 56, 80 notes, read back clean. The button asks first, replaces the score and the lyrics through the boxes' own history (Ctrl+Z) and turns Direct to Full.
+
+**The lifted lyrics larger, the menu that lets go** (Viktor 08.10.2026, 10:50: «Попап редактора лирики. Ужасно мелкий шрифт по умолчанию. Увеличь умолчание всех текстов в таком оверлее на 40%. При моём 150% браузера вообще идеал… Ты не прикручивал ещё кнопки -+?»; «Я переместил в корзину три трека, а блок так и остался раскрытым, и не исчез обратно в тень»). The lifted box's zoom is a variable now (--lyr-z, 1.54 by default, which is 1.1 × 1.4), its width and height divided by it so it keeps 60 % of the screen; −, + and ⟲ in its head step it a tenth (1.1ⁿ, five each way, kept as yue2.lyricsZoom). The bar's own trash, hide and take-out buttons emptied the choice; the menu's ways went through HC.trash and HC.act and counted on the catalog read again to drop what left, which it does not for a hidden take (still in the catalog) and did not for the three in the trash (the catalog answered before the move). HC.trash now drops the moved takes from the choice, HC.unselect is called after the menu's Hide, a take-out of the open workspace and a regeneration of several, and a dislike that sends takes out of the lists drops them too (the bar's 👎 as well).
+
+**The lyrics' rows at 125 %, the log at the left, two steps** (Viktor 08.10.2026, 11:00: «При скейле 125% именно в полной странице в редакторе съезжают хайлайтинги секций. При 100-110% - НОРМ»; «В попапе фреймов серверный лог поверх кнопки синтеза. В этом режиме смести его влево. Так не будет закрывать ничего»; «В попапе лирики оставь два шага +… В минус тоже только два шага»). Both mirrors of the lyrics box (the aids' and the meter's) took clientWidth, a whole number, while the box's used width is fractional (442.656 px at a 1536 px window, the 1920 screen at 125 %); a line within that fraction of the edge wrapped in one and not the other, and every number, mark and tag highlight after it stood one row off. innerWidth() in heresy-lyrics.js takes the box's computed width less its borders and its scrollbar. Measured with claude-wrap-probe.mjs on his Buratino words, 48 layouts (100, 110, 125, 150 % at twelve window widths each): the box's scrollHeight and its mirrors' differed in 3 before, in none after; the lifted box agreed both ways. The log: placeLogDock() (after frameOver and on resize) gives it .is-left and a max-width up to the first control of Generate's row less 28 px (Probes starts at 779 px at 100 %, 607 at 110 %, 401 at 125 %); with less than 220 px it stands above that row, and when the row is scrolled away (150 %) it keeps its foot. Measured with claude-logdock-probe.mjs: on the left it covers no control of either frame at the four zooms (only the form's scrolling field behind it). The lifted lyrics: two steps each way (1.54 × 1.1ⁿ, n from −2 to 2).
+
+**The Librarian's filter as a window** (Viktor 08.10.2026, 10:50: «у Библиотекаря трансформируй полосу фильтров показа карточек. Вижу визуал так же как в попап селектре воркспейса в зоне бара. Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR. Фильтр прикрути как кнопку в ту же строку с поиском и сортировкой - в самый конец справа. Минимальную длину поискового поля… 240 px, макс длина - 320px»). HeresyDialog.pick is the chooser's sibling: groups of ticks (an icon, a word, a count), a segmented AND · OR · NOR, Clear, Cancel and Show N, where count(values, logic) runs the Librarian's own shown() with the ticks it is given. The filters are FILTERS (made: the four kinds; marked: liked, disliked, favourites, with a note, with artwork; has: the four refinements), each a test on a row; passes() joins the ticked ones (AND all of them, OR at least one, NOR none), and a dislike is shown only when the ticks ask for it outside NOR. The row of chips (1235) left the bar (#collBar hidden, its chips' code gone); the logic is kept in yue2.collLogic when it is not AND. The suite's star check (1168) opens the window now and finds the star beside the thumbs there.
+
+**A LoRA's strength over the pointer, the Instrumental adapter's ceiling** (Viktor 08.10.2026, 11:45: «Для Instrumental ABC LoRA индивидуально пропиши потолок в ползунке на 1.0, и это её максимальный, и дефолт. Выше начинается партитурное мракобесие. При наведении мыши на ползунок и при перетаскивании сделай тултип поверх курсора, 16pt»). loras.js keeps one .lora-vtip under the body: on pointermove over a zoned range (a half or a total) it says the half's word and the exact value (three places, trailing noughts off), framed green, amber or red by the slider's own --z1 and --z2, 14 px above the pointer; it follows the input while dragging and goes when the pointer leaves the picker or lets go off the slider; body.lora-vtip-on hides the page's tip meanwhile. The Instrumental adapter (Mothersuperior's YuE2-instrumental-cot-full-loras, a score adapter: green to 1.0, limit 1.25, max 2 by the shared rule) got its own limits in loras/sources.json, «ar»: [1.0, 1.0, 1.0]: the slider ends at 1.0 and starts there (a new row takes the smaller of 1 and the limit). The file is the studio's, not git's; the one before is in heresy/MISC/replaced; make-release.sh carries it.
+
+**The maiden drawn again** (Viktor 08.10.2026: her arms «спирально изогнутые»; «Она стоит задом»; the right arm a little bent upward, the left almost hidden, but for the upper arm down to the elbow). Her right arm now bends at the elbow, the forearm rising about 14° toward the wing and ending in a slender, relaxed hand; her left one shows only the upper arm, and the elbow melts into the waist. Done on the body's contour of figure-traced.svg (path19, still 101 paths) with Inkscape's booleans: the old arm and its curls cut away, then an elbow, a forearm and a taper laid in and united (heresy/MISC/maiden/build.py). make_all.sh made every file of the logo again: the canvases and the words in each language came out byte for byte the same, only the figure's line differs. The page's two inline copies (brand-full and brand-compact) had only that line swapped, and the favicon its 64 (heresy/MISC/maiden/swap2.py); the files before are in heresy/MISC/replaced/brand-before-1243-*. The site takes her at its next build (it inlines src/brand); the README's banner, the link preview and the pictures in the guide and on the site are shots of the page and still show the first maiden until they are taken again.
+
+**The take's tools fill the column** (Viktor 08.10.2026, a screenshot of the lifted take frame: «Сделай растяжку трёх блоков кнопок на всю ширину колонки»). The groups were a grid of `repeat(auto-fit, minmax(150px, 1fr))` with Make again spanning `1 / -1`: auto-fit collapses only empty tracks, and the span kept all of them filled, so in the lifted frame's wide column (780 px at 2560 × 150 %) the grid made five tracks and the three groups stood in three of them, a gap after. Now a row that grows: `.take-tools` flex with wrap, each group `flex: 1 1 150px`, Make again `flex-basis: 100%` on its own row; the three share the width equally (249 px each there, 221 at 1920 × 125 %), and in the room's third (586 px) they are as wide as before (186). Tried and left: each group as wide as its buttons on one line (a grid of three `auto` columns, or flex with `min-width: max-content`): the grid gave Download 275.16 px for 275.19 of buttons and wrapped it anyway, and the flex one put Files on a row of its own at 1920 × 125 %. The suite checks that every row of groups ends at the column's right edge and the groups of a row are equally wide (heresy/MISC/creator/tools/claude-takeframe-probe.mjs measures and pictures the lifted frame at a window size).
+
+**The Refiner's chain in the order of the work** (Viktor 08.10.2026: «У Огранщика во первых нужно перепроверить пайплайн и его логичность. Апскейлер нужен в двух местах - перед разделением на стемы и в конце после ремастера (как уже есть). По дефолту стеммер - four»). What it was: Debuzz › Upscale › Remaster of a single file, then the checks, and the stems last, split from the raw take (the frame buzz in them), the preset and the de-esser off in the chain for want of stems. What it is: Debuzz › Upscale › Stems › Remaster › Upscale, then Artifacts, Spectrum, Lyrics. lab.py: `stems_async(name, mode, source)` splits a file of the tree into a set of its own (`stems-MODE-TIME`, its source in the manifest; the same file again answers with that set, the take's own set stays `stems-MODE`); the chain splits the file before its remaster and remasters the set (the preset, the levels, the de-esser on the voice; without stems the de-ess is recorded off); its upscale at the end runs on the remaster with the remaster's `tp` as a ceiling (upscale_job.py measures the true peak four times oversampled and turns the whole file down to it; the manifest keeps `ceiling_db`, `true_peak_db`, `turned_down_db`). GET /stems and the API's stems take `source`, four by default; rpp.py and dawproject.py take the newest set of each kind (several of one kind would double the tracks). The page: the chain row in that order (the stems' select four first; the prefs moved once to four, the end's upscale starting as the first one is), the Remaster says its preset and de-ess when the chain splits stems, and its preset and de-esser come alive for it; the Stems step has a *Source* (the take, a debuzzed or upscaled file) and Split: four stems first. Measured on a 21 s take in a copy of the lab (heresy/MISC/claude-labtest, GPU1/GPU2, 128 s for the whole chain): each step took the file before it; the de-esser ran on vocals.flac; the remaster mixed the set from −15.7 to −14.0 LUFS; the end's upscale read −0.99 dBTP and turned the file down 0.01 dB, ffmpeg then reads −14.0 LUFS and −1.0 dBTP. Why the second upscale (absolute band energy, dB): the «other» stem carries hiss above 22 kHz 15 dB over its input (35.1 against 19.9), the mix gets +7 dB at 20–22 kHz from it (32.2 against 24.8), and the remaster keeps almost nothing above 22 kHz (7.6); the upscale at the end gives 21.8 and 17.4, near the first one's 24.8 and 19.9. Below 12 kHz nothing changes. Not measured: how it sounds; that is the ear's, in the tree's Compare. Also checked: a chain without stems (Debuzz › Remaster › Upscale, the de-ess off), the same source split again (200 at once, no new split), and a REAPER project after a second set of four (one set went in, the newest, sample for sample). Patch 1245.
+
+**The lyrics' text alone, a frame's three steps, and the fields that did not grow** (Viktor 08.10.2026: «В Lyrics можно + и - только в самой зоне текста, а не весь интерфейс? Сейчас скейлится весь попап блокфрейм. В попапе фреймов всё скейлится с 4-мя шагами. Очень много. Опусти до 3-х. Поле Title остаётся почему-то прежним размером. Дропдаун селекторы тоже остаётся прежним кеглем»). The lyrics' overlay keeps its box at `zoom: 1.54` and − / + set `--lyr-t` (1.1 a step, two each way): `.lyr-over-body #lyrics` takes `calc((12.5px + var(--fs, 0pt)) * var(--lyr-t, 1))` and its numbers `calc((10.5px + …) * …)`; the copies under the text measure its computed size, so the marks, the tags and the find bar follow. A lifted frame's own text size goes −4…+6 pt (it went to +8), a size kept from before held to the range. Why Title and the selects stood still: `button, input, select, textarea { font: inherit }`, and what is inherited is the size the body worked out, outside the frame (the frame's `--fs` changes only the rules written with it); now the lifted frame has its own `font-size: calc(14px + var(--fs))`, the body's 14px with the steps on it. Measured at +6: Title, Style and the selects 14 → 22 px, as the labels (11 → 19). Patch 1246.
+
+**The signs drawn** (Viktor 08.10.2026: «По всей студии, где у нас i в кружочке для тултипов, замени этот артефакт Кита на красивую svg иконку, и покрась её в 70% gray + основной цвет активной темы оформления… В блоке LoRAs при неактивном адаптере в кружочке появляется жёлтым треуголик с воскл. знаком. Такое тоже переделай в правильную SVG иконку. И всюду пройдись и подобные артефакты замени на svg иконки. И эти информационные тултип иконки не нужно в кружочек. Просто чуть меньше размером, чтобы не казались глазу, мол они - кнопки»). `.info` is a CSS mask now (`--ico-info`, a serif i drawn in a 12 × 22 box), 7 × 12 px, no border, coloured `color-mix(in oklab, #8c8c8c 70%, var(--amber))` and `var(--amber)` when pointed at; `.lora-notes` the same, and its warning `--ico-warn` (Lucide's triangle-alert, ISC) in the warning's #d9a441, the glyph no longer written into it. The ⚠ that leads a warning: a tip draws it in its text as it shows (`drawSigns`, the text translated by then); the page's own lines are written as the sign and the words apart (`ruachSigned`: the key check under Style, Whisper's loop warning, the text profile's log; the cheat-sheet's warning in its markup; the guide's renderer), and heresy-i18n.js looks such words up under the catalog's «⚠ …» and gives them back without the sign. Why not one observer for the whole page: a language switch walks every text node back to the English it first saw; a node split after its translation would keep the old language. check-i18n proves it both ways (16 checks: the words in Russian after the drawn sign, and in English again). The cursor's ? beside the pointer on hover is the system's (Plasma's cursor theme for `cursor: help`); Viktor chose Oxygen Zion, which draws the pointer itself as a question mark. Patch 1247.
+
+**A tidy right-click menu** (Viktor 08.10.2026, a screenshot of a take's menu: «Мышечное меню ... твои мини подсказки на некоторых опциях срезают текст. А Resite вообще урезана до R. Лучше прямо с боку от меню выводить небольшой тултип при наведенее указателя мыши на ту или иую команду, а inline подсказки вообще оттуда убрать и держать это контекстное меню аккуратным»). heresy-menu.js wrote an item's `hint` in its row, mono, after the name; the menu is 320 px at most, so the name gave way (`Open the …`, `Draw …`, `R…`). The row now holds the icon and the name only; one `.hm-tip` beside the menu (on the right, on the left when the window has no room) shows the hint level with the item, on `focusin` (the pointer focuses an item too, the keys move the focus), translated as it is written so it is measured in its own language; leaving the menu, Esc or a click hides it. The suite opens a take's menu: no name cut, a hint beside it and level, gone with Esc. Patch 1248.
+
+**Create ABC Score** (Viktor 08.10.2026: «Кнопка "Plan score only" в ре;име FULL неактивна, а должна быть. И даже если есть уже партитура, тоже должна быть активной, с попапом предепреждением о перезаписывании текущего ABC. И переименуй её во всех языках > `Create ABC Score`»). Why it was grey in Full: `paintPlanBtn` greys it in Direct only, and it ran when a mode radio sent a change; the page starts in Direct, and `loadRequestIntoForm` (the draft restored on load, Retake, Reuse, a prompt file) sets the radio without one, so a form saved in Full came back with the button greyed until the mode was touched. Measured headless: Full chosen, the draft saved, the page reloaded: greyed on the live page, live with the fix (claude-plan-reload-probe.mjs). The loader repaints it now. A score in the form: `HeresyDialog.confirm` first («Create a new ABC score? The score now in the form is written over…», *Write over it*, red); Cancel keeps it and sends nothing (HERESY 1089 had cleared it quietly). The name: the button, help.js's tip about scores, the six catalogs (the label and that tip: Создать партитуру ABC, Створити партитуру ABC, Стварыць партытуру ABC, Δημιουργία παρτιτούρας ABC, Crear la partitura ABC, Crea la partitura ABC) and the guide's heading and line in seven languages (its anchor now `create-abc-score-and-generate`; no link pointed at the old one). Patch 1249.
+
+**The guide by F1, and larger** (Viktor 08.10.2026: «Попап Гайда сделай шире на 10% по hv и выше по vv. И кнопочку FULL SCREEN. И также кнопки скейла текста сделай… Можешь устроить перехват браузерного F1 для вывода Гайда? Это же логичное F1. Нахер нам браузерный Help. А если нет, то Ыршае=А1, а в Electron'е F1»). F1 (and Shift+F1), caught on keydown in the capture phase with `preventDefault`, opens the guide on the room you are in and shuts it again; Chrome lets a page take F1, and so does Electron. The box went from `min(1180px, 100%)` × `min(88vh, 980px)` to `min(1300px, 100%)` × `min(94vh, 1080px)` (the backdrop keeps its 3 vh and 3 vw). In its head: − + ⟲ (`--hg-z` on the box, 1.1 a step, two each way, as the lyrics' overlay) zoom the text alone, the article's content wrapped in `.hg-doc` so the scroll box keeps its size and the stops still find their headings; ⤢ puts the box over the whole screen (`.hg-back.is-full`, 100 vw × 100 vh, no border) and ⤡ back; ✕ drawn (`x`). Both kept in this browser (yue2.guideZoom, yue2.guideFull). The suite gives the page a small guide (the mock has no /lab/guide/) and opens it by F1: 1300 × 94 vh, 1.21 at most, the whole screen and back, F1 shuts it. Keys table: an F1 row in seven languages. Patch 1250.
+
+**English headings in title case** (Viktor 08.10.2026: «В английском как базовом нашем языке, по правилам оформления заголовков исправь сущ. и прил., чобы начинались с заглавной. `The guide` > `The Guide` и т.п.»). heresy/MISC/claude-tc/titlecase.py, Chicago's rule: every word capitalised but the articles, the coordinating conjunctions and the prepositions (all of them, short or long) inside a heading; the first word, the last and the first after a colon or a · always; a word with a capital or a digit inside it (LoRAs, YuE2, DAWproject, REAPER, rc2) and ggml as their makers write them; a hyphenated word capitalised in each part (Cheat-Sheet). The page: its headings and drawers' names in index.html (Server Log, Local Chat Server, Trained Here, From a Recording, From One of Your Takes, Smithery Is Idle, Takes Made from It, The Song Now, Made from This Take, Start from an Idea, Cover or Remix, Supply Your Own Score, Writing Room, Text Profiles, Import a Track, Lyrics Check, Score Planner, Music Tokens, Sound and Output) and the idle take's title in app.js; the six catalogs got each new heading as a key of its own beside the old one (19 each), since the old words also live inside sentences, tips and toasts. The docs: the guide's headings at every level (its ids are lowercase slugs, so no link and no translation's anchor moved), the README's own (its little story in Spanish and Italian left alone), the CHANGELOG's. Buttons and sentences keep sentence case. Patch 1251.
+
+**The guide's Score and Voices on a Score** (Viktor 08.10.2026: «Смотрю ты партитуру препарировал. Разобрался полностью с SheetSage2 ересью? Тогда можно исчерпывающий гайд по этому формату и по принципу подхода к редактированию Ins/Vocal пространства партитурного. И напиши вспомогательный helper документ по тому, как у тебя удалось сделать многоголосие и управлять временными точками при создании аудио ряда для нашего недоделанного видео ролика. И прикручивай его тоже в секцию гайдов»). Two tabs before Shortcuts & Tricks in all seven guides (the guide's tabs are its «## »). *Score*: the eight lines of the head word for word, groups of one to four bars with the same count in both voices, Z and z, M: and K: changes, letters and octaves, the eleven lengths (1 2 3 4 6 8 12 16 24 32 48, others tied), the bar adding up, chords in Vocal only with their qualities and a slash bass, a chord on a rest, Full or Melody only told by the chords, sections against the lyrics (one long rap: 2 to 17 for the 32 of its text), a bar's seconds, the take as long as its score, the Vocal space (a syllable a note, the meter), the Ins space (resting under the voice as the official covers and Viktor's Full takes do; the Ins : Vocal line), changing it (Create ABC Score, the check, Key and Move, MIDI and Markers, SheetSage2, Recite), and a table of the check's refusals with their fixes; every rule read from heresy-abc.js, every example a real score (the meter check, Buratino v9.3.6.7, the official covers). *Voices on a Score*: the bed and its SheetSage2 score as the clock (103 BPM, 2.33 s a bar), a line at the bar nearest its scene, a syllable an eighth on the chord's tones, the section comment and tag together, the stress marks; the narrator and the women in one take (the style names both, the vocalise in parentheses and on its own notes two octaves up, a voice adapter at 0.45/0.3); six seeds, Whisper's word times against the bars (the best take: 7 of 11 lines within 1.5 s, mean 1.7 s, the farthest 7.5 s; the score leads, it does not pin), the ranking, the double ring (the film follows the take); what is in the studio (Recite, Time the Lines, End at…) and what is not yet. Written English first, then ru, uk, be, el, es, it by hand with each guide's own words for the rooms and buttons; check_guide.py clean in all six (images, code, numbers, rows, items, bold, the roots kept out), anchor_guide.py gave the new headings their English ids. Patch 1252.
+
+**Full by default, the score up to 8192** (Viktor 08.10.2026, answering the report: «Full as the default, the 6144 default score cap (8192 at max limit), [Fade out to silence] works»). The Full radio carries `checked` and New song calls `setCot("full")` (HERESY 1167 had Direct in both); the score's `min_tokens` and `max_tokens` bounds go to 8192 (`KNOB_BOUNDS.abc`), their default stays the engine's 6144 (src/sampling.h: «6144 + 12000 + ~80 leave ~6350 for the style and the lyrics in the 24576 window; 8192 for the score would eat the lyrics»: so 8192 is a ceiling for a long song, not a default). The engine itself checks only `max_tokens ≥ 1` and the floor under the ceiling, and the music's Max length already takes what the score holds. The words: the knob's tip («Default 6144, 8192 at most») and the two clamps' reasons (8,192) in the six catalogs; the guide marks Full plan as the default in seven languages. The suite: a fresh page in Full, 9000 back to 8192, 8000 kept, and New song back to Full (the 1167 check turned). `[Fade out to silence]` stays as it is: it works for him. Patch 1253.
+
+**A lifted frame's selects at +6, the LoRA notes' sign** (my own catch on the headless pictures sent to Viktor 08.10.2026, after 1246 and 1247). Since 1246 the selects grow with a lifted frame's text, and three of them sat in boxes measured in pixels: the Writer's (`max-width: 190px`), the key (`.keyfield` 128 px) and the profile's (`flex: 1 1 160px … 300px`, in a row that would not wrap): at +6 they read «From the Write…», «as writte…», «Music · up to 8:…». Now the same sizes in em (13.6, 9.15, 11.4–21.4 em: the pixels they were at 14 px), and in a lifted Compose the profile's row may wrap, its Delete going to the next line. Since 1247 the (i) has no circle, and the LoRA picker's notes (an i in its own circle until then) stood beside the section's (i) as «i i»: the notes are a drawn short list now (`--ico-notes`), a warning among them still the triangle. The suite lifts Compose to +6 and measures the three selects' words against their room, and the notes' mask against the (i)'s. Patch 1254.
 
 ## heresy-lab
 
-`lab/lab.py` — standard-library Python, port 41870, reached by the page through the Kit
-(`/lab/…`). One heavy job at a time; each runs in its own process on the GPU with the most free
-memory and leaves VRAM when it ends. CPU jobs (spectrum, artifacts, debuzz, remaster) one at a
-time of their own. Packages: `lab/requirements.txt`. The endpoints are listed in
-HERETICA-GUIDE §7.
+`lab/lab.py` — standard-library Python, port 41870, reached by the page through the Kit (`/lab/…`). One heavy job at a time; each runs in its own process on the GPU with the most free memory and leaves VRAM when it ends. CPU jobs (spectrum, artifacts, debuzz, remaster) one at a time of their own. Packages: `lab/requirements.txt`. The endpoints are listed in HERETICA-GUIDE §7.
 
 ### Running in production: two systemd user units
 
@@ -1688,22 +891,15 @@ journalctl --user -u ruach-studio -f                   # logs
 
 Findings from our takes, with the conditions, so they can be checked.
 
-**Where things live.** The music half (AR) writes the score and the semantic tokens: *what* is
-sung. The sound half (NAR, flow matching) and the VAE render them: *how it sounds*. Garbled
-words are an AR matter; solvers and steps cannot fix them.
+**Where things live.** The music half (AR) writes the score and the semantic tokens: *what* is sung. The sound half (NAR, flow matching) and the VAE render them: *how it sounds*. Garbled words are an AR matter; solvers and steps cannot fix them.
 
-**Glossolalia on long songs.** Two kinds: the words break down in the middle of the text, or the
-text ends and the model goes round singing earlier lines. The "high" Performance card
-(T 1.1 · top-p 0.97 · top-k 140) produced the first on a 7-minute song; the cover configs on
-r/StableDiffusion keep the music temperature at 0.80–0.95.
+**Glossolalia on long songs.** Two kinds: the words break down in the middle of the text, or the text ends and the model goes round singing earlier lines. The "high" Performance card (T 1.1 · top-p 0.97 · top-k 140) produced the first on a 7-minute song; the cover configs on r/StableDiffusion keep the music temperature at 0.80–0.95.
 
 **Flash attention.** Kept on everywhere.
-- Off in the AR: a different performance from the first tokens; on two seeds both takes were
-  4–9 dB brighter in 2–12 kHz and less clear in diction.
+- Off in the AR: a different performance from the first tokens; on two seeds both takes were 4–9 dB brighter in 2–12 kHz and less clear in diction.
 - Off in the NAR (same tokens): band energies equal to 0.1 dB, SNR 39 dB, 3.2× slower.
 
-**Style against the score.** Same score (`K:Dm M:2/4 Q:1/4=71`), same lyrics, two seeds, Whisper
-against the lyrics (mean match per minute):
+**Style against the score.** Same score (`K:Dm M:2/4 Q:1/4=71`), same lyrics, two seeds, Whisper against the lyrics (mean match per minute):
 
 | style | seed A | seed B |
 |---|---|---|
@@ -1713,9 +909,7 @@ against the lyrics (mean match per minute):
 
 The contradiction, not the length, cost the diction — most of all in the first minute.
 
-**The official examples** (110 prompts shipped with the Kit): style 4…999 characters, median 124;
-no arrows, no dynamics marks; 29 of them have lines in brackets inside the lyrics (instrument
-cues like `(saxophone)`, voice cues, backing echoes).
+**The official examples** (110 prompts shipped with the Kit): style 4…999 characters, median 124; no arrows, no dynamics marks; 29 of them have lines in brackets inside the lyrics (instrument cues like `(saxophone)`, voice cues, backing echoes).
 
 **Whisper over music loops** on its own hallucinations unless `condition_on_previous_text` is off.
 
@@ -1723,19 +917,10 @@ cues like `(saxophone)`, voice cues, backing echoes).
 
 ## Patches or commits?
 
-In the fork the patches become what they already are in `build/`: **commits on a branch on top of
-upstream**, one per patch, same messages. `heresy/apply.sh --export` still writes them out as
-`.patch` files — for rebasing on a new Kit release and for offering single ones upstream.
+In the fork the patches become what they already are in `build/`: **commits on a branch on top of upstream**, one per patch, same messages. `heresy/apply.sh --export` still writes them out as `.patch` files — for rebasing on a new Kit release and for offering single ones upstream.
 
 ---
 
 ## Credits
 
-[yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) · [yue2-kit](https://github.com/IronWolve/yue2-kit) ·
-[YuE2](https://github.com/multimodal-art-projection/YuE) (M-A-P) · [YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio) (songwriting
-assistant, Apache-2.0) · [abcjs](https://www.abcjs.net/) · Noto Music (SIL OFL 1.1) ·
-Whisper (OpenAI) via faster-whisper / CTranslate2 · [ggml](https://github.com/ggml-org/ggml) ·
-[python-audio-separator](https://github.com/nomadkaraoke/python-audio-separator) · [UniverSR](https://github.com/woongzip1/UniverSR) ·
-[openDAW](https://github.com/andremichelle/openDAW) (AGPL-3.0, vendored for later) · [Lucide](https://lucide.dev) (ISC) ·
-[Font Awesome Free](https://fontawesome.com/license/free) (CC BY 4.0). Ideas from
-[music-generator](https://github.com/jrlabanza/music-generator) (jrlabanza) and the ComfyUI nodes named in the guide.
+[yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) · [yue2-kit](https://github.com/IronWolve/yue2-kit) · [YuE2](https://github.com/multimodal-art-projection/YuE) (M-A-P) · [YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio) (songwriting assistant, Apache-2.0) · [abcjs](https://www.abcjs.net/) · Noto Music (SIL OFL 1.1) · Whisper (OpenAI) via faster-whisper / CTranslate2 · [ggml](https://github.com/ggml-org/ggml) · [python-audio-separator](https://github.com/nomadkaraoke/python-audio-separator) · [UniverSR](https://github.com/woongzip1/UniverSR) · [openDAW](https://github.com/andremichelle/openDAW) (AGPL-3.0, vendored for later) · [Lucide](https://lucide.dev) (ISC) · [Font Awesome Free](https://fontawesome.com/license/free) (CC BY 4.0). Ideas from [music-generator](https://github.com/jrlabanza/music-generator) (jrlabanza) and the ComfyUI nodes named in the guide.

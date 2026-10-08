@@ -1,2 +1,26 @@
 # work in progress, not a patch yet
 wip-*
+
+# HERESY 1169 · heresy/MISC (Viktor 08.10.2026: «под своим heresy/MISC/ держи всё, чего боишься потерять»): its small things are committed, what is big, generated or someone else's is only kept on the disk
+MISC/creator/build/
+MISC/creator/tmp/
+MISC/creator/heresy
+MISC/creator/.venv
+MISC/creator/shots-1168/
+MISC/upstreams/
+MISC/replaced/
+MISC/promo-rc1/
+MISC/claude-probes/
+MISC/old/
+MISC/art/
+MISC/from-laptop/
+MISC/**/*.png
+MISC/**/*.jpg
+MISC/**/*.tgz
+MISC/**/*.wav
+MISC/**/*.flac
+MISC/**/*.mp3
+MISC/**/*.mp4
+MISC/**/*.log
+MISC/**/__pycache__/
+MISC/claude-tc/yue-server.*

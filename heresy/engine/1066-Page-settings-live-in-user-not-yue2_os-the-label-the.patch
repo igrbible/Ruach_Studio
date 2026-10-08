@@ -2,7 +2,7 @@ From 4e28b495c36da137099d71bda4cba1debd1b1cdc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 00:25:21 -0600
-Subject: [PATCH 1066/1198] Page settings live in user/, not yue2_os: the
+Subject: [PATCH 1066/1252] Page settings live in user/, not yue2_os: the
  label, the reset tip, the comments
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

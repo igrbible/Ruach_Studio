@@ -1,9 +1,6 @@
 # Ruach Studio · the logo
 
-From Viktor's own draft (02.10.2026): **RUACH · the winged woman · [STUDIO]**. She is white, rising out of a cloud
-in the theme's accent; the cloud reaches over the words' inner ends. RUACH is set in Montserrat Black, STUDIO a
-touch above Light (Montserrat, SIL Open Font License, turned into paths: the files need no font). The woman is
-traced from his drawing (`figure-traced.svg`, 101 contours).
+From Viktor's own draft (02.10.2026): **RUACH · the winged woman · [STUDIO]**. She is white, rising out of a cloud in the theme's accent; the cloud reaches over the words' inner ends. RUACH is set in Montserrat Black, STUDIO a touch above Light (Montserrat, SIL Open Font License, turned into paths: the files need no font). The woman is traced from his drawing (`figure-traced.svg`, 101 contours). Her arms were drawn again on 08.10.2026 (HERESY 1243), at his word: she stands with her back to us, her right arm bent a little upward at the elbow, her left one hidden but for the upper arm down to the elbow (the spiral curls of the first trace are gone).
 
 | file | what |
 |---|---|

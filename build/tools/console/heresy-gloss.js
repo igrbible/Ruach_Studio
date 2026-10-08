@@ -38,8 +38,9 @@
     if (r.loop) {
       var warn = document.createElement("p");
       warn.className = "gloss-loop";
-      warn.textContent = "⚠ Whisper went round on one text (“" + r.loop.text + "” ×" + r.loop.times +
+      var said = "⚠ Whisper went round on one text (“" + r.loop.text + "” ×" + r.loop.times +
         "): this measurement says nothing about the song. Press Listen again.";
+      if (window.ruachSigned) window.ruachSigned(warn, said); else warn.textContent = said;   // HERESY 1169 · 1247: the sign drawn
       box.appendChild(warn);
     }
     var bars = document.createElement("div");

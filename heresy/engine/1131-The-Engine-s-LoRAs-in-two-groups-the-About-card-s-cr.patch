@@ -2,7 +2,7 @@ From 9ce390823b6f96973a4987b7c9f53ac4e920ce9d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Sun, 4 Oct 2026 02:03:00 -0600
-Subject: [PATCH 1131/1198] The Engine's LoRAs in two groups; the About card's
+Subject: [PATCH 1131/1252] The Engine's LoRAs in two groups; the About card's
  credits on a line of their own (1166, part eleven)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

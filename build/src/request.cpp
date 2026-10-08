@@ -35,6 +35,8 @@ void request_init(Yue2Request * r) {
     r->cfg_scale        = -1.0f;
     r->semantic_tokens  = "";
     r->semantic_keep    = "";
+    r->end_at           = 0.0f;
+    r->fade_out         = 0.0f;
 
     r->abc_sampling      = YUE2_ABC_SAMPLING;
     r->semantic_sampling = YUE2_SEMANTIC_SAMPLING;
@@ -173,6 +175,12 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     }
     if ((v = yyjson_obj_get(obj, "semantic_keep")) && yyjson_is_str(v)) {
         r->semantic_keep = yy_str(v);
+    }
+    if ((v = yyjson_obj_get(obj, "end_at")) && yyjson_is_num(v)) {   // HERESY 1169
+        r->end_at = (float) yyjson_get_num(v);
+    }
+    if ((v = yyjson_obj_get(obj, "fade_out")) && yyjson_is_num(v)) {   // HERESY 1169
+        r->fade_out = (float) yyjson_get_num(v);
     }
     if ((v = yyjson_obj_get(obj, "cfg_scale")) && yyjson_is_num(v)) {
         r->cfg_scale = (float) yyjson_get_num(v);
@@ -342,6 +350,12 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     }
     if (!r->semantic_keep.empty()) {   // HERESY 1037: written only when used
         yyjson_mut_obj_add_strncpy(doc, root, "semantic_keep", r->semantic_keep.c_str(), r->semantic_keep.size());
+    }
+    if (r->end_at > 0.0f) {   // HERESY 1169: written only when used
+        yyjson_mut_obj_add_real(doc, root, "end_at", r->end_at);
+    }
+    if (r->fade_out > 0.0f) {
+        yyjson_mut_obj_add_real(doc, root, "fade_out", r->fade_out);
     }
     if (!sparse || r->cfg_scale != d.cfg_scale) {
         yyjson_mut_obj_add_real(doc, root, "cfg_scale", r->cfg_scale);

@@ -1,0 +1,43 @@
+From 66b211c081969127df9a58462ab2d93ff473aaa0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 18:50:38 -0600
+Subject: [PATCH 1207/1252] HERESY 1169: a measure whose beat numbers skip one
+ is written with the beats it has, an odd bar, and the log says so, instead of
+ failing the whole score
+
+The last of the 620 style takes without a score cover (suno-french-house-a, measure 28).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/notation.h | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/src/notation.h b/src/notation.h
+index d824009..9828215 100644
+--- a/src/notation.h
++++ b/src/notation.h
+@@ -196,13 +196,17 @@ static bool not_measures(const std::vector<NotBeat> & beats, std::vector<NotMeas
+         const Span &     sp    = spans[mi];
+         int              count = sp.end - sp.start;
+         std::vector<int> dens, nums;
++        bool             skipped = false;
+         for (int i = sp.start; i < sp.end; i++) {
+-            if (beats[i].beat_id != beats[sp.start].beat_id + (i - sp.start)) {
+-                return not_fail(error, "Measure " + std::to_string(mi) + ": non-consecutive beat IDs");
+-            }
++            // HERESY 1169: beat numbers that skip one (the tracker's own guess of a beat it lost) failed the whole score in
++            // the reference; the measure is the beats it has, so it is written with them, an odd bar, and the log says so
++            skipped = skipped || beats[i].beat_id != beats[sp.start].beat_id + (i - sp.start);
+             dens.push_back(beats[i].den);
+             nums.push_back(beats[i].num);
+         }
++        if (skipped) {
++            fprintf(stderr, "[SheetSage] measure %zu: its beat numbers skip one; written with the %d beats it has\n", mi, count);
++        }
+         if (!sp.pickup && beats[sp.start].beat_id != 1) {
+             return not_fail(error, "Measure " + std::to_string(mi) + ": full measure does not start at beat ID 1");
+         }
+-- 
+2.43.0
+

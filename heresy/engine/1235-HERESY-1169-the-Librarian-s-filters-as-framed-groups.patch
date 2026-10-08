@@ -1,0 +1,359 @@
+From 0021f2576df81e2df42fa795a76a08ed1837a85b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 09:22:45 -0600
+Subject: [PATCH 1235/1252] =?UTF-8?q?HERESY=201169:=20the=20Librarian's=20?=
+ =?UTF-8?q?filters=20as=20framed=20groups=20(made=20=C2=B7=20liked=20?=
+ =?UTF-8?q?=C2=B7=20has)=20with=20icons=20and=20counts=20and=20a=20clear?=
+ =?UTF-8?q?=20button;=20the=20take's=20menu=20on=20a=20checked=20card=20ac?=
+ =?UTF-8?q?ts=20on=20every=20checked=20take=20(marks,=20artwork,=20its=20r?=
+ =?UTF-8?q?emoval,=20workspaces,=20hiding,=20a=20ZIP)=20and=20asks=20first?=
+ =?UTF-8?q?=20for=20artwork=20or=20regeneration=20of=20several=20(=C2=ABHu?=
+ =?UTF-8?q?man,=20=E2=80=A6=20in=20one=20volley=3F=20Won't=20your=20graphi?=
+ =?UTF-8?q?cs=20card=20waste=20away=3F=C2=BB,=20his=20own=20words=20in=20R?=
+ =?UTF-8?q?ussian)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «первая статичная строка фильтрации... сделай её ахуйной»; «всё, что может быть применено массово, оформи на tracks selection… И то, что реально сможет убить ресурсы GPU и время, всё в попап диалоги».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 14 +++++
+ tools/console/app.js               | 85 ++++++++++++++++++++++++------
+ tools/console/heresy-collection.js | 22 +++++++-
+ tools/console/heresy-i18n-ru.js    |  2 +
+ tools/console/heresy-icons.js      |  9 ++++
+ tools/console/index.html           | 42 +++++++++------
+ 6 files changed, 140 insertions(+), 34 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6b67e90..3555428 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4509,3 +4509,17 @@ body:not([data-frame]) .frame-fs { display: none; }
+ .icon-check:has(input:checked) { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
+ .icon-check:has(input:focus-visible) { outline: 2px solid var(--amber); outline-offset: 1px; }
+ @media (max-width: 1400px) { .coll-bulk { flex-wrap: wrap; } }
++
++/* HERESY 1169 · 1235 (Viktor 08.10.2026: «первая статичная строка фильтрации... сделай её ахуйной»): the filters as framed groups like the bar of the checked: a caption, then chips joined into one control, each an icon, its word and how many takes of this place it would show */
++.coll-filters { gap: 10px; }
++.coll-fgroup { display: inline-flex; align-items: stretch; flex: none; border: 1px solid var(--line-a); border-radius: var(--r-md); overflow: hidden; background: color-mix(in srgb, var(--ink) 2%, transparent); }
++.coll-fgroup > .coll-cap-inline { display: inline-flex; align-items: center; padding: 0 10px; border-right: 1px solid var(--line-a); font-size: 10.5px; letter-spacing: .09em; background: color-mix(in srgb, var(--ink) 5%, transparent); }
++.coll-fgroup .coll-chip, .coll-fgroup .coll-chip-ico { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 0; border-right: 1px solid var(--line-a); border-radius: 0; background: none; color: var(--muted); font-size: 12.5px; line-height: 18px; transition: background-color .12s ease, color .12s ease; }
++.coll-fgroup .coll-chip:last-child { border-right: 0; }
++.coll-fgroup .coll-chip:hover { background: color-mix(in srgb, var(--amber) 9%, transparent); color: var(--ink); }
++.coll-fgroup .coll-chip.is-on { background: color-mix(in srgb, var(--amber) 17%, transparent); color: var(--amber); box-shadow: inset 0 -2px 0 var(--amber); }
++.coll-fgroup .coll-chip svg { width: 15px; height: 15px; flex: none; display: block; }
++.coll-fn { min-width: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; font-size: 10.5px; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; color: var(--muted); background: color-mix(in srgb, var(--ink) 8%, transparent); }
++.coll-fgroup .coll-chip.is-on .coll-fn { color: var(--amber); background: color-mix(in srgb, var(--amber) 18%, transparent); }
++.coll-fgroup .coll-chip.is-none:not(:hover) { opacity: .5; }
++.coll-fclear[hidden] { display: none; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 23f4f7e..aa8e4c9 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5073,7 +5073,7 @@
+       toast(this.value ? "Artwork from now on: " + this.options[this.selectedIndex].textContent : "Artwork: the painter by the cards");
+     });
+   })();
+-  function drawArt(name, again) {
++  function drawArt(name, again, quiet) {
+     var take = findTake(name), title = take ? displayTitle(take) : name;
+     if (ARTING[name]) {
+       toast(ARTING[name] === "wait" ? "Artwork for “" + title + "” already waits in the queue for a card"
+@@ -5081,7 +5081,7 @@
+       return Promise.resolve();
+     }
+     ARTING[name] = "draw";
+-    toast("Drawing artwork for “" + title + "”: a prompt from its style and words, then the picture (a minute or two)");
++    if (!quiet) toast("Drawing artwork for “" + title + "”: a prompt from its style and words, then the picture (a minute or two)");
+     var painter = recall("yue2.artPainter") || "";      // HERESY 1167: Engine → Artwork; empty: by the cards
+     var ask = function (first) {
+       return api("/lab/art/draw?name=" + encodeURIComponent(name) + (first && again ? "&again=1" : "") +
+@@ -5099,10 +5099,38 @@
+       });
+     };
+     return ask(true).then(function (d) {
+-      return refreshArts().then(function () { toast("Artwork for “" + title + "” is ready"); return d; });
++      return refreshArts().then(function () { if (!quiet) toast("Artwork for “" + title + "” is ready"); return d; });
+     }).catch(function (e) { toast("No artwork: " + e.message, "bad"); })
+       .then(function (d) { delete ARTING[name]; return d; });
+   }
++  // HERESY 1169 · 1235 (Viktor 08.10.2026: «Та же генерация обложек. На одну уходит до минуты в Krea 2 Muse. `Человече, ты запрашиваешь генерацию обложек на 00 треков одним залпом? Твоя видеокарта не схудится?`»): artwork for every checked take, asked first, then drawn one after another; a redraw keeps the old picture beside its take
++  function artMany(list) {
++    var have = list.filter(function (n) { return !!artUrl(n); }), none = list.filter(function (n) { return !artUrl(n); });
++    var text = "Human, artwork for " + list.length + " takes in one volley? Won't your graphics card waste away?\n\nEach picture is about a minute on a GPU (Krea 2 Muse): some " + list.length + " minutes in all, drawn one after another; the studio stays yours meanwhile." +
++      (have.length && none.length ? "\n\n" + have.length + " of them have artwork already: drawing for the " + none.length + " without leaves those as they are; redrawing all keeps each old picture beside its take." :
++       have.length ? "\n\nAll of them have artwork already: each old picture is kept beside its take." : "");
++    var opts = have.length && none.length ? { ok: "Draw the " + none.length + " without", alt: "Redraw all " + list.length, cancel: "Not now" }
++      : have.length ? { ok: "Redraw all " + list.length, cancel: "Not now" } : { ok: "Draw all " + list.length, cancel: "Not now" };
++    return window.HeresyDialog.confirm(text, opts).then(function (r) {
++      if (!r) return;
++      var todo = r === "alt" || !none.length ? list : none, done = 0, i = 0;
++      toast("Drawing artwork for " + todo.length + " takes, one after another: about " + todo.length + " minutes");
++      var next = function () {
++        if (i >= todo.length) { toast("Artwork drawn: " + done + " of " + todo.length, done === todo.length ? "good" : "bad"); return; }
++        var n = todo[i++];
++        return drawArt(n, !!artUrl(n), true).then(function (d) { if (d && d.status !== "failed") done++; }).then(next);
++      };
++      return next();
++    });
++  }
++  function removeArtMany(list) {
++    return window.HeresyDialog.confirm("Take the artwork off " + list.length + " takes?\n\nEach picture is kept beside its take, in artwork-removed/, and their MP3s lose it as their cover; the menu can paint new ones.", { ok: "Take them off", danger: true })
++      .then(function (ok) {
++        if (!ok) return;
++        return list.reduce(function (p, n) { return p.then(function () { return api("/lab/art/remove?name=" + encodeURIComponent(n)).catch(function () {}); }); }, Promise.resolve())
++          .then(refreshArts).then(function () { toast("The artwork is off " + list.length + " takes: kept beside each, in artwork-removed/"); });
++      });
++  }
+   // HERESY 1156: the picture taken off its take (the lab keeps it in the take's artwork-removed/, and drops the MP3s made
+   // with it as their cover)
+   function removeArt(name) {
+@@ -7280,6 +7308,13 @@
+ 
+   // HERESY 1160: the lab makes them again (its own queue in the engine) and swaps each new take in when it lands, even
+   // with this page closed; the activity log says each swap
++  // HERESY 1169 · 1235: more than one take made again asks first (each a whole song: minutes on a GPU)
++  function regenAsk(list) {
++    if (list.length < 2) return regenTakes(list);
++    var secs = list.reduce(function (s, n) { var t = findTake(n); return s + ((t && t.seconds) || 0); }, 0);
++    return window.HeresyDialog.confirm("Human, " + list.length + " whole songs made again in one volley? Won't your graphics card waste away?\n\nEach is made again from its own request with new seeds, the score and the music anew: minutes on a GPU each, " + clock(secs) + " of music in all. They queue one after another; the old ones are kept in “Sourced for Regeneration”.",
++      { ok: "Regenerate " + list.length, cancel: "Not now" }).then(function (ok) { if (ok) return regenTakes(list); });
++  }
+   function regenTakes(list) {
+     var n = list.length, first = findTake(list[0]), what = n > 1 ? n + " takes" : "\u201c" + (first ? displayTitle(first) : list[0]) + "\u201d";
+     return post("/lab/regen", { names: list }).then(function (d) {
+@@ -7323,7 +7358,11 @@
+     var save = function (url, file) {
+       return function () { var a = document.createElement("a"); a.href = url; a.download = file; document.body.appendChild(a); a.click(); a.remove(); };
+     };
++    // HERESY 1169 · 1235 (Viktor 08.10.2026: «всё, что может быть применено массово, оформи на tracks selection… И то, что реально сможет убить ресурсы GPU и время, всё в попап диалоги»): on a checked card in the Librarian with others checked, the marks, the artwork, the workspaces, hiding and a ZIP act on every checked take; what costs a card's minutes asks first
++    var bulkSel = here === "collection" && HC && HC.selected ? HC.selected() : [], bulk = bulkSel.length > 1 && bulkSel.indexOf(name) >= 0 ? bulkSel : null;
++    var bulkRows = bulk ? bulk.map(function (n) { return HC.row(n); }).filter(Boolean) : [], bulkArt = bulk ? bulk.filter(function (n) { return !!artUrl(n); }) : [];
+     var items = [
++      bulk ? { head: bulk.length + " checked: a line with a number acts on all of them" } : null,
+       { icon: now ? "❚❚" : "▶", label: now ? "Pause" : "Play", action: function () {
+         if (now) return togglePlay();
+         STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
+@@ -7336,9 +7375,12 @@
+       HC && HC.openSheet && here === "collection" ? { icon: "▤", label: "Open the sheet", action: function () { HC.openSheet(name); } } : null,
+       HC && HC.datasheet ? { icon: "☰", label: "Open the datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
+       { sep: true },
+-      HC ? { icon: "👍", label: "Like", checked: r > 0, action: function () { HC.rate(name, r > 0 ? 0 : 1).then(changed); } } : null,
+-      HC ? { icon: "👎", label: "Dislike", checked: r < 0, action: function () { HC.rate(name, r < 0 ? 0 : -1).then(changed); } } : null,
+-      { icon: "☆", label: "Favourite", checked: !!take.favorite, action: function () { toggleFavorite(take).then(function () { changed(); if (HC) HC.reload(); }); } },
++      HC && bulk && HC.rateMany ? { icon: "👍", label: "Like " + bulk.length, hint: "all liked: taken back", checked: bulkRows.every(function (x) { return x.rating > 0; }), action: function () { HC.rateMany(bulk, 1).then(changed); } }
++        : HC ? { icon: "👍", label: "Like", checked: r > 0, action: function () { HC.rate(name, r > 0 ? 0 : 1).then(changed); } } : null,
++      HC && bulk && HC.rateMany ? { icon: "👎", label: "Dislike " + bulk.length, hint: "all disliked: taken back", checked: bulkRows.every(function (x) { return x.rating < 0; }), action: function () { HC.rateMany(bulk, -1).then(changed); } }
++        : HC ? { icon: "👎", label: "Dislike", checked: r < 0, action: function () { HC.rate(name, r < 0 ? 0 : -1).then(changed); } } : null,
++      HC && bulk && HC.favMany ? { icon: "☆", label: "Favourite " + bulk.length, hint: "all favourites: taken back", checked: bulk.every(function (n) { var t = findTake(n); return !!(t && t.favorite); }), action: function () { HC.favMany(bulk).then(function () { changed(); HC.reload(); }); } }
++        : { icon: "☆", label: "Favourite", checked: !!take.favorite, action: function () { toggleFavorite(take).then(function () { changed(); if (HC) HC.reload(); }); } },
+       HC ? { icon: "✍", label: "Note…", action: function () {
+         window.HeresyDialog.prompt("A note on “" + displayTitle(take) + "”\n\nEmpty removes it.", HC.note(name), { ok: "Keep the note", max: 4000 })
+           .then(function (t) { if (t !== null) HC.setNote(name, t).then(paintNote); });
+@@ -7351,21 +7393,25 @@
+       // HERESY 1120: artwork, asked for. HERESY 1155 (Viktor: «Для Draw Artwork, когда есть иллюстрация, заменяй на
+       // Redraw Artwork»; «Не уходим из студии в другие окна и вкладки»): seen over the page, drawn again by name
+       take.session || !artUrl(name) ? null : { icon: "▣", label: "Open the artwork", action: function () { showArt(name); } },
+-      take.session ? null : ARTING[name]                // HERESY 1167: one drawing a take at a time
++      take.session ? null : bulk ? { icon: "▣", label: "Artwork for " + bulk.length + "…", hint: "about a minute each on a GPU; asks first", action: function () { artMany(bulk); } }
++        : ARTING[name]                // HERESY 1167: one drawing a take at a time
+         ? { icon: "▣", label: ARTING[name] === "wait" ? "Artwork waits for a card…" : "Drawing artwork…", disabled: true, action: function () {} }
+         : artUrl(name)
+-        ? { icon: "↻", label: "Redraw artwork", hint: "a new prompt, a new picture", action: function () { drawArt(name, true); } }
++        ? { icon: "↻", label: "Redraw artwork", hint: "a new picture; the old one kept beside the take", action: function () { drawArt(name, true); } }
+         : { icon: "▣", label: "Draw artwork", hint: "a minute or two on a GPU", action: function () { drawArt(name, false); } },
+       // HERESY 1156 (Viktor: «В меню мыши Remove current Artwork»): taken off the take, kept beside it
+-      take.session || !artUrl(name) ? null : { icon: "✕", label: "Remove current artwork", hint: "kept beside the take", action: function () { removeArt(name); } },
++      take.session ? null : bulk ? (bulkArt.length ? { icon: "✕", label: "Remove artwork from " + bulkArt.length + "…", hint: "kept beside each take", action: function () { removeArtMany(bulkArt); } } : null)
++        : !artUrl(name) ? null : { icon: "✕", label: "Remove current artwork", hint: "kept beside the take", action: function () { removeArt(name); } },
+       { sep: true },
+-      HC ? { icon: "▦", label: "Workspaces", items: ws.map(function (w) {
+-        var on = inWs.indexOf(w) >= 0;
+-        return { label: w, raw: true, checked: on, action: function () { HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: [name] }, on ? "Taken out of “" + w + "”" : "Added to “" + w + "”"); } };
++      HC ? { icon: "▦", label: bulk ? "Workspaces of " + bulk.length : "Workspaces", items: ws.map(function (w) {
++        var whom = bulk || [name], on = bulk ? bulkRows.length > 0 && bulkRows.every(function (x) { return (x.workspaces || []).indexOf(w) >= 0; }) : inWs.indexOf(w) >= 0;
++        var said = bulk ? " " + bulk.length : "";
++        return { label: w, raw: true, checked: on, action: function () { HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: whom }, on ? "Taken out of “" + w + "”" + said : "Added to “" + w + "”" + said); } };
+       }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
+-        window.HeresyDialog.prompt("A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name" }).then(function (w) {
++        var whom = bulk || [name];
++        window.HeresyDialog.prompt(bulk ? "A new workspace for the " + bulk.length + " checked takes" : "A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name" }).then(function (w) {
+           w = (w || "").trim();
+-          if (w) HC.act({ op: "ws-add", workspace: w, names: [name] }, "Added to “" + w + "”");
++          if (w) HC.act({ op: "ws-add", workspace: w, names: whom }, "Added to “" + w + "”");
+         });
+       } }]) } : null,
+       // HERESY 1154 (Viktor): Move above Pin
+@@ -7399,7 +7445,12 @@
+       // HERESY 1166: in the Pinned view, Unpin takes it out of every strip it stands in
+       HC && HC.unpinAll && here === "collection" && HC.place() === "__pinned" && HC.pinPlaces(name).length ?
+         { icon: "\ud83d\udccc", label: "Unpin", action: function () { HC.unpinAll(name); } } : null,
+-      HC ? { icon: "◌", label: row && row.hidden ? "Show again" : "Hide from the lists", action: function () {
++      HC && bulk ? (function () {
++        var all = bulkRows.length > 0 && bulkRows.every(function (x) { return x.hidden; });
++        return { icon: "◌", label: all ? "Show " + bulk.length + " again" : "Hide " + bulk.length + " from the lists", action: function () {
++          HC.act({ op: all ? "show" : "hide", names: bulk }, all ? "Shown again: " + bulk.length : "Hidden from the lists (not deleted): " + bulk.length);
++        } };
++      })() : HC ? { icon: "◌", label: row && row.hidden ? "Show again" : "Hide from the lists", action: function () {
+         HC.act({ op: row && row.hidden ? "show" : "hide", names: [name] }, row && row.hidden ? "Shown again" : "Hidden from the lists (not deleted)");
+       } } : null,
+       { sep: true },
+@@ -7409,7 +7460,7 @@
+       take.session ? null : (function () {
+         var sel = here === "collection" && HC && HC.selected ? HC.selected() : [], list = sel.length > 1 && sel.indexOf(name) >= 0 ? sel : [name];
+         return { icon: "⟳", label: list.length > 1 ? "Regenerate " + list.length + " with new seeds" : "Regenerate with a new seed",
+-                 hint: "replaces it; the old one kept", action: function () { regenTakes(list); } };
++                 hint: list.length > 1 ? "replaces them; the old kept; asks first" : "replaces it; the old one kept", action: function () { regenAsk(list); } };
+       })(),
+       HW ? { icon: "✒", label: "Writer", items: [
+         { label: "New document from this take", action: function () {
+@@ -7429,6 +7480,8 @@
+         { label: "Take id", hint: name.slice(0, 15), action: copy("Take id", function () { return name; }) }
+       ] },
+       { icon: "⤓", label: "Download", items: [
++        bulk && HC.exportChecked ? { label: bulk.length + " as a ZIP", hint: "the bar's format, made on the Forge", action: function () { HC.exportChecked(); } } : null,
++        bulk ? { sep: true } : null,
+         { label: formatExt(take.format).toUpperCase(), action: save(downloadUrl(take), audioFileName(take)) },
+         convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", hint: artUrl(name) ? "with its artwork" : "", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null,
+         artUrl(name) ? { label: "Artwork · JPEG", action: save(artUrl(name), fileTitle(take) + ".jpg") } : null,
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index fee0631..807dd75 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -353,6 +353,16 @@
+     if (liked) parts.push(liked + " liked"); if (disliked) parts.push(disliked + " disliked"); if (fav) parts.push(fav + " \u2605"); if (notes) parts.push(notes + " with a note");
+     parts.push(kindsSaid);
+     parts.push(state.rows.length + " in the library");
++    // HERESY 1169 · 1235: how many takes of this place each filter would show; the clear button while any is on
++    Array.prototype.forEach.call(document.querySelectorAll("#collFilters .coll-chip"), function (b) {
++      var k = b.dataset.kind || b.dataset.der;
++      var n = count(b.dataset.der ? function (r) { return (r.derived || []).indexOf(k) >= 0; } : k === "__liked" ? function (r) { return r.rating > 0; } :
++                    k === "__disliked" ? function (r) { return r.rating < 0; } : k === "__starred" ? function (r) { return !!r.favorite; } : function (r) { return r.kind === k; });
++      var f = b.querySelector(".coll-fn");
++      if (f) f.textContent = String(n);
++      b.classList.toggle("is-none", !n && !b.classList.contains("is-on"));
++    });
++    $("collFClear").hidden = !(Object.keys(state.kinds).length || Object.keys(state.derived).length);
+     // HERESY 1166: every piece its own text, so each translates (the kinds of take as a list of their own)
+     $("collNote").innerHTML = parts.filter(function (p) { return p && p.length; }).map(function (p) {
+       return Array.isArray(p) ? p.map(function (k) { return "<span>" + esc(k) + "</span>"; }).join(", ") : "<span>" + esc(p) + "</span>";
+@@ -815,6 +825,16 @@
+       var svg = ico({ __liked: "like", __disliked: "dislike", __starred: "star" }[b.dataset.kind]);   // the cards' one-colour icons, not the emoji
+       if (svg) b.innerHTML = svg;
+     });
++    // HERESY 1169 · 1235: each chip an icon, its word and how many takes of this place it would show (paintHead counts)
++    Array.prototype.forEach.call(document.querySelectorAll("#collFilters .coll-chip"), function (b) {
++      if (b.classList.contains("coll-chip-ico")) b.insertAdjacentHTML("beforeend", '<span class="coll-fn"></span>');
++      else b.innerHTML = (b.dataset.fi ? ico(b.dataset.fi) : "") + '<span class="coll-fw">' + esc(b.textContent.trim()) + '</span><span class="coll-fn"></span>';
++    });
++    $("collFClear").addEventListener("click", function () {
++      state.kinds = {}; state.derived = {};
++      Array.prototype.forEach.call(document.querySelectorAll("#collFilters .is-on"), function (b) { b.classList.remove("is-on"); });
++      paint();
++    });
+     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) {
+       b.addEventListener("click", function () { store(VIEW_KEY, b.dataset.collView); paint(); });
+     });
+@@ -1636,7 +1656,7 @@
+   }
+ 
+   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
+-                              current: current, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
++                              current: current, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 5029120..eb8eec8 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1324,6 +1324,8 @@ RuachI18n.add("ru", {
+ "The text ends at {0} of {1} ({2} of {3} lines heard in order).": "Текст кончается на {0} из {1} (по порядку услышано {2} из {3} строк).",
+ "Render this take again, cut at {0}? The same performance; only the sound stage runs.": "Озвучить этот семпл заново с обрезкой на {0}? То же исполнение; работает только звуковая стадия.",
+ "Trim it": "Обрезать",
++"Human, artwork for {0} takes in one volley? Won't your graphics card waste away?": "Человече, ты запрашиваешь генерацию обложек на {0} треков одним залпом? Твоя видеокарта не схудится?",
++"Human, {0} whole songs made again in one volley? Won't your graphics card waste away?": "Человече, ты запрашиваешь регенерацию {0} треков одним залпом? Твоя видеокарта не схудится?",
+ "Rendering {0} cut at {1}…": "{0} звучит с обрезкой на {1}…",
+ "Open a take first": "Сначала открой семпл",
+ "VAE": "VAE",
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 0df3fe2..6033e02 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -85,6 +85,15 @@
+     // HERESY 1169: back and on by a quarter minute (Lucide's rewind and fast-forward, ISC)
+     rewind: '<polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/>',
+     forward: '<polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/>',
++    // HERESY 1169 · 1235: the Librarian's filters (Lucide's sparkles, import, refresh-cw, audio-waveform, eraser, sliders-vertical, chevrons-up and filter-x, ISC)
++    sparkles: '<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
++    "import": '<path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/>',
++    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
++    waveform: '<path d="M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2"/>',
++    eraser: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
++    sliders: '<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M2 14h4"/><path d="M10 8h4"/><path d="M18 16h4"/>',
++    "chevrons-up": '<path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/>',
++    "filter-x": '<path d="M13.01 3H2l8 9.46V19l4 2v-8.54l.9-1.06"/><path d="m22 3-5 5"/><path d="m17 3 5 5"/>',
+     // HERESY 1169: the Librarian's bar of the checked (Lucide's list-checks, x, folder-minus, eye-off, eye, archive, layers and trash-2, ISC)
+     "select-all": '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+     x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+diff --git a/tools/console/index.html b/tools/console/index.html
+index ca0b254..68bf8ed 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1794,24 +1794,32 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+            data-tip="Drag to widen or narrow the workspaces; a double click folds them away"><button type="button" class="coll-fold" id="collFold">«</button></div>
+       <div class="coll-main">
+         <div class="coll-bar" id="collBar">
++          <!-- HERESY 1169 · 1235 (Viktor 08.10.2026: «первая статичная строка фильтрации... сделай её ахуйной»): three framed groups like the bar of the checked; each chip an icon, its word and how many takes of this place it would show -->
+           <div class="coll-filters" id="collFilters">
+-            <span class="coll-cap-inline">made</span>
+-            <button type="button" class="coll-chip" data-kind="generated">generated</button>
+-            <button type="button" class="coll-chip" data-kind="imported">imported</button>
+-            <button type="button" class="coll-chip" data-kind="regenerated">regenerated</button>
+-            <button type="button" class="coll-chip" data-kind="rerendered">re-rendered</button>
+-            <span class="coll-cap-inline">liked</span>
+-            <!-- HERESY 1167: the cards' own one-colour icons (heresy-collection.js puts them in); a dislike hides a take, this shows them -->
+-            <button type="button" class="coll-chip coll-chip-ico" data-kind="__liked" aria-label="Liked" data-tip="Only the liked">👍</button>
+-            <button type="button" class="coll-chip coll-chip-ico" data-kind="__disliked" aria-label="Disliked" data-tip="Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them">👎</button>
+-            <!-- HERESY 1168 (Viktor 06.10.2026: «В фильтр в Воркспейсах добавь Звезду»): the favourites of the workspace in hand
+-                 (★ Favourites at the side is all of them, everywhere) -->
+-            <button type="button" class="coll-chip coll-chip-ico" data-kind="__starred" aria-label="Favourites" data-tip="Only the favourites (★), in the workspace you are in">★</button>
+-            <span class="coll-cap-inline">has</span>
+-            <button type="button" class="coll-chip" data-der="stems">stems</button>
+-            <button type="button" class="coll-chip" data-der="debuzz">debuzz</button>
+-            <button type="button" class="coll-chip" data-der="remaster">remaster</button>
+-            <button type="button" class="coll-chip" data-der="upscale">upscale</button>
++            <span class="coll-fgroup" role="group" aria-label="Made">
++              <span class="coll-cap-inline">made</span>
++              <button type="button" class="coll-chip" data-kind="generated" data-fi="sparkles" data-tip="Made here, from words">generated</button>
++              <button type="button" class="coll-chip" data-kind="imported" data-fi="import" data-tip="Brought in from a file">imported</button>
++              <button type="button" class="coll-chip" data-kind="regenerated" data-fi="refresh" data-tip="Made again from its own request with new seeds">regenerated</button>
++              <button type="button" class="coll-chip" data-kind="rerendered" data-fi="waveform" data-tip="The same music rendered again: another decoder, a new sound, trimmed or ended">re-rendered</button>
++            </span>
++            <span class="coll-fgroup" role="group" aria-label="Liked">
++              <span class="coll-cap-inline">liked</span>
++              <!-- HERESY 1167: the cards' own one-colour icons (heresy-collection.js puts them in); a dislike hides a take, this shows them -->
++              <button type="button" class="coll-chip coll-chip-ico" data-kind="__liked" aria-label="Liked" data-tip="Only the liked">👍</button>
++              <button type="button" class="coll-chip coll-chip-ico" data-kind="__disliked" aria-label="Disliked" data-tip="Only the disliked: a dislike hides a take from the lists, as SUNO does (nothing is deleted); this shows them">👎</button>
++              <!-- HERESY 1168 (Viktor 06.10.2026: «В фильтр в Воркспейсах добавь Звезду»): the favourites of the workspace in hand
++                   (★ Favourites at the side is all of them, everywhere) -->
++              <button type="button" class="coll-chip coll-chip-ico" data-kind="__starred" aria-label="Favourites" data-tip="Only the favourites (★), in the workspace you are in">★</button>
++            </span>
++            <span class="coll-fgroup" role="group" aria-label="Has">
++              <span class="coll-cap-inline">has</span>
++              <button type="button" class="coll-chip" data-der="stems" data-fi="layers" data-tip="Split into stems in the Refiner">stems</button>
++              <button type="button" class="coll-chip" data-der="debuzz" data-fi="eraser" data-tip="Debuzzed in the Refiner">debuzz</button>
++              <button type="button" class="coll-chip" data-der="remaster" data-fi="sliders" data-tip="Remastered in the Refiner">remaster</button>
++              <button type="button" class="coll-chip" data-der="upscale" data-fi="chevrons-up" data-tip="Upscaled in the Refiner">upscale</button>
++            </span>
++            <button type="button" class="btn ghost small icon-btn coll-fclear" id="collFClear" data-ui="filter-x" aria-label="Clear the filters" data-tip="Clear the filters" hidden></button>
+           </div>
+         </div>
+         <div class="coll-bar" id="collTrashBar" hidden>
+-- 
+2.43.0
+

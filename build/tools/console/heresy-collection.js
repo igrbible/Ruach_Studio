@@ -85,13 +85,21 @@
   function inTree(r, place) {
     return r.workspaces.some(function (w) { return w === place || (w.indexOf(place + SEP) === 0 && wsLeaf(w) !== SOURCED); });
   }
+  // HERESY 1169 (Viktor 08.10.2026: «всё, что с начальным диамандом 💎, чтобы алфавитно шло вниз древа. Там мои пробы и семплы
+  // глобально публичные»): the 💎 workspaces (the public sets) at the tree's foot, in their own order by name without the 💎
+  // «И суфиксные `💎 ... LoRA` гони в самый низ как вечное правило. Мы на будущее проектируем»: a 💎 one named «… LoRA» lower still
+  var DIAMOND = /^\s*\uD83D\uDC8E\s*/, LORA_END = /\bLoRAs?\s*$/i;
+  function treeRank(top) { return !DIAMOND.test(top) ? 0 : LORA_END.test(top) ? 2 : 1; }
   function treeOrder(list) {                     // a parent, then its sections, whatever names stand between them
     return list.slice().sort(function (a, b) {
-      var A = wsParts(a), B = wsParts(b);
+      var A = wsParts(a), B = wsParts(b), rA = treeRank(A[0]), rB = treeRank(B[0]);
+      if (rA !== rB) return rA - rB;
+      if (rA) { A[0] = A[0].replace(DIAMOND, ""); B[0] = B[0].replace(DIAMOND, ""); }
       for (var i = 0; i < Math.min(A.length, B.length); i++) if (A[i] !== B[i]) return A[i] < B[i] ? -1 : 1;
       return A.length - B.length;
     });
   }
+  window.ruachTreeOrder = treeOrder;   // for the checks
   // HERESY 1166 (Viktor: «Деактивация воркспейса. Замораживаются все треки в этом представлении, никаких действий по ним,
   // в `All Workspaces` и в поиске не отображаются. Сам деактивированный воркспейс немного засЕривается»): a take frozen with
   // its workspace (the lab says which: in no workspace that is not frozen) shows only inside it, greyed, heard and read
@@ -113,8 +121,30 @@
   }
   function frozenWs(w) { return (state.frozen || []).some(function (f) { return w === f || String(w).indexOf(f + SEP) === 0; }); }
   function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
+  // HERESY 1169 · 1241 (Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): what can be ticked, and how a take answers each
+  var FILTERS = [
+    { label: "Made", items: [["generated", "generated", "sparkles"], ["imported", "imported", "import"], ["regenerated", "regenerated", "refresh"], ["rerendered", "re-rendered", "waveform"]] },
+    { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"]] },
+    { label: "Has", items: [["stems", "stems", "layers"], ["debuzz", "debuzz", "eraser"], ["remaster", "remaster", "sliders"], ["upscale", "upscale", "chevrons-up"]] }
+  ];
+  var DERIVED = { stems: 1, debuzz: 1, remaster: 1, upscale: 1 }, LOGIC_KEY = "yue2.collLogic";
+  function filterTest(v) {
+    if (DERIVED[v]) return function (r) { return (r.derived || []).indexOf(v) >= 0; };
+    if (v === "__liked") return function (r) { return r.rating > 0; };
+    if (v === "__disliked") return function (r) { return r.rating < 0; };
+    if (v === "__starred") return function (r) { return !!r.favorite; };
+    if (v === "__note") return function (r) { return !!r.note; };
+    if (v === "__art") return function (r) { return !!(window.HeresyArt && window.HeresyArt.url(r.name)); };
+    return function (r) { return r.kind === v; };
+  }
+  function filterOn() { return Object.keys(state.kinds).concat(Object.keys(state.derived)); }
+  function passes(r, on, logic) {
+    if (!on.length) return true;
+    var hits = on.filter(function (v) { return filterTest(v)(r); }).length;
+    return logic === "or" ? hits > 0 : logic === "nor" ? hits === 0 : hits === on.length;
+  }
   function shown() {
-    var m = matcher(state.q), anyDer = Object.keys(state.derived).length;
+    var m = matcher(state.q), on = filterOn(), logic = state.logic || "and";
     var rows = state.rows.filter(function (r) {
       if (!iceHere(r)) return false;               // HERESY 1166
       if (state.place === "__fav" && !r.favorite) return false;
@@ -122,14 +152,9 @@
       if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
       if (state.place === "__hidden") { if (!r.hidden) return false; }
       else if (r.hidden) return false;
-      if (r.rating < 0 && !showDis() && !state.kinds.__disliked) return false;   // HERESY 1167
+      if (r.rating < 0 && !showDis() && !(state.kinds.__disliked && logic !== "nor")) return false;   // HERESY 1167; 1241: shown when the filter asks for the disliked
       if (state.place && state.place.charAt(0) !== "_" && !inTree(r, state.place)) return false;   // its sections too (1161)
-      if (state.kinds.__liked && !(r.rating > 0)) return false;
-      if (state.kinds.__disliked && !(r.rating < 0)) return false;
-      if (state.kinds.__starred && !r.favorite) return false;   // HERESY 1168: the favourites, where you are
-      var realKinds = Object.keys(state.kinds).filter(function (k) { return k.charAt(0) !== "_"; });
-      if (realKinds.length && !state.kinds[r.kind]) return false;
-      if (anyDer && !r.derived.some(function (k) { return state.derived[k]; })) return false;
+      if (!passes(r, on, logic)) return false;   // HERESY 1169 · 1241: the ticked filters, joined AND, OR or NOR
       // HERESY 1167: a take's workspaces and sections are searched too (a section's name finds its takes)
       return m(r.title) || m(r.name) || (r.note && m(r.note)) || r.workspaces.some(function (w) { return m(w); });
     });
@@ -257,7 +282,7 @@
   }
   function batch() { var n = perRow(); return n * Math.ceil(30 / n); }
   function viewSig() {
-    return [state.place, state.q, JSON.stringify(state.kinds), JSON.stringify(state.derived), recall(SORT_KEY) || "new", recall(VIEW_KEY) || "tiles"].join("|");
+    return [state.place, state.q, JSON.stringify(state.kinds), JSON.stringify(state.derived), state.logic, recall(SORT_KEY) || "new", recall(VIEW_KEY) || "tiles"].join("|");
   }
   function moreWatch() {
     var g = $("collGrid"), s = $("collMore");
@@ -321,14 +346,8 @@
                 : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
     }
   }
-  function paintHead(rows) {
-    // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
-    var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
-    // HERESY 1165: the studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
-    $("collWhere").innerHTML = " \u203a " + (placeName ? "<span>" + esc(placeName) + "</span>" : wsParts(state.place).map(function (p, i) {
-      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>";
-    }).join(SEP));
-    var inPlace = state.rows.filter(function (r) {
+  function placeRows() {   // the takes of the place open (HERESY 1169 · 1241: the head's counts and the filter window's)
+    return state.rows.filter(function (r) {
       if (state.place === "__fav") return r.favorite && !r.hidden;
       if (state.place === "__pinned") return !!pinnedAll()[r.name] && !r.hidden;
       if (state.place === "__none") return !r.workspaces.length && !r.hidden;
@@ -336,6 +355,51 @@
       if (state.place) return !r.hidden && inTree(r, state.place);     // HERESY 1161: with its sections
       return !r.hidden;
     }).filter(iceHere);                            // HERESY 1166: frozen takes count only in their own workspace
+  }
+  function paintFilterBtn() {
+    var b = $("collFilterBtn"), n = $("collFilterN"), on = filterOn(), lg = String(state.logic || "and").toUpperCase();
+    if (!b) return;
+    b.classList.toggle("is-on", on.length > 0);
+    n.hidden = !on.length;
+    n.textContent = on.length ? on.length + " · " + lg : "";
+    b.setAttribute("aria-label", on.length ? "Filter: " + on.length + " on, joined " + lg : "Filter");
+  }
+  function countWith(values, logic) {
+    var kinds = state.kinds, derived = state.derived, lg = state.logic;
+    state.kinds = {}; state.derived = {}; state.logic = logic;
+    values.forEach(function (v) { (DERIVED[v] ? state.derived : state.kinds)[v] = 1; });
+    var n = shown().length;
+    state.kinds = kinds; state.derived = derived; state.logic = lg;
+    return n;
+  }
+  function openFilter() {
+    var inPlace = placeRows();
+    var groups = FILTERS.map(function (g) {
+      return { label: g.label, items: g.items.map(function (it) {
+        return { value: it[0], label: it[1], icon: ico(it[2]), note: String(inPlace.filter(filterTest(it[0])).length), checked: !!(state.kinds[it[0]] || state.derived[it[0]]) };
+      }) };
+    });
+    return window.HeresyDialog.pick("Filter the takes\n\nTick what to look for. A take is shown when it has all of the ticked (AND), any of them (OR) or none of them (NOR); the numbers count the takes of this place.", groups, {
+      logic: state.logic || "and", ok: "Show", count: countWith,
+      logics: [{ value: "and", label: "All · AND", tip: "A take shows when it has every ticked thing" }, { value: "or", label: "Any · OR", tip: "A take shows when it has at least one ticked thing" },
+               { value: "nor", label: "None · NOR", tip: "A take shows when it has none of the ticked things" }]
+    }).then(function (r) {
+      if (!r) return;
+      state.kinds = {}; state.derived = {};
+      r.values.forEach(function (v) { (DERIVED[v] ? state.derived : state.kinds)[v] = 1; });
+      state.logic = r.logic || "and";
+      if (state.logic === "and") { try { localStorage.removeItem(LOGIC_KEY); } catch (e) { /* private */ } } else store(LOGIC_KEY, state.logic);   // AND, the default, leaves no key
+      paint();
+    });
+  }
+  function paintHead(rows) {
+    // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
+    var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
+    // HERESY 1165: the studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
+    $("collWhere").innerHTML = " \u203a " + (placeName ? "<span>" + esc(placeName) + "</span>" : wsParts(state.place).map(function (p, i) {
+      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>";
+    }).join(SEP));
+    var inPlace = placeRows();
     var secs = inPlace.reduce(function (s, r) { return s + (r.seconds || 0); }, 0), hm = function (t) { var h = Math.floor(t / 3600), m = Math.round(t % 3600 / 60); return h ? h + " h " + m + " min" : m + " min"; };
     var count = function (f) { return inPlace.filter(f).length; }, kinds = {};
     inPlace.forEach(function (r) { kinds[r.kind] = (kinds[r.kind] || 0) + 1; });
@@ -345,6 +409,7 @@
     if (liked) parts.push(liked + " liked"); if (disliked) parts.push(disliked + " disliked"); if (fav) parts.push(fav + " \u2605"); if (notes) parts.push(notes + " with a note");
     parts.push(kindsSaid);
     parts.push(state.rows.length + " in the library");
+    paintFilterBtn();   // HERESY 1169 · 1241
     // HERESY 1166: every piece its own text, so each translates (the kinds of take as a list of their own)
     $("collNote").innerHTML = parts.filter(function (p) { return p && p.length; }).map(function (p) {
       return Array.isArray(p) ? p.map(function (k) { return "<span>" + esc(k) + "</span>"; }).join(", ") : "<span>" + esc(p) + "</span>";
@@ -429,7 +494,10 @@
       '<option value="__new">+ a new one…</option>';
     $("collWsPick").innerHTML = '<option value="">Add to workspace…</option>' + state.ws.map(function (w) { return '<option translate="no">' + esc(w) + "</option>"; }).join("") +
       '<option value="__new">+ a new one…</option>';
-    $("collHide").textContent = state.place === "__hidden" ? "Show again" : "Hide";
+    var hid = state.place === "__hidden", hb = $("collHide");                 // HERESY 1169: an icon, its words in its tip
+    hb.innerHTML = window.HeresyIcons ? window.HeresyIcons.ui(hid ? "eye" : "eye-off") : (hid ? "Show again" : "Hide");
+    hb.setAttribute("aria-label", hid ? "Show again" : "Hide");
+    hb.dataset.tip = hid ? "Show again: back in the lists" : "Out of the lists, not deleted: Hidden on the left shows them again";
     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
   }
 
@@ -693,7 +761,8 @@
       '<div class="hd-body">The studio\'s approved sets, as their author published them. Each comes in as a workspace of its own, ' +
       "locked against deletion: its takes as MP3 with their covers, titles and notes. Only what you ask for is downloaded. " +
       // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
-      "The covers are painted by an image model: some show an instrument not quite as it really is.</div>" +
+      // HERESY 1169: the styles' covers are their own scores (SheetSage2 heard each take), the instruments' still painted
+      "The instruments' covers are painted by an image model: some show an instrument not quite as it really is; the styles' covers are each take's own score.</div>" +
       '<div class="hub-list"><p class="row-hint">Asking Hugging Face…</p></div>' +
       '<div class="hd-acts"><button type="button" class="btn ghost small hub-close">Close</button></div></div>';
     document.body.appendChild(back);
@@ -799,20 +868,11 @@
     $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
     // HERESY 1167: the disliked shown or not: the rooms' takes column's ⋯ («The disliked ones too»), one setting with this
     window.addEventListener("ruach-disliked", function () { paint(); });
-    Array.prototype.forEach.call(document.querySelectorAll('#collFilters [data-kind="__liked"], #collFilters [data-kind="__disliked"], #collFilters [data-kind="__starred"]'), function (b) {
-      var svg = ico({ __liked: "like", __disliked: "dislike", __starred: "star" }[b.dataset.kind]);   // the cards' one-colour icons, not the emoji
-      if (svg) b.innerHTML = svg;
-    });
+    // HERESY 1169 · 1241: the filters' window, from the button at the end of the search row
+    state.logic = recall(LOGIC_KEY) || "and";
+    $("collFilterBtn").addEventListener("click", function () { openFilter(); });
     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) {
       b.addEventListener("click", function () { store(VIEW_KEY, b.dataset.collView); paint(); });
-    });
-    $("collFilters").addEventListener("click", function (e) {
-      var b = e.target.closest("[data-kind],[data-der]");
-      if (!b) return;
-      var bag = b.dataset.kind ? state.kinds : state.derived, k = b.dataset.kind || b.dataset.der;
-      if (bag[k]) delete bag[k]; else bag[k] = 1;
-      b.classList.toggle("is-on", !!bag[k]);
-      paint();
     });
     $("collSide").addEventListener("click", function (e) {
       var more = e.target.closest("[data-ws-menu]");          // HERESY 1050
@@ -1159,12 +1219,15 @@
   }
 
   // HERESY 1042: likes, as SUNO has them (the player sets them)
-  function rating(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.rating || 0 : 0; }
+  // HERESY 1169: a take without a row here (the Creator's take head, another workspace's take) reads what rate() remembered
+  function rating(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.rating || 0 : rated[name] ? rated[name].v || 0 : 0; }
   // HERESY 1108: many takes rated at once; all of them rated so already: taken back to none
   function rateMany(list, value) {
     var rows = list.map(rowOf).filter(Boolean), all = rows.length && rows.every(function (r) { return r.rating === value; });
     var v = all ? 0 : value, before = rows.map(function (r) { return r.rating; });
-    rows.forEach(function (r) { r.rating = v; }); paint();
+    rows.forEach(function (r) { r.rating = v; });
+    if (v < 0 && !showDis()) list.forEach(function (n) { delete state.sel[n]; });   // HERESY 1169 · 1239: a dislike sends them out of the lists, so out of the choice
+    paint();
     list.forEach(function (n) { remember(n, v); });
     var asked = rateSeq;
     return api("/collection", { op: "rate", names: list, value: v }).then(function (d) {
@@ -1622,8 +1685,8 @@
     api("/collection", { op: "played", names: [name] }).catch(function () { r.fresh = true; });
   }
 
-  window.HeresyCollection = { init: init, reload: load, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
-                              current: current, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+  window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
+                              current: current, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
@@ -1633,5 +1696,7 @@
                               pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166
                               undoable: undoable, untrash: untrash,
-                              trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { return load().then(function () { return d; }); }); } };
+                              trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { ((d && d.moved) || names).forEach(function (n) { delete state.sel[n]; }); return load().then(function () { return d; }); }); },
+                              // HERESY 1169 · 1239 (Viktor 08.10.2026: «Я переместил в корзину три трека, а блок так и остался раскрытым, и не исчез обратно в "тень"»): what the menu sends away leaves the choice, as with the bar's own buttons
+                              unselect: function (names) { (names || []).forEach(function (n) { delete state.sel[n]; }); paint(); } };
 })();

@@ -480,18 +480,21 @@
     var d = state.data;
     $("trRaw").innerHTML = d.raw.length ? d.raw.map(function (r) {
       return '<button type="button" class="tr-pick' + (state.raw === r.name ? " is-on" : "") + '" data-raw="' + esc(r.name) + '"><b translate="no">' + esc(r.name) + "</b><span>" +   // HERESY 1166
-        "<span>" + r.tracks + " tracks</span> · <span>" + gb(r.bytes) + "</span>" + (r.captions ? " · <span>" + r.captions + " captions</span>" : "") + "</span></button>";
+        "<span>" + r.tracks + " tracks</span> · <span>" + gb(r.bytes) + "</span>" + (r.captions ? " · <span>" + r.captions + " captions</span>" : "") +
+        (voiceShort(r.voice) ? ' · <span translate="no">' + esc(voiceShort(r.voice)) + "</span>" : "") + "</span></button>";   // HERESY 1169
     }).join("") : '<p class="row-hint">Put a folder of songs into <code>datasets/raw/</code>, then press Reload.</p>';
   }
   function pickRaw(name) {
-    state.raw = name; paintRaw(); paintPills();
+    var kept = (rawOf(name) || {}).voice;                 // HERESY 1169: a sex said before is said again
+    state.raw = name; state.voiceMode = null; state.voiceSex = kept && kept.voice_by === "given" ? kept.voice : "";
+    paintRaw(); paintPills(); paintVoice();
     $("trTracks").innerHTML = '<p class="row-hint">Reading the folder…</p>';
     api("/train/scan?name=" + encodeURIComponent(name)).then(function (d) {
       state.rows = d.tracks.map(function (t) {
         return { file: t.file, seconds: t.seconds, include: (t.seconds || 0) >= 30 || !!t.style, style: t.style || "", lyrics: t.lyrics || "", from: t.lyrics_from || "", hints: t.hints || [] };
       });
       $("trSetName").value = slug(name);
-      paintTracks(); paintPills();
+      paintTracks(); paintPills(); paintVoice();
     }).catch(function (e) { $("trTracks").innerHTML = '<p class="tr-warn">' + esc(e.message) + "</p>"; });
   }
   function paintTracks() {
@@ -506,6 +509,75 @@
         '<input type="text" data-style="' + i + '" value="' + esc(r.style) + '" placeholder="a style of its own (empty: the shared one)" />' +
         '<textarea rows="8" data-lyrics="' + i + '" placeholder="[Verse]\nthe lyrics exactly as sung (empty for an instrumental)">' + esc(r.lyrics) + "</textarea></div></div></div>";
     }).join("");
+  }
+
+  // ------------------------------------------------------------------ 1b The voice
+  // HERESY 1169 (Viktor 05.10.2026: «Ты можешь у Тренера прикрутить… что определяет тип голоса? Мужской или женский,
+  // регистр? Нам не нужны Имена человеков, а нужны именно их тональности»): the picked folder's voice by measure
+  // (lab/voice_kind.py, pYIN over up to twelve tracks). On speech: male or female and the register, and a name for the set
+  // made of them, as the published voice adapters are named (voice-ru-m-baritenor-117: the language of the lyrics, the
+  // middle pitch in Hz last). On singing: the range sung, the voice left to the ear. Kept beside the songs, shown on the
+  // folder and beside the sets made from it. A draft by measure: the ear decides.
+  function rawOf(name) { return ((state.data && state.data.raw) || []).filter(function (r) { return r.name === name; })[0] || null; }
+  function voiceShort(v) {
+    if (!v || v.error || !v.median_hz) return "";
+    var sex = v.voice === "male" ? "♂ " : v.voice === "female" ? "♀ " : "? ";
+    if (v.mode === "sung") return sex + "sung " + (v.low || "") + "–" + (v.high || "");
+    return sex + (v.register || "?") + " · " + Math.round(v.median_hz) + " Hz";
+  }
+  function voiceLang() {   // the lyrics' letters: Cyrillic is ru, Latin en
+    var cy = 0, la = 0;
+    state.rows.forEach(function (r) { var t = r.lyrics || ""; cy += (t.match(/[а-яёіїєґў]/gi) || []).length; la += (t.match(/[a-z]/gi) || []).length; });
+    return cy > la * 2 ? "ru" : la > cy * 2 ? "en" : "";
+  }
+  function voiceName(v) {
+    if (!v || v.mode === "sung" || !v.register || (v.voice !== "male" && v.voice !== "female")) return "";
+    var l = voiceLang();
+    return "voice-" + (l ? l + "-" : "") + (v.voice === "female" ? "f" : "m") + "-" + v.register + "-" + Math.round(v.median_hz);
+  }
+  function sungGuess() { return state.rows.some(function (r) { return /^\s*\[(verse|chorus|bridge|intro|outro|pre-chorus)/im.test(r.lyrics || ""); }); }
+  function voiceMode() { var v = (rawOf(state.raw) || {}).voice; return state.voiceMode || (v && v.mode) || (sungGuess() ? "sung" : "speech"); }
+  function paintVoice() {
+    var el = $("trVoice"), v = (rawOf(state.raw) || {}).voice, j = state.voiceJob && state.voiceJob.name === state.raw ? state.voiceJob : null;
+    el.hidden = !state.raw;
+    if (!state.raw) return;
+    var mode = voiceMode(), name = voiceName(v), running = !!j && j.status === "running", say;
+    if (running) say = '<span class="row-hint">measuring the pitch of up to twelve tracks, twenty seconds of each…</span>';
+    else if (j && j.status === "failed") say = '<span class="tr-warn">' + esc(j.error || "the measure failed") + "</span>";
+    else if (!v || !v.median_hz) say = '<span class="row-hint">not measured yet</span>';
+    else if (v.mode === "sung") say = "<b>" + esc(v.voice === "uncertain" ? "a voice the pitch alone does not name" : v.voice) + "</b> <span>· sung " + esc(v.low) + "–" + esc(v.high) +
+      ", the middle " + esc(v.mid) + " (" + Math.round(v.median_hz) + " Hz)</span>";
+    else if (v.voice === "uncertain") say = "<b>" + Math.round(v.median_hz) + " Hz</b> <span>· a low woman (" + esc(v.register_if_female) + ") or a high man (" +
+      esc(v.register_if_male) + "): say which, and measure again</span>";
+    else say = "<b>" + esc(v.voice) + " · " + esc(v.register) + "</b> <span>· speaking at " + Math.round(v.median_hz) + " Hz" + (v.mid ? " (" + esc(v.mid) + ")" : "") + ", most of it " +
+      Math.round(v.p10_hz) + "–" + Math.round(v.p90_hz) + " Hz</span>" + (v.voice_by === "given" ? ' <span class="row-hint">(male or female as you said)</span>' : "");
+    el.innerHTML = '<span class="tr-voice-cap">Voice</span>' + say + '<span class="spacer"></span>' +
+      '<span class="tr-voice-opts" role="group" aria-label="What the folder holds">' + [["speech", "speech"], ["sung", "singing"]].map(function (m) {
+        return '<button type="button" class="btn ghost small tr-chip' + (mode === m[0] ? " is-on" : "") + '" data-voice-mode="' + m[0] + '" aria-pressed="' + (mode === m[0]) + '">' + m[1] + "</button>";
+      }).join("") + "</span>" +
+      '<span class="tr-voice-opts" role="group" aria-label="Male or female">' + [["", "by pitch"], ["male", "♂"], ["female", "♀"]].map(function (s) {
+        return '<button type="button" class="btn ghost small tr-chip' + ((state.voiceSex || "") === s[0] ? " is-on" : "") + '" data-voice-sex="' + s[0] + '" aria-pressed="' + ((state.voiceSex || "") === s[0]) + '">' + s[1] + "</button>";
+      }).join("") + "</span>" +
+      '<button type="button" class="btn ghost small" data-voice-go' + (running ? " disabled" : "") + ' data-tip="The pitch of the voiced moments, measured on this computer (pYIN); about half a minute">' +
+      (v && v.median_hz ? "Measure again" : "Measure the voice") + "</button>" +
+      (name ? '<button type="button" class="btn ghost small" data-voice-name="' + esc(name) + '" data-tip="The set named by its voice, as the published voice adapters are: no person\'s name">Name the set ' + esc(name) + "</button>" : "");
+  }
+  function measureVoice() {
+    var name = state.raw;
+    state.voiceJob = { name: name, status: "running" };
+    paintVoice();
+    api("/train/voice", { name: name, voice: state.voiceSex || "", mode: voiceMode() }).then(function poll() {
+      return api("/train/voice?name=" + encodeURIComponent(name)).then(function (j) {
+        if (j.status === "running") return new Promise(function (ok) { setTimeout(ok, 1500); }).then(poll);
+        state.voiceJob = { name: name, status: j.status, error: j.error };
+        var r = rawOf(name);
+        if (r && j.kept) r.voice = j.kept;
+        paintRaw(); paintSets();
+        if (state.raw === name) paintVoice();
+        if (j.status === "done") toast("The voice of " + name + ": " + voiceShort(j.kept));
+        else toast(j.error || "The measure failed", true);
+      });
+    }).catch(function (e) { state.voiceJob = { name: name, status: "failed", error: e.message }; paintVoice(); });
   }
 
   // HERESY 1100: the starter sets (Viktor: "so a person can start experimenting, not beat their head against a wall").
@@ -572,7 +644,8 @@
     if (state.set && !(d.prepared || []).some(function (p) { return p.name === state.set; })) state.set = "";
     $("trSets").innerHTML = d.prepared.length ? d.prepared.map(function (p) {
       return '<label class="tr-setpick' + (p.name === state.set ? " is-on" : "") + '"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + (p.name === state.set ? " checked" : "") + ' /><b translate="no">' + esc(p.name) + "</b><span>" +   // HERESY 1166
-        "<span>" + p.tracks + " tracks</span> · <span>" + clock(p.seconds) + "</span> · <span>from</span> <span translate=\"no\">" + esc(p.from) + "</span> · <span>" + esc(p.made) + "</span></span></label>";
+        "<span>" + p.tracks + " tracks</span> · <span>" + clock(p.seconds) + "</span> · <span>from</span> <span translate=\"no\">" + esc(p.from) + "</span> · <span>" + esc(p.made) + "</span>" +
+        (voiceShort((rawOf(p.from) || {}).voice) ? ' · <span translate="no">' + esc(voiceShort(rawOf(p.from).voice)) + "</span>" : "") + "</span></label>";   // HERESY 1169
     }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
   }
   function setKind(k) {
@@ -696,6 +769,15 @@
     $("trFold").addEventListener("click", function () { state.folded = true; keep("yue2.trFolded", "1"); paintList(); });
     $("trUnfold").addEventListener("click", function () { state.folded = false; keep("yue2.trFolded", null); paintList(); });
     $("trRaw").addEventListener("click", function (e) { var b = e.target.closest("[data-raw]"); if (b) pickRaw(b.dataset.raw); });
+    $("trVoice").addEventListener("click", function (e) {                 // HERESY 1169
+      var b = e.target.closest("[data-voice-mode], [data-voice-sex], [data-voice-go], [data-voice-name]");
+      if (!b || b.disabled) return;
+      if (b.dataset.voiceMode) { state.voiceMode = b.dataset.voiceMode; return paintVoice(); }
+      if (b.hasAttribute("data-voice-sex")) { state.voiceSex = b.dataset.voiceSex; return paintVoice(); }
+      if (b.hasAttribute("data-voice-go")) return measureVoice();
+      $("trSetName").value = b.dataset.voiceName;
+      toast("The set's name: " + b.dataset.voiceName);
+    });
     $("trStarterOpen").addEventListener("click", toggleStarter);
     $("trStarter").addEventListener("click", function (e) { var b = e.target.closest("[data-starter]"); if (b) fetchStarter(b.dataset.starter); });
     $("trTracks").addEventListener("change", function (e) { var i = e.target.dataset.in; if (i !== undefined) { state.rows[+i].include = e.target.checked; paintTracks(); paintPills(); } });

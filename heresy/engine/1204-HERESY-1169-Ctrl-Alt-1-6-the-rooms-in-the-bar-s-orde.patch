@@ -1,0 +1,51 @@
+From 13399a16e509ac16367b6a0422fd689d457a0508 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 16:44:53 -0600
+Subject: [PATCH 1204/1252] =?UTF-8?q?HERESY=201169:=20Ctrl+Alt+1=E2=80=A66?=
+ =?UTF-8?q?,=20the=20rooms=20in=20the=20bar's=20order,=20then=20the=20Engi?=
+ =?UTF-8?q?ne?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Хромовские и файрфоксовские Ctrl+N можно перехватывать? Если так, то к каждой комнате по её порядку
+можно прикрутить Ctrl+1, etc.» Ctrl+1…9 are the browser's own tabs (Chrome and Firefox never hand them to a page; on Linux
+Alt+1…9 too), so here Ctrl+Alt+1…6 («Да, делай Ctrl+Alt+1…6»), Ctrl+1…6 kept for the desktop app («Да Ctrl+цифра в
+Electron»). Each key presses the bar's own button (leaving the Engine with GPU roles unsaved asks, as it does), read by the
+key's code: any keyboard layout, the number pad too. The guide's keys table in seven languages.
+
+Kitchen suite: 400 passed, 0 failed, 7 skipped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index fee54c6..e1f0933 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8098,6 +8098,19 @@
+     if (!f || (event.target.closest && event.target.closest("input, select, textarea"))) return;
+     setTimeout(function () { if (!f.contains(document.activeElement)) f.focus({ preventScroll: true }); }, 0);
+   });
++  // HERESY 1169 (Viktor 07.10.2026: «к каждой комнате по её порядку можно прикрутить Ctrl+1, etc.»): Ctrl+1…9 are the
++  // browser's own tabs and never reach a page, so here Ctrl+Alt+1…6 («Да, делай Ctrl+Alt+1…6»; Ctrl+1…6 come with the desktop
++  // app): the rooms in the bar's order, then the Engine, each by its own button (leaving the Engine asks as it does); read
++  // by the key's code, so in any keyboard layout and from the number pad too
++  window.addEventListener("keydown", function (event) {
++    if (!event.ctrlKey || !event.altKey || event.shiftKey || event.metaKey) return;
++    var m = /^(?:Digit|Numpad)([1-6])$/.exec(event.code || "");
++    if (!m || document.querySelector(".hd-back:not(.is-leaving)")) return;
++    event.preventDefault();
++    var n = +m[1], tabs = all("#tabs [data-tab]");
++    if (n === 6) $("engineToggle").click();
++    else if (tabs[n - 1]) tabs[n - 1].click();
++  }, true);
+   // HERESY 1169 (Viktor 07.10.2026: «Давай шорткат Shift+Tab блокируем для обратного хождения по полям, а именно для
+   // переключения между композером и Исполнителем. И когда фрейм опущен, из обычной страницы… эта комбинация подымает оверлей во
+   // фрейме композера… В общем, всегда в композере. Это главная кузня»): in the Creator, Shift+Tab is the frames' key, not the
+-- 
+2.43.0
+

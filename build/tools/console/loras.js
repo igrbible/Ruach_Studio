@@ -215,7 +215,7 @@
       r.parentNode.classList.toggle("is-over", overLimit(entry(c.id), half, c[half]));
     });
     syncTotal(half);
-    S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+    paintNotes();
   }
   function overLimit(e, half, v) { return v > zones(e, half).limit + 1e-9; }
 
@@ -379,7 +379,7 @@
         (e.error ? "" : '<span class="lora-pick-half">' + (p ? "both" : halfShort(e)) + "</span>") +
         '<span class="lora-pick-tag">' + escape(tag) + "</span></button>";
     }).join("");
-    S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+    paintNotes();
     S.host.querySelector(".lora-lib-count").textContent = S.catalog.length ? String(S.catalog.length) : "";   // HERESY 1167
   }
 
@@ -388,6 +388,19 @@
     if (S.opts.onChange) S.opts.onChange();
   }
 
+  // HERESY 1169 (Viktor 08.10.2026: «после свёрнутого блока LoRA выскочил обрезанный параграф объяснений. Он нахер там не нужен»):
+  // the picker's notes in a tip beside the LoRAs' name, ⚠ when one warns; the paragraph under the list keeps them, hidden
+  function paintNotes() {
+    var list = hints().map(tr), p = S.host.querySelector(".lora-hint"), set = S.host.closest("fieldset"), n = set && set.querySelector(".lora-notes");
+    if (p) p.textContent = list.join(" ");
+    if (!n) return;
+    var warn = list.some(function (x) { return x.charAt(0) === "\u26a0"; });
+    n.hidden = !list.length;
+    n.textContent = "";   // HERESY 1169 · 1247: drawn by the stylesheet (.lora-notes, .is-warn), not the emoji or a letter
+    n.setAttribute("aria-label", warn ? "A warning on the LoRAs" : "Notes on the LoRAs");
+    n.classList.toggle("is-warn", warn);
+    n.dataset.tip = list.join("\n");
+  }
   function mount(host, opts) {
     S.host = host;
     S.opts = opts || {};
@@ -395,6 +408,16 @@
     host.innerHTML = '<div class="lora-active"></div><details class="lora-lib"><summary><span class="chev" aria-hidden="true"></span>' +
       '<span class="lora-lib-name">Add a LoRA</span><span class="lora-lib-count mono"></span></summary>' +
       '<div class="lora-chips"></div></details><p class="row-hint lora-hint"></p>';
+    var lab = host.closest("fieldset") && host.closest("fieldset").querySelector(".label");   // HERESY 1169: the notes' place
+    if (lab && !lab.querySelector(".lora-notes")) {
+      var nb = root.document.createElement("span");
+      nb.className = "lora-notes";
+      nb.tabIndex = -1;
+      nb.setAttribute("role", "img");
+      nb.setAttribute("aria-label", "Notes on the LoRAs");
+      nb.hidden = true;
+      lab.appendChild(nb);
+    }
     var lib = host.querySelector(".lora-lib");
     try { lib.open = root.localStorage.getItem("yue2.loraLib") === "open"; } catch (e) { /* no storage: closed */ }
     lib.addEventListener("toggle", function () {
@@ -459,6 +482,28 @@
       field.addEventListener("keydown", function (e) { if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); });
       field.addEventListener("blur", function () { finish(true); });
     });
+    // HERESY 1169 · 1242 (Viktor 08.10.2026: «При наведении мыши на ползунок и при перетаскивании сделай тултип поверх курсора, 16pt»): the strength over the pointer, exact (0.875, not the output's 0.88), framed in its zone's colour, while the pointer is on a slider or drags it; the label's own tip stands aside meanwhile
+    var vt = null, vtOn = null, vtXY = [0, 0];
+    function vtip(range) {
+      if (!vt) { vt = document.createElement("div"); vt.className = "lora-vtip"; vt.setAttribute("aria-hidden", "true"); document.body.appendChild(vt); }
+      var v = +range.value, max = +range.max || 1, z1 = parseFloat(range.style.getPropertyValue("--z1")) / 100 * max, z2 = parseFloat(range.style.getPropertyValue("--z2")) / 100 * max;
+      var label = range.closest(".lora-half, .lora-total"), name = label && label.querySelector("span") ? label.querySelector("span").textContent : "";
+      vt.textContent = (name ? name + " " : "") + v.toFixed(3).replace(/0+$/, "").replace(/\.$/, ".0");
+      vt.className = "lora-vtip " + (v > z2 + 1e-9 ? "is-red" : v > z1 + 1e-9 ? "is-amber" : "is-green");
+      vt.style.left = vtXY[0] + "px";
+      vt.style.top = vtXY[1] + "px";
+      vt.hidden = false;
+      document.body.classList.add("lora-vtip-on");
+    }
+    function vtipOff() { if (vt) vt.hidden = true; document.body.classList.remove("lora-vtip-on"); vtOn = null; }
+    host.addEventListener("pointermove", function (event) {
+      var r = event.target.closest && event.target.closest('input[type="range"].zoned');
+      vtXY = [event.clientX, event.clientY];
+      if (r && !r.disabled) { vtOn = r; vtip(r); } else if (vtOn && !(event.buttons & 1)) vtipOff();
+    });
+    host.addEventListener("pointerleave", function (event) { if (!(event.buttons & 1)) vtipOff(); });
+    host.addEventListener("input", function (event) { if (event.target.matches && event.target.matches('input[type="range"].zoned') && vtOn) vtip(event.target); });
+    document.addEventListener("pointerup", function () { setTimeout(function () { if (vtOn && !vtOn.matches(":hover")) vtipOff(); }, 0); });
     host.addEventListener("input", function (event) {
       if (event.target.classList.contains("lora-total-range")) return void scaleHalf(event.target.dataset.half || "ar", parseFloat(event.target.value));   // 1166, 1167
       var id = event.target.dataset.lora, half = event.target.dataset.half;
@@ -467,7 +512,7 @@
       event.target.nextElementSibling.textContent = fmt(event.target.value, 2);
       event.target.parentNode.classList.toggle("is-over", overLimit(entry(id), half, parseFloat(event.target.value)));   // 1084
       syncTotal();                        // HERESY 1166, 1167: each half's together follows a strength as it moves
-      S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
+      paintNotes();
     });
     // HERESY 1166: the together-slider let go: the next drag starts from where the strengths stand, the slider at their sum
     host.addEventListener("change", function (event) {

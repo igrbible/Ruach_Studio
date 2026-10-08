@@ -329,6 +329,31 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
 // Build the velocity graph of M variations of a T_lat frame block over the
 // AR prefix of KV set kv_set. The frame inputs hold for a shape (T_lat,
 // ar_len), the graph itself is rebuilt at every evaluation.
+// HERESY 1169: why the sound half stopped, in words for the job (pipeline_generate puts it in last_error)
+inline std::string g_nar_error;
+
+// HERESY 1169: out of memory. A failed allocation left the scheduler half-reserved and the next request asserted in it,
+// killing the engine with the job: a new scheduler, the inputs built anew at the next evaluation, and the reason with the
+// card's own numbers
+static void nar_out_of_memory(Yue2NAR * n, int T_lat, int M) {
+    size_t             free_b = 0, total_b = 0;
+    ggml_backend_dev_t dev    = ggml_backend_get_device(n->backend);
+    if (dev) {
+        ggml_backend_dev_memory(dev, &free_b, &total_b);
+    }
+    char msg[480];
+    snprintf(msg, sizeof msg,
+             "Out of GPU memory for the sound: %.1f of %.1f GB free when %d variation%s of %d s needed more. A smaller copy of "
+             "the model (Q8_0) or fewer probes at once leaves it room.",
+             free_b / 1073741824.0, total_b / 1073741824.0, M, M == 1 ? "" : "s", T_lat / 25);
+    g_nar_error = msg;
+    fprintf(stderr, "[NAR] %s\n", msg);
+    ggml_backend_sched_free(n->sched);
+    BackendPair bp = { n->backend, n->cpu_backend, n->use_flash_attn };
+    n->sched       = backend_sched_new(bp, YUE2_NAR_GRAPH_NODES);
+    n->graph_T     = -1;
+}
+
 static bool nar_build_graph(Yue2NAR * n, const Qw3lmKvCache * kv, int T_lat, int M, int ar_len, int kv_set) {
     bool                  new_shape = (n->graph_T != T_lat || n->graph_ar != ar_len);
     bool                  new_key   = new_shape || n->graph_M != M || n->graph_set != kv_set;
@@ -491,6 +516,7 @@ static bool nar_velocity(Yue2NAR *            n,
     ggml_backend_sched_reset(n->sched);
     if (!ggml_backend_sched_alloc_graph(n->sched, n->graph)) {
         fprintf(stderr, "[NAR] FATAL: graph alloc failed for T_lat=%d\n", T_lat);
+        nar_out_of_memory(n, T_lat, M);
         return false;
     }
 

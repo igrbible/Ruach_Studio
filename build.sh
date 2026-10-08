@@ -70,12 +70,25 @@ src, examples, page = (pathlib.Path(a) for a in sys.argv[1:4])
 folder = sys.argv[4]
 html = (src / "index.html").read_text(encoding="utf-8")
 css = (src / "app.css").read_text(encoding="utf-8")
+
+
+# HERESY 1169 (Viktor 07.10.2026: «три кнопочки svg -, +, reset для скейла… В минус шагом 2pt до минус 4, а в плюс… до макс 8pt…
+# глобальный скейл шрифтов с минус 2 и плюс до 4»): every font size of the stylesheets, in px or pt (never 0), is written
+# calc(N + var(--fs, 0pt)), so the text grows and the layout does not; the page sets --fs (☰, a lifted frame), unset it is 0
+def scaled(text):
+    text = re.sub(r"(font-size:\s*)(?!0(?:\.0+)?(?:px|pt)\b)(\d+(?:\.\d+)?(?:px|pt))(?=\s*[;}!])", r"\1calc(\2 + var(--fs, 0pt))", text)
+    return re.sub(r"(\bfont:\s*(?:(?:italic|oblique|normal|bold|bolder|lighter|small-caps|[1-9]00)\s+)*)(\d+(?:\.\d+)?(?:px|pt))(?=[\s/])",
+                  r"\1calc(\2 + var(--fs, 0pt))", text)
+
+
+css = scaled(css)
 js = (src / "app.js").read_text(encoding="utf-8")
 ins = (src / "instrumental.js").read_text(encoding="utf-8")
 helps = (src / "help.js").read_text(encoding="utf-8")
 lorajs = (src / "loras.js").read_text(encoding="utf-8")
 vaejs = (src / "vaes.js").read_text(encoding="utf-8")
 themecss = (src / "themes.css").read_text(encoding="utf-8")
+themecss = scaled(themecss)
 themejs = (src / "themes.js").read_text(encoding="utf-8")
 
 prompts = []
@@ -153,6 +166,19 @@ PY
 mv "$PAGE.part" "$PAGE"
 IFS=$'\t' read -r s_html s_css s_js s_ex s_page l_html l_css l_js n_ex n_css n_js <<<"$stats"
 echo -e "  ${PAGE#"$ROOT"/} · $(( s_page / 1024 )) KB · $((1 + n_css + n_js)) files and $n_ex examples inside · $(( ($(date +%s%N) - T0) / 1000000 )) ms"
+
+# ── HERESY 1169: our fixes to ggml (a submodule, someone else's fork) are patch files of our own, build/ggml-patches/:
+#    put on before the server is built, each once (one already on is passed over; one that no longer fits is said)
+GGML_PUT=0
+for p in "$ROOT"/build/ggml-patches/*.patch; do
+    [ -f "$p" ] || continue
+    if git -C "$ROOT/build/ggml" apply --check "$p" 2>/dev/null; then
+        git -C "$ROOT/build/ggml" apply "$p" && GGML_PUT=1 && echo -e "  ggml: ${p##*/} put on"
+    elif ! git -C "$ROOT/build/ggml" apply --check -R "$p" 2>/dev/null; then
+        echo -e "${Y}  ggml: ${p##*/} does not fit this ggml${X}"
+    fi
+done
+[ "$GGML_PUT" = 1 ] && SERVER=1
 
 # ── ③ сервер: только если его C++ новее бинаря (или --server)
 BIN="$ROOT/build/build/yue-server"

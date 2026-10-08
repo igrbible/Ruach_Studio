@@ -334,7 +334,7 @@ def handle(method, path, query, body, headers, ctx):
             raise Redirect("/library/file?name=" + urllib.parse.quote(name) + "&path=" + urllib.parse.quote(path))
         if method == "POST" and what in ("stems", "debuzz", "remaster", "upscale", "lyrics-check"):
             if what == "stems":
-                r = rf["stems"](name, str(data.get("mode") or "vocals"))
+                r = rf["stems"](name, str(data.get("mode") or "four"), str(data.get("source") or ""))
             elif what == "debuzz":
                 r = rf["debuzz"](name, str(data.get("source") or ""), data.get("strength", 0.8))
             elif what == "remaster":

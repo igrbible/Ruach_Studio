@@ -17,8 +17,10 @@ cutoff sample for sample and takes only the new top, joined by a smooth crossove
 Stereo is done channel by channel (the model takes mono). The take is cut into chunks with
 an overlap and joined by equal-power crossfades; each variant is one noise seed.
 
-    upscale_job.py AUDIO OUTDIR MODE SEEDS [keep|all]
-    SEEDS: comma separated, one file per seed. Prints one line of JSON.
+    upscale_job.py AUDIO OUTDIR MODE SEEDS [keep|all] [CEILING_DB]
+    SEEDS: comma separated, one file per seed. CEILING_DB (HERESY 1169, the chain's upscale after the remaster): the true
+    peak the result may reach, in dBTP, the remaster's own; a louder top is met by turning the whole file down. Prints one
+    line of JSON.
 """
 import json, math, os, sys, time
 from pathlib import Path
@@ -31,6 +33,7 @@ import torchaudio
 audio, outdir, mode = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
 seeds = [int(s) for s in sys.argv[4].split(",") if s.strip()]
 keep_low = (sys.argv[5] if len(sys.argv) > 5 else "keep") == "keep"
+ceiling = float(sys.argv[6]) if len(sys.argv) > 6 else None
 INPUT = {"subtle": 24000, "normal": 16000, "high": 12000, "extreme": 8000}[mode]
 CUT = INPUT / 2                      # what lies above is drawn anew
 CHUNK, OVERLAP = 20.0, 1.0           # seconds; 20 s keeps the peak near 10 GB on a 3090
@@ -80,6 +83,20 @@ def crossover(original, new):
     return np.fft.irfft(np.fft.rfft(original) * (1 - g) + np.fft.rfft(new) * g, len(original))
 
 
+def true_peak(sig):
+    """The highest peak between the samples too, as a true-peak meter reads it: four times oversampled, in pieces of ten
+    seconds with a margin on each side."""
+    top, step, pad = 0.0, sr * 10, 256
+    for c in range(sig.shape[1]):
+        ch = torch.from_numpy(np.ascontiguousarray(sig[:, c], dtype=np.float32))
+        for s0 in range(0, len(ch), step):
+            a, b = max(0, s0 - pad), min(len(ch), s0 + step + pad)
+            up = torchaudio.functional.resample(ch[a:b], sr, sr * 4)
+            lo = (s0 - a) * 4
+            top = max(top, float(up[lo:lo + min(step, len(ch) - s0) * 4].abs().max()))
+    return top
+
+
 files = []
 for i, seed in enumerate(seeds):
     chans = []
@@ -90,10 +107,17 @@ for i, seed in enumerate(seeds):
     peak = float(np.abs(out).max())
     if peak > 0.999:                                         # never clip: scale the whole file down
         out *= 0.999 / peak
+    held = {}
+    if ceiling is not None:                                  # the remaster's true-peak ceiling holds after the new top
+        tp, lim = true_peak(out), 10 ** (ceiling / 20)
+        held = {"true_peak_db": round(20 * math.log10(max(tp, 1e-9)), 2), "turned_down_db": 0.0}
+        if tp > lim:
+            out *= lim / tp
+            held["turned_down_db"] = round(20 * math.log10(lim / tp), 2)
     name = f"upscale-{mode}-{'AB'[i] if i < 2 else i + 1}"
     sf.write(str(outdir / f"{name}.flac"), out.astype(np.float32), sr, subtype="PCM_24")
     files.append({"name": f"{mode} · variant {'AB'[i] if i < 2 else i + 1}", "file": f"{name}.flac",
-                  "seconds": round(n / sr, 2), "seed": seed, "peak": round(peak, 4)})
+                  "seconds": round(n / sr, 2), "seed": seed, "peak": round(peak, 4), **held})
     torch.cuda.empty_cache()
-print(json.dumps({"files": files, "mode": mode, "input_sr": INPUT, "cutoff_hz": CUT, "keep_low": keep_low,
+print(json.dumps({"files": files, "mode": mode, "input_sr": INPUT, "cutoff_hz": CUT, "keep_low": keep_low, "ceiling_db": ceiling,
                   "load_s": round(load_s, 1), "took": round(time.time() - t0, 1)}))

@@ -1,0 +1,186 @@
+From a6fbb3ad840035af1577a50c0a5dcc7c915cd07d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 00:24:36 -0600
+Subject: [PATCH 1225/1252] =?UTF-8?q?HERESY=201169:=20a=20voice's=20kind?=
+ =?UTF-8?q?=20in=20the=20Trainer:=20on=20the=20folder,=20in=20the=20picked?=
+ =?UTF-8?q?=20folder's=20line=20with=20=E2=99=82=20=E2=99=80=20and=20speec?=
+ =?UTF-8?q?h=20or=20singing,=20beside=20the=20sets=20made=20from=20it,=20a?=
+ =?UTF-8?q?nd=20a=20name=20for=20the=20set=20made=20of=20it=20(no=20person?=
+ =?UTF-8?q?'s=20name)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 05.10.2026: «Ты можешь у Тренера прикрутить… что определяет тип голоса? Мужской или женский, регистр? Нам не нужны Имена человеков, а нужны именно их тональности». The lab measures (POST /train/voice, lab/voice_kind.py with a sung mode) and keeps voice-kind.json beside the songs; the name follows the published voice adapters: voice-ru-m-baritenor-117, the lyrics' letters giving the language.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  9 ++++
+ tools/console/heresy-train.js | 90 +++++++++++++++++++++++++++++++++--
+ tools/console/index.html      |  1 +
+ 3 files changed, 96 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index b615805..6e83664 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4415,3 +4415,12 @@ tr.is-test .hi-tag { color: #d9a441; }
+ /* the scrollbar's room kept in a lifted frame whether it scrolls or not: two columns made the take short enough not to, and
+    its ⇆ ⤡ ran ten pixels right of Compose's */
+ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
++/* HERESY 1169 (Viktor 05.10.2026: «что определяет тип голоса? Мужской или женский, регистр? Нам не нужны Имена человеков, а
++   нужны именно их тональности»): the picked folder's voice, measured (lab/voice_kind.py), and a name for the set made of it */
++.tr-voice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px; border: 1px solid var(--line-a);
++  border-radius: var(--r-md); font-size: 13px; }
++.tr-voice[hidden] { display: none; }
++.tr-voice-cap { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
++.tr-voice-opts { display: inline-flex; gap: 4px; }
++.tr-voice .tr-chip { padding: 2px 9px; }
++.tr-voice .tr-chip.is-on { border-color: var(--amber); color: var(--amber); }
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 6f57ece..1c37710 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -480,18 +480,21 @@
+     var d = state.data;
+     $("trRaw").innerHTML = d.raw.length ? d.raw.map(function (r) {
+       return '<button type="button" class="tr-pick' + (state.raw === r.name ? " is-on" : "") + '" data-raw="' + esc(r.name) + '"><b translate="no">' + esc(r.name) + "</b><span>" +   // HERESY 1166
+-        "<span>" + r.tracks + " tracks</span> · <span>" + gb(r.bytes) + "</span>" + (r.captions ? " · <span>" + r.captions + " captions</span>" : "") + "</span></button>";
++        "<span>" + r.tracks + " tracks</span> · <span>" + gb(r.bytes) + "</span>" + (r.captions ? " · <span>" + r.captions + " captions</span>" : "") +
++        (voiceShort(r.voice) ? ' · <span translate="no">' + esc(voiceShort(r.voice)) + "</span>" : "") + "</span></button>";   // HERESY 1169
+     }).join("") : '<p class="row-hint">Put a folder of songs into <code>datasets/raw/</code>, then press Reload.</p>';
+   }
+   function pickRaw(name) {
+-    state.raw = name; paintRaw(); paintPills();
++    var kept = (rawOf(name) || {}).voice;                 // HERESY 1169: a sex said before is said again
++    state.raw = name; state.voiceMode = null; state.voiceSex = kept && kept.voice_by === "given" ? kept.voice : "";
++    paintRaw(); paintPills(); paintVoice();
+     $("trTracks").innerHTML = '<p class="row-hint">Reading the folder…</p>';
+     api("/train/scan?name=" + encodeURIComponent(name)).then(function (d) {
+       state.rows = d.tracks.map(function (t) {
+         return { file: t.file, seconds: t.seconds, include: (t.seconds || 0) >= 30 || !!t.style, style: t.style || "", lyrics: t.lyrics || "", from: t.lyrics_from || "", hints: t.hints || [] };
+       });
+       $("trSetName").value = slug(name);
+-      paintTracks(); paintPills();
++      paintTracks(); paintPills(); paintVoice();
+     }).catch(function (e) { $("trTracks").innerHTML = '<p class="tr-warn">' + esc(e.message) + "</p>"; });
+   }
+   function paintTracks() {
+@@ -508,6 +511,75 @@
+     }).join("");
+   }
+ 
++  // ------------------------------------------------------------------ 1b The voice
++  // HERESY 1169 (Viktor 05.10.2026: «Ты можешь у Тренера прикрутить… что определяет тип голоса? Мужской или женский,
++  // регистр? Нам не нужны Имена человеков, а нужны именно их тональности»): the picked folder's voice by measure
++  // (lab/voice_kind.py, pYIN over up to twelve tracks). On speech: male or female and the register, and a name for the set
++  // made of them, as the published voice adapters are named (voice-ru-m-baritenor-117: the language of the lyrics, the
++  // middle pitch in Hz last). On singing: the range sung, the voice left to the ear. Kept beside the songs, shown on the
++  // folder and beside the sets made from it. A draft by measure: the ear decides.
++  function rawOf(name) { return ((state.data && state.data.raw) || []).filter(function (r) { return r.name === name; })[0] || null; }
++  function voiceShort(v) {
++    if (!v || v.error || !v.median_hz) return "";
++    var sex = v.voice === "male" ? "♂ " : v.voice === "female" ? "♀ " : "? ";
++    if (v.mode === "sung") return sex + "sung " + (v.low || "") + "–" + (v.high || "");
++    return sex + (v.register || "?") + " · " + Math.round(v.median_hz) + " Hz";
++  }
++  function voiceLang() {   // the lyrics' letters: Cyrillic is ru, Latin en
++    var cy = 0, la = 0;
++    state.rows.forEach(function (r) { var t = r.lyrics || ""; cy += (t.match(/[а-яёіїєґў]/gi) || []).length; la += (t.match(/[a-z]/gi) || []).length; });
++    return cy > la * 2 ? "ru" : la > cy * 2 ? "en" : "";
++  }
++  function voiceName(v) {
++    if (!v || v.mode === "sung" || !v.register || (v.voice !== "male" && v.voice !== "female")) return "";
++    var l = voiceLang();
++    return "voice-" + (l ? l + "-" : "") + (v.voice === "female" ? "f" : "m") + "-" + v.register + "-" + Math.round(v.median_hz);
++  }
++  function sungGuess() { return state.rows.some(function (r) { return /^\s*\[(verse|chorus|bridge|intro|outro|pre-chorus)/im.test(r.lyrics || ""); }); }
++  function voiceMode() { var v = (rawOf(state.raw) || {}).voice; return state.voiceMode || (v && v.mode) || (sungGuess() ? "sung" : "speech"); }
++  function paintVoice() {
++    var el = $("trVoice"), v = (rawOf(state.raw) || {}).voice, j = state.voiceJob && state.voiceJob.name === state.raw ? state.voiceJob : null;
++    el.hidden = !state.raw;
++    if (!state.raw) return;
++    var mode = voiceMode(), name = voiceName(v), running = !!j && j.status === "running", say;
++    if (running) say = '<span class="row-hint">measuring the pitch of up to twelve tracks, twenty seconds of each…</span>';
++    else if (j && j.status === "failed") say = '<span class="tr-warn">' + esc(j.error || "the measure failed") + "</span>";
++    else if (!v || !v.median_hz) say = '<span class="row-hint">not measured yet</span>';
++    else if (v.mode === "sung") say = "<b>" + esc(v.voice === "uncertain" ? "a voice the pitch alone does not name" : v.voice) + "</b> <span>· sung " + esc(v.low) + "–" + esc(v.high) +
++      ", the middle " + esc(v.mid) + " (" + Math.round(v.median_hz) + " Hz)</span>";
++    else if (v.voice === "uncertain") say = "<b>" + Math.round(v.median_hz) + " Hz</b> <span>· a low woman (" + esc(v.register_if_female) + ") or a high man (" +
++      esc(v.register_if_male) + "): say which, and measure again</span>";
++    else say = "<b>" + esc(v.voice) + " · " + esc(v.register) + "</b> <span>· speaking at " + Math.round(v.median_hz) + " Hz" + (v.mid ? " (" + esc(v.mid) + ")" : "") + ", most of it " +
++      Math.round(v.p10_hz) + "–" + Math.round(v.p90_hz) + " Hz</span>" + (v.voice_by === "given" ? ' <span class="row-hint">(male or female as you said)</span>' : "");
++    el.innerHTML = '<span class="tr-voice-cap">Voice</span>' + say + '<span class="spacer"></span>' +
++      '<span class="tr-voice-opts" role="group" aria-label="What the folder holds">' + [["speech", "speech"], ["sung", "singing"]].map(function (m) {
++        return '<button type="button" class="btn ghost small tr-chip' + (mode === m[0] ? " is-on" : "") + '" data-voice-mode="' + m[0] + '" aria-pressed="' + (mode === m[0]) + '">' + m[1] + "</button>";
++      }).join("") + "</span>" +
++      '<span class="tr-voice-opts" role="group" aria-label="Male or female">' + [["", "by pitch"], ["male", "♂"], ["female", "♀"]].map(function (s) {
++        return '<button type="button" class="btn ghost small tr-chip' + ((state.voiceSex || "") === s[0] ? " is-on" : "") + '" data-voice-sex="' + s[0] + '" aria-pressed="' + ((state.voiceSex || "") === s[0]) + '">' + s[1] + "</button>";
++      }).join("") + "</span>" +
++      '<button type="button" class="btn ghost small" data-voice-go' + (running ? " disabled" : "") + ' data-tip="The pitch of the voiced moments, measured on this computer (pYIN); about half a minute">' +
++      (v && v.median_hz ? "Measure again" : "Measure the voice") + "</button>" +
++      (name ? '<button type="button" class="btn ghost small" data-voice-name="' + esc(name) + '" data-tip="The set named by its voice, as the published voice adapters are: no person\'s name">Name the set ' + esc(name) + "</button>" : "");
++  }
++  function measureVoice() {
++    var name = state.raw;
++    state.voiceJob = { name: name, status: "running" };
++    paintVoice();
++    api("/train/voice", { name: name, voice: state.voiceSex || "", mode: voiceMode() }).then(function poll() {
++      return api("/train/voice?name=" + encodeURIComponent(name)).then(function (j) {
++        if (j.status === "running") return new Promise(function (ok) { setTimeout(ok, 1500); }).then(poll);
++        state.voiceJob = { name: name, status: j.status, error: j.error };
++        var r = rawOf(name);
++        if (r && j.kept) r.voice = j.kept;
++        paintRaw(); paintSets();
++        if (state.raw === name) paintVoice();
++        if (j.status === "done") toast("The voice of " + name + ": " + voiceShort(j.kept));
++        else toast(j.error || "The measure failed", true);
++      });
++    }).catch(function (e) { state.voiceJob = { name: name, status: "failed", error: e.message }; paintVoice(); });
++  }
++
+   // HERESY 1100: the starter sets (Viktor: "so a person can start experimenting, not beat their head against a wall").
+   // Shown on a click; each fetched only after its size and terms are read and agreed; while one downloads, its
+   // bytes so far; when it lands, the Material list reads it like any folder.
+@@ -572,7 +644,8 @@
+     if (state.set && !(d.prepared || []).some(function (p) { return p.name === state.set; })) state.set = "";
+     $("trSets").innerHTML = d.prepared.length ? d.prepared.map(function (p) {
+       return '<label class="tr-setpick' + (p.name === state.set ? " is-on" : "") + '"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + (p.name === state.set ? " checked" : "") + ' /><b translate="no">' + esc(p.name) + "</b><span>" +   // HERESY 1166
+-        "<span>" + p.tracks + " tracks</span> · <span>" + clock(p.seconds) + "</span> · <span>from</span> <span translate=\"no\">" + esc(p.from) + "</span> · <span>" + esc(p.made) + "</span></span></label>";
++        "<span>" + p.tracks + " tracks</span> · <span>" + clock(p.seconds) + "</span> · <span>from</span> <span translate=\"no\">" + esc(p.from) + "</span> · <span>" + esc(p.made) + "</span>" +
++        (voiceShort((rawOf(p.from) || {}).voice) ? ' · <span translate="no">' + esc(voiceShort(rawOf(p.from).voice)) + "</span>" : "") + "</span></label>";   // HERESY 1169
+     }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
+   }
+   function setKind(k) {
+@@ -696,6 +769,15 @@
+     $("trFold").addEventListener("click", function () { state.folded = true; keep("yue2.trFolded", "1"); paintList(); });
+     $("trUnfold").addEventListener("click", function () { state.folded = false; keep("yue2.trFolded", null); paintList(); });
+     $("trRaw").addEventListener("click", function (e) { var b = e.target.closest("[data-raw]"); if (b) pickRaw(b.dataset.raw); });
++    $("trVoice").addEventListener("click", function (e) {                 // HERESY 1169
++      var b = e.target.closest("[data-voice-mode], [data-voice-sex], [data-voice-go], [data-voice-name]");
++      if (!b || b.disabled) return;
++      if (b.dataset.voiceMode) { state.voiceMode = b.dataset.voiceMode; return paintVoice(); }
++      if (b.hasAttribute("data-voice-sex")) { state.voiceSex = b.dataset.voiceSex; return paintVoice(); }
++      if (b.hasAttribute("data-voice-go")) return measureVoice();
++      $("trSetName").value = b.dataset.voiceName;
++      toast("The set's name: " + b.dataset.voiceName);
++    });
+     $("trStarterOpen").addEventListener("click", toggleStarter);
+     $("trStarter").addEventListener("click", function (e) { var b = e.target.closest("[data-starter]"); if (b) fetchStarter(b.dataset.starter); });
+     $("trTracks").addEventListener("change", function (e) { var i = e.target.dataset.in; if (i !== undefined) { state.rows[+i].include = e.target.checked; paintTracks(); paintPills(); } });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 18804e4..09b536d 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1702,6 +1702,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <!-- HERESY 1100: the starter sets, fetched on the user's word (lab/starter.py) -->
+           <div class="tr-starter" id="trStarter" hidden></div>
+           <div class="tr-picks" id="trRaw"></div>
++          <div class="tr-voice" id="trVoice" hidden></div>   <!-- HERESY 1169: the picked folder's voice, measured -->
+           <div class="tr-bar"><span class="row-hint" id="trTracksNote"></span><span class="spacer"></span>
+             <button type="button" class="btn ghost small" id="trAllIn">All in</button><button type="button" class="btn ghost small" id="trNoneIn">None</button>
+             <button type="button" class="btn small primary" data-go="set">The set ›</button></div>
+-- 
+2.43.0
+

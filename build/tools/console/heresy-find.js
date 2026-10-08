@@ -163,26 +163,31 @@
   }
 
   // where the letters of a match stand inside the box (relative to its padding box, the box's own scroll not counted): a copy
-  // as wide as the box's inside (its scroll bar left out, so its lines wrap where the box's do), its paddings, no borders
+  // as wide as the box's inside (its scroll bar left out, so its lines wrap where the box's do), its paddings, no borders.
+  // HERESY 1169 (Viktor 07.10.2026, at 100 % and 125 %: «по горизонтали бежит влево… С увеличением скейла страницы больше
+  // смещение»): the copy stands beside the box, so its letters are drawn at the box's own zoom (a lifted frame's, the page's);
+  // laid out in the body, at another size, their rounding ran the mark along a line. Its boxes are read back in the box's pixels
   function measure(h) {
     if (!box || !h) return null;
-    if (!mirror) {
+    if (!mirror || mirror.parentNode !== box.parentNode) {
+      if (mirror && mirror.parentNode) mirror.parentNode.removeChild(mirror);
       mirror = document.createElement("div");
       mirror.className = "find-mirror";
       mirror.setAttribute("aria-hidden", "true");
-      document.body.appendChild(mirror);
+      box.parentNode.insertBefore(mirror, box.nextSibling);
     }
     var cs = getComputedStyle(box);
     ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "wordSpacing", "tabSize", "textTransform",
-     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent"].forEach(function (k) { mirror.style[k] = cs[k]; });
+     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontVariantLigatures", "textIndent",
+     "fontKerning", "fontFeatureSettings", "fontVariationSettings", "fontStretch", "fontOpticalSizing", "textRendering"].forEach(function (k) { mirror.style[k] = cs[k]; });
     mirror.style.boxSizing = "border-box";
     mirror.style.border = "0";
     mirror.style.width = box.clientWidth + "px";
     var text = box.value;
     mirror.innerHTML = esc(text.slice(0, h[0])) + "<mark>" + esc(text.slice(h[0], h[1])) + "</mark>" + esc(text.slice(h[1])) + "​";
-    var mark = mirror.querySelector("mark"), base = mirror.getBoundingClientRect();
+    var mark = mirror.querySelector("mark"), base = mirror.getBoundingClientRect(), k = scale();
     var rects = Array.prototype.map.call(mark.getClientRects(), function (q) {
-      return { left: q.left - base.left, top: q.top - base.top, width: q.width, height: q.height };
+      return { left: (q.left - base.left) / k, top: (q.top - base.top) / k, width: q.width / k, height: q.height / k };
     });
     return rects.length ? { top: rects[0].top, rects: rects } : null;
   }

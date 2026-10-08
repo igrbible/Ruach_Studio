@@ -1,0 +1,428 @@
+From 6406c2b7935420e19d0d5b37f8d05027e010c693 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 01:44:41 -0600
+Subject: [PATCH 1230/1252] HERESY 1169: the Musician's card compact (Style
+ over the lyrics, the score on the right, folded on a new take, the tools in
+ framed groups); Compose's seeds in Sampling, Instrumental in the planning
+ head, the LoRA notes in a tip; the cheat-sheet asks where a name goes; the
+ lyrics over everything
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «В Музыканте перенеси Score в правую колонку, Prompt переименуй в Style и перенеси в левую поверх Lyrics. ПО умолчанию оба блока закрыты… Секции кнопок под DOWNLOADS, MAKE AGAIN, REFINER определи в собственные обрамлённые приятные в UIX блоки… В окне Lyrics ещё одну кнопку full screen, и поверх всего где-то 60% ширины экрана, и шрифт автоматом на 10% крупнее… нужен диалоговый попап, спрашивающий, что мы делаем. Переписываем или добавляем в конец… Блок с обеими SEEDs настаиваю перенести в блок Sampling and Denoising… Instrumental… в ту же строку, что и Planning Mode… обрезанный параграф объяснений [LoRA]. Он нахер там не нужен»; «Хедер Takes имеет дохера паддинга сверху. 5-8px?» (18 → 11 px).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 38 ++++++++++++++++
+ tools/console/app.js                | 57 ++++++++++++++++++++++--
+ tools/console/heresy-instruments.js | 31 ++++++++++++-
+ tools/console/index.html            | 69 ++++++++++++++++-------------
+ tools/console/loras.js              | 28 ++++++++++--
+ 5 files changed, 182 insertions(+), 41 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 5be4fbe..0733f04 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4442,3 +4442,41 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ /* HERESY 1169: the lyrics editor's keys: the meter's «Keys» (a press opens the guide there), the Writer's label says them too */
+ .lyr-tog.lyr-keys { font-family: var(--mono); }
+ .lyr-keys-at { cursor: help; }
++/* HERESY 1169 (Viktor 08.10.2026: «Instrumental… в ту же строку, что и Planning Mode заголовок с подсказкой, - выключка вправо…
++   Planning Mode строку и само название секции - красиво в общем стиле с паддингами»): the planning head a row of its own */
++.plan-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 2px 9px; margin-bottom: 10px;
++  border-bottom: 1px solid var(--line-a); }
++.plan-head > .label { margin: 0; }
++.plan-head .instrumental-check { margin: 0; flex: none; }
++/* «Блок с обеими SEEDs… в блок Sampling and Denoising»: the seeds the drawer's first part */
++.seed-sub { margin-bottom: 16px; }
++/* «Секции кнопок под DOWNLOADS, MAKE AGAIN, REFINER определи в собственные обрамлённые приятные в UIX блоки»: each group framed,
++   its name on top; Make again, the largest, a row of its own under the others */
++.take-tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: stretch; }
++.take-tools .tool-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 9px 11px 11px; border: 1px solid var(--line-a);
++  border-radius: var(--r-md); background: color-mix(in srgb, var(--ink) 3%, transparent); }
++.take-tools .tool-group.tg-dl { order: 1; }
++.take-tools .tool-group.tg-refine { order: 2; }
++.take-tools .tool-group.tg-files { order: 3; }
++.take-tools .tool-group.tg-again { order: 4; grid-column: 1 / -1; }
++.take-tools .tool-cap { display: block; margin: 0; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
++.take-tools .tool-row { display: flex; flex-wrap: wrap; gap: 6px; }
++/* «обрезанный параграф объяснений… нахер там не нужен»: the LoRA picker's notes in a tip beside the LoRAs' name */
++.lora-hint { display: none; }
++.lora-notes { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 6px; border: 1px solid var(--line-strong-a);
++  border-radius: 50%; font: 700 10px/1 var(--mono); color: var(--muted); text-transform: none; letter-spacing: 0; cursor: help; vertical-align: middle; }
++.lora-notes.is-warn { color: #d9a441; border-color: #d9a441; }
++.lora-notes[hidden] { display: none; }
++/* «ещё один оверлей поверх оверлея!… поверх всего где-то 60% ширины экрана, и шрифт автоматом на 10% крупнее»: the lyrics over
++   everything (app.js lyricsOver moves the box there and back) */
++.lyr-big { margin-left: 6px; vertical-align: middle; }
++.lyr-over { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 40; display: flex; align-items: center; justify-content: center;
++  background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55)); backdrop-filter: blur(3px); }
++.lyr-over-box { zoom: 1.1; width: calc(60vw / 1.1); height: calc((100vh - var(--playbar-h)) * .94 / 1.1); display: flex; flex-direction: column; gap: 8px;
++  padding: 12px 16px 14px; border: 1px solid var(--line-strong-a); border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 24px 80px var(--shadow-lg); }
++.lyr-over-head { display: flex; align-items: center; gap: 8px; font: 600 15px/1.3 var(--heading); }
++.lyr-over-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
++.lyr-over-body > .lyr-wrap { flex: 1; min-height: 0; }
++.lyr-over-body #lyrics { height: 100% !important; max-height: none; resize: none; overflow-y: auto; }
++/* HERESY 1169 (Viktor 08.10.2026: «Хедер Takes имеет дохера паддинга сверху. 5-8px?»): the Creator's takes head 7 px nearer its top (18 → 11) */
++body[data-tab="create"] #library .lib-head { padding-top: 11px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 1fad98c..7f22275 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3929,6 +3929,9 @@
+     var take = findTake(name);
+     if (!take) return;
+     opts = opts || {};
++    // HERESY 1169 (Viktor 08.10.2026: «ПО умолчанию оба блока закрыты. Минимальное отображение всей карты трека»): another take
++    // opens with its Style and its Lyrics folded, whatever the last one had open
++    if (!STATE.take || STATE.take.name !== take.name) { cardFolds.prompt = true; cardFolds.lyrics = true; paintCardFolds(); }
+     STATE.take = take;
+     STATE.job = null;
+     STATE.stageRows = null;
+@@ -4260,7 +4263,7 @@
+     var text = $("metaStyle").textContent;
+     if (!text) return toast("This take has no prompt", "bad");
+     navigator.clipboard.writeText(text)
+-      .then(function () { toast("Prompt copied"); })
++      .then(function () { toast("Style copied"); })
+       .catch(function () { toast("The browser refused clipboard access", "bad"); });
+   });
+ 
+@@ -8174,6 +8177,50 @@
+   // handlers and state stay its own); from there the other frame. Esc, a click beside it, another room or a run started put
+   // it back; what brings the form forward (Retake, Reuse, the score into the form) brings the form's frame: show("compose").
+   var FRAMES = { compose: "view-compose", take: "view-take" };
++  // HERESY 1169 (Viktor 08.10.2026: «ещё один оверлей поверх оверлея! В окне Lyrics ещё одну кнопку full screen, и поверх всего
++  // где-то 60% ширины экрана, и шрифт автоматом на 10% крупнее»): the lyrics over everything, 60 % of the screen wide, a tenth
++  // larger. The box itself moves there with its meter (its numbers, marks, tags, the find bar and the «[» list go with it) and
++  // back where it stood; Esc (unless a list, a find bar or a question has it) or ⤡ puts it back, and so does another room
++  var lyrOver = null;
++  function lyricsOver(on) {
++    var area = $("lyrics");
++    if (on && !lyrOver) {
++      var wrap = area.parentNode, meter = $("lyricsMeter"), back = document.createElement("div");
++      back.className = "lyr-over";
++      back.id = "lyrOver";
++      back.innerHTML = '<div class="lyr-over-box" role="dialog" aria-label="Lyrics"><div class="lyr-over-head"><b>' + escape(tr("Lyrics")) + '</b><span class="spacer"></span>' +
++        '<button type="button" class="btn ghost small icon-btn" id="lyricsBack" aria-label="Back into the form" data-tip="Back into the form (Esc)">' +
++        (window.HeresyIcons ? window.HeresyIcons.ui("minimize") : "") + '</button></div><div class="lyr-over-body"></div></div>';
++      document.body.appendChild(back);
++      lyrOver = { back: back, wrap: wrap, wrapParent: wrap.parentNode, wrapNext: wrap.nextSibling, meter: meter, meterParent: meter.parentNode, meterNext: meter.nextSibling };
++      var body = back.querySelector(".lyr-over-body");
++      body.appendChild(wrap);
++      body.appendChild(meter);
++      back.addEventListener("click", function (e) { if (e.target === back) lyricsOver(false); });
++      $("lyricsBack").addEventListener("click", function () { lyricsOver(false); });
++      document.body.classList.add("lyr-over-on");
++      area.focus({ preventScroll: true });
++    } else if (!on && lyrOver) {
++      var o = lyrOver;
++      lyrOver = null;
++      o.wrapParent.insertBefore(o.wrap, o.wrapNext);
++      o.meterParent.insertBefore(o.meter, o.meterNext);
++      o.back.remove();
++      document.body.classList.remove("lyr-over-on");
++    }
++    $("lyricsBig").setAttribute("aria-pressed", lyrOver ? "true" : "false");
++    window.dispatchEvent(new Event("resize"));   // the meter, the numbers and the marks measure their box again
++  }
++  window.ruachLyricsOver = function () { return !!lyrOver; };   // for the checks
++  $("lyricsBig").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); lyricsOver(!lyrOver); });
++  document.addEventListener("keydown", function (e) {
++    if (e.key !== "Escape" || !lyrOver) return;
++    if (document.querySelector(".hd-back.is-on, .tc-pop:not([hidden]), .find-bar:not([hidden]), .hi-back:not([hidden])")) return;
++    e.preventDefault();
++    e.stopPropagation();
++    lyricsOver(false);
++  }, true);
++  new MutationObserver(function () { if (lyrOver && document.body.dataset.tab !== "create") lyricsOver(false); }).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
+   // HERESY 1169 (Viktor 07.10.2026: «Давай лучше в попапе доделаем Музыканта. Тоже дадим ему две колонки»; the plan he called
+   // GOOD: «Слева действия (скачать, сделать ещё, Огранщик, файлы, заметка), справа карта «как сделан», VAE, промпт. Во время
+   // генерации остаётся на весь фрейм»): the take lifted over the room in two columns, what to do with it on the left (its
+@@ -8194,13 +8241,15 @@
+       t.cols.className = "take-cols";
+       left.className = "take-col take-col-do";
+       right.className = "take-col take-col-made";
+-      [t.tools, t.note, t.lyrics].forEach(function (n) { left.appendChild(n); });
+-      [t.meta, t.decode, t.sound, t.prompt].forEach(function (n) { right.appendChild(n); });
++      // 08.10 (Viktor: «перенеси Score в правую колонку, Prompt переименуй в Style и перенеси в левую поверх Lyrics»)
++      [t.tools, t.note, t.prompt, t.lyrics].forEach(function (n) { left.appendChild(n); });
++      [t.meta, t.decode, t.sound, t.score].forEach(function (n) { right.appendChild(n); });
+       t.cols.appendChild(left);
+       t.cols.appendChild(right);
+-      t.body.insertBefore(t.cols, t.score);
++      t.body.appendChild(t.cols);
+       t.words.classList.add("is-hidden");
+     } else if (!on && t.cols) {
++      t.body.appendChild(t.score);
+       [t.tools, t.note, t.meta, t.decode, t.sound, t.words].forEach(function (n) { t.body.insertBefore(n, t.score); });
+       t.words.appendChild(t.prompt);
+       t.words.appendChild(t.lyrics);
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index edbcb08..d055d83 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -301,7 +301,7 @@
+     var caret = at + ins.length - (hand && tag === "( )" ? 1 : 0);
+     ly.setSelectionRange(caret, caret);
+     ly.dispatchEvent(new Event("input", { bubbles: true }));
+-    return "Into the lyrics: " + tag;
++    return "Into the lyrics, line " + (ly.value.slice(0, at + (ins.charAt(0) === "\n" ? 1 : 0)).split("\n").length) + ": " + tag;   // HERESY 1169: where
+   }
+   // HERESY 1169 (Viktor 07.10.2026: «В шпаргалке по стилям и инструментам проблемка. Не работает кликание, вставка,
+   // копирование»): the click did put a name into the Style prompt, but its words showed under the sheet (the toasts stand over
+@@ -322,6 +322,33 @@
+       .then(function () { return true; }, function () { return false; })
+       .then(function (ok) { state.hooks.toast(words + (ok ? " \u00b7 copied" : "")); });
+   }
++  // HERESY 1169 (Viktor 08.10.2026: «нужен диалоговый попап, спрашивающий, что мы делаем. Переписываем или добавляем в конец
++  // (новой строкой, и потом самостоятельный эджастмент)»): a name for the Style goes onto the clipboard at once (the click's own
++  // gesture), then the question: at the end on a line of its own, or in place of the whole Style. Into an empty Style it goes
++  // without one; a name the Style holds already is only copied
++  function toClip(text) {
++    var put = window.ruachCopyText || function (x) { return navigator.clipboard.writeText(x); };
++    return Promise.resolve().then(function () { return put(text); }).then(function () { return true; }, function () { return false; });
++  }
++  function chooseInto(tag) {
++    var st = $("style");
++    if (!st || !tag) return;
++    var copied = toClip(tag), v = st.value.replace(/\s+$/, "");
++    function finish(words) {
++      st.dispatchEvent(new Event("input", { bubbles: true }));
++      markIn();
++      copied.then(function (ok) { state.hooks.toast(words + (ok ? " \u00b7 copied" : "")); });
++    }
++    if (!v) { st.value = tag; return finish("Into the style: " + tag); }
++    if (fold(v).indexOf(fold(tag)) >= 0) return copied.then(function (ok) { state.hooks.toast("\u201c" + tag + "\u201d is in the style already" + (ok ? " \u00b7 copied" : "")); });
++    window.HeresyDialog.confirm(tr("Into the Style: {0}").replace("{0}", "\u00ab" + tag + "\u00bb") + "\n\n" +
++      tr("At the end, on a line of its own (adjust it as you like), or in place of all the Style holds now?"),
++      { ok: tr("Add at the end"), alt: tr("Replace the style"), cancel: tr("Cancel") }).then(function (r) {
++        if (r === "alt") { st.value = tag; finish("The style is now: " + tag); }
++        else if (r) { st.value = st.value.replace(/\s+$/, "") + "\n" + tag; finish("Into the style, on a line of its own: " + tag); }
++      });
++  }
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+   function paint() { paintTable(); markIn(); }
+   function paintTable() {
+     Array.prototype.forEach.call(document.querySelectorAll("[data-hi-tab]"), function (b) { b.classList.toggle("is-on", b.dataset.hiTab === state.tab); });
+@@ -381,7 +408,7 @@
+       var t = e.target.closest("[data-hi-tag]"), p = e.target.closest("[data-hi-play]"), a = e.target.closest("[data-hi-art]"), tb = e.target.closest("[data-hi-tab]");
+       if (tb) { state.tab = tb.dataset.hiTab; return paint(); }
+       if (a && window.HeresyArt) return window.HeresyArt.show(a.dataset.hiArt, Array.prototype.map.call($("hiTable").querySelectorAll("[data-hi-art]"), function (b) { return b.dataset.hiArt; }));
+-      if (t) return said(addTag(t.dataset.hiTag), t.dataset.hiTag);
++      if (t) return chooseInto(t.dataset.hiTag);                      // HERESY 1169: asked where it goes
+       var lt = e.target.closest("[data-hi-lyr]");
+       if (lt) return said(addLyricTag(lt.dataset.hiLyr, !!lt.dataset.hiHand), lt.dataset.hiLyr);   // HERESY 1168
+       if (p) { var take = state.hooks.findTake(p.dataset.hiPlay); if (take) state.hooks.playNow(take); else state.hooks.toast("The probe is not in the library now", "bad"); }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 09b536d..b4bfe8d 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -874,7 +874,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         </section>
+         <section class="k-card k-lyrics">
+           <label class="field" data-fold="lyrics">
+-            <span class="label" data-head="section tags on their own line">Lyrics</span>
++            <span class="label" data-head="section tags on their own line">Lyrics <button type="button" class="btn ghost small icon-btn lyr-big" id="lyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The lyrics over everything" data-tip="The lyrics over everything, a tenth larger: Esc or this button puts them back"></button></span>
+             <!-- HERESY 1168 (Viktor: «теперь, когда у нас две отдельные колонки в левом фрейме, поле лирики можно увеличить на десять
+                  строк»): 16 rows to 26; the lyrics' meter (heresy-lyrics.js) draws beside it and counts under it -->
+             <textarea id="lyrics" rows="16" data-max-rows="26" spellcheck="true" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
+@@ -900,8 +900,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save profile…</button>
+             <button type="button" class="btn ghost small" id="setupDel" disabled>Delete</button>
+           </div>
+-          <fieldset class="field">
+-            <span class="label">Planning mode</span>
++          <fieldset class="field plan-field">
++            <!-- HERESY 1169 (Viktor 08.10.2026: «Instrumental… перенести в ту же строку, что и Planning Mode заголовок с подсказкой, -
++                 выключка вправо… Planning Mode строку и само название секции - красиво в общем стиле с паддингами»): its words in its tip -->
++            <div class="plan-head"><span class="label">Planning mode</span>
++              <label class="check instrumental-check"><input type="checkbox" id="instrumental" /> <span><strong>Instrumental</strong></span>
++                <span class="info" tabindex="-1" role="img" aria-label="About instrumental songs" data-tip-ref="tip-instrumental"></span></label></div>
+             <div class="modes" id="modes">
+               <label class="mode">
+                 <input type="radio" name="cot" value="full" />
+@@ -925,9 +929,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+                 </span>
+               </label>
+             </div>
+-            <label class="check instrumental-check"><input type="checkbox" id="instrumental" />
+-              <span><strong>Instrumental</strong> · no vocals, the official YuE2 recipe</span>
+-              <span class="info" tabindex="-1" role="img" aria-label="About instrumental songs" data-tip-ref="tip-instrumental"></span></label>
+           </fieldset>
+ 
+           <div class="codes-note is-hidden" id="codesNote">
+@@ -937,26 +938,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             </div>
+             <button type="button" class="btn ghost small" id="dropCodes" title="Forget the codes: Generate writes new music from the prompt">Drop codes</button>
+           </div>
+-          <div class="field-row seedrow">
+-            <label class="field seedfield">
+-              <span class="label">Music seed <span class="info" tabindex="-1" role="img" aria-label="About the two seeds" data-tip-ref="tip-seeds"></span></span>
+-              <div class="seed-wrap">
+-                <input type="text" id="lmSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
+-                <button type="button" class="dice" id="rollLmSeed" aria-label="Put in a random music seed">
+-                  <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
+-                </button>
+-              </div>
+-            </label>
+-            <label class="field seedfield">
+-              <span class="label">Sound seed</span>
+-              <div class="seed-wrap">
+-                <input type="text" id="soundSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
+-                <button type="button" class="dice" id="rollSoundSeed" aria-label="Put in a random sound seed">
+-                  <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
+-                </button>
+-              </div>
+-            </label>
+-          </div>
+         </section>
+         <section class="k-card k-sound">
+           <fieldset class="field sound" data-fold="vae">
+@@ -1070,6 +1051,30 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <details class="drawer" id="advDrawer">
+             <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Sampling and Denoising</span><span class="sum-say" id="outSummary">WAV 24-bit</span></span></summary>
+             <div class="drawer-body">
++              <!-- HERESY 1169 (Viktor 08.10.2026: «Блок с обеими SEEDs настаиваю перенести в блок Sampling and Denoising»): the
++                   seeds are the sampling's own: the first thing in its drawer -->
++              <div class="out-sub seed-sub"><h4><span class="dot dim"></span> Seeds</h4>
++          <div class="field-row seedrow">
++            <label class="field seedfield">
++              <span class="label">Music seed <span class="info" tabindex="-1" role="img" aria-label="About the two seeds" data-tip-ref="tip-seeds"></span></span>
++              <div class="seed-wrap">
++                <input type="text" id="lmSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
++                <button type="button" class="dice" id="rollLmSeed" aria-label="Put in a random music seed">
++                  <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
++                </button>
++              </div>
++            </label>
++            <label class="field seedfield">
++              <span class="label">Sound seed</span>
++              <div class="seed-wrap">
++                <input type="text" id="soundSeed" placeholder="random" inputmode="numeric" autocomplete="off" spellcheck="false" />
++                <button type="button" class="dice" id="rollSoundSeed" aria-label="Put in a random sound seed">
++                  <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
++                </button>
++              </div>
++            </label>
++          </div>
++              </div>
+               <div class="shape" id="shape">
+                 <label class="shape-row"><span class="shape-name" data-head="familiar ↔ unexpected melody and chords">Composition</span>
+                   <input type="range" id="shapeComposition" min="0" max="4" step="1" value="2" /><output id="shapeCompositionOut">default</output></label>
+@@ -1211,7 +1216,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ 
+     <div class="take-body is-hidden" id="takeBody">
+       <div class="take-tools" id="takeTools">
+-        <div class="tool-group"><span class="tool-cap">Download</span><div class="tool-row">
++        <div class="tool-group tg-dl"><span class="tool-cap">Download</span><div class="tool-row">
+           <a class="btn ghost small" id="dlTakeAudio" download title="Download this song">WAV</a>
+           <a class="btn ghost small" id="dlTakeFlac" download data-tip="FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.">FLAC</a>
+           <span class="split-btn"><a class="btn ghost small" id="dlTakeMp3" download data-tip="MP3 converter: makes a shareable MP3 from the lossless song on the server (a few seconds the first time, then kept). 320 kbps is near transparent (about 7 MB for 3 minutes); 256 is very good; 192 is good and smaller (about 4 MB); 128 is small, with audible loss on cymbals and reverb. The song title and lyrics are written into the file.">MP3</a>
+@@ -1220,7 +1225,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <option value="192">192k</option><option value="128">128k</option>
+         </select></span>
+         </div></div>
+-        <div class="tool-group"><span class="tool-cap">Make again</span><div class="tool-row">
++        <div class="tool-group tg-again"><span class="tool-cap">Make again</span><div class="tool-row">
+           <button type="button" class="btn ghost small" id="retakeTake" data-tip="Retake: this exact take into the form, with its score, both seeds and its music codes. Generate renders the same music again: try another VAE, sound seed or sound variations">Retake</button>
+           <button type="button" class="btn ghost small" id="reuseTake" data-tip="Reuse: the prompt, lyrics and every setting (mode, sampling, guidance, VAE, sliders, LoRAs, output) for a new song: no score, no seeds, no music codes, so Generate writes new music">Reuse</button>
+           <button type="button" class="btn ghost small" id="rerenderSound" title="Same music, a new sound seed (seconds)">Re-render sound</button>
+@@ -1228,11 +1233,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <button type="button" class="btn ghost small" id="transcribeTake" data-tip="SheetSage2 writes this take's own sound down as a score (the server reads the take itself; nothing is uploaded), into the form for a cover: with chords, or the melody only, as chosen under Cover a recording. Good for a reading made in Direct mode, which has no score.">Transcribe this take</button>
+           <button type="button" class="btn ghost small" id="trimToText" data-tip="For readings and songs that go on past their text: Whisper finds where the text ends, and the same take is rendered again from its own music codes cut there (+1.5 s). The same performance, without the returns and babble after the last line; only the sound stage runs.">Trim to the text</button>
+         </div></div>
+-        <div class="tool-group"><span class="tool-cap">Refiner</span><div class="tool-row">
++        <div class="tool-group tg-refine"><span class="tool-cap">Refiner</span><div class="tool-row">
+           <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum">Spectrum</button>
+           <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in the Refiner: Whisper against the lyrics">Lyrics check</button>
+         </div></div>
+-        <div class="tool-group"><span class="tool-cap">Files</span><div class="tool-row">
++        <div class="tool-group tg-files"><span class="tool-cap">Files</span><div class="tool-row">
+           <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds">Request</button>
+           <button type="button" class="btn ghost small" id="dlScore" title="The score as ABC notation (.abc)">Score</button>
+         </div></div>
+@@ -1248,8 +1253,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <!-- what the song actually is: prompt first, words under it -->
+       <div class="word-row">
+         <section class="panel" data-card-fold="prompt">
+-          <div class="panel-head"><h3>Prompt</h3><div class="spacer"></div>
+-            <button type="button" class="icon-btn copy-icon" id="copyPrompt" aria-label="Copy the prompt" data-tip="Copy the prompt">
++          <div class="panel-head"><h3>Style</h3><div class="spacer"></div>
++            <button type="button" class="icon-btn copy-icon" id="copyPrompt" aria-label="Copy the style" data-tip="Copy the style">
+               <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 4.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v7.5A1.5 1.5 0 0 0 4 13h.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+             </button></div>
+           <p class="prompt-text" id="metaStyle"></p>
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 9bcd26f..904b28a 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -215,7 +215,7 @@
+       r.parentNode.classList.toggle("is-over", overLimit(entry(c.id), half, c[half]));
+     });
+     syncTotal(half);
+-    S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
++    paintNotes();
+   }
+   function overLimit(e, half, v) { return v > zones(e, half).limit + 1e-9; }
+ 
+@@ -379,7 +379,7 @@
+         (e.error ? "" : '<span class="lora-pick-half">' + (p ? "both" : halfShort(e)) + "</span>") +
+         '<span class="lora-pick-tag">' + escape(tag) + "</span></button>";
+     }).join("");
+-    S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
++    paintNotes();
+     S.host.querySelector(".lora-lib-count").textContent = S.catalog.length ? String(S.catalog.length) : "";   // HERESY 1167
+   }
+ 
+@@ -388,6 +388,18 @@
+     if (S.opts.onChange) S.opts.onChange();
+   }
+ 
++  // HERESY 1169 (Viktor 08.10.2026: «после свёрнутого блока LoRA выскочил обрезанный параграф объяснений. Он нахер там не нужен»):
++  // the picker's notes in a tip beside the LoRAs' name, ⚠ when one warns; the paragraph under the list keeps them, hidden
++  function paintNotes() {
++    var list = hints().map(tr), p = S.host.querySelector(".lora-hint"), set = S.host.closest("fieldset"), n = set && set.querySelector(".lora-notes");
++    if (p) p.textContent = list.join(" ");
++    if (!n) return;
++    var warn = list.some(function (x) { return x.charAt(0) === "\u26a0"; });
++    n.hidden = !list.length;
++    n.textContent = warn ? "\u26a0" : "i";
++    n.classList.toggle("is-warn", warn);
++    n.dataset.tip = list.join("\n");
++  }
+   function mount(host, opts) {
+     S.host = host;
+     S.opts = opts || {};
+@@ -395,6 +407,16 @@
+     host.innerHTML = '<div class="lora-active"></div><details class="lora-lib"><summary><span class="chev" aria-hidden="true"></span>' +
+       '<span class="lora-lib-name">Add a LoRA</span><span class="lora-lib-count mono"></span></summary>' +
+       '<div class="lora-chips"></div></details><p class="row-hint lora-hint"></p>';
++    var lab = host.closest("fieldset") && host.closest("fieldset").querySelector(".label");   // HERESY 1169: the notes' place
++    if (lab && !lab.querySelector(".lora-notes")) {
++      var nb = root.document.createElement("span");
++      nb.className = "lora-notes";
++      nb.tabIndex = -1;
++      nb.setAttribute("role", "img");
++      nb.setAttribute("aria-label", "Notes on the LoRAs");
++      nb.hidden = true;
++      lab.appendChild(nb);
++    }
+     var lib = host.querySelector(".lora-lib");
+     try { lib.open = root.localStorage.getItem("yue2.loraLib") === "open"; } catch (e) { /* no storage: closed */ }
+     lib.addEventListener("toggle", function () {
+@@ -467,7 +489,7 @@
+       event.target.nextElementSibling.textContent = fmt(event.target.value, 2);
+       event.target.parentNode.classList.toggle("is-over", overLimit(entry(id), half, parseFloat(event.target.value)));   // 1084
+       syncTotal();                        // HERESY 1166, 1167: each half's together follows a strength as it moves
+-      S.host.querySelector(".lora-hint").textContent = hints().map(tr).join(" ");
++      paintNotes();
+     });
+     // HERESY 1166: the together-slider let go: the next drag starts from where the strengths stand, the slider at their sum
+     host.addEventListener("change", function (event) {
+-- 
+2.43.0
+

@@ -1,0 +1,288 @@
+From 0e2e07a1cd151c3615c0dc24540e9a40112d4e48 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 21:40:25 -0600
+Subject: [PATCH 1211/1252] =?UTF-8?q?HERESY=201169:=20Engine=20=E2=86=92?=
+ =?UTF-8?q?=20Updates:=20GitHub's=20releases=20against=20this=20VERSION=20?=
+ =?UTF-8?q?on=20the=20schedule=20chosen=20there=20(every=20day,=20week,=20?=
+ =?UTF-8?q?month,=20never;=20release=20candidates;=20ask=20or=20update=20w?=
+ =?UTF-8?q?hen=20nothing=20runs;=20Check=20now);=20the=20window=20when=20o?=
+ =?UTF-8?q?ne=20is=20out;=20after=20a=20day,=20how=20often;=20the=20?=
+ =?UTF-8?q?=F0=9F=92=8E=20sets=20offered=20on=20a=20new=20studio=20and=20a?=
+ =?UTF-8?q?fter=20each=20update?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «проверка на обновления — раз в сутки, неделю, месяц, никогда, кнопка "проверить сейчас"… обновить автоматом, вручную. Попап для пользователя нового, скажем, через сутки»; «если у пользователя не скачаны мои 💎 Воркспейсы, тоже попапом предложить скачать их».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              |   6 ++
+ tools/console/app.js               |   4 +
+ tools/console/heresy-collection.js |   2 +-
+ tools/console/heresy-updates.js    | 155 +++++++++++++++++++++++++++++
+ tools/console/index.html           |  22 ++++
+ 5 files changed, 188 insertions(+), 1 deletion(-)
+ create mode 100644 tools/console/heresy-updates.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 9d9cc8e..6acb3c1 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -552,6 +552,7 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+ .engine-grid > .eg-look { order: 10; }
+ .engine-grid > .eg-log { order: 11; }
+ .engine-grid > .eg-about { order: 12; }
++.engine-grid > .eg-updates { order: 13; }   /* HERESY 1169: a row of its own under About */
+ @media (min-width: 1400px) {
+   .engine-grid { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); }
+   .engine-grid > .eg-server   { grid-area: 1 / 1 / 2 / 11; }    /* Server over Hardware | the log    1/3 · 2/3 */
+@@ -566,6 +567,7 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+   .engine-grid > .eg-loras    { grid-area: 6 / 6 / 7 / 31; }
+   .engine-grid > .eg-sliders  { grid-area: 7 / 1 / 8 / 31; }
+   .engine-grid > .eg-about    { grid-area: 8 / 1 / 9 / 31; }
++  .engine-grid > .eg-updates  { grid-area: 9 / 1 / 10 / 31; }
+   /* the log fills its column beside Server and Hardware, 260px at least */
+   .eg-log .log-body { flex: 1 1 0; height: auto; min-height: 260px; }
+   /* a sixth is narrower than two tiles: the decoders one under another */
+@@ -4351,3 +4353,7 @@ body[data-frame] :is(#view-compose, #view-take) > .col-head > .frame-tools { mar
+ #advDrawer .out-sub .out-grid > .field:has(> #odeSolver) { grid-column: auto; }   /* over 1168's span: two columns here */
+ .reset-btn { min-width: 128px; justify-content: center; }
+ #advDrawer .reset-cell { padding-top: 0; align-self: center; }
++/* HERESY 1169: the Updates card: what is here and what GitHub has, the schedule, the way an update goes */
++.upd-line { margin: 0 0 10px; font-size: 14px; color: var(--ink); }
++.upd-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
++.upd-row select { width: auto; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index ea77c79..f549b41 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -7161,6 +7161,10 @@
+     },
+     reaper: function () { var t = dawTake(); return t ? reaperProject(t) : Promise.reject(new Error("no take in hand")); },
+     dawproject: function () { var t = dawTake(); return t ? dawProject(t).catch(function (e) { toast("No DAWproject: " + e.message, "bad"); throw e; }) : Promise.reject(new Error("no take in hand")); } });
++  // HERESY 1169: new releases on GitHub (Engine → Updates) and the 💎 sets offered on a new studio and after an update
++  if (window.HeresyUpdates) window.HeresyUpdates.init({ toast: toast,
++    hub: function () { if (window.HeresyCollection && window.HeresyCollection.hubOpen) window.HeresyCollection.hubOpen(); },
++    idle: function () { return !STATE.jobs.some(function (j) { return isLive(j); }); } });
+   // HERESY 1169 (Viktor: «…продублировать в правильных местах в самом Огранщике»): the Refiner's ways out, to the same window
+   all("#postDaw, [data-daw-open]").forEach(function (b) { b.addEventListener("click", function () { if (window.HeresyDaw) window.HeresyDaw.open(); }); });
+   if (window.HeresyInstruments) window.HeresyInstruments.init({        // HERESY 1069: the ♪ cheat-sheet
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index f18df63..b7a388b 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -1624,7 +1624,7 @@
+     api("/collection", { op: "played", names: [name] }).catch(function () { r.fresh = true; });
+   }
+ 
+-  window.HeresyCollection = { init: init, reload: load, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
++  window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
+                               current: current, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+diff --git a/tools/console/heresy-updates.js b/tools/console/heresy-updates.js
+new file mode 100644
+index 0000000..6c0b4f6
+--- /dev/null
++++ b/tools/console/heresy-updates.js
+@@ -0,0 +1,155 @@
++// HERESY 1169 (Viktor 07.10.2026: «проверка на обновления — раз в сутки, неделю, месяц, никогда, кнопка "проверить сейчас",
++// ... обновить автоматом, вручную. Попап для пользователя нового, скажем, через сутки. Настройка в Engine… на тегах новых
++// релизов»; «для свежей установки Студии, и при апдейтах, если у пользователя не скачаны мои 💎 Воркспейсы, тоже попапом
++// предложить скачать их. Гарантия, что только единицы додумаются до этого сами»): the Engine's Updates card; the look at
++// GitHub's releases on this page's schedule (the lab asks: lab/updates.py); the window when one is out; after a day of use,
++// the question how often; and the 💎 sets offered on a new studio and after each update, until they are here or refused.
++// Nothing shows unless the lab answers: a studio without its lab, or the page's tests, stay quiet.
++(function () {
++  "use strict";
++  var KEY = "yue2.updates", DAY = 86400000, EVERY = { day: DAY, week: 7 * DAY, month: 30 * DAY, never: 0 };
++  var DEF = { every: "week", mode: "ask", rc: null, skip: "", asked: false, first: 0, seen: "", gems: "" };
++  var S = { st: null, hooks: {}, watching: false };
++  function $(id) { return document.getElementById(id); }
++  function prefs() {
++    var p = {};
++    try { p = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { p = {}; }
++    return Object.assign({}, DEF, p);
++  }
++  function keep(p) { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) { /* a private window */ } }
++  function toast(t, k) { if (S.hooks.toast) S.hooks.toast(t, k); }
++  function lab(path, body) {
++    return fetch("/lab" + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined)
++      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; }); });
++  }
++  function ago(ts) {
++    var m = Math.round((Date.now() / 1000 - ts) / 60);
++    return m < 2 ? "just now" : m < 120 ? m + " min ago" : m < 2880 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " days ago";
++  }
++  function size(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(1, Math.round(b / 1e6)) + " MB"; }
++  function rcWanted(st) { var p = prefs(); return p.rc == null ? /-rc/.test((st && st.current) || "") : !!p.rc; }
++
++  function paint() {
++    var st = S.st, p = prefs(), line = $("updLine");
++    if (!line) return;
++    if (!st) { line.textContent = "Asking the lab…"; return; }
++    var l = st.latest;
++    line.textContent = st.current === undefined ? "The lab does not answer: " + (st.error || "") :
++      "Ruach Studio " + st.current + " · " + (st.error ? "could not ask GitHub: " + st.error : !st.checked ? "not looked yet" :
++        (st.newer ? l.version + " is out" : "up to date") + ", looked " + ago(st.checked));
++    $("updEvery").value = p.every;
++    $("updMode").value = p.mode;
++    $("updRc").checked = rcWanted(st);
++    $("updMode").disabled = !st.can_run;
++    $("updWhy").textContent = st.can_run || !st.why ? "" : st.why;
++    $("updRun").hidden = !(st.newer && st.can_run);
++    $("updRun").textContent = st.newer ? "Update to " + l.version : "Update";
++    $("updNotes").hidden = !l;
++  }
++  function refresh() {
++    return lab("/update").then(function (st) { S.st = st; paint(); return st; },
++      function (e) { S.st = { error: e.message }; paint(); return null; });
++  }
++  function check(manual) {
++    if ($("updCheck")) $("updCheck").disabled = true;
++    return lab("/update", { check: true, rc: rcWanted(S.st) }).then(function (st) {
++      S.st = st; paint();
++      if (manual) toast(st.error ? "Could not ask GitHub: " + st.error : st.newer ? "Ruach Studio " + st.latest.version + " is out" : "Up to date: " + st.current, st.error ? "bad" : "");
++      return st;
++    }, function (e) { if (manual) toast("No answer: " + e.message, "bad"); return null; })
++      .then(function (st) { if ($("updCheck")) $("updCheck").disabled = false; return st; });
++  }
++  function said(notes) {
++    var t = String(notes || "").replace(/\r/g, "").replace(/^#+\s*/gm, "").replace(/\*\*/g, "").trim();
++    return t.length > 1400 ? t.slice(0, 1400).replace(/\s+\S*$/, "") + "…" : t;
++  }
++  function offer(st, fromCard) {
++    var l = st.latest, p = prefs();
++    var text = "Ruach Studio " + l.version + " is out\n\n" + (l.candidate ? "A release candidate: everything in it works and was checked, the last polish comes in the release.\n\n" : "") +
++      said(l.notes) + "\n\n" + (st.can_run ? "The update fetches it, builds it and restarts the studio when nothing runs; your songs, models and settings stay."
++        : "Here it cannot update by itself: " + st.why + ".");
++    return window.HeresyDialog.confirm(text, { ok: st.can_run ? "Update now" : "Open the release page", cancel: "Later", alt: fromCard ? "" : "Skip this version" }).then(function (a) {
++      if (a === "alt") { p.skip = l.version; keep(p); toast("Skipped " + l.version + ": the next release will be offered"); return; }
++      if (a !== true) return;
++      if (st.can_run) return run(st);
++      window.open(l.url, "_blank", "noopener");
++    });
++  }
++  function run(st) {
++    if (S.hooks.idle && !S.hooks.idle()) { toast("A run is going: the update waits until nothing runs", "bad"); return; }
++    return lab("/update", { run: st.latest.version }).then(function () {
++      toast("Updating to " + st.latest.version + ": the studio builds it, then restarts");
++      watch(st.latest.version);
++    }, function (e) { toast("No update: " + e.message, "bad"); });
++  }
++  function watch(version) {                 // the update's last words in the card; back with the new version: the page reloads
++    if (S.watching) return;
++    S.watching = true;
++    var t = setInterval(function () {
++      lab("/update/log").then(function (d) { var last = (d.log || "").trim().split("\n").pop(); if (last && $("updWhy")) $("updWhy").textContent = last; }, function () {});
++      lab("/update").then(function (st) {
++        if (st.current === version) { clearInterval(t); toast("Ruach Studio " + version + ": reloading the page"); setTimeout(function () { location.reload(); }, 1500); }
++      }, function () { /* restarting */ });
++    }, 3000);
++  }
++  function askHowOften() {
++    return window.HeresyDialog.choose("How often should the studio look for a new release?\n\nIt asks GitHub for the list of its releases, nothing more. When one is out you are asked first; Engine → Updates can update by itself instead, and look whenever you ask.",
++      [{ label: "Every week", value: "week", note: "recommended", current: true }, { label: "Every day", value: "day" }, { label: "Every month", value: "month" },
++        { label: "Never", value: "never", note: "Engine → Updates looks when you ask" }], { cancel: "Ask me later" }).then(function (v) {
++      if (!v) return;
++      var p = prefs(); p.every = v; p.asked = true; keep(p); paint();
++    });
++  }
++  function gems(st) {                       // the 💎 sets, on a new studio and after an update, until here or refused
++    var p = prefs();
++    if (p.gems === "never" || p.seen === st.current) return Promise.resolve();
++    return lab("/collection/diamonds").then(function (d) {
++      var missing = (d.sets || []).filter(function (s) { return s.published && !s.here; }), q = prefs();
++      q.seen = st.current; keep(q);
++      if (!missing.length) return;
++      var list = missing.map(function (s) { return "💎 " + String(s.name).replace(/^💎\s*/, "") + (s.takes ? " · " + s.takes + " takes" : "") + (s.bytes ? " · " + size(s.bytes) : ""); }).join("\n");
++      return window.HeresyDialog.confirm("The studio's 💎 sets\n\nTakes made with this studio and approved by its author, to hear what YuE2 does and make it again: instruments, " +
++        "styles and voices, each with its whole request. You do not have these yet:\n\n" + list + "\n\nEach comes as a workspace of its own; only what you pick is downloaded.",
++        { ok: "Open the sets", cancel: "Not now", alt: "Don't ask again" }).then(function (a) {
++        if (a === "alt") { var r = prefs(); r.gems = "never"; keep(r); }
++        else if (a === true && S.hooks.hub) S.hooks.hub();
++      });
++    }, function () { /* no lab, no list: nothing to offer */ });
++  }
++  function due(st) {
++    var every = EVERY[prefs().every] || 0;
++    return !!every && (!st.checked || Date.now() / 1000 - st.checked >= every / 1000);
++  }
++  function schedule() {
++    var p = prefs();
++    if (!p.first) { p.first = Date.now(); keep(p); }
++    return refresh().then(function (st) {
++      if (!st || st.current === undefined) return null;      // no lab: quiet
++      return gems(st).then(function () {
++        var q = prefs();
++        return !q.asked && Date.now() - q.first >= DAY ? askHowOften() : null;
++      }).then(function () { return due(st) ? check(false) : st; });
++    }).then(function (st) {
++      if (!st || !st.newer || st.latest.version === prefs().skip) return;
++      if (prefs().mode === "auto" && st.can_run && (!S.hooks.idle || S.hooks.idle())) return run(st);
++      return offer(st, false);
++    }).catch(function () {});
++  }
++  function init(hooks) {
++    S.hooks = hooks || {};
++    if ($("updEvery")) {
++      $("updEvery").addEventListener("change", function () { var p = prefs(); p.every = this.value; p.asked = true; keep(p); });
++      $("updMode").addEventListener("change", function () { var p = prefs(); p.mode = this.value; keep(p); });
++      $("updRc").addEventListener("change", function () { var p = prefs(); p.rc = this.checked; keep(p); });
++      $("updCheck").addEventListener("click", function () { check(true); });
++      $("updRun").addEventListener("click", function () { if (S.st && S.st.newer) offer(S.st, true); });
++      $("updNotes").addEventListener("click", function () {
++        var l = S.st && S.st.latest;
++        if (l) window.HeresyDialog.alert("Ruach Studio " + l.version + "\n\n" + said(l.notes) + (l.url ? "\n\n" + l.url : ""));
++      });
++    }
++    paint();
++    setTimeout(schedule, S.hooks.delay == null ? 12000 : S.hooks.delay);   // after the page has settled
++  }
++  window.HeresyUpdates = { init: init, refresh: refresh, check: check, schedule: schedule, gems: gems, offer: offer, prefs: prefs, paint: paint };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index d64e142..d08061e 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -653,6 +653,27 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ 
+ 
+     <!-- credits: upstream project names, not paths (build-page.sh's folder-name guard skips this block) -->
++    <!-- HERESY 1169 (Viktor 07.10.2026: «проверка на обновления — раз в сутки, неделю, месяц, никогда, кнопка "проверить сейчас"…
++         обновить автоматом, вручную… Настройка в Engine… на тегах новых релизов»): GitHub's releases against this VERSION, on
++         the schedule chosen here (heresy-updates.js; the lab asks, lab/updates.py) -->
++    <div class="card wide eg-updates" id="updatesCard">
++      <h3>Updates</h3>
++      <p class="upd-line" id="updLine">Asking the lab…</p>
++      <div class="upd-row">
++        <label class="field field-inline" data-tip="How often the studio asks GitHub for the list of its releases, nothing more. Never: only when you press Check now"><span class="label">Look for a new release</span>
++          <select id="updEvery"><option value="day">every day</option><option value="week">every week</option><option value="month">every month</option><option value="never">never</option></select></label>
++        <label class="check" data-tip="Release candidates count too, not only releases (on a candidate they count anyway)"><input type="checkbox" id="updRc" /> <span>release candidates too</span></label>
++        <label class="field field-inline" data-tip="Ask: a window says what is new, and you choose. Update by itself: when nothing runs, the studio fetches it, builds it and restarts (only where it is a clone of its repository)"><span class="label">When one is out</span>
++          <select id="updMode"><option value="ask">ask me</option><option value="auto">update when nothing runs</option></select></label>
++      </div>
++      <p class="hint" id="updWhy"></p>
++      <div class="card-actions">
++        <button type="button" class="btn ghost small" id="updNotes" hidden>What's new</button>
++        <button type="button" class="btn ghost small" id="updCheck">Check now</button>
++        <button type="button" class="btn primary small" id="updRun" hidden>Update</button>
++      </div>
++    </div>
++
+     <div class="card wide about-card eg-about" id="aboutCard">
+       <div class="about-head">
+         <h3>About</h3>
+@@ -2061,6 +2082,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <p>Songs &times; Sounds is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
+ </template>
+ <script src="heresy-dialog.js"></script>
++<script src="heresy-updates.js"></script>
+ <script src="heresy-settings.js"></script>
+ <script src="heresy-i18n.js"></script>
+ <script src="heresy-logo-words.js"></script>
+-- 
+2.43.0
+

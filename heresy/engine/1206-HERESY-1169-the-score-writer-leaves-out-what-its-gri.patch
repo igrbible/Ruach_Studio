@@ -1,0 +1,130 @@
+From be797f85d1193d61eeff9258553b486fda7dd678 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 18:41:27 -0600
+Subject: [PATCH 1206/1252] HERESY 1169: the score writer leaves out what its
+ grid cannot hold (a note or an interval shorter than its step, a note over
+ one still sounding) and says how many, instead of failing the whole score
+
+10 of the 620 style takes had no score cover for it, and the Creator's "Transcribe this take" failed on such songs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/notation.h | 50 ++++++++++++++++++++++++++------------------------
+ 1 file changed, 26 insertions(+), 24 deletions(-)
+
+diff --git a/src/notation.h b/src/notation.h
+index 6892fc5..d824009 100644
+--- a/src/notation.h
++++ b/src/notation.h
+@@ -267,18 +267,23 @@ static bool not_grid(NotScore * s, std::string * error) {
+     return true;
+ }
+ 
+-static bool not_fill(const std::vector<NotInterval> & rows,
++// HERESY 1169: what the grid cannot hold (an interval shorter than its step; in a voice, a note that short, or one that
++// lands on a note still sounding) is left out and counted, and the rest of the score stands. The reference failed the
++// whole score on the first such one: 10 of the 620 style covers had no score, and the Creator's transcription said
++// "failed" on those songs. notation_abc says the count in the log
++static void not_fill(const std::vector<NotInterval> & rows,
+                      const std::vector<double> &      times,
+                      const std::string &              fallback,
+                      std::vector<std::string> *       out,
+-                     std::string *                    error) {
++                     int *                            dropped) {
+     int n = (int) times.size();
+     out->assign((size_t) n, fallback);
+     for (const NotInterval & r : rows) {
+         int start_t = not_clampi(not_quantize(r.start, times), 0, n - 1);
+         int end_t   = not_clampi(not_quantize(r.end, times), 0, n - 1);
+         if (end_t <= start_t) {
+-            return not_fail(error, "Interval (" + r.label + ") is shorter than the ABC subbeat grid");
++            ++*dropped;
++            continue;
+         }
+         for (int t = start_t; t < end_t; t++) {
+             (*out)[(size_t) t] = r.label;
+@@ -287,29 +292,26 @@ static bool not_fill(const std::vector<NotInterval> & rows,
+     if (n > 1) {
+         (*out)[(size_t) n - 1] = (*out)[(size_t) n - 2];
+     }
+-    return true;
+ }
+ 
+-// Notes of one voice on the grid: onset marked, sustain filled, no overlap
+-static bool not_voice(const std::vector<std::array<double, 2>> & spans,
++// Notes of one voice on the grid: onset marked, sustain filled, no overlap (the one already there keeps its place)
++static void not_voice(const std::vector<std::array<double, 2>> & spans,
+                       const std::vector<int> &                   pitches,
+                       const std::vector<double> &                times,
+                       std::vector<int> *                         out,
+-                      const char *                               voice_id,
+-                      std::string *                              error) {
++                      int *                                      dropped) {
+     int n = (int) times.size();
+     out->assign((size_t) n, 0);
+     for (size_t i = 0; i < spans.size(); i++) {
+         int start_t = not_clampi(not_quantize(spans[i][0], times), 0, n - 1);
+         int end_t   = not_clampi(not_quantize(spans[i][1], times), 0, n - 1);
+-        if (end_t <= start_t) {
+-            return not_fail(error,
+-                            std::string(voice_id) + ": MIDI note cannot be represented on the decoded subbeat grid");
++        bool clash  = end_t <= start_t;
++        for (int t = start_t; t < end_t && !clash; t++) {
++            clash = (*out)[(size_t) t] != 0;
+         }
+-        for (int t = start_t; t < end_t; t++) {
+-            if ((*out)[(size_t) t] != 0) {
+-                return not_fail(error, std::string(voice_id) + ": overlapping quantized melody notes");
+-            }
++        if (clash) {
++            ++*dropped;
++            continue;
+         }
+         int sustain = pitches[i] * 2 + 2;
+         for (int t = start_t; t < end_t; t++) {
+@@ -317,7 +319,6 @@ static bool not_voice(const std::vector<std::array<double, 2>> & spans,
+         }
+         (*out)[(size_t) start_t] = sustain + 1;
+     }
+-    return true;
+ }
+ 
+ // ABC key signature accidentals per letter, C D E F G A B
+@@ -860,6 +861,7 @@ static bool notation_abc(const std::vector<NotEvent> & events,
+     if (!not_measures(s.beats, &s.measures, error) || !not_grid(&s, error)) {
+         return false;
+     }
++    int dropped = 0;
+     for (int track = 0; track < 2; track++) {
+         std::vector<std::array<double, 2>> spans;
+         std::vector<int>                   pitches;
+@@ -872,17 +874,17 @@ static bool notation_abc(const std::vector<NotEvent> & events,
+                 }
+             }
+         }
+-        if (!not_voice(spans, pitches, s.subbeat_times, &s.voice[track], track == 0 ? "Vocal" : "Ins", error)) {
+-            return false;
+-        }
+-    }
+-    if (!not_fill(fields[1], s.subbeat_times, fields[1][0].label, &s.key_arr, error)) {
+-        return false;
++        not_voice(spans, pitches, s.subbeat_times, &s.voice[track], &dropped);
+     }
++    not_fill(fields[1], s.subbeat_times, fields[1][0].label, &s.key_arr, &dropped);
+     if (melody_only) {
+         s.chord_arr.assign(s.subbeat_times.size(), "N");
+-    } else if (!not_fill(fields[0], s.subbeat_times, "N", &s.chord_arr, error)) {
+-        return false;
++    } else {
++        not_fill(fields[0], s.subbeat_times, "N", &s.chord_arr, &dropped);
++    }
++    if (dropped > 0) {
++        fprintf(stderr, "[SheetSage] %d note(s) or interval(s) the score's grid cannot hold left out (shorter than its step, "
++                        "or over a note still sounding)\n", dropped);
+     }
+     for (const NotInterval & r : fields[2]) {
+         int t = not_clampi(not_quantize(r.start, s.subbeat_times), 0, (int) s.subbeat_times.size() - 1);
+-- 
+2.43.0
+

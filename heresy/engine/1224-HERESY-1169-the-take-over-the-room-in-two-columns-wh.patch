@@ -1,0 +1,96 @@
+From 0368311eec50d10086dda44108ad0745131ed5d3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 00:10:45 -0600
+Subject: [PATCH 1224/1252] HERESY 1169: the take over the room in two columns:
+ what to do with it and its lyrics left, how it was made, its VAE and its
+ prompt right, the score under both
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Давай лучше в попапе доделаем Музыканта. Тоже дадим ему две колонки». The plan he called GOOD: «Слева действия (скачать, сделать ещё, Огранщик, файлы, заметка), справа карта «как сделан», VAE, промпт. Во время генерации остаётся на весь фрейм». takeColumns in frameOver moves the blocks into two flex columns while the take's frame is up, and puts each back where it stood when it goes down. A run lays them one under the other. The lifted frames keep the scrollbar's room (scrollbar-gutter: stable): the take, short now, no longer scrolled, and its ⇆ ⤡ ran ten pixels right of Compose's.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 11 +++++++++++
+ tools/console/app.js  | 37 +++++++++++++++++++++++++++++++++++++
+ 2 files changed, 48 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 83efaa3..b615805 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4404,3 +4404,14 @@ body[data-frame="compose"] .compose > .submit-bar { padding-top: 9px; padding-bo
+ .tc-test, .hi-test { color: #d9a441; }
+ .tc-item .tc-say.tc-test, .hi-test { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; }
+ tr.is-test .hi-tag { color: #d9a441; }
++/* HERESY 1169 (Viktor 07.10.2026: «Давай лучше в попапе доделаем Музыканта. Тоже дадим ему две колонки»): the take lifted over
++   the room in two columns (app.js takeColumns moves the blocks while it is up): what to do with it and its lyrics on the left,
++   how it was made, its VAE and its prompt on the right, the score under both; a run's chain keeps the whole frame */
++#takeBody > .take-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px 26px; align-items: start; }
++.take-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
++.take-col > .take-note { margin: 0; }
++.take-body.is-running > .take-cols { display: flex; flex-direction: column; gap: 20px; }
++.take-body.is-running .take-cols .panel { display: none; }
++/* the scrollbar's room kept in a lifted frame whether it scrolls or not: two columns made the take short enough not to, and
++   its ⇆ ⤡ ran ten pixels right of Compose's */
++body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 4bfdc0a..7aa22ce 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8173,6 +8173,42 @@
+   // handlers and state stay its own); from there the other frame. Esc, a click beside it, another room or a run started put
+   // it back; what brings the form forward (Retake, Reuse, the score into the form) brings the form's frame: show("compose").
+   var FRAMES = { compose: "view-compose", take: "view-take" };
++  // HERESY 1169 (Viktor 07.10.2026: «Давай лучше в попапе доделаем Музыканта. Тоже дадим ему две колонки»; the plan he called
++  // GOOD: «Слева действия (скачать, сделать ещё, Огранщик, файлы, заметка), справа карта «как сделан», VAE, промпт. Во время
++  // генерации остаётся на весь фрейм»): the take lifted over the room in two columns, what to do with it on the left (its
++  // lyrics under the note), how it was made on the right; the score under both. The blocks move into the columns while the
++  // frame is up and back where they stood when it goes down, so the room's card stays as it was; a run's chain keeps the
++  // whole frame (the CSS lays the columns one under the other then, and hides the panels as .word-row's were)
++  var TAKE_COLS = (function () {
++    var body = $("takeBody"), words = body.querySelector(".word-row");
++    return { body: body, words: words, tools: $("takeTools"), note: body.querySelector(".take-note"), meta: $("metaGrid"),
++      decode: $("decodeSwitch"), sound: $("soundSwitch"), prompt: words.querySelector('[data-card-fold="prompt"]'),
++      lyrics: words.querySelector('[data-card-fold="lyrics"]'), score: $("scorePanel"), cols: null };
++  })();
++  function takeColumns(on) {
++    var t = TAKE_COLS;
++    if (on && !t.cols) {
++      var left = document.createElement("div"), right = document.createElement("div");
++      t.cols = document.createElement("div");
++      t.cols.className = "take-cols";
++      left.className = "take-col take-col-do";
++      right.className = "take-col take-col-made";
++      [t.tools, t.note, t.lyrics].forEach(function (n) { left.appendChild(n); });
++      [t.meta, t.decode, t.sound, t.prompt].forEach(function (n) { right.appendChild(n); });
++      t.cols.appendChild(left);
++      t.cols.appendChild(right);
++      t.body.insertBefore(t.cols, t.score);
++      t.words.classList.add("is-hidden");
++    } else if (!on && t.cols) {
++      [t.tools, t.note, t.meta, t.decode, t.sound, t.words].forEach(function (n) { t.body.insertBefore(n, t.score); });
++      t.words.appendChild(t.prompt);
++      t.words.appendChild(t.lyrics);
++      t.words.classList.remove("is-hidden");
++      t.cols.remove();
++      t.cols = null;
++    }
++  }
++  window.ruachTakeColumns = function () { return !!TAKE_COLS.cols; };   // for the checks
+   function frameOver(which) {
+     if (!FRAMES[which] || document.body.dataset.tab !== "create") which = null;
+     if ((document.body.dataset.frame || null) === which) return;
+@@ -8186,6 +8222,7 @@
+       if (window.HeresyIcons) b.innerHTML = window.HeresyIcons.ui(up ? "minimize" : "maximize");
+     });
+     if (which) $(FRAMES[which]).setAttribute("tabindex", "-1");   // the keys can stay with it (the player's clicks give them back)
++    takeColumns(which === "take");
+     window.dispatchEvent(new Event("resize"));   // the wave, the staff and the pictures measure their frame again
+   }
+   all(".frame-big").forEach(function (b) {
+-- 
+2.43.0
+

@@ -1,0 +1,23 @@
+Ruach Studio, HERESY 1169: CUDA flash attention, the mask scan reads a mask shared by every sequence in place
+
+With two or more sound variations the NAR asks flash attention for several sequences (Q ne[3] = M) over one mask
+(ne[3] = 1), which the attention kernels read in place for each. The scan that finds each tile's last key
+(flash_attn_mask_to_KV_max, run when the keys are a multiple of FATTN_KQ_STRIDE) stepped by the mask's nb[3],
+past its end from the second sequence on: «illegal memory access», or wrong limits where it did not fault
+(compute-sanitizer: invalid __global__ read, block (0,1,0), 11 777 bytes after the allocation).
+
+build.sh puts every patch here on build/ggml before the server is built, once.
+
+--- a/src/ggml-cuda/fattn-common.cuh
++++ b/src/ggml-cuda/fattn-common.cuh
+@@ -1117,7 +1117,9 @@
+     const bool scan_mask = !use_sparse && mask && K->ne[1] % FATTN_KQ_STRIDE == 0 && (Q->ne[1] >= 1024 || Q->ne[3] > 1);
+     if (scan_mask) {
+         const int64_t s31 = mask->nb[1] / sizeof(half2);
+-        const int64_t s33 = mask->nb[3] / sizeof(half2);
++        // Ruach Studio (HERESY 1169): one mask shared by every sequence (mask->ne[3] == 1, as the attention kernels
++        // read it) is read in place for each; its own stride ran past its end from the second sequence on
++        const int64_t s33 = mask->ne[3] == 1 ? 0 : mask->nb[3] / sizeof(half2);
+ 
+         const dim3 blocks_num_KV_max(ntiles_x, Q->ne[3], 1);
+         const dim3 block_dim_KV_max(FATTN_KQ_STRIDE/2, 1, 1);

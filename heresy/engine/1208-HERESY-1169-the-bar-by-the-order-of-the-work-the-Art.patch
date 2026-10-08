@@ -1,0 +1,244 @@
+From c0c9e4add7c4031f337396f08955f4f8eedfb6ea Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 19:20:38 -0600
+Subject: [PATCH 1208/1252] =?UTF-8?q?HERESY=201169:=20the=20bar=20by=20the?=
+ =?UTF-8?q?=20order=20of=20the=20work=20(the=20Artist's=20place=20greyed,?=
+ =?UTF-8?q?=20the=20Trainer=20a=20pill=20of=20its=20own=20right=20of=20the?=
+ =?UTF-8?q?=20logo),=20Export=20to=20DAW=20into=20=E2=98=B0=20and=20the=20?=
+ =?UTF-8?q?Refiner;=20the=20take's=20frame=20head=20as=20Compose's;=20the?=
+ =?UTF-8?q?=20Generate=20bar's=20note=20on=20its=20row;=20Style?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Творец → Писатель → Огранщик → (Художник) → Библиотекарь ЛОГО Trainer»; «кнопку экспорта в DAW перенести в спадающее меню… и продублировать в правильных местах в самом Огранщике»; «в Музыканте… съехали… именно <> и X»; «иконки кнопок мелкие во втором фрейме»; «A run is in progress… можно поднять в уровень с кнопкой Generate»; «укороти Style Prompt > Style».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css        | 28 ++++++++++++++++++++++++++++
+ tools/console/app.js         | 28 +++++++++++++++++++++-------
+ tools/console/heresy-gpus.js |  2 +-
+ tools/console/index.html     | 21 +++++++++++++++++----
+ 4 files changed, 67 insertions(+), 12 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index bd7882b..8e70259 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4285,3 +4285,31 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
+ /* New song: its double icon twice as wide, and the button with it */
+ #newSong .hz-icon { width: 34px; }
+ #newSong.btn.icon-only { min-width: 72px; }
++/* HERESY 1169 (Viktor 07.10.2026: «Творец → Писатель → Огранщик → (Художник) → Библиотекарь ЛОГО Trainer»): the Artist's place
++   greyed until the room comes; the Trainer, a room of another kind, a pill of its own: after the rooms where the bar has no
++   logo, right of it where it has. It stands by the TALL bar's logo (98 + 10 px high, its width by its proportions in the page's
++   language, --logo-aspect from fitBar), so it stays put while the logo grows and shrinks with the bar (1167: «абы только не
++   сбивал лево/право») */
++.tabs .tab-soon { opacity: .4; cursor: default; }
++.tabs .tab-soon:hover { color: var(--muted); }
++.topbar .tabs-side { margin-left: 0; }
++@media (min-width: 1660px) {
++  .topbar .tabs-side { position: absolute; top: 50%; transform: translateY(-50%); left: calc(50% + 54px * var(--logo-aspect, 4.1423) + 18px); }
++}
++/* the Refiner's way out: at its head's end, beside the take in hand; in Stems, at the end of the split's row */
++.post-head .post-daw { margin-left: auto; align-self: center; }
++.dv-actions .dv-daw { margin-left: auto; }
++/* HERESY 1169 (Viktor 07.10.2026: «в Музыканте… съехали не кнопки его, а именно <> и X»; «В композиторе по высоте вся полоса
++   идеальна»; «иконки кнопок мелкие во втором фрейме»): over the room, the take's ⇆ and ⤡ stand in its head's row as Compose's
++   do, level with the take's buttons and ending where the frame's content ends (the top right corner stays theirs in the room,
++   where the head wraps: 1168); the take's buttons in Compose's box with Compose's icon size */
++body[data-frame="take"] #view-take > .col-head { padding-right: 22px; }
++@media (max-width: 1500px) { body[data-frame="take"] #view-take > .col-head { padding-right: 16px; } }
++body[data-frame="take"] #view-take > .col-head > .frame-tools { position: static; }
++.head-actions .icon-act { padding: 0 9px; min-width: 34px; height: 30px; display: inline-flex; align-items: center; justify-content: center; }
++.head-actions .icon-act svg { width: 17px; height: 17px; }
++.head-actions .icon-act .ui-ico { stroke-width: 1.8; }
++#favTake[aria-pressed="true"] > .ui-star { fill-opacity: 1; }
++/* HERESY 1169 (Viktor 07.10.2026: «A run is in progress… забирает лишнюю строку с футера… можно поднять в уровень с кнопкой
++   Generate»): the bar's note on the bar's own row, left of Takes; a line of its own only where the row has no room for it */
++.submit-note { order: -1; flex: 1 1 260px; min-width: 0; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 12ed825..aa19e33 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -303,7 +303,7 @@
+       close();
+     });
+     document.addEventListener("keydown", function (event) { if (event.key === "Escape") close(); });
+-    ["openPrompt", "unloadModel", "engineToggle"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", function () { setTimeout(close, 0); }); });
++    ["openPrompt", "unloadModel", "engineToggle", "dawOpen"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", function () { setTimeout(close, 0); }); });
+     pop.addEventListener("click", function (event) { if (event.target.closest("#exampleMenu [data-example]")) setTimeout(close, 0); });
+   })();
+   menuToggle("savePrompt", "saveMenu");
+@@ -315,9 +315,14 @@
+     var bar = document.querySelector(".topbar"), logo = document.querySelector(".topbar .brand"), ws = document.querySelector(".topbar .ws-current");
+     if (!bar || !logo || !ws) return;
+     bar.classList.remove("ws-tight", "ws-tighter");
++    // HERESY 1169 (Viktor: «… Библиотекарь ЛОГО Trainer»): the Trainer's pill stands right of the tall bar's logo (app.css),
++    // by the logo's proportions in the page's language; the workspace then meets the pill, not the logo
++    var full = logo.querySelector(".brand-full"), vb = full && full.viewBox && full.viewBox.baseVal;
++    if (vb && vb.height) bar.style.setProperty("--logo-aspect", (vb.width / vb.height).toFixed(4));
+     var ls = getComputedStyle(logo);
+     if (ls.display === "none" || ls.position !== "absolute") return;   // no logo (1157), or at the bar's start: nothing to meet
+-    var gap = function () { return ws.getBoundingClientRect().left - logo.getBoundingClientRect().right; };
++    var side = $("tabsSide") && getComputedStyle($("tabsSide")).position === "absolute" ? $("tabsSide") : logo;
++    var gap = function () { return ws.getBoundingClientRect().left - side.getBoundingClientRect().right; };
+     if (gap() < 18) bar.classList.add("ws-tight");
+     if (gap() < 18) bar.classList.add("ws-tighter");
+   }
+@@ -3936,14 +3941,14 @@
+     $("takeActions").innerHTML =
+       '<button type="button" class="btn ghost small icon-act' + (take.favorite ? " is-on" : "") + '" id="favTake" aria-pressed="' +
+       (take.favorite ? "true" : "false") + '" aria-label="Favourite" data-tip="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '">' +
+-      (take.favorite ? "★" : "☆") + "</button>" +
++      (window.HeresyIcons ? window.HeresyIcons.ui("star") : take.favorite ? "★" : "☆") + "</button>" +   // HERESY 1169: drawn, as Compose's
+       // HERESY 1167 (Viktor: «Жму на мигалку, открывает в Творце "медицинскую карту". А как обратно из неё перейти в
+       // Библиотеку на этот же трек?»): the Librarian with this take in sight, flashed
+       (window.HeresyCollection && window.HeresyCollection.reveal && !take.session
+         ? '<button type="button" class="btn ghost small icon-act" id="libTake" aria-label="Show in the Librarian" data-tip="Show this take in the Librarian: its card found, in sight and flashed">' +
+           '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+           '<path d="M4 4h3.2v16H4zM9.2 6.5h3.2V20H9.2zM14.4 7.4l3-.8 3.5 13-3 .8zM2.5 20.5h19"/></svg></button>' : "") +
+-      '<button type="button" class="btn ghost small icon-act" id="renameTake" aria-label="Rename" data-tip="Rename this take">✎</button>' +
++      '<button type="button" class="btn ghost small icon-act" id="renameTake" aria-label="Rename" data-tip="Rename this take">' + (window.HeresyIcons ? window.HeresyIcons.ui("pencil") : "✎") + "</button>" +
+       '<button type="button" class="btn ghost small icon-act danger" id="deleteTake" aria-label="Delete take" data-tip="Delete this take (asks first)">' +
+       '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+       '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5"/></svg></button>';
+@@ -7134,6 +7139,8 @@
+     },
+     reaper: function () { var t = dawTake(); return t ? reaperProject(t) : Promise.reject(new Error("no take in hand")); },
+     dawproject: function () { var t = dawTake(); return t ? dawProject(t).catch(function (e) { toast("No DAWproject: " + e.message, "bad"); throw e; }) : Promise.reject(new Error("no take in hand")); } });
++  // HERESY 1169 (Viktor: «…продублировать в правильных местах в самом Огранщике»): the Refiner's ways out, to the same window
++  all("#postDaw, [data-daw-open]").forEach(function (b) { b.addEventListener("click", function () { if (window.HeresyDaw) window.HeresyDaw.open(); }); });
+   if (window.HeresyInstruments) window.HeresyInstruments.init({        // HERESY 1069: the ♪ cheat-sheet
+     toast: toast, findTake: findTake, playNow: function (t) { STATE.playZone = "collection"; playNow(t); }
+   });
+@@ -7508,6 +7515,7 @@
+     var take = STATE.take;
+     $("postTitle").textContent = take ? displayTitle(take) : "";   // HERESY 1167: the room's name stands before it now
+     $("postNote").textContent = take ? takeLabel(take).replace(displayTitle(take), "").replace(/^ · /, "") || take.name : "pick a take on the right";
++    $("postDaw").disabled = !take || !!take.session;   // HERESY 1169: a take of the library goes out
+     if (take && document.body.dataset.tab === "post") store("yue2.postTake", take.name);   // HERESY 1132: for F5
+   }
+   function setTab(tab) {
+@@ -7523,7 +7531,7 @@
+     if (tab === "collection" && window.HeresyCollection) window.HeresyCollection.reload();
+     if (tab === "write") refreshChat().catch(function () {});   // HERESY 1110: the Writing room says its state at once
+     paintLibFold();                                   // HERESY 1167: each room its own fold
+-    all("#tabs [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
++    all(".topbar [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+     store(TAB_KEY, tab === "create" ? null : tab);
+     if (tab === "write") paintCurrentSong();
+     if (tab === "post") { paintPost(); refreshRefined(); restorePostTake(); }   // HERESY 1132
+@@ -7533,7 +7541,13 @@
+     window.dispatchEvent(new Event("resize"));   // pictures measure their new width
+   }
+   // HERESY 1166: a room in the bar leaves the Engine page for that room (asked first when the GPU roles are not saved)
+-  all("#tabs [data-tab]").forEach(function (b) { b.addEventListener("click", function () { leaveEngine().then(function (ok) { if (ok) setTab(b.dataset.tab); }); }); });
++  all(".topbar [data-tab]").forEach(function (b) { b.addEventListener("click", function () { leaveEngine().then(function (ok) { if (ok) setTab(b.dataset.tab); }); }); });
++  // HERESY 1169: the Artist's greyed place in the bar by the page's language (the catalogs' "Artist" is the Trainer's
++  // performer, «Артист»; the room is Viktor's «Художник», the pictures for the songs)
++  var ARTIST_ROOM = { ru: "Художник", uk: "Художник", be: "Мастак", el: "Καλλιτέχνης", es: "Artista", it: "Artista" };
++  function paintArtistTab() { if ($("tabArtist")) $("tabArtist").textContent = ARTIST_ROOM[document.documentElement.lang] || "Artist"; }
++  window.addEventListener("ruach-lang", paintArtistTab);
++  paintArtistTab();
+ 
+   // HERESY 1023: import a track from elsewhere. The body goes up as it is, with a progress line
+   // (XMLHttpRequest: fetch reports no upload progress); then the lyrics, if any; then the new
+@@ -8109,7 +8123,7 @@
+     var m = /^(?:Digit|Numpad)([1-9])$/.exec(event.code || "");
+     if (!m || document.querySelector(".hd-back:not(.is-leaving)")) return;
+     event.preventDefault();
+-    var n = +m[1], tab = ROOM_KEYS[n], btn = tab && document.querySelector('#tabs [data-tab="' + tab + '"]');
++    var n = +m[1], tab = ROOM_KEYS[n], btn = tab && document.querySelector('.topbar [data-tab="' + tab + '"]');
+     if (btn) btn.click();
+     else if (n === 8) $("dawOpen").click();
+     else if (n === 9) $("engineToggle").click();
+diff --git a/tools/console/heresy-gpus.js b/tools/console/heresy-gpus.js
+index 5966f58..c56ddc2 100644
+--- a/tools/console/heresy-gpus.js
++++ b/tools/console/heresy-gpus.js
+@@ -125,7 +125,7 @@
+       return window.HeresyDialog.confirm("GPU" + g + " is training " + d.studio_training + "\n\nIt is the studio’s own card: a synthesis now would fight the training for its memory, and one of them would fail. " +
+         "The synthesis waits until the run ends, or until you stop it (Train). To create while training, give training another card: Engine → GPUs.",
+         { ok: "Open Train", cancel: "Wait" }).then(function (go) {
+-        if (go) { var t = document.querySelector('#tabs [data-tab="train"]'); if (t) t.click(); }
++        if (go) { var t = document.querySelector('.topbar [data-tab="train"]'); if (t) t.click(); }
+         return false;
+       });
+     }).catch(function (e) { console.warn("the GPU guard could not ask the lab:", e.message); return true; });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index af497fa..da2f168 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -362,12 +362,19 @@
+ 
+ 
+   <!-- HERESY 1014: the three workspaces -->
++  <!-- HERESY 1169 (Viktor 07.10.2026: «Творец → Писатель → Огранщик → (Художник) → Библиотекарь ЛОГО Trainer»; «нереализованные
++       оставь grayed out & non-clicable… хороший тизер»): the rooms in the order of the work, the Artist's place greyed until the
++       room comes (named by the page's language in app.js: the catalogs' "Artist" is the Trainer's performer); the Trainer, a
++       room of another kind, a pill of its own right of the logo -->
+   <nav class="tabs" id="tabs" aria-label="Workspace">
+     <button type="button" data-tab="create" class="is-active">Creator</button>
+     <button type="button" data-tab="write">Writer</button>
+     <button type="button" data-tab="post">Refiner</button>
++    <button type="button" class="tab-soon" id="tabArtist" aria-disabled="true" translate="no" data-tip="The Artist: cover art for your songs, square, wide and tall at once. It comes in a later release">Artist</button>
+     <button type="button" data-tab="collection">Librarian</button>
+-    <button type="button" data-tab="train">Trainer</button>   <!-- HERESY 1167 (Viktor: «Просто "Trainer"»; Artist comes after it) -->
++  </nav>
++  <nav class="tabs tabs-side" id="tabsSide" aria-label="Training">
++    <button type="button" data-tab="train">Trainer</button>   <!-- HERESY 1167 (Viktor: «Просто "Trainer"») -->
+   </nav>
+ 
+   <div class="spacer"></div>
+@@ -394,7 +401,6 @@
+     <button type="button" class="btn ghost small lang-btn" id="langButton" aria-haspopup="true" aria-label="Language" data-tip="The language of the page">EN</button>
+     <button type="button" class="btn ghost small day-night" id="dayNight" aria-label="Day, night or as the system">☀</button>
+     <!-- HERESY 1167 (Viktor: «кнопку GUIDE убрать… а также перенести туда с бара SAVE»): Save and the guide live in ☰ -->
+-    <button class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform, Bitwig)">DAW</button>
+     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
+     <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now (tinted red while a model is loaded)" disabled>Unload model</button>
+     <div class="menu-wrap head-more">
+@@ -412,6 +418,9 @@ Standard · the cleanest sound, the newer model, the default
+ Legacy · the older official decoder, the benchmarks were made with it
+ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <div class="head-more-items">
++          <!-- HERESY 1169 (Viktor 07.10.2026: «кнопку экспорта в DAW перенести в спадающее меню… И наверное продублировать в
++               правильных местах в самом Огранщике»): out of the bar into ☰; the Refiner has it beside the take in hand -->
++          <button type="button" class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform, Bitwig)">Export to DAW</button>
+           <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
+           <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
+           <button type="button" class="btn ghost small" id="guideOpenMenu" data-icon="question" data-tip="The guide: every room, what each thing does">The guide</button>
+@@ -828,7 +837,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <label class="field" data-fold="style">
+             <!-- HERESY 1168 (Viktor 06.10.2026: «В STYLE полосе ненужный текст подсказки. При свёртывании на две строки рубится»):
+                  the box's own placeholder says it; the bar keeps its name, its marks and its buttons -->
+-            <span class="label">Style prompt</span>
++            <span class="label">Style</span>
+             <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
+             <span class="row-hint size-meter" id="styleMeter"></span>
+             <span class="key-check is-hidden" id="keyCheck"><span id="keyCheckText"></span>
+@@ -1440,7 +1449,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <section class="col post-col is-hidden" id="view-post">
+     <!-- HERESY 1167 (Viktor: «В рефайнере нет такого Титла. Туда тоже добавь»): the room's name and what it does, the take beside -->
+     <div class="col-head post-head"><h2>Refiner</h2><span class="col-note col-note-two">the take in hand, heard and mended: spectrum, artifacts, stems, remaster, upscale, lyrics check</span>
+-      <span class="post-take" id="postTitle"></span><span class="col-note" id="postNote">pick a take on the right</span></div>
++      <span class="post-take" id="postTitle"></span><span class="col-note" id="postNote">pick a take on the right</span>
++      <!-- HERESY 1169: the take in hand out of the studio, from the room that finishes it (the DAW window, as ☰ has it) -->
++      <button type="button" class="btn ghost small post-daw" id="postDaw" data-icon="daw" data-tip="The take in hand out of the studio: the mixed track as it is, or the whole take into your DAW (with its stems, once they are split here)" disabled>Export to DAW</button></div>
+     <!-- HERESY 1023: a track from elsewhere (a SUNO track…) becomes a take, and every tool here works on it -->
+     <details class="drawer" id="importPanel">
+       <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Import a track</span><span class="sum-say">WAV, FLAC, MP3… from anywhere: it becomes a take in the library (48 kHz 24-bit), marked imported, ready for stems, remaster and the rest.</span></span></summary>
+@@ -1468,6 +1479,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <button type="button" class="btn ghost small" data-dv-split="vocals" data-tip="BS-Roformer ep317 (SDR 12.97): vocals and instrumental, about 4 minutes for 7">Split: vocals + instrumental</button>
+             <button type="button" class="btn ghost small" data-dv-split="four" data-tip="The same, then htdemucs_ft on the instrumental: + drums, bass, other, about 6 minutes for 7">Split: four stems</button>
+             <span class="row-hint mono" id="derivedState"></span>
++            <!-- HERESY 1169: where the stems are made, the way out with them -->
++            <button type="button" class="btn ghost small dv-daw" data-daw-open="stems" data-tip="The take with every stem split here, into your DAW: a REAPER project or a DAWproject">Export to DAW</button>
+           </div>
+         </div>
+       </details>
+-- 
+2.43.0
+

@@ -1,0 +1,95 @@
+From 956d3abc6ecd9aaf8161d6f046fdce444cff433d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 14:03:13 -0600
+Subject: [PATCH 1247/1252] =?UTF-8?q?HERESY=201169:=20a=20tidy=20right-cli?=
+ =?UTF-8?q?ck=20menu:=20the=20rows=20hold=20the=20icon=20and=20the=20name?=
+ =?UTF-8?q?=20only=20(the=20hints=20cut=20them:=20R=E2=80=A6),=20an=20item?=
+ =?UTF-8?q?'s=20hint=20beside=20the=20menu,=20level=20with=20it,=20on=20ho?=
+ =?UTF-8?q?ver=20or=20the=20keys?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «Мышечное меню ... мини подсказки на некоторых опциях срезают текст… Лучше прямо с боку от меню выводить небольшой тултип… inline подсказки вообще оттуда убрать».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css        |  4 ++++
+ tools/console/heresy-menu.js | 28 ++++++++++++++++++++++++++--
+ 2 files changed, 30 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 28ae3fc..6135d60 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2503,6 +2503,10 @@ body.coll-dragging .coll-peek { display: none; }
+ .hm-item[aria-checked="true"] .hm-icon { color: var(--amber); }
+ .hm-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .hm-hint { font-size: 11px; color: var(--dim); font-family: var(--mono); }
++/* HERESY 1169 · 1248: an item's hint beside the menu, level with it (heresy-menu.js hintShow); the row keeps only its name */
++.hm-tip { position: fixed; z-index: 91; max-width: 280px; padding: 5px 9px; border: 1px solid var(--line-a); border-radius: var(--r-sm); background: var(--panel);
++  color: var(--muted); box-shadow: 0 8px 24px -10px var(--shadow-lg); font-size: 12.5px; line-height: 1.4; pointer-events: none; }
++.hm-tip[hidden] { display: none; }
+ .hm-more { color: var(--muted); }
+ .hm-sep { height: 1px; margin: 4px 6px; background: var(--line); }
+ .hm-head { padding: 4px 10px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+diff --git a/tools/console/heresy-menu.js b/tools/console/heresy-menu.js
+index 8edd338..4bc8151 100644
+--- a/tools/console/heresy-menu.js
++++ b/tools/console/heresy-menu.js
+@@ -7,10 +7,32 @@
+ (function () {
+   "use strict";
+ 
+-  var root = null, stack = [], anchor = null;
++  var root = null, stack = [], anchor = null, tipEl = null;
+   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+ 
++  // HERESY 1169 · 1248 (Viktor 08.10.2026: «Мышечное меню… твои мини подсказки на некоторых опциях срезают текст… урезана до R. Лучше прямо
++  // с боку от меню выводить небольшой тултип при наведении указателя мыши на ту или иную команду, а inline подсказки вообще оттуда убрать и
++  // держать это контекстное меню аккуратным»): an item's hint is not written in its row; pointed at or reached by the keys, it shows beside
++  // the menu, level with the item, on the side with room, in the page's language as it is written
++  function hintShow(entry, b) {
++    var it = entry.items[+b.dataset.i];
++    if (!it || !it.hint || it.items) { hintHide(); return; }
++    if (!tipEl) {
++      tipEl = document.createElement("div");
++      tipEl.className = "hm-tip";
++      tipEl.setAttribute("role", "tooltip");
++      document.body.appendChild(tipEl);
++    }
++    tipEl.textContent = window.RuachI18n ? window.RuachI18n.t(it.hint) : it.hint;
++    tipEl.hidden = false;
++    var m = entry.el.getBoundingClientRect(), r = b.getBoundingClientRect(), w = tipEl.offsetWidth, h = tipEl.offsetHeight;
++    tipEl.style.left = (m.right + 6 + w <= window.innerWidth - 6 ? m.right + 6 : Math.max(6, m.left - 6 - w)) + "px";
++    tipEl.style.top = Math.max(6, Math.min(r.top + r.height / 2 - h / 2, window.innerHeight - h - 6)) + "px";
++  }
++  function hintHide() { if (tipEl) tipEl.hidden = true; }
++
+   function close() {
++    hintHide();
+     stack.forEach(function (m) { m.el.remove(); });
+     stack = [];
+     if (root) { document.removeEventListener("keydown", onKey, true); root = null; }
+@@ -26,7 +48,7 @@
+       return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + '" role="menuitem" data-i="' + i + '"' +
+         (it.disabled ? " disabled" : "") + (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + ">" +
+         '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label"' + (it.raw ? ' translate="no"' : "") + ">" + esc(it.label) + "</span>" +
+-        (it.items ? '<span class="hm-more">›</span>' : it.hint ? '<span class="hm-hint">' + esc(it.hint) + "</span>" : "") + "</button>";
++        (it.items ? '<span class="hm-more">›</span>' : "") + "</button>";   // HERESY 1169 · 1248: the hint beside the menu (hintShow), not in the row
+     }).join("");
+     document.body.appendChild(el);
+     var entry = { el: el, items: items, level: level };
+@@ -48,6 +70,8 @@
+         if (it.items) openSub(entry, b, it); else trim(level);
+       }, 140);
+     });
++    el.addEventListener("focusin", function (e) { var b = e.target.closest(".hm-item"); if (b) hintShow(entry, b); });   // the pointer focuses too
++    el.addEventListener("mouseleave", hintHide);
+     el.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+     return entry;
+   }
+-- 
+2.43.0
+

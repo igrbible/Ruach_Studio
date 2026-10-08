@@ -1,0 +1,62 @@
+From 4022925c7ddb4ecad2fa138946c0c909b9cf2931 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 17:32:51 -0600
+Subject: [PATCH 1205/1252] =?UTF-8?q?HERESY=201169:=20Ctrl+Alt+1=E2=80=A69?=
+ =?UTF-8?q?=20by=20Viktor's=20plan=20of=20the=20rooms:=201=20Creator,=202?=
+ =?UTF-8?q?=20Writer,=203=20Refiner,=204=20Artist,=205=20Librarian,=206=20?=
+ =?UTF-8?q?kept,=207=20Trainer,=208=20out=20to=20your=20DAW,=209=20Engine?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Распределим всё, как по плану: Творец 1, Писатель 2, Огранщик 3 / DAW 4 (3), Художник 5 (4), Библиотекарь
+6 (5), EMPTY (6), Тренер 7, Экспорт в Local DAW 8, Движок 9. Если всё же планируешь интеграцию DAW в Огранщика, тогда кнопка 4
+снимается с DAW… и в резервации имеем EMPTY 6 на будущее.» The DAW is to live inside the Refiner, so the numbers in his
+brackets: 4 waits for the Artist room (it says so), 6 for a room to come, 8 is the bar's DAW button (the mixed track or the
+whole take into REAPER, Waveform, Bitwig). The same numbers wait for Ctrl in the desktop app. The guide's keys row in seven
+languages.
+
+Kitchen suite: 400 passed, 0 failed, 7 skipped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 18 +++++++++++-------
+ 1 file changed, 11 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e1f0933..12ed825 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8099,17 +8099,21 @@
+     setTimeout(function () { if (!f.contains(document.activeElement)) f.focus({ preventScroll: true }); }, 0);
+   });
+   // HERESY 1169 (Viktor 07.10.2026: «к каждой комнате по её порядку можно прикрутить Ctrl+1, etc.»): Ctrl+1…9 are the
+-  // browser's own tabs and never reach a page, so here Ctrl+Alt+1…6 («Да, делай Ctrl+Alt+1…6»; Ctrl+1…6 come with the desktop
+-  // app): the rooms in the bar's order, then the Engine, each by its own button (leaving the Engine asks as it does); read
+-  // by the key's code, so in any keyboard layout and from the number pad too
++  // browser's own tabs and never reach a page, so here Ctrl+Alt with the digit (Ctrl+digit comes with the desktop app). The
++  // places, by his plan (the DAW to live inside the Refiner): «Творец 1, Писатель 2, Огранщик 3, Художник 4, Библиотекарь 5,
++  // EMPTY 6, Тренер 7, Экспорт в Local DAW 8, Движок 9». 4 waits for the Artist room, 6 for a room to come. Each presses
++  // its own button (leaving the Engine asks as it does); read by the key's code, so in any layout and from the number pad
++  var ROOM_KEYS = { 1: "create", 2: "write", 3: "post", 5: "collection", 7: "train" };
+   window.addEventListener("keydown", function (event) {
+     if (!event.ctrlKey || !event.altKey || event.shiftKey || event.metaKey) return;
+-    var m = /^(?:Digit|Numpad)([1-6])$/.exec(event.code || "");
++    var m = /^(?:Digit|Numpad)([1-9])$/.exec(event.code || "");
+     if (!m || document.querySelector(".hd-back:not(.is-leaving)")) return;
+     event.preventDefault();
+-    var n = +m[1], tabs = all("#tabs [data-tab]");
+-    if (n === 6) $("engineToggle").click();
+-    else if (tabs[n - 1]) tabs[n - 1].click();
++    var n = +m[1], tab = ROOM_KEYS[n], btn = tab && document.querySelector('#tabs [data-tab="' + tab + '"]');
++    if (btn) btn.click();
++    else if (n === 8) $("dawOpen").click();
++    else if (n === 9) $("engineToggle").click();
++    else if (n === 4) toast("Ctrl+Alt+4 is kept for the Artist room, which comes in a later release");
+   }, true);
+   // HERESY 1169 (Viktor 07.10.2026: «Давай шорткат Shift+Tab блокируем для обратного хождения по полям, а именно для
+   // переключения между композером и Исполнителем. И когда фрейм опущен, из обычной страницы… эта комбинация подымает оверлей во
+-- 
+2.43.0
+

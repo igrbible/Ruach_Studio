@@ -122,6 +122,12 @@
   function render(en) {
     if (lang === "en") return en;
     var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(en), tr = m[2] ? look(m[2]) : null;
+    // HERESY 1169 · 1247: the page draws a warning's ⚠ apart (app.js .warn-ico) and writes its words alone; the catalog keeps them
+    // under «⚠ …», so they are looked up there and given back without the sign
+    if (tr === null && m[2] && m[2].charAt(0) !== "\u26a0") {
+      var signed = look("\u26a0 " + m[2]);
+      if (signed !== null) tr = signed.replace(/^\u26a0\ufe0f?[ \u00a0]?/, "");
+    }
     if (tr === null && MISS && /[A-Za-z]{2}/.test(m[2])) { var k = norm(m[2]); if (!MISS.has(k)) MISS.set(k, CUR); }
     return tr === null ? en : m[1] + tr + m[3];
   }

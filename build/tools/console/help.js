@@ -52,7 +52,7 @@
       "A supplied score needs Full or Melody.",
     abc: "A score in YuE2's own notation: two voices, Vocal and Ins (instrument), in bars of 1/32 notes, with chord symbols on the Vocal line " +
       "and section comments (% verse). In Full or Melody mode the song follows it in time and pitch.\n" +
-      "Plan score only writes one here to check or edit; a transcription or an older take can fill it too. " +
+      "Create ABC Score writes one here to check or edit; a transcription or an older take can fill it too. " +
       "For a cover, use Melody only with a score that has no chord symbols.",
     versions: "Renders this prompt several times, each extra version with a fresh seed. " +
       "Picking the best of several is the most reliable way to a better song: the model card's own benchmark compared best-of-2 and best-of-8 picks.",
@@ -206,7 +206,7 @@
         "⚠ It does nothing while the penalty is at 1.0.",
       min_tokens: "The score cannot end before this many tokens. Default 200.\n" +
         "✓ Leave it.",
-      max_tokens: "The longest score, in tokens. Default 6144.\n" +
+      max_tokens: "The longest score, in tokens. Default 6144, 8192 at most.\n" +
         "✓ 6144 holds a long song (4096 cut long scores short).\n" +
         "⚠ The score and the music share ONE context of 24,576 tokens: every token given to the score is taken from the music. " +
         "8192 leaves the song too little room. A score cut off here cannot be used."

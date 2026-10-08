@@ -91,7 +91,14 @@
       "tag": "no vocals, planned sections",
       "repo": "Mothersuperior/YuE2-instrumental-cot-full-loras",
       "url": "https://huggingface.co/Mothersuperior/YuE2-instrumental-cot-full-loras",
-      "about": "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound."
+      "about": "Instrumental music with a section plan, music half (trained on about 2,700 instrumental tracks). Use Full plan mode. Lyrics box: only bare section tags, one per line ([intro] [verse] [chorus] [bridge] [outro]), optionally with m:ss times. Pair it with a real-audio sound LoRA for real-production sound.",
+      "limits": {
+        "ar": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
     },
     "YuE2_Deathmetalv1_lora/": {
       "title": "Death metal",

@@ -1,0 +1,236 @@
+From 5fdad30a9130f80e614ca6e037bcea19a2f82497 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 01:17:36 -0600
+Subject: [PATCH 1229/1252] =?UTF-8?q?HERESY=201169:=20the=20tags=20under?=
+ =?UTF-8?q?=20=C2=AB[=C2=BB=20along=20a=20song's=20arc,=20Intro=20to=20END?=
+ =?UTF-8?q?,=20the=20once-tags=20there=20already=20reached=20and=20read;?=
+ =?UTF-8?q?=20more=20of=20mcedit=20in=20the=20lyrics=20(Alt+O,=20Alt+L,=20?=
+ =?UTF-8?q?Ctrl+Y,=20Alt+=E2=86=91=20=E2=86=93)=20and=20a=20Keys=20cheat?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «В подсказках тегов… отсортируй их по стандартной арке произведения, начиная с Intro и заканчивая End. Также ты правильно деактивируешь единственные вхождения в промпт лирики, но позволь двигаться по ним и читать шпаргалку/описание. Я в ахуе от мимики бейсиковых трейсов команд mcedit. Хочешь, добавь ещё что-то дельное. И обязательно обнови описаловки/хелпы и читшиты по редактору». ARC orders the sections (a name's start still ranks before a later word's); the next verse is in hand when the lyrics number theirs. A once-tag already in the lyrics keeps its place, and ↑ ↓ and the pointer reach it to read it, but it is not put in. Alt+O clears the marks (mcedit's BookmarkFlush), Alt+L goes to a line, Ctrl+Y deletes the line, Alt+↑ / Alt+↓ move the line or the lines selected with their marks, each through execCommand so Ctrl+Z takes it back. The meter's Keys lists them and opens the guide at the lyrics; the Writer's LYRICS label says them on hover.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |  3 ++
+ tools/console/app.js             |  2 +-
+ tools/console/heresy-complete.js | 32 ++++++++---------
+ tools/console/heresy-lyrics.js   | 62 +++++++++++++++++++++++++++++---
+ 4 files changed, 78 insertions(+), 21 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 9eeeea5..5be4fbe 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4439,3 +4439,6 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ /* HERESY 1169 (Viktor 08.10.2026: «Снова ловлю тебя на хардкорных переносах строк… НИКОГДА НЕ ЛОМАТЬ СТРОКУ… вернуть ломанные
+    строки в их текущие autowrap параграфы»): no measure on a paragraph any more (the hints' 62 and 68ch, the guide's 78 and 80ch,
+    the cheat-sheet's 150ch, the rooms' notes' 430 px): the box sets the width and the text flows to its edge */
++/* HERESY 1169: the lyrics editor's keys: the meter's «Keys» (a press opens the guide there), the Writer's label says them too */
++.lyr-tog.lyr-keys { font-family: var(--mono); }
++.lyr-keys-at { cursor: help; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 2e49767..1fad98c 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1431,7 +1431,7 @@
+   // HERESY 1168: the lyrics' meter: each line's syllables against its group's ruler, the counts under the box, the browser's
+   // spelling check; the box drawn by hand keeps its height (heresy-lyrics.js)
+   var lyricsMeter = window.HeresyLyrics ? window.HeresyLyrics.attach($("lyrics"), { meter: $("lyricsMeter"), style: $("style"), fit: function (area) { fitText(area); } }) : null;
+-  if (window.HeresyLyrics) window.HeresyLyrics.aids($("wrLyrics"));   // HERESY 1169: the Writer's lyrics numbered, marked, their tags lit
++  if (window.HeresyLyrics) window.HeresyLyrics.aids($("wrLyrics"), null, $("wrLyrics").closest(".field").querySelector(".label"));   // HERESY 1169: the Writer's lyrics numbered, marked, their tags lit; its label says the keys
+ 
+   // Each dice toggles: an empty box (random each run) gets a seed to keep or edit; a seed is cleared
+   var DICE = [["lmSeed", "rollLmSeed", "music seed"], ["soundSeed", "rollSoundSeed", "sound seed"]];
+diff --git a/tools/console/heresy-complete.js b/tools/console/heresy-complete.js
+index e8a3da7..230f0c3 100644
+--- a/tools/console/heresy-complete.js
++++ b/tools/console/heresy-complete.js
+@@ -3,14 +3,13 @@
+ // особые Intro, Outro, END проверка, если уже есть в тексте»): the section tags offered as a code editor offers its words.
+ //
+ // A «[» typed at a line's start (spaces before it allowed) in the Creator's or the Writer's lyrics opens a list under it:
+-// the sections of the cheat-sheet (heresy-instruments.js: the 110 official examples counted), the common ones first
+-// (Verse, Chorus, Pre-Chorus, Bridge, Interlude), then the three a song has once (Intro, Outro, End), then the rest
+-// as often as the examples write them. What is typed after the «[» narrows it, from a word's start («ch» finds Chorus and
++// the sections of the cheat-sheet (heresy-instruments.js: the 110 official examples counted), in the order a song
++// goes through them, Intro to End (HERESY 1169; before, the common ones came first). What is typed after the «[» narrows it, from a word's start («ch» finds Chorus and
+ // Pre-Chorus), in a Russian or Ukrainian layout too («[мук» is «[ver»); a number after it numbers the tag («v2» is
+ // [Verse 2]); lyrics that number their verses are offered the next one. ↑ ↓ choose (the mouse too); Enter or Tab puts
+ // the tag in on a line of its own and the cursor on the line under it (Ctrl+Z takes it back); Esc closes it (what was
+-// typed stays), and so does «]» (a tag of one's own). Intro, Outro and END already in the lyrics stand at the list's end,
+-// dimmed, with their line, and are not put in twice; a numbered tag already there likewise. Ctrl+Space opens the list on
++// typed stays), and so does «]» (a tag of one's own). Intro, Outro and END already in the lyrics stay in their place,
++// dimmed, with their line: ↑ ↓ and the pointer reach them and read what they are, and they are not put in twice; a numbered tag already there likewise. Ctrl+Space opens the list on
+ // a «[» line, and at a line's start types the «[» itself: no Latin layout needed for it.
+ //
+ // HERESY 1169 (Viktor 08.10.2026: «Две колонки, высота селектора не изменяется, если только в подвал не упирается. В левой
+@@ -23,6 +22,11 @@
+ (function () {
+   "use strict";
+   // HERESY 1169 (Viktor 07.10.2026: «Вычисти оттуда то, чего нет в оф примерах YuE2»): no Break, the examples never write it
++  // HERESY 1169 (Viktor 08.10.2026: «отсортируй их по стандартной арке произведения, начиная с Intro и заканчивая End»): the
++  // sections in the order a song goes through them, the TEST ones where they would stand; FIRST is the fallback's order
++  var ARC = ["Intro", "Instrumental Intro", "Verse", "Pre-Chorus", "Chorus", "Post-Chorus", "Refrain", "Hook", "Interlude", "Instrumental Break",
++    "Guitar Solo", "Scatting", "Yodeling", "Non-Lyrical Vocals", "Bridge", "Breakdown", "Drop", "Instrumental", "Skit", "Segue", "Part",
++    "Final Chorus", "Outro", "Fade Out", "Instrumental Outro", "End"];
+   var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude"], ONCE = ["Intro", "Outro", "End"];
+   // as Viktor writes it (thirty songs of his end so; «Да, измени»), where the official examples write [End]
+   var SPELL = { End: "END" };
+@@ -41,10 +45,8 @@
+     var g = window.HeresyInstruments && window.HeresyInstruments.lyricTags ? window.HeresyInstruments.lyricTags()[0] : null;
+     var rows = (g ? g.rows : []).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: r[1], note: r[2], test: !r[1] }; });
+     if (!rows.length) rows = FIRST.concat(ONCE).map(function (name) { return { name: name, n: 0, note: "", test: false }; });
+-    var by = {};
+-    rows.forEach(function (r) { by[r.name] = r; });
+-    return FIRST.concat(ONCE).map(function (n) { return by[n]; }).filter(Boolean)
+-      .concat(rows.filter(function (r) { return FIRST.indexOf(r.name) < 0 && ONCE.indexOf(r.name) < 0; }));
++    var pos = function (r) { var i = ARC.indexOf(r.name); return i < 0 ? ARC.length + rows.indexOf(r) : i; };
++    return rows.slice().sort(function (a, b) { return pos(a) - pos(b); });
+   }
+ 
+   function fold(q) {
+@@ -92,7 +94,7 @@
+       else if (name !== (SPELL[t.name] || t.name) && have.named[name.toLowerCase()] !== undefined) it.there = have.named[name.toLowerCase()];
+       out.push(it);
+     });
+-    return out.sort(function (a, b) { return ((a.there !== undefined) - (b.there !== undefined)) || (a.test - b.test) || (a.rank - b.rank) || (a.k - b.k); });
++    return out.sort(function (a, b) { return (a.rank - b.rank) || (a.k - b.k); });   // HERESY 1169: the arc, the once-tags in their place
+   }
+ 
+   // the «[» the cursor stands after, at its line's start, nothing but its letters between: where it is and what follows it.
+@@ -122,9 +124,9 @@
+       var o = e.target.closest(".tc-item");
+       if (o && !o.classList.contains("is-there")) accept(+o.dataset.i);
+     });
+-    pop.addEventListener("mousemove", function (e) {
++    pop.addEventListener("mousemove", function (e) {           // HERESY 1169: a once-tag there already is read too, not put in
+       var o = e.target.closest(".tc-item");
+-      if (o && !o.classList.contains("is-there") && +o.dataset.i !== at) { at = +o.dataset.i; mark(false); }
++      if (o && +o.dataset.i !== at) { at = +o.dataset.i; mark(false); }
+     });
+   }
+ 
+@@ -221,6 +223,7 @@
+     if (!items.length) return hide();
+     at = -1;
+     if (keep) items.forEach(function (it, i) { if (at < 0 && it.tag === keep && it.there === undefined) at = i; });
++    if (at < 0) items.some(function (it, i) { if (it.next) { at = i; return true; } return false; });   // HERESY 1169: the next verse first
+     if (at < 0) items.some(function (it, i) { if (it.there === undefined) { at = i; return true; } return false; });
+     build();
+     pop.hidden = false;
+@@ -265,10 +268,7 @@
+   }
+   function move(d) {
+     var n = items.length;
+-    for (var s = 1; s <= n; s++) {
+-      var i = ((at < 0 ? (d > 0 ? -1 : 0) : at) + d * s + n * 2) % n;
+-      if (items[i].there === undefined) { at = i; break; }
+-    }
++    if (n) at = ((at < 0 ? (d > 0 ? -1 : 0) : at) + d + n * 2) % n;   // HERESY 1169 (Viktor: «позволь двигаться по ним и читать»): every row
+     mark(true);
+   }
+ 
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index 0e5078d..4c596fc 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -309,9 +309,14 @@
+   // band runs along it. Marks follow the lines as text is added or taken above them, and are kept with the text they were
+   // made on (a reload brings them back, other lyrics do not). Every [tag] lies under a thin amber layer. A copy of the box's
+   // layout (as the meter's) tells where each line and each tag stands.
+-  function aids(area, onChange) {
++  // the editor's keys said in one place: the meter's «Keys», the Writer's lyrics label
++  var KEYS = "The lyrics editor's keys, as in mcedit:\nAlt+K  mark the cursor's line (again: unmark it)\nAlt+J  the next mark · Alt+Shift+J the one before\n" +
++    "Alt+O  clear the marks (Alt+Shift+K too)\nAlt+L  go to a line by its number\nCtrl+Y  delete the line\nAlt+↑ Alt+↓  move the line, or the lines selected\n" +
++    "[ at a line's start, or Ctrl+Space  the section tags\nCtrl+F  find in the box\nAlt+I  the instruments' and styles' cheat-sheet\nCtrl+Z  take a change back";
++  function aids(area, onChange, tipAt) {
+     if (!area || area.dataset.aids) return null;
+     area.dataset.aids = "1";
++    if (tipAt) { tipAt.dataset.tip = tr(KEYS); tipAt.classList.add("lyr-keys-at"); }
+     var wrap = area.parentNode;
+     if (!wrap.classList.contains("lyr-wrap")) {
+       wrap = document.createElement("div");
+@@ -409,10 +414,57 @@
+       if (to === undefined) to = dir > 0 ? marks[0] : marks[marks.length - 1];
+       bring(to);
+     }
++    // HERESY 1169 (Viktor 08.10.2026: «Я в ахуе от мимики бейсиковых трейсов команд mcedit. Хочешь, добавь ещё что-то
++    // дельное»): mcedit's keys a lyric writer reaches for: Alt+L to a line by its number, Ctrl+Y the line away, Alt+O the marks
++    // away; and Alt+↑ / Alt+↓ move the line (or the lines selected) up or down, their marks with them. Each change goes in as
++    // typed (execCommand), so Ctrl+Z takes it back.
++    function typeIn(s) {
++      var ok = false;
++      try { ok = s ? document.execCommand("insertText", false, s) : document.execCommand("delete"); } catch (e) { ok = false; }
++      if (!ok) {
++        var a = area.selectionStart, b = area.selectionEnd;
++        area.value = area.value.slice(0, a) + s + area.value.slice(b);
++        area.setSelectionRange(a + s.length, a + s.length);
++        area.dispatchEvent(new Event("input", { bubbles: true }));
++      }
++    }
++    function startOf(line) { return line ? area.value.split("\n").slice(0, line).join("\n").length + 1 : 0; }
++    function deleteLine() {
++      var v = area.value, l = lineAt(area.selectionStart), from = startOf(l), to = v.indexOf("\n", from);
++      if (to < 0) { to = v.length; if (from > 0) from -= 1; } else to += 1;     // the line and its newline (the last one: the newline before it)
++      if (from === to) return;
++      area.setSelectionRange(from, to);
++      typeIn("");
++    }
++    function moveLines(dir) {
++      var v = area.value, lines = v.split("\n"), s0 = area.selectionStart, s1 = area.selectionEnd;
++      var a = lineAt(s0), b = lineAt(s1 > s0 && v.charAt(s1 - 1) === "\n" ? s1 - 1 : s1);
++      if ((dir < 0 && a === 0) || (dir > 0 && b >= lines.length - 1)) return;
++      var other = dir < 0 ? lines[a - 1] : lines[b + 1], block = lines.slice(a, b + 1);
++      var from = startOf(dir < 0 ? a - 1 : a), to = from + (dir < 0 ? [other].concat(block) : block.concat([other])).join("\n").length;
++      var shift = dir < 0 ? -(other.length + 1) : other.length + 1;
++      area.setSelectionRange(from, to);
++      typeIn((dir < 0 ? block.concat([other]) : [other].concat(block)).join("\n"));
++      area.setSelectionRange(s0 + shift, s1 + shift);
++      var swap = dir < 0 ? a - 1 : b + 1;
++      marks = marks.map(function (m) { return m >= a && m <= b ? m + dir : m === swap ? (dir < 0 ? b : a) : m; }).sort(function (x, y) { return x - y; });
++      changed();
++    }
++    function gotoLine() {
++      var n = area.value.split("\n").length, here = lineAt(area.selectionStart) + 1;
++      var ask = window.HeresyDialog ? window.HeresyDialog.prompt(tr("Go to line (1–{0})").replace("{0}", n), String(here), { ok: tr("Go") }) : Promise.resolve(window.prompt("Line", String(here)));
++      ask.then(function (v) { var k = parseInt(v, 10); if (k >= 1) bring(Math.min(k, n) - 1); else area.focus(); });
++    }
+     area.addEventListener("keydown", function (e) {
+-      if (!e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+-      if (e.code === "KeyK") { e.preventDefault(); if (e.shiftKey) { marks = []; changed(); } else toggle(); }
+-      else if (e.code === "KeyJ") { e.preventDefault(); jump(e.shiftKey ? -1 : 1); }
++      if (e.isComposing || e.metaKey) return;
++      var editable = !area.readOnly && !area.disabled;
++      if (e.altKey && !e.ctrlKey) {
++        if (e.code === "KeyK") { e.preventDefault(); if (e.shiftKey) { marks = []; changed(); } else toggle(); }
++        else if (e.code === "KeyJ") { e.preventDefault(); jump(e.shiftKey ? -1 : 1); }
++        else if (e.code === "KeyO" && !e.shiftKey) { e.preventDefault(); marks = []; changed(); }
++        else if (e.code === "KeyL" && !e.shiftKey) { e.preventDefault(); gotoLine(); }
++        else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !e.shiftKey && editable) { e.preventDefault(); moveLines(e.key === "ArrowUp" ? -1 : 1); }
++      } else if (e.ctrlKey && !e.altKey && !e.shiftKey && e.code === "KeyY" && editable) { e.preventDefault(); deleteLine(); }
+     });
+     area.addEventListener("scroll", later);
+     if (window.ResizeObserver) new ResizeObserver(later).observe(area);
+@@ -471,6 +523,7 @@
+       var mk = ax ? ax.marks().length : 0;
+       if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
+         esc(tr("Marks: {0}").replace("{0}", num(mk))) + "</button>");
++      parts.push('<button type="button" class="lyr-tog lyr-keys" data-lyr="keys" data-tip="' + esc(tr(KEYS)) + '">' + esc(tr("Keys")) + "</button>");   // HERESY 1169
+       parts.push('<button type="button" class="lyr-tog" data-lyr="nums" aria-pressed="' + (recall("yue2.lyrNums") !== "off") + '" data-tip="' + esc(tr("The lines' numbers in the box, as a code editor shows them (Alt+K marks a line, Alt+J goes to the next mark)")) + '">' + esc(tr("Line numbers")) + "</button>");
+       parts.push('<button type="button" class="lyr-tog" data-lyr="spell" aria-pressed="' + spell + '" data-tip="' + esc(tr("The browser's spelling check in the lyrics' language; press to switch it off or on")) + '">' + esc(tr("Spelling")) + "</button>");
+       if (manual) parts.push('<button type="button" class="lyr-tog" data-lyr="auto" data-tip="' + esc(tr("The box grows with the words again, as it did before you drew it")) + '">' + esc(tr("Auto height")) + "</button>");
+@@ -594,6 +647,7 @@
+         return;
+       }
+       if (b.dataset.lyr === "mark" && ax) return ax.next();                 // HERESY 1169
++      if (b.dataset.lyr === "keys") { if (window.HeresyGuide) window.HeresyGuide.open("creator", "The lyrics' meter and the phonetic hand"); return; }
+       if (b.dataset.lyr === "nums" && ax) ax.numbers(recall("yue2.lyrNums") === "off");
+       if (b.dataset.lyr === "spell") store("yue2.lyrSpell", recall("yue2.lyrSpell") === "off" ? null : "off");
+       if (b.dataset.lyr === "auto") {
+-- 
+2.43.0
+

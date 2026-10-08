@@ -214,15 +214,42 @@
   // в читшит максимальный список музыкальных тегов/маркеров для промпта лирики»): the lyrics' tags, as the 110 official
   // examples write them (how often, counted 07.10.2026), and Viktor's phonetic hand. A click puts a tag into the
   // lyrics where the cursor stands, on a line of its own; a mark of the hand goes in where the cursor stands.
+  // HERESY 1169 (Viktor 07.10.2026: «те суно теги `[Break]`, если уж нет их в оф. примерах… Они не работают. Вычисти оттуда
+  // то, чего нет в оф примерах YuE2»): only what the examples write; [Break] and the studio's own [Inst] are gone.
+  // HERESY 1169 (Viktor 08.10.2026: «Вот нашёл документ… https://genius.com/Genius-song-sections-and-headers-guide-annotated.
+  // Пройдись по нему и вычлени для всех наших тегов YuE2 описаловки… И также по остальным, что не найдены в 110 примерах
+  // официальных добавь и эти, но пометь как тестовые»): what each section is, in our words after Genius's guide to song
+  // sections, recounted on the 110 examples (build/tools/webui/example: a header's name before a dash, a colon or its number,
+  // any case; Prechorus, Ends, Fadeout and Instrumental Introduction with theirs). Genius's sections none of them writes
+  // come last with 0: TEST, YuE2 may sing them as words or pass them by
   var LYRIC_TAGS = [
-    { group: "Sections YuE2 knows (×: how often the 110 official examples write it)", rows: [
-      ["[Verse]", 145, "Verse 1, Verse 2… a numbered one counts as the same"], ["[Chorus]", 187, "the hook the song comes back to"],
-      ["[Pre-Chorus]", 61, "Prechorus too (8)"], ["[Bridge]", 47, "measured with the verses in the meter"], ["[Outro]", 37, ""],
-      ["[Intro]", 21, "its lines are seldom sung: put a spoken intro under [Interlude] or [Verse]"], ["[Interlude]", 18, "Viktor: a pause in rap, a brake on speech that runs ahead"],
-      ["[Final Chorus]", 9, ""], ["[End]", 7, "Ends too"], ["[Instrumental Break]", 9, "with what plays: «Instrumental Break - Horns»"],
-      ["[Guitar Solo]", 8, "Drum Solo, Keyboard Solo, Solo"], ["[Refrain]", 4, "Refrain 1…4"], ["[Post-Chorus]", 3, ""], ["[Breakdown]", 2, ""],
-      ["[Fade Out]", 2, "Fadeout, Instrumental fade out"], ["[Hook]", 1, ""], ["[Drop]", 1, "Beat drops – …"], ["[Instrumental]", 1, ""],
-      ["[Inst]", 0, "the studio's own short name of an instrumental part"], ["[Break]", 0, "Viktor's: a pause in rap"]] },
+    { group: "Sections (×: how often the 110 official examples write one; TEST: none does, Genius's guide to song sections names it)", rows: [
+      ["[Verse]", 163, "The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the studio offers the next number."],
+      ["[Chorus]", 201, "The part the song comes back to, the same words and melody each time, with the line people remember and sing along."],
+      ["[Pre-Chorus]", 63, "The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Also written Prechorus."],
+      ["[Bridge]", 56, "Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. The meter counts it with the verses."],
+      ["[Outro]", 46, "The ending: a last line repeated as the music fades, or the chorus once more with a change that resolves the song."],
+      ["[Intro]", 34, "The opening before the first verse, mostly music. YuE2 seldom sings its lines: put a spoken intro under [Interlude] or [Verse]."],
+      ["[Interlude]", 18, "A passage of another feel between parts, often without words. Viktor's use: a pause in rap that brakes speech running ahead."],
+      ["[Final Chorus]", 11, "The last chorus, usually the biggest: more voices, more power, now and then a key change."],
+      ["[Instrumental Break]", 11, "The instruments alone between sections, for variety or to build into the next one. Name what plays: «Instrumental Break - Horns»."],
+      ["[Guitar Solo]", 8, "One instrument steps forward with a long melody of its own while the rest backs it. The examples also write Drum Solo, Keyboard Solo and plain Solo."],
+      ["[End]", 7, "The song's last mark: the music stops here. The examples also write Ends; SUNO's [END] is the same tag."],
+      ["[Instrumental Intro]", 5, "An opening played without voices. Also written Instrumental Introduction."],
+      ["[Refrain]", 4, "A line or two repeated unchanged at the end of each verse: part of the verse, not a section of its own as a chorus is."],
+      ["[Post-Chorus]", 3, "A short part right after the chorus that carries its energy on (a chant, a riff, a tag line) before the next verse."],
+      ["[Breakdown]", 2, "The music cut to its bones: heavy, simple riffs and pounding drums (metal and its kin), or a stripped beat in dance music."],
+      ["[Fade Out]", 2, "The music fades to silence. Also written Fadeout; Instrumental Fade Out once."],
+      ["[Hook]", 1, "The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now."],
+      ["[Drop]", 1, "Dance and electronic music: the moment beat and bass hit after a build-up."],
+      ["[Instrumental]", 1, "A part, or a whole song, played without singing."],
+      ["[Instrumental Outro]", 0, "An ending played without voices."],
+      ["[Skit]", 0, "A short scene acted out apart from the song: voices and something happening, not singing."],
+      ["[Segue]", 0, "A spoken or played passage that joins two songs within one track."],
+      ["[Part]", 0, "One of the songs a long track is made of, numbered in Roman numerals (Part I, Part II); the verses keep counting across the parts."],
+      ["[Scatting]", 0, "Wordless syllables sung like an instrument, as in jazz."],
+      ["[Yodeling]", 0, "Quick leaps between chest and head voice, as in an alpine yodel."],
+      ["[Non-Lyrical Vocals]", 0, "Voices without words: oohs, aahs, hums, a vocalise."]] },
     { group: "A section and how it is sung (after a dash or a colon)", rows: [
       ["[Verse 1 – Male voice (raspy, relaxed)]", 1, ""], ["[Chorus – Both voices (call & response)]", 1, ""], ["[Pre-Chorus – Sung softly]", 1, ""],
       ["[Verse 1 – Melodic Rap / Spoken Rhythmically]", 1, ""], ["[Intro – Muse (whispered)]", 1, ""], ["[Intro – Warlord (spoken/half-sung)]", 1, ""],
@@ -251,10 +278,11 @@
       if (!rows.length) return;
       n += rows.length;
       html += '<tr class="hi-fam"><th colspan="4">' + esc(g.group) + " <em>" + rows.length + "</em></th></tr>" + rows.map(function (r) {
-        return '<tr class="is-heard"><td class="hi-name"><button type="button" class="hi-tag" data-hi-lyr="' + esc(r[0]) + '"' + (g.hand ? ' data-hi-hand="1"' : "") +
+        return '<tr class="' + (r[1] || g.hand ? "is-heard" : "is-test") + '"><td class="hi-name"><button type="button" class="hi-tag" data-hi-lyr="' + esc(r[0]) + '"' + (g.hand ? ' data-hi-hand="1"' : "") +
           ' translate="no" data-tip="' + (g.hand ? "into the lyrics, where the cursor stands" : "into the lyrics, on a line of its own") + '">' + esc(g.hand ? (r[3] ? r[0] + "  ·  " + r[3] : r[0]) : r[0]) + "</button></td>" +
           '<td class="hi-say" colspan="2"><div>' + esc(r[2]) + "</div></td>" +
-          '<td class="hi-plays mono">' + (r[1] ? "×" + esc(String(r[1])) : "") + "</td></tr>";
+          '<td class="hi-plays mono">' + (r[1] ? "×" + esc(String(r[1])) : g.hand ? "" :
+            '<span class="hi-test" data-tip="None of the 110 official examples writes it: YuE2 may sing it as words or pass it by">TEST</span>') + "</td></tr>";
       }).join("");
     });
     $("hiTable").innerHTML = html || '<tr><td class="row-hint">Nothing matches.</td></tr>';
@@ -262,7 +290,7 @@
   }
   function addLyricTag(tag, hand) {
     var ly = $("lyrics");
-    if (!ly || !tag) return;
+    if (!ly || !tag) return "";
     var at = ly.selectionStart, end = ly.selectionEnd, v = ly.value, ins = tag;
     if (hand) ins = tag === "( )" ? "()" : tag;
     else {
@@ -273,9 +301,56 @@
     var caret = at + ins.length - (hand && tag === "( )" ? 1 : 0);
     ly.setSelectionRange(caret, caret);
     ly.dispatchEvent(new Event("input", { bubbles: true }));
-    state.hooks.toast("Into the lyrics: " + tag);
+    return "Into the lyrics, line " + (ly.value.slice(0, at + (ins.charAt(0) === "\n" ? 1 : 0)).split("\n").length) + ": " + tag;   // HERESY 1169: where
   }
-  function paint() {
+  // HERESY 1169 (Viktor 07.10.2026: «В шпаргалке по стилям и инструментам проблемка. Не работает кликание, вставка,
+  // копирование»): the click did put a name into the Style prompt, but its words showed under the sheet (the toasts stand over
+  // it now) and the prompt is under the sheet too: a name the prompt holds is marked in the sheet itself, at once on a click
+  function markIn() {
+    var st = $("style"), v = st ? fold(st.value) : "";
+    Array.prototype.forEach.call(document.querySelectorAll("#hiTable [data-hi-tag]"), function (b) {
+      var f = fold(b.dataset.hiTag);
+      b.classList.toggle("is-in", !!v && !!f && v.indexOf(f) >= 0);
+    });
+  }
+  // and a name clicked goes onto the clipboard as well (its pointer always said copy), the page's own way, which works over
+  // plain http too (app.js ruachCopyText); the words say whether the clipboard took it
+  function said(words, text) {
+    if (!words) return;
+    var put = window.ruachCopyText || function (x) { return navigator.clipboard.writeText(x); };
+    Promise.resolve().then(function () { return put(text); })
+      .then(function () { return true; }, function () { return false; })
+      .then(function (ok) { state.hooks.toast(words + (ok ? " \u00b7 copied" : "")); });
+  }
+  // HERESY 1169 (Viktor 08.10.2026: «нужен диалоговый попап, спрашивающий, что мы делаем. Переписываем или добавляем в конец
+  // (новой строкой, и потом самостоятельный эджастмент)»): a name for the Style goes onto the clipboard at once (the click's own
+  // gesture), then the question: at the end on a line of its own, or in place of the whole Style. Into an empty Style it goes
+  // without one; a name the Style holds already is only copied
+  function toClip(text) {
+    var put = window.ruachCopyText || function (x) { return navigator.clipboard.writeText(x); };
+    return Promise.resolve().then(function () { return put(text); }).then(function () { return true; }, function () { return false; });
+  }
+  function chooseInto(tag) {
+    var st = $("style");
+    if (!st || !tag) return;
+    var copied = toClip(tag), v = st.value.replace(/\s+$/, "");
+    function finish(words) {
+      st.dispatchEvent(new Event("input", { bubbles: true }));
+      markIn();
+      copied.then(function (ok) { state.hooks.toast(words + (ok ? " \u00b7 copied" : "")); });
+    }
+    if (!v) { st.value = tag; return finish("Into the style: " + tag); }
+    if (fold(v).indexOf(fold(tag)) >= 0) return copied.then(function (ok) { state.hooks.toast("\u201c" + tag + "\u201d is in the style already" + (ok ? " \u00b7 copied" : "")); });
+    window.HeresyDialog.confirm(tr("Into the Style: {0}").replace("{0}", "\u00ab" + tag + "\u00bb") + "\n\n" +
+      tr("At the end, on a line of its own (adjust it as you like), or in place of all the Style holds now?"),
+      { ok: tr("Add at the end"), alt: tr("Replace the style"), cancel: tr("Cancel") }).then(function (r) {
+        if (r === "alt") { st.value = tag; finish("The style is now: " + tag); }
+        else if (r) { st.value = st.value.replace(/\s+$/, "") + "\n" + tag; finish("Into the style, on a line of its own: " + tag); }
+      });
+  }
+  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  function paint() { paintTable(); markIn(); }
+  function paintTable() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-hi-tab]"), function (b) { b.classList.toggle("is-on", b.dataset.hiTab === state.tab); });
     $("hiFam").hidden = $("hiHeardBox").hidden = state.tab !== "instruments";
     if (state.tab === "styles") return paintStyles();
@@ -309,9 +384,9 @@
       '<button type="button" class="btn ghost small" id="hiClose">Close</button></div>' +
       // HERESY 1167 (Viktor: «Дизайн аудио шпаргалки пересмотри. Там в голове навалено сплошными потоками»): the head in parts:
       // the warning in a line, a legend of four, how the probes were made folded
-      '<p class="hi-warn"><b>⚠ A name in the style is a request, not a promise.</b> What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.</p>' +
+      '<p class="hi-warn"><b><span class="warn-ico" role="img" aria-label="Warning"></span>A name in the style is a request, not a promise.</b> What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.</p>' +
       '<ul class="hi-legend">' +
-      '<li><b>Click a name</b><span>it goes into the Style prompt</span></li>' +
+      '<li><b>Click a name</b><span>it goes into the Style prompt and onto the clipboard</span></li>' +
       '<li><b>▶ A · ▶ B</b><span>its two probes, their seeds under them</span></li>' +
       '<li><b class="hi-lg-ok">✓ heard</b><span>the ear heard it and kept it; <em class="hi-lg-no">red</em>: not played when named alone</span></li>' +
       // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
@@ -333,9 +408,9 @@
       var t = e.target.closest("[data-hi-tag]"), p = e.target.closest("[data-hi-play]"), a = e.target.closest("[data-hi-art]"), tb = e.target.closest("[data-hi-tab]");
       if (tb) { state.tab = tb.dataset.hiTab; return paint(); }
       if (a && window.HeresyArt) return window.HeresyArt.show(a.dataset.hiArt, Array.prototype.map.call($("hiTable").querySelectorAll("[data-hi-art]"), function (b) { return b.dataset.hiArt; }));
-      if (t) return addTag(t.dataset.hiTag);
+      if (t) return chooseInto(t.dataset.hiTag);                      // HERESY 1169: asked where it goes
       var lt = e.target.closest("[data-hi-lyr]");
-      if (lt) return addLyricTag(lt.dataset.hiLyr, !!lt.dataset.hiHand);   // HERESY 1168
+      if (lt) return said(addLyricTag(lt.dataset.hiLyr, !!lt.dataset.hiHand), lt.dataset.hiLyr);   // HERESY 1168
       if (p) { var take = state.hooks.findTake(p.dataset.hiPlay); if (take) state.hooks.playNow(take); else state.hooks.toast("The probe is not in the library now", "bad"); }
     });
     $("hiSearch").addEventListener("input", function () { state.q = this.value; paint(); });
@@ -343,14 +418,16 @@
     $("hiHeard").addEventListener("change", function () { state.heard = this.checked; paint(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !back.hidden) close(); });
   }
+  // what a click did, in words (said() says them once the clipboard has answered)
   function addTag(tag) {
     var st = $("style");
-    if (!st || !tag) return;
+    if (!st || !tag) return "";
     var v = st.value.replace(/\s+$/, "");
-    if (fold(v).indexOf(fold(tag)) >= 0) return state.hooks.toast("“" + tag + "” is in the style already");
+    if (fold(v).indexOf(fold(tag)) >= 0) return ("“" + tag + "” is in the style already");
     st.value = v ? v.replace(/[.,;]?$/, ", ") + tag : tag;
     st.dispatchEvent(new Event("input", { bubbles: true }));
-    state.hooks.toast("Into the style: " + tag);
+    markIn();
+    return "Into the style: " + tag;
   }
   function open(q, tab) {
     if (!$("hiBack")) build();

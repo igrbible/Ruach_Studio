@@ -125,7 +125,7 @@
       return window.HeresyDialog.confirm("GPU" + g + " is training " + d.studio_training + "\n\nIt is the studio’s own card: a synthesis now would fight the training for its memory, and one of them would fail. " +
         "The synthesis waits until the run ends, or until you stop it (Train). To create while training, give training another card: Engine → GPUs.",
         { ok: "Open Train", cancel: "Wait" }).then(function (go) {
-        if (go) { var t = document.querySelector('#tabs [data-tab="train"]'); if (t) t.click(); }
+        if (go) { var t = document.querySelector('.topbar [data-tab="train"]'); if (t) t.click(); }
         return false;
       });
     }).catch(function (e) { console.warn("the GPU guard could not ask the lab:", e.message); return true; });

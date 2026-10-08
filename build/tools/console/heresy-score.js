@@ -73,6 +73,7 @@
     formTimer = setTimeout(function () {
       var abc = $("abc").value, s = paint($("formScoreCheck"), abc);
       $("voiceShiftRow").classList.toggle("is-hidden", !s);
+      if ($("reciteRow")) $("reciteRow").classList.toggle("is-hidden", !s);   // HERESY 1169 · 1238
       ["formMidi", "formMarkers"].forEach(function (id) { $(id).disabled = !s; });
     }, 250);
   }

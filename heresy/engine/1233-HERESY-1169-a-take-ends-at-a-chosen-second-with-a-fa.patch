@@ -1,0 +1,147 @@
+From e862ee3b6d652f3c1d7a031356277751f3c532df Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 02:50:47 -0600
+Subject: [PATCH 1233/1252] HERESY 1169: a take ends at a chosen second with a
+ fade (end_at, fade_out in the request): with decode_from its kept latents are
+ decoded only so far, in seconds; fade_out brings the last seconds down on a
+ half cosine in both the decode and the render jobs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «после последнего правильного затухания какая-то… хуета выскакивает на 10-15 секунд». Measured on his 01:14 take (CFG 1.8): the last words at 4:55, the score's 8-bar loop held 27 more bars with the voice resting, the engine played them and dropped to quiet twice (the fade he hears) and came back loud for ~10 s. The plan's leftover bars, not the guidance. Both fields are written into a take's request only when used.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/request.cpp      | 14 ++++++++++++++
+ src/request.h        |  4 ++++
+ tools/yue-server.cpp | 30 ++++++++++++++++++++++++++++++
+ 3 files changed, 48 insertions(+)
+
+diff --git a/src/request.cpp b/src/request.cpp
+index 78f3c07..b0871ea 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -35,6 +35,8 @@ void request_init(Yue2Request * r) {
+     r->cfg_scale        = -1.0f;
+     r->semantic_tokens  = "";
+     r->semantic_keep    = "";
++    r->end_at           = 0.0f;
++    r->fade_out         = 0.0f;
+ 
+     r->abc_sampling      = YUE2_ABC_SAMPLING;
+     r->semantic_sampling = YUE2_SEMANTIC_SAMPLING;
+@@ -174,6 +176,12 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+     if ((v = yyjson_obj_get(obj, "semantic_keep")) && yyjson_is_str(v)) {
+         r->semantic_keep = yy_str(v);
+     }
++    if ((v = yyjson_obj_get(obj, "end_at")) && yyjson_is_num(v)) {   // HERESY 1169
++        r->end_at = (float) yyjson_get_num(v);
++    }
++    if ((v = yyjson_obj_get(obj, "fade_out")) && yyjson_is_num(v)) {   // HERESY 1169
++        r->fade_out = (float) yyjson_get_num(v);
++    }
+     if ((v = yyjson_obj_get(obj, "cfg_scale")) && yyjson_is_num(v)) {
+         r->cfg_scale = (float) yyjson_get_num(v);
+     }
+@@ -343,6 +351,12 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+     if (!r->semantic_keep.empty()) {   // HERESY 1037: written only when used
+         yyjson_mut_obj_add_strncpy(doc, root, "semantic_keep", r->semantic_keep.c_str(), r->semantic_keep.size());
+     }
++    if (r->end_at > 0.0f) {   // HERESY 1169: written only when used
++        yyjson_mut_obj_add_real(doc, root, "end_at", r->end_at);
++    }
++    if (r->fade_out > 0.0f) {
++        yyjson_mut_obj_add_real(doc, root, "fade_out", r->fade_out);
++    }
+     if (!sparse || r->cfg_scale != d.cfg_scale) {
+         yyjson_mut_obj_add_real(doc, root, "cfg_scale", r->cfg_scale);
+     }
+diff --git a/src/request.h b/src/request.h
+index 71a70af..d7f160a 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -85,6 +85,10 @@ struct Yue2Request {
+     // here"). It counts in the duration; the song is the kept codes followed by the new ones.
+     std::string semantic_keep;  // ""
+ 
++    // HERESY 1169 (Viktor 08.10.2026: a Full song runs on 10-15 s after its proper fade): the take ends at this second (with decode_from its kept latents are decoded only so far; 0: to the end) and fades out over its last fade_out seconds (0: no fade)
++    float end_at;    // 0
++    float fade_out;  // 0
++
+     // classifier free guidance on the semantic stage. Negative applies the
+     // default (HERESY 1031: 1.6 in every mode; the release had 1.01 in off mode
+     // and 1.0 otherwise), and a scale of exactly 1.0 keeps a single branch.
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index b2063e4..9269b33 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -793,6 +793,20 @@ static bool latents_load(const std::string & dir, Yue2Song * song) {
+     return true;
+ }
+ 
++// HERESY 1169: the last seconds of a planar stereo song [2, T] brought down to silence on a half cosine
++static void audio_fade_out(std::vector<float> & audio, int T_audio, float seconds) {
++    int n = std::min(T_audio, (int) (seconds * (float) YUE2_SAMPLE_RATE));
++    if (n <= 0 || audio.size() < (size_t) 2 * T_audio) {
++        return;
++    }
++    for (int k = 0; k < n; k++) {
++        float  g = 0.5f * (1.0f + cosf(3.14159265358979f * (float) (k + 1) / (float) n));
++        size_t i = (size_t) (T_audio - n + k);
++        audio[i] *= g;
++        audio[(size_t) T_audio + i] *= g;
++    }
++}
++
+ static bool listen_flac_fresh(const std::string & dir) {
+     std::error_code ec;
+     auto            f = std::filesystem::last_write_time(dir + "/listen.flac", ec);
+@@ -1489,6 +1503,9 @@ static bool validate(const httplib::Request & req, httplib::Response & res, Yue2
+             return fail("unknown decoder (see /props vaes)");
+         }
+     }
++    if (!(r->end_at >= 0.0f && r->end_at < 36000.0f) || !(r->fade_out >= 0.0f && r->fade_out <= 30.0f)) {   // HERESY 1169
++        return fail("end_at must be 0 or a second of the take, fade_out 0 to 30 seconds");
++    }
+     if (!r->decode_from.empty()) {   // HERESY 1168: a take of the library that kept its latents
+         const std::string & n = r->decode_from;
+         if (n == "." || n == ".." || n.find('/') != std::string::npos || n.find('\\') != std::string::npos ||
+@@ -1588,6 +1605,13 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
+         job->status.store(JobStatus::FAILED);
+         return;
+     }
++    if (request.end_at > 0.0f) {   // HERESY 1169: the kept latents only up to the chosen second
++        int keep = (int) ceilf(request.end_at * (float) YUE2_SAMPLE_RATE / (float) YUE2_HOP);
++        if (keep > 0 && keep < song.T_lat) {
++            song.T_lat = keep;
++            song.latents.resize((size_t) keep * YUE2_LATENT_DIM);
++        }
++    }
+     bool   ok             = pipeline_decode_latents(&g_pipeline, request.vae, &song, server_cancel_job, (void *) &job->cancel);
+     double render_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+     if (!ok) {
+@@ -1597,6 +1621,9 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
+         return;
+     }
+     fprintf(stderr, "[Server] Job %s: %s decoded again in %.1f s (%d frames)\n", job->id.c_str(), from.c_str(), render_seconds, song.T_lat);
++    if (request.fade_out > 0.0f) {   // HERESY 1169
++        audio_fade_out(song.audio, song.T_audio, request.fade_out);
++    }
+     bool      is_mp3  = false;
+     WavFormat wav_fmt = WAV_S16;
+     audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt);
+@@ -1680,6 +1707,9 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
+     std::vector<std::string> request_parts;
+     for (size_t t = 0; t < songs.size(); t++) {
+         Yue2Song & song = songs[t];
++        if (request.fade_out > 0.0f) {   // HERESY 1169
++            audio_fade_out(song.audio, song.T_audio, request.fade_out);
++        }
+         // Normalization belongs to the output stage, WAV32 keeping the full range
+         if (is_mp3 || wav_fmt != WAV_F32) {
+             audio_normalize(song.audio.data(), song.T_audio * 2, request.peak_clip);
+-- 
+2.43.0
+

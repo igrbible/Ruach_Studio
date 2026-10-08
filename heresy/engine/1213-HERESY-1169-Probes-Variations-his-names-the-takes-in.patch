@@ -1,0 +1,276 @@
+From e3a8377a676334287b6d7e26d0c912b167e17ff6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 22:07:48 -0600
+Subject: [PATCH 1213/1252] =?UTF-8?q?HERESY=201169:=20Probes=20=C3=97=20Va?=
+ =?UTF-8?q?riations=20(his=20names),=20the=20takes=20in=20a=20column=20of?=
+ =?UTF-8?q?=20their=20own;=20the=20Variations=20tip=20says=20what=20was=20?=
+ =?UTF-8?q?measured=20(time,=20hardly=20any=20memory);=20=E2=8F=AA=20?=
+ =?UTF-8?q?=E2=8F=A9=20in=20the=20player=20to=20the=20quarter-minute=20mar?=
+ =?UTF-8?q?ks=20from=200:00,=20the=20arrows=20to=20the=205=20s=20marks?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Переименовываем Takes в Probes (Пробы)»; «пусть будет Variations (Вариации)»; «При 1-9 бегает… отдельной колоночкой… с запасом и выключкой текста влево»; «REV и FF… по 15 сек… как в видеоплеерах по аналогу ключевых фреймов… в чистой кратности с 0:00».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  3 +++
+ tools/console/app.js            | 18 ++++++++++++++++--
+ tools/console/heresy-i18n-be.js |  7 +++++++
+ tools/console/heresy-i18n-el.js |  7 +++++++
+ tools/console/heresy-i18n-es.js |  7 +++++++
+ tools/console/heresy-i18n-it.js |  7 +++++++
+ tools/console/heresy-i18n-ru.js |  7 +++++++
+ tools/console/heresy-i18n-uk.js |  7 +++++++
+ tools/console/heresy-icons.js   |  3 +++
+ tools/console/index.html        | 26 +++++++++++++++-----------
+ 10 files changed, 79 insertions(+), 13 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6acb3c1..04bcafe 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4345,6 +4345,9 @@ body[data-frame] :is(#view-compose, #view-take) > .col-head > .frame-tools { mar
+ .count-slider input[type="range"] { width: 96px; height: auto; padding: 0; accent-color: var(--amber); }
+ .count-slider .cs-val { min-width: 1.3em; text-align: right; font: 600 13px/1 var(--mono); color: var(--ink); }
+ .cs-total { font: 12.5px/1 var(--mono); color: var(--muted); white-space: nowrap; flex: none; }
++/* Viktor: «При 1-9 бегает… Возьми отдельной колоночкой после ползунков для "= xx takes", с запасом и выключкой текста влево»:
++   a column of its own, wide enough for «= 90 takes» in any of the seven languages, its words from the left */
++.cs-total { display: inline-block; min-width: 13ch; text-align: left; }
+ /* Sampling's lower section: the sound half and the output (the old Sound and output drawer), and the two resets alike */
+ .dot.dim { background: var(--dim); }
+ .out-sub { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft, var(--line-a)); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f549b41..4ec3602 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -346,6 +346,18 @@
+     event.preventDefault();
+   });
+   // HERESY 1148 (Viktor, 03.10.2026): Ctrl+A only in a field one types into
++  // HERESY 1169 (Viktor 07.10.2026: «как в видеоплеерах по аналогу ключевых фреймов… перематываем по 5, 15 сек в чистой
++  // кратности с 0:00»): a jump lands on the next whole multiple of its step, or the last one; back from just past a mark
++  // (under a second, as playing on keeps it) goes to the one before, so a press never lands where the music already is
++  function seekTarget(t, step, dir) {
++    return dir > 0 ? (Math.floor(t / step + 1e-6) + 1) * step : Math.max(0, Math.floor((t - 1) / step) * step);
++  }
++  window.ruachSeekTarget = seekTarget;   // the page's tests read it
++  function seekMark(step, dir) {
++    var audio = $("audio");
++    if (!audio.getAttribute("src") || !isFinite(audio.duration) || audio.duration <= 0) return;
++    audio.currentTime = Math.min(audio.duration - 0.05, seekTarget(audio.currentTime || 0, step, dir));
++  }
+   function typingField(el) {
+     if (!el) return false;
+     if (el.isContentEditable || el.tagName === "TEXTAREA") return true;
+@@ -357,10 +369,10 @@
+     if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+     if (event.key === "Escape") { leaveEngine(); closeMenus(); }
+     if (event.key === " " && (audio.getAttribute("src") || STATE.take) && !event.target.closest(".menu-pop")) { event.preventDefault(); togglePlay(); }
+-    // HERESY 1111: seek and mute from the keyboard, outside text fields and menus
++    // HERESY 1111: seek and mute from the keyboard, outside text fields and menus; 1169: to the marks of 5 s (Shift: 30) from 0:00
+     if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && audio.getAttribute("src") && isFinite(audio.duration) && !event.target.closest(".menu-pop, [role=menu], .col-grip")) {
+       event.preventDefault();
+-      audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + (event.key === "ArrowRight" ? 1 : -1) * (event.shiftKey ? 30 : 5)));
++      seekMark(event.shiftKey ? 30 : 5, event.key === "ArrowRight" ? 1 : -1);
+     }
+     if ((event.key === "m" || event.key === "M") && !event.ctrlKey && !event.metaKey && !event.altKey) $("muteBtn").click();
+   });
+@@ -5167,6 +5179,8 @@
+   }
+   $("autoplay").addEventListener("click", function () { store("yue2.playOn", playOn() ? "off" : null); paintPlayOn(); });
+   $("prevTake").addEventListener("click", function () { stepTake(-1); });
++  $("pbRew").addEventListener("click", function () { seekMark(15, -1); });   // HERESY 1169
++  $("pbFwd").addEventListener("click", function () { seekMark(15, 1); });
+   $("nextTake").addEventListener("click", function () { stepTake(1); });
+   paintPlayOn();
+   audio.addEventListener("emptied", markPlaying);
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index ebbb94d..ef74fa4 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2431,6 +2431,13 @@ RuachI18n.add("be", {
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Колькі разоў гук кожнай песні рэндэрыцца з яе адной музыкі, кожны раз са сваім гукавым сідам (seed, seed + 1…, аднолькава для кожнай песні). Гукі песні робяцца разам, побач: менавіта гэта займае памяць карты, таму столь залежыць ад карты, копіі мадэлі і даўжыні песні.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Песні × Гукі — столькі сэмплаў выйдзе: 2 × 4 = 8, музыка m і m + 1, у кожнай гукі ад s да s + 3.",
+ "{0} take": "Сэмплаў: {0}",
++"Probes": "Пробы",
++"Variations": "Варыяцыі",
++"About probes": "Пра пробы",
++"About variations": "Пра варыяцыі",
++"How many probes Generate makes from this prompt: each one is the music written anew, with its own music seed (seed, seed + 1…). The server writes up to": "Колькі проб «Стварыць» робіць з гэтага промпту: у кожнай музыка пішацца нанова, са сваім музычным сідам (seed, seed + 1…). Сервер піша да",
++"How many times each probe's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every probe). A probe's variations are made in one pass; each costs about the time of one sound, hardly any memory.": "Колькі разоў гук кожнай пробы рэндэрыцца з яе адной музыкі, кожны раз са сваім гукавым сідам (seed, seed + 1…, аднолькава для кожнай пробы). Варыяцыі пробы робяцца за адзін праход; кожная каштуе прыкладна часу аднаго гуку, памяці амаль не дадае.",
++"Probes × Variations is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Пробы × Варыяцыі — столькі сэмплаў выйдзе: 2 × 4 = 8, музыка m і m + 1, у кожнай гукі ад s да s + 3.",
+ "16 voice and genre sliders (Female, Male, Pop, Metal, Country and more): an add-on by a third party, not the model's publisher. None ship with the model. Each is a small trained adapter on the music half, a cousin of a LoRA: instead of one fixed weight change it routes the model's signal through a tiny learned network, so its push adapts to the music. That is why it runs live while the music is written instead of being merged in, and why each one slows that stage a little. 0 is off, 1 is the trained sound; negative is not supported. Its makers mark the set experimental.": "16 слайдараў голасу і жанру (Female, Male, Pop, Metal, Country і іншыя): дапаўненне ад трэцяга боку, не ад выдаўца мадэлі. Ніводзін не ідзе з мадэллю. Кожны — маленькі навучаны адаптар на музычнай палове, сваяк LoRA: замест адной нязменнай змены вагаў ён прапускае сігнал мадэлі праз малюсенькую навучаную сетку, і яго штуршок падладжваецца пад музыку. Таму ён дзейнічае ўжывую, пакуль пішацца музыка, а не ўліваецца ў мадэль, і таму кожны крыху запавольвае гэтую стадыю. 0 — выкл., 1 — навучанае гучанне; адмоўныя не падтрымліваюцца. Аўтары пазначаюць набор як эксперыментальны.",
+ "Artist-style LoRA for close, hushed vocals, heavy low end and off-kilter bedroom pop. Both halves; start at 1.0. Its card says to begin the style with \"sv_billie, in the style of sv_billie.\" and give full section-tagged lyrics; it used 100 sound steps.": "LoRA стылю артыста: блізкі, прыглушаны вакал, цяжкі ніз і дзівакаваты бедрум-поп. Абедзве паловы; пачынай з 1.0. Яе картка раіць пачынаць стыль з «sv_billie, in the style of sv_billie.» і даваць поўны тэкст з тэгамі раздзелаў; там ужыта 100 крокаў гуку.",
+ "DreamPop v2: a style LoRA toward dream pop (hazy, washed guitars, soft vocals). Both halves. Put its trigger sv_dreampop in the style. Its settings file asks for Direct mode (no score), guidance 1 and 32 sound steps.": "DreamPop v2: LoRA стылю ў бок дрым-попу (туманныя, размытыя гітары, мяккі вакал). Абедзве паловы. Упішы яе трыгер sv_dreampop у стыль. Яе файл налад просіць рэжым «Наўпрост» (без партытуры), вядзенне 1 і 32 крокі гуку.",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 428a16a..b47d23c 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2430,6 +2430,13 @@ RuachI18n.add("el", {
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Πόσες φορές αποδίδεται ο ήχος κάθε τραγουδιού από τη μία μουσική του, κάθε φορά με το δικό του seed ήχου (seed, seed + 1…, το ίδιο για κάθε τραγούδι). Οι ήχοι ενός τραγουδιού φτιάχνονται όλοι μαζί, δίπλα δίπλα: αυτό γεμίζει τη μνήμη της κάρτας, γι' αυτό το ανώτατο όριο ακολουθεί την κάρτα, το αντίγραφο του μοντέλου και τη διάρκεια του τραγουδιού.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Τραγούδια × Ήχοι είναι όσες λήψεις βγαίνουν: 2 × 4 = 8, μουσική m και m + 1, η καθεμία με ήχους s έως s + 3.",
+ "{0} take": "Λήψεις: {0}",
++"Probes": "Δοκιμές",
++"Variations": "Παραλλαγές",
++"About probes": "Σχετικά με τις δοκιμές",
++"About variations": "Σχετικά με τις παραλλαγές",
++"How many probes Generate makes from this prompt: each one is the music written anew, with its own music seed (seed, seed + 1…). The server writes up to": "Πόσες δοκιμές φτιάχνει η Παραγωγή από αυτό το prompt: σε καθεμία η μουσική γράφεται από την αρχή, με το δικό της μουσικό seed (seed, seed + 1…). Ο διακομιστής γράφει έως",
++"How many times each probe's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every probe). A probe's variations are made in one pass; each costs about the time of one sound, hardly any memory.": "Πόσες φορές αποδίδεται ο ήχος κάθε δοκιμής από τη μία μουσική της, κάθε φορά με το δικό του seed ήχου (seed, seed + 1…, το ίδιο για κάθε δοκιμή). Οι παραλλαγές μιας δοκιμής γίνονται σε ένα πέρασμα· η καθεμία κοστίζει περίπου τον χρόνο ενός ήχου, σχεδόν καθόλου μνήμη.",
++"Probes × Variations is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Δοκιμές × Παραλλαγές είναι όσες λήψεις βγαίνουν: 2 × 4 = 8, μουσική m και m + 1, η καθεμία με ήχους s έως s + 3.",
+ "16 voice and genre sliders (Female, Male, Pop, Metal, Country and more): an add-on by a third party, not the model's publisher. None ship with the model. Each is a small trained adapter on the music half, a cousin of a LoRA: instead of one fixed weight change it routes the model's signal through a tiny learned network, so its push adapts to the music. That is why it runs live while the music is written instead of being merged in, and why each one slows that stage a little. 0 is off, 1 is the trained sound; negative is not supported. Its makers mark the set experimental.": "16 ρυθμιστικά φωνής και είδους (Female, Male, Pop, Metal, Country και άλλα): ένα πρόσθετο από τρίτον, όχι από τον εκδότη του μοντέλου. Κανένα δεν έρχεται με το μοντέλο. Το καθένα είναι ένας μικρός εκπαιδευμένος adapter στο μουσικό μισό, συγγενής μιας LoRA: αντί για μία σταθερή αλλαγή βαρών, περνά το σήμα του μοντέλου μέσα από ένα μικροσκοπικό εκπαιδευμένο δίκτυο, οπότε η ώθησή του προσαρμόζεται στη μουσική. Γι' αυτό τρέχει ζωντανά όσο γράφεται η μουσική αντί να ενσωματώνεται, και γι' αυτό το καθένα επιβραδύνει λίγο εκείνο το στάδιο. Το 0 είναι κλειστό, το 1 ο εκπαιδευμένος ήχος· αρνητικές τιμές δεν υποστηρίζονται. Οι δημιουργοί του σημειώνουν το σετ ως πειραματικό.",
+ "Artist-style LoRA for close, hushed vocals, heavy low end and off-kilter bedroom pop. Both halves; start at 1.0. Its card says to begin the style with \"sv_billie, in the style of sv_billie.\" and give full section-tagged lyrics; it used 100 sound steps.": "LoRA ύφους καλλιτέχνη για κοντινά, σιγανά φωνητικά, βαριά χαμηλά και στραβό bedroom pop. Και τα δύο μισά· ξεκίνα από 1.0. Η κάρτα της λέει να ξεκινά το ύφος με «sv_billie, in the style of sv_billie.» και να δίνονται πλήρεις στίχοι με ετικέτες ενοτήτων· χρησιμοποίησε 100 βήματα ήχου.",
+ "DreamPop v2: a style LoRA toward dream pop (hazy, washed guitars, soft vocals). Both halves. Put its trigger sv_dreampop in the style. Its settings file asks for Direct mode (no score), guidance 1 and 32 sound steps.": "DreamPop v2: μια LoRA ύφους προς το dream pop (θολές, ξεπλυμένες κιθάρες, απαλά φωνητικά). Και τα δύο μισά. Βάλε τη λέξη ενεργοποίησής της sv_dreampop στο ύφος. Το αρχείο ρυθμίσεών της ζητά λειτουργία Απευθείας (χωρίς παρτιτούρα), καθοδήγηση 1 και 32 βήματα ήχου.",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index e420bb9..5a67e3e 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2430,6 +2430,13 @@ RuachI18n.add("es", {
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Cuántas veces se renderiza el sonido de cada canción a partir de su única música, cada vez con su propia semilla de sonido (seed, seed + 1…, la misma para cada canción). Los sonidos de una canción se hacen todos a la vez, en paralelo: eso es lo que llena la memoria de la tarjeta, así que el tope sigue a la tarjeta, la copia del modelo y la duración de la canción.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Canciones × Sonidos es cuántas tomas salen: 2 × 4 = 8, música m y m + 1, cada una con sonidos de s a s + 3.",
+ "{0} take": "Tomas: {0}",
++"Probes": "Pruebas",
++"Variations": "Variaciones",
++"About probes": "Sobre las pruebas",
++"About variations": "Sobre las variaciones",
++"How many probes Generate makes from this prompt: each one is the music written anew, with its own music seed (seed, seed + 1…). The server writes up to": "Cuántas pruebas hace Generar con este prompt: en cada una la música se escribe de nuevo, con su propia semilla de música (seed, seed + 1…). El servidor escribe hasta",
++"How many times each probe's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every probe). A probe's variations are made in one pass; each costs about the time of one sound, hardly any memory.": "Cuántas veces se renderiza el sonido de cada prueba a partir de su única música, cada vez con su propia semilla de sonido (seed, seed + 1…, la misma para cada prueba). Las variaciones de una prueba se hacen en una pasada; cada una cuesta más o menos el tiempo de un sonido, casi nada de memoria.",
++"Probes × Variations is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Pruebas × Variaciones es cuántas tomas salen: 2 × 4 = 8, música m y m + 1, cada una con sonidos de s a s + 3.",
+ "16 voice and genre sliders (Female, Male, Pop, Metal, Country and more): an add-on by a third party, not the model's publisher. None ship with the model. Each is a small trained adapter on the music half, a cousin of a LoRA: instead of one fixed weight change it routes the model's signal through a tiny learned network, so its push adapts to the music. That is why it runs live while the music is written instead of being merged in, and why each one slows that stage a little. 0 is off, 1 is the trained sound; negative is not supported. Its makers mark the set experimental.": "16 deslizadores de voz y género (Female, Male, Pop, Metal, Country y más): un complemento de un tercero, no del editor del modelo. Ninguno viene con el modelo. Cada uno es un pequeño adaptador entrenado en la mitad musical, pariente de una LoRA: en lugar de un cambio fijo de pesos, hace pasar la señal del modelo por una diminuta red aprendida, así que su empuje se adapta a la música. Por eso corre en vivo mientras se escribe la música en lugar de fusionarse, y por eso cada uno ralentiza un poco esa etapa. 0 es apagado, 1 es el sonido entrenado; los negativos no se admiten. Sus autores marcan el conjunto como experimental.",
+ "Artist-style LoRA for close, hushed vocals, heavy low end and off-kilter bedroom pop. Both halves; start at 1.0. Its card says to begin the style with \"sv_billie, in the style of sv_billie.\" and give full section-tagged lyrics; it used 100 sound steps.": "LoRA de estilo de artista para voces cercanas y susurradas, graves pesados y un bedroom pop descolocado. Ambas mitades; empieza en 1.0. Su ficha dice que hay que empezar el estilo con «sv_billie, in the style of sv_billie.» y dar la letra completa con etiquetas de sección; usó 100 pasos de sonido.",
+ "DreamPop v2: a style LoRA toward dream pop (hazy, washed guitars, soft vocals). Both halves. Put its trigger sv_dreampop in the style. Its settings file asks for Direct mode (no score), guidance 1 and 32 sound steps.": "DreamPop v2: una LoRA de estilo hacia el dream pop (guitarras brumosas y lavadas, voces suaves). Ambas mitades. Pon su activador sv_dreampop en el estilo. Su archivo de ajustes pide el modo Directo (sin partitura), guía 1 y 32 pasos de sonido.",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 989d105..253d9e2 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2430,6 +2430,13 @@ RuachI18n.add("it", {
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Quante volte il suono di ogni canzone viene reso dalla sua unica musica, ogni volta con il proprio seed sonoro (seed, seed + 1…, lo stesso per ogni canzone). I suoni di una canzone si fanno tutti insieme, affiancati: è questo che riempie la memoria della scheda, quindi il tetto segue la scheda, la copia del modello e la durata della canzone.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Canzoni × Suoni è quanti take escono: 2 × 4 = 8, musica m e m + 1, ognuna con suoni da s a s + 3.",
+ "{0} take": "Take: {0}",
++"Probes": "Prove",
++"Variations": "Variazioni",
++"About probes": "Sulle prove",
++"About variations": "Sulle variazioni",
++"How many probes Generate makes from this prompt: each one is the music written anew, with its own music seed (seed, seed + 1…). The server writes up to": "Quante prove fa Genera da questo prompt: in ognuna la musica viene scritta da capo, con il proprio seed musicale (seed, seed + 1…). Il server ne scrive fino a",
++"How many times each probe's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every probe). A probe's variations are made in one pass; each costs about the time of one sound, hardly any memory.": "Quante volte il suono di ogni prova viene reso dalla sua unica musica, ogni volta con il proprio seed sonoro (seed, seed + 1…, lo stesso per ogni prova). Le variazioni di una prova si fanno in un passaggio; ognuna costa all'incirca il tempo di un suono, quasi nulla di memoria.",
++"Probes × Variations is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Prove × Variazioni è quanti take escono: 2 × 4 = 8, musica m e m + 1, ognuna con suoni da s a s + 3.",
+ "16 voice and genre sliders (Female, Male, Pop, Metal, Country and more): an add-on by a third party, not the model's publisher. None ship with the model. Each is a small trained adapter on the music half, a cousin of a LoRA: instead of one fixed weight change it routes the model's signal through a tiny learned network, so its push adapts to the music. That is why it runs live while the music is written instead of being merged in, and why each one slows that stage a little. 0 is off, 1 is the trained sound; negative is not supported. Its makers mark the set experimental.": "16 slider di voce e genere (Female, Male, Pop, Metal, Country e altri): un componente aggiuntivo di terzi, non dell'editore del modello. Nessuno viene con il modello. Ognuno è un piccolo adattatore addestrato sulla metà musicale, parente di una LoRA: invece di una modifica fissa ai pesi, fa passare il segnale del modello attraverso una minuscola rete appresa, così la sua spinta si adatta alla musica. Per questo gira dal vivo mentre si scrive la musica invece di fondersi, e per questo ognuno rallenta un po' quella fase. 0 è spento, 1 è il suono addestrato; i valori negativi non sono supportati. I suoi autori segnano il set come sperimentale.",
+ "Artist-style LoRA for close, hushed vocals, heavy low end and off-kilter bedroom pop. Both halves; start at 1.0. Its card says to begin the style with \"sv_billie, in the style of sv_billie.\" and give full section-tagged lyrics; it used 100 sound steps.": "LoRA di stile d'artista per voci vicine e sussurrate, bassi pesanti e un bedroom pop sghembo. Entrambe le metà; parti da 1.0. La sua scheda dice di iniziare lo stile con «sv_billie, in the style of sv_billie.» e di dare il testo completo con i tag di sezione; ha usato 100 passi di suono.",
+ "DreamPop v2: a style LoRA toward dream pop (hazy, washed guitars, soft vocals). Both halves. Put its trigger sv_dreampop in the style. Its settings file asks for Direct mode (no score), guidance 1 and 32 sound steps.": "DreamPop v2: una LoRA di stile verso il dream pop (chitarre nebulose e slavate, voci morbide). Entrambe le metà. Metti il suo trigger sv_dreampop nello stile. Il suo file di impostazioni chiede la modalità Diretto (senza partitura), guida 1 e 32 passi di suono.",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 981c038..e7714c3 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2436,6 +2436,13 @@ RuachI18n.add("ru", {
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Сколько раз звук каждой песни рендерится из её одной музыки, каждый раз со своим звуковым сидом (seed, seed + 1…, одинаково для каждой песни). Звуки песни делаются разом, бок о бок: именно это занимает память карты, поэтому потолок зависит от карты, копии модели и длины песни.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Песни × Звуки — столько семплов выйдет: 2 × 4 = 8, музыка m и m + 1, у каждой звуки от s до s + 3.",
+ "{0} take": "Семплов: {0}",
++"Probes": "Пробы",
++"Variations": "Вариации",
++"About probes": "О пробах",
++"About variations": "О вариациях",
++"How many probes Generate makes from this prompt: each one is the music written anew, with its own music seed (seed, seed + 1…). The server writes up to": "Сколько проб «Создать» делает из этого промпта: в каждой музыка пишется заново, со своим музыкальным сидом (seed, seed + 1…). Сервер пишет до",
++"How many times each probe's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every probe). A probe's variations are made in one pass; each costs about the time of one sound, hardly any memory.": "Сколько раз звук каждой пробы рендерится из её одной музыки, каждый раз со своим звуковым сидом (seed, seed + 1…, одинаково для каждой пробы). Вариации пробы делаются за один проход; каждая стоит примерно времени одного звука, памяти почти не добавляет.",
++"Probes × Variations is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Пробы × Вариации — столько семплов выйдет: 2 × 4 = 8, музыка m и m + 1, у каждой звуки от s до s + 3.",
+ "16 voice and genre sliders (Female, Male, Pop, Metal, Country and more): an add-on by a third party, not the model's publisher. None ship with the model. Each is a small trained adapter on the music half, a cousin of a LoRA: instead of one fixed weight change it routes the model's signal through a tiny learned network, so its push adapts to the music. That is why it runs live while the music is written instead of being merged in, and why each one slows that stage a little. 0 is off, 1 is the trained sound; negative is not supported. Its makers mark the set experimental.": "16 слайдеров голоса и жанра (Female, Male, Pop, Metal, Country и другие): дополнение от третьей стороны, не от издателя модели. Ни один не идёт с моделью. Каждый — маленький обученный адаптер на музыкальной половине, родственник LoRA: вместо одного неизменного изменения весов он пропускает сигнал модели через крошечную обученную сеть, и его толчок подстраивается под музыку. Поэтому он действует вживую, пока пишется музыка, а не вливается в модель, и поэтому каждый слегка замедляет эту стадию. 0 — выкл, 1 — обученное звучание; отрицательные не поддерживаются. Авторы помечают набор как экспериментальный.",
+ "Artist-style LoRA for close, hushed vocals, heavy low end and off-kilter bedroom pop. Both halves; start at 1.0. Its card says to begin the style with \"sv_billie, in the style of sv_billie.\" and give full section-tagged lyrics; it used 100 sound steps.": "LoRA стиля артиста: близкий, приглушённый вокал, тяжёлый низ и кривоватый бедрум-поп. Обе половины; начинай с 1.0. Её карточка советует начинать стиль с «sv_billie, in the style of sv_billie.» и давать полный текст с тегами разделов; там использовано 100 шагов звука.",
+ "DreamPop v2: a style LoRA toward dream pop (hazy, washed guitars, soft vocals). Both halves. Put its trigger sv_dreampop in the style. Its settings file asks for Direct mode (no score), guidance 1 and 32 sound steps.": "DreamPop v2: LoRA стиля в сторону дрим-попа (туманные, размытые гитары, мягкий вокал). Обе половины. Впиши её триггер sv_dreampop в стиль. Её файл настроек просит режим «Напрямую» (без партитуры), ведение 1 и 32 шага звука.",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index d889210..65f3ee9 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2431,6 +2431,13 @@ RuachI18n.add("uk", {
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Скільки разів звук кожної пісні рендериться з її однієї музики, щоразу зі своїм звуковим сідом (seed, seed + 1…, однаково для кожної пісні). Звуки пісні робляться разом, пліч-о-пліч: саме це займає пам'ять карти, тож стеля залежить від карти, копії моделі й довжини пісні.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Пісні × Звуки — стільки семплів вийде: 2 × 4 = 8, музика m і m + 1, у кожної звуки від s до s + 3.",
+ "{0} take": "Семплів: {0}",
++"Probes": "Проби",
++"Variations": "Варіації",
++"About probes": "Про проби",
++"About variations": "Про варіації",
++"How many probes Generate makes from this prompt: each one is the music written anew, with its own music seed (seed, seed + 1…). The server writes up to": "Скільки проб «Створити» робить із цього промпту: у кожній музика пишеться наново, зі своїм музичним сідом (seed, seed + 1…). Сервер пише до",
++"How many times each probe's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every probe). A probe's variations are made in one pass; each costs about the time of one sound, hardly any memory.": "Скільки разів звук кожної проби рендериться з її однієї музики, щоразу зі своїм звуковим сідом (seed, seed + 1…, однаково для кожної проби). Варіації проби робляться за один прохід; кожна коштує приблизно часу одного звуку, пам'яті майже не додає.",
++"Probes × Variations is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Проби × Варіації — стільки семплів вийде: 2 × 4 = 8, музика m і m + 1, у кожної звуки від s до s + 3.",
+ "16 voice and genre sliders (Female, Male, Pop, Metal, Country and more): an add-on by a third party, not the model's publisher. None ship with the model. Each is a small trained adapter on the music half, a cousin of a LoRA: instead of one fixed weight change it routes the model's signal through a tiny learned network, so its push adapts to the music. That is why it runs live while the music is written instead of being merged in, and why each one slows that stage a little. 0 is off, 1 is the trained sound; negative is not supported. Its makers mark the set experimental.": "16 слайдерів голосу й жанру (Female, Male, Pop, Metal, Country та інші): доповнення від третьої сторони, не від видавця моделі. Жоден не йде з моделлю. Кожен — маленький навчений адаптер на музичній половині, родич LoRA: замість однієї незмінної зміни ваг він пропускає сигнал моделі крізь крихітну навчену мережу, і його поштовх підлаштовується під музику. Тому він діє наживо, поки пишеться музика, а не вливається в модель, і тому кожен трохи сповільнює цю стадію. 0 — вимк., 1 — навчене звучання; від'ємні не підтримуються. Автори позначають набір як експериментальний.",
+ "Artist-style LoRA for close, hushed vocals, heavy low end and off-kilter bedroom pop. Both halves; start at 1.0. Its card says to begin the style with \"sv_billie, in the style of sv_billie.\" and give full section-tagged lyrics; it used 100 sound steps.": "LoRA стилю артиста: близький, приглушений вокал, важкий низ і химерний бедрум-поп. Обидві половини; починай з 1.0. Її картка радить починати стиль із «sv_billie, in the style of sv_billie.» і давати повний текст із тегами розділів; там використано 100 кроків звуку.",
+ "DreamPop v2: a style LoRA toward dream pop (hazy, washed guitars, soft vocals). Both halves. Put its trigger sv_dreampop in the style. Its settings file asks for Direct mode (no score), guidance 1 and 32 sound steps.": "DreamPop v2: LoRA стилю в бік дрім-попу (туманні, розмиті гітари, м'який вокал). Обидві половини. Впиши її тригер sv_dreampop у стиль. Її файл налаштувань просить режим «Напряму» (без партитури), ведення 1 і 32 кроки звуку.",
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 6d1d8f5..c2cd25a 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -82,6 +82,9 @@
+     pause: '<rect x="7" y="5" width="3.2" height="14" rx="1"/><rect x="13.8" y="5" width="3.2" height="14" rx="1"/>',
+     prev: '<polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>',
+     next: '<polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>',
++    // HERESY 1169: back and on by a quarter minute (Lucide's rewind and fast-forward, ISC)
++    rewind: '<polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/>',
++    forward: '<polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/>',
+     like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+     dislike: '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+     note: '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><path d="M7 12h7M7 16h5"/>',
+diff --git a/tools/console/index.html b/tools/console/index.html
+index d08061e..18804e4 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1148,14 +1148,15 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <div class="submit-bar">
+         <div class="submit-actions">
+           <!-- HERESY 1169 (Viktor 07.10.2026: «Takes с полем ввода. Нет дефолта и нет сторожа. Я ввёл 100 и прокатило»; «вынести sound
+-               variations… бок о бок к Takes… ползунками целочисленными»): what Generate makes, said as it is: Songs (other music, a
+-               music seed each; the engine writes max-batch of them at a time) times Sounds (each song's sound again, a sound seed
++               variations… бок о бок к Takes… ползунками целочисленными»; names his: «Переименовываем Takes в Probes (Пробы)», «пусть будет
++               Variations (Вариации)»): what Generate makes, said as it is: Probes (other music, a
++               music seed each; the engine writes max-batch of them at a time) times Variations (each probe's sound again, a sound seed
+                each, all at once: what fills the card), and how many takes that is -->
+           <label class="versions count-slider">
+-            <span>Songs <span class="info" tabindex="-1" role="img" aria-label="About songs" data-tip-ref="tip-versions"></span></span>
++            <span>Probes <span class="info" tabindex="-1" role="img" aria-label="About probes" data-tip-ref="tip-versions"></span></span>
+             <input type="range" id="versions" min="1" max="10" step="1" value="1" /><output class="cs-val" id="versionsOut" for="versions">1</output></label>
+           <label class="count-slider">
+-            <span>Sounds <span class="info" tabindex="-1" role="img" aria-label="About sounds" data-tip-ref="tip-variations"></span></span>
++            <span>Variations <span class="info" tabindex="-1" role="img" aria-label="About variations" data-tip-ref="tip-variations"></span></span>
+             <input type="range" id="variations" min="1" max="9" step="1" value="1" /><output class="cs-val" id="variationsOut" for="variations">1</output></label>
+           <span class="cs-total" aria-live="polite">= <span id="takesTotal">1 take</span></span>
+           <button type="button" class="btn ghost" id="planBtn"
+@@ -1911,9 +1912,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <div class="pb-ctrl">
+     <button type="button" class="icon-btn pb-tog" id="pbShuffle" aria-pressed="false" aria-label="Shuffle" data-tip="Shuffle: the next take is any of the list, not the one below" data-ui="shuffle">⤮</button>
+     <button type="button" class="icon-btn skip-btn" id="prevTake" aria-label="Previous take" data-tip="The take above in the list" data-ui="prev">⏮</button>
++    <!-- HERESY 1169 (Viktor 07.10.2026: «Есть PREV и NEXT, а вот REV и FF нет… На кнопки REV/FF прикрути по 15 сек… как в
++         видеоплеерах по аналогу ключевых фреймов… в чистой кратности с 0:00»): to the last or the next quarter-minute mark -->
++    <button type="button" class="icon-btn skip-btn" id="pbRew" aria-label="Back 15 s" data-tip="Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark" data-ui="rewind">⏪</button>
+     <button class="play" id="playBtn" aria-label="Play"><span id="playGlyph">▶</span>
+       <svg class="play-icon play-icon-play" viewBox="0 0 24 24" aria-hidden="true"><polygon points="7 4 19 12 7 20 7 4" /></svg>
+       <svg class="play-icon play-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.2" height="14" rx="1" /><rect x="13.8" y="5" width="3.2" height="14" rx="1" /></svg></button>
++    <button type="button" class="icon-btn skip-btn" id="pbFwd" aria-label="On 15 s" data-tip="On to the next quarter-minute mark. The → key: to the next 5 s mark" data-ui="forward">⏩</button>
+     <button type="button" class="icon-btn skip-btn" id="nextTake" aria-label="Next take" data-tip="The take below in the list" data-ui="next">⏭</button>
+     <button type="button" class="icon-btn pb-tog" id="pbRepeat" aria-pressed="false" data-mode="off" aria-label="Repeat" data-tip="Repeat: off · the list again from the top · this take again and again" data-ui="repeat">⟳</button>
+   </div>
+@@ -2069,17 +2074,16 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   </dl>
+ </template>
+ <template id="tip-versions">
+-  <span class="tip-kind">Songs</span>
+-  <p>How many different songs Generate makes from this prompt, each with its own music seed (seed, seed&nbsp;+&nbsp;1&hellip;).
++  <span class="tip-kind">Probes</span>
++  <p>How many probes Generate makes from this prompt: each one is the music written anew, with its own music seed (seed, seed&nbsp;+&nbsp;1&hellip;).
+     The server writes up to <strong data-fill="max-batch">1</strong> side by side in one pass; more wait as further passes, so
+     a larger number only takes longer.</p>
+ </template>
+ <template id="tip-variations">
+-  <span class="tip-kind">Sounds</span>
+-  <p>How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed&nbsp;+&nbsp;1&hellip;,
+-    the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the
+-    ceiling follows the card, the model copy and the song's length.</p>
+-  <p>Songs &times; Sounds is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
++  <span class="tip-kind">Variations</span>
++  <p>How many times each probe's sound is rendered from its one music, each with its own sound seed (seed, seed&nbsp;+&nbsp;1&hellip;,
++    the same for every probe). A probe's variations are made in one pass; each costs about the time of one sound, hardly any memory.</p>
++  <p>Probes &times; Variations is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
+ </template>
+ <script src="heresy-dialog.js"></script>
+ <script src="heresy-updates.js"></script>
+-- 
+2.43.0
+

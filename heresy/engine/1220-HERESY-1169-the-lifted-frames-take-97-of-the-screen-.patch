@@ -1,0 +1,37 @@
+From 4fb4e66f86609932626c87d5e455f3c8e392470c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 23:28:26 -0600
+Subject: [PATCH 1220/1252] HERESY 1169: the lifted frames take 97 % of the
+ screen above the player (from 95), their heads and Generate's bar a few
+ pixels tighter
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Давай увеличим до 97%, и постарайся в шапках и подвале хоть немножечко, но немного ужать, но не превратить в микрофильм».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3cfd8e1..283780e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4373,3 +4373,11 @@ body[data-frame] :is(#view-compose, #view-take) > .col-head > .frame-tools { mar
+ .hd-input { font-size: 16px; }
+ /* «А вот предупреждение WARNING в стиле… массивный размер тултипа. Его как раз уменьшить на 4 пункта» */
+ .tip.tip-big { font-size: 12pt; }
++/* HERESY 1169 (Viktor 07.10.2026: «касательно тех 95%... Давай увеличим до 97%, и постарайся в шапках и подвале хоть немножечко,
++   но немного ужать, но не превратить в микрофильм»): a lifted frame takes 97 % of the screen above the player; its head and
++   Generate's bar a few pixels tighter */
++body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
++  left: calc(1.5vw / var(--frame-zoom)); width: calc(97vw / var(--frame-zoom));
++  top: calc((100vh - var(--playbar-h)) * .015 / var(--frame-zoom)); height: calc((100vh - var(--playbar-h)) * .97 / var(--frame-zoom)); }
++body[data-frame] :is(#view-compose, #view-take) > .col-head { padding-top: 13px; padding-bottom: 9px; }
++body[data-frame="compose"] .compose > .submit-bar { padding-top: 9px; padding-bottom: 10px; }
+-- 
+2.43.0
+

@@ -1,0 +1,290 @@
+From 844d71f86591e0e26e154c6f12b3645f32f26e65 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 02:29:27 -0600
+Subject: [PATCH 1232/1252] =?UTF-8?q?HERESY=201169:=20the=20text's=20size?=
+ =?UTF-8?q?=20(=E2=98=B0=20=E2=88=922=E2=80=A6+4=20pt=20for=20the=20page,?=
+ =?UTF-8?q?=20=E2=88=92/+/=E2=9F=B2=20=E2=88=924=E2=80=A6+8=20pt=20in=20a?=
+ =?UTF-8?q?=20lifted=20frame,=20the=20layout=20as=20it=20is);=20the=20Libr?=
+ =?UTF-8?q?arian's=20bar=20of=20the=20checked=20as=20framed=20icon=20group?=
+ =?UTF-8?q?s;=20=C2=AB[End]=C2=BB=20as=20the=20examples=20write=20it;=20th?=
+ =?UTF-8?q?e=20=F0=9F=92=8E=20workspaces=20at=20the=20tree's=20foot,=20the?=
+ =?UTF-8?q?=20=F0=9F=92=8E=20=E2=80=A6=20LoRA=20ones=20lowest?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «три кнопочки svg -, +, reset для скейла… глобальный скейл шрифтов с минус 2 и плюс до 4… в спадающее меню в баре». 08.10: «в Комнате Библиотекаря наведи порядок с кнопками и SVG иконками»; «Конечный тег изменил из суновского [END] на [End]»; «всё, что с начальным диамандом 💎, чтобы алфавитно шло вниз древа… суфиксные 💎 ... LoRA гони в самый низ как вечное правило». build.sh writes every font size as calc(N + var(--fs, 0pt)) (both copies).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               | 25 +++++++++++++++
+ tools/console/app.js                | 34 ++++++++++++++++++++
+ tools/console/heresy-collection.js  | 15 +++++++--
+ tools/console/heresy-complete.js    |  3 +-
+ tools/console/heresy-icons.js       | 13 ++++++++
+ tools/console/heresy-instruments.js |  2 +-
+ tools/console/index.html            | 50 ++++++++++++++++++-----------
+ 7 files changed, 120 insertions(+), 22 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 2270972..6b67e90 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4484,3 +4484,28 @@ body[data-tab="create"] #library .lib-head { padding-top: 11px; }
+    bracket to look at amber (over a mark's amber) */
+ .lyr-num.is-lint-bad { color: var(--bad); opacity: 1; font-weight: 700; }
+ .lyr-num.is-lint-near { color: #d9a441; opacity: 1; }
++/* HERESY 1169 (Viktor 07.10.2026: «три кнопочки svg -, +, reset для скейла… глобальный скейл шрифтов… в спадающее меню в баре»): every
++   font size is calc(N + var(--fs, 0pt)) since the build (build.sh); --fs is the page's (☰) and, in a lifted frame, the page's and the
++   frame's together. The frame's buttons show only while a frame is up */
++:root { --fs-g: 0pt; --fs-f: 0pt; --fs: var(--fs-g); }
++body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take { --fs: calc(var(--fs-g) + var(--fs-f)); }
++.fs-btns { display: inline-flex; gap: 4px; }
++.frame-fs { display: inline-flex; margin-right: 10px; }
++body:not([data-frame]) .frame-fs { display: none; }
++.hm-fs { display: flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; min-height: 34px; }
++.hm-fs-name { flex: 1; font-size: 13px; color: var(--ink); }
++.hm-fs-val { min-width: 5ch; text-align: right; font-size: 12px; color: var(--muted); }
++/* HERESY 1169 (Viktor 08.10.2026: «в Комнате Библиотекаря наведи порядок с кнопками и SVG иконками»): the bar of the checked in
++   one row of groups, each a frame around its icons; the trash at the end */
++.coll-bulk { flex-wrap: nowrap; gap: 10px; }
++.coll-bulk .coll-count { flex: none; min-width: 9ch; }
++.coll-group { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--line-a); border-radius: var(--r-md); flex: none; }
++.coll-group select { max-width: 200px; }
++.coll-bulk .icon-btn .ui-ico { width: 17px; height: 17px; }
++.icon-check { position: relative; display: inline-grid; place-items: center; width: 32px; height: 30px; border: 1px solid transparent; border-radius: 2px; cursor: pointer; color: var(--muted); }
++.icon-check input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
++.icon-check .ui-ico { width: 17px; height: 17px; }
++.icon-check:hover { border-color: var(--amber); color: var(--ink); }
++.icon-check:has(input:checked) { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
++.icon-check:has(input:focus-visible) { outline: 2px solid var(--amber); outline-offset: 1px; }
++@media (max-width: 1400px) { .coll-bulk { flex-wrap: wrap; } }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 964c948..8899218 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8194,6 +8194,40 @@
+   // handlers and state stay its own); from there the other frame. Esc, a click beside it, another room or a run started put
+   // it back; what brings the form forward (Retake, Reuse, the score into the form) brings the form's frame: show("compose").
+   var FRAMES = { compose: "view-compose", take: "view-take" };
++  // HERESY 1169 (Viktor 07.10.2026: «три кнопочки svg -, +, reset для скейла… В минус шагом 2pt до минус 4, а в плюс… до макс
++  // 8pt… глобальный скейл шрифтов с минус 2 и плюс до 4… Три кнопочки глобального -=R в спадающее меню в баре»; «По скейлингу
++  // шрифтов и их лимитов сам решить, где порог»): every font size of the stylesheets is calc(N + var(--fs)) since the build, so
++  // the text grows and the layout stays. --fs-g is the page's (☰: −2…+4 pt by 1), --fs-f a lifted frame's on top of it (−4…+8
++  // by 2); both are this browser's (yue2.textSize), as the look is: each screen keeps its own
++  var TEXT = { g: { min: -2, max: 4, step: 1 }, f: { min: -4, max: 8, step: 2 } };
++  function textSizes() { try { return JSON.parse(recall("yue2.textSize") || "{}") || {}; } catch (e) { return {}; } }
++  function paintTextSize() {
++    var t = textSizes(), root = document.documentElement;
++    ["g", "f"].forEach(function (w) { if (t[w]) root.style.setProperty("--fs-" + w, t[w] + "pt"); else root.style.removeProperty("--fs-" + w); });
++    all("[data-fs-say]").forEach(function (el) { var v = t[el.dataset.fsSay] || 0; el.textContent = (v > 0 ? "+" : v < 0 ? "\u2212" : "") + Math.abs(v) + " pt"; });
++    all("[data-fs]").forEach(function (b) {
++      var w = b.dataset.fs.charAt(0), d = b.dataset.fs.slice(1), v = t[w] || 0, r = TEXT[w];
++      b.disabled = d === "-" ? v <= r.min : d === "+" ? v >= r.max : !v;
++    });
++  }
++  function setTextSize(w, v) {
++    var t = textSizes(), r = TEXT[w];
++    v = Math.max(r.min, Math.min(r.max, v));
++    if (v) t[w] = v; else delete t[w];
++    store("yue2.textSize", Object.keys(t).length ? JSON.stringify(t) : null);
++    paintTextSize();
++    window.dispatchEvent(new Event("resize"));            // the meter, the lists and the frames measure again
++  }
++  document.addEventListener("click", function (e) {
++    var b = e.target.closest("[data-fs]");
++    if (!b || b.disabled) return;
++    e.preventDefault();
++    e.stopPropagation();
++    var w = b.dataset.fs.charAt(0), d = b.dataset.fs.slice(1), v = textSizes()[w] || 0;
++    setTextSize(w, d === "0" ? 0 : v + (d === "+" ? TEXT[w].step : -TEXT[w].step));
++  }, true);
++  window.ruachTextSize = function (w, v) { if (v !== undefined) setTextSize(w, v); return textSizes()[w] || 0; };   // for the checks
++  paintTextSize();
+   // HERESY 1169 (Viktor 08.10.2026: «ещё один оверлей поверх оверлея! В окне Lyrics ещё одну кнопку full screen, и поверх всего
+   // где-то 60% ширины экрана, и шрифт автоматом на 10% крупнее»): the lyrics over everything, 60 % of the screen wide, a tenth
+   // larger. The box itself moves there with its meter (its numbers, marks, tags, the find bar and the «[» list go with it) and
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index b7a388b..fee0631 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -85,13 +85,21 @@
+   function inTree(r, place) {
+     return r.workspaces.some(function (w) { return w === place || (w.indexOf(place + SEP) === 0 && wsLeaf(w) !== SOURCED); });
+   }
++  // HERESY 1169 (Viktor 08.10.2026: «всё, что с начальным диамандом 💎, чтобы алфавитно шло вниз древа. Там мои пробы и семплы
++  // глобально публичные»): the 💎 workspaces (the public sets) at the tree's foot, in their own order by name without the 💎
++  // «И суфиксные `💎 ... LoRA` гони в самый низ как вечное правило. Мы на будущее проектируем»: a 💎 one named «… LoRA» lower still
++  var DIAMOND = /^\s*\uD83D\uDC8E\s*/, LORA_END = /\bLoRAs?\s*$/i;
++  function treeRank(top) { return !DIAMOND.test(top) ? 0 : LORA_END.test(top) ? 2 : 1; }
+   function treeOrder(list) {                     // a parent, then its sections, whatever names stand between them
+     return list.slice().sort(function (a, b) {
+-      var A = wsParts(a), B = wsParts(b);
++      var A = wsParts(a), B = wsParts(b), rA = treeRank(A[0]), rB = treeRank(B[0]);
++      if (rA !== rB) return rA - rB;
++      if (rA) { A[0] = A[0].replace(DIAMOND, ""); B[0] = B[0].replace(DIAMOND, ""); }
+       for (var i = 0; i < Math.min(A.length, B.length); i++) if (A[i] !== B[i]) return A[i] < B[i] ? -1 : 1;
+       return A.length - B.length;
+     });
+   }
++  window.ruachTreeOrder = treeOrder;   // for the checks
+   // HERESY 1166 (Viktor: «Деактивация воркспейса. Замораживаются все треки в этом представлении, никаких действий по ним,
+   // в `All Workspaces` и в поиске не отображаются. Сам деактивированный воркспейс немного засЕривается»): a take frozen with
+   // its workspace (the lab says which: in no workspace that is not frozen) shows only inside it, greyed, heard and read
+@@ -429,7 +437,10 @@
+       '<option value="__new">+ a new one…</option>';
+     $("collWsPick").innerHTML = '<option value="">Add to workspace…</option>' + state.ws.map(function (w) { return '<option translate="no">' + esc(w) + "</option>"; }).join("") +
+       '<option value="__new">+ a new one…</option>';
+-    $("collHide").textContent = state.place === "__hidden" ? "Show again" : "Hide";
++    var hid = state.place === "__hidden", hb = $("collHide");                 // HERESY 1169: an icon, its words in its tip
++    hb.innerHTML = window.HeresyIcons ? window.HeresyIcons.ui(hid ? "eye" : "eye-off") : (hid ? "Show again" : "Hide");
++    hb.setAttribute("aria-label", hid ? "Show again" : "Hide");
++    hb.dataset.tip = hid ? "Show again: back in the lists" : "Out of the lists, not deleted: Hidden on the left shows them again";
+     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
+   }
+ 
+diff --git a/tools/console/heresy-complete.js b/tools/console/heresy-complete.js
+index 230f0c3..1b49cf0 100644
+--- a/tools/console/heresy-complete.js
++++ b/tools/console/heresy-complete.js
+@@ -29,7 +29,8 @@
+     "Final Chorus", "Outro", "Fade Out", "Instrumental Outro", "End"];
+   var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude"], ONCE = ["Intro", "Outro", "End"];
+   // as Viktor writes it (thirty songs of his end so; «Да, измени»), where the official examples write [End]
+-  var SPELL = { End: "END" };
++  // HERESY 1169 (Viktor 08.10.2026: «Конечный тег изменил из суновского `[END]` на `[End]`»): as the official examples write it
++  var SPELL = {};
+   var TALL = 300;                                   // the two columns' height, px
+   var ONCE_HEAD = { Intro: /^intro(duction)?$/, Outro: /^outro$/, End: /^ends?$/ };
+   // the keys of a Russian (and Ukrainian) layout, as the Latin letters on the same keys
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index c2cd25a..0df3fe2 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -85,6 +85,19 @@
+     // HERESY 1169: back and on by a quarter minute (Lucide's rewind and fast-forward, ISC)
+     rewind: '<polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/>',
+     forward: '<polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/>',
++    // HERESY 1169: the Librarian's bar of the checked (Lucide's list-checks, x, folder-minus, eye-off, eye, archive, layers and trash-2, ISC)
++    "select-all": '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
++    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
++    "folder-minus": '<path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
++    "eye-off": '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
++    eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
++    archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
++    layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
++    trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
++    // HERESY 1169: the text smaller, larger and its own size again (Lucide's a-arrow-down, a-arrow-up and rotate-ccw, ISC)
++    "text-smaller": '<path d="M3.5 13h6"/><path d="m2 16 4.5-9 4.5 9"/><path d="M18 7v9"/><path d="m14 12 4 4 4-4"/>',
++    "text-larger": '<path d="M3.5 13h6"/><path d="m2 16 4.5-9 4.5 9"/><path d="M18 16V7"/><path d="m14 11 4-4 4 4"/>',
++    "text-reset": '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+     like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+     dislike: '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+     note: '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><path d="M7 12h7M7 16h5"/>',
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index d055d83..600bcd7 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -234,7 +234,7 @@
+       ["[Final Chorus]", 11, "The last chorus, usually the biggest: more voices, more power, now and then a key change."],
+       ["[Instrumental Break]", 11, "The instruments alone between sections, for variety or to build into the next one. Name what plays: «Instrumental Break - Horns»."],
+       ["[Guitar Solo]", 8, "One instrument steps forward with a long melody of its own while the rest backs it. The examples also write Drum Solo, Keyboard Solo and plain Solo."],
+-      ["[End]", 7, "The song's last mark: the music stops here. Viktor writes [END]; the examples also write Ends."],
++      ["[End]", 7, "The song's last mark: the music stops here. The examples also write Ends; SUNO's [END] is the same tag."],
+       ["[Instrumental Intro]", 5, "An opening played without voices. Also written Instrumental Introduction."],
+       ["[Refrain]", 4, "A line or two repeated unchanged at the end of each verse: part of the verse, not a section of its own as a chorus is."],
+       ["[Post-Chorus]", 3, "A short part right after the chorus that carries its energy on (a chant, a riff, a tag line) before the next verse."],
+diff --git a/tools/console/index.html b/tools/console/index.html
+index b4bfe8d..58f9172 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -19,6 +19,9 @@
+   for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, JSON.stringify(f[k]) + ", " + g[k]);
+   var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners"];
+   for (var i = 0; i < o.length; i++) if (typeof L[o[i]] === "string") document.documentElement.dataset[o[i]] = L[o[i]];
++  var T = JSON.parse(localStorage.getItem("yue2.textSize") || "{}");   // HERESY 1169: the text's size before the first paint
++  if (T.g) document.documentElement.style.setProperty("--fs-g", T.g + "pt");
++  if (T.f) document.documentElement.style.setProperty("--fs-f", T.f + "pt");
+   var lang = localStorage.getItem("yue2.lang");                 // HERESY 1148: no English flash before the translation
+   if (lang && lang !== "en") { document.documentElement.classList.add("i18n-wait");
+     setTimeout(function () { document.documentElement.classList.remove("i18n-wait"); }, 2500); } } catch (e) {}
+@@ -421,6 +424,10 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <!-- HERESY 1169 (Viktor 07.10.2026: «кнопку экспорта в DAW перенести в спадающее меню… И наверное продублировать в
+                правильных местах в самом Огранщике»): out of the bar into ☰; the Refiner has it beside the take in hand -->
+           <button type="button" class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform, Bitwig)">Export to DAW</button>
++          <!-- HERESY 1169 (Viktor 07.10.2026: «глобальный скейл шрифтов с минус 2 и плюс до 4… Три кнопочки глобального -=R в спадающее
++               меню в баре»): the page's text, smaller or larger, the layout as it is -->
++          <div class="hm-fs" data-tip="The whole page's text smaller or larger (−2 to +4 pt): the layout stays; a lifted frame has its own on top">
++            <span class="hm-fs-name">Text size</span><output class="hm-fs-val mono" data-fs-say="g">0 pt</output><span class="fs-btns" role="group" aria-label="Text size"><button type="button" class="btn ghost small icon-btn" data-fs="g-" data-ui="text-smaller" aria-label="Smaller text" data-tip="Smaller text"></button><button type="button" class="btn ghost small icon-btn" data-fs="g+" data-ui="text-larger" aria-label="Larger text" data-tip="Larger text"></button><button type="button" class="btn ghost small icon-btn" data-fs="g0" data-ui="text-reset" aria-label="The text&#39;s own size" data-tip="The text&#39;s own size again"></button></span></div>
+           <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
+           <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
+           <button type="button" class="btn ghost small" id="guideOpenMenu" data-icon="question" data-tip="The guide: every room, what each thing does">The guide</button>
+@@ -778,6 +785,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+            "полный экран", в оверлей окно 95%x95%, с увеличением масштаба всего фрейма здесь на добрых 20%… Также в оверлеях
+            кнопку переключения между фреймами»): this frame over the room, larger; from there, the other frame -->
+       <span class="frame-tools">
++        <span class="frame-fs" data-fs-say-tip="f"><span class="fs-btns" role="group" aria-label="Text in the frame"><button type="button" class="btn ghost small icon-btn" data-fs="f-" data-ui="text-smaller" aria-label="Smaller text" data-tip="Smaller text"></button><button type="button" class="btn ghost small icon-btn" data-fs="f+" data-ui="text-larger" aria-label="Larger text" data-tip="Larger text"></button><button type="button" class="btn ghost small icon-btn" data-fs="f0" data-ui="text-reset" aria-label="The text&#39;s own size" data-tip="The text&#39;s own size again"></button></span></span>
+         <button type="button" class="btn ghost small icon-btn frame-swap" data-frame="take" data-ui="swap" aria-label="The take's frame" data-tip="The other frame over the room: the take"></button>
+         <button type="button" class="btn ghost small icon-btn frame-big" data-frame="compose" data-ui="maximize" aria-pressed="false" aria-label="Over the room" data-tip="This frame over the room, larger: Esc or a click beside it puts it back"></button>
+       </span>
+@@ -1188,7 +1196,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <!-- HERESY 1167 (Viktor: «Пропала кнопка отмены генерации»): the run cancelled from wherever you are -->
+       <button type="button" class="btn ghost small run-cancel is-hidden" id="cancelAway" aria-label="Cancel run" data-tip="Cancel run">✕</button>
+       <div class="head-actions" id="takeActions"></div>
+-      <span class="frame-tools">   <!-- HERESY 1168: as Compose's -->
++      <span class="frame-tools">
++        <span class="frame-fs" data-fs-say-tip="f"><span class="fs-btns" role="group" aria-label="Text in the frame"><button type="button" class="btn ghost small icon-btn" data-fs="f-" data-ui="text-smaller" aria-label="Smaller text" data-tip="Smaller text"></button><button type="button" class="btn ghost small icon-btn" data-fs="f+" data-ui="text-larger" aria-label="Larger text" data-tip="Larger text"></button><button type="button" class="btn ghost small icon-btn" data-fs="f0" data-ui="text-reset" aria-label="The text&#39;s own size" data-tip="The text&#39;s own size again"></button></span></span>   <!-- HERESY 1168: as Compose's -->
+         <button type="button" class="btn ghost small icon-btn frame-swap" data-frame="compose" data-ui="swap" aria-label="The form's frame" data-tip="The other frame over the room: Compose"></button>
+         <button type="button" class="btn ghost small icon-btn frame-big" data-frame="take" data-ui="maximize" aria-pressed="false" aria-label="Over the room" data-tip="This frame over the room, larger: Esc or a click beside it puts it back"></button>
+       </span>
+@@ -1817,24 +1826,29 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <!-- HERESY 1103: a strip of fixed height: the pinned takes, or the bar of the checked; the grid never moves -->
+         <div class="coll-slot" id="collSlot">
+         <div class="coll-pins" id="collPins"></div>
++        <!-- HERESY 1169 (Viktor 08.10.2026: «в Комнате Библиотекаря наведи порядок с кнопками и SVG иконками. Там сейчас безобразие»):
++             the bar of the checked in groups of framed icons, each saying itself in its tip: the choice, the marks, the workspaces,
++             the export, and the trash at the end -->
+         <div class="coll-bulk" id="collBulk" hidden>
+-          <strong id="collSelCount"></strong>
+-          <button type="button" class="btn ghost small" id="collSelAll">Select all shown</button>
+-          <button type="button" class="btn ghost small" id="collSelNone">Clear</button>
+-          <span class="coll-sep"></span>
+-          <button type="button" class="btn ghost small" id="collLike" aria-label="Like the checked" data-tip="Like every checked take (all liked already: taken back)">👍</button>
+-          <button type="button" class="btn ghost small" id="collDislike" aria-label="Dislike the checked" data-tip="Dislike every checked take (all disliked already: taken back)">👎</button>
+-          <button type="button" class="btn ghost small" id="collFav" aria-label="Favourite the checked" data-tip="Favourite every checked take (all favourites already: taken back)">★</button>
+-          <select id="collWsPick" aria-label="Add to workspace"></select>
+-          <select id="collWsMove" aria-label="Move to workspace" title="Into that workspace and out of this one (out of every other when you are in All Workspaces)"></select>
+-          <button type="button" class="btn ghost small" id="collWsOut">Take out of this workspace</button>
+-          <button type="button" class="btn ghost small" id="collHide" data-tip="Out of the lists, not deleted: Hidden on the left shows them again">Hide</button>
+-          <span class="coll-sep"></span>
+-          <select id="collExportFmt" aria-label="Export format" data-tip="FLAC: lossless, about half the size of WAV. WAV: for tools that take nothing else."><option value="flac">FLAC</option><option value="wav">WAV</option></select>
+-          <label class="check" data-tip="Also every file made from each take (remasters, stems, upscales, debuzzed files), named after the take."><input type="checkbox" id="collExportDer" /> <span>with what is made from them</span></label>
+-          <button type="button" class="btn ghost small" id="collExport" data-tip="A ZIP made on Forge, then saved by the browser where you tell it">Export ZIP</button>
+-          <span class="coll-sep"></span>
+-          <button type="button" class="btn ghost small danger" id="collTrash">To the trash</button>
++          <strong class="coll-count" id="collSelCount"></strong>
++          <span class="coll-group" role="group" aria-label="The choice">
++            <button type="button" class="btn ghost small icon-btn" id="collSelAll" data-ui="select-all" aria-label="Select all shown" data-tip="Select all shown"></button>
++            <button type="button" class="btn ghost small icon-btn" id="collSelNone" data-ui="x" aria-label="Clear" data-tip="Clear the choice"></button></span>
++          <span class="coll-group" role="group" aria-label="Marks">
++            <button type="button" class="btn ghost small icon-btn" id="collLike" data-ui="like" aria-label="Like the checked" data-tip="Like every checked take (all liked already: taken back)"></button>
++            <button type="button" class="btn ghost small icon-btn" id="collDislike" data-ui="dislike" aria-label="Dislike the checked" data-tip="Dislike every checked take (all disliked already: taken back)"></button>
++            <button type="button" class="btn ghost small icon-btn" id="collFav" data-ui="star" aria-label="Favourite the checked" data-tip="Favourite every checked take (all favourites already: taken back)"></button></span>
++          <span class="coll-group" role="group" aria-label="Workspaces">
++            <select id="collWsPick" aria-label="Add to workspace"></select>
++            <select id="collWsMove" aria-label="Move to workspace" title="Into that workspace and out of this one (out of every other when you are in All Workspaces)"></select>
++            <button type="button" class="btn ghost small icon-btn" id="collWsOut" data-ui="folder-minus" aria-label="Take out of this workspace" data-tip="Take out of this workspace"></button>
++            <button type="button" class="btn ghost small icon-btn" id="collHide" data-ui="eye-off" aria-label="Hide" data-tip="Out of the lists, not deleted: Hidden on the left shows them again"></button></span>
++          <span class="coll-group" role="group" aria-label="Export">
++            <select id="collExportFmt" aria-label="Export format" data-tip="FLAC: lossless, about half the size of WAV. WAV: for tools that take nothing else."><option value="flac">FLAC</option><option value="wav">WAV</option></select>
++            <label class="icon-check" data-tip="With what is made from them: also every file made from each take (remasters, stems, upscales, debuzzed files), named after the take."><input type="checkbox" id="collExportDer" aria-label="with what is made from them" /><span class="icon-check-face" data-ui="layers"></span></label>
++            <button type="button" class="btn ghost small icon-btn" id="collExport" data-ui="archive" aria-label="Export ZIP" data-tip="Export ZIP: made on Forge, then saved by the browser where you tell it"></button></span>
++          <span class="spacer"></span>
++          <button type="button" class="btn ghost small icon-btn danger" id="collTrash" data-ui="trash" aria-label="To the trash" data-tip="To the trash: it gives them back until it is emptied"></button>
+         </div>
+         </div>
+         <div id="collGrid" class="coll-grid tiles"></div>
+-- 
+2.43.0
+

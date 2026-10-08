@@ -1,0 +1,93 @@
+From e44e0337b4978c3158259673318dd9288781dfde Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 22:47:11 -0600
+Subject: [PATCH 1218/1252] =?UTF-8?q?HERESY=201169:=20out=20of=20GPU=20mem?=
+ =?UTF-8?q?ory,=20the=20page=20offers=20the=20next=20smaller=20copy=20of?=
+ =?UTF-8?q?=20the=20model,=20honestly=20(BF16=20=E2=86=92=20Q8=5F0=20near?=
+ =?UTF-8?q?=20lossless;=20Q6=5FK=20the=20quality=20starts=20to=20suffer;?=
+ =?UTF-8?q?=20Q5=5FK=5FM=20the=20music=20half=20hallucinates,=20breaking?=
+ =?UTF-8?q?=20the=20score=20and=20the=20music=20tokens);=20the=20engine's?=
+ =?UTF-8?q?=20numbers=20in=20GiB,=20as=20nvidia-smi=20counts?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «при OOM сторож ловит падение и предлагает пользователю осознанно с текущих весов опуститься на порядок ниже. Т.е. с BF16 на Q8, с честным предупреждением, что качество начнёт страдать, при Q5 и ниже галлюцинировать и ронять как ABC, так и музыкальные токены».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/nar.h            |  2 +-
+ src/vae.h            |  2 +-
+ tools/console/app.js | 26 ++++++++++++++++++++++++++
+ 3 files changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/src/nar.h b/src/nar.h
+index 44802ea..828c6f7 100644
+--- a/src/nar.h
++++ b/src/nar.h
+@@ -345,7 +345,7 @@ static void nar_out_of_memory(Yue2NAR * n, int T_lat, int M) {
+     snprintf(msg, sizeof msg,
+              "Out of GPU memory for the sound: %.1f of %.1f GB free when %d variation%s of %d s needed more. A smaller copy of "
+              "the model (Q8_0) or fewer probes at once leaves it room.",
+-             free_b / 1e9, total_b / 1e9, M, M == 1 ? "" : "s", T_lat / 25);
++             free_b / 1073741824.0, total_b / 1073741824.0, M, M == 1 ? "" : "s", T_lat / 25);
+     g_nar_error = msg;
+     fprintf(stderr, "[NAR] %s\n", msg);
+     ggml_backend_sched_free(n->sched);
+diff --git a/src/vae.h b/src/vae.h
+index c6d4ade..51b3d47 100644
+--- a/src/vae.h
++++ b/src/vae.h
+@@ -385,7 +385,7 @@ static void vae_out_of_memory(VAEGGML * m, int T_latent) {
+     snprintf(msg, sizeof msg,
+              "Out of GPU memory for decoding the sound: %.1f of %.1f GB free for a tile of %d frames. A smaller copy of the "
+              "model (Q8_0) or fewer probes at once leaves it room.",
+-             free_b / 1e9, total_b / 1e9, T_latent);
++             free_b / 1073741824.0, total_b / 1073741824.0, T_latent);
+     g_vae_error = msg;
+     fprintf(stderr, "[VAE] %s\n", msg);
+     ggml_backend_sched_free(m->sched);
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 4f28fcb..bc8102f 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2382,9 +2382,35 @@
+       toasted["babel" + job.id] = true;
+       return showBrokenScore(job, message.replace(/^Broken score: /, ""), (data && data.abc) || "");
+     }
++    // HERESY 1169 (Viktor 07.10.2026: «при OOM сторож ловит падение и предлагает пользователю осознанно с текущих весов
++    // опуститься на порядок ниже. Т.е. с BF16 на Q8, с честным предупреждением, что качество начнёт страдать, при Q5 и ниже
++    // галлюцинировать и ронять как ABC, так и музыкальные токены»): the engine says it ran out, the page offers the next copy
++    if (/^Out of GPU memory/.test(message) && !toasted["oom" + job.id]) {
++      toasted["oom" + job.id] = true;
++      return offerSmallerModel(message);
++    }
+     toastOnce(job.id, message, "bad");
+     if (job.kind === "transcribe") transcriptionFailed(job, message);
+   }
++  var MODEL_LADDER = ["BF16", "Q8_0", "Q6_K", "Q5_K_M"];
++  var MODEL_WORD = {
++    Q8_0: "near lossless, about half the size: the sound hardly changes.",
++    Q6_K: "smaller still: the quality starts to suffer.",
++    Q5_K_M: "the smallest: with it the music half hallucinates, and breaks the score (ABC) and the music tokens."
++  };
++  function offerSmallerModel(message) {
++    var now = (STATE.settings && STATE.settings.model) || $("modelPick").value, models = (STATE.settings && STATE.settings.models) || [];
++    var at = MODEL_LADDER.indexOf(now), next = MODEL_LADDER.slice(at + 1).filter(function (m) { return models.indexOf(m) >= 0; })[0];
++    if (at < 0 || !next) { toast(message, "bad"); return Promise.resolve(false); }
++    return window.HeresyDialog.confirm("Out of GPU memory\n\n" + message + "\n\nSwitch the engine to " + next + "? It is " + MODEL_WORD[next] +
++      " It loads with the next song; ☰ → Model takes it back.", { ok: "Switch to " + next, cancel: "Keep " + now }).then(function (yes) {
++      if (!yes) return false;
++      $("modelPick").value = next;
++      $("modelPick").dispatchEvent(new Event("change"));
++      return true;
++    });
++  }
++  window.ruachOfferSmallerModel = offerSmallerModel;   // the page's tests read it
+ 
+   // HERESY 1087 (Viktor, 02.10.2026): "a Tower of Babel built on strengths past the ceiling". The engine
+   // stops a run whose score is not a score before any music is made on it; here the user is told why, in
+-- 
+2.43.0
+

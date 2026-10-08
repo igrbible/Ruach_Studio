@@ -793,6 +793,20 @@ static bool latents_load(const std::string & dir, Yue2Song * song) {
     return true;
 }
 
+// HERESY 1169: the last seconds of a planar stereo song [2, T] brought down to silence on a half cosine
+static void audio_fade_out(std::vector<float> & audio, int T_audio, float seconds) {
+    int n = std::min(T_audio, (int) (seconds * (float) YUE2_SAMPLE_RATE));
+    if (n <= 0 || audio.size() < (size_t) 2 * T_audio) {
+        return;
+    }
+    for (int k = 0; k < n; k++) {
+        float  g = 0.5f * (1.0f + cosf(3.14159265358979f * (float) (k + 1) / (float) n));
+        size_t i = (size_t) (T_audio - n + k);
+        audio[i] *= g;
+        audio[(size_t) T_audio + i] *= g;
+    }
+}
+
 static bool listen_flac_fresh(const std::string & dir) {
     std::error_code ec;
     auto            f = std::filesystem::last_write_time(dir + "/listen.flac", ec);
@@ -1489,6 +1503,9 @@ static bool validate(const httplib::Request & req, httplib::Response & res, Yue2
             return fail("unknown decoder (see /props vaes)");
         }
     }
+    if (!(r->end_at >= 0.0f && r->end_at < 36000.0f) || !(r->fade_out >= 0.0f && r->fade_out <= 30.0f)) {   // HERESY 1169
+        return fail("end_at must be 0 or a second of the take, fade_out 0 to 30 seconds");
+    }
     if (!r->decode_from.empty()) {   // HERESY 1168: a take of the library that kept its latents
         const std::string & n = r->decode_from;
         if (n == "." || n == ".." || n.find('/') != std::string::npos || n.find('\\') != std::string::npos ||
@@ -1588,6 +1605,13 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
         job->status.store(JobStatus::FAILED);
         return;
     }
+    if (request.end_at > 0.0f) {   // HERESY 1169: the kept latents only up to the chosen second
+        int keep = (int) ceilf(request.end_at * (float) YUE2_SAMPLE_RATE / (float) YUE2_HOP);
+        if (keep > 0 && keep < song.T_lat) {
+            song.T_lat = keep;
+            song.latents.resize((size_t) keep * YUE2_LATENT_DIM);
+        }
+    }
     bool   ok             = pipeline_decode_latents(&g_pipeline, request.vae, &song, server_cancel_job, (void *) &job->cancel);
     double render_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
     if (!ok) {
@@ -1597,6 +1621,9 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
         return;
     }
     fprintf(stderr, "[Server] Job %s: %s decoded again in %.1f s (%d frames)\n", job->id.c_str(), from.c_str(), render_seconds, song.T_lat);
+    if (request.fade_out > 0.0f) {   // HERESY 1169
+        audio_fade_out(song.audio, song.T_audio, request.fade_out);
+    }
     bool      is_mp3  = false;
     WavFormat wav_fmt = WAV_S16;
     audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt);
@@ -1680,6 +1707,9 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
     std::vector<std::string> request_parts;
     for (size_t t = 0; t < songs.size(); t++) {
         Yue2Song & song = songs[t];
+        if (request.fade_out > 0.0f) {   // HERESY 1169
+            audio_fade_out(song.audio, song.T_audio, request.fade_out);
+        }
         // Normalization belongs to the output stage, WAV32 keeping the full range
         if (is_mp3 || wav_fmt != WAV_F32) {
             audio_normalize(song.audio.data(), song.T_audio * 2, request.peak_clip);

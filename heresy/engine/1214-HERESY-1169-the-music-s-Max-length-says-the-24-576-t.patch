@@ -1,0 +1,178 @@
+From a1aef9616c4d03816ec81f775709bbfd12481605 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 7 Oct 2026 22:19:06 -0600
+Subject: [PATCH 1214/1252] =?UTF-8?q?HERESY=201169:=20the=20music's=20Max?=
+ =?UTF-8?q?=20length=20says=20the=2024,576-token=20window=20in=20its=20own?=
+ =?UTF-8?q?=20tip=20(it=20hung=20under=20Sound=20and=20output);=20a=20ques?=
+ =?UTF-8?q?tion's=20=E2=86=90=20=E2=86=92=20go=20along=20its=20buttons=20a?=
+ =?UTF-8?q?nd=20Enter=20presses=20the=20focused=20one;=20=E2=8F=AE=20on=20?=
+ =?UTF-8?q?the=20list's=20first=20take=20goes=20to=200:00?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 07.10.2026: «Подсказка по макс продолжительности выскочила из отключенного тобою поля»; «По кнопкам в F5 диалоге - добавь LEFT/RIGHT клавиатурными передвижение по кнопкам»; «По кнопке PREV в плеере - если нет предыдущего трека в списке - перемотка на начало текущего».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            | 11 +++++++----
+ tools/console/heresy-dialog.js  | 13 ++++++++++++-
+ tools/console/heresy-i18n-be.js |  2 ++
+ tools/console/heresy-i18n-el.js |  2 ++
+ tools/console/heresy-i18n-es.js |  2 ++
+ tools/console/heresy-i18n-it.js |  2 ++
+ tools/console/heresy-i18n-ru.js |  2 ++
+ tools/console/heresy-i18n-uk.js |  2 ++
+ 8 files changed, 31 insertions(+), 5 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 4ec3602..4f28fcb 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -593,7 +593,7 @@
+     penalty_window: "The engine looks back 100 tokens at most.",
+     "abc.min_tokens": "The score's window holds 6,144 tokens.",
+     "abc.max_tokens": "Below 256 a score has no room for its sections; past 6,144 it overflows its window.",
+-    "semantic.min_tokens": "The floor never goes above the music's Max length (Max length in Sound and output)."
++    "semantic.min_tokens": "The floor never goes above the music's Max length."   // HERESY 1169: Max length is beside it now
+   };
+   // HERESY 1167 (Viktor: «CFG при вводе 3 не опускает его до макс. 2. Поставь сторожа на все поля в семплинге и уведомления
+   // оверлеями»; «2.4 - макс стабильности. 2.6 и выше - дурдом. Может макс выставим до 4?»): Guidance and Sound and output
+@@ -701,7 +701,9 @@
+       var lock = wrap.querySelector(".knob-lock");
+       if (lock) lock.remove();
+       wrap.classList.remove("is-locked");
+-      shown.dataset.tip = "The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it";
++      // HERESY 1169 (Viktor: «Подсказка по макс продолжительности выскочила из отключенного тобою поля»): the window's word, once
++      // under Sound and output where no length field is left, is this field's own now
++      shown.dataset.tip = "The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.";
+     }
+     shown.readOnly = false;
+     shown.addEventListener("change", function () {
+@@ -967,8 +969,7 @@
+     if (isFinite(length) && length !== outDefault("duration")) parts.push("up to " + clock(length));
+     $("outSummary").textContent = parts.map(tr).join(" · ");   // HERESY 1166
+     var notes = [];
+-    // HERESY 1167: the music's ceiling is Max length itself now; the window is the other cap
+-    notes.push("Songs end on their own; Max length only caps them, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.");
++    // HERESY 1167: the music's ceiling is Max length itself now; the window is the other cap (1169: said in Max length's own tip)
+     if (format === "wav32") notes.push("WAV 32 is raw float: peak clip is ignored.");
+     $("outHint").textContent = notes.map(tr).join(" ");
+     syncMusicCeiling();                               // HERESY 1167: the music's Max length follows
+@@ -5135,6 +5136,8 @@
+     if (dir > 0 && shuffleOn() && names.length > 1) { var k; do { k = Math.floor(Math.random() * names.length); } while (k === from); name = names[k]; }
+     else if (!name && repeatMode() === "all" && names.length && from >= 0) name = dir > 0 ? names[0] : names[names.length - 1];
+     var take = name ? findTake(name) : null;
++    // HERESY 1169 (Viktor: «если нет предыдущего трека в списке - перемотка на начало текущего»)
++    if (!take && dir < 0 && from >= 0 && audio.getAttribute("src")) { audio.currentTime = 0; return; }
+     if (!take) { if (dir > 0 && from >= 0) toast("The end of the list"); return; }
+     var follow = STATE.take && STATE.playerTake && STATE.take.name === STATE.playerTake.name;
+     loadPlayer(take, false);
+diff --git a/tools/console/heresy-dialog.js b/tools/console/heresy-dialog.js
+index 1f6b4d6..86f766d 100644
+--- a/tools/console/heresy-dialog.js
++++ b/tools/console/heresy-dialog.js
+@@ -36,9 +36,20 @@
+         if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
+         resolve(kind === "prompt" ? (yes ? input.value : null) : yes === "alt" ? "alt" : !!yes);
+       }
++      // HERESY 1169 (Viktor: «По кнопкам в F5 диалоге - добавь LEFT/RIGHT клавиатурными передвижение по кнопкам»): ← and → go along
++      // the buttons; Enter presses the one in focus (with arrows it may be another than Yes), else Yes as before
+       function key(e) {
++        var buttons = Array.prototype.slice.call(back.querySelectorAll(".hd-acts button")), at = buttons.indexOf(document.activeElement);
+         if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (!opts.must) done(false); }
+-        else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); done(true); }
++        else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && document.activeElement !== input && buttons.length > 1) {
++          e.preventDefault(); e.stopPropagation();
++          var to = at < 0 ? buttons.length - 1 : (at + (e.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
++          buttons[to].focus();
++        }
++        else if (e.key === "Enter" && !e.shiftKey) {
++          e.preventDefault(); e.stopPropagation();
++          if (at >= 0 && !buttons[at].classList.contains("hd-yes")) buttons[at].click(); else done(true);
++        }
+       }
+       document.addEventListener("keydown", key, true);
+       back.addEventListener("mousedown", function (e) { if (e.target === back && !opts.must) done(false); });
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index ef74fa4..7c75d09 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2638,6 +2638,8 @@ RuachI18n.add("be", {
+ "The score's window holds 6,144 tokens.": "Акно партытуры змяшчае 6 144 токены.",
+ "Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Ніжэй за 256 партытуры не хапае месца на раздзелы; вышэй за 6 144 яна перапаўняе сваё акно.",
+ "The floor never goes above the music's Max length (Max length in Sound and output).": "Ніжняя мяжа не ўздымаецца вышэй за макс. даўжыню музыкі («Макс. даўжыня» ў «Гуку і вывадзе»).",
++"The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Найбольшая даўжыня песні, у хв:сс (музычныя токены, 25 у секунду): песні заканчваюцца самі раней, а рухавік урэзвае песню да таго, што змяшчаецца ў акно з 24 576 токенаў побач са стылем, тэкстам і (па-за Direct) партытурай.",
++"The floor never goes above the music's Max length.": "Ніжняя мяжа не ўздымаецца вышэй за макс. даўжыню музыкі.",
+ "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 — вывераны стабільны дыяпазон; 2.0 — дынаміка, бліжэй да SUNO; да 2.4 трымаецца. З 2.6 музыка абрываецца, а тэкст пакутуе; 1.0 выключае вядзенне.",
+ "32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 — як у рэлізе; 8–16 — хуткія чарнавікі; 160 — столь.",
+ "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "Усё акно мадэлі — 24 576 токенаў (16:23 гуку), і сваю долю з яго бяруць стыль, тэкст і, па-за рэжымам «Наўпрост», партытура.",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index b47d23c..2b9dd66 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2637,6 +2637,8 @@ RuachI18n.add("el", {
+ "The score's window holds 6,144 tokens.": "Το παράθυρο της παρτιτούρας χωρά 6.144 tokens.",
+ "Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Κάτω από 256 η παρτιτούρα δεν έχει χώρο για τα μέρη της· πάνω από 6.144 ξεχειλίζει το παράθυρό της.",
+ "The floor never goes above the music's Max length (Max length in Sound and output).": "Το κατώτατο όριο δεν ξεπερνά ποτέ τη μέγιστη διάρκεια της μουσικής («Μέγιστη διάρκεια» στο «Ήχος και έξοδος»).",
++"The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Η μέγιστη διάρκεια του τραγουδιού, σε λ:δδ (τα μουσικά tokens, 25 το δευτερόλεπτο): τα τραγούδια τελειώνουν μόνα τους νωρίτερα, και η μηχανή κόβει ένα τραγούδι σε ό,τι χωρά στο παράθυρο των 24.576 tokens δίπλα στο ύφος, τους στίχους και (εκτός Direct) την παρτιτούρα.",
++"The floor never goes above the music's Max length.": "Το κατώτατο όριο δεν ξεπερνά ποτέ τη μέγιστη διάρκεια της μουσικής.",
+ "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 είναι το επαληθευμένο σταθερό εύρος· 2.0 δυναμικό, πιο κοντά στο SUNO· έως 2.4 αντέχει. Από 2.6 η μουσική κόβεται νωρίς και οι στίχοι υποφέρουν· το 1.0 απενεργοποιεί την καθοδήγηση.",
+ "32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 όπως στην έκδοση· 8–16 γρήγορα πρόχειρα· 160 το ανώτατο.",
+ "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "Όλο το παράθυρο του μοντέλου είναι 24.576 tokens (16:23 ήχου), και το ύφος, οι στίχοι και, εκτός «Απευθείας», η παρτιτούρα παίρνουν το μερίδιό τους.",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 5a67e3e..394c90f 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2637,6 +2637,8 @@ RuachI18n.add("es", {
+ "The score's window holds 6,144 tokens.": "En la ventana de la partitura caben 6.144 tokens.",
+ "Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Por debajo de 256 la partitura no tiene sitio para sus secciones; por encima de 6.144 desborda su ventana.",
+ "The floor never goes above the music's Max length (Max length in Sound and output).": "El mínimo nunca pasa de la duración máxima de la música («Duración máxima» en «Sonido y salida»).",
++"The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "La duración máxima de la canción, en m:ss (los tokens musicales, 25 por segundo): las canciones terminan solas antes, y el motor recorta la canción a lo que cabe en la ventana de 24.576 tokens junto al estilo, la letra y (fuera de «Directo») la partitura.",
++"The floor never goes above the music's Max length.": "El mínimo nunca pasa de la duración máxima de la música.",
+ "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 es el rango estable comprobado; 2.0 es dinámico, más cerca de SUNO; hasta 2.4 aguanta. Desde 2.6 la música se corta antes y la letra sufre; 1.0 apaga la guía.",
+ "32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 es el de la versión publicada; 8–16 son borradores rápidos; 160 es el techo.",
+ "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "La ventana entera del modelo es de 24.576 tokens (16:23 de sonido), y el estilo, la letra y, fuera de «Directo», la partitura se llevan su parte.",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 253d9e2..200d38b 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2637,6 +2637,8 @@ RuachI18n.add("it", {
+ "The score's window holds 6,144 tokens.": "La finestra della partitura contiene 6.144 token.",
+ "Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Sotto 256 la partitura non ha spazio per le sue sezioni; oltre 6.144 trabocca dalla sua finestra.",
+ "The floor never goes above the music's Max length (Max length in Sound and output).": "Il minimo non supera mai la durata massima della musica («Durata massima» in «Suono e uscita»).",
++"The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "La durata massima della canzone, in m:ss (i token musicali, 25 al secondo): le canzoni finiscono da sole prima, e il motore taglia la canzone a ciò che entra nella finestra di 24.576 token accanto allo stile, al testo e (fuori da «Diretto») alla partitura.",
++"The floor never goes above the music's Max length.": "Il minimo non supera mai la durata massima della musica.",
+ "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 è l'intervallo stabile verificato; 2.0 è dinamico, più vicino a SUNO; fino a 2.4 regge. Da 2.6 la musica si tronca e il testo ne soffre; 1.0 spegne la guida.",
+ "32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 è quello della release; 8–16 sono bozze rapide; 160 è il tetto.",
+ "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "L'intera finestra del modello è di 24.576 token (16:23 di suono), e lo stile, il testo e, fuori da «Diretto», la partitura ne prendono la loro parte.",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index e7714c3..3444ca4 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2643,6 +2643,8 @@ RuachI18n.add("ru", {
+ "The score's window holds 6,144 tokens.": "Окно партитуры вмещает 6 144 токена.",
+ "Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Ниже 256 партитуре не хватает места на разделы; выше 6 144 она переполняет своё окно.",
+ "The floor never goes above the music's Max length (Max length in Sound and output).": "Нижняя граница не поднимается выше макс. длины музыки («Макс. длина» в «Звуке и выводе»).",
++"The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Наибольшая длина песни, в м:сс (музыкальные токены, 25 в секунду): песни заканчиваются сами раньше, а движок урезает песню до того, что вмещается в окно из 24 576 токенов рядом со стилем, текстом и (кроме Direct) партитурой.",
++"The floor never goes above the music's Max length.": "Нижняя граница не поднимается выше макс. длины музыки.",
+ "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 — выверенный стабильный диапазон; 2.0 — динамика, ближе к SUNO; до 2.4 держится. С 2.6 музыка обрывается, а текст страдает; 1.0 выключает ведение.",
+ "32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 — как в релизе; 8–16 — быстрые черновики; 160 — потолок.",
+ "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "Всё окно модели — 24 576 токенов (16:23 звука), и свою долю из него берут стиль, текст и, вне режима «Напрямую», партитура.",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 65f3ee9..5bf29d9 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2638,6 +2638,8 @@ RuachI18n.add("uk", {
+ "The score's window holds 6,144 tokens.": "Вікно партитури вміщує 6 144 токени.",
+ "Below 256 a score has no room for its sections; past 6,144 it overflows its window.": "Нижче 256 партитурі бракує місця на розділи; понад 6 144 вона переповнює своє вікно.",
+ "The floor never goes above the music's Max length (Max length in Sound and output).": "Нижня межа не піднімається вище за макс. довжину музики («Макс. довжина» у «Звуці і виводі»).",
++"The song's length at most, as m:ss (the music's tokens, 25 a second): songs end on their own before it, and the engine cuts a song to what fits in the window of 24,576 tokens beside the style, the lyrics and (outside Direct) the score.": "Найбільша довжина пісні, у хв:сс (музичні токени, 25 за секунду): пісні закінчуються самі раніше, а рушій урізає пісню до того, що вміщується у вікно з 24 576 токенів поруч зі стилем, текстом і (поза Direct) партитурою.",
++"The floor never goes above the music's Max length.": "Нижня межа не піднімається вище за макс. довжину музики.",
+ "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off.": "1.4–1.6 — вивірений стабільний діапазон; 2.0 — динаміка, ближче до SUNO; до 2.4 тримається. З 2.6 музика обривається, а текст страждає; 1.0 вимикає ведення.",
+ "32 is the release; 8–16 are quick drafts; 160 is the ceiling.": "32 — як у релізі; 8–16 — швидкі чернетки; 160 — стеля.",
+ "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it.": "Усе вікно моделі — 24 576 токенів (16:23 звуку), і свою частку з нього беруть стиль, текст і, поза режимом «Напряму», партитура.",
+-- 
+2.43.0
+

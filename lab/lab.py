@@ -14,7 +14,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET /arts                        HERESY 1120: every take that has artwork (name -> time), the ones being drawn;
                                    HERESY 1156: the unseen (its subject not found by the critic: a guess)
   GET /art?name=TAKE               its artwork (JPEG, 768 px)
-  GET /art/draw?name=TAKE[&again=1][&seed=N]   draw it (art_job.py): 202 while drawing, then what was drawn
+  GET /art/draw?name=TAKE[&again=1][&seed=N]   draw it (art_job.py): 202 while drawing, then what was drawn; a redraw keeps the old picture in artwork-removed/ (1235)
   GET /art/remove?name=TAKE        HERESY 1156: the picture taken off, kept beside the take (artwork-removed/)
   POST /jobs/cancel {key}          HERESY 1165: a job waiting for a card off the queue (a running one is refused)
   POST /regen {names, same_seeds}  HERESY 1160: made again, new seeds; same_seeds (1165): its own, at a probe's full length
@@ -57,8 +57,9 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   POST /daw/reaper {name, midi}  the take as a REAPER project in its derived/ (the engine serves it); midi: the
                                  page's MIDI of the score, base64 (HERESY 1104)
                                    LoRA training through AI-Toolkit (training.py)
-  POST /chain {name, debuzz, strength, upscale, upscale_mode, remaster: {…}, inspect, spectrum, gloss,
-             stems, stems_mode} · GET /chain?name=   Post's steps in order, each on the file before
+  POST /chain {name, debuzz, strength, upscale, upscale_mode, stems, stems_mode, remaster: {…}, upscale_end,
+             upscale_end_mode, inspect, spectrum, gloss} · GET /chain?name=   Post's steps in order, each on the file
+             before: Debuzz, Upscale, Stems, Remaster (from the stems when they are split), Upscale at the end
   GET /writer[?id] · POST /writer  the Writer's notebook (KIT/writer/ID.json): documents with STYLE,
                                    LYRICS, NOTES, PARAMS, their takes and versions; ops put, snapshot, link,
                                    restore, delete (into writer/.trash)
@@ -101,6 +102,7 @@ import api  # noqa: E402   HERESY 1116
 import dawbridge  # noqa: E402   HERESY 1102
 import rpp  # noqa: E402   HERESY 1104
 import diamond  # noqa: E402   HERESY 1166
+import updates  # noqa: E402   HERESY 1169
 
 heavy = threading.Lock()
 jobs = {}            # take name -> {"status": "queued" | "running" | "failed", "error": …, "started": …}
@@ -454,13 +456,25 @@ def derived_list(name):
     return {"name": name, "derived": out, "running": running}
 
 
-def stems_async(name, mode):
+def stems_async(name, mode, source=""):
     if mode not in ("vocals", "four"):
         raise ValueError("mode is vocals or four")
     d = take_dir(name)
-    did = f"stems-{mode}"
+    audio, did, key = d / "audio.wav", f"stems-{mode}", f"stems:{name}:{mode}"
+    # HERESY 1169 (Viktor 08.10.2026: «Апскейлер нужен в двух местах - перед разделением на стемы…»): stems from a file of
+    # the tree (a debuzzed or an upscaled take) are a set of their own beside the take's, their source in the manifest;
+    # the same file split again answers with the set it gave
+    if source:
+        audio = source_of(name, source)[0]
+        for man in sorted(d.glob(f"derived/stems-{mode}-*/manifest.json")):
+            try:
+                made = json.load(open(man, encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if made.get("source") == source:
+                return made
+        did, key = f"stems-{mode}-" + time.strftime("%Y%m%d-%H%M%S"), f"stems:{name}:{mode}:{source}"
     target = d / "derived" / did
-    key = f"stems:{name}:{mode}"
     with jobs_lock:
         job = jobs.get(key)
         if job and job["status"] in ("queued", "running"):
@@ -470,7 +484,7 @@ def stems_async(name, mode):
             return dict(job, name=name)
         if (target / "manifest.json").is_file():
             return json.load(open(target / "manifest.json", encoding="utf-8"))
-        job = {"status": "queued", "started": time.time(), "kind": "stems", "mode": mode}
+        job = {"status": "queued", "started": time.time(), "kind": "stems", "mode": mode, "id": did}
         jobs[key] = job
 
     def work():
@@ -482,12 +496,12 @@ def stems_async(name, mode):
                 env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID")
                 tmp = d / "derived" / (did + ".part")
                 shutil.rmtree(tmp, ignore_errors=True)
-                p = subprocess.run([str(LAB_PY), str(HERE / "stems_job.py"), str(d / "audio.wav"), str(tmp), mode],
+                p = subprocess.run([str(LAB_PY), str(HERE / "stems_job.py"), str(audio), str(tmp), mode],
                                    env=env, capture_output=True, text=True, timeout=3600)
                 if p.returncode != 0:
                     raise RuntimeError("stems failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 r = json.loads(p.stdout.strip().splitlines()[-1])
-            manifest = {"id": did, "kind": "stems", "parent": name, "mode": mode, "models": r["models"],
+            manifest = {"id": did, "kind": "stems", "parent": name, "mode": mode, "source": source or "the take", "models": r["models"],
                         "files": [dict(s, path=f"derived/{did}/{s['file']}") for s in r["stems"]],
                         "took": r["took"], "gpu": gpu, "created": time.strftime("%Y-%m-%d %H:%M")}
             json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
@@ -722,7 +736,7 @@ def set_lyrics(name, text):
 HF_HOME = KIT / "hf_cache"                     # the model's weights live in the Kit too
 
 
-def upscale_async(name, mode, source="", variants=2, keep=True):
+def upscale_async(name, mode, source="", variants=2, keep=True, ceiling=None):
     if mode not in ("subtle", "normal", "high", "extreme"):
         raise ValueError("mode is subtle, normal, high or extreme")
     d = take_dir(name)
@@ -746,13 +760,14 @@ def upscale_async(name, mode, source="", variants=2, keep=True):
                 env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", HF_HOME=str(HF_HOME))
                 seeds = ",".join(str(1000 + i) for i in range(max(1, min(int(variants), 4))))
                 p = subprocess.run([str(LAB_PY), str(HERE / "upscale_job.py"), str(audio), str(tmp), mode, seeds,
-                                    "keep" if keep else "all"], env=env, capture_output=True, text=True, timeout=7200)
+                                    "keep" if keep else "all"] + ([str(float(ceiling))] if ceiling is not None else []),
+                                   env=env, capture_output=True, text=True, timeout=7200)
                 if p.returncode != 0:
                     raise RuntimeError("upscale failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 r = json.loads(p.stdout.strip().splitlines()[-1])
             manifest = {"id": did, "kind": "upscale", "parent": name, "mode": mode, "source": source or "the take",
                         "models": ["UniverSR (universr-audio)"], "input_sr": r["input_sr"], "cutoff_hz": r["cutoff_hz"],
-                        "keep_low": r["keep_low"], "gpu": gpu,
+                        "keep_low": r["keep_low"], "gpu": gpu, **({"ceiling_db": r["ceiling_db"]} if r.get("ceiling_db") is not None else {}),
                         "files": [dict(f, path=f"derived/{did}/{f['file']}") for f in r["files"]],
                         "took": r["took"], "created": time.strftime("%Y-%m-%d %H:%M")}
             json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
@@ -937,24 +952,31 @@ def chain_async(name, spec):
         job = CHAINS.get(name)
         if job and job["status"] == "running":
             return dict(job, name=name)
+        # HERESY 1169 (Viktor 08.10.2026: «перепроверить пайплайн и его логичность. Апскейлер нужен в двух местах - перед
+        # разделением на стемы и в конце после ремастера… По дефолту стеммер - four»): the stems come before the remaster,
+        # split from the debuzzed (and upscaled) take instead of the raw one after it all, and the remaster mixes them: the
+        # preset balances them and the de-esser has a voice of its own. The separators work at 44.1 kHz and the mix dulls
+        # the top, so it may be drawn anew at the end, under the remaster's true-peak ceiling
         steps = []
         if spec.get("debuzz", True):
             steps.append({"step": "debuzz", "strength": min(1.0, max(0.1, float(spec.get("strength", 0.8))))})
         if spec.get("upscale"):
             steps.append({"step": "upscale", "mode": spec.get("upscale_mode") or "subtle"})
+        if spec.get("stems"):
+            steps.append({"step": "stems", "mode": spec.get("stems_mode") or "four"})
         steps.append({"step": "remaster", "settings": dict(spec.get("remaster") or {})})
+        if spec.get("upscale_end"):
+            steps.append({"step": "upscale", "mode": spec.get("upscale_end_mode") or "subtle", "end": True})
         for k in ("inspect", "spectrum", "gloss"):
             if spec.get(k):
                 steps.append({"step": k})
-        if spec.get("stems"):
-            steps.append({"step": "stems", "mode": spec.get("stems_mode") or "vocals"})
         for st in steps:
             st["status"] = "waiting"
         job = {"status": "running", "started": time.time(), "kind": "chain", "steps": steps, "final": ""}
         CHAINS[name] = job
 
     def work():
-        src, st = "", None
+        src, stems, st = "", "", None
         try:
             for st in steps:
                 st["status"] = "running"
@@ -965,11 +987,24 @@ def chain_async(name, spec):
                     _follow(r, f"debuzz:{name}:{r['id']}")
                     src = _first_file(d, r["id"])
                 elif k == "upscale":
-                    r = upscale_async(name, st["mode"], src, 1, True)
+                    ceiling = None
+                    if st.get("end"):                   # the remaster's true-peak ceiling holds after the new top
+                        rm = next(x for x in steps if x["step"] == "remaster")["settings"]
+                        ceiling = float(rm.get("tp", -1)) if rm.get("loudnorm", True) else None
+                    r = upscale_async(name, st["mode"], src, 1, True, ceiling)
                     _follow(r, f"upscale:{name}:{r['id']}")
                     src = _first_file(d, r["id"])
+                    if st.get("end"):
+                        job["final"] = src
+                elif k == "stems":                      # from the file before, the take when nothing came before
+                    r = stems_async(name, st["mode"], src)
+                    _follow(r, f"stems:{name}:{st['mode']}" + (f":{src}" if src else ""))
+                    stems = "derived/" + r["id"]
+                    st["file"] = stems
                 elif k == "remaster":
-                    cfg = dict(st["settings"], source=src)
+                    cfg = dict(st["settings"], source=stems or src)
+                    if not stems:                       # a single file has no voice of its own to de-ess
+                        cfg["deess"] = False
                     r = remaster_async(name, json.dumps(cfg))
                     _follow(r, f"remaster:{name}:{r['id']}")
                     src = _first_file(d, r["id"])
@@ -980,8 +1015,6 @@ def chain_async(name, spec):
                     _follow(spectrum_async(name, src), "spectrum:" + name + source_of(name, src)[1])
                 elif k == "gloss":                      # the words are the take's: heard on the take itself
                     _follow(gloss_async(name), name)
-                elif k == "stems":
-                    _follow(stems_async(name, st["mode"]), f"stems:{name}:{st['mode']}")
                 st["status"] = "done"
                 if k in ("debuzz", "upscale", "remaster"):
                     st["file"] = src
@@ -1180,6 +1213,13 @@ def art_async(name, again=False, seed=None, painter=None):
                     r = json.loads(p.stdout.strip().splitlines()[-1])
                 break
             r.update(gpu=gpu, created=time.strftime("%Y-%m-%d %H:%M"))
+            if (d / "artwork.jpg").is_file():           # HERESY 1169 · 1235 (Viktor 08.10.2026: «перепроверь, или мы не удаляем старые картинки с редженом новых»): the picture a redraw replaces is kept beside the take, as Remove keeps one
+                keep = d / "artwork-removed"
+                keep.mkdir(exist_ok=True)
+                stamp = time.strftime("%Y%m%d-%H%M%S")
+                (d / "artwork.jpg").replace(keep / f"{stamp}.jpg")
+                if (d / "artwork.json").is_file():
+                    (d / "artwork.json").replace(keep / f"{stamp}.json")
             json.dump(r, open(d / "artwork.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
             tmp.replace(d / "artwork.jpg")
             for sib in art_pair(name):                 # HERESY 1162: the pair's other letter gets it too, when it has none
@@ -1608,7 +1648,7 @@ class Handler(BaseHTTPRequestHandler):
                 r = art_async(q.get("name", ""), q.get("again") == "1", int(seed) if seed.isdigit() else None, q.get("painter"))
                 return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
             if url.path == "/stems":
-                r = stems_async(q.get("name", ""), q.get("mode", "vocals"))
+                r = stems_async(q.get("name", ""), q.get("mode", "four"), q.get("source", ""))
                 return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
             if url.path == "/debuzz":
                 return self.send(202, debuzz_async(q.get("name", ""), q.get("source", ""), q.get("strength", "0.8"),
@@ -1653,6 +1693,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, training.run_status(KIT, q.get("name", "")))
             if url.path == "/train/listen":                 # HERESY 1078: the listener's drafts for a set
                 return self.send(200, training.listen_status(KIT, q.get("name", "")))
+            if url.path == "/train/voice":                  # HERESY 1169: a raw folder's voice, measured
+                return self.send(200, training.voice_status(KIT, q.get("name", "")))
             if url.path == "/gpus":                          # HERESY 1091: which card does what
                 return self.send(200, gpus_state())
             if url.path.startswith("/guide/"):              # HERESY 1096: docs/GUIDE.md and its pictures, for the page's guide
@@ -1684,6 +1726,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, collection.trash_list(KIT))
             if url.path == "/collection/diamonds":       # HERESY 1166: the 💎 workspaces on Hugging Face
                 return self.send(200, diamond.listing(KIT, OUTPUTS, config_dir(), refresh=q.get("refresh") == "1"))
+            if url.path == "/update":                     # HERESY 1169: this version, the last look at GitHub's releases
+                return self.send(200, updates.status(KIT, config_dir()))
+            if url.path == "/update/log":
+                return self.send(200, updates.log_tail(KIT))
             if url.path == "/writer":                       # HERESY 1047
                 if q.get("id"):
                     return self.send(200, writer.get(KIT, q["id"], q.get("scope", "")))
@@ -1727,6 +1773,13 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/regen":                         # HERESY 1160: {names}: made again with new seeds
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, regen([str(n) for n in data.get("names") or []], bool(data.get("same_seeds"))))
+            if url.path == "/update":                     # HERESY 1169: {check, rc}: look now; {run: version}: update while nothing runs
+                data = json.loads(body.decode("utf-8"))
+                if data.get("run"):
+                    with jobs_lock:
+                        busy = heavy.locked() or any(v.get("status") in ("running", "queued") for v in jobs.values())
+                    return self.send(*updates.run(KIT, config_dir(), str(data["run"]), busy))
+                return self.send(200, updates.check(KIT, config_dir(), data.get("rc")))
             if url.path == "/collection/diamonds":       # HERESY 1166: one 💎 workspace, on the user's word (409: it is here)
                 data = json.loads(body.decode("utf-8"))
                 return self.send(*diamond.fetch(KIT, OUTPUTS, config_dir(), str(data.get("name", "")), bool(data.get("restore"))))
@@ -1785,6 +1838,8 @@ class Handler(BaseHTTPRequestHandler):
                 if url.path == "/train/purge":
                     return self.send(200, training.purge_run(KIT, str(data.get("id", ""))))
                 return self.send(200, training.unpublish(KIT, str(data.get("name", "")), str(data.get("lora", ""))))
+            if url.path == "/train/voice":                  # HERESY 1169: measure a raw folder's voice
+                return self.send(202, training.measure_voice(KIT, json.loads(body.decode("utf-8"))))
             if url.path in ("/train/prepare", "/train/run", "/train/stop", "/train/publish", "/train/listen", "/train/styles"):     # HERESY 1063, 1067, 1078
                 data = json.loads(body.decode("utf-8"))
                 if url.path == "/train/listen":

@@ -1,7 +1,6 @@
 # Installing Ruach Studio
 
-One Linux machine with an NVIDIA card. The studio runs there; you use it from a browser on that machine or on any
-other machine of your home network. Nothing goes to a cloud unless you ask (OpenRouter for the Writer, if you choose it).
+One Linux machine with an NVIDIA card. The studio runs there; you use it from a browser on that machine or on any other machine of your home network. Nothing goes to a cloud unless you ask (OpenRouter for the Writer, if you choose it).
 
 ## What it needs
 
@@ -20,8 +19,7 @@ On Ubuntu 24.04, everything but CUDA in one line:
 sudo apt install git cmake ninja-build build-essential python3.12-venv ffmpeg curl
 ```
 
-CUDA 12.8: NVIDIA's own repository for Ubuntu 24.04 (developer.nvidia.com → CUDA Toolkit 12.8 → Linux → x86_64 →
-Ubuntu → 24.04), the `cuda-toolkit-12-8` package.
+CUDA 12.8: NVIDIA's own repository for Ubuntu 24.04 (developer.nvidia.com → CUDA Toolkit 12.8 → Linux → x86_64 → Ubuntu → 24.04), the `cuda-toolkit-12-8` package.
 
 ## Install
 
@@ -35,9 +33,7 @@ git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_
 systemctl --user enable --now heresy-lab ruach-studio
 ```
 
-Open **http://127.0.0.1:41867** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:41867** from another one on
-your network: `start.sh` prints it. The studio answers this machine and private networks only (10.x, 172.16–31.x,
-192.168.x, Tailscale's 100.64.x), never the internet.
+Open **http://127.0.0.1:41867** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:41867** from another one on your network: `start.sh` prints it. The studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet.
 
 To have it running after a reboot without logging in: `sudo loginctl enable-linger $USER` (once).
 
@@ -71,10 +67,7 @@ tools/test_downloaders.sh                  # the model downloaders, offline
 .venv/bin/python tools/test_flac.py        # the engine's FLAC against the reference flac (needs flac and metaflac)
 ```
 
-Measured on the machine it was made on: 6 passed (the page part 14), 314 passed and 8 skipped, 3, 14 and 18 passed. None of
-them touches your songs, your settings or your services; the real-server test proves it at its end. The page tests take
-Chrome from `YUE2_CHROME` when it is not on the `PATH`; on Ubuntu 24.04, Playwright's *Chrome for Testing* needs
-`--no-sandbox` there (AppArmor), Google Chrome's own package does not.
+Measured on the machine it was made on: 6 passed (the page part 14), 314 passed and 8 skipped, 3, 14 and 18 passed. None of them touches your songs, your settings or your services; the real-server test proves it at its end. The page tests take Chrome from `YUE2_CHROME` when it is not on the `PATH`; on Ubuntu 24.04, Playwright's *Chrome for Testing* needs `--no-sandbox` there (AppArmor), Google Chrome's own package does not.
 
 ## When something is wrong
 
@@ -87,5 +80,4 @@ Chrome from `YUE2_CHROME` when it is not on the `PATH`; on Ubuntu 24.04, Playwri
 | the Writer says *no chat server* | none is set | Engine → Chat server (vLLM, LM Studio, Ollama on your machine), or OpenRouter with your key in the Writer |
 | upscale, stems or the lyrics check refuse | their models are missing | `./fetch-models.sh` (or `--check` to see which) |
 
-The guide inside the studio (the **?** in the bar) explains every room. `docs/API.md` is the API; `CHANGELOG.md` what
-is in this version; `heresy/docs/HERESY.md` every change with what was measured.
+The guide inside the studio (the **?** in the bar) explains every room. `docs/API.md` is the API; `CHANGELOG.md` what is in this version; `heresy/docs/HERESY.md` every change with what was measured.

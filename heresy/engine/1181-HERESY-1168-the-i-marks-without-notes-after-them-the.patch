@@ -2,7 +2,7 @@ From a9301e23a946866b20bb8b91cd81db30170445ac Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Tue, 6 Oct 2026 22:25:56 -0600
-Subject: [PATCH 1181/1198] HERESY 1168: the (i) marks without notes after them
+Subject: [PATCH 1181/1252] HERESY 1168: the (i) marks without notes after them
  (the notes are their tips' first lines); the Takes' star as our icon; a take
  moved to the trash leaves the player
 MIME-Version: 1.0
