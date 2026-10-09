@@ -1,0 +1,51 @@
+From 0fe14b6bc90602125c30daf4240eb747e42af83b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 14:51:00 -0600
+Subject: [PATCH 1262/1265] =?UTF-8?q?HERESY=201169=20=C2=B7=201264:=20the?=
+ =?UTF-8?q?=20dock=20as=20tall=20as=20its=20cards=20need=20(at=20most=2060?=
+ =?UTF-8?q?=20%=20of=20the=20window),=20the=20log=20and=20the=20cards=20sc?=
+ =?UTF-8?q?rolling=20inside;=20the=20log=20no=20longer=20grows=20to=20its?=
+ =?UTF-8?q?=20whole=20length?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 5 +++--
+ tools/console/heresy-gpulive.js | 2 ++
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 24b107c..0d30fc5 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3141,8 +3141,9 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+ @media (max-width: 1180px) { .log-dock.has-gpus:not(.is-folded) { width: min(600px, calc(100vw - 32px)); }
+   .log-dock.has-gpus.is-tall { width: min(860px, calc(100vw - 32px)); }
+   .log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr); } .log-dock-gpus { display: none; } }
+-.log-dock.has-gpus:not(.is-folded) .log-dock-body { height: auto; min-height: calc(10 * 1.5 * 11px + 16px); }
+-.log-dock.has-gpus.is-tall .log-dock-body { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 74px); }
++.log-dock.has-gpus:not(.is-folded):not(.is-tall) .log-dock-body,
++.log-dock.has-gpus:not(.is-folded):not(.is-tall) .log-dock-gpus { height: var(--gl-h, calc(10 * 1.5 * 11px + 16px)); }
++.log-dock.has-gpus.is-tall .log-dock-body, .log-dock.has-gpus.is-tall .log-dock-gpus { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 74px); }
+ .gl-card { display: flex; flex-direction: column; gap: 3px; padding: 5px 8px 6px; border: 1px solid var(--line-a, var(--line)); border-radius: var(--r-sm, 4px); }
+ .gl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+ .gl-head .gl-name { flex: none; }
+diff --git a/tools/console/heresy-gpulive.js b/tools/console/heresy-gpulive.js
+index 96181a6..471ee89 100644
+--- a/tools/console/heresy-gpulive.js
++++ b/tools/console/heresy-gpulive.js
+@@ -103,6 +103,8 @@
+       card.querySelector(".gl-nums").innerHTML = nums(ring);
+       draw(card.querySelector("canvas"), ring, false);
+     });
++    // the dock as tall as its cards need (the log beside them as tall), never more than 60 % of the window: both scroll inside
++    dock.style.setProperty("--gl-h", Math.min(Math.max(host.scrollHeight, 181), Math.round(innerHeight * 0.6)) + "px");
+   }
+   function paint(on) {
+     if (on.indexOf("engine") >= 0) paintEngine();
+-- 
+2.43.0
+

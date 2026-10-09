@@ -2,7 +2,7 @@ From e44e0337b4978c3158259673318dd9288781dfde Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Wed, 7 Oct 2026 22:47:11 -0600
-Subject: [PATCH 1218/1259] =?UTF-8?q?HERESY=201169:=20out=20of=20GPU=20mem?=
+Subject: [PATCH 1218/1265] =?UTF-8?q?HERESY=201169:=20out=20of=20GPU=20mem?=
  =?UTF-8?q?ory,=20the=20page=20offers=20the=20next=20smaller=20copy=20of?=
  =?UTF-8?q?=20the=20model,=20honestly=20(BF16=20=E2=86=92=20Q8=5F0=20near?=
  =?UTF-8?q?=20lossless;=20Q6=5FK=20the=20quality=20starts=20to=20suffer;?=

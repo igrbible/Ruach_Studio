@@ -179,7 +179,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 
 **In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC) and the logo's words (Montserrat, SIL OFL, as paths) are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **From the internet, when the page can reach it:** [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, from cdnjs.cloudflare.com, and the fonts (Noto Sans and Noto Sans Mono by default; IBM Plex Sans and Mono, Bodoni Moda, Michroma and Space Grotesk to choose from; SIL OFL) from Google Fonts.
 
-**Optional:** a chat server for the Writer (vLLM, LM Studio or Ollama on your machine) or OpenRouter (the cloud, your key); a DAW (above); `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`); `fontTools` with Montserrat, Noto Sans and Noto Sans CJK (to redraw the logo and its words in each language, [`src/brand/`](src/brand/README.md)).
+**Optional:** a chat server for the Writer (vLLM, LM Studio or Ollama on your machine) or OpenRouter (the cloud, your key); a DAW (above); `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`).
 
 ## Extras
 
@@ -211,13 +211,14 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **A voice's kind in the Trainer**: measured on speech and on singing, shown beside the set, with a name to give it.
 - **The lyrics box as a code editor**: numbered lines, marks to jump between, mcedit's keys, the section tags under «[» along a song's arc with what each one is, the brackets checked before Generate.
 - **End at…**: a take ending where you choose, its last seconds faded, from its kept latents in seconds; the tail after a Full song's proper end is the score's leftover bars, measured.
-- **The winged woman drawn again**: her back to us, the right arm bent a little upward, the left hidden but for the upper arm.
+- **The logo is the name alone**: RUACH and the STUDIO block in each language, in the bar of one height, on the veil and in About; the tab's icon the name's first letter (R, Р, Π).
 - **The Refiner's chain in the order of the work**: the stems split from the debuzzed and upscaled take and mixed by the remaster, the top drawn anew at the end.
 - **The guide's Score and Voices on a Score**: YuE2's ABC line by line, and how a narrator and a choir are timed on one take.
 - **The Artist room, an early preview**: pictures for your songs from a prompt of your own, in three shapes from one seed, painted by Krea 2 Muse, seen developing step by step and kept in a gallery; a square one becomes a take's cover.
 - **[Pinokio](https://pinokio.co) on Linux**: install, start, update and more models from its menu; the work is done by bash scripts that run the same from a terminal ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
 - **The player where the songs are**: in two rows where they are heard and compared, in one elsewhere, and back with its take and its place after a reload.
 - **Fewer tips**: none repeats what the screen already says.
+- **The cards live**: each card's load and memory second by second, under it in Engine → GPUs and beside the server log, the studio's card framed.
 
 ### To Do › rc4 and After
 

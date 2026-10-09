@@ -179,8 +179,8 @@ for (const [w, h] of [[1536, 730], [1920, 960]]) {
       pb: Math.round(document.getElementById("playbar").getBoundingClientRect().top), doc: document.scrollingElement.scrollHeight, vh: innerHeight }; })()`;
   const eng = await ev(engineProbe);
   // HERESY 1167: at the page’s top the bar is tall from 1660 px (98 px; 105 until 06.10), 52 px below that and once the page scrolls
-  check("engine open: its own page (the song workspace steps aside), the Engine band under the top bar (tall at the top from 1660 px), the Engine button lit",
-    !eng.wsShown && eng.headTop === eng.bar && eng.bar === (w >= 1660 ? 98 : 52) && eng.lit && /Engine/.test(eng.title), JSON.stringify(eng));
+  check("engine open: its own page (the song workspace steps aside), the Engine band under the top bar (52 px at every width since 1266), the Engine button lit",
+    !eng.wsShown && eng.headTop === eng.bar && eng.bar === 52 && eng.lit && /Engine/.test(eng.title), JSON.stringify(eng));
   for (let i = 0; i < 4; i++) await wheel(Math.round(w * 0.5), 300, 3000);
   await barStill();
   const down = await ev(engineProbe);
@@ -221,7 +221,7 @@ for (const [w, h] of [[1536, 730], [1920, 960]]) {
   await barStill();
   const back = await ev(measure);
   check("Back to compose closes it: the workspace returns under the bar and the page fits the window", (await ev(`document.getElementById("view-engine").classList.contains("is-hidden")`)) === true &&
-    back.doc <= back.vh && back.wsTop === back.bar && back.bar === (w >= 1660 ? 98 : 52) && back.wsBottom <= back.pb + 1, JSON.stringify(back));
+    back.doc <= back.vh && back.wsTop === back.bar && back.bar === 52 && back.wsBottom <= back.pb + 1, JSON.stringify(back));
 }
 
 // ============================================================ column grips
@@ -968,12 +968,12 @@ check("Ctrl+Alt+1…9 by Viktor's plan: 1 Creator, 2 Writer, 3 Refiner, 4 the Ar
 // оставь grayed out & non-clicable»; «кнопку экспорта в DAW перенести в спадающее меню… и продублировать в правильных местах
 // в самом Огранщике»)
 await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 960, deviceScaleFactor: 1, mobile: false });
-await ev(`document.querySelector('.topbar [data-tab="create"]').click(); document.body.classList.add("bar-tall"); true`);
+await ev(`document.querySelector('.topbar [data-tab="create"]').click(); true`);   // 1266: no tall bar to set
 await sleep(500);
 const barNow = () => ev(`(() => {
-  const r = (e) => e.getBoundingClientRect(), logo = document.querySelector(".topbar .brand"), side = document.getElementById("tabsSide"), tabs = document.getElementById("tabs");
+  const r = (e) => e.getBoundingClientRect(), logo = document.querySelector(".topbar .brand"), barH = Math.round(r(document.querySelector(".topbar")).height), side = document.getElementById("tabsSide"), tabs = document.getElementById("tabs");
   const art = document.getElementById("tabArtist"), ws = document.querySelector(".topbar .ws-current"), daw = document.getElementById("dawOpen");
-  return { rooms: [...tabs.querySelectorAll("button")].map(b => b.textContent.trim()).join("|"), side: [...side.querySelectorAll("button")].map(b => b.textContent.trim()).join("|"),
+  return { barH, rooms: [...tabs.querySelectorAll("button")].map(b => b.textContent.trim()).join("|"), side: [...side.querySelectorAll("button")].map(b => b.textContent.trim()).join("|"),
     artistOn: art.dataset.tab === "artist" && !art.hasAttribute("aria-disabled") && !art.classList.contains("tab-soon"), artistDim: +getComputedStyle(art).opacity < .6,
     logoShown: getComputedStyle(logo).display !== "none", logoRight: Math.round(r(logo).right), sideLeft: Math.round(r(side).left), sideRight: Math.round(r(side).right),
     tabsRight: Math.round(r(tabs).right), wsLeft: Math.round(r(ws).left),
@@ -983,10 +983,10 @@ const barWide = await barNow();
 await ev(`document.getElementById("tabArtist").click(); true`);
 await sleep(250);
 const artistStays = await ev(`document.body.dataset.tab`);
-await ev(`document.body.classList.remove("bar-tall"); true`);          // the room scrolled: the bar and its logo shrink
+await ev(`(() => { const v = document.getElementById("view-artist"); if (v) v.scrollTop = 300; return true; })()`);   // the room scrolled: the bar and its logo stay (1266)
 await sleep(500);
 const barShort = await barNow();
-await ev(`document.body.classList.add("bar-tall"); true`);
+await ev(`(() => { const v = document.getElementById("view-artist"); if (v) v.scrollTop = 0; return true; })()`);
 await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
 await sleep(600);
 const barNarrow = await barNow();
@@ -994,9 +994,9 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 960, dev
 await sleep(500);
 check("the bar: Creator, Writer, Refiner, the Artist (its room open since 1255: a click opens it), Librarian; the Trainer a pill of its own",
   barWide.rooms === "Creator|Writer|Refiner|Artist|Librarian" && barWide.side === "Trainer" && barWide.artistOn && !barWide.artistDim && artistStays === "artist", JSON.stringify(barWide));
-check("  with the logo in the bar, the Trainer stands right of it, level with the rooms, clear of the workspace, and stays put while the logo shrinks",
+check("  with the logo in the bar, the Trainer stands right of it, level with the rooms, clear of the workspace; the bar of one height, the logo with it, when the room scrolls (1266)",
   barWide.logoShown && barWide.sideLeft > barWide.logoRight && barWide.sideLeft - barWide.logoRight < 40 && Math.abs(barWide.sideMid - barWide.tabsMid) <= 1 &&
-  barWide.wsLeft - barWide.sideRight >= 18 && barShort.sideLeft === barWide.sideLeft && barShort.logoRight < barWide.logoRight,
+  barWide.wsLeft - barWide.sideRight >= 18 && barShort.sideLeft === barWide.sideLeft && barShort.logoRight === barWide.logoRight && barShort.barH === 52 && barWide.barH === 52,
   JSON.stringify({ wide: [barWide.logoRight, barWide.sideLeft, barWide.sideRight, barWide.wsLeft], short: [barShort.logoRight, barShort.sideLeft] }));
 check("  without the logo (1440 px), the Trainer follows the rooms", !barNarrow.logoShown && barNarrow.sideLeft > barNarrow.tabsRight &&
   barNarrow.sideLeft - barNarrow.tabsRight <= 24 && Math.abs(barNarrow.sideMid - barNarrow.tabsMid) <= 1, JSON.stringify(barNarrow));
@@ -1238,7 +1238,8 @@ const sheetAt = await ev(`(async () => {
 // a real click: the clipboard takes a copy only from the user's own gesture
 for (const type of ["mouseMoved", "mousePressed", "mouseReleased"])
   await send("Input.dispatchMouseEvent", { type, x: sheetAt.x, y: sheetAt.y, button: "left", buttons: type === "mousePressed" ? 1 : 0, clickCount: 1 });
-// 08.10 (Viktor: «нужен диалоговый попап, спрашивающий, что мы делаем. Переписываем или добавляем в конец (новой строкой…)»)
+// 08.10 (Viktor: «нужен диалоговый попап, спрашивающий, что мы делаем. Переписываем или добавляем в конец (новой строкой…)»);
+// 09.10, after 1265 took it away: «ты уже сделал автокопирование в буфер и попап диалоговый. Так пусть и остаётся» (1267)
 await waitFor(`!!document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes")`, 3000, 50);
 const sheetAsk = await ev(`(() => { const b = document.querySelector(".hd-back.is-on:not(.is-leaving)"); const o = { title: b.querySelector(".hd-title").textContent,
   yes: b.querySelector(".hd-yes").textContent, alt: (b.querySelector(".hd-alt") || {}).textContent || null }; b.querySelector(".hd-yes").click(); return o; })()`);
@@ -2030,6 +2031,73 @@ check("  drawn at the size the full one takes (16:9 wider than 1:1, both as tall
 check("  one whose full picture cannot come says so (dimmed, «not loaded» by its count)", !v63.none && v63.after.broken && /not loaded/.test(v63.after.note) && v63.shut, JSON.stringify(v63.after));
 await ev(`document.querySelector('.topbar [data-tab="${v63Tab}"]')?.click(); true`);
 await sleep(300);
+
+// HERESY 1169 · 1264 (Viktor 09.10.2026: «в GPUs секцию под каждым btop-like монитор утилизации/VRAM usage в реальном времени»; «btop
+// ересь можно прикрутить и к фрейму лога сервера… шире на 200-400px, В две колонки… главная карта особо обрамлена. Пометки над блоками
+// графов — какая роль карты»). The mock has no cards: /lab/gpus and /lab/gpus/live answer through window.fetch, three cards as Forge's.
+section("the cards live: beside the server log and under each card in Engine → GPUs");
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+const g64 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), now = () => Date.now() / 1000;
+  const name = "NVIDIA GeForce RTX 3090", roles = { studio: 0, train: [1, 2], jobs: [1, 2], training: { "1": "voice-r16" } };
+  let t0 = now() - 30;
+  const samples = (i, since) => { const out = []; for (let k = 0; k < 30; k++) { const t = t0 + k; if (t > since) out.push([t, i === 0 ? 20 + k * 2.5 : i === 1 ? 95 : 0, i === 0 ? 18768 : i === 1 ? 21000 : 266, 24576, 50 + i, 40 + i]); } return out; };
+  window.__g64 = window.fetch;
+  window.fetch = (u, o) => {
+    u = String(u);
+    const json = (d) => Promise.resolve(new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } }));
+    if (u.startsWith("/lab/gpus/live")) { const since = +(new URL(u, location.href).searchParams.get("since") || 0); return json({ cards: [0, 1, 2].map((i) => ({ index: i, name, samples: samples(i, since) })), error: "", now: now(), keep: 120, roles }); }
+    if (u.startsWith("/lab/gpus")) return json({ cards: [0, 1, 2].map((i) => ({ index: i, name, total_mb: 24576, free_mb: 5000 })), roles: { studio: 0, train: [1, 2], jobs: [1, 2] }, saved: true, studio_now: 0, guard: [], training: { "1": "voice-r16" }, studio_training: null });
+    return window.__g64(u, o);
+  };
+  const dock = document.getElementById("logDock"), folded = dock.classList.contains("is-folded"), w0 = Math.round(dock.getBoundingClientRect().width);
+  if (folded) document.getElementById("logDockTab").click();
+  await wait(2600);
+  const ink = (c) => { const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height).data; let a = 0; for (let k = 3; k < d.length; k += 4) a += d[k]; return a > 0; };
+  const cards = [...document.querySelectorAll("#logDockGpus .gl-card")];
+  const box = dock.getBoundingClientRect();
+  const out = { w0, w: Math.round(box.width), top: Math.round(box.top), h: Math.round(box.height), gpus: !!document.querySelector("#logDockGpus") && getComputedStyle(document.getElementById("logDockGpus")).display !== "none",
+    cards: cards.map((c) => ({ gpu: c.dataset.gpu, role: c.querySelector(".gl-role").textContent, main: c.classList.contains("is-main"), drawn: ink(c.querySelector("canvas")), nums: c.querySelector(".gl-nums").textContent })) };
+  if (folded) document.getElementById("logDockTab").click();
+  document.getElementById("engineToggle").click(); await wait(2600);
+  const rows = [...document.querySelectorAll("#gpuRoles .gpu-live[data-gpu]")];
+  out.engine = rows.map((b) => ({ gpu: b.dataset.gpu, drawn: !!b.querySelector("canvas") && ink(b.querySelector("canvas")), nums: (b.querySelector(".gl-nums") || {}).textContent || "" }));
+  document.getElementById("engineBack").click(); await wait(300);
+  window.fetch = window.__g64; delete window.__g64;
+  return out;
+})()`);
+check("the unfolded log grows wider for a column of the cards (600 → 900 px at 1920)", g64.gpus && g64.w >= 880 && g64.w - (g64.w0 > 500 ? g64.w0 : 600) >= 200, JSON.stringify({ w0: g64.w0, w: g64.w, gpus: g64.gpus }));
+check("  the dock stays inside the window, as tall as its cards (not the whole log)", g64.top >= 0 && g64.h < 1080 * 0.7, JSON.stringify({ top: g64.top, h: g64.h }));
+check("  each card's block says its role, the studio's card framed, its bars drawn and its numbers given",
+  g64.cards.length === 3 && /Studio/.test(g64.cards[0].role) && g64.cards[0].main && !g64.cards[1].main && /Training voice-r16 · Lab jobs/.test(g64.cards[1].role) &&
+  g64.cards.every((c) => c.drawn && /VRAM/.test(c.nums)), JSON.stringify(g64.cards));
+check("Engine → GPUs: a live row under each card, drawn", g64.engine.length === 3 && g64.engine.every((r) => r.drawn && /load/.test(r.nums)), JSON.stringify(g64.engine));
+
+// HERESY 1169 · 1266 (Viktor 09.10.2026: «Логотип для топ бара заменяй на версию без Девы, и убирай из него высокий вариант. Больше без
+// этих понтов. Стабильный тулбар во всей Студии»; «фавиконку — бекграунд базовый из лого, и монтеррат букву R для английского, Р для
+// русского, Π для греческого»): the name alone in the bar, inside it, at one height; the favicon the name's first letter.
+section("the name alone in the bar at one height; the favicon its first letter");
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+await sleep(400);
+const lg66 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), r = (e) => e.getBoundingClientRect();
+  const bar = document.querySelector(".topbar"), logo = document.querySelector(".topbar .brand-full"), fav = document.getElementById("favicon");
+  const o = { barH: Math.round(r(bar).height), top: Math.round(r(logo).top), bottom: Math.round(r(logo).bottom), h: Math.round(r(logo).height),
+    alone: !document.querySelector(".brand svg .rl-fig, .brand svg .rl-cloud, .brand-compact") && !!logo.querySelector(".rl-word path") && !!logo.querySelector(".rl-box") && !!logo.querySelector(".rl-studio path"),
+    tall: document.body.classList.contains("bar-tall"),
+    fav: !!fav && fav.getAttribute("href") === (window.RUACH_FAVICONS || {}).R && !!(window.RUACH_FAVICONS || {})["Р"] && !!(window.RUACH_FAVICONS || {})["Π"],
+    letters: Object.keys(window.RUACH_LOGO_WORDS || {}).map((k) => k + ":" + window.RUACH_LOGO_WORDS[k].letter).join(",") };
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  const v = document.getElementById("view-compose"); v.scrollTop = 500; await wait(500);
+  o.scrolledBarH = Math.round(r(bar).height); o.scrolledH = Math.round(r(logo).height);
+  v.scrollTop = 0; await wait(300);
+  const about = document.querySelector("#aboutLogo svg");
+  o.aboutAlone = !!about && !about.querySelector(".rl-fig, .rl-cloud");
+  return o; })()`);
+check("the bar's logo is the name alone (no figure, no cloud, no compact cut), inside the 52 px bar", lg66.alone && lg66.barH === 52 && lg66.top >= 0 && lg66.bottom <= 52 && lg66.h === 28 && lg66.aboutAlone, JSON.stringify(lg66));
+check("  one height: no tall bar at the page's top, the bar and the logo the same when a room scrolls", !lg66.tall && lg66.scrolledBarH === 52 && lg66.scrolledH === 28, JSON.stringify(lg66));
+check("  the favicon is R in English; each language has its letter (Р for the Cyrillic names, Π for the Greek)", lg66.fav &&
+  /ru:Р/.test(lg66.letters) && /uk:Р/.test(lg66.letters) && /be:Р/.test(lg66.letters) && /el:Π/.test(lg66.letters) && /es:R/.test(lg66.letters) && /it:R/.test(lg66.letters), JSON.stringify(lg66));
 // ================================================================== fonts
 section("fonts (Engine page)");
 const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"), kids = [...s.children], hr = kids.findIndex(k => k.tagName === "HR");
@@ -3945,11 +4013,11 @@ await ev(`(() => { document.querySelector('#tabs [data-tab="create"]').click(); 
 await waitFor(`!!document.querySelector('[data-hi-tab="tags"]')`, 3000, 50);
 await ev(`document.querySelector('[data-hi-tab="tags"]').click(); true`);
 await sleep(200);
-const tagsTab = await ev(`(() => { const b = [...document.querySelectorAll("[data-hi-lyr]")]; const ch = b.find(x => x.dataset.hiLyr === "[Chorus]");
-  ch.click(); const hand = b.find(x => x.dataset.hiLyr === "ע"); return { n: b.length, chorus: !!ch, hand: !!hand, lyrics: document.getElementById("lyrics").value }; })()`);
+const tagsTab = await ev(`(() => { const b = [...document.querySelectorAll("[data-hi-lyr]")]; const ch = b.find(x => x.dataset.hiLyr === "[Chorus]"), was = document.getElementById("lyrics").value;
+  ch.click(); window.__tagsWas = was; const hand = b.find(x => x.dataset.hiLyr === "ע"); return { n: b.length, chorus: !!ch, hand: !!hand, lyrics: document.getElementById("lyrics").value }; })()`);
 await ev(`document.getElementById("hiClose").click(); true`);
-check("the cheat-sheet has the lyrics' tags (the official examples' and the phonetic hand); a click puts a tag on a line of its own in the lyrics",
-  tagsTab.n >= 40 && tagsTab.chorus && tagsTab.hand && tagsTab.lyrics === "[Verse]\nодна строка\n[Chorus]\n", JSON.stringify(tagsTab));
+check("the cheat-sheet has the lyrics' tags (the official examples' and the phonetic hand); a click only copies a tag, the lyrics stay (HERESY 1265: «[» offers them in the editor)",
+  tagsTab.n >= 40 && tagsTab.chorus && tagsTab.hand && tagsTab.lyrics === (await ev(`window.__tagsWas`)) && !/\[Chorus\]/.test(tagsTab.lyrics), JSON.stringify(tagsTab));
 
 // HERESY 1168 (Viktor 06.10.2026: «В фильтр в Воркспейсах добавь Звезду»): the star among the Librarian's filters. The mock
 // keeps no collection (the lab's), so its takes are not there to filter: the chip itself, its place, its drawing, its press

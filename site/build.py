@@ -217,6 +217,12 @@ if __name__ == "__main__":
     for code, _ in built:
         catalog = json.load(open(here / "i18n" / (code + ".json"), encoding="utf-8")) if code != "en" else {}
         page, missing = page_for(code, template, units, catalog)
+        # HERESY 1266 (Viktor 09.10.2026: «Переделай лого для всех языков»): the logo in the page's language (src/brand/i18n), the
+        # English one where none is
+        own = here.parent / "src/brand/i18n" / ("ruach-logo-" + code + ".svg")
+        if code != "en" and own.is_file():
+            a = page.rfind("<svg", 0, page.index('class="ruach-logo"'))
+            page = page[:a] + own.read_text(encoding="utf-8").strip() + page[page.index("</svg>", a) + 6:]
         page = typeset(page, code)
         out = here / ("index.html" if code == "en" else code + "/index.html")
         out.parent.mkdir(parents=True, exist_ok=True)

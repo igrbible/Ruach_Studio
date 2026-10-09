@@ -1,7 +1,7 @@
 From f193bfb65a922e44294d1c408fc9877fbf27a610 Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 18:12:32 -0600
-Subject: [PATCH 1017/1259] A top bar of icons that fits at 120%; the takes
+Subject: [PATCH 1017/1265] A top bar of icons that fits at 120%; the takes
  list folds to the right
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

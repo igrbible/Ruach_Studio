@@ -38,7 +38,8 @@
             '<td><input type="radio" name="gpuStudio" value="' + i + '"' + (r.studio === i ? " checked" : "") + " /></td>" +
             '<td><input type="checkbox" data-role="train" value="' + i + '"' + (r.train.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
             '<td><input type="checkbox" data-role="jobs" value="' + i + '"' + (r.jobs.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
-            '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td>" + guardCell(d.guard, i) + "</tr>";
+            '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td>" + guardCell(d.guard, i) + "</tr>" +
+            '<tr class="gpu-live-row"><td colspan="6"><div class="gpu-live" data-gpu="' + i + '"></div></td></tr>';   // HERESY 1264: the card live
         }).join("") + "</table>";
       hint();
     }).catch(function (e) { host.innerHTML = '<p class="tr-err">The lab does not answer: ' + esc(e.message) + "</p>"; });

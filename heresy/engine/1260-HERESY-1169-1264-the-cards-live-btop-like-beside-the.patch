@@ -1,0 +1,237 @@
+From cae036de1f764896548b269ef6a7f953d6a59e1b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 14:34:49 -0600
+Subject: [PATCH 1260/1265] =?UTF-8?q?HERESY=201169=20=C2=B7=201264:=20the?=
+ =?UTF-8?q?=20cards=20live,=20btop-like:=20beside=20the=20server=20log=20(?=
+ =?UTF-8?q?the=20dock=20300=20px=20wider,=20the=20log=20and=20a=20column?=
+ =?UTF-8?q?=20of=20the=20cards=20with=20a=20role,=20the=20studio's=20card?=
+ =?UTF-8?q?=20framed)=20and=20under=20each=20card=20in=20Engine=20?=
+ =?UTF-8?q?=E2=86=92=20GPUs?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  27 +++++++
+ tools/console/heresy-gpulive.js | 127 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-gpus.js    |   3 +-
+ tools/console/index.html        |   8 +-
+ 4 files changed, 163 insertions(+), 2 deletions(-)
+ create mode 100644 tools/console/heresy-gpulive.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index ab3f736..440fa6e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3126,6 +3126,33 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+ .log-dock.is-folded .log-dock-tall { display: none; }
+ .log-dock-tall { min-width: 30px; font-size: 14px; }
+ .log-dock.is-folded .log-dock-body, .log-dock.is-folded .log-dock-acts { display: none; }
++/* HERESY 1264 (Viktor 09.10.2026: «btop-like монитор утилизации/VRAM usage в реальном времени»; «к фрейму лога сервера… шире на
++   200-400px, В две колонки… главная карта особо обрамлена. Пометки над блоками графов — какая роль карты»): the cards live. Beside the
++   log the dock grows 300 px for a column of the cards with a role (none without a card: then it keeps its width); in Engine → GPUs a
++   row under each card. The bars: the load above, the memory below, a second each, two minutes wide. */
++.log-dock.has-gpus:not(.is-folded) { width: min(900px, calc(100vw - 32px)); }
++.log-dock.has-gpus.is-tall { width: min(1160px, calc(100vw - 32px)); }
++.log-dock-main { display: grid; grid-template-columns: minmax(0, 1fr); }
++.log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr) 290px; }
++.log-dock.is-folded .log-dock-main, .log-dock-gpus:empty { display: none; }
++.log-dock:not(.has-gpus) .log-dock-gpus { display: none; }
++.log-dock-gpus { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; padding: 8px 10px; border-top: 1px solid var(--line-soft, var(--line));
++  border-left: 1px solid var(--line-soft, var(--line)); }
++@media (max-width: 1180px) { .log-dock.has-gpus:not(.is-folded) { width: min(600px, calc(100vw - 32px)); }
++  .log-dock.has-gpus.is-tall { width: min(860px, calc(100vw - 32px)); }
++  .log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr); } .log-dock-gpus { display: none; } }
++.gl-card { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px 7px; border: 1px solid var(--line-a, var(--line)); border-radius: var(--r-sm, 4px); }
++.gl-card.is-main { border: 1.5px solid var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 14%, transparent); }
++.gl-role { font: 600 10px/1.3 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
++.gl-card.is-main .gl-role { color: var(--amber); }
++.gl-name { font-size: 11px; color: var(--ink); }
++.gl-graph { display: block; width: 100%; height: 46px; }
++.gl-graph.gl-wide { height: 54px; }
++.gl-nums { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11px; color: var(--muted); }
++.gl-nums b { color: var(--ink); font-weight: 600; }
++.gl-wait { font-size: 11px; color: var(--muted); }
++.gpu-table .gpu-live-row td { padding-top: 0; padding-bottom: 10px; border-top: 0; }
++.gpu-live { display: flex; flex-direction: column; gap: 3px; }
+ @media (max-width: 1150px) { .log-dock { bottom: 10px; } }
+ 
+ /* HERESY 1096: the guide */
+diff --git a/tools/console/heresy-gpulive.js b/tools/console/heresy-gpulive.js
+new file mode 100644
+index 0000000..b037f02
+--- /dev/null
++++ b/tools/console/heresy-gpulive.js
+@@ -0,0 +1,127 @@
++// HERESY 1264 (Viktor 09.10.2026: «Добавь в страничку Engine в GPUs секцию под каждым btop-like монитор утилизации/VRAM usage в
++// реальном времени»; «btop ересь можно прикрутить и к фрейму лога сервера. Разрешаю сделать его шире на 200-400px, В две колонки. В
++// одной живой лог, в другой живая шкала активных GPU, где главная карта особо обрамлена. Пометки над блоками графов — какая роль
++// карты»): the cards second by second (the lab's /gpus/live: one nvidia-smi while a page looks), drawn as btop draws them: a bar a
++// second for the load and one for the memory, two minutes wide, green to yellow to red. In Engine → GPUs under each card's row; beside
++// the server log, a column of the cards that have a role, each block headed by what its card is given to, the studio's card framed.
++// It asks only while one of the two is in sight, and the page is.
++(function () {
++  "use strict";
++  var KEEP = 120, COLORS = ["#3f9a4a", "#e0b030", "#c8372d"];          // the level meter's green, yellow and red
++  var S = { rings: {}, names: {}, roles: null, since: 0, busy: false, error: "", seen: false };
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function gb(mb) { return mb == null ? "?" : (mb / 1024).toFixed(1); }
++
++  function where() {                                  // what is in sight: the unfolded log, the Engine room
++    if (document.visibilityState !== "visible") return [];
++    var out = [], dock = $("logDock"), eng = $("view-engine");
++    if (dock && !dock.classList.contains("is-folded")) out.push("dock");
++    if (eng && !eng.classList.contains("is-hidden")) out.push("engine");
++    return out;
++  }
++  function roleOf(i) {                                // what the card is given to, as the column's head says it
++    var r = S.roles, say = [];
++    if (!r) return "";
++    if (r.studio === i) say.push(tr("Studio"));
++    if ((r.train || []).indexOf(i) >= 0) say.push(tr("Training") + (r.training && r.training[String(i)] ? " " + r.training[String(i)] : ""));
++    if ((r.jobs || []).indexOf(i) >= 0) say.push(tr("Lab jobs"));
++    return say.join(" · ");
++  }
++  function color(v) {                                 // 0…1 → green, yellow, red, as btop's own gradient
++    var a = Math.max(0, Math.min(1, v)) * 2, k = Math.min(1, Math.floor(a)), f = a - k;
++    var c0 = COLORS[k], c1 = COLORS[Math.min(2, k + 1)];
++    var mix = function (s, e) { return Math.round(parseInt(c0.substr(s, 2), 16) * (1 - f) + parseInt(c1.substr(s, 2), 16) * f); };
++    return "rgb(" + mix(1) + "," + mix(3) + "," + mix(5) + ")";
++  }
++  function draw(canvas, ring, wide) {                 // two lanes: the load above, the memory below; the newest bar at the right
++    var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
++    if (!w || !h) return;
++    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
++    var g = canvas.getContext("2d"), cs = getComputedStyle(document.documentElement);
++    g.setTransform(dpr, 0, 0, dpr, 0, 0);
++    g.clearRect(0, 0, w, h);
++    var lane = (h - 2) / 2, bw = w / KEEP, n = ring.length;
++    g.strokeStyle = cs.getPropertyValue("--line").trim() || "#ccc";
++    g.globalAlpha = 0.5;
++    g.beginPath(); g.moveTo(0, lane + 1); g.lineTo(w, lane + 1); g.stroke();
++    g.globalAlpha = 1;
++    for (var k = 0; k < n; k++) {
++      var s = ring[k], x = w - (n - k) * bw, util = (s[1] || 0) / 100, mem = s[3] ? (s[2] || 0) / s[3] : 0;
++      var bh = Math.max(util > 0 ? 1 : 0, util * (lane - 1));
++      g.fillStyle = color(util);
++      g.fillRect(x, lane - bh, Math.max(1, bw - (wide ? 1 : 0.4)), bh);
++      var mh = Math.max(mem > 0 ? 1 : 0, mem * (lane - 1));
++      g.fillStyle = color(mem);
++      g.fillRect(x, h - mh, Math.max(1, bw - (wide ? 1 : 0.4)), mh);
++    }
++  }
++  function nums(ring) {
++    var s = ring[ring.length - 1];
++    if (!s) return '<span class="gl-wait">' + esc(tr("waiting for the first second…")) + "</span>";
++    return '<span class="gl-util">' + esc(tr("load")) + " <b>" + Math.round(s[1] || 0) + "%</b></span>" +
++      '<span class="gl-mem">VRAM <b>' + gb(s[2]) + "</b> / " + gb(s[3]) + " GB</span>" +
++      (s[4] != null ? '<span class="gl-temp">' + Math.round(s[4]) + " °C</span>" : "") +
++      (s[5] != null ? '<span class="gl-watt">' + Math.round(s[5]) + " W</span>" : "");
++  }
++  function paintEngine() {
++    Array.prototype.forEach.call(document.querySelectorAll("#gpuRoles .gpu-live[data-gpu]"), function (box) {
++      var i = +box.dataset.gpu, ring = S.rings[i] || [];
++      if (!box.firstChild) box.innerHTML = '<canvas class="gl-graph gl-wide" aria-hidden="true"></canvas><div class="gl-nums mono"></div>';
++      box.querySelector(".gl-nums").innerHTML = nums(ring);
++      draw(box.querySelector("canvas"), ring, true);
++    });
++  }
++  function paintDock() {
++    var host = $("logDockGpus"), dock = $("logDock");
++    if (!host || !dock) return;
++    var ids = Object.keys(S.rings).map(Number).sort(function (a, b) { return a - b; });
++    var withRole = ids.filter(function (i) { return roleOf(i); });
++    var show = withRole.length ? withRole : ids;
++    dock.classList.toggle("has-gpus", show.length > 0);
++    if (!show.length) { host.innerHTML = S.error ? '<p class="gl-wait">' + esc(S.error) + "</p>" : ""; return; }
++    if (host.dataset.ids !== show.join(",")) {
++      host.dataset.ids = show.join(",");
++      host.innerHTML = show.map(function (i) {
++        return '<div class="gl-card" data-gpu="' + i + '"><div class="gl-role"></div><div class="gl-name mono"></div>' +
++          '<canvas class="gl-graph" aria-hidden="true"></canvas><div class="gl-nums mono"></div></div>';
++      }).join("");
++    }
++    var main = S.roles ? S.roles.studio : null;
++    show.forEach(function (i) {
++      var card = host.querySelector('.gl-card[data-gpu="' + i + '"]'), ring = S.rings[i] || [];
++      card.classList.toggle("is-main", i === main);
++      card.querySelector(".gl-role").textContent = roleOf(i) || tr("No role");
++      card.querySelector(".gl-name").textContent = "GPU" + i + " · " + String(S.names[i] || "").replace(/^NVIDIA GeForce /, "");
++      card.querySelector(".gl-nums").innerHTML = nums(ring);
++      draw(card.querySelector("canvas"), ring, false);
++    });
++  }
++  function paint(on) {
++    if (on.indexOf("engine") >= 0) paintEngine();
++    if (on.indexOf("dock") >= 0) paintDock();
++  }
++  function tick() {
++    var on = where();
++    if (!on.length || S.busy) return;
++    S.busy = true;
++    fetch("/lab/gpus/live?since=" + S.since).then(function (r) {
++      return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; });
++    }).then(function (d) {
++      S.error = d.error || "";
++      (d.cards || []).forEach(function (c) {
++        var ring = S.rings[c.index] || (S.rings[c.index] = []);
++        (c.samples || []).forEach(function (s) { ring.push(s); if (s[0] > S.since) S.since = s[0]; });
++        if (ring.length > KEEP) ring.splice(0, ring.length - KEEP);
++        S.names[c.index] = c.name;
++      });
++      if (d.roles && !d.roles.error) S.roles = d.roles;
++      paint(on);
++    }).catch(function (e) { S.error = tr("The lab does not answer") + ": " + e.message; paint(on); })
++      .then(function () { S.busy = false; });
++  }
++  setInterval(tick, 1000);
++  document.addEventListener("visibilitychange", tick);
++  window.HeresyGpuLive = { tick: tick, state: S };
++})();
+diff --git a/tools/console/heresy-gpus.js b/tools/console/heresy-gpus.js
+index c56ddc2..d3f68a5 100644
+--- a/tools/console/heresy-gpus.js
++++ b/tools/console/heresy-gpus.js
+@@ -38,7 +38,8 @@
+             '<td><input type="radio" name="gpuStudio" value="' + i + '"' + (r.studio === i ? " checked" : "") + " /></td>" +
+             '<td><input type="checkbox" data-role="train" value="' + i + '"' + (r.train.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
+             '<td><input type="checkbox" data-role="jobs" value="' + i + '"' + (r.jobs.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
+-            '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td>" + guardCell(d.guard, i) + "</tr>";
++            '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td>" + guardCell(d.guard, i) + "</tr>" +
++            '<tr class="gpu-live-row"><td colspan="6"><div class="gpu-live" data-gpu="' + i + '"></div></td></tr>';   // HERESY 1264: the card live
+         }).join("") + "</table>";
+       hint();
+     }).catch(function (e) { host.innerHTML = '<p class="tr-err">The lab does not answer: ' + esc(e.message) + "</p>"; });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 7337066..3c075b0 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -2007,7 +2007,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <button type="button" class="btn ghost small" id="logDockEngine" data-tip="The whole log, in Engine">Engine</button>
+     </span>
+   </div>
+-  <div class="log-dock-body mono" id="logDockBody" role="log" aria-live="off"></div>
++  <!-- HERESY 1264 (Viktor 09.10.2026: «btop ересь можно прикрутить и к фрейму лога сервера. Разрешаю сделать его шире на 200-400px, В две
++       колонки. В одной живой лог, в другой живая шкала активных GPU, где главная карта особо обрамлена»): the log and the cards, live -->
++  <div class="log-dock-main">
++    <div class="log-dock-body mono" id="logDockBody" role="log" aria-live="off"></div>
++    <div class="log-dock-gpus" id="logDockGpus" aria-label="The cards, live"></div>
++  </div>
+ </aside>
+ 
+ <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+@@ -2133,6 +2138,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ </template>
+ <script src="heresy-dialog.js"></script>
+ <script src="heresy-updates.js"></script>
++<script src="heresy-gpulive.js"></script>
+ <script src="heresy-settings.js"></script>
+ <script src="heresy-i18n.js"></script>
+ <script src="heresy-logo-words.js"></script>
+-- 
+2.43.0
+

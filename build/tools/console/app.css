@@ -2351,6 +2351,7 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
 .yue2-mark .y2-word { fill: var(--ink); }
 .yue2-mark .y2-mark { fill: color-mix(in srgb, #A4513A 82%, var(--ink)); }
 .about-mark { display: block; height: 64px; width: auto; overflow: visible; }
+.about-mark.ruach-logo { height: 40px; max-width: 100%; }   /* HERESY 1266: the name alone, as wide as the column allows */
 .about-tagline { font: 400 12px/1.4 var(--sans); color: var(--muted); }
 .about-links.about-ours { margin-top: 1.4em; }
 /* HERESY 1166: the Engine's LoRAs in two groups, trained here and from Hugging Face */
@@ -3126,6 +3127,38 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
 .log-dock.is-folded .log-dock-tall { display: none; }
 .log-dock-tall { min-width: 30px; font-size: 14px; }
 .log-dock.is-folded .log-dock-body, .log-dock.is-folded .log-dock-acts { display: none; }
+/* HERESY 1264 (Viktor 09.10.2026: «btop-like монитор утилизации/VRAM usage в реальном времени»; «к фрейму лога сервера… шире на
+   200-400px, В две колонки… главная карта особо обрамлена. Пометки над блоками графов — какая роль карты»): the cards live. Beside the
+   log the dock grows 300 px for a column of the cards with a role (none without a card: then it keeps its width); in Engine → GPUs a
+   row under each card. The bars: the load above, the memory below, a second each, two minutes wide. */
+.log-dock.has-gpus:not(.is-folded) { width: min(900px, calc(100vw - 32px)); }
+.log-dock.has-gpus.is-tall { width: min(1160px, calc(100vw - 32px)); }
+.log-dock-main { display: grid; grid-template-columns: minmax(0, 1fr); }
+.log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr) 290px; }
+.log-dock.is-folded .log-dock-main, .log-dock-gpus:empty { display: none; }
+.log-dock:not(.has-gpus) .log-dock-gpus { display: none; }
+.log-dock-gpus { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; padding: 8px 10px; border-top: 1px solid var(--line-soft, var(--line));
+  border-left: 1px solid var(--line-soft, var(--line)); }
+@media (max-width: 1180px) { .log-dock.has-gpus:not(.is-folded) { width: min(600px, calc(100vw - 32px)); }
+  .log-dock.has-gpus.is-tall { width: min(860px, calc(100vw - 32px)); }
+  .log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr); } .log-dock-gpus { display: none; } }
+.log-dock.has-gpus:not(.is-folded):not(.is-tall) .log-dock-body,
+.log-dock.has-gpus:not(.is-folded):not(.is-tall) .log-dock-gpus { height: var(--gl-h, calc(10 * 1.5 * 11px + 16px)); }
+.log-dock.has-gpus.is-tall .log-dock-body, .log-dock.has-gpus.is-tall .log-dock-gpus { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 74px); }
+.gl-card { display: flex; flex-direction: column; gap: 3px; padding: 5px 8px 6px; border: 1px solid var(--line-a, var(--line)); border-radius: var(--r-sm, 4px); }
+.gl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.gl-head .gl-name { flex: none; }
+.gl-card.is-main { border: 1.5px solid var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 14%, transparent); }
+.gl-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 10px/1.3 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.gl-card.is-main .gl-role { color: var(--amber); }
+.gl-name { font-size: 11px; color: var(--ink); }
+.gl-graph { display: block; width: 100%; height: 40px; }
+.gl-graph.gl-wide { height: 54px; }
+.gl-nums { display: flex; flex-wrap: wrap; gap: 0 9px; font-size: 10.5px; color: var(--muted); }
+.gl-nums b { color: var(--ink); font-weight: 600; }
+.gl-wait { font-size: 11px; color: var(--muted); }
+.gpu-table .gpu-live-row td { padding-top: 0; padding-bottom: 10px; border-top: 0; }
+.gpu-live { display: flex; flex-direction: column; gap: 3px; }
 @media (max-width: 1150px) { .log-dock { bottom: 10px; } }
 
 /* HERESY 1096: the guide */
@@ -3392,8 +3425,10 @@ input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
    without the words her hang below it looked misplaced (1148: «без текста логотипа не красиво смотрится»); narrower
    still: that, at the start of the bar. The square is the favicon only. */
 .topbar .brand { position: absolute; left: 50%; top: 0; transform: translateX(-50%); height: var(--bar-h); z-index: 2; pointer-events: none; display: block; }
-.topbar .brand .brand-logo { display: block; height: 100%; }
-.brand-full { display: block; height: calc(var(--bar-h) + 10px); width: auto; overflow: visible; }
+/* HERESY 1266: the name alone, inside the bar, at one height (--logo-h: the Trainer's place is measured by it) */
+:root { --logo-h: 28px; }
+.topbar .brand .brand-logo { display: flex; align-items: center; height: 100%; }
+.brand-full { display: block; height: var(--logo-h); width: auto; }
 /* HERESY 1148 (Viktor, 03.10.2026): no stray selection when a click or a drag misses a button: the page's own words do not
    select; the fields one types into, the log, the guide, notes, the take's id and anything marked .selectable do */
 body { -webkit-user-select: none; user-select: none; }
@@ -3406,8 +3441,7 @@ html.i18n-wait body { visibility: hidden; }
 
 .brand-compact { display: none; height: 50px; width: auto; margin-top: 1px; overflow: visible; }   /* 1.4 : 1, cut from the bar's copy; inside the bar (1148) */
 .topbar .ws-current + .spacer { display: none; }
-@media (max-width: 1659px) { .brand-full { display: none; } .brand-compact { display: block; }
-  .ws-current .ws-cap { display: none; } }   /* 1148 (Viktor): with the logo's words gone, WORKSPACE goes too; the select names itself */
+@media (max-width: 1659px) { .ws-current .ws-cap { display: none; } }   /* 1148 (Viktor): with the logo's words gone, WORKSPACE goes too; the select names itself */
 /* HERESY 1157 (Viktor: «обрезанное лого на высоких скейлах… Вообще не пляшет и выглядит несоответствующе. Может вообще
    убрать логотип в таких случаях?»): where the logo would lose its words, it goes whole; the bar keeps the rooms and tools */
 @media (max-width: 1659px) { .topbar .brand { display: none; } }
@@ -3874,7 +3908,8 @@ body[data-frame="compose"] .k-plan #setupLibRow { flex-wrap: wrap; }
      A calmer page (html[data-motion="reduced"]) cuts it to nothing with every other transition. */
 @property --bar-h { syntax: "<length>"; inherits: true; initial-value: 52px; }
 :root { --bar-h: 52px; }
-@media (min-width: 1660px) { body.bar-tall { --bar-h: 98px; } }   /* HERESY 1167: 105 → 98 (Viktor: «отступ логотипа уменьши при высоком баре») */
+/* HERESY 1266 (Viktor 09.10.2026: «убирай из него высокий вариант. Больше без этих понтов. Стабильный тулбар во всей Студии»): the
+   bar tall at the page's top (1167) is gone: one height everywhere */
 body { transition: --bar-h .22s ease; }
 @media (prefers-reduced-motion: reduce) { body { transition: none; } }
 /* · the cheat-sheet's lead paragraph across the sheet («убери ручные переносы строк. Пусть всё автоврепом идёт») */
@@ -3923,7 +3958,7 @@ html.booting.veil-lift .boot-veil { opacity: 0; pointer-events: none; }
   text-align: center; animation: boot-in 1.1s .15s ease both; }
 .boot-osem b { color: var(--ink); font-weight: 600; letter-spacing: .18em; }
 html.i18n-wait .boot-veil > * { visibility: hidden; }
-.boot-logo { width: min(86vw, 1100px); animation: boot-in 1.1s ease both; }
+.boot-logo { width: min(72vw, 820px); animation: boot-in 1.1s ease both; }   /* HERESY 1266: the name alone */
 .boot-mark { display: block; width: 100%; height: auto; overflow: visible; }
 .boot-words { margin: 18px 0 0; font: 500 clamp(13px, 1.15vw, 19px)/1.4 var(--heading); letter-spacing: .34em; text-transform: uppercase;
   color: var(--muted); text-align: center; animation: boot-in 1.1s .25s ease both; }
@@ -4321,7 +4356,7 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
 .tabs .tab-soon:hover { color: var(--muted); }
 .topbar .tabs-side { margin-left: 0; }
 @media (min-width: 1660px) {
-  .topbar .tabs-side { position: absolute; top: 50%; transform: translateY(-50%); left: calc(50% + 54px * var(--logo-aspect, 4.1423) + 18px); }
+  .topbar .tabs-side { position: absolute; top: 50%; transform: translateY(-50%); left: calc(50% + var(--logo-h) / 2 * var(--logo-aspect, 9.7216) + 18px); }
 }
 /* the Refiner's way out: at its head's end, beside the take in hand; in Stems, at the end of the split's row */
 .post-head .post-daw { margin-left: auto; align-self: center; }

@@ -279,7 +279,7 @@
       n += rows.length;
       html += '<tr class="hi-fam"><th colspan="4">' + esc(g.group) + " <em>" + rows.length + "</em></th></tr>" + rows.map(function (r) {
         return '<tr class="' + (r[1] || g.hand ? "is-heard" : "is-test") + '"><td class="hi-name"><button type="button" class="hi-tag" data-hi-lyr="' + esc(r[0]) + '"' + (g.hand ? ' data-hi-hand="1"' : "") +
-          ' translate="no" data-tip="' + (g.hand ? "into the lyrics, where the cursor stands" : "into the lyrics, on a line of its own") + '">' + esc(g.hand ? (r[3] ? r[0] + "  ·  " + r[3] : r[0]) : r[0]) + "</button></td>" +
+          ' translate="no" data-tip="' + (g.hand ? "Onto the clipboard (in the lyrics, put it where the cursor stands)" : "Onto the clipboard (in the lyrics, «[» offers it as you type)") + '">' + esc(g.hand ? (r[3] ? r[0] + "  ·  " + r[3] : r[0]) : r[0]) + "</button></td>" +
           '<td class="hi-say" colspan="2"><div>' + esc(r[2]) + "</div></td>" +
           '<td class="hi-plays mono">' + (r[1] ? "×" + esc(String(r[1])) : g.hand ? "" :
             '<span class="hi-test" data-tip="None of the 110 official examples writes it: YuE2 may sing it as words or pass it by">TEST</span>') + "</td></tr>";
@@ -329,6 +329,12 @@
   function toClip(text) {
     var put = window.ruachCopyText || function (x) { return navigator.clipboard.writeText(x); };
     return Promise.resolve().then(function () { return put(text); }).then(function () { return true; }, function () { return false; });
+  }
+  function copyName(name, style) {
+    var st = $("style"), held = style && st && fold(st.value).indexOf(fold(name)) >= 0;
+    toClip(name).then(function (ok) {
+      state.hooks.toast(ok ? (held ? "\u201c" + name + "\u201d is in the style already \u00b7 copied" : "Copied: " + name) : "The clipboard did not take it", ok ? "" : "bad");
+    });
   }
   function chooseInto(tag) {
     var st = $("style");
@@ -386,7 +392,7 @@
       // the warning in a line, a legend of four, how the probes were made folded
       '<p class="hi-warn"><b><span class="warn-ico" role="img" aria-label="Warning"></span>A name in the style is a request, not a promise.</b> What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.</p>' +
       '<ul class="hi-legend">' +
-      '<li><b>Click a name</b><span>it goes into the Style prompt and onto the clipboard</span></li>' +
+      '<li><b>Click a name</b><span>it goes onto the clipboard and, where you say, into the Style prompt; a name the Style holds already is marked; a lyrics tag goes onto the clipboard only</span></li>' +
       '<li><b>▶ A · ▶ B</b><span>its two probes, their seeds under them</span></li>' +
       '<li><b class="hi-lg-ok">✓ heard</b><span>the ear heard it and kept it; <em class="hi-lg-no">red</em>: not played when named alone</span></li>' +
       // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
@@ -408,9 +414,12 @@
       var t = e.target.closest("[data-hi-tag]"), p = e.target.closest("[data-hi-play]"), a = e.target.closest("[data-hi-art]"), tb = e.target.closest("[data-hi-tab]");
       if (tb) { state.tab = tb.dataset.hiTab; return paint(); }
       if (a && window.HeresyArt) return window.HeresyArt.show(a.dataset.hiArt, Array.prototype.map.call($("hiTable").querySelectorAll("[data-hi-art]"), function (b) { return b.dataset.hiArt; }));
-      if (t) return chooseInto(t.dataset.hiTag);                      // HERESY 1169: asked where it goes
+      // HERESY 1265 · 1267 (Viktor 09.10.2026: «Клик по структурным тегам… ничего не должен делать. Для этого в редакторе у нас и есть
+      // автодополнение с `[`»; then, of the styles and the instruments: «ты уже сделал автокопирование в буфер и попап диалоговый. Так
+      // пусть и остаётся»): a style's or an instrument's name copied and asked where it goes (1169); a lyrics tag only copied
+      if (t) return chooseInto(t.dataset.hiTag);
       var lt = e.target.closest("[data-hi-lyr]");
-      if (lt) return said(addLyricTag(lt.dataset.hiLyr, !!lt.dataset.hiHand), lt.dataset.hiLyr);   // HERESY 1168
+      if (lt) return copyName(lt.dataset.hiLyr, false);
       if (p) { var take = state.hooks.findTake(p.dataset.hiPlay); if (take) state.hooks.playNow(take); else state.hooks.toast("The probe is not in the library now", "bad"); }
     });
     $("hiSearch").addEventListener("input", function () { state.q = this.value; paint(); });

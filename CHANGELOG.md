@@ -4,7 +4,7 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 
 ## 2.0.0-rc3 · 2026-10-09
 
-The third release candidate: the Artist room in an early preview, Pinokio on Linux, and what two days of the rooms' audit asked for (HERESY 1169, patches 1199–1263).
+The third release candidate: the Artist room in an early preview, Pinokio on Linux, and what two days of the rooms' audit asked for (HERESY 1169, patches 1199–1267).
 
 ### Everywhere
 
@@ -56,7 +56,7 @@ The third release candidate: the Artist room in an early preview, Pinokio on Lin
 - **More of mcedit in the lyrics**: **Alt+O** clears the marks, **Alt+L** goes to a line by its number, **Ctrl+Y** deletes the line, **Alt+↑** / **Alt+↓** move the line (or the lines selected) with its mark. *Keys* under the box lists the editor's keys and opens the guide there; the Writer's LYRICS label says them on hover.
 - **The take's card compact**: its tools in framed groups (Download, Refiner, Files; Make again a row of its own); **Style** (once Prompt) over the lyrics on the left of a lifted take and the score on the right; a new take opens with Style and Lyrics folded.
 - **Compose tidier**: the seeds stand first in Sampling and Denoising; **Instrumental** at the right of the planning mode's head, its words in its tip; the LoRA picker's notes in a tip beside the LoRAs' name (⚠ when one warns) instead of a paragraph under the list; the Takes head 7 px nearer its top.
-- **The cheat-sheet asks where a name goes**: at the end of the Style on a line of its own, or in place of it (copied either way); a lyrics tag says the line it went to.
+- **The cheat-sheet asks where a name goes**: at the end of the Style on a line of its own, or in place of it (copied either way); a lyrics tag is only copied (in the editor, «[» offers them as you type).
 - **The lyrics over everything**: ⤢ beside Lyrics lifts the box, 60 % of the screen and four tenths larger than the form, with its meter, numbers and marks, and its own −, + and ⟲ for the text's size (a tenth a press, two each way, kept in this browser); Esc puts it back.
 - **The lyrics' brackets checked**: a «[» not closed, a «]» astray, a tag inside a tag or an empty one numbers its line red, round brackets astray amber, counted under the box (a press goes to the next); **Generate asks first** when a tag is broken (*Go to the line*, *Generate as it is*).
 - **Viktor's conservative recipe for Russian** is a built-in profile: Composition low, Performance low, Style influence high, 32 steps with Midpoint (no speeding up, rap at a moderate pace); the guide has it under Sampling and Denoising.
@@ -68,12 +68,13 @@ The third release candidate: the Artist room in an early preview, Pinokio on Lin
 
 ### The Bar
 
-- **The winged woman drawn again**: she stands with her back to us, her right arm bent a little upward at the elbow, the left one hidden but for the upper arm (the first trace's spiral curls are gone); in the bar, the favicon and every file of the logo.
-- The rooms in the order a song goes through them: Creator, Writer, Refiner, the **Artist**'s place (greyed: the room for your songs' pictures comes in a later release), Librarian; the logo in the middle, and the **Trainer** a pill of its own right of it (it stays put while the logo grows and shrinks with the bar; without the logo it follows the rooms).
+- **The logo is the name alone**: RUACH and the STUDIO block, in each language its own words, without the figure: in the bar, on the veil the page boots under and in About; the bar keeps one height everywhere (the tall bar at the page's top is gone). The tab's icon is the name's first letter on the logo's cloud: R, Р for the Cyrillic names, Π for the Greek; the README's banner and the Pinokio launcher's icon with it.
+- The rooms in the order a song goes through them: Creator, Writer, Refiner, the **Artist** (an early preview), Librarian; the logo in the middle, and the **Trainer** a pill of its own right of it (without the logo it follows the rooms).
 - **Export to DAW** left the bar for ☰; the Refiner has it too, beside the take in hand and in its Stems.
 
 ### The Engine
 
+- **The cards live, as btop draws them**: under each card in Engine → GPUs and beside the server log, its load and its memory a bar a second for two minutes, green to yellow to red, with its temperature and power; the unfolded log grows 300 px wider for a column of the cards that have a role, each headed by what it is given to (studio, training, lab jobs), the studio's card framed.
 - **The settings file keeps what is not the page's** through the page's saves and its Reset; the lab knows where your own work lives (outputs, trash, artist, writer: a folder of the studio's, or a link of it to another disk), makes one that is missing at its start and links back one the settings file places elsewhere. The card that moves them (Engine → Folders) comes after this candidate.
 - **One decoder on the card**: another VAE (Legacy, Blend) swaps out the idle one. Three side by side, each keeping a 3.1 GB working buffer, ran a 24 GB card out of memory on the third.
 - **Out of GPU memory no longer kills the engine**: the sound half and the decoder renew their scheduler after a failed allocation and the run says why, with the card's numbers; the page then offers the next smaller copy of the model, honestly (Q8_0 near lossless; Q6_K the quality starts to suffer; Q5_K_M the music half hallucinates). Variations that do not fit at once go one at a time. The music's memory (its KV sets) is given back after a run of several probes: two long probes at once on BF16 had left 10.75 GB behind them for good.

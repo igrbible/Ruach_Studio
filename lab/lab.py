@@ -109,6 +109,7 @@ import diamond  # noqa: E402   HERESY 1166
 import updates  # noqa: E402   HERESY 1169
 import artist  # noqa: E402   HERESY 1255
 import places  # noqa: E402   HERESY 1261: where the user's work lives (outputs, trash, artist, writer)
+import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
 
 heavy = threading.Lock()
 jobs = {}            # take name -> {"status": "queued" | "running" | "failed", "error": …, "started": …}
@@ -207,6 +208,23 @@ def whisper_env():
         return dict(base, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", WHISPER_DEVICE="cuda"), gpu, ""
     except RuntimeError as e:
         return dict(base, CUDA_VISIBLE_DEVICES="", WHISPER_DEVICE="cpu"), "cpu", f"on the CPU: {e}"
+
+
+LIVE_ROLES = {"at": 0.0, "value": None}
+
+
+def live_roles():
+    """HERESY 1264: what each card is given to and what trains on it, for the live graphs' labels; read again every 15 s."""
+    if LIVE_ROLES["value"] is None or time.time() - LIVE_ROLES["at"] > 15:
+        try:
+            s = gpus_state()
+            r = s["roles"]
+            LIVE_ROLES["value"] = {"studio": s["studio_now"] if s.get("studio_now") is not None else r["studio"],
+                                   "train": r["train"], "jobs": r["jobs"], "training": s.get("training", {})}
+        except Exception as e:                          # the graphs go on without their labels
+            LIVE_ROLES["value"] = {"error": str(e)}
+        LIVE_ROLES["at"] = time.time()
+    return LIVE_ROLES["value"]
 
 
 def gpus_state():
@@ -1638,6 +1656,10 @@ class Handler(BaseHTTPRequestHandler):
         if url.path.startswith("/api/"):
             return self.api("GET", url, q, None)
         try:
+            if url.path == "/gpus/live":                    # HERESY 1264: the cards second by second, and what each is given to
+                out = gpu_live.live(float(q.get("since") or 0))
+                out["roles"] = live_roles()
+                return self.send(200, out)
             if url.path == "/places":                       # HERESY 1261: where the user's work lives, and a move under way
                 return self.send(200, places.listing(q.get("refresh") == "1"))
             if url.path == "/places/plan":

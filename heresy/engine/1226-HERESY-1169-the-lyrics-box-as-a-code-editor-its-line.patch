@@ -2,7 +2,7 @@ From a6fe573c523ad7f81e313bced28bec2e3d5c40e6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 8 Oct 2026 00:34:25 -0600
-Subject: [PATCH 1226/1259] HERESY 1169: the lyrics box as a code editor: its
+Subject: [PATCH 1226/1265] HERESY 1169: the lyrics box as a code editor: its
  lines numbered, Alt+K marks a line and Alt+J goes to the next mark, every tag
  under a thin amber layer; the Writer's lyrics too
 MIME-Version: 1.0

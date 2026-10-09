@@ -2,7 +2,7 @@ From c652189654dfb9d247759e4625b455581d3ce1c1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Tue, 6 Oct 2026 13:40:04 -0600
-Subject: [PATCH 1175/1259] HERESY 1167: a song's tools beside New song; the
+Subject: [PATCH 1175/1265] HERESY 1167: a song's tools beside New song; the
  browser's language at the first visit; the DAW panel across its width; a
  patient peek; the Librarian's search that narrows, finds sections and takes
  Ctrl+F

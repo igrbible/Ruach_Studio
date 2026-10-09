@@ -1,7 +1,7 @@
 From e9a7ba2e52efb30d890fc51bdb72b8c1d47686c0 Mon Sep 17 00:00:00 2001
 From: Pascal <admin@serveurperso.com>
 Date: Wed, 7 Oct 2026 11:48:52 +0200
-Subject: [PATCH 1190/1259] ggml: sync to upstream 0.26.0
+Subject: [PATCH 1190/1265] ggml: sync to upstream 0.26.0
 
 The vendored fork rebases onto ggml-org/ggml 0.26.0, which now carries
 the fixes upstreamed from these projects:

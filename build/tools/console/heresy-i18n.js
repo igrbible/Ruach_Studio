@@ -233,6 +233,10 @@
     var holder = document.querySelector(".brand-logo");
     if (holder && g.name) holder.setAttribute("aria-label", g.name);
     copyLogo(svg, g.name);
+    // HERESY 1266 (Viktor 09.10.2026: «фавиконку — бекграунд базовый из лого, и монтеррат букву R для английского, Р для русского, Π
+    // для греческого»): the tab's icon wears the first letter of the name in the page's language
+    var fav = document.getElementById("favicon"), favs = window.RUACH_FAVICONS || {}, letter = (L && L.letter) || "R";
+    if (fav && favs[letter] && fav.getAttribute("href") !== favs[letter]) fav.setAttribute("href", favs[letter]);
   }
   // HERESY 1166 (Viktor: «В Engine логотип заменить»): the About card shows the bar's own logo, its words in the page's
   // language, a copy made again whenever they change; its ids renamed, so the bar's logo hidden (the compact one showing)

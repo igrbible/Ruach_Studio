@@ -5689,7 +5689,8 @@
     });
   }
   function logoMotion() {
-    var on = !lessMotion.matches && !document.hidden;
+    // HERESY 1266: the name alone has nothing that moves; the clock runs only for a logo with its cloud
+    var on = !lessMotion.matches && !document.hidden && !!document.querySelector(".brand svg feTurbulence");
     if (on && !logoTimer) logoTimer = setInterval(logoStep, 100);
     else if (!on && logoTimer) { clearInterval(logoTimer); logoTimer = 0; }
   }
@@ -6804,23 +6805,8 @@
     saveWidths(next);
   });
 
-  // HERESY 1167 (Viktor: «в верху страницы bar высокий, на 40pt выше, чем сейчас, с прокруткой страницы уменьшаем до текущего
-  // дефолта. Так логотип сможем по высоте увеличить, абы только не сбивал лево/право»): the bar tall while the page stands at
-  // its top, its usual height once a room's own column scrolls (lists and text boxes inside it do not count); the logo grows
-  // and shrinks with it, the bar's left and right stay where they are. It shrinks after 60 px, more than the 53 px it loses:
-  // where the whole page scrolls (the Engine page) the browser keeps the content in place by taking those 53 px off the
-  // scroll, and from 25 px that would land under 4 px and grow it again, round and round
-  (function () {
-    var PAGES = "#view-compose, #view-take, #view-write, #view-post, #view-artist, #view-collection, #view-train, #view-engine";
-    document.body.classList.add("bar-tall");
-    document.addEventListener("scroll", function (event) {
-      var el = event.target === document ? document.scrollingElement : event.target;
-      if (!el || (el !== document.scrollingElement && !(el.matches && el.matches(PAGES)))) return;
-      var top = el.scrollTop || 0;
-      if (top > 60) document.body.classList.remove("bar-tall");
-      else if (top < 4) document.body.classList.add("bar-tall");
-    }, true);
-  })();
+  // HERESY 1266 (Viktor 09.10.2026: «убирай из него высокий вариант… Стабильный тулбар во всей Студии»): the bar tall at the
+  // page's top (1167) is gone; one height everywhere, the logo inside it
 
   // ------------------------------------------------------------- appearance
   // The Engine page's Appearance card: the theme (the same choice as the top bar's swatches), options that

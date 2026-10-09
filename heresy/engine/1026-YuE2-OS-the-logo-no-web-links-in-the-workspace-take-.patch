@@ -2,7 +2,7 @@ From 6717667ea4b3d51b1515da96df03ce54566df80f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Wed, 30 Sep 2026 23:13:05 -0600
-Subject: [PATCH 1026/1259] YuE2 OS: the logo, no web links in the workspace,
+Subject: [PATCH 1026/1265] YuE2 OS: the logo, no web links in the workspace,
  take IDs, a player that follows the list
 
 - Header: the YuE2 OS logo (the favicon's treble clef, the word, an OS plate that inverts by

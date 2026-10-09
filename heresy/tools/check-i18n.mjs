@@ -29,6 +29,7 @@ check("  attributes too: the button's tip and label", (await ev(`document.getEle
   (await ev(`document.getElementById("langButton").getAttribute("aria-label")`)) === "Язык");
 check("  the logo's words: РУАХ СТУДИЯ (its frame, its name)", (await ev(`document.querySelector(".brand-full").getAttribute("viewBox")`)) === (await ev(`RUACH_LOGO_WORDS.ru.viewBox`)) &&
   (await ev(`document.querySelector(".brand-logo").getAttribute("aria-label")`)) === "Руах Студия");
+check("  the favicon wears Р, the name's first letter (1266)", (await ev(`document.getElementById("favicon").getAttribute("href") === RUACH_FAVICONS["Р"]`)) === true);
 // what the page writes later is translated as it appears
 await ev(`(() => { const b = document.createElement("button"); b.id = "i18nProbe"; b.textContent = "Save"; b.title = "Clear"; document.body.appendChild(b); return true; })()`);
 await sleep(50);
@@ -58,6 +59,7 @@ await sleep(50);
 const backTabs = await ev(`[...document.querySelectorAll(".topbar .tabs button")].map(b => b.textContent.trim()).join("|")`);
 check("back to English: the rooms, the logo, the probe, the lang", backTabs === enTabs && (await ev(`document.querySelector(".brand-full").getAttribute("viewBox")`)) === enVb &&
   (await ev(`document.getElementById("i18nProbe").textContent`)) === "Something new" && (await ev(`document.documentElement.lang`)) === "en", backTabs);
+check("  the favicon back to R (1266)", (await ev(`document.getElementById("favicon").getAttribute("href") === RUACH_FAVICONS.R`)) === true);
 check("  the button's tip back in English", (await ev(`document.getElementById("langButton").dataset.tip`)) === "The language of the page");
 check("  and the warning's words back in English, its sign still drawn", (await ev(`document.getElementById("i18nWarn").textContent`)) === "A name in the style is a request, not a promise." &&
   (await ev(`document.querySelectorAll("#i18nWarn .warn-ico").length`)) === 1);

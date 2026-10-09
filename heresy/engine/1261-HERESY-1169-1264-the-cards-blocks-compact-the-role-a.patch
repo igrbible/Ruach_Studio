@@ -1,0 +1,90 @@
+From a74942f1a57d84ca4f6a6aa7c488fc7a22ce8424 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 14:44:08 -0600
+Subject: [PATCH 1261/1265] =?UTF-8?q?HERESY=201169=20=C2=B7=201264:=20the?=
+ =?UTF-8?q?=20cards'=20blocks=20compact=20(the=20role=20and=20the=20card?=
+ =?UTF-8?q?=20on=20one=20line),=20each=20lane=20on=20a=20faint=20ground=20?=
+ =?UTF-8?q?with=20its=20name,=20the=20log=20as=20tall=20as=20the=20cards?=
+ =?UTF-8?q?=20beside=20it?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 12 ++++++++----
+ tools/console/heresy-gpulive.js | 16 +++++++++++-----
+ 2 files changed, 19 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 440fa6e..24b107c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3141,14 +3141,18 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+ @media (max-width: 1180px) { .log-dock.has-gpus:not(.is-folded) { width: min(600px, calc(100vw - 32px)); }
+   .log-dock.has-gpus.is-tall { width: min(860px, calc(100vw - 32px)); }
+   .log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr); } .log-dock-gpus { display: none; } }
+-.gl-card { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px 7px; border: 1px solid var(--line-a, var(--line)); border-radius: var(--r-sm, 4px); }
++.log-dock.has-gpus:not(.is-folded) .log-dock-body { height: auto; min-height: calc(10 * 1.5 * 11px + 16px); }
++.log-dock.has-gpus.is-tall .log-dock-body { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 74px); }
++.gl-card { display: flex; flex-direction: column; gap: 3px; padding: 5px 8px 6px; border: 1px solid var(--line-a, var(--line)); border-radius: var(--r-sm, 4px); }
++.gl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
++.gl-head .gl-name { flex: none; }
+ .gl-card.is-main { border: 1.5px solid var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 14%, transparent); }
+-.gl-role { font: 600 10px/1.3 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
++.gl-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 10px/1.3 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+ .gl-card.is-main .gl-role { color: var(--amber); }
+ .gl-name { font-size: 11px; color: var(--ink); }
+-.gl-graph { display: block; width: 100%; height: 46px; }
++.gl-graph { display: block; width: 100%; height: 40px; }
+ .gl-graph.gl-wide { height: 54px; }
+-.gl-nums { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11px; color: var(--muted); }
++.gl-nums { display: flex; flex-wrap: wrap; gap: 0 9px; font-size: 10.5px; color: var(--muted); }
+ .gl-nums b { color: var(--ink); font-weight: 600; }
+ .gl-wait { font-size: 11px; color: var(--muted); }
+ .gpu-table .gpu-live-row td { padding-top: 0; padding-bottom: 10px; border-top: 0; }
+diff --git a/tools/console/heresy-gpulive.js b/tools/console/heresy-gpulive.js
+index b037f02..96181a6 100644
+--- a/tools/console/heresy-gpulive.js
++++ b/tools/console/heresy-gpulive.js
+@@ -42,10 +42,11 @@
+     var g = canvas.getContext("2d"), cs = getComputedStyle(document.documentElement);
+     g.setTransform(dpr, 0, 0, dpr, 0, 0);
+     g.clearRect(0, 0, w, h);
+-    var lane = (h - 2) / 2, bw = w / KEEP, n = ring.length;
+-    g.strokeStyle = cs.getPropertyValue("--line").trim() || "#ccc";
+-    g.globalAlpha = 0.5;
+-    g.beginPath(); g.moveTo(0, lane + 1); g.lineTo(w, lane + 1); g.stroke();
++    var lane = (h - 2) / 2, bw = w / KEEP, n = ring.length, ink = cs.getPropertyValue("--ink").trim() || "#444";
++    g.fillStyle = ink;                                  // each lane's own faint ground, so an empty one reads as a lane
++    g.globalAlpha = 0.05;
++    g.fillRect(0, 0, w, lane);
++    g.fillRect(0, lane + 2, w, lane);
+     g.globalAlpha = 1;
+     for (var k = 0; k < n; k++) {
+       var s = ring[k], x = w - (n - k) * bw, util = (s[1] || 0) / 100, mem = s[3] ? (s[2] || 0) / s[3] : 0;
+@@ -56,6 +57,11 @@
+       g.fillStyle = color(mem);
+       g.fillRect(x, h - mh, Math.max(1, bw - (wide ? 1 : 0.4)), mh);
+     }
++    g.font = "9px " + (cs.getPropertyValue("--mono").trim() || "monospace");      // the lanes' names, small, at their left
++    g.fillStyle = cs.getPropertyValue("--muted").trim() || "#888";
++    g.textBaseline = "top";
++    g.fillText(tr("load"), 3, 2);
++    g.fillText("VRAM", 3, lane + 4);
+   }
+   function nums(ring) {
+     var s = ring[ring.length - 1];
+@@ -84,7 +90,7 @@
+     if (host.dataset.ids !== show.join(",")) {
+       host.dataset.ids = show.join(",");
+       host.innerHTML = show.map(function (i) {
+-        return '<div class="gl-card" data-gpu="' + i + '"><div class="gl-role"></div><div class="gl-name mono"></div>' +
++        return '<div class="gl-card" data-gpu="' + i + '"><div class="gl-head"><span class="gl-role"></span><span class="gl-name mono"></span></div>' +
+           '<canvas class="gl-graph" aria-hidden="true"></canvas><div class="gl-nums mono"></div></div>';
+       }).join("");
+     }
+-- 
+2.43.0
+

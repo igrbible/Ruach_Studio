@@ -2,7 +2,7 @@ From 533e08d849fe7126e94d47a01a4f47af10f5e7fa Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 11:28:37 -0600
-Subject: [PATCH 1041/1259] The Collection: a fourth tab, workspaces, many
+Subject: [PATCH 1041/1265] The Collection: a fourth tab, workspaces, many
  takes at once, the trash in the page
 
 - Collection (heresy-collection.js): every take as a tile or a row; search with * and ?;

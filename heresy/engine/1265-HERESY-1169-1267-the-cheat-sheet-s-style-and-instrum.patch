@@ -1,0 +1,71 @@
+From bce6bcc2d6018161652bc59eef4e439f2e156e84 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 16:03:16 -0600
+Subject: [PATCH 1265/1265] =?UTF-8?q?HERESY=201169=20=C2=B7=201267:=20the?=
+ =?UTF-8?q?=20cheat-sheet's=20style=20and=20instrument=20names=20copied=20?=
+ =?UTF-8?q?and=20asked=20where=20they=20go=20again=20(1169);=20its=20lyric?=
+ =?UTF-8?q?s=20tags=20only=20copied=20(1265)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ tools/console/heresy-instruments.js | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index ff0793b..4645299 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -170,12 +170,12 @@
+     var bare = state.loaded && !p.a && !p.b;
+     var play = bare ? "" : playsHtml(p);
+     return '<tr class="' + (bare ? "is-no" : st.cls) + '">' + picHtml(p) + '<td class="hi-name">' +
+-      (bare ? '<span class="hi-bare" translate="no">' + esc(i.tag || i.slug) + "</span>" : '<button type="button" class="hi-tag" data-hi-tag="' + esc(i.tag) + '" data-tip="Onto the clipboard">' + esc(i.tag || i.slug) + "</button>") +
++      (bare ? '<span class="hi-bare" translate="no">' + esc(i.tag || i.slug) + "</span>" : '<button type="button" class="hi-tag" data-hi-tag="' + esc(i.tag) + '" data-tip="into the Style prompt">' + esc(i.tag || i.slug) + "</button>") +
+       '<div class="hi-home">' + esc(i.home) + '</div><div class="hi-st">' + esc(st.text) + "</div></td>" +
+       '<td class="hi-say"><div translate="no">' + esc(i.en) + '</div><div class="hi-ru">' + esc(i.ru) + "</div>" +
+       (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") +
+       // HERESY 1148 (Viktor): the shofar's probes are kept and listed with the prompt they were made with
+-      (i.prompt ? '<button type="button" class="hi-prompt" data-hi-tag="' + esc(i.prompt) + '" data-tip="The prompt both probes were made with: onto the clipboard">' + esc(i.prompt) + "</button>" : "") +
++      (i.prompt ? '<button type="button" class="hi-prompt" data-hi-tag="' + esc(i.prompt) + '" data-tip="The prompt both probes were made with: into the Style prompt">' + esc(i.prompt) + "</button>" : "") +
+       loraHtml(i) + "</td>" +                       // HERESY 1166: its adapter's A/B by epoch
+       '<td class="hi-plays">' + play + "</td></tr>";
+   }
+@@ -194,7 +194,7 @@
+   function styleRow(s) {
+     var p = probes(s.slug), his = hisNote(p), c = styleState(s), st = c.text;
+     return '<tr class="' + (c.cls === "is-wait" ? "is-wait" : "is-heard") + '">' + picHtml(p) + '<td class="hi-name">' + (fold(s.name) === fold(s.tag) ? "" : '<div class="hi-sname">' + esc(s.name) + "</div>") +
+-      '<button type="button" class="hi-tag" data-hi-tag="' + esc(s.tag) + '" data-tip="Onto the clipboard">' + esc(s.tag) + '</button><div class="hi-st ' + c.cls + '">' + esc(st) + "</div></td>" +
++      '<button type="button" class="hi-tag" data-hi-tag="' + esc(s.tag) + '" data-tip="into the Style prompt">' + esc(s.tag) + '</button><div class="hi-st ' + c.cls + '">' + esc(st) + "</div></td>" +
+       '<td class="hi-say"><div translate="no">' + esc(s.en) + '</div><div class="hi-ru">' + esc(s.ru) + "</div>" + (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") + "</td>" +
+       '<td class="hi-plays">' + playsHtml(p) + "</td></tr>";
+   }
+@@ -392,7 +392,7 @@
+       // the warning in a line, a legend of four, how the probes were made folded
+       '<p class="hi-warn"><b><span class="warn-ico" role="img" aria-label="Warning"></span>A name in the style is a request, not a promise.</b> What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten: trust the ear, not the name.</p>' +
+       '<ul class="hi-legend">' +
+-      '<li><b>Click a name</b><span>it goes onto the clipboard; a name the Style holds already is marked</span></li>' +
++      '<li><b>Click a name</b><span>it goes onto the clipboard and, where you say, into the Style prompt; a name the Style holds already is marked; a lyrics tag goes onto the clipboard only</span></li>' +
+       '<li><b>▶ A · ▶ B</b><span>its two probes, their seeds under them</span></li>' +
+       '<li><b class="hi-lg-ok">✓ heard</b><span>the ear heard it and kept it; <em class="hi-lg-no">red</em>: not played when named alone</span></li>' +
+       // HERESY 1167 (Viktor: «дисклеймер по картинкам… сгенерированы нейросетью»)
+@@ -414,10 +414,10 @@
+       var t = e.target.closest("[data-hi-tag]"), p = e.target.closest("[data-hi-play]"), a = e.target.closest("[data-hi-art]"), tb = e.target.closest("[data-hi-tab]");
+       if (tb) { state.tab = tb.dataset.hiTab; return paint(); }
+       if (a && window.HeresyArt) return window.HeresyArt.show(a.dataset.hiArt, Array.prototype.map.call($("hiTable").querySelectorAll("[data-hi-art]"), function (b) { return b.dataset.hiArt; }));
+-      // HERESY 1265 (Viktor 09.10.2026: «Только копирование в клипбоард»; «Клик по структурным тегам… ничего не должен делать. Для этого в
+-      // редакторе у нас и есть автодополнение с `[`»): a name goes onto the clipboard and nowhere else; the sheet says so, and says
+-      // when the Style holds it already (the mark stays on it)
+-      if (t) return copyName(t.dataset.hiTag, true);
++      // HERESY 1265 · 1267 (Viktor 09.10.2026: «Клик по структурным тегам… ничего не должен делать. Для этого в редакторе у нас и есть
++      // автодополнение с `[`»; then, of the styles and the instruments: «ты уже сделал автокопирование в буфер и попап диалоговый. Так
++      // пусть и остаётся»): a style's or an instrument's name copied and asked where it goes (1169); a lyrics tag only copied
++      if (t) return chooseInto(t.dataset.hiTag);
+       var lt = e.target.closest("[data-hi-lyr]");
+       if (lt) return copyName(lt.dataset.hiLyr, false);
+       if (p) { var take = state.hooks.findTake(p.dataset.hiPlay); if (take) state.hooks.playNow(take); else state.hooks.toast("The probe is not in the library now", "bad"); }
+-- 
+2.43.0
+

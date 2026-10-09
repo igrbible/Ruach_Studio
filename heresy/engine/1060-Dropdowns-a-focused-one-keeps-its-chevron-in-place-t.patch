@@ -2,7 +2,7 @@ From e4eb8a2026dde2d954c8109d382f7b0eb5b2b5fe Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 23:18:57 -0600
-Subject: [PATCH 1060/1259] Dropdowns: a focused one keeps its chevron in place
+Subject: [PATCH 1060/1265] Dropdowns: a focused one keeps its chevron in place
  (the theme shorthand reset its geometry)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

@@ -2,7 +2,7 @@ From f2851a3f7f3ae172c43082a274c3d4d0ad7a935a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 21:03:44 -0600
-Subject: [PATCH 1057/1259] Train: a wizard for YuE2 LoRAs
+Subject: [PATCH 1057/1265] Train: a wizard for YuE2 LoRAs
 
 1063 (Viktor): a fifth tab walks a LoRA from raw songs to loras/: a folder of
 datasets/raw/ and its tracks (in or out, a style of their own, the lyrics
