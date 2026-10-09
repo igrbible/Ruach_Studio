@@ -1049,7 +1049,7 @@ RuachI18n.add("el", {
 "Its picture: see it whole": "Η εικόνα του: δες την ολόκληρη",
 "On the cards now:": "Στις κάρτες τώρα:",
 "Drag to widen or narrow the workspaces; a double click folds them away": "Σύρε για να φαρδύνεις ή να στενέψεις τους χώρους· διπλό κλικ τους διπλώνει",
-"Fold the workspaces away: the cards take one column more": "Δίπλωσε τους χώρους: οι κάρτες παίρνουν μία στήλη ακόμη",
+"Fold the workspaces away: the cards grow wider": "Δίπλωσε τους χώρους: οι κάρτες γίνονται φαρδύτερες",
 "Show the workspaces": "Εμφάνιση των χώρων",
 "regen": "regen",
 "Regenerated with a new seed from {0}": "Αναγεννήθηκε με νέο σπόρο από το {0}",

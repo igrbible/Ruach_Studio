@@ -17,13 +17,14 @@ YuE2 has **two halves**, and most of what you set in the studio is aimed at one 
 | **Music** (AR, the language model) | writes the song: first a score (ABC notation), then the music tokens, 25 a second | the planning mode, the score, the music seed, the music strength of a LoRA |
 | **Sound** (NAR + VAE) | renders the tokens into sound | the sound seed, the VAE, the sound strength of a LoRA, steps and solver |
 
-### The Five Rooms
+### The Six Rooms
 
 | room | for |
 |---|---|
 | **Creator** | the song form and the take you are listening to |
 | **Writer** | your songs as documents with versions; a chat model drafts and revises with you |
 | **Refiner** | after the render: spectrum, artifacts, debuzz, lyrics check, stems, remaster, upscale |
+| **Artist** | pictures for your songs from a prompt of your own: square, wide and tall from one seed; a square one becomes a take's cover (an early preview) |
 | **Librarian** | every take: workspaces, search, likes, notes, bulk actions, the trash |
 | **LoRA Trainer** | LoRA adapters from your own songs: the set, the run, its telemetry and its epochs |
 
@@ -31,7 +32,7 @@ YuE2 has **two halves**, and most of what you set in the studio is aimed at one 
 
 ![The bar: rooms, the workspace, and the few buttons you use all the time](guide/bar.png)
 
-The rooms open the bar in the order of the work: Creator, Writer, Refiner, the Artist's place (greyed: the room for your songs' pictures comes in a later release) and Librarian; the logo stands in its middle, the Trainer right after it; on the right, the workspace, the engine's lamp (green: ready; amber: working; red: something failed) and the few buttons. The pointer on the lamp (or a click) opens **what runs and what waits**: the songs, the regenerations and the lab's work on the cards (artwork, stems, upscale, Whisper). A waiting one comes off its queue with its ✕, pressed twice (the first press asks); what already runs stops where it is shown: a song in its run, a training in the Trainer.
+The rooms open the bar in the order of the work: Creator, Writer, Refiner, Artist (an early preview: pictures for your songs) and Librarian; the logo stands in its middle, the Trainer right after it; on the right, the workspace, the engine's lamp (green: ready; amber: working; red: something failed) and the few buttons. The pointer on the lamp (or a click) opens **what runs and what waits**: the songs, the regenerations and the lab's work on the cards (artwork, stems, upscale, Whisper). A waiting one comes off its queue with its ✕, pressed twice (the first press asks); what already runs stops where it is shown: a song in its run, a training in the Trainer.
 
 - **Workspace**: the workspace in hand. The takes list shows only it, and every new take lands in it. *All Workspaces* shows everything. Where the bar is narrow (the logo without its words), the word *Workspace* goes too; the box stays.
 - **EN** (the language's two letters): the page in another language, kept with your settings: English, Русский, Українська, Беларуская, Ελληνικά, Español, Italiano, each named in its own words. Numbers and dates follow the language, and this guide opens in it.
@@ -57,6 +58,7 @@ The rooms open the bar in the order of the work: Creator, Writer, Refiner, the A
 ### The Player, the Takes and the Server Log
 
 - **The player** at the bottom: the waveform across, one soft cloud with the part already heard in the accent (a click jumps there); under it the take (its artwork when it has one, its title, the first words of its style, 👍 👎 ★), then **shuffle**, previous, play, next and **repeat** (off · the whole list again · this take again, marked 1), then the time (a click on the total turns it to the time left), *play on click* (a click in a list plays the take at once), *play on* (when a take ends, the next one down the list starts), the **speed** (0.50× to 2.00×, the pitch kept), the volume and a dot for the state (it beats while a take plays). What you do not need this moment stays faint until the pointer comes; every icon says what it does when the pointer rests on it. The pointer over the waveform shows the time a click would jump to. The keyboard's and a headset's media keys drive the player, and the desktop's media panel shows the take. ⏪ and ⏩ go to the last or the next mark every 15 s from 0:00, ← and → to the marks every 5 s (Shift: 30 s). The status pill at the player's right end (green while a take plays, the accent's colour while one is made) opens the take or the run; with Compose lifted over the room it turns the frame to the take's.
+- **Two rows or one**: the player keeps the waveform over its controls where songs are heard and compared (the Creator, the Refiner, the Librarian) and is one row in the Writer, the Artist, the Trainer and the Engine, and in the Creator while a frame is lifted or the lyrics are over everything. After a reload (F5) it comes back with its take and its place. In the Artist the Takes start folded and the server log stands at the left.
 - **The line to the studio** shows beside the server log (*Forge · 85 ms*, or *here* on the same machine). When the studio is far, a like, a favourite or a pin shows at once and the studio only confirms it.
 - **Takes** on the right: search with words, `*` and `?`; *Favourites*; fold the column with »; ⋯ for the list's own actions.
 - **The server log** sits right above the player in every room: folded, it shows the last thing the engine said (in red when something failed); unfolded, ten lines, *Follow*, *Copy*, and the way to the whole log in Engine. With a frame lifted over the room it stands at the left, off the frame's buttons.
@@ -244,6 +246,32 @@ The **chain** runs several steps in one go: *Debuzz → Upscale → Stems → Re
 6. **Remaster**: mix the stems or take the take; clean, de-ess, optionally retune 440 → 432 Hz, loudness (LUFS) and true peak. Each run is a new branch. The preset and the de-esser work on stems before they are mixed: with the take or any single file as the source they are off, and in the chain they work when it splits stems.
 7. **Upscale**: UniverSR draws the top of the spectrum anew; the original stays sample for sample below the cutoff. On a remaster (the chain's last step) the whole file is turned down if the new top passes the remaster's true-peak ceiling.
 
+## Artist
+
+*An early preview: what is here works, and the rest of the room comes in the releases after.*
+
+### Pictures for Your Songs
+
+Write what you see for the song, in sentences: Krea 2 Muse reads a prompt as a description, not as a list of tags. Put what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph), and end with *no text* when you want no letters in it. **From the take** puts in the prompt the take in hand got its artwork from, or one made of its title and style, to start from.
+
+**Shapes**: **1:1** (1280 × 1280) for the cover, **16:9** (1920 × 1080) for a video, **9:16** (1080 × 1920) for a short. The shapes of one press share their seed, so they come out as one series: the same scene in the same colours, each composed for its own frame rather than one picture cut three ways. **Variations** draws the next seeds too (the seed, the seed + 1, …), each in every shape. **Seed**: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed, and **To the form** brings it back with the prompt).
+
+**Painter**: Krea 2 Muse by Stable Yogi, **Q4** on a card with 12.5 GB free, **Q8** (finer) with 18.5 GB. A picture takes about 35 s at 1:1 and 47 s at 16:9 or 9:16 on an RTX 3090, and loading the painter about 25 s more a press. A press waits in the lab's queue for a card with room, as the artwork and the stems do; while it waits, **Off the queue** takes it back. Every picture passes the content filter the painter's licence asks for: one it flags is not kept, and the run says so.
+
+**Live preview** (on by default): the place of the picture being painted shows each of its steps, from the noise to the picture, an eighth of its size and seen without the decoder, so it costs nothing; off, the place waits for the finished picture.
+
+### A Cover for the Take
+
+A click on a picture opens it over the page in its own shape (← → walk the run, Esc closes), with **Download** (PNG, full size). A square picture has **Set as cover**: it becomes the cover of the take in hand (pick one on the right), in its card, in the player and in its MP3. The cover it had is kept beside the take (`artwork-removed/`), as a redraw keeps it, and the other letter of an A/B pair gets the new one too when it has none.
+
+The runs stay in the studio's `artist/` folder, the newest on top. **Again** draws a run once more from a new seed; **Trash** moves it to `trash/artist/`, from where it comes back when you move its folder back into `artist/`.
+
+**Runs or Gallery**: the runs show each press of Draw with its prompt and seed; the gallery shows every picture of every run in one grid, the newest first, by shape (1:1, 16:9, 9:16) or starred (☆ on a picture stars it), in three sizes. A picture opened from the gallery walks the whole gallery, with ★, To the form (its prompt, seed and shape), Set as cover and Download.
+
+### Coming to the Artist
+
+A reference picture to start from; repainting a part of a picture, and growing it past its edges, on a canvas; several LoRA adapters at once; an upscale; Qwen Image as a second painter; the title and the artist written on the cover.
+
 ## Librarian
 
 ### Every Take
@@ -255,7 +283,7 @@ The **chain** runs several steps in one go: *Debuzz → Upscale → Stems → Re
 - **Search** with words, `*` and `?`; **sort** newest, oldest, by title, longest; **Tiles** or **List**: all three in the heading line, beside the counts.
 - **A card** wears its take's artwork in its top right corner, beside the title, when it has one (*Draw artwork* in the take's menu); a click shows the picture whole over the studio, where ‹ › and the arrow keys walk the pictures of the cards shown, ▶ plays its take and Esc closes. The card that plays glows with the song's own peaks.
 - **Fresh takes**: a take you have not played yet wears a light dashed line; its first play takes it off. A regenerated take carries a *regen* badge and keeps its note, like and star.
-- **The workspaces column**: drag its edge to widen or narrow it; « folds it away, and the cards take one column more.
+- **The workspaces column**: drag its edge to widen or narrow it; « folds it away, and the cards grow wider: their columns stay, so the eye keeps its place.
 - **Sections**: a workspace can hold sections, two levels deep at most (⋯ beside its name → *New section…*), to sort what is in it without a new workspace each time. A workspace shows its sections' takes too. Whatever the Refiner makes something of goes by itself into the section *Refined* of its workspaces.
 - **Drag a card onto a workspace** on the left to move it there (all the checked ones, when it is checked); hold **Ctrl** to add it there and keep it here too. The studio asks first, and Ctrl+Z gives it back.
 - **Pinned takes**: up to four in each workspace, in a strip of their own tone above the cards (right-click a take → *Pin here*; × unpins). When you check takes, the bar of the checked takes the strip's place, so the cards never move. That bar is a row of framed icons: the choice, the marks, the workspaces, the export, and the trash at its end; each says itself on hover.
@@ -269,7 +297,7 @@ The **chain** runs several steps in one go: *Debuzz → Upscale → Stems → Re
 
 **Regenerate with a new seed** (above the Writer in the take's menu): the take made again from everything it was made with, but new seeds; the new one takes the old one's workspaces and note, and the old one waits in the section *Sourced for Regeneration* of its workspace (its workspace does not show it among its own) until you empty it; the new one keeps its note, like, star and picture. A probe comes out its full two minutes. Play, open in the Creator or in the Refiner, the sheet (its score), the datasheet (all it was made with: the style and the lyrics, the score drawn, every knob, the LoRAs and sliders with their strengths; a Direct take has no score, and *Write it from the sound* asks the transcriber for one), like, dislike, favourite, a note, rename, **workspaces** (one take can sit in several), **move to** one workspace (on a checked card: every checked take, out of the workspace open), hide, send to the Writer, copy, download, **export to DAW** (REAPER project or DAWproject, on any take: with its stems once the Refiner has split them), the trash. **On a checked card, with others checked**, the menu acts on all of them, and its head says how many: like, dislike, favourite, artwork, the artwork taken off, workspaces, hide, a ZIP; drawing artwork for several and regenerating several ask first, as they cost a card's minutes.
 
-**Draw artwork**: a small language model (Qwen3-4B) reads the take's style and words and writes one picture prompt; an SDXL model (CyberRealistic XL) paints it, 768 px, in about half a minute on a 16 GB card. It shows in the player, on the card, in the desktop's media panel, and inside the MP3 you download (as its front cover). Once a take has its picture, the menu says *Open the artwork* (over the page, as a click on the card's picture or on the player's square) and *Redraw artwork* (a new prompt and a new picture; the old one is kept beside the take, in `artwork-removed/`). The two models come with `heresy/fetch-heresy.sh --artwork` (14 GB, asked first).
+**Draw artwork**: a small language model (Qwen3-4B) reads the take's style and words and writes one picture prompt; Krea 2 Muse paints it, 1024 px, in about half a minute on a 16 GB card (on a smaller card SDXL, CyberRealistic XL; *Engine → Artwork* picks the painter). It shows in the player, on the card, in the desktop's media panel, and inside the MP3 you download (as its front cover). Once a take has its picture, the menu says *Open the artwork* (over the page, as a click on the card's picture or on the player's square) and *Redraw artwork* (a new prompt and a new picture; the old one is kept beside the take, in `artwork-removed/`). The two models come with `heresy/fetch-heresy.sh --artwork` (14 GB, asked first).
 
 ### The Instruments under the Style
 
@@ -277,11 +305,11 @@ Under the Style box, the studio names what your prompt asks for: a chip for each
 
 ### Artwork: What Draws It, What It Cannot, Another Painter
 
-**What draws it.** A small language model (Qwen3-4B) reads the take's style and words and writes one picture prompt, its subject first; an SDXL model paints it (1024 px, kept at 768). When the take is named for an instrument (an instrument's probe), the studio tells both how the instrument looks and where it is at home, and Omni (the listener's model) looks at the picture: when it does not find the instrument, it writes the prompt again from what it saw, and the painter tries once more, three pictures at most. About half a minute a picture on a 16 GB card.
+**What draws it.** A small language model (Qwen3-4B) reads the take's style and words and writes one picture prompt, its subject first; Krea 2 Muse paints it (1024 px), or SDXL where Krea does not fit (*Engine → Artwork*). When the take is named for an instrument (an instrument's probe), the studio tells both how the instrument looks and where it is at home, and Omni (the listener's model) looks at the picture: when it does not find the instrument, it writes the prompt again from what it saw, and the painter tries once more, three pictures at most. About half a minute a picture on a 16 GB card.
 
 **What it cannot** (a disclaimer, said plainly): the painter draws what it knows. An instrument it has never seen by name (the duduk, the morin khuur, the khomus, crystal singing bowls…) comes out as a guess: a wooden pipe, a violin, kitchen bowls. Where Omni found the instrument in none of the three pictures, the picture is marked **≈ a guess**, in the overlay and in the instruments' cheat-sheet. An artwork is the take's mood, not a reference picture of an instrument: to know how an instrument looks, look it up.
 
-**Pro tip: another painter.** The studio paints with whatever SDXL the link `artwork/SDXL-Artwork-Model` points at; ours is `CyberRealistic-XL-v10`. Put another SDXL finetune beside it, as a diffusers folder or as one `.safetensors` file (as Civitai gives them), and point the link at it, relative:
+**Pro tip: another painter.** When the painter is SDXL (chosen in *Engine → Artwork*, or on a card under 16 GB), it is whatever SDXL the link `artwork/SDXL-Artwork-Model` points at; ours is `CyberRealistic-XL-v10`. Put another SDXL finetune beside it, as a diffusers folder or as one `.safetensors` file (as Civitai gives them), and point the link at it, relative:
 
 ```bash
 cd artwork && ln -sfn MyFavourite-XL.safetensors SDXL-Artwork-Model
@@ -652,7 +680,7 @@ How the studio's promo got its sound: a narrator saying the promo's lines over a
 | **←** **→** (with **Shift**: 30 s) | anywhere but a text field or a menu | 5 seconds back or on |
 | **M** | anywhere but a text field | sound off and on |
 | the media keys | the keyboard, a headset, the desktop's media panel | play, pause, previous, next |
-| **Ctrl+Alt+1** … **9** | anywhere | **1** Creator, **2** Writer, **3** Refiner, **5** Librarian, **7** Trainer, **8** out to your DAW, **9** the Engine; **4** is kept for the Artist room, **6** for a room to come (Ctrl+1…9 are the browser's own tabs) |
+| **Ctrl+Alt+1** … **9** | anywhere | **1** Creator, **2** Writer, **3** Refiner, **4** Artist, **5** Librarian, **7** Trainer, **8** out to your DAW, **9** the Engine; **6** is kept for a room to come (Ctrl+1…9 are the browser's own tabs) |
 | **Esc** | anywhere | closes what is open: a menu, a dialog, the guide, a full-screen view, the Engine room |
 | **F1** (or **Shift+F1**) | anywhere | this guide, on the room you are in; again to close it (the browser's own help does not come) |
 | **Shift+Tab** | the Creator | the frames' key, not the fields' way back: a frame lifted turns to the other, none lifted lifts the form's (Compose); a dialog, a menu and the find bar keep their own Shift+Tab |

@@ -1050,7 +1050,7 @@ RuachI18n.add("be", {
 "Its picture: see it whole": "Малюнак: паглядзець цалкам",
 "On the cards now:": "Зараз на картах:",
 "Drag to widen or narrow the workspaces; a double click folds them away": "Цягні, каб пашырыць або звузіць калонку прастор; падвойны пстрык згортвае яе",
-"Fold the workspaces away: the cards take one column more": "Згарнуць прасторы: карткам дадасца калонка",
+"Fold the workspaces away: the cards grow wider": "Згарнуць прасторы: карткі стануць шырэйшымі",
 "Show the workspaces": "Паказаць прасторы",
 "regen": "рэджэн",
 "Regenerated with a new seed from {0}": "Перагенераваны з новым зернем з {0}",

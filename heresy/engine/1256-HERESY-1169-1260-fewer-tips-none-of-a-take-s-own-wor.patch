@@ -1,0 +1,305 @@
+From 395e356ed543ed2259bd6d6c3c2e21d29eefe00e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 11:11:38 -0600
+Subject: [PATCH 1256/1259] =?UTF-8?q?HERESY=201169=20=C2=B7=201260:=20fewe?=
+ =?UTF-8?q?r=20tips=20(none=20of=20a=20take's=20own=20words,=20a=20button'?=
+ =?UTF-8?q?s=20own=20label=20or=20a=20sign=20everyone=20reads),=20the=20fo?=
+ =?UTF-8?q?lded=20workspaces=20leave=20the=20tiles=20their=20columns=20(th?=
+ =?UTF-8?q?e=20cards=20grow=20wider),=20the=20day=20wash=20over=20the=20ca?=
+ =?UTF-8?q?rds=20at=20half=20its=20strength?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 18 ++++++++----------
+ tools/console/app.js               | 12 +++++-------
+ tools/console/heresy-collection.js | 16 ++++++++--------
+ tools/console/heresy-i18n-be.js    |  2 +-
+ tools/console/heresy-i18n-el.js    |  2 +-
+ tools/console/heresy-i18n-es.js    |  2 +-
+ tools/console/heresy-i18n-it.js    |  2 +-
+ tools/console/heresy-i18n-ru.js    |  2 +-
+ tools/console/heresy-i18n-uk.js    |  2 +-
+ tools/console/heresy-presets.js    |  2 +-
+ tools/console/index.html           |  8 ++++----
+ tools/console/vaes.js              |  2 +-
+ 12 files changed, 33 insertions(+), 37 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 74c1a0b..366f48f 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2285,7 +2285,7 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .lib-search { padding: 0 12px 8px; }
+ .lib-search input { width: 100%; }
+ @media (max-width: 900px) { .coll-layout { grid-template-columns: 1fr; } .coll-side { position: static; flex-direction: row; flex-wrap: wrap; } }
+-/* HERESY 1162: the workspaces column, its width by its edge, folded away by «; the tiles one column more while it is folded */
++/* HERESY 1162: the workspaces column, its width by its edge, folded away by «; folded, the tiles grow wider (1260) */
+ /* HERESY 1166 (Viktor: «Сделай отступ от кнопочки сворачивания, чтобы не наслаивалось впритык MADE»): the edge as wide as its
+    « (20 px; it was 12, so the button sat on the filters) and a gap beside it */
+ .coll-layout { grid-template-columns: var(--coll-side-w, 210px) 22px minmax(0, 1fr); gap: 4px 10px; }
+@@ -2299,11 +2299,8 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
+ .coll-layout.is-folded { grid-template-columns: 0 22px minmax(0, 1fr); column-gap: 6px; }
+ .coll-layout.is-folded .coll-side { visibility: hidden; overflow: hidden; }
+ .coll-layout.is-folded .coll-resizer { cursor: default; }
+-.coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+-@media (max-width: 1400px) { .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+-@media (max-width: 1050px) { .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+-@media (min-width: 2880px) { .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+-@media (min-width: 3360px) { .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
++/* HERESY 1260 (Viktor 09.10.2026: «Пусть лучше растягиваются карточки, чем добавляется ещё одна колонка»): folded, the
++   tiles keep the columns they had, only wider; the eye keeps its place in the tiling (1162 and 1167 gave one more) */
+ @media (max-width: 900px) { .coll-layout, .coll-layout.is-folded { grid-template-columns: 1fr; } .coll-resizer { display: none; }
+   .coll-layout.is-folded .coll-side { visibility: visible; } }
+ .coll-bar[hidden], .coll-bulk[hidden] { display: none; }
+@@ -3856,8 +3853,7 @@ body[data-frame="compose"] .k-plan #setupLibRow { flex-wrap: wrap; }
+    больше воздуха для карточек»): from 1401 to 2199 px three tiles a row, four with the workspaces folded; 2K keeps its
+    four and five, and the steps past it stay */
+ @media (min-width: 1401px) and (max-width: 2199px) {
+-  .coll-grid.tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+-  .coll-layout.is-folded .coll-grid.tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
++  .coll-grid.tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+ /* HERESY 1167 (Viktor: «в пометках regen сделай тоньше обводку и радиус углов мелкий 2px»): the regen badge's dashed edge was
+    the browser's medium (3 px: no width was given) on a pill */
+ .coll-badge.rg { border: 1px dashed currentColor; border-radius: 2px; padding: 0 6px; }
+@@ -4117,9 +4113,11 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ /* HERESY 1167 (Viktor: «Карточки у библиотекаря до сих пор слишком красные. Возьми начальный #f2edef и в градиенте дневной темы
+    доводи его в правый низ… до нулевой альфы»): by day the card's wash from #f2edef in its top left to nothing at its bottom
+    right; a little deeper when hovered, held or checked */
+-:root[data-tone="light"] .coll-card { background: linear-gradient(to bottom right, #f2edef, rgb(242 237 239 / 0)), var(--panel); }
++/* HERESY 1260 (Viktor 09.10.2026: «Ещё слабее сделай цветовой альфа канал градиента… Пусть будет слегка видим цветовой подсвет»):
++   the wash starts at half its strength; hovered or held, at four fifths; checked as it was */
++:root[data-tone="light"] .coll-card { background: linear-gradient(to bottom right, rgb(242 237 239 / .5), rgb(242 237 239 / 0)), var(--panel); }
+ :root[data-tone="light"] .coll-card:hover,
+-:root[data-tone="light"] .coll-card.is-current { background: linear-gradient(to bottom right, #ebe3e6, rgb(235 227 230 / 0)), var(--panel); }
++:root[data-tone="light"] .coll-card.is-current { background: linear-gradient(to bottom right, rgb(235 227 230 / .8), rgb(235 227 230 / 0)), var(--panel); }
+ :root[data-tone="light"] .coll-card.is-sel { background: linear-gradient(to bottom right, #e5d9dd, rgb(229 217 221 / 0)), var(--panel); }
+ /* HERESY 1167 (Viktor: «Дизайн аудио шпаргалки пересмотри… Увеличь тексты в ней на 2pt, и растяни на макс 1800px»): the sheet up
+    to 1800 px; every text 2 pt larger; the head a warning line, a legend of four, the rest folded */
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 4882208..459cd04 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3460,7 +3460,7 @@
+         var gone = !!QP.gone[r.key], armed = QP.armed === r.key;
+         return '<li class="q-row' + (r.run ? " is-run" : " is-wait") + (gone ? " is-gone" : "") + '" data-q="' + escape(r.key) + '">' +
+           '<span class="q-dot" aria-hidden="true"></span><span class="q-what">' + escape(r.what) + "</span>" +
+-          '<span class="q-name" translate="no" title="' + escape(r.name) + '">' + escape(r.name) + '</span><span class="q-state"></span>' +
++          '<span class="q-name" translate="no">' + escape(r.name) + '</span><span class="q-state"></span>' +
+           (r.run || gone ? "<span></span>" : '<button type="button" class="q-off' + (armed ? " is-armed" : "") + '" data-q-off="' + escape(r.key) + '" aria-label="' +
+             (armed ? "Press again to take it off" : "Take it off the queue") + '">' + (armed ? "Take it off?" : "\u2715") + "</button>") + "</li>";
+       }).join("") : '<li class="q-empty">Nothing runs and nothing waits.</li>';
+@@ -4074,7 +4074,7 @@
+         '<button type="button" class="btn ghost small icon-act" id="dislikeTake" data-rate="-1" aria-pressed="' + (rated < 0) + '" aria-label="Dislike" data-tip="Dislike">' +
+         (IC ? IC.ui("dislike") : "👎") + "</button>" : "") +
+       '<button type="button" class="btn ghost small icon-act' + (take.favorite ? " is-on" : "") + '" id="favTake" aria-pressed="' +
+-      (take.favorite ? "true" : "false") + '" aria-label="Favourite" data-tip="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '">' +
++      (take.favorite ? "true" : "false") + '" aria-label="Favourite">' +
+       (window.HeresyIcons ? window.HeresyIcons.ui("star") : take.favorite ? "★" : "☆") + "</button>" +   // HERESY 1169: drawn, as Compose's
+       // HERESY 1167 (Viktor: «Жму на мигалку, открывает в Творце "медицинскую карту". А как обратно из неё перейти в
+       // Библиотеку на этот же трек?»): the Librarian with this take in sight, flashed
+@@ -4765,7 +4765,6 @@
+     $("playbar").classList.add("is-empty");
+     $("playbarTitle").textContent = "Nothing loaded";
+     $("playbarTitle").setAttribute("translate", "yes");
+-    $("playbarTitle").dataset.tip = "Pick a take on the right";
+     paintCover(null);
+     $("timeNow").textContent = "0:00";
+     $("timeTotal").textContent = "0:00";
+@@ -4901,11 +4900,10 @@
+       }
+     }
+     $("playbar").classList.remove("is-empty");
+-    // just the name; its style prompt on hover (downloads are on the song page)
++    // just the name (HERESY 1260, Viktor 09.10.2026, of the style on hover: «Это лишнее. И так всё под рукой»)
+     $("playbarTitle").textContent = displayTitle(take);
+     $("playbarTitle").setAttribute("translate", "no");
+     paintRate();   // HERESY 1042
+-    if (take.style) $("playbarTitle").dataset.tip = take.style; else $("playbarTitle").removeAttribute("data-tip");
+     paintCover(take);                                       // HERESY 1106: the subtitle and the cover tile
+     paintMp3();
+     $("timeTotal").textContent = clock(take.seconds);
+@@ -5825,9 +5823,9 @@
+       return '<article class="take' + active + (extras ? " has-rate" : "") + (take.favorite ? " is-fav" : "") + (HC && HC.isHidden(take.name) ? " is-hidden-take" : "") + (HC && HC.isFresh && HC.isFresh(take.name) ? " is-fresh" : "") +
+         (window.HeresyRegen && window.HeresyRegen.has(take.name) ? " is-regenerating" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
+         (extras ? "" : '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
+-        '" title="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>") +
++        '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>") +
+         '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>' +
+-        (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '" title="Load into the Refiner">Refine</button>') +
++        (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '">Refine</button>') +
+         '<a class="take-dl" data-dl="1" href="' + escape(downloadUrl(take)) + '" download="' + escape(audioFileName(take)) +
+         '" title="Download ' + formatExt(take.format).toUpperCase() + '" aria-label="Download">⤓</a>' +
+         (!convertible(take) ? "" : '<a class="take-mp3" data-dl="1" href="' + escape(mp3Url(take)) + '" download="' + escape(fileTitle(take)) +
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 85971fd..efd5bd7 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -238,10 +238,10 @@
+     if (!r) return "";
+     return '<div class="take-extra"><span class="coll-badges">' + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+       r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</span>" +
+-      '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + "</button>" +
+-      '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + "</button>" +
++      '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + "</button>" +
++      '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + "</button>" +
+       // HERESY 1167 (Viktor: «У Творца во фрейме Takes… И нет звёздочки»): the favourite beside them, as on the Librarian's cards
+-      '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" title="Favourite">' + ico("star") + "</button>" +
++      '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" aria-label="Favourite">' + ico("star") + "</button>" +
+       (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
+   }
+   function favOf(name, r) { var t = state.hooks && state.hooks.findTake ? state.hooks.findTake(name) : null; return t ? !!t.favorite : !!r.favorite; }
+@@ -336,10 +336,10 @@
+         // HERESY 1155 (Viktor: «Не уходим из студии в другие окна и вкладки, если не нужно»): the whole picture over the page
+         (art ? '<button type="button" class="coll-art" data-art="' + esc(r.name) + '" style="background-image:url(&quot;' + esc(art) + '&quot;)" data-tip="The artwork: see it whole" aria-label="The artwork"></button>' : "") +
+         // HERESY 1048: like, dislike, favourite, Post and the menu, on the card itself
+-        '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + '</button>' +
+-        '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + '</button>' +
+-        '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" title="Favourite">' + ico("star") + "</button>" +
+-        '<button type="button" class="coll-act post" data-cgo="post" title="Load into the Refiner">Refine</button>' +
++        '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + '</button>' +
++        '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + '</button>' +
++        '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" aria-label="Favourite">' + ico("star") + "</button>" +
++        '<button type="button" class="coll-act post" data-cgo="post">Refine</button>' +
+         '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' +
+         // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height
+         (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" aria-label="Has a note">' + ico("note") + "</button>"
+@@ -1119,7 +1119,7 @@
+         lay.classList.toggle("is-folded", on);
+         store(F_KEY, on ? "1" : "0");
+         fb.textContent = on ? "\u00bb" : "\u00ab";
+-        fb.dataset.tip = on ? "Show the workspaces" : "Fold the workspaces away: the cards take one column more";
++        fb.dataset.tip = on ? "Show the workspaces" : "Fold the workspaces away: the cards grow wider";
+         fb.setAttribute("aria-label", fb.dataset.tip);
+         rz.setAttribute("aria-valuenow", on ? "0" : String(Math.round($("collSide").getBoundingClientRect().width)));
+         fitSideSoon();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 0e3f5c9..b0c76d2 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1050,7 +1050,7 @@ RuachI18n.add("be", {
+ "Its picture: see it whole": "Малюнак: паглядзець цалкам",
+ "On the cards now:": "Зараз на картах:",
+ "Drag to widen or narrow the workspaces; a double click folds them away": "Цягні, каб пашырыць або звузіць калонку прастор; падвойны пстрык згортвае яе",
+-"Fold the workspaces away: the cards take one column more": "Згарнуць прасторы: карткам дадасца калонка",
++"Fold the workspaces away: the cards grow wider": "Згарнуць прасторы: карткі стануць шырэйшымі",
+ "Show the workspaces": "Паказаць прасторы",
+ "regen": "рэджэн",
+ "Regenerated with a new seed from {0}": "Перагенераваны з новым зернем з {0}",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 462da73..a316c9d 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1049,7 +1049,7 @@ RuachI18n.add("el", {
+ "Its picture: see it whole": "Η εικόνα του: δες την ολόκληρη",
+ "On the cards now:": "Στις κάρτες τώρα:",
+ "Drag to widen or narrow the workspaces; a double click folds them away": "Σύρε για να φαρδύνεις ή να στενέψεις τους χώρους· διπλό κλικ τους διπλώνει",
+-"Fold the workspaces away: the cards take one column more": "Δίπλωσε τους χώρους: οι κάρτες παίρνουν μία στήλη ακόμη",
++"Fold the workspaces away: the cards grow wider": "Δίπλωσε τους χώρους: οι κάρτες γίνονται φαρδύτερες",
+ "Show the workspaces": "Εμφάνιση των χώρων",
+ "regen": "regen",
+ "Regenerated with a new seed from {0}": "Αναγεννήθηκε με νέο σπόρο από το {0}",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index cec3054..9cfb928 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1049,7 +1049,7 @@ RuachI18n.add("es", {
+ "Its picture: see it whole": "Su imagen: verla entera",
+ "On the cards now:": "Ahora en las tarjetas:",
+ "Drag to widen or narrow the workspaces; a double click folds them away": "Arrastra para ensanchar o estrechar los espacios; un doble clic los pliega",
+-"Fold the workspaces away: the cards take one column more": "Plegar los espacios: las tarjetas ganan una columna",
++"Fold the workspaces away: the cards grow wider": "Plegar los espacios: las tarjetas se ensanchan",
+ "Show the workspaces": "Mostrar los espacios",
+ "regen": "regen",
+ "Regenerated with a new seed from {0}": "Regenerada con una semilla nueva a partir de {0}",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index e3a6d14..ac04d38 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1049,7 +1049,7 @@ RuachI18n.add("it", {
+ "Its picture: see it whole": "La sua immagine: vedila intera",
+ "On the cards now:": "Ora sulle schede:",
+ "Drag to widen or narrow the workspaces; a double click folds them away": "Trascina per allargare o restringere gli spazi; un doppio clic li comprime",
+-"Fold the workspaces away: the cards take one column more": "Comprimi gli spazi: le schede guadagnano una colonna",
++"Fold the workspaces away: the cards grow wider": "Comprimi gli spazi: le schede si allargano",
+ "Show the workspaces": "Mostra gli spazi",
+ "regen": "regen",
+ "Regenerated with a new seed from {0}": "Rigenerato con un nuovo seme da {0}",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index fea6ddc..9f16e5c 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1050,7 +1050,7 @@ RuachI18n.add("ru", {
+ "Its picture: see it whole": "Картинка: посмотреть целиком",
+ "On the cards now:": "Сейчас на картах:",
+ "Drag to widen or narrow the workspaces; a double click folds them away": "Тяни, чтобы расширить или сузить колонку пространств; двойной щелчок сворачивает её",
+-"Fold the workspaces away: the cards take one column more": "Свернуть пространства: карточкам прибавится колонка",
++"Fold the workspaces away: the cards grow wider": "Свернуть пространства: карточки станут шире",
+ "Show the workspaces": "Показать пространства",
+ "regen": "реджен",
+ "Regenerated with a new seed from {0}": "Перегенерирован с новым зерном из {0}",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index fdaef6e..bfddd7b 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1050,7 +1050,7 @@ RuachI18n.add("uk", {
+ "Its picture: see it whole": "Картинка: подивитися цілком",
+ "On the cards now:": "Зараз на картах:",
+ "Drag to widen or narrow the workspaces; a double click folds them away": "Тягни, щоб розширити або звузити колонку просторів; подвійне клацання згортає її",
+-"Fold the workspaces away: the cards take one column more": "Згорнути простори: карткам додасться колонка",
++"Fold the workspaces away: the cards grow wider": "Згорнути простори: картки стануть ширшими",
+ "Show the workspaces": "Показати простори",
+ "regen": "реджен",
+ "Regenerated with a new seed from {0}": "Перегенеровано з новим зерном із {0}",
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+index 8869d3a..ffb2155 100644
+--- a/tools/console/heresy-presets.js
++++ b/tools/console/heresy-presets.js
+@@ -47,7 +47,7 @@
+   function paint() {
+     var keepS = $("styleLib").value, keepP = $("setupLib").value;
+     $("styleLib").innerHTML = '<option value="">' + (state.styles.length ? "Saved styles…" : "No saved styles yet") + "</option>" +
+-      state.styles.map(function (s) { return '<option value="' + esc(s.name) + '" title="' + esc(s.text.slice(0, 300)) + '">' + esc(s.name) + "</option>"; }).join("");
++      state.styles.map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + "</option>"; }).join("");
+     $("styleLib").value = state.styles.some(function (s) { return s.name === keepS; }) ? keepS : "";
+     $("styleDel").disabled = !$("styleLib").value;
+     $("setupLib").innerHTML = '<optgroup label="built in">' + BUILT_IN.map(function (p, i) { return '<option value="b' + i + '">' + esc(p.name) + "</option>"; }).join("") +
+diff --git a/tools/console/index.html b/tools/console/index.html
+index bcc8f8e..115c354 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1948,11 +1948,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <div class="pb-row">
+   <div class="playbar-id">
+     <div class="pb-cover" id="pbCover" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+-    <div class="pb-names"><strong id="playbarTitle" data-tip="Pick a take on the right">Nothing loaded</strong><span class="pb-sub" id="playbarSub"></span></div>
++    <div class="pb-names"><strong id="playbarTitle">Nothing loaded</strong><span class="pb-sub" id="playbarSub"></span></div>
+     <span class="pb-rate" id="pbRate" hidden>
+-      <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-tip="Like" data-ui="like">👍</button>
+-      <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-tip="Dislike" data-ui="dislike">👎</button>
+-      <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-tip="Keep as a favourite" data-ui="star">☆</button>
++      <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-ui="like">👍</button>
++      <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-ui="dislike">👎</button>
++      <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-ui="star">☆</button>
+     </span>
+   </div>
+   <div class="pb-ctrl">
+diff --git a/tools/console/vaes.js b/tools/console/vaes.js
+index 34ab030..0adbfad 100644
+--- a/tools/console/vaes.js
++++ b/tools/console/vaes.js
+@@ -62,7 +62,7 @@
+       var where = url
+         ? '<a class="tile-link" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer" data-tip="' +
+           escape(tr("Open its model card (new tab): " + url)) + '"><span translate="no">' + escape(v.repo || url) + "</span>\u2197</a>"
+-        : '<span class="tile-repo" translate="no" data-tip="' + escape(v.repo || v.name) + '">' + escape(v.repo || v.name) + "</span>";
++        : '<span class="tile-repo" translate="no">' + escape(v.repo || v.name) + "</span>";
+       var meta = [NOTES[v.name] || "", v.name === S.def ? "engine default" : "", ok ? "" : "not downloaded"].filter(Boolean)
+         .map(function (m) { return "<span>" + escape(m) + "</span>"; }).join(" · ");   // HERESY 1165: each its own text
+       return '<li class="lora-item vae-item' + (picked ? " is-on" : "") + (kind === "add-on" ? " is-addon" : "") + (ok ? "" : " is-bad") +
+-- 
+2.43.0
+

@@ -47,7 +47,7 @@
   function paint() {
     var keepS = $("styleLib").value, keepP = $("setupLib").value;
     $("styleLib").innerHTML = '<option value="">' + (state.styles.length ? "Saved styles…" : "No saved styles yet") + "</option>" +
-      state.styles.map(function (s) { return '<option value="' + esc(s.name) + '" title="' + esc(s.text.slice(0, 300)) + '">' + esc(s.name) + "</option>"; }).join("");
+      state.styles.map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + "</option>"; }).join("");
     $("styleLib").value = state.styles.some(function (s) { return s.name === keepS; }) ? keepS : "";
     $("styleDel").disabled = !$("styleLib").value;
     $("setupLib").innerHTML = '<optgroup label="built in">' + BUILT_IN.map(function (p, i) { return '<option value="b' + i + '">' + esc(p.name) + "</option>"; }).join("") +

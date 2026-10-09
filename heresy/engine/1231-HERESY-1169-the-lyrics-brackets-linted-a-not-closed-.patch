@@ -2,7 +2,7 @@ From f971e3a9cf267490db230a0eb335c293eac0ba89 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 8 Oct 2026 01:54:01 -0600
-Subject: [PATCH 1231/1252] =?UTF-8?q?HERESY=201169:=20the=20lyrics'=20brac?=
+Subject: [PATCH 1231/1259] =?UTF-8?q?HERESY=201169:=20the=20lyrics'=20brac?=
  =?UTF-8?q?kets=20linted=20(a=20=C2=AB[=C2=BB=20not=20closed,=20a=20=C2=AB?=
  =?UTF-8?q?]=C2=BB=20astray,=20a=20tag=20in=20a=20tag,=20an=20empty=20tag:?=
  =?UTF-8?q?=20red;=20round=20brackets=20astray:=20amber)=20and=20Generate?=

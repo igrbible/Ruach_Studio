@@ -350,7 +350,7 @@ check("  the takes folded are a strip at the right edge, its word on its side, a
   kFolded.libW <= 44 && kFolded.right && Math.abs(kFolded.take - kFolded.room) <= 2 && /vertical/.test(kFolded.sideways), JSON.stringify(kFolded));
 const kPlayer = await ev(`(() => { const p = document.getElementById("playbar").getBoundingClientRect(), w = document.getElementById("wave").getBoundingClientRect(),
   c = document.querySelector("#playbar .pb-ctrl").getBoundingClientRect(); return { h: Math.round(p.height), oneRow: Math.abs((w.top + w.bottom) / 2 - (c.top + c.bottom) / 2) < 8 }; })()`);
-check("  the player is one row in the Creator (the waveform beside the transport)", kPlayer.h <= 72 && kPlayer.oneRow, JSON.stringify(kPlayer));
+check("  the player has its two rows in the Creator, the waveform over the transport (HERESY 1258: one row in the rooms without sound and over a lifted frame)", kPlayer.h > 72 && !kPlayer.oneRow, JSON.stringify(kPlayer));
 await click("#libUnfold");
 await sleep(250);
 const kCards = await ev(`[...document.querySelectorAll("#libList .take[data-name]")].slice(0, 5).map(c => Math.round(c.getBoundingClientRect().height))`);
@@ -958,12 +958,10 @@ const roomKey = async (d) => {
   await sleep(350);
   return ev(`(document.getElementById("view-engine").classList.contains("is-hidden") ? "" : "engine:") + document.body.dataset.tab`);
 };
-const rooms = { two: await roomKey(2), three: await roomKey(3), five: await roomKey(5), seven: await roomKey(7), nine: await roomKey(9), one: await roomKey(1) };
-rooms.four = await ev(`(() => { const e = new KeyboardEvent("keydown", { key: "4", code: "Digit4", ctrlKey: true, altKey: true, bubbles: true, cancelable: true }); window.dispatchEvent(e);
-  return { prevented: e.defaultPrevented, tab: document.body.dataset.tab, said: /Artist room/.test([...document.querySelectorAll(".toast")].map(t => t.textContent).join(" ")) }; })()`);
-check("Ctrl+Alt+1…9 by Viktor's plan: 1 Creator, 2 Writer, 3 Refiner, 5 Librarian, 7 Trainer, 9 the Engine; 4 kept for the Artist room (it says so), the room stays",
-  rooms.two === "write" && rooms.three === "post" && rooms.five === "collection" && rooms.seven === "train" && rooms.nine.startsWith("engine:") && rooms.one === "create" &&
-  rooms.four.prevented && rooms.four.tab === "create" && rooms.four.said, JSON.stringify(rooms));
+const rooms = { two: await roomKey(2), three: await roomKey(3), four: await roomKey(4), five: await roomKey(5), seven: await roomKey(7), nine: await roomKey(9), one: await roomKey(1) };
+check("Ctrl+Alt+1…9 by Viktor's plan: 1 Creator, 2 Writer, 3 Refiner, 4 the Artist (its room open since 1255), 5 Librarian, 7 Trainer, 9 the Engine",
+  rooms.two === "write" && rooms.three === "post" && rooms.four === "artist" && rooms.five === "collection" && rooms.seven === "train" && rooms.nine.startsWith("engine:") &&
+  rooms.one === "create", JSON.stringify(rooms));
 
 
 // HERESY 1169 (Viktor 07.10.2026: «Творец → Писатель → Огранщик → (Художник) → Библиотекарь ЛОГО Trainer»; «нереализованные
@@ -976,7 +974,7 @@ const barNow = () => ev(`(() => {
   const r = (e) => e.getBoundingClientRect(), logo = document.querySelector(".topbar .brand"), side = document.getElementById("tabsSide"), tabs = document.getElementById("tabs");
   const art = document.getElementById("tabArtist"), ws = document.querySelector(".topbar .ws-current"), daw = document.getElementById("dawOpen");
   return { rooms: [...tabs.querySelectorAll("button")].map(b => b.textContent.trim()).join("|"), side: [...side.querySelectorAll("button")].map(b => b.textContent.trim()).join("|"),
-    artistOff: art.getAttribute("aria-disabled") === "true" && !art.dataset.tab, artistDim: +getComputedStyle(art).opacity < .6,
+    artistOn: art.dataset.tab === "artist" && !art.hasAttribute("aria-disabled") && !art.classList.contains("tab-soon"), artistDim: +getComputedStyle(art).opacity < .6,
     logoShown: getComputedStyle(logo).display !== "none", logoRight: Math.round(r(logo).right), sideLeft: Math.round(r(side).left), sideRight: Math.round(r(side).right),
     tabsRight: Math.round(r(tabs).right), wsLeft: Math.round(r(ws).left),
     sideMid: Math.round((r(side).top + r(side).bottom) / 2), tabsMid: Math.round((r(tabs).top + r(tabs).bottom) / 2),
@@ -994,8 +992,8 @@ await sleep(600);
 const barNarrow = await barNow();
 await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 960, deviceScaleFactor: 1, mobile: false });
 await sleep(500);
-check("the bar: Creator, Writer, Refiner, the Artist's place greyed (no room yet: a click stays where it is), Librarian; the Trainer a pill of its own",
-  barWide.rooms === "Creator|Writer|Refiner|Artist|Librarian" && barWide.side === "Trainer" && barWide.artistOff && barWide.artistDim && artistStays === "create", JSON.stringify(barWide));
+check("the bar: Creator, Writer, Refiner, the Artist (its room open since 1255: a click opens it), Librarian; the Trainer a pill of its own",
+  barWide.rooms === "Creator|Writer|Refiner|Artist|Librarian" && barWide.side === "Trainer" && barWide.artistOn && !barWide.artistDim && artistStays === "artist", JSON.stringify(barWide));
 check("  with the logo in the bar, the Trainer stands right of it, level with the rooms, clear of the workspace, and stays put while the logo shrinks",
   barWide.logoShown && barWide.sideLeft > barWide.logoRight && barWide.sideLeft - barWide.logoRight < 40 && Math.abs(barWide.sideMid - barWide.tabsMid) <= 1 &&
   barWide.wsLeft - barWide.sideRight >= 18 && barShort.sideLeft === barWide.sideLeft && barShort.logoRight < barWide.logoRight,
@@ -1718,6 +1716,320 @@ await ev(`(() => { window.ruachTextSize("f", 0); document.querySelector('#view-c
 await waitFor(`!document.body.dataset.frame`, 3000, 50);
 check("at a lifted frame's +6 the key, the Writer's and the profile's selects show their whole words (their widths in em); the LoRA notes are a drawn list, not a second i",
   sel6.key >= -1 && sel6.writer >= -1 && sel6.profile >= -1 && sel6.notesOwn, JSON.stringify(sel6));
+
+// HERESY 1169 · 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»; «Код Художника оправданнее строит на рабочем Krea2»)
+section("the Artist room: a prompt of one's own in three shapes from one seed, its runs, a square one the cover");
+const arWas = await ev(`document.body.dataset.tab`);
+await ev(`(() => { const real = window.fetch; window.__arFetch = real; window.__arAsked = [];
+  const pic = (n, shape, w, h) => { const f = String(n).padStart(2, "0") + "-" + shape.replace(":", "x") + "-s100"; return { n, shape, seed: 100, w, h, nsfw: 0, took: 30, kept: true, file: f + ".png", thumb: "thumbs/" + f + ".jpg" }; };
+  const run = (id, status, pics, extra) => Object.assign({ id, prompt: "A boat at dawn, no text.", shapes: ["1:1", "16:9", "9:16"], seed: 100, count: 1, painter: "krea2-q4",
+    created: 1791500000, status, of: 3, pictures: pics }, extra || {});
+  window.__arRuns = [run("20261008-160000-aaaa", "done", [pic(1, "1:1", 1280, 1280), pic(2, "16:9", 1920, 1080), pic(3, "9:16", 1080, 1920)], { took: 150 })];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => {
+    u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: window.__arRuns });
+    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); window.__arAsked.push(["draw", b]);
+      const r = run("20261008-170000-bbbb", "queued", [], { prompt: b.prompt, shapes: b.shapes, count: b.count, seed: 7, of: b.shapes.length * b.count });
+      window.__arRuns = [r].concat(window.__arRuns); return json(r, 202); }
+    if (u.startsWith("/lab/artist/cover")) { window.__arAsked.push(["cover", JSON.parse(o.body)]); return json({ cover: "x", kept: null }); }
+    return real(u, o);
+  };
+  return true; })()`);
+await ev(`document.getElementById("tabArtist").click(); true`);
+await waitFor(`document.querySelectorAll("#arRuns .ar-run").length === 1`, 4000, 50);
+const ar = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), fire = (el, t) => el.dispatchEvent(new Event(t, { bubbles: true }));
+  const out = { tab: document.body.dataset.tab, shapes: [...document.querySelectorAll("#arShapes input")].map((i) => i.value).join(" ") };
+  $("arPrompt").value = ""; fire($("arPrompt"), "input"); out.offEmpty = $("arDraw").disabled;
+  $("arPrompt").value = "A lighthouse at night, painted in oils."; fire($("arPrompt"), "input");
+  document.querySelectorAll("#arShapes input").forEach((i) => { i.checked = i.value !== "9:16"; }); fire($("arShapes"), "change");
+  $("arCount").value = "3"; fire($("arCount"), "change"); $("arSeed").value = ""; fire($("arSeed"), "input");
+  out.cost = $("arCost").textContent; out.onFull = !$("arDraw").disabled;
+  const pics = [...document.querySelectorAll('.ar-run[data-id="20261008-160000-aaaa"] .ar-pic')];
+  out.ratios = pics.map((f) => { const r = f.querySelector(".ar-thumb").getBoundingClientRect(); return Math.round(r.width / r.height * 100) / 100; });
+  out.covers = pics.map((f) => !!f.querySelector(".ar-cover")).join(",");
+  $("arDraw").click(); await wait(300);
+  out.asked = (window.__arAsked.filter((a) => a[0] === "draw")[0] || [])[1];
+  const live = document.querySelector(".ar-run.is-live");
+  out.live = live ? live.dataset.id + ":" + live.querySelectorAll(".ar-pic.is-wait").length : "";
+  out.liveFirst = document.querySelector("#arRuns .ar-run") === live;
+  document.querySelector('.ar-run[data-id="20261008-160000-aaaa"] .ar-thumb').click(); await wait(250);
+  const v = document.querySelector(".ar-view");
+  out.view = v ? v.querySelector(".art-count").textContent + " " + v.querySelector(".art-title").textContent : "";
+  out.square = v ? v.style.getPropertyValue("--ar") : "";
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); await wait(80);
+  out.view2 = v ? v.querySelector(".art-title").textContent : ""; out.cover2 = v ? v.querySelector(".ar-cover").disabled : null;
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(250);
+  out.shut = !document.querySelector(".ar-view");
+  document.querySelector('.ar-run[data-id="20261008-160000-aaaa"] [data-act="form"]').click(); await wait(80);
+  out.form = [$("arPrompt").value, $("arSeed").value, $("arCount").value, [...document.querySelectorAll("#arShapes input")].filter((i) => i.checked).length].join("|");
+  return out; })()`);
+await ev(`(() => { window.fetch = window.__arFetch; delete window.__arFetch; delete window.__arRuns; delete window.__arAsked;
+  ["yue2.arPrompt", "yue2.arShapes", "yue2.arCount", "yue2.arSeed", "yue2.arPainter"].forEach((k) => localStorage.removeItem(k));
+  const $ = (id) => document.getElementById(id); $("arPrompt").value = ""; $("arSeed").value = ""; $("arCount").value = "1";
+  document.querySelectorAll("#arShapes input").forEach((i) => { i.checked = i.value === "1:1"; }); $("arShapes").dispatchEvent(new Event("change", { bubbles: true }));
+  return true; })()`);
+await ev(`document.querySelector('.topbar [data-tab="${arWas}"]').click(); true`);
+await sleep(300);
+check("the Artist: the room from the bar; three shapes; Draw waits for a prompt; 2 shapes × 3 variations say 6 pictures; the run asked for as the form says (a new seed when none)",
+  ar.tab === "artist" && ar.shapes === "1:1 16:9 9:16" && ar.offEmpty && ar.onFull && /^6 pictures/.test(ar.cost) && ar.asked && ar.asked.prompt === "A lighthouse at night, painted in oils." &&
+  JSON.stringify(ar.asked.shapes) === '["1:1","16:9"]' && ar.asked.count === 3 && ar.asked.seed === null && ar.asked.painter === "krea2-q4", JSON.stringify(ar));
+check("  the new run on top, live, its six pictures to come in their shapes; a done run's thumbnails in theirs (1, 16:9, 9:16); Set as cover on the square one only",
+  ar.live === "20261008-170000-bbbb:6" && ar.liveFirst && ar.ratios.length === 3 && Math.abs(ar.ratios[0] - 1) < .03 && Math.abs(ar.ratios[1] - 1.78) < .05 && Math.abs(ar.ratios[2] - .56) < .05 &&
+  ar.covers === "true,false,false", JSON.stringify({ live: ar.live, ratios: ar.ratios, covers: ar.covers }));
+check("  a picture over the page in its own shape, → the next (16:9, no cover there), Esc shuts it; To the form brings back its prompt, seed, variations and shapes",
+  ar.view === "1 / 3 1:1 · 1280×1280 · seed 100" && ar.square === "1/1" && /^16:9 · 1920×1080/.test(ar.view2) && ar.cover2 === true && ar.shut &&
+  ar.form === "A boat at dawn, no text.|100|1|3" && (await ev(`document.body.dataset.tab`)) === arWas, JSON.stringify({ view: ar.view, view2: ar.view2, form: ar.form }));
+
+// HERESY 1169 · 1257 (Viktor 08.10.2026: «живую проявку с латентного шума до готовой картинки… В InvokeAI можно либо выключить, либо включить»;
+// «Ты предусмотрел галлерею сгенерированного арта? Изучи интерфейс и функционал InvokeAI»)
+section("the Artist's live preview and its gallery");
+const ar7Was = await ev(`document.body.dataset.tab`);
+await ev(`(() => { const real = window.fetch; window.__ar7Fetch = real; window.__ar7Asked = [];
+  const pic = (n, shape, w, h, star) => { const f = String(n).padStart(2, "0") + "-" + shape.replace(":", "x") + "-s100"; const p = { n, shape, seed: 100, w, h, nsfw: 0, took: 30, kept: true, file: f + ".png", thumb: "thumbs/" + f + ".jpg" }; if (star) p.star = true; return p; };
+  const base = { prompt: "A boat at dawn, no text.", seed: 100, count: 1, painter: "krea2-q4", created: 1791500000 };
+  window.__ar7Runs = [
+    Object.assign({}, base, { id: "20261008-180000-cccc", shapes: ["1:1", "16:9"], status: "running", of: 2, pictures: [], gpu: 1, live: { live: 1, step: 3, of: 8, file: "preview/01.jpg" }, prompt: "A fox in the snow, no text.", seed: 7 }),
+    Object.assign({}, base, { id: "20261008-160000-aaaa", shapes: ["1:1", "16:9", "9:16"], status: "done", of: 3, took: 150,
+      pictures: [pic(1, "1:1", 1280, 1280), pic(2, "16:9", 1920, 1080, true), pic(3, "9:16", 1080, 1920)] }),
+  ];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => {
+    u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: window.__ar7Runs });
+    if (u.startsWith("/lab/artist/star")) { const b = JSON.parse(o.body); window.__ar7Asked.push(["star", b]); return json({ star: b.star, file: b.file }); }
+    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); window.__ar7Asked.push(["draw", b]); return json(Object.assign({}, base, { id: "20261008-190000-dddd", shapes: b.shapes, status: "queued", of: 1, pictures: [] }), 202); }
+    return real(u, o);
+  };
+  ["yue2.arLook", "yue2.arFilter", "yue2.arSize", "yue2.arLive"].forEach((k) => localStorage.removeItem(k));
+  return true; })()`);
+await ev(`document.getElementById("tabArtist").click(); true`);
+await waitFor(`document.querySelectorAll("#arRuns .ar-run").length === 2`, 4000, 50);
+const ar7 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id);
+  const run = document.querySelector('.ar-run[data-id="20261008-180000-cccc"]'), places = run ? [...run.querySelectorAll(".ar-pic.is-wait .ar-gone")] : [];
+  const img = places[0] && places[0].querySelector("img");
+  const out = { develop: places[0] ? places[0].classList.contains("ar-develop") : false, src: img ? img.getAttribute("src") : "",
+    stepno: places[0] && places[0].querySelector(".ar-stepno") ? places[0].querySelector(".ar-stepno").textContent : "",
+    next: places[1] ? places[1].textContent.trim() : "", liveOn: $("arLive").checked, filtersHidden: $("arFilters").hidden };
+  $("arLive").checked = false; $("arLive").dispatchEvent(new Event("change", { bubbles: true }));
+  $("arPrompt").value = "A boat."; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  $("arDraw").click(); await wait(300);
+  const asked = window.__ar7Asked.filter((a) => a[0] === "draw").map((a) => a[1]);
+  out.previewAsked = asked.length ? asked[0].preview : "none"; out.liveKept = localStorage.getItem("yue2.arLive");
+  document.querySelector('#arBar [data-look="gallery"]').click(); await wait(200);
+  out.gallery = document.querySelectorAll(".ar-gpic").length; out.total = $("arTotal").textContent; out.filtersShown = !$("arFilters").hidden;
+  document.querySelector('#arFilters [data-filter="16:9"]').click(); await wait(100); out.wide = document.querySelectorAll(".ar-gpic").length;
+  document.querySelector('#arFilters [data-filter="star"]').click(); await wait(100); out.starred = document.querySelectorAll(".ar-gpic").length;
+  document.querySelector('#arFilters [data-filter="all"]').click(); await wait(100);
+  document.querySelector('#arSizes [data-size="l"]').click(); await wait(100);
+  out.size = getComputedStyle(document.querySelector(".ar-gallery")).getPropertyValue("--g-h").trim(); out.sizeKept = localStorage.getItem("yue2.arSize");
+  document.querySelector('.ar-gpic[data-g="0"] .ar-star').click(); await wait(250);
+  out.star = (window.__ar7Asked.filter((a) => a[0] === "star")[0] || [])[1] || null;
+  out.starOn = document.querySelector('.ar-gpic[data-g="0"] .ar-star').classList.contains("is-on");
+  document.querySelector('.ar-gpic[data-g="0"] .ar-thumb').click(); await wait(250);
+  const v = document.querySelector(".ar-view");
+  out.view = v ? v.querySelector(".art-count").textContent : "";
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); await wait(80);
+  out.view2 = v ? v.querySelector(".art-title").textContent : ""; out.vstar = v ? v.querySelector(".ar-vstar").textContent : "";
+  v.querySelector(".ar-vform").click(); await wait(200);
+  out.form = [$("arPrompt").value, $("arSeed").value, [...document.querySelectorAll("#arShapes input")].filter((i) => i.checked).map((i) => i.value).join(",")].join("|");
+  out.shut = !document.querySelector(".ar-view");
+  return out; })()`);
+await ev(`(() => { window.fetch = window.__ar7Fetch; delete window.__ar7Fetch; delete window.__ar7Runs; delete window.__ar7Asked;
+  ["yue2.arPrompt", "yue2.arShapes", "yue2.arCount", "yue2.arSeed", "yue2.arPainter", "yue2.arLook", "yue2.arFilter", "yue2.arSize", "yue2.arLive"].forEach((k) => localStorage.removeItem(k));
+  const $ = (id) => document.getElementById(id); $("arPrompt").value = ""; $("arSeed").value = ""; $("arCount").value = "1"; $("arLive").checked = true;
+  document.querySelectorAll("#arShapes input").forEach((i) => { i.checked = i.value === "1:1"; }); $("arShapes").dispatchEvent(new Event("change", { bubbles: true }));
+  document.querySelector('#arBar [data-look="runs"]').click();
+  return true; })()`);
+await ev(`document.querySelector('.topbar [data-tab="${ar7Was}"]').click(); true`);
+await sleep(300);
+check("the Artist's live preview: the place being painted shows its step's picture (preview/01.jpg at step 3 of 8), the next waits; off, the run is asked without it (kept off)",
+  ar7.develop && /preview%2F01\.jpg&v=3$/.test(ar7.src) && ar7.stepno === "3 / 8" && ar7.next === "to come" && ar7.liveOn && ar7.filtersHidden && ar7.previewAsked === false && ar7.liveKept === "0", JSON.stringify(ar7));
+check("  the gallery: every kept picture of every run (3), by shape (16:9: 1), the starred (1), three sizes (L 300 px, kept); a star sent and shown",
+  ar7.gallery === 3 && /^3 of 3/.test(ar7.total) && ar7.filtersShown && ar7.wide === 1 && ar7.starred === 1 && ar7.size === "300px" && ar7.sizeKept === "l" &&
+  ar7.star && ar7.star.id === "20261008-160000-aaaa" && ar7.star.file === "01-1x1-s100.png" && ar7.star.star === true && ar7.starOn, JSON.stringify(ar7));
+check("  the gallery's picture over the page walks every picture (1 / 3, → the 16:9, starred ★); To the form brings back its prompt, seed and shape",
+  ar7.view === "1 / 3" && /^16:9 · 1920×1080/.test(ar7.view2) && ar7.vstar === "★" && ar7.form === "A boat at dawn, no text.|100|16:9" && ar7.shut &&
+  (await ev(`document.body.dataset.tab`)) === ar7Was, JSON.stringify({ view: ar7.view, view2: ar7.view2, vstar: ar7.vstar, form: ar7.form }));
+
+// HERESY 1169 · 1258 (Viktor 08.10.2026: «Двухуровневый аудиоплеер наш давай оставим только в аудиотворческих комнатах… В остальных
+// одноуровневый… когда делаем распахивание фреймов и редактора в оверлей, сворачиваем полный плеер в одноуровневый»; «комнате
+// художника… колонку Taker… по умолчанию свёрнутой. Серверный лог фрейм в левую сторону»; «Плеер при F5 не держит последний трек и его позицию»)
+section("the player's rows by the room; the Artist's folded Takes and its log on the left; the player's place kept");
+const pr8Size = await ev(`[innerWidth, innerHeight]`);
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+const pr8Was = await ev(`document.body.dataset.tab`);
+await sleep(300);
+const rowsOf = async (tab) => {
+  await ev(`document.querySelector('.topbar [data-tab="${tab}"]').click(); true`);
+  await sleep(350);
+  return ev(`(() => { const p = document.getElementById("playbar").getBoundingClientRect(), w = document.getElementById("wave").getBoundingClientRect(),
+    c = document.querySelector("#playbar .pb-ctrl").getBoundingClientRect(); return Math.abs((w.top + w.bottom) / 2 - (c.top + c.bottom) / 2) < 8 ? 1 : 2; })()`);
+};
+await ev(`localStorage.removeItem("yue2.libFolded.artist"); true`);
+const pr8 = { create: await rowsOf("create"), post: await rowsOf("post"), collection: await rowsOf("collection"), write: await rowsOf("write"), artist: await rowsOf("artist") };
+pr8.artistFolded = await ev(`document.getElementById("library").classList.contains("is-folded")`);
+pr8.logLeftArtist = await ev(`document.getElementById("logDock").classList.contains("is-left")`);
+await ev(`document.getElementById("libUnfold").click(); true`);
+await sleep(200);
+pr8.artistUnfolded = await ev(`!document.getElementById("library").classList.contains("is-folded") && localStorage.getItem("yue2.libFolded.artist") === "0"`);
+await ev(`localStorage.removeItem("yue2.libFolded.artist"); true`);
+pr8.createAgain = await rowsOf("create");
+pr8.logLeftCreate = await ev(`document.getElementById("logDock").classList.contains("is-left")`);
+pr8.creatorFolded = await ev(`document.getElementById("library").classList.contains("is-folded")`);
+await ev(`document.querySelector('#view-compose [data-frame="compose"]').click(); true`);
+await sleep(400);
+pr8.lifted = await ev(`(() => { const w = document.getElementById("wave").getBoundingClientRect(), c = document.querySelector("#playbar .pb-ctrl").getBoundingClientRect();
+  return { frame: document.body.dataset.frame || "", rows: Math.abs((w.top + w.bottom) / 2 - (c.top + c.bottom) / 2) < 8 ? 1 : 2 }; })()`);
+await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+await sleep(350);
+pr8.down = await ev(`document.body.dataset.frame || ""`);
+await ev(`document.getElementById("lyricsBig").click(); true`);
+await sleep(300);
+pr8.lyrics = await ev(`(() => { const w = document.getElementById("wave").getBoundingClientRect(), c = document.querySelector("#playbar .pb-ctrl").getBoundingClientRect();
+  return { open: !!document.getElementById("lyrOver"), rows: Math.abs((w.top + w.bottom) / 2 - (c.top + c.bottom) / 2) < 8 ? 1 : 2 }; })()`);
+await ev(`document.getElementById("lyricsBig").click(); true`);
+await sleep(300);
+pr8.lyricsShut = await ev(`!document.getElementById("lyrOver")`);
+await ev(`document.querySelector('.topbar [data-tab="${pr8Was}"]').click(); true`);
+await send("Emulation.setDeviceMetricsOverride", { width: pr8Size[0], height: pr8Size[1], deviceScaleFactor: 1, mobile: false });
+await sleep(300);
+check("the player in two rows where songs are heard (Creator, Refiner, Librarian), in one where they are not (Writer, Artist); the Creator in one while a frame is lifted or its lyrics are over everything",
+  pr8.create === 2 && pr8.post === 2 && pr8.collection === 2 && pr8.write === 1 && pr8.artist === 1 && pr8.createAgain === 2 &&
+  pr8.lifted.frame === "compose" && pr8.lifted.rows === 1 && pr8.down === "" && pr8.lyrics.open && pr8.lyrics.rows === 1 && pr8.lyricsShut, JSON.stringify(pr8));
+check("  the Artist's Takes folded at first (its own fold, unfolding kept as «0»), the Creator's as it was; the server log on the left in the Artist only",
+  pr8.artistFolded && pr8.artistUnfolded && !pr8.creatorFolded && pr8.logLeftArtist && !pr8.logLeftCreate, JSON.stringify(pr8));
+const pr8Keep = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), a = document.getElementById("audio");
+  const before = localStorage.getItem("ruach.playerAt");
+  a.dispatchEvent(new Event("pause")); await wait(50);
+  const kept = JSON.parse(localStorage.getItem("ruach.playerAt") || "null");
+  return { before: !!before, kept: !!kept, name: kept && kept.name, hasAt: kept && typeof kept.at === "number", playing: kept && kept.playing,
+    player: !document.getElementById("playbar").classList.contains("is-empty") };
+})()`);
+check("  the player's take, place and play state kept in this browser as it pauses (ruach.playerAt, not the settings file), for the reload to bring back",
+  !pr8Keep.player || (pr8Keep.kept && !!pr8Keep.name && pr8Keep.hasAt && pr8Keep.playing === false), JSON.stringify(pr8Keep));
+
+// HERESY 1169 · 1260 (Viktor 09.10.2026: «Убери из тултипа в плеере вывод промпта трека. Это лишнее. И так всё под рукой. И пройдись
+// по таким местам и убери лишние тултипы»; «при сворачивании колонки воркспейсов добавляется ещё одна колонка треков… Пусть лучше
+// растягиваются карточки»; «Ещё слабее сделай цветовой альфа канал градиента, что через все карточки идёт»). The mock draws no
+// Librarian cards, so the tiles are six empty cards of a grid of their own beside the real one, gone at the end; the room and the
+// window are put back as they were.
+section("fewer tips: none of a take's own words; folded workspaces leave the tiles their columns; the day wash at half");
+const s60Size = await ev(`[innerWidth, innerHeight]`), s60Tab = await ev(`document.body.dataset.tab`);
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+await sleep(300);
+const p60 = await ev(`(() => {
+  const t = document.getElementById("playbarTitle");
+  return { empty: document.getElementById("playbar").classList.contains("is-empty"), titleTip: t.hasAttribute("data-tip") || !!t.title,
+    pb: ["pbLike", "pbDislike", "pbFav"].map((id) => { const b = document.getElementById(id); return !b.hasAttribute("data-tip") && !b.title && !!b.getAttribute("aria-label"); }),
+    refine: document.querySelectorAll(".take-post[title], .take-post[data-tip]").length, qname: document.querySelectorAll(".q-name[title], .q-name[data-tip]").length,
+    stars: [...document.querySelectorAll("#libList .take-fav, #libList .coll-act, #takeFav, [data-take-fav]")].map((b) => ({ title: b.getAttribute("title") || "", tip: b.getAttribute("data-tip") || "", label: b.getAttribute("aria-label") || "" })) };
+})()`);
+check("the player's title carries no tip: no hint, never the take's style (its card and the song page show it)", !p60.titleTip, JSON.stringify(p60));
+check("  like, dislike and the star in the player: names for a reader, no tips", p60.pb.every(Boolean), JSON.stringify(p60.pb));
+check("  «Refine» and a queue's name: no tip of their own words", p60.refine === 0 && p60.qname === 0, JSON.stringify({ refine: p60.refine, qname: p60.qname }));
+check("  the stars and rating signs of the takes' list: names, no tips", p60.stars.length >= 1 && p60.stars.every((b) => !b.title && !b.tip && !!b.label), JSON.stringify(p60.stars.slice(0, 4)));
+await ev(`document.querySelector('.topbar [data-tab="collection"]').click(); true`);
+await sleep(700);
+const c60 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const lay = document.querySelector(".coll-layout"), fb = document.getElementById("collFold"), real = document.getElementById("collGrid");
+  if (!lay || !fb || !real) return { none: true };
+  const g = document.createElement("div");
+  g.className = "coll-grid tiles"; g.id = "claudeGrid1260";
+  g.innerHTML = '<article class="coll-card"><div class="coll-title">a</div></article>'.repeat(6);
+  real.after(g);
+  const cols = () => getComputedStyle(g).gridTemplateColumns.split(" ").filter(Boolean).length;
+  const wid = () => Math.round(g.firstElementChild.getBoundingClientRect().width);
+  const was = lay.classList.contains("is-folded");
+  if (was) { fb.click(); await wait(350); }
+  const open = { cols: cols(), w: wid() };
+  fb.click(); await wait(350);
+  const folded = { on: lay.classList.contains("is-folded"), cols: cols(), w: wid(), tip: "" };
+  fb.click(); await wait(350);
+  folded.tip = fb.dataset.tip || "";
+  if (was) { fb.click(); await wait(350); }
+  const r = document.documentElement, tone = r.getAttribute("data-tone");
+  r.setAttribute("data-tone", "light");
+  const wash = getComputedStyle(g.firstElementChild).backgroundImage;
+  if (tone === null) r.removeAttribute("data-tone"); else r.setAttribute("data-tone", tone);
+  g.remove();
+  return { open, folded, wash, back: lay.classList.contains("is-folded") === was };
+})()`);
+check("folded workspaces leave the tiles their columns; the cards grow wider instead",
+  !c60.none && c60.folded.on && c60.open.cols >= 2 && c60.folded.cols === c60.open.cols && c60.folded.w > c60.open.w && c60.back, JSON.stringify(c60));
+check("  the fold's own tip says so", /grow wider/.test(c60.folded ? c60.folded.tip : ""), c60.folded && c60.folded.tip);
+check("the day tone's wash over a card starts at half its strength", /rgba\(242, 237, 239, 0\.5\)/.test(c60.wash || ""), c60.wash);
+await ev(`document.querySelector('.topbar [data-tab="${s60Tab}"]')?.click(); true`);
+await send("Emulation.setDeviceMetricsOverride", { width: s60Size[0], height: s60Size[1], deviceScaleFactor: 1, mobile: false });
+await sleep(400);
+
+// HERESY 1169 · 1262 (Viktor 09.10.2026: «Recite on a score либо не вижу, либо не там смотрю»; «`Save profile...` укороти. `Save`»)
+section("a score the page puts into the form shows its rows at once; the profile's button says Save");
+const r62Tab = await ev(`document.body.dataset.tab`);
+await ev(`document.querySelector('.topbar [data-tab="create"]').click(); true`);
+await sleep(300);
+const r62 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const abc = document.getElementById("abc"), was = abc.value, drawer = document.getElementById("scoreDrawer"), open = drawer ? drawer.open : null;
+  if (drawer) drawer.open = true;
+  abc.value = ""; await wait(400);
+  const before = { recite: !document.getElementById("reciteRow").classList.contains("is-hidden"), midi: !document.getElementById("formMidi").disabled };
+  document.querySelector('[data-abc="melody"]').click(); await wait(500);
+  const after = { recite: !document.getElementById("reciteRow").classList.contains("is-hidden"), midi: !document.getElementById("formMidi").disabled,
+    shift: !document.getElementById("voiceShiftRow").classList.contains("is-hidden"), filled: abc.value.length > 20 };
+  abc.value = was; await wait(400);
+  if (drawer && open !== null) drawer.open = open;
+  return { before, after, save: document.getElementById("setupSave").textContent.trim() };
+})()`);
+check("an example put in by the page (no key pressed): Recite and the voice shift show, MIDI lights",
+  !r62.before.recite && !r62.before.midi && r62.after.filled && r62.after.recite && r62.after.midi && r62.after.shift, JSON.stringify(r62));
+check("  the profile's button says Save", r62.save === "Save", r62.save);
+await ev(`document.querySelector('.topbar [data-tab="${r62Tab}"]')?.click(); true`);
+await sleep(300);
+
+// HERESY 1169 · 1263 (Viktor 09.10.2026: «листалка картинок у Артиста не работает. < и > не меняют картинку но описаловка меняется»).
+// Two stand-in runs through window.fetch; the mock has no pictures, so the full ones never come: what counts is what a step shows at
+// once (the new picture's thumb at the full one's size, never the one before) and what it says when the full one cannot come.
+section("the Artist's viewer: a step shows the next picture at once, the full one when it comes");
+const v63Tab = await ev(`document.body.dataset.tab`);
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+const v63 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const pic = (n, shape, w, h) => ({ file: "0" + n + "-" + shape.replace(":", "x") + "-s7.png", thumb: "thumbs/0" + n + "-" + shape.replace(":", "x") + "-s7.jpg", shape, w, h, seed: 7, kept: true });
+  const runs = [{ id: "20261009-130000-aaaa", status: "done", prompt: "a", created: Date.now() / 1000, painter: "krea2-q4", shapes: ["1:1", "16:9"],
+    pictures: [pic(1, "1:1", 1280, 1280), pic(2, "16:9", 1920, 1080)] }];
+  window.__v63 = window.fetch;
+  window.fetch = (u, o) => String(u).indexOf("/lab/artist/runs") >= 0 ? Promise.resolve(new Response(JSON.stringify({ runs }), { headers: { "Content-Type": "application/json" } })) : window.__v63(u, o);
+  document.querySelector('.topbar [data-tab="artist"]').click(); await wait(300);
+  if (window.HeresyArtist && window.HeresyArtist.reload) window.HeresyArtist.reload();
+  await wait(500);
+  document.querySelector('#arBar [data-look="gallery"]').click(); await wait(300);
+  const t = document.querySelector('.ar-gpic[data-g="0"] .ar-thumb'); if (!t) return { none: true };
+  t.click(); await wait(60);
+  const v = document.querySelector(".ar-view"), img = v.querySelector(".art-img");
+  const one = { src: img.getAttribute("src"), w: img.style.width, h: img.style.height, loading: img.classList.contains("is-loading") };
+  v.querySelector(".art-next").click(); await wait(60);
+  const two = { src: img.getAttribute("src"), w: img.style.width, h: img.style.height, loading: img.classList.contains("is-loading"), broken: img.classList.contains("is-broken"), title: v.querySelector(".art-title").textContent };
+  await wait(1500);
+  const after = { broken: img.classList.contains("is-broken"), note: getComputedStyle(v.querySelector(".art-count"), "::after").content };
+  v.querySelector(".art-close").click(); await wait(200);
+  window.fetch = window.__v63; delete window.__v63;
+  document.querySelector('#arBar [data-look="runs"]').click();
+  if (window.HeresyArtist && window.HeresyArtist.reload) window.HeresyArtist.reload();
+  return { one, two, after, shut: !document.querySelector(".ar-view") };
+})()`);
+check("a step shows the next picture's thumb at once, never the picture before",
+  !v63.none && /thumbs%2F02-16x9-s7\.jpg|thumbs\/02-16x9-s7\.jpg/.test(v63.two.src) && v63.two.src !== v63.one.src && (v63.two.loading || v63.two.broken) && /16:9/.test(v63.two.title), JSON.stringify(v63));
+check("  drawn at the size the full one takes (16:9 wider than 1:1, both as tall as the window allows)",
+  !v63.none && parseFloat(v63.two.w) > parseFloat(v63.one.w) && Math.abs(parseFloat(v63.two.w) / parseFloat(v63.two.h) - 16 / 9) < 0.02, JSON.stringify([v63.one, v63.two]));
+check("  one whose full picture cannot come says so (dimmed, «not loaded» by its count)", !v63.none && v63.after.broken && /not loaded/.test(v63.after.note) && v63.shut, JSON.stringify(v63.after));
+await ev(`document.querySelector('.topbar [data-tab="${v63Tab}"]')?.click(); true`);
+await sleep(300);
 // ================================================================== fonts
 section("fonts (Engine page)");
 const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"), kids = [...s.children], hr = kids.findIndex(k => k.tagName === "HR");
@@ -2457,8 +2769,7 @@ await send("Input.dispatchKeyEvent", { type: "keyUp", key: " ", code: "Space", w
 check("song A plays", !!(await waitFor(`!document.getElementById("audio").paused`, 3000)));
 const srcA = await ev(`document.getElementById("audio").src`), barA = await ev(`document.getElementById("playbarTitle").textContent`);
 t = await hoverOn("#playbarTitle");
-check("the player shows just the song's name; its style prompt is on hover", (await ev(`!document.getElementById("playbarStyle")`)) === true && t?.on &&
-  t.text === (await ev(`document.querySelector("#libList .take.is-playing .take-style")?.textContent || ""`)), t?.text);
+check("the player shows just the song's name, and no tip over it (HERESY 1260: its style is on its card, at hand)", (await ev(`!document.getElementById("playbarStyle")`)) === true && !t?.on, t?.text);
 await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5 });
 await click(`#libList .take[data-name="${songB}"]`);
 await showsTake(songB);

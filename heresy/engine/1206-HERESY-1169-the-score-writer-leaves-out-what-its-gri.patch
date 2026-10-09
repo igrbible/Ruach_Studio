@@ -2,7 +2,7 @@ From be797f85d1193d61eeff9258553b486fda7dd678 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Wed, 7 Oct 2026 18:41:27 -0600
-Subject: [PATCH 1206/1252] HERESY 1169: the score writer leaves out what its
+Subject: [PATCH 1206/1259] HERESY 1169: the score writer leaves out what its
  grid cannot hold (a note or an interval shorter than its step, a note over
  one still sounding) and says how many, instead of failing the whole score
 

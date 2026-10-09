@@ -62,7 +62,7 @@
       var where = url
         ? '<a class="tile-link" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer" data-tip="' +
           escape(tr("Open its model card (new tab): " + url)) + '"><span translate="no">' + escape(v.repo || url) + "</span>\u2197</a>"
-        : '<span class="tile-repo" translate="no" data-tip="' + escape(v.repo || v.name) + '">' + escape(v.repo || v.name) + "</span>";
+        : '<span class="tile-repo" translate="no">' + escape(v.repo || v.name) + "</span>";
       var meta = [NOTES[v.name] || "", v.name === S.def ? "engine default" : "", ok ? "" : "not downloaded"].filter(Boolean)
         .map(function (m) { return "<span>" + escape(m) + "</span>"; }).join(" · ");   // HERESY 1165: each its own text
       return '<li class="lora-item vae-item' + (picked ? " is-on" : "") + (kind === "add-on" ? " is-addon" : "") + (ok ? "" : " is-bad") +

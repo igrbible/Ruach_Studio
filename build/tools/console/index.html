@@ -373,7 +373,8 @@
     <button type="button" data-tab="create" class="is-active">Creator</button>
     <button type="button" data-tab="write">Writer</button>
     <button type="button" data-tab="post">Refiner</button>
-    <button type="button" class="tab-soon" id="tabArtist" aria-disabled="true" translate="no" data-tip="The Artist: cover art for your songs, square, wide and tall at once. It comes in a later release">Artist</button>
+    <!-- HERESY 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»): the Artist's room opens -->
+    <button type="button" data-tab="artist" id="tabArtist" translate="no" data-tip="The Artist: pictures for your songs from a prompt of your own, square, wide and tall from one seed (an early preview)">Artist</button>
     <button type="button" data-tab="collection">Librarian</button>
   </nav>
   <nav class="tabs tabs-side" id="tabsSide" aria-label="Training">
@@ -905,7 +906,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <span class="label">Profile</span>
             <select id="setupLib" aria-label="Profiles" data-tip="A profile sets the mode, length, sampling, guidance, steps, VAE, sliders, LoRAs and output; the texts and seeds stay"></select>
             <button type="button" class="btn ghost small" id="setupApply">Apply</button>
-            <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save profile…</button>
+            <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save</button>
             <button type="button" class="btn ghost small" id="setupDel" disabled>Delete</button>
           </div>
           <fieldset class="field plan-field">
@@ -1698,6 +1699,38 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 
   </section>
 
+  <!-- HERESY 1169 · 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»; «Код Художника оправданнее
+       строит на рабочем Krea2»): the Artist room (heresy-artist.js, lab/artist.py): pictures for a song from a prompt of one's
+       own, in the shapes its pictures take, all from one seed, painted by Krea 2 Muse; a square one becomes the cover of the
+       take in hand -->
+  <section class="col artist-col is-hidden" id="view-artist">
+    <div class="col-head post-head artist-head"><h2>Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a reference picture, repainting on a canvas, LoRAs and the upscale come in the releases after">Early preview</span>
+      <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Krea 2 Muse</span>
+      <span class="post-take" id="arTake" translate="no"></span><span class="col-note" id="arTakeNote">pick a take on the right to give it a cover</span></div>
+    <div class="ar-form">
+      <label class="field"><span class="label">Prompt <em>what to paint, said in sentences (Krea 2 reads them); Ctrl+Enter draws</em></span>
+        <textarea id="arPrompt" rows="5" spellcheck="false" data-tip="What to paint, said in sentences: what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph); end with no text when you want no letters in it. Ctrl+Enter draws" placeholder="A woman in a white linen dress dancing alone in a birch grove at dusk, warm lanterns in the branches, painted in soft oils, no text."></textarea></label>
+      <div class="ar-knobs">
+        <button type="button" class="btn ghost small" id="arFromTake" data-tip="The prompt the take's artwork was drawn from, or one from its title and style, to start from">From the take</button>
+        <div class="ar-shapes" id="arShapes" role="group" aria-label="Shapes"></div>
+        <label class="field ar-seed"><span class="label">Seed <em>empty: a new one</em></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
+        <label class="field ar-count" data-tip="Each variation is the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Variations</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+        <label class="field ar-painter"><span class="label">Painter</span><select id="arPainter" translate="no" data-tip="Krea 2 Muse by Stable Yogi: Q4 wants a card with 12.5 GB free, Q8 (finer) 18.5 GB; about 35 s a square picture and 47 s a wide or tall one on an RTX 3090"><option value="krea2-q4">Krea 2 Muse · Q4 (from 12.5 GB)</option><option value="krea2-q8">Krea 2 Muse · Q8 (from 18.5 GB)</option></select></label>
+        <!-- HERESY 1257 (Viktor 08.10.2026: «живую проявку с латентного шума до готовой картинки… В InvokeAI можно либо выключить, либо включить») -->
+        <label class="check ar-live" data-tip="Each step of the painting over its place, from the noise to the picture: an eighth of its size, seen without the decoder, so it costs nothing. Off: the place waits for the picture"><input type="checkbox" id="arLive" checked /> <span>Live preview</span></label>
+        <div class="ar-go"><span class="row-hint" id="arCost"></span><button type="button" class="btn primary" id="arDraw">Draw</button></div>
+      </div>
+    </div>
+    <!-- HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта?»): the runs, or every picture as one gallery -->
+    <div class="ar-bar" id="arBar">
+      <span class="ar-looks" role="group" aria-label="How to show them"><button type="button" class="chip" data-look="runs" data-tip="Each press of Draw with its prompt, seed and pictures, the newest on top">Runs</button><button type="button" class="chip" data-look="gallery" data-tip="Every picture of every run in one grid, the newest first: filter by shape or by star, three sizes">Gallery</button></span>
+      <span class="ar-filters" id="arFilters" role="group" aria-label="Which pictures" hidden></span>
+      <span class="ar-sizes" id="arSizes" role="group" aria-label="Their size" hidden></span>
+      <span class="ar-total" id="arTotal"></span>
+    </div>
+    <div class="ar-runs" id="arRuns"></div>
+  </section>
+
 
   <!-- HERESY 1063 / 1090: Train — a LoRA for YuE2 from your own songs (heresy-train.js, lab/training.py). Viktor,
        02.10.2026: the runs that are training stand on top with their progress; the steps sit in a row as in the Refiner,
@@ -1915,11 +1948,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <div class="pb-row">
   <div class="playbar-id">
     <div class="pb-cover" id="pbCover" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-    <div class="pb-names"><strong id="playbarTitle" data-tip="Pick a take on the right">Nothing loaded</strong><span class="pb-sub" id="playbarSub"></span></div>
+    <div class="pb-names"><strong id="playbarTitle">Nothing loaded</strong><span class="pb-sub" id="playbarSub"></span></div>
     <span class="pb-rate" id="pbRate" hidden>
-      <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-tip="Like" data-ui="like">👍</button>
-      <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-tip="Dislike" data-ui="dislike">👎</button>
-      <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-tip="Keep as a favourite" data-ui="star">☆</button>
+      <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-ui="like">👍</button>
+      <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-ui="dislike">👎</button>
+      <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-ui="star">☆</button>
     </span>
   </div>
   <div class="pb-ctrl">
@@ -2139,6 +2172,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-inspect.js"></script>
 <script src="heresy-derived.js"></script>
 <script src="heresy-post.js"></script>
+<script src="heresy-artist.js"></script>
 <script src="heresy-zoom.js"></script>
 <script src="heresy-spectrum.js"></script>
 <script src="themes.js"></script>

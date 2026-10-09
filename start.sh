@@ -13,7 +13,7 @@
 # Extra arguments go to yue-server (for example --keep-loaded).
 set -euo pipefail
 
-export CUDA_HOME=/usr/local/cuda-12.8
+export CUDA_HOME="${RUACH_CUDA_HOME:-/usr/local/cuda-12.8}"   # HERESY 1259: the toolkit pinokio/env.sh found (Pinokio's own where the machine has none)
 export PATH="$CUDA_HOME/bin:$HOME/.local/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export CUDA_DEVICE_ORDER=PCI_BUS_ID

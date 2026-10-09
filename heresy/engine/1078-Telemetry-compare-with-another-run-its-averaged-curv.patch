@@ -2,7 +2,7 @@ From 06b279257c39aa12a1d3407f1128ab12794e2093 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 04:40:55 -0600
-Subject: [PATCH 1078/1252] Telemetry: compare with another run, its averaged
+Subject: [PATCH 1078/1259] Telemetry: compare with another run, its averaged
  curves dashed on the same steps (1090)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

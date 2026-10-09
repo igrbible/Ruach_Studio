@@ -2,7 +2,7 @@ From 956d3abc6ecd9aaf8161d6f046fdce444cff433d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 8 Oct 2026 14:03:13 -0600
-Subject: [PATCH 1247/1252] =?UTF-8?q?HERESY=201169:=20a=20tidy=20right-cli?=
+Subject: [PATCH 1247/1259] =?UTF-8?q?HERESY=201169:=20a=20tidy=20right-cli?=
  =?UTF-8?q?ck=20menu:=20the=20rows=20hold=20the=20icon=20and=20the=20name?=
  =?UTF-8?q?=20only=20(the=20hints=20cut=20them:=20R=E2=80=A6),=20an=20item?=
  =?UTF-8?q?'s=20hint=20beside=20the=20menu,=20level=20with=20it,=20on=20ho?=

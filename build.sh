@@ -28,7 +28,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the studio's one environment
 export TMPDIR="$ROOT/tmp"
 mkdir -p "$TMPDIR"
-export CUDA_HOME=/usr/local/cuda-12.8
+export CUDA_HOME="${RUACH_CUDA_HOME:-/usr/local/cuda-12.8}"   # HERESY 1259: the toolkit pinokio/env.sh found (Pinokio's own where the machine has none)
 export PATH="$CUDA_HOME/bin:$PATH"
 PORT="${YUE2CPP_PORT:-41867}"
 G="\e[1;32m"; R="\e[1;31m"; Y="\e[1;33m"; D="\e[2m"; X="\e[0m"
@@ -189,7 +189,7 @@ if [ $SERVER = 0 ] && [ -x "$BIN" ] && [ -z "$(find "$ROOT/build/tools" "$ROOT/b
 fi
 step "③ the server"
 if [ ! -f "$ROOT/build/build/CMakeCache.txt" ]; then                 # a fresh clone: configure once, as Forge's was
-    GEN=(); command -v ninja >/dev/null && GEN=(-G Ninja)
+    GEN=(); ninja --version >/dev/null 2>&1 && GEN=(-G Ninja)   # HERESY 1259: a ninja that answers (a pip wrapper without its module is on a PATH too)
     NVCC="$(command -v nvcc || echo "$CUDA_HOME/bin/nvcc")"
     echo -e "  configuring cmake (the first time): CUDA ($NVCC), flash attention, Release"
     cmake -S "$ROOT/build" -B "$ROOT/build/build" "${GEN[@]}" -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DGGML_CUDA_FA=ON \

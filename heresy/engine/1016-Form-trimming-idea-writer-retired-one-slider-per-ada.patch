@@ -1,7 +1,7 @@
 From d0aa8b6a4b5247455e43653895e27473525620f9 Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 18:06:09 -0600
-Subject: [PATCH 1016/1252] Form trimming: idea writer retired, one slider per
+Subject: [PATCH 1016/1259] Form trimming: idea writer retired, one slider per
  adapter half, TAB skips the tips
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

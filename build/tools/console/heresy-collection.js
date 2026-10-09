@@ -238,10 +238,10 @@
     if (!r) return "";
     return '<div class="take-extra"><span class="coll-badges">' + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
       r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</span>" +
-      '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + "</button>" +
-      '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + "</button>" +
+      '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + "</button>" +
+      '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + "</button>" +
       // HERESY 1167 (Viktor: «У Творца во фрейме Takes… И нет звёздочки»): the favourite beside them, as on the Librarian's cards
-      '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" title="Favourite">' + ico("star") + "</button>" +
+      '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" aria-label="Favourite">' + ico("star") + "</button>" +
       (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
   }
   function favOf(name, r) { var t = state.hooks && state.hooks.findTake ? state.hooks.findTake(name) : null; return t ? !!t.favorite : !!r.favorite; }
@@ -336,10 +336,10 @@
         // HERESY 1155 (Viktor: «Не уходим из студии в другие окна и вкладки, если не нужно»): the whole picture over the page
         (art ? '<button type="button" class="coll-art" data-art="' + esc(r.name) + '" style="background-image:url(&quot;' + esc(art) + '&quot;)" data-tip="The artwork: see it whole" aria-label="The artwork"></button>' : "") +
         // HERESY 1048: like, dislike, favourite, Post and the menu, on the card itself
-        '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" title="Like">' + ico("like") + '</button>' +
-        '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" title="Dislike">' + ico("dislike") + '</button>' +
-        '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" title="Favourite">' + ico("star") + "</button>" +
-        '<button type="button" class="coll-act post" data-cgo="post" title="Load into the Refiner">Refine</button>' +
+        '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + '</button>' +
+        '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + '</button>' +
+        '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" aria-label="Favourite">' + ico("star") + "</button>" +
+        '<button type="button" class="coll-act post" data-cgo="post">Refine</button>' +
         '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' +
         // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height
         (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" aria-label="Has a note">' + ico("note") + "</button>"
@@ -1119,7 +1119,7 @@
         lay.classList.toggle("is-folded", on);
         store(F_KEY, on ? "1" : "0");
         fb.textContent = on ? "\u00bb" : "\u00ab";
-        fb.dataset.tip = on ? "Show the workspaces" : "Fold the workspaces away: the cards take one column more";
+        fb.dataset.tip = on ? "Show the workspaces" : "Fold the workspaces away: the cards grow wider";
         fb.setAttribute("aria-label", fb.dataset.tip);
         rz.setAttribute("aria-valuenow", on ? "0" : String(Math.round($("collSide").getBoundingClientRect().width)));
         fitSideSoon();

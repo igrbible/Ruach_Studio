@@ -1,0 +1,273 @@
+From f28ed3bf499bfff74a7135a62cff81c9a18c3e4b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 21:36:08 -0600
+Subject: [PATCH 1254/1259] =?UTF-8?q?HERESY=201169=20=C2=B7=201257:=20the?=
+ =?UTF-8?q?=20Artist's=20live=20preview=20(each=20step's=20latents=20as=20?=
+ =?UTF-8?q?a=20picture=20in=20the=20place=20being=20painted,=20the=20Wan?=
+ =?UTF-8?q?=202.1=20VAE's=20latent-to-RGB=20factors=20as=20InvokeAI=20carr?=
+ =?UTF-8?q?ies=20them;=20a=20box=20turns=20it=20off)=20and=20its=20gallery?=
+ =?UTF-8?q?=20(every=20picture=20of=20every=20run=20in=20one=20grid,=20by?=
+ =?UTF-8?q?=20shape=20or=20star,=20three=20sizes;=20the=20overlay=20walks?=
+ =?UTF-8?q?=20the=20gallery=20with=20=E2=98=85=20and=20To=20the=20form)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  20 +++++++
+ tools/console/heresy-artist.js | 104 +++++++++++++++++++++++++++++----
+ tools/console/index.html       |   9 +++
+ 3 files changed, 122 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6d5b4aa..bb64255 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4664,3 +4664,23 @@ body[data-tab="artist"] .col-grip.left { display: none; }
+ .ar-view .art-img { aspect-ratio: auto; width: auto; height: auto; max-width: calc(100vw - 140px); max-height: calc(100vh - var(--playbar-h, 60px) - 96px); align-self: center; }
+ .ar-view .art-cap { width: auto; }
+ .ar-view .ar-cover { flex: none; }
++
++/* HERESY 1257: the live preview in its place, and the gallery */
++.ar-pic .ar-gone.ar-develop { position: relative; padding: 0; border-style: solid; animation: none; cursor: default; }
++.ar-gone.ar-develop img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: auto; }
++.ar-stepno { position: absolute; right: 6px; bottom: 6px; padding: 1px 7px; border-radius: var(--r-pill); background: rgba(0, 0, 0, .55); color: #fff;
++  font-size: 11px; font-variant-numeric: tabular-nums; }
++.ar-live { align-self: center; white-space: nowrap; }
++.ar-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 16px 0 0; }
++.ar-looks, .ar-filters, .ar-sizes { display: inline-flex; gap: 6px; flex-wrap: wrap; }
++.ar-filters[hidden], .ar-sizes[hidden] { display: none; }
++.ar-bar .chip.is-on { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); }
++.ar-total { margin-left: auto; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
++.ar-gallery { display: flex; flex-wrap: wrap; gap: 10px; }
++.ar-gpic { position: relative; margin: 0; }
++.ar-gpic .ar-thumb { height: var(--g-h, 200px); }
++.ar-star { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0;
++  border-radius: 50%; background: rgba(0, 0, 0, .45); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .12s ease; }
++.ar-gpic:hover .ar-star, .ar-star:focus-visible, .ar-star.is-on { opacity: 1; }
++.ar-star.is-on, .ar-vstar.is-on { color: #f2c14e; }
++.ar-view .ar-vstar { font-size: 18px; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 01ac1b8..3232444 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -13,8 +13,14 @@
+     { id: "9:16", label: "9:16 · 1080×1920", say: "a short", w: 9, h: 16, s: 47 }
+   ];
+   var PAINTERS = { "krea2-q4": "Krea 2 Muse · Q4", "krea2-q8": "Krea 2 Muse · Q8" };
+-  var KEY = { prompt: "yue2.arPrompt", shapes: "yue2.arShapes", count: "yue2.arCount", seed: "yue2.arSeed", painter: "yue2.arPainter" };
+-  var state = { hooks: null, runs: [], take: null, timer: 0, sending: false, open: {}, view: null, first: true };
++  var KEY = { prompt: "yue2.arPrompt", shapes: "yue2.arShapes", count: "yue2.arCount", seed: "yue2.arSeed", painter: "yue2.arPainter",
++    live: "yue2.arLive", look: "yue2.arLook", filter: "yue2.arFilter", size: "yue2.arSize" };
++  // HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта? Изучи интерфейс и функционал InvokeAI»):
++  // the pictures as runs or as one gallery (InvokeAI's grid: every picture, the newest first, filtered, starred, three sizes)
++  var FILTERS = [["all", "All"], ["1:1", "1:1"], ["16:9", "16:9"], ["9:16", "9:16"], ["star", "★ Starred"]];
++  var SIZES = [["s", "S", 130], ["m", "M", 200], ["l", "L", 300]];
++  var state = { hooks: null, runs: [], take: null, timer: 0, sending: false, open: {}, view: null, first: true,
++    look: "runs", filter: "all", size: "m" };
+ 
+   function $(id) { return document.getElementById(id); }
+   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+@@ -70,6 +76,7 @@
+   function draw(again) {
+     var body = again ? { prompt: again.prompt, shapes: again.shapes, count: again.count, seed: null, painter: again.painter }
+       : { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value };
++    body.preview = $("arLive").checked;                 // HERESY 1257: each step's picture while it paints
+     if (state.take) body.take = state.take.name;
+     if (!body.prompt) return toast(tr("Write what to paint first"), "bad");
+     if (!body.shapes.length) return toast(tr("Pick a shape: 1:1, 16:9 or 9:16"), "bad");
+@@ -134,7 +141,8 @@
+   }
+   function schedule(ms) {
+     clearTimeout(state.timer);
+-    if (document.body.dataset.tab === "artist" && state.runs.some(live)) state.timer = setTimeout(load, ms || 2500);
++    var painting = state.runs.some(function (r) { return r.status === "running"; });
++    if (document.body.dataset.tab === "artist" && state.runs.some(live)) state.timer = setTimeout(load, ms || (painting ? 1200 : 2500));
+   }
+   function runState(r) {
+     if (r.status === "queued") return '<span class="ar-state is-wait">' + esc(tr(r.waiting ? "waits for a card" : "in the queue")) + "</span>" +
+@@ -169,15 +177,50 @@
+       (r.shapes || []).forEach(function (id) {
+         n++;
+         if (n <= have) return;
+-        var sh = shapeOf(id);
+-        out += '<figure class="ar-pic is-wait" style="--ar:' + sh.w + "/" + sh.h + '"><div class="ar-gone">' + esc(n === have + 1 && r.status === "running" ? tr("painting…") : tr("to come")) +
++        var sh = shapeOf(id), now = n === have + 1 && r.status === "running", step = now && r.live && r.live.live === n ? r.live : null;
++        out += '<figure class="ar-pic is-wait" style="--ar:' + sh.w + "/" + sh.h + '"><div class="ar-gone' + (step ? " ar-develop" : "") + '">' +
++          (step ? '<img alt="" draggable="false" src="' + esc(fileUrl(r.id, step.file) + "&v=" + step.step) + '" /><span class="ar-stepno">' + step.step + " / " + step.of + "</span>"
++            : esc(now ? tr("painting…") : tr("to come"))) +
+           '</div><figcaption><span class="ar-cap">' + esc(capOf(r, { shape: id, seed: (r.seed || 0) + k })) + "</span></figcaption></figure>";
+       });
+     }
+     return out;
+   }
++  function items() {                                  // every kept picture, the newest first, as the gallery's filter says
++    var out = [];
++    state.runs.forEach(function (r) {
++      (r.pictures || []).forEach(function (p) {
++        if (!p.kept) return;
++        if (state.filter === "star" ? !p.star : state.filter !== "all" && p.shape !== state.filter) return;
++        out.push({ r: r, p: p });
++      });
++    });
++    return out;
++  }
++  function paintBar() {
++    Array.prototype.forEach.call(document.querySelectorAll("#arBar [data-look]"), function (b) { b.classList.toggle("is-on", b.dataset.look === state.look); });
++    Array.prototype.forEach.call(document.querySelectorAll("#arFilters [data-filter]"), function (b) { b.classList.toggle("is-on", b.dataset.filter === state.filter); });
++    Array.prototype.forEach.call(document.querySelectorAll("#arSizes [data-size]"), function (b) { b.classList.toggle("is-on", b.dataset.size === state.size); });
++    $("arFilters").hidden = $("arSizes").hidden = state.look !== "gallery";
++    var all = 0;
++    state.runs.forEach(function (r) { (r.pictures || []).forEach(function (p) { if (p.kept) all++; }); });
++    $("arTotal").textContent = state.look === "gallery" ? items().length + " " + tr("of") + " " + all : state.runs.length + " " + tr(state.runs.length === 1 ? "run" : "runs") + " · " + all + " " + tr(all === 1 ? "picture" : "pictures");
++  }
++  function paintGallery() {
++    var list = items(), h = (SIZES.filter(function (z) { return z[0] === state.size; })[0] || SIZES[1])[2];
++    $("arRuns").innerHTML = !list.length ? '<p class="ar-empty">' + esc(tr(state.filter === "star" ? "No starred picture yet: ☆ on a picture stars it." : "No picture of this shape yet.")) + "</p>"
++      : '<div class="ar-gallery" style="--g-h:' + h + 'px">' + list.map(function (it, i) {
++        var sh = shapeOf(it.p.shape);
++        return '<figure class="ar-gpic" style="--ar:' + sh.w + "/" + sh.h + '" data-g="' + i + '">' +
++          '<button type="button" class="ar-thumb" data-act="gview" aria-label="' + esc(tr("Look at it")) + '" data-tip="' + esc(it.p.shape + " · " + tr("seed") + " " + it.p.seed + " · " + when(it.r.created)) + '">' +
++          '<img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(it.r.id, it.p.thumb || it.p.file)) + '" /></button>' +
++          '<button type="button" class="ar-star' + (it.p.star ? " is-on" : "") + '" data-act="gstar" aria-pressed="' + (it.p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + (it.p.star ? "★" : "☆") + "</button></figure>";
++      }).join("") + "</div>";
++  }
+   function paintRuns() {
+     var box = $("arRuns");
++    paintBar();
++    if (state.look === "gallery" && state.runs.length) return paintGallery();
+     if (!state.runs.length) {
+       box.innerHTML = '<p class="ar-empty">' + esc(tr("Nothing drawn here yet. Write what you see for the song, pick its shapes and press Draw.")) + "</p>";
+       return;
+@@ -211,6 +254,12 @@
+       tr("The cover it has now is kept beside the take (artwork-removed/), as a redraw keeps it; its MP3 is made again with the new one."),
+       { ok: tr("Set as cover") }).then(function (ok) { if (ok) return go(); });
+   }
++  function star(r, p, on) {
++    return api("/artist/star", { id: r.id, file: p.file, star: on }).then(function () {
++      p.star = on;
++      paintRuns();
++    }).catch(function (e) { toast(tr("No star:") + " " + e.message, "bad"); });
++  }
+   function trashRun(r) {
+     return window.HeresyDialog.confirm(tr("The run and its") + " " + (r.pictures || []).filter(function (p) { return p.kept; }).length + " " + tr("pictures to the trash?") + "\n\n" +
+       tr("They go to the studio's trash/artist/ and can come back from there; a cover already given to a take stays with the take."),
+@@ -225,8 +274,7 @@
+   }
+ 
+   // ------------------------------------------------------------------ a picture over the page
+-  function view(r, at) {
+-    var list = (r.pictures || []).filter(function (p) { return p.kept; });
++  function view(list, i) {                           // list: [{r, p}], the run's or the gallery's
+     if (!list.length) return;
+     if (state.view) state.view.close(true);
+     var back = document.createElement("div"), before = document.activeElement;
+@@ -234,6 +282,8 @@
+     back.innerHTML = '<figure class="art-fig" role="dialog" aria-modal="true" aria-label="' + esc(tr("The picture")) + '" tabindex="-1">' +
+       '<img class="art-img" alt="" draggable="false" />' +
+       '<figcaption class="art-cap"><span class="art-title" translate="no"></span><span class="art-count"></span>' +
++      '<button type="button" class="pb-btn ar-vstar" aria-label="' + esc(tr("Star it")) + '"></button>' +
++      '<button type="button" class="btn small ghost ar-vform" data-tip="' + esc(tr("Its prompt, seed and shape back in the form")) + '">' + esc(tr("To the form")) + "</button>" +
+       '<button type="button" class="btn small ar-cover" data-act="cover"></button>' +
+       '<a class="pb-btn art-dl" aria-label="' + esc(tr("Download the picture")) + '" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '">' +
+         (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
+@@ -241,9 +291,13 @@
+       '<button type="button" class="art-step art-prev" aria-label="' + esc(tr("Previous")) + '" data-tip="' + esc(tr("Previous (←)")) + '">‹</button>' +
+       '<button type="button" class="art-step art-next" aria-label="' + esc(tr("Next")) + '" data-tip="' + esc(tr("Next (→)")) + '">›</button>';
+     document.body.appendChild(back);
+-    var i = Math.max(0, list.indexOf(r.pictures[at]));
++    i = Math.max(0, Math.min(list.length - 1, i || 0));
+     function paint() {
+-      var p = list[i], sh = shapeOf(p.shape), take = state.take, b = back.querySelector(".ar-cover");
++      var r = list[i].r, p = list[i].p, sh = shapeOf(p.shape), take = state.take, b = back.querySelector(".ar-cover");
++      var st = back.querySelector(".ar-vstar");
++      st.textContent = p.star ? "★" : "☆";
++      st.classList.toggle("is-on", !!p.star);
++      st.dataset.tip = p.star ? tr("Starred: ☆ takes the star off") : tr("Star it: the gallery's ★ shows the starred");
+       var img = back.querySelector(".art-img");
+       img.src = fileUrl(r.id, p.file);
+       back.style.setProperty("--ar", sh.w + "/" + sh.h);
+@@ -275,7 +329,9 @@
+       if (e.target === back || e.target.closest(".art-close")) return close();
+       if (e.target.closest(".art-prev")) return step(-1);
+       if (e.target.closest(".art-next")) return step(1);
+-      if (e.target.closest(".ar-cover")) { var p = list[i]; close(); cover(r, p); }
++      if (e.target.closest(".ar-cover")) { var it = list[i]; close(); cover(it.r, it.p); }
++      if (e.target.closest(".ar-vstar")) { var s0 = list[i]; star(s0.r, s0.p, !s0.p.star).then(paint); }
++      if (e.target.closest(".ar-vform")) { var f0 = list[i]; close(); fillForm({ prompt: f0.r.prompt, shapes: [f0.p.shape], count: 1, seed: f0.p.seed, painter: f0.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
+     });
+     state.view = { close: close };
+     paint();
+@@ -304,10 +360,20 @@
+       if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("arDraw").disabled) { e.preventDefault(); draw(); }
+     });
+     $("arRuns").addEventListener("click", function (e) {
++      var g = e.target.closest("[data-act^=g]");
++      if (g) {                                          // the gallery's own: look, star
++        var list = items(), at = +g.closest(".ar-gpic").dataset.g;
++        if (g.dataset.act === "gview") view(list, at);
++        else if (g.dataset.act === "gstar") star(list[at].r, list[at].p, !list[at].p.star);
++        return;
++      }
+       var b = e.target.closest("[data-act]"), r = b && runOf(b);
+       if (!b || !r || b.disabled) return;
+       var act = b.dataset.act, fig = b.closest(".ar-pic"), p = fig && r.pictures[+fig.dataset.i];
+-      if (act === "view") view(r, +fig.dataset.i);
++      if (act === "view") {
++        var kept = (r.pictures || []).filter(function (x) { return x.kept; }).map(function (x) { return { r: r, p: x }; });
++        view(kept, kept.map(function (x) { return x.p; }).indexOf(r.pictures[+fig.dataset.i]));
++      }
+       else if (act === "cover" && p) cover(r, p);
+       else if (act === "form") { fillForm(r, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, shapes, variations and seed")); }
+       else if (act === "again") draw(r);
+@@ -315,6 +381,22 @@
+       else if (act === "fold") { state.open[r.id] = !state.open[r.id]; b.classList.toggle("is-open", !!state.open[r.id]); }
+       else if (act === "cancel") api("/jobs/cancel", { key: "artist:" + r.id }).then(load).catch(function (err) { toast(err.message, "bad"); });
+     });
++    // HERESY 1257: runs or the gallery, its filter and size, kept in this browser; the live preview's box
++    state.look = recall(KEY.look) === "gallery" ? "gallery" : "runs";
++    state.filter = FILTERS.some(function (f) { return f[0] === recall(KEY.filter); }) ? recall(KEY.filter) : "all";
++    state.size = SIZES.some(function (z) { return z[0] === recall(KEY.size); }) ? recall(KEY.size) : "m";
++    $("arFilters").innerHTML = FILTERS.map(function (f) { return '<button type="button" class="chip" data-filter="' + f[0] + '">' + esc(tr(f[1])) + "</button>"; }).join("");
++    $("arSizes").innerHTML = SIZES.map(function (z) { return '<button type="button" class="chip" data-size="' + z[0] + '" aria-label="' + esc(tr("Size") + " " + z[1]) + '">' + z[1] + "</button>"; }).join("");
++    $("arBar").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-look], [data-filter], [data-size]");
++      if (!b) return;
++      if (b.dataset.look) { state.look = b.dataset.look; keep(KEY.look, state.look === "runs" ? null : state.look); }
++      if (b.dataset.filter) { state.filter = b.dataset.filter; keep(KEY.filter, state.filter === "all" ? null : state.filter); }
++      if (b.dataset.size) { state.size = b.dataset.size; keep(KEY.size, state.size === "m" ? null : state.size); }
++      paintRuns();
++    });
++    $("arLive").checked = recall(KEY.live) !== "0";
++    $("arLive").addEventListener("change", function () { keep(KEY.live, this.checked ? null : "0"); });
+     window.addEventListener("ruach-lang", function () { paintForm(); paintHead(); paintRuns(); });
+     if (state.hooks.take) setTake(state.hooks.take()); else paintHead();
+     paintForm();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 68d8871..bcc8f8e 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1716,9 +1716,18 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <label class="field ar-seed"><span class="label">Seed <em>empty: a new one</em></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
+         <label class="field ar-count" data-tip="Each variation is the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Variations</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+         <label class="field ar-painter"><span class="label">Painter</span><select id="arPainter" translate="no" data-tip="Krea 2 Muse by Stable Yogi: Q4 wants a card with 12.5 GB free, Q8 (finer) 18.5 GB; about 35 s a square picture and 47 s a wide or tall one on an RTX 3090"><option value="krea2-q4">Krea 2 Muse · Q4 (from 12.5 GB)</option><option value="krea2-q8">Krea 2 Muse · Q8 (from 18.5 GB)</option></select></label>
++        <!-- HERESY 1257 (Viktor 08.10.2026: «живую проявку с латентного шума до готовой картинки… В InvokeAI можно либо выключить, либо включить») -->
++        <label class="check ar-live" data-tip="Each step of the painting over its place, from the noise to the picture: an eighth of its size, seen without the decoder, so it costs nothing. Off: the place waits for the picture"><input type="checkbox" id="arLive" checked /> <span>Live preview</span></label>
+         <div class="ar-go"><span class="row-hint" id="arCost"></span><button type="button" class="btn primary" id="arDraw">Draw</button></div>
+       </div>
+     </div>
++    <!-- HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта?»): the runs, or every picture as one gallery -->
++    <div class="ar-bar" id="arBar">
++      <span class="ar-looks" role="group" aria-label="How to show them"><button type="button" class="chip" data-look="runs" data-tip="Each press of Draw with its prompt, seed and pictures, the newest on top">Runs</button><button type="button" class="chip" data-look="gallery" data-tip="Every picture of every run in one grid, the newest first: filter by shape or by star, three sizes">Gallery</button></span>
++      <span class="ar-filters" id="arFilters" role="group" aria-label="Which pictures" hidden></span>
++      <span class="ar-sizes" id="arSizes" role="group" aria-label="Their size" hidden></span>
++      <span class="ar-total" id="arTotal"></span>
++    </div>
+     <div class="ar-runs" id="arRuns"></div>
+   </section>
+ 
+-- 
+2.43.0
+

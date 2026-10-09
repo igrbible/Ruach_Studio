@@ -1050,7 +1050,7 @@ RuachI18n.add("ru", {
 "Its picture: see it whole": "Картинка: посмотреть целиком",
 "On the cards now:": "Сейчас на картах:",
 "Drag to widen or narrow the workspaces; a double click folds them away": "Тяни, чтобы расширить или сузить колонку пространств; двойной щелчок сворачивает её",
-"Fold the workspaces away: the cards take one column more": "Свернуть пространства: карточкам прибавится колонка",
+"Fold the workspaces away: the cards grow wider": "Свернуть пространства: карточки станут шире",
 "Show the workspaces": "Показать пространства",
 "regen": "реджен",
 "Regenerated with a new seed from {0}": "Перегенерирован с новым зерном из {0}",

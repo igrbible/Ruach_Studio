@@ -2,10 +2,15 @@
 
 Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): one machine with an NVIDIA card, your own songs, nothing in a cloud. It grew over [YuE2 Kit](https://github.com/IronWolve/yue2-kit) v12 by IronWolve, which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by ServeurpersoCom. Every change has a number (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each change to the engine and the page as a patch of its own.
 
-## 2.0.0-rc3 · In the Making
+## 2.0.0-rc3 · 2026-10-09
+
+The third release candidate: the Artist room in an early preview, Pinokio on Linux, and what two days of the rooms' audit asked for (HERESY 1169, patches 1199–1263).
 
 ### Everywhere
 
+- **Fewer tips**: none repeats a take's own words (the player's title shows no style on hover any more; a queue's name, a VAE tile's repository, a preset's text), a button's own label («Refine») or a sign everyone reads (like, dislike, the star; their names stay for a screen reader).
+- **The player in two rows where songs are heard and compared** (the Creator, the Refiner, the Librarian), in one row in the Writer, the Artist, the Trainer and the Engine, and in the Creator while a frame is lifted or the lyrics are over everything (from 1660 px; below it one row everywhere, as before).
+- **The player comes back after a reload** (F5) with its take and its place, and plays on where the browser lets it; kept in this browser as it pauses, seeks and plays, never in the settings file.
 - **A lifted frame's larger text fits its selects**: the key, the Writer's and the profile's grow with it (their widths in em), the profile's buttons go to the next line rather than squeeze it; **the LoRA notes their own sign**, a short list, not a second i beside the section's.
 - **English headings in title case**, by the rules for headings: the page's (Supply Your Own Score, Cover or Remix, Score Planner, The Song Now…), the guide's (Ruach Studio · The Guide), the README's and these notes'; the other languages keep their own rules and translations.
 - **The guide by F1**, and larger: F1 (or Shift+F1) opens it on the room you are in and shuts it, the browser's help kept away; the window 10 % wider and taller, its own −, + and ⟲ for the text and ⤢ for the whole screen (kept in this browser).
@@ -16,6 +21,8 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 
 ### Creator
 
+- **A score the page puts into the form shows its rows at once**: a take loaded into the form, Edit score or an example, and Recite and the voice shift are there and MIDI lights (they waited for a key pressed in the score).
+- **The profile's button says Save.**
 - **Full plan by default** (Direct was, since rc1), and New song comes back to it; **the score's Max tokens up to 8192**, its default still 6144 (what the score takes, the music cannot have: the shared window is 24,576).
 - **Create ABC Score** (once *Plan score only*), in every language: live in Full and Melody whenever the form is, a draft restored on load included (it stayed greyed there); with a score in the form it asks before writing over it.
 - **The lyrics over everything: − and + scale the text alone**, its line numbers with it; the box, its buttons and the meter stay four tenths larger than the form.
@@ -67,19 +74,17 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 
 ### The Engine
 
+- **The settings file keeps what is not the page's** through the page's saves and its Reset; the lab knows where your own work lives (outputs, trash, artist, writer: a folder of the studio's, or a link of it to another disk), makes one that is missing at its start and links back one the settings file places elsewhere. The card that moves them (Engine → Folders) comes after this candidate.
 - **One decoder on the card**: another VAE (Legacy, Blend) swaps out the idle one. Three side by side, each keeping a 3.1 GB working buffer, ran a 24 GB card out of memory on the third.
 - **Out of GPU memory no longer kills the engine**: the sound half and the decoder renew their scheduler after a failed allocation and the run says why, with the card's numbers; the page then offers the next smaller copy of the model, honestly (Q8_0 near lossless; Q6_K the quality starts to suffer; Q5_K_M the music half hallucinates). Variations that do not fit at once go one at a time. The music's memory (its KV sets) is given back after a run of several probes: two long probes at once on BF16 had left 10.75 GB behind them for good.
 - **Probes go together only as many as the card holds**, by the parts measured on a 24 GB card (the weights as their GGUF weighs, the music's memory per probe, the sound's by the length); the page says when they go one after another. On 24 GB with BF16: two of 2 minutes at once, one of 5.
 - **Two or more sound variations no longer crash the engine**, on any copy of the model: flash attention's mask scan read one shared mask past its end from the second variation on (ggml-patches/0001, put on by build.sh; it could also cut a variation's attention short where it did not crash).
 - **Transcription** (a score from the sound) no longer fails a whole score on a note or an interval its grid cannot hold, or on a measure whose beat numbers skip one: what the grid cannot hold is left out, and the log says how many; an odd measure is written with the beats it has. Ten of the 620 style takes had no score cover for it, and «Transcribe this take» failed on such songs.
+- **Updates** (Engine → Updates): Ruach Studio's releases on GitHub against this version, on a schedule you choose (every day, week, month, never; release candidates too), *Check now*; when one is out, a window with what is new: ask, or update by itself when nothing runs, where the studio is a clone of its repository (elsewhere it says how to update by hand). After a day of use it asks how often to look. A new studio, and each update, offers the 💎 sets it lacks.
 
 ### Trainer
 
 - **A voice's kind, measured** (Material): male or female and the register on speech, the range sung on singing, kept beside the songs and shown on the folder and beside the sets made from it; on speech a name for the set made of it, as the published voice adapters are named (`voice-ru-m-baritenor-117`): no person's name. ♂ or ♀ when the pitch alone cannot tell.
-
-### Engine
-
-- **Updates** (Engine → Updates): Ruach Studio's releases on GitHub against this version, on a schedule you choose (every day, week, month, never; release candidates too), *Check now*; when one is out, a window with what is new: ask, or update by itself when nothing runs, where the studio is a clone of its repository (elsewhere it says how to update by hand). After a day of use it asks how often to look. A new studio, and each update, offers the 💎 sets it lacks.
 
 ### Player
 
@@ -95,8 +100,18 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 - **The chain in the order of the work**: Debuzz › Upscale › Stems › Remaster › Upscale, then the checks. The stems are split from the debuzzed (and upscaled) take, no longer from the raw one after it all, and the remaster mixes them, so its preset and de-esser work in the chain too; the upscale at the end draws anew the top the stems and the remaster leave, and turns the whole file down if the new top passes the remaster's true-peak ceiling.
 - **Stems four by default**, from the take or from a debuzzed or upscaled file of it (*Source*), each source with a set of its own; a REAPER project or a DAWproject takes the newest set of each kind.
 
+### Artist (Early Preview)
+
+- **The viewer's arrows over a slow link**: a step shows the next picture's thumb at once, at the size the full one takes, and the full one when it has come; it went on showing the picture before under the new caption while a PNG of 2 or 3 MB came through a VPN.
+- **The Artist room opens** (Ctrl+Alt+4), an early preview: pictures for your songs from a prompt of your own, painted by Krea 2 Muse. **1:1** for the cover (1280²), **16:9** for a video (1920×1080), **9:16** for a short (1080×1920), any of them at once and all from one seed, so they come out as one series; one to four variations (the next seeds); Q4 or Q8. A press waits in the lab's queue for a card with room as the artwork does; the VAE decodes in tiles (Q8 at 1920×1080 peaks at 16.9 GB so, 22.7 GB at once, in the same 46 s); every picture passes the content filter. The runs stay in `artist/`, the newest on top: a picture over the page in its own shape, downloaded as PNG, or, when it is square, made the cover of the take in hand (the cover it had kept beside the take, the other letter of an A/B pair given it when it has none); a run's prompt and seed back to the form, the same again from a new seed, a run to `trash/artist/`. **From the take** starts from the prompt its artwork was drawn from.
+- **A live preview** (on by default, as InvokeAI has it): the place of the picture being painted shows each step, from the noise to the picture, an eighth of its size and without the decoder (the Wan 2.1 VAE's latent-to-RGB factors, as InvokeAI carries them).
+- **A gallery** beside the runs: every picture of every run in one grid, the newest first, by shape or starred, in three sizes; a picture opened from it walks the whole gallery, with ★, To the form, Set as cover and Download.
+- **The room folds its Takes at first** and keeps its server log on the left, out of the way of the pictures.
+
 ### Librarian
 
+- **Folding the workspaces keeps the columns**: the cards grow wider instead of one column more, so the eye keeps its place in the tiling.
+- **The day wash over the cards at half its strength**: a slight glow of colour, no longer a grid of pink.
 - **What the menu sends away leaves the choice**: after the trash, Hide, taking out of the workspace open, regenerating or a dislike, the bar of the checked lets those takes go and folds back into the pinned strip, as its own buttons did (three takes sent to the trash from the menu left it open, «3 selected»).
 - **Filter** is a button at the end of the search row now (the search 240 to 320 px wide), and the filters a window of their own, as the workspace chooser: three groups of ticks (made · marked · has, with a note and with artwork among the marks), each with its icon and how many takes of the place, and how the ticked join: all (AND), any (OR) or none (NOR); Show says how many it will show, and the button how many are on and how they join.
 - **The menu on a checked card acts on every checked take**: like, dislike, favourite, artwork (drawn one after another), the artwork taken off, workspaces, hiding, a ZIP; a line with a number says so. Drawing artwork for several and regenerating several ask first: «Human, … in one volley? Won't your graphics card waste away?» (in Russian, his own words).
@@ -117,6 +132,12 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 - **Two new tabs, in seven languages**: *Score*, YuE2's ABC read line by line (the head, groups and bars, notes and their lengths, chords, sections, time, the Vocal and Ins spaces, changing it in the studio, what the check refuses and why); *Voices on a Score*, how the promo's narrator and the women's vocalise came out of one take, each line timed to its scene.
 - **Full or Direct**, in all seven languages: Viktor's word after a week of songs (Direct is SUNO's hit and miss; Full is the way for everyone) beside what was measured on his rap (the best take of all a Full one with his recipe; where Full fails it fails at the end, as a take is as long as its score; the 10–15 s after a song's proper fade are the score's leftover bars, not the guidance), and what to do with a Full take's end.
 - **End at…**, the Librarian's filters and its menu on the checked takes, the redraw that keeps the old picture, the player's status dot: each where its room is told.
+
+### Pinokio
+
+- **A launcher for [Pinokio](https://pinokio.co)** (`pinokio.js` and `pinokio/`): Install, Start, Open the studio, More models, Update and Reset from Pinokio's menu, on Linux with an NVIDIA card, with Pinokio's own CUDA toolkit 12.8 where the machine has none. The work is done by bash scripts that run the same from a terminal; INSTALL.md › With Pinokio. Asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1).
+- **`build.sh` and `start.sh` take the CUDA toolkit the launcher found** (`RUACH_CUDA_HOME`; `/usr/local/cuda-12.8` when it is not set, as before), and `build.sh` takes ninja only when it answers: a pip wrapper left without its module had made cmake fail.
+- **Engine → GPUs → Restart the studio says so where the studio is no service** (under Pinokio, or `./start.sh` by hand): it used to answer «restarting» and then «back», though nothing had restarted; the card is saved all the same.
 
 ## 2.0.0-rc2 · 2026-10-07
 

@@ -1,0 +1,551 @@
+From b09489f083fa2c0ecf10fc5805f35e9d586174fc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 16:59:01 -0600
+Subject: [PATCH 1253/1259] =?UTF-8?q?HERESY=201169=20=C2=B7=201255:=20the?=
+ =?UTF-8?q?=20Artist=20room,=20an=20early=20preview:=20a=20prompt=20of=20o?=
+ =?UTF-8?q?ne's=20own=20in=20three=20shapes=20from=20one=20seed=20(1:1,=20?=
+ =?UTF-8?q?16:9,=209:16),=20one=20to=20four=20variations,=20Krea=202=20Mus?=
+ =?UTF-8?q?e=20Q4=20or=20Q8;=20the=20runs=20below,=20live=20while=20drawin?=
+ =?UTF-8?q?g;=20a=20picture=20over=20the=20page=20in=20its=20own=20shape;?=
+ =?UTF-8?q?=20a=20square=20one=20the=20cover=20of=20the=20take=20in=20hand?=
+ =?UTF-8?q?;=20the=20tab=20live,=20Ctrl+Alt+4,=20F1=20its=20guide?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  52 ++++++
+ tools/console/app.js           |  13 +-
+ tools/console/heresy-artist.js | 323 +++++++++++++++++++++++++++++++++
+ tools/console/heresy-guide.js  |   2 +-
+ tools/console/index.html       |  27 ++-
+ 5 files changed, 411 insertions(+), 6 deletions(-)
+ create mode 100644 tools/console/heresy-artist.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 8ca3054..6d5b4aa 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4612,3 +4612,55 @@ body.lora-vtip-on .tip { display: none !important; }
+    among them stays the triangle */
+ :root { --ico-notes: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M4 6h16'/%3E%3Cpath d='M4 12h16'/%3E%3Cpath d='M4 18h10'/%3E%3C/svg%3E"); }
+ .lora-notes:not(.is-warn) { width: 12px; height: 12px; -webkit-mask-image: var(--ico-notes); mask-image: var(--ico-notes); }
++
++/* ---------------------------------------------------------------- HERESY 1255: the Artist room (heresy-artist.js), an early preview */
++.artist-col { grid-column: 1 / span 2; }
++body[data-tab="artist"] .col-grip.left { display: none; }
++.artist-head .ar-badge { align-self: center; padding: 2px 9px; border: 1px solid var(--amber-dim); border-radius: var(--r-pill); color: var(--amber);
++  font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
++.ar-form { display: flex; flex-direction: column; gap: 12px; margin: 16px 0 6px; }
++.ar-form textarea { resize: vertical; min-height: 92px; }
++.ar-knobs { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
++.ar-shapes { display: flex; gap: 6px; flex-wrap: wrap; }
++.ar-shape { display: inline-flex; align-items: center; gap: 6px; user-select: none; white-space: nowrap; }
++.ar-shape input { margin: 0; accent-color: var(--amber); }
++.ar-shape.is-on { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); }
++.ar-seed { width: 13.5em; flex: none; }
++.ar-seed-row { display: flex; gap: 6px; align-items: center; }
++.ar-count { width: 7.5em; flex: none; }
++.ar-painter { width: 17.5em; flex: none; }
++.ar-go { display: flex; align-items: center; gap: 12px; margin-left: auto; }
++.ar-go .row-hint { margin: 0; white-space: nowrap; }
++.ar-runs { display: flex; flex-direction: column; gap: 14px; margin: 16px 0 28px; }
++.ar-empty { margin: 8px 0; color: var(--dim); font-size: 13px; }
++.ar-run { border: 1px solid var(--line-a); border-radius: var(--r-lg); padding: 10px 12px 12px; background: var(--raise); }
++.ar-run.is-live { border-color: var(--amber-dim); }
++.ar-run-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12.5px; color: var(--muted); }
++.ar-when { color: var(--ink); font-variant-numeric: tabular-nums; }
++.ar-meta { color: var(--dim); font-variant-numeric: tabular-nums; }
++.ar-state.is-run, .ar-state.is-wait { color: var(--amber); }
++.ar-state.is-bad { color: var(--bad); }
++.ar-why { color: var(--dim); font-size: 12px; }
++.ar-acts { margin-left: auto; display: inline-flex; gap: 6px; }
++.ar-prompt { margin: 8px 0 10px; font-size: 13px; line-height: 1.45; color: var(--ink); cursor: pointer; overflow: hidden;
++  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
++.ar-prompt.is-open { display: block; -webkit-line-clamp: unset; }
++.ar-pics { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
++.ar-pic { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
++.ar-thumb, .ar-pic .ar-gone { display: block; height: 200px; aspect-ratio: var(--ar, 1); padding: 0; overflow: hidden; background: var(--field);
++  border: 1px solid var(--line-a); border-radius: var(--r-md); cursor: zoom-in; }
++.ar-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
++.ar-thumb:hover, .ar-thumb:focus-visible { border-color: var(--amber); }
++.ar-pic .ar-gone { display: grid; place-items: center; padding: 10px; text-align: center; font-size: 12px; color: var(--dim); cursor: default; border-style: dashed; }
++.ar-pic.is-wait .ar-gone { animation: ar-pulse 1.6s ease-in-out infinite; }
++@keyframes ar-pulse { 50% { opacity: .5; } }
++.ar-pic figcaption { display: flex; align-items: center; gap: 6px; align-self: stretch; min-width: 0; font-size: 12px; color: var(--dim); }
++.ar-cap { margin-right: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
++.ar-dl { display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none; color: var(--muted); border-radius: var(--r-sm); }
++.ar-dl:hover { color: var(--ink); background: var(--hover); }
++.ar-dl svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
++/* a picture over the page keeps its own shape (the takes' artwork is square) */
++.ar-view .art-fig { align-items: stretch; }
++.ar-view .art-img { aspect-ratio: auto; width: auto; height: auto; max-width: calc(100vw - 140px); max-height: calc(100vh - var(--playbar-h, 60px) - 96px); align-self: center; }
++.ar-view .art-cap { width: auto; }
++.ar-view .ar-cover { flex: none; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 3527c64..55e3006 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4017,6 +4017,7 @@
+     if (document.body.dataset.tab === "post") paintPost();   // HERESY 1014
+     if (typeof paintNote === "function") setTimeout(paintNote, 0);   // HERESY 1044
+     if (window.HeresyPost) window.HeresyPost.setTake({ name: take.name });   // HERESY 1029: before the tools report
++    if (window.HeresyArtist) window.HeresyArtist.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1255: its cover
+     if (window.HeresyInspect) window.HeresyInspect.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1025
+     if (window.HeresyDerived) window.HeresyDerived.setTake({ name: take.name, label: displayTitle(take), seconds: take.seconds });   // HERESY 1021; 1060 its length for the estimates
+     setTimeout(paintCardFolds, 0);   // HERESY 1009: the peeks read the texts filled below
+@@ -6773,7 +6774,7 @@
+   // where the whole page scrolls (the Engine page) the browser keeps the content in place by taking those 53 px off the
+   // scroll, and from 25 px that would land under 4 px and grow it again, round and round
+   (function () {
+-    var PAGES = "#view-compose, #view-take, #view-write, #view-post, #view-collection, #view-train, #view-engine";
++    var PAGES = "#view-compose, #view-take, #view-write, #view-post, #view-artist, #view-collection, #view-train, #view-engine";
+     document.body.classList.add("bar-tall");
+     document.addEventListener("scroll", function (event) {
+       var el = event.target === document ? document.scrollingElement : event.target;
+@@ -7751,16 +7752,18 @@
+     if (take && document.body.dataset.tab === "post") store("yue2.postTake", take.name);   // HERESY 1132: for F5
+   }
+   function setTab(tab) {
+-    if (["create", "write", "post", "collection", "train"].indexOf(tab) < 0) tab = "create";
++    if (["create", "write", "post", "artist", "collection", "train"].indexOf(tab) < 0) tab = "create";   // HERESY 1255: the Artist
+     document.body.dataset.tab = tab;
+     $("view-compose").classList.toggle("is-hidden", tab !== "create");
+     $("view-take").classList.toggle("is-hidden", tab !== "create");
+     $("view-write").classList.toggle("is-hidden", tab !== "write");
+     $("view-post").classList.toggle("is-hidden", tab !== "post");
++    $("view-artist").classList.toggle("is-hidden", tab !== "artist");            // HERESY 1255
+     $("view-collection").classList.toggle("is-hidden", tab !== "collection");   // HERESY 1041
+     $("view-train").classList.toggle("is-hidden", tab !== "train");             // HERESY 1063
+     if (tab === "train" && window.HeresyTrain) window.HeresyTrain.reload();
+     if (tab === "collection" && window.HeresyCollection) window.HeresyCollection.reload();
++    if (tab === "artist" && window.HeresyArtist) window.HeresyArtist.reload();      // HERESY 1255
+     if (tab === "write") refreshChat().catch(function () {});   // HERESY 1110: the Writing room says its state at once
+     paintLibFold();                                   // HERESY 1167: each room its own fold
+     all(".topbar [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+@@ -8189,6 +8192,9 @@
+     return sr > 0 && fr > 0 && sr % fr === 0 ? { period: sr / fr, rate: sr } : null;
+   }
+   if (window.HeresyPost) window.HeresyPost.init({ toast: toast, frame: vaeFrame });   // HERESY 1029; 1054 the chain
++  // HERESY 1255: the Artist room: the take in hand for its cover, the takes' pictures asked again when one is set
++  if (window.HeresyArtist) window.HeresyArtist.init({ toast: toast, artUrl: artUrl, refreshArts: refreshArts,
++    take: function () { return STATE.take ? { name: STATE.take.name, label: displayTitle(STATE.take) } : null; } });
+   if (window.HeresyDerived) window.HeresyDerived.init({   // HERESY 1021
+     frame: vaeFrame,
+     compare: function (path) {
+@@ -8518,7 +8524,7 @@
+   // places, by his plan (the DAW to live inside the Refiner): «Творец 1, Писатель 2, Огранщик 3, Художник 4, Библиотекарь 5,
+   // EMPTY 6, Тренер 7, Экспорт в Local DAW 8, Движок 9». 4 waits for the Artist room, 6 for a room to come. Each presses
+   // its own button (leaving the Engine asks as it does); read by the key's code, so in any layout and from the number pad
+-  var ROOM_KEYS = { 1: "create", 2: "write", 3: "post", 5: "collection", 7: "train" };
++  var ROOM_KEYS = { 1: "create", 2: "write", 3: "post", 4: "artist", 5: "collection", 7: "train" };   // HERESY 1255: 4 the Artist
+   window.addEventListener("keydown", function (event) {
+     if (!event.ctrlKey || !event.altKey || event.shiftKey || event.metaKey) return;
+     var m = /^(?:Digit|Numpad)([1-9])$/.exec(event.code || "");
+@@ -8528,7 +8534,6 @@
+     if (btn) btn.click();
+     else if (n === 8) $("dawOpen").click();
+     else if (n === 9) $("engineToggle").click();
+-    else if (n === 4) toast("Ctrl+Alt+4 is kept for the Artist room, which comes in a later release");
+   }, true);
+   // HERESY 1169 (Viktor 07.10.2026: «Давай шорткат Shift+Tab блокируем для обратного хождения по полям, а именно для
+   // переключения между композером и Исполнителем. И когда фрейм опущен, из обычной страницы… эта комбинация подымает оверлей во
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+new file mode 100644
+index 0000000..01ac1b8
+--- /dev/null
++++ b/tools/console/heresy-artist.js
+@@ -0,0 +1,323 @@
++// HERESY 1169 · 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»; «Код Художника оправданнее
++// строит на рабочем Krea2, который у тебя уже bulletproof»): the Artist room, an early preview. A prompt of one's own; the
++// shapes a song's pictures take (1:1 for the cover, 16:9 for a video, 9:16 for a short), all from one seed; one to four
++// variations; the painter. The lab draws a run (lab/artist.py) in its queue with its other GPU jobs; the runs stand below,
++// the newest first: each picture opened over the page, downloaded, or made the cover of the take in hand (a square one;
++// the cover it replaces is kept beside the take, as a redraw keeps it).
++(function () {
++  "use strict";
++
++  var SHAPES = [
++    { id: "1:1", label: "1:1 · 1280²", say: "the cover", w: 1, h: 1, s: 36 },
++    { id: "16:9", label: "16:9 · 1920×1080", say: "a video", w: 16, h: 9, s: 47 },
++    { id: "9:16", label: "9:16 · 1080×1920", say: "a short", w: 9, h: 16, s: 47 }
++  ];
++  var PAINTERS = { "krea2-q4": "Krea 2 Muse · Q4", "krea2-q8": "Krea 2 Muse · Q8" };
++  var KEY = { prompt: "yue2.arPrompt", shapes: "yue2.arShapes", count: "yue2.arCount", seed: "yue2.arSeed", painter: "yue2.arPainter" };
++  var state = { hooks: null, runs: [], take: null, timer: 0, sending: false, open: {}, view: null, first: true };
++
++  function $(id) { return document.getElementById(id); }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
++  function keep(k, v) { try { if (v == null || v === "") localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private window */ } }
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function toast(t, kind) { if (state.hooks) state.hooks.toast(t, kind || ""); }
++  function api(path, body) {
++    var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
++    return fetch("/lab" + path, opt).then(function (r) {
++      return r.json().catch(function () { return {}; }).then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || ("HTTP " + r.status)); return b; });
++    });
++  }
++  function fileUrl(id, file) { return "/lab/artist/file?id=" + encodeURIComponent(id) + "&file=" + encodeURIComponent(file); }
++  function shapeOf(id) { return SHAPES.filter(function (s) { return s.id === id; })[0] || SHAPES[0]; }
++  function live(r) { return r && (r.status === "queued" || r.status === "running"); }
++  function when(t) {
++    if (!t) return "";
++    var d = new Date(t * 1000), locs = window.RuachI18n ? window.RuachI18n.locales() : undefined;
++    return d.toLocaleDateString(locs, { day: "2-digit", month: "2-digit" }) + " " + d.toTimeString().slice(0, 5);
++  }
++  function minutes(sec) { var m = Math.max(1, Math.round(sec / 30) / 2); return m === 1 ? "about a minute" : "about " + String(m).replace(".5", "½") + " min"; }
++
++  // ------------------------------------------------------------------ the form
++  function shapesPicked() {
++    return Array.prototype.filter.call(document.querySelectorAll("#arShapes input"), function (i) { return i.checked; })
++      .map(function (i) { return i.value; });
++  }
++  function seedAsked() { var v = $("arSeed").value.trim(); return /^\d{1,10}$/.test(v) ? +v : null; }
++  function paintForm() {
++    var shapes = shapesPicked(), count = +$("arCount").value || 1, n = shapes.length * count;
++    var secs = 25 + count * shapes.reduce(function (a, id) { return a + shapeOf(id).s; }, 0);
++    $("arCost").textContent = n ? tr(n === 1 ? "1 picture" : n + " pictures") + " · " + tr(minutes(secs)) + " " + tr("on one card") : tr("pick a shape");
++    $("arDraw").disabled = !n || !$("arPrompt").value.trim() || state.sending;
++    Array.prototype.forEach.call(document.querySelectorAll("#arShapes label"), function (l) { l.classList.toggle("is-on", l.querySelector("input").checked); });
++  }
++  function keepForm() {
++    keep(KEY.prompt, $("arPrompt").value);
++    keep(KEY.shapes, shapesPicked().join(","));
++    keep(KEY.count, $("arCount").value === "1" ? null : $("arCount").value);
++    keep(KEY.seed, $("arSeed").value.trim());
++    keep(KEY.painter, $("arPainter").value === "krea2-q4" ? null : $("arPainter").value);
++  }
++  function fillForm(run, withSeed) {
++    $("arPrompt").value = run.prompt || "";
++    Array.prototype.forEach.call(document.querySelectorAll("#arShapes input"), function (i) { i.checked = (run.shapes || []).indexOf(i.value) >= 0; });
++    $("arCount").value = String(run.count || 1);
++    $("arSeed").value = withSeed && run.seed != null ? String(run.seed) : "";
++    if (PAINTERS[run.painter]) $("arPainter").value = run.painter;
++    keepForm();
++    paintForm();
++  }
++  function draw(again) {
++    var body = again ? { prompt: again.prompt, shapes: again.shapes, count: again.count, seed: null, painter: again.painter }
++      : { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value };
++    if (state.take) body.take = state.take.name;
++    if (!body.prompt) return toast(tr("Write what to paint first"), "bad");
++    if (!body.shapes.length) return toast(tr("Pick a shape: 1:1, 16:9 or 9:16"), "bad");
++    state.sending = true;
++    paintForm();
++    return api("/artist/draw", body).then(function (run) {
++      state.runs.unshift(run);
++      paintRuns();
++      toast(tr("The Artist draws") + " " + run.of + " " + tr(run.of === 1 ? "picture" : "pictures") + " · " + tr("seed") + " " + run.seed + ": " +
++        tr("it waits for a card with room, then paints (Engine → GPUs says which card does what)"));
++      schedule(1500);
++    }).catch(function (e) { toast(tr("The Artist cannot draw:") + " " + e.message, "bad"); })
++      .then(function () { state.sending = false; paintForm(); });
++  }
++  function fromTake() {
++    var take = state.take;
++    if (!take) return toast(tr("Pick a take on the right first"), "bad");
++    api("/artist/prompt?name=" + encodeURIComponent(take.name)).then(function (d) {
++      var put = function () {
++        $("arPrompt").value = d.prompt || "";
++        keepForm(); paintForm();
++        toast(d.from === "artwork" ? tr("The prompt its artwork was drawn from") : tr("A prompt from its title and style: say more of what you see"));
++      };
++      var mine = $("arPrompt").value.trim();
++      if (!mine || mine === (d.prompt || "").trim()) return put();
++      return window.HeresyDialog.confirm(tr("Put the take's prompt in place of the one written here?") + "\n\n" +
++        tr("What is written now goes; each run below keeps its own prompt."), { ok: tr("Put it in"), danger: true }).then(function (ok) { if (ok) put(); });
++    }).catch(function (e) { toast(tr("No prompt from the take:") + " " + e.message, "bad"); });
++  }
++
++  // ------------------------------------------------------------------ the take in hand
++  function setTake(take) {
++    state.take = take && take.name ? take : null;
++    paintHead();
++    if (state.runs.length) paintRuns();     // «Set as cover» names the take
++  }
++  function hasArt(name) { return !!(state.hooks && state.hooks.artUrl && state.hooks.artUrl(name)); }
++  function paintHead() {
++    var t = state.take;
++    $("arTake").textContent = t ? t.label || t.name : "";
++    $("arTakeNote").textContent = t ? (hasArt(t.name) ? tr("its cover can be one of these") : tr("no cover yet: give it one of these")) : tr("pick a take on the right to give it a cover");
++    $("arFromTake").disabled = !t;
++  }
++
++  // ------------------------------------------------------------------ the runs
++  function load() {
++    return api("/artist/runs").then(function (d) {
++      var was = {};
++      state.runs.forEach(function (r) { if (live(r)) was[r.id] = 1; });
++      state.runs = d.runs || [];
++      state.runs.forEach(function (r) {           // a run that ended while the room looked on says so
++        if (!was[r.id] || live(r)) return;
++        var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length;
++        if (r.status === "done") toast(tr("The Artist drew") + " " + kept + " " + tr("of") + " " + r.of + " " + tr(r.of === 1 ? "picture" : "pictures"), kept ? "good" : "bad");
++        else toast(tr("The Artist's run failed:") + " " + (r.error || ""), "bad");
++      });
++      paintRuns();
++      schedule();
++    }).catch(function (e) {
++      $("arRuns").innerHTML = '<p class="ar-empty">' + esc(tr("The lab does not answer:")) + " " + esc(e.message) + "</p>";
++    });
++  }
++  function schedule(ms) {
++    clearTimeout(state.timer);
++    if (document.body.dataset.tab === "artist" && state.runs.some(live)) state.timer = setTimeout(load, ms || 2500);
++  }
++  function runState(r) {
++    if (r.status === "queued") return '<span class="ar-state is-wait">' + esc(tr(r.waiting ? "waits for a card" : "in the queue")) + "</span>" +
++      (r.waiting ? ' <span class="ar-why">' + esc(r.waiting) + "</span>" : "") +
++      ' <button type="button" class="btn ghost small" data-act="cancel">' + esc(tr("Off the queue")) + "</button>";
++    if (r.status === "running") return '<span class="ar-state is-run">' + esc(tr("drawing")) + " " + (r.pictures || []).length + " " + esc(tr("of")) + " " + r.of +
++      (r.gpu != null ? " · GPU " + esc(r.gpu) : "") + "</span>";
++    if (r.status === "failed") return '<span class="ar-state is-bad">' + esc(tr("failed")) + "</span> " + '<span class="ar-why">' + esc(r.error || "") + "</span>";
++    var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length;
++    return '<span class="ar-state">' + kept + " " + esc(tr(kept === 1 ? "picture" : "pictures")) + (r.took ? " · " + Math.round(r.took) + " s" : "") + "</span>";
++  }
++  function capOf(r, p) { return p.shape + (r.count > 1 ? " · v" + (p.seed - r.seed + 1) : ""); }
++  function picHtml(r, p, i) {
++    var sh = shapeOf(p.shape);
++    if (!p.kept) return '<figure class="ar-pic is-gone" style="--ar:' + sh.w + "/" + sh.h + '"><div class="ar-gone">' +
++      esc(tr("Not kept: the content filter flagged it")) + '</div><figcaption><span class="ar-cap">' + esc(capOf(r, p)) + "</span></figcaption></figure>";
++    var square = p.shape === "1:1", take = state.take;
++    var coverTip = !take ? tr("Pick a take on the right to give it this cover") : !square ? tr("A cover is square: this one is for a video or a short") :
++      tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" + (hasArt(take.name) ? " " + tr("(its cover now is kept beside it)") : "");
++    return '<figure class="ar-pic" style="--ar:' + sh.w + "/" + sh.h + '" data-i="' + i + '">' +
++      '<button type="button" class="ar-thumb" data-act="view" aria-label="' + esc(tr("Look at it")) + '" data-tip="' + esc(p.w + "×" + p.h + " · " + tr("seed") + " " + p.seed) +
++      '"><img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(r.id, p.thumb || p.file)) + '" /></button>' +
++      '<figcaption><span class="ar-cap">' + esc(capOf(r, p)) + "</span>" +
++      '<a class="ar-dl" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '" aria-label="' + esc(tr("Download")) + '" href="' + esc(fileUrl(r.id, p.file)) +
++      '" download="' + esc("ruach-artist-" + r.id + "-" + p.file) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
++      (square ? '<button type="button" class="btn ghost small ar-cover" data-act="cover"' + (take ? "" : " disabled") + ' data-tip="' + esc(coverTip) + '">' +
++      esc(tr("Set as cover")) + "</button>" : "") + "</figcaption></figure>";
++  }
++  function waitHtml(r) {
++    var have = (r.pictures || []).length, out = "", n = 0;
++    for (var k = 0; k < (r.count || 1); k++) {
++      (r.shapes || []).forEach(function (id) {
++        n++;
++        if (n <= have) return;
++        var sh = shapeOf(id);
++        out += '<figure class="ar-pic is-wait" style="--ar:' + sh.w + "/" + sh.h + '"><div class="ar-gone">' + esc(n === have + 1 && r.status === "running" ? tr("painting…") : tr("to come")) +
++          '</div><figcaption><span class="ar-cap">' + esc(capOf(r, { shape: id, seed: (r.seed || 0) + k })) + "</span></figcaption></figure>";
++      });
++    }
++    return out;
++  }
++  function paintRuns() {
++    var box = $("arRuns");
++    if (!state.runs.length) {
++      box.innerHTML = '<p class="ar-empty">' + esc(tr("Nothing drawn here yet. Write what you see for the song, pick its shapes and press Draw.")) + "</p>";
++      return;
++    }
++    box.innerHTML = state.runs.map(function (r) {
++      var pics = (r.pictures || []).map(function (p, i) { return picHtml(r, p, i); }).join("") + (live(r) ? waitHtml(r) : "");
++      var open = !!state.open[r.id];
++      return '<article class="ar-run' + (live(r) ? " is-live" : "") + '" data-id="' + esc(r.id) + '">' +
++        '<header class="ar-run-head"><span class="ar-when">' + esc(when(r.created)) + "</span>" +
++        '<span class="ar-meta" translate="no">' + esc(PAINTERS[r.painter] || r.painter || "") + " · " + esc(tr("seed")) + " " + esc(r.seed) +
++        (r.count > 1 ? "…" + esc(r.seed + r.count - 1) : "") + "</span>" + runState(r) +
++        '<span class="ar-acts"><button type="button" class="btn ghost small" data-act="form" data-tip="' + esc(tr("Its prompt, shapes, variations and seed back in the form above")) + '">' + esc(tr("To the form")) + "</button>" +
++        '<button type="button" class="btn ghost small" data-act="again" data-tip="' + esc(tr("The same prompt and shapes once more, from a new seed")) + '"' + (live(r) ? " disabled" : "") + ">" + esc(tr("Again")) + "</button>" +
++        '<button type="button" class="btn ghost small danger" data-act="trash" data-tip="' + esc(tr("The run and its pictures to the trash (the studio's trash/artist/)")) + '"' + (live(r) ? " disabled" : "") + ">" + esc(tr("Trash")) + "</button></span></header>" +
++        '<p class="ar-prompt' + (open ? " is-open" : "") + '" data-act="fold" translate="no">' + esc(r.prompt) + "</p>" +
++        '<div class="ar-pics">' + pics + "</div></article>";
++    }).join("");
++  }
++  function runOf(el) { var a = el.closest(".ar-run"); return a && state.runs.filter(function (r) { return r.id === a.dataset.id; })[0]; }
++  function cover(r, p) {
++    var take = state.take;
++    if (!take || p.shape !== "1:1") return;
++    var go = function () {
++      return api("/artist/cover", { id: r.id, file: p.file, name: take.name }).then(function (d) {
++        toast(tr("The cover of") + " “" + (take.label || take.name) + "” " + tr("is this picture now") + (d.kept ? " · " + tr("the old one is kept beside the take") : ""), "good");
++        if (state.hooks.refreshArts) state.hooks.refreshArts().then(paintHead);
++      }).catch(function (e) { toast(tr("No cover:") + " " + e.message, "bad"); });
++    };
++    if (!hasArt(take.name)) return go();
++    return window.HeresyDialog.confirm(tr("Set this picture as the cover of the take in hand?") + "\n\n" + (take.label || take.name) + "\n\n" +
++      tr("The cover it has now is kept beside the take (artwork-removed/), as a redraw keeps it; its MP3 is made again with the new one."),
++      { ok: tr("Set as cover") }).then(function (ok) { if (ok) return go(); });
++  }
++  function trashRun(r) {
++    return window.HeresyDialog.confirm(tr("The run and its") + " " + (r.pictures || []).filter(function (p) { return p.kept; }).length + " " + tr("pictures to the trash?") + "\n\n" +
++      tr("They go to the studio's trash/artist/ and can come back from there; a cover already given to a take stays with the take."),
++      { ok: tr("To the trash"), danger: true }).then(function (ok) {
++      if (!ok) return;
++      return api("/artist/trash", { id: r.id }).then(function () {
++        state.runs = state.runs.filter(function (x) { return x.id !== r.id; });
++        paintRuns();
++        toast(tr("In the trash: the studio's trash/artist/ keeps it"));
++      }).catch(function (e) { toast(e.message, "bad"); });
++    });
++  }
++
++  // ------------------------------------------------------------------ a picture over the page
++  function view(r, at) {
++    var list = (r.pictures || []).filter(function (p) { return p.kept; });
++    if (!list.length) return;
++    if (state.view) state.view.close(true);
++    var back = document.createElement("div"), before = document.activeElement;
++    back.className = "hd-back art-back ar-view";
++    back.innerHTML = '<figure class="art-fig" role="dialog" aria-modal="true" aria-label="' + esc(tr("The picture")) + '" tabindex="-1">' +
++      '<img class="art-img" alt="" draggable="false" />' +
++      '<figcaption class="art-cap"><span class="art-title" translate="no"></span><span class="art-count"></span>' +
++      '<button type="button" class="btn small ar-cover" data-act="cover"></button>' +
++      '<a class="pb-btn art-dl" aria-label="' + esc(tr("Download the picture")) + '" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '">' +
++        (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
++      '<button type="button" class="pb-btn art-close" aria-label="' + esc(tr("Close")) + '" data-tip="' + esc(tr("Close (Esc)")) + '">✕</button></figcaption></figure>' +
++      '<button type="button" class="art-step art-prev" aria-label="' + esc(tr("Previous")) + '" data-tip="' + esc(tr("Previous (←)")) + '">‹</button>' +
++      '<button type="button" class="art-step art-next" aria-label="' + esc(tr("Next")) + '" data-tip="' + esc(tr("Next (→)")) + '">›</button>';
++    document.body.appendChild(back);
++    var i = Math.max(0, list.indexOf(r.pictures[at]));
++    function paint() {
++      var p = list[i], sh = shapeOf(p.shape), take = state.take, b = back.querySelector(".ar-cover");
++      var img = back.querySelector(".art-img");
++      img.src = fileUrl(r.id, p.file);
++      back.style.setProperty("--ar", sh.w + "/" + sh.h);
++      back.querySelector(".art-title").textContent = sh.id + " · " + p.w + "×" + p.h + " · " + tr("seed") + " " + p.seed;
++      back.querySelector(".art-count").textContent = list.length > 1 ? (i + 1) + " / " + list.length : "";
++      var dl = back.querySelector(".art-dl");
++      dl.href = fileUrl(r.id, p.file);
++      dl.setAttribute("download", "ruach-artist-" + r.id + "-" + p.file);
++      b.textContent = tr("Set as cover");
++      b.disabled = !(take && p.shape === "1:1");
++      b.dataset.tip = !take ? tr("Pick a take on the right to give it this cover") : p.shape !== "1:1" ? tr("A cover is square: this one is for a video or a short") :
++        tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”";
++      Array.prototype.forEach.call(back.querySelectorAll(".art-step"), function (s) { s.hidden = list.length < 2; });
++    }
++    function close(now) {
++      document.removeEventListener("keydown", key, true);
++      state.view = null;
++      back.classList.add("is-leaving");
++      setTimeout(function () { back.remove(); }, now ? 0 : 120);
++      if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
++    }
++    function step(d) { i = (i + d + list.length) % list.length; paint(); }
++    function key(e) {
++      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
++      else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.ctrlKey && !e.altKey) { e.preventDefault(); e.stopPropagation(); if (list.length > 1) step(e.key === "ArrowRight" ? 1 : -1); }
++    }
++    document.addEventListener("keydown", key, true);
++    back.addEventListener("click", function (e) {
++      if (e.target === back || e.target.closest(".art-close")) return close();
++      if (e.target.closest(".art-prev")) return step(-1);
++      if (e.target.closest(".art-next")) return step(1);
++      if (e.target.closest(".ar-cover")) { var p = list[i]; close(); cover(r, p); }
++    });
++    state.view = { close: close };
++    paint();
++    requestAnimationFrame(function () { back.classList.add("is-on"); back.querySelector(".art-fig").focus({ preventScroll: true }); });
++  }
++
++  // ------------------------------------------------------------------ wiring
++  function init(hooks) {
++    state.hooks = hooks || {};
++    var shapes = (recall(KEY.shapes) || "1:1").split(",");
++    $("arShapes").innerHTML = SHAPES.map(function (s) {
++      return '<label class="chip ar-shape" data-tip="' + esc(tr("For") + " " + tr(s.say)) + '"><input type="checkbox" value="' + s.id + '"' +
++        (shapes.indexOf(s.id) >= 0 ? " checked" : "") + " /> " + esc(s.label) + "</label>";
++    }).join("");
++    $("arPrompt").value = recall(KEY.prompt) || "";
++    $("arCount").value = recall(KEY.count) || "1";
++    $("arSeed").value = recall(KEY.seed) || "";
++    $("arPainter").value = PAINTERS[recall(KEY.painter)] ? recall(KEY.painter) : "krea2-q4";
++    ["arPrompt", "arSeed"].forEach(function (id) { $(id).addEventListener("input", function () { keepForm(); paintForm(); }); });
++    ["arCount", "arPainter"].forEach(function (id) { $(id).addEventListener("change", function () { keepForm(); paintForm(); }); });
++    $("arShapes").addEventListener("change", function () { keepForm(); paintForm(); });
++    $("arSeedNew").addEventListener("click", function () { $("arSeed").value = ""; keepForm(); paintForm(); $("arSeed").focus(); });
++    $("arDraw").addEventListener("click", function () { draw(); });
++    $("arFromTake").addEventListener("click", fromTake);
++    $("arPrompt").addEventListener("keydown", function (e) {
++      if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("arDraw").disabled) { e.preventDefault(); draw(); }
++    });
++    $("arRuns").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-act]"), r = b && runOf(b);
++      if (!b || !r || b.disabled) return;
++      var act = b.dataset.act, fig = b.closest(".ar-pic"), p = fig && r.pictures[+fig.dataset.i];
++      if (act === "view") view(r, +fig.dataset.i);
++      else if (act === "cover" && p) cover(r, p);
++      else if (act === "form") { fillForm(r, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, shapes, variations and seed")); }
++      else if (act === "again") draw(r);
++      else if (act === "trash") trashRun(r);
++      else if (act === "fold") { state.open[r.id] = !state.open[r.id]; b.classList.toggle("is-open", !!state.open[r.id]); }
++      else if (act === "cancel") api("/jobs/cancel", { key: "artist:" + r.id }).then(load).catch(function (err) { toast(err.message, "bad"); });
++    });
++    window.addEventListener("ruach-lang", function () { paintForm(); paintHead(); paintRuns(); });
++    if (state.hooks.take) setTake(state.hooks.take()); else paintHead();
++    paintForm();
++  }
++  window.HeresyArtist = { init: init, reload: function () { paintHead(); return load(); }, setTake: setTake };
++})();
+diff --git a/tools/console/heresy-guide.js b/tools/console/heresy-guide.js
+index b6889ca..2ba0e59 100644
+--- a/tools/console/heresy-guide.js
++++ b/tools/console/heresy-guide.js
+@@ -9,7 +9,7 @@
+   "use strict";
+ 
+   var SEEN = "yue2.guideSeen", LAST = "yue2.guideTab";
+-  var ROOM_TAB = { create: "creator", write: "writer", post: "refiner", collection: "librarian", train: "lora" };
++  var ROOM_TAB = { create: "creator", write: "writer", post: "refiner", artist: "artist", collection: "librarian", train: "lora" };   // HERESY 1255: the Artist
+   var state = { tabs: null, title: "", lead: "", el: null, loading: null, lang: "" };
+   function $(id) { return document.getElementById(id); }
+   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index d8b9dcd..68d8871 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -373,7 +373,8 @@
+     <button type="button" data-tab="create" class="is-active">Creator</button>
+     <button type="button" data-tab="write">Writer</button>
+     <button type="button" data-tab="post">Refiner</button>
+-    <button type="button" class="tab-soon" id="tabArtist" aria-disabled="true" translate="no" data-tip="The Artist: cover art for your songs, square, wide and tall at once. It comes in a later release">Artist</button>
++    <!-- HERESY 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»): the Artist's room opens -->
++    <button type="button" data-tab="artist" id="tabArtist" translate="no" data-tip="The Artist: pictures for your songs from a prompt of your own, square, wide and tall from one seed (an early preview)">Artist</button>
+     <button type="button" data-tab="collection">Librarian</button>
+   </nav>
+   <nav class="tabs tabs-side" id="tabsSide" aria-label="Training">
+@@ -1698,6 +1699,29 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ 
+   </section>
+ 
++  <!-- HERESY 1169 · 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»; «Код Художника оправданнее
++       строит на рабочем Krea2»): the Artist room (heresy-artist.js, lab/artist.py): pictures for a song from a prompt of one's
++       own, in the shapes its pictures take, all from one seed, painted by Krea 2 Muse; a square one becomes the cover of the
++       take in hand -->
++  <section class="col artist-col is-hidden" id="view-artist">
++    <div class="col-head post-head artist-head"><h2>Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a reference picture, repainting on a canvas, LoRAs and the upscale come in the releases after">Early preview</span>
++      <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Krea 2 Muse</span>
++      <span class="post-take" id="arTake" translate="no"></span><span class="col-note" id="arTakeNote">pick a take on the right to give it a cover</span></div>
++    <div class="ar-form">
++      <label class="field"><span class="label">Prompt <em>what to paint, said in sentences (Krea 2 reads them); Ctrl+Enter draws</em></span>
++        <textarea id="arPrompt" rows="5" spellcheck="false" data-tip="What to paint, said in sentences: what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph); end with no text when you want no letters in it. Ctrl+Enter draws" placeholder="A woman in a white linen dress dancing alone in a birch grove at dusk, warm lanterns in the branches, painted in soft oils, no text."></textarea></label>
++      <div class="ar-knobs">
++        <button type="button" class="btn ghost small" id="arFromTake" data-tip="The prompt the take's artwork was drawn from, or one from its title and style, to start from">From the take</button>
++        <div class="ar-shapes" id="arShapes" role="group" aria-label="Shapes"></div>
++        <label class="field ar-seed"><span class="label">Seed <em>empty: a new one</em></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
++        <label class="field ar-count" data-tip="Each variation is the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Variations</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
++        <label class="field ar-painter"><span class="label">Painter</span><select id="arPainter" translate="no" data-tip="Krea 2 Muse by Stable Yogi: Q4 wants a card with 12.5 GB free, Q8 (finer) 18.5 GB; about 35 s a square picture and 47 s a wide or tall one on an RTX 3090"><option value="krea2-q4">Krea 2 Muse · Q4 (from 12.5 GB)</option><option value="krea2-q8">Krea 2 Muse · Q8 (from 18.5 GB)</option></select></label>
++        <div class="ar-go"><span class="row-hint" id="arCost"></span><button type="button" class="btn primary" id="arDraw">Draw</button></div>
++      </div>
++    </div>
++    <div class="ar-runs" id="arRuns"></div>
++  </section>
++
+ 
+   <!-- HERESY 1063 / 1090: Train — a LoRA for YuE2 from your own songs (heresy-train.js, lab/training.py). Viktor,
+        02.10.2026: the runs that are training stand on top with their progress; the steps sit in a row as in the Refiner,
+@@ -2139,6 +2163,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ <script src="heresy-inspect.js"></script>
+ <script src="heresy-derived.js"></script>
+ <script src="heresy-post.js"></script>
++<script src="heresy-artist.js"></script>
+ <script src="heresy-zoom.js"></script>
+ <script src="heresy-spectrum.js"></script>
+ <script src="themes.js"></script>
+-- 
+2.43.0
+

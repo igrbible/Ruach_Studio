@@ -2,7 +2,7 @@ From 1d255775ffa35a550ed7f2191bd3c1d2b7a30b42 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Wed, 7 Oct 2026 14:48:57 -0600
-Subject: [PATCH 1199/1252] HERESY 1169: Ctrl+F's mark and the tags list stand
+Subject: [PATCH 1199/1259] HERESY 1169: Ctrl+F's mark and the tags list stand
  on their letters along a line at any page zoom
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

@@ -17,13 +17,14 @@ YuE2 tiene **dos mitades**, y casi todo lo que ajustas en el estudio apunta a un
 | **Música** (AR, el modelo de lenguaje) | escribe la canción: primero una partitura (notación ABC), luego los tokens musicales, 25 por segundo | el modo de planificación, la partitura, la semilla musical, la fuerza musical de una LoRA |
 | **Sonido** (NAR + VAE) | convierte los tokens en sonido | la semilla sonora, el VAE, la fuerza sonora de una LoRA, los pasos y el resolvedor |
 
-### Las cinco salas <!-- #the-five-rooms -->
+### Las seis salas <!-- #the-six-rooms -->
 
 | sala | para qué |
 |---|---|
 | **Creador** | el formulario de la canción y la toma que estás escuchando |
 | **Escritor** | tus canciones como documentos con versiones; un modelo de chat redacta y revisa contigo |
 | **Pulidor** | después del render: espectro, artefactos, antizumbido, revisión de la letra, stems, remasterización, reescalado |
+| **Artista** | imágenes para tus canciones con un prompt tuyo: cuadrada, ancha y alta con una semilla; la cuadrada se vuelve la portada de una toma (un adelanto) |
 | **Bibliotecario** | todas las tomas: espacios, búsqueda, me gusta, notas, acciones en bloque, la papelera |
 | **Entrenador LoRA** | adaptadores LoRA a partir de tus propias canciones: el conjunto, la ejecución, su telemetría y sus épocas |
 
@@ -31,7 +32,7 @@ YuE2 tiene **dos mitades**, y casi todo lo que ajustas en el estudio apunta a un
 
 ![La barra: las salas, el espacio y los pocos botones que usas todo el tiempo](guide/bar.png)
 
-Las salas abren la barra en el orden del trabajo: Creador, Escritor, Pulidor, el sitio del Artista (en gris: la sala de las imágenes para tus canciones llega en una próxima versión) y Bibliotecario; el logo está en el centro, el Entrenador justo después; a la derecha, el espacio, la luz del motor (verde: listo; ámbar: trabajando; roja: algo falló) y los pocos botones. El puntero sobre la luz (o un clic) abre **qué corre y qué espera**: las canciones, las regeneraciones y el trabajo del laboratorio en las tarjetas gráficas (portadas, stems, reescalado, Whisper). Lo que espera sale de su cola con su ✕, pulsado dos veces (la primera pulsación pregunta); lo que ya corre se detiene donde se muestra: una canción en su ejecución, un entrenamiento en el Entrenador.
+Las salas abren la barra en el orden del trabajo: Creador, Escritor, Pulidor, Artista (un adelanto: imágenes para tus canciones) y Bibliotecario; el logo está en el centro, el Entrenador justo después; a la derecha, el espacio, la luz del motor (verde: listo; ámbar: trabajando; roja: algo falló) y los pocos botones. El puntero sobre la luz (o un clic) abre **qué corre y qué espera**: las canciones, las regeneraciones y el trabajo del laboratorio en las tarjetas gráficas (portadas, stems, reescalado, Whisper). Lo que espera sale de su cola con su ✕, pulsado dos veces (la primera pulsación pregunta); lo que ya corre se detiene donde se muestra: una canción en su ejecución, un entrenamiento en el Entrenador.
 
 - **Espacio**: el espacio en mano. La lista de tomas muestra solo ese, y cada toma nueva cae en él. *Todos los espacios* lo muestra todo. Donde la barra es estrecha (el logo sin sus palabras), la palabra *Espacio* también se va; el selector se queda.
 - **ES** (las dos letras del idioma): la página en otro idioma, guardado con tus ajustes: English, Русский, Українська, Беларуская, Ελληνικά, Español, Italiano, cada uno nombrado con sus propias palabras. Los números y las fechas siguen al idioma, y esta guía se abre en él.
@@ -57,6 +58,7 @@ Las salas abren la barra en el orden del trabajo: Creador, Escritor, Pulidor, el
 ### El reproductor, las tomas y el registro del servidor <!-- #the-player-the-takes-and-the-server-log -->
 
 - **El reproductor**, abajo: la forma de onda de lado a lado, una nube suave con la parte ya escuchada en el color de acento (un clic salta allí); debajo, la toma (su portada cuando la tiene, su título, las primeras palabras de su estilo, 👍 👎 ★), luego **aleatorio**, anterior, reproducir, siguiente y **repetir** (desactivado · toda la lista otra vez · esta toma otra vez, marcado con 1), luego el tiempo (un clic en la duración total lo cambia al tiempo restante), *reproducir al hacer clic* (un clic en una lista reproduce la toma de inmediato), *seguir reproduciendo* (cuando una toma termina, empieza la siguiente de la lista), la **velocidad** (de 0.50× a 2.00×, conservando el tono), el volumen y un punto de estado (late mientras suena una toma). Lo que no necesitas en este momento queda tenue hasta que llega el puntero; cada icono dice qué hace cuando el puntero se posa sobre él. El puntero sobre la forma de onda muestra el tiempo al que saltaría un clic. Las teclas multimedia del teclado y de unos auriculares controlan el reproductor, y el panel multimedia del escritorio muestra la toma. ⏪ y ⏩ van a la marca anterior o siguiente cada 15 segundos desde 0:00, ← y → a las marcas de 5 segundos (con Shift, de 30). La píldora de estado al final derecho del reproductor (verde mientras suena una toma, del color del acento mientras se hace una) abre la toma o la ejecución; con Compose alzado sobre la sala, cambia el marco al de la toma.
+- **Dos filas o una**: la forma de onda sobre los botones del reproductor se queda donde las canciones se escuchan y se comparan (Creador, Pulidor, Bibliotecario); en el Escritor, el Artista, el Entrenador y el Motor el reproductor va en una fila, como en el Creador mientras un marco está alzado o la letra está por encima de todo. Tras recargar (F5) vuelve con su toma y su punto. En el Artista las tomas empiezan plegadas y el registro del servidor se coloca a la izquierda.
 - **La línea al estudio** aparece junto al registro del servidor (*Forge · 85 ms*, o *aquí* en la misma máquina). Cuando el estudio está lejos, un me gusta, una favorita o una fijación se ven al instante y el estudio solo los confirma.
 - **Tomas**, a la derecha: busca con palabras, `*` y `?`; *Favoritas*; pliega la columna con »; ⋯ para las acciones propias de la lista.
 - **El registro del servidor** está justo encima del reproductor en cada sala: plegado, muestra lo último que dijo el motor (en rojo cuando algo falló); desplegado, diez líneas, *Seguir*, *Copiar* y el camino al registro completo en el Motor. Con un marco alzado sobre la sala, se coloca a la izquierda, lejos de los botones del marco.
@@ -244,6 +246,32 @@ La **cadena** ejecuta varios pasos de una vez: *Antizumbido → Reescalado → S
 6. **Remasterizar**: mezcla los stems o usa la toma tal cual; limpieza, de-esser, opcionalmente reafinar 440 → 432 Hz, sonoridad (LUFS) y pico real. Cada pasada es una rama nueva. El preset y el de-esser actúan sobre los stems antes de mezclarlos: con la toma o cualquier archivo suelto como origen están apagados, y en la cadena actúan cuando ella separa stems.
 7. **Reescalado**: UniverSR dibuja de nuevo la parte alta del espectro; el original se queda muestra por muestra por debajo del corte. Sobre un remaster (el último paso de la cadena) el archivo entero baja de nivel si la parte alta nueva supera el techo de pico real del remaster.
 
+## Artista <!-- #artist -->
+
+*Un adelanto: lo que hay aquí funciona, y el resto de la sala llega en las versiones siguientes.*
+
+### Imágenes para tus canciones <!-- #pictures-for-your-songs -->
+
+Escribe con frases lo que ves para la canción: Krea 2 Muse lee el prompt como una descripción, no como una lista de etiquetas. Primero lo que hay en la imagen, luego la luz, los colores y la técnica (óleo, tinta, una fotografía), y al final *no text* cuando no quieras letras en ella. **From the take** pone el prompt con el que se pintó la portada de la toma que tienes en la mano, o uno hecho de su título y su estilo, para tener por dónde empezar.
+
+**Formas**: **1:1** (1280 × 1280) para la portada, **16:9** (1920 × 1080) para un vídeo, **9:16** (1080 × 1920) para un short. Las formas de una pulsación comparten su semilla, así que salen como una serie: la misma escena con los mismos colores, cada una compuesta para su propio marco y no una sola imagen recortada tres veces. **Variations** pinta también las semillas siguientes (la semilla, la semilla + 1, …), cada una en todas las formas. **Seed**: vacía para una nueva cada vez; la semilla de una imagen que te gustó la vuelve a pintar (cada tanda muestra su semilla, y **To the form** la devuelve con el prompt).
+
+**Painter**: Krea 2 Muse de Stable Yogi, **Q4** en una tarjeta con 12,5 GB libres, **Q8** (más fina) con 18,5 GB. Una imagen tarda unos 35 s en 1:1 y 47 s en 16:9 o 9:16 en una RTX 3090, y unos 25 s más en cargar el pintor por pulsación. Una pulsación espera en la cola del laboratorio una tarjeta con sitio, como las portadas y los stems; mientras espera, **Off the queue** la retira. Cada imagen pasa por el filtro de contenido que pide la licencia del pintor: la que marca no se guarda, y la tanda lo dice.
+
+**Live preview** (activo por defecto): el sitio de la imagen que se pinta muestra cada uno de sus pasos, del ruido a la imagen, a un octavo de su tamaño y sin el decodificador, así que no cuesta nada; apagado, el sitio espera la imagen terminada.
+
+### Una portada para la toma <!-- #a-cover-for-the-take -->
+
+Un clic en una imagen la abre sobre la página con su propia forma (← → recorren la tanda, Esc cierra), con **Download** (PNG, tamaño completo). Una imagen cuadrada tiene **Set as cover**: se vuelve la portada de la toma que tienes en la mano (elígela a la derecha), en su tarjeta, en el reproductor y en su MP3. La portada que tenía se guarda junto a la toma (`artwork-removed/`), como la guarda un repintado, y la otra letra de un par A/B recibe también la nueva cuando no tiene una propia.
+
+Las tandas se quedan en la carpeta `artist/` del estudio, las más nuevas arriba. **Again** pinta una tanda otra vez desde una semilla nueva; **Trash** la lleva a `trash/artist/`, de donde vuelve si mueves su carpeta otra vez a `artist/`.
+
+**Runs o Gallery**: las tandas muestran cada pulsación de Draw con su prompt y su semilla; la galería muestra todas las imágenes de todas las tandas en una sola cuadrícula, las más nuevas primero, por forma (1:1, 16:9, 9:16) o con estrella (☆ en una imagen le pone estrella), en tres tamaños. Una imagen abierta desde la galería recorre toda la galería, con ★, To the form (su prompt, su semilla y su forma), Set as cover y Download.
+
+### Lo que viene al Artista <!-- #coming-to-the-artist -->
+
+Una imagen de referencia de la que partir; repintar una parte de una imagen y extenderla más allá de sus bordes, en un lienzo; varios adaptadores LoRA a la vez; un reescalado; Qwen Image como segundo pintor; el título y el artista escritos en la portada.
+
 ## Bibliotecario <!-- #librarian -->
 
 ### Todas las tomas <!-- #every-take -->
@@ -255,7 +283,7 @@ La **cadena** ejecuta varios pasos de una vez: *Antizumbido → Reescalado → S
 - **Busca** con palabras, `*` y `?`; **ordena** por más nuevas, más antiguas, por título, más largas; **Mosaico** o **Lista**: los tres en la línea del encabezado, junto a los recuentos.
 - **Una tarjeta** lleva la portada de su toma en la esquina superior derecha, junto al título, cuando la tiene (*Dibujar la portada* en el menú de la toma); un clic muestra la imagen entera sobre el estudio, donde ‹ › y las flechas recorren las imágenes de las tarjetas mostradas, ▶ reproduce su toma y Esc cierra. La tarjeta que suena brilla con los propios picos de la canción.
 - **Tomas frescas**: una toma que aún no has reproducido lleva una línea discontinua clara; su primera reproducción la quita. Una toma regenerada lleva una insignia *regen* y conserva su nota, su me gusta y su estrella.
-- **La columna de espacios**: arrastra su borde para ensancharla o estrecharla; « la pliega, y las tarjetas ganan una columna más.
+- **La columna de espacios**: arrastra su borde para ensancharla o estrecharla; « la pliega, y las tarjetas se ensanchan: las columnas son las mismas, y la vista no pierde su sitio.
 - **Secciones**: un espacio puede tener secciones, dos niveles de profundidad como mucho (⋯ junto a su nombre → *Sección nueva…*), para ordenar lo que contiene sin un espacio nuevo cada vez. Un espacio muestra también las tomas de sus secciones. Todo aquello de lo que el Pulidor hace algo va solo a la sección *Pulidas* de sus espacios.
 - **Arrastra una tarjeta a un espacio** de la izquierda para moverla allí (todas las marcadas, si está marcada); mantén **Ctrl** para añadirla allí y dejarla también aquí. El estudio pregunta primero, y Ctrl+Z lo deshace.
 - **Tomas fijadas**: hasta cuatro en cada espacio, en una franja de su propio tono sobre las tarjetas (clic derecho en una toma → *Fijar aquí*; × la desfija). Cuando marcas tomas, la barra de las marcadas ocupa el lugar de la franja, así que las tarjetas nunca se mueven. Esa barra es una fila de iconos enmarcados: la selección, las marcas, los espacios, la exportación y la papelera al final; cada uno se dice al pasar el puntero.
@@ -269,7 +297,7 @@ La **cadena** ejecuta varios pasos de una vez: *Antizumbido → Reescalado → S
 
 **Regenerar con una semilla nueva** (encima del Escritor en el menú de la toma): la toma hecha de nuevo con todo aquello con lo que se hizo, pero con semillas nuevas; la nueva hereda los espacios y la nota de la antigua, y la antigua espera en la sección *Origen de la regeneración* de su espacio (su espacio no la muestra entre las suyas) hasta que la vacíes; la nueva conserva su nota, su me gusta, su estrella y su imagen. Una prueba sale con sus dos minutos completos. Reproducir, abrir en el Creador o en el Pulidor, la hoja (su partitura), la ficha técnica (todo aquello con lo que se hizo: el estilo y la letra, la partitura dibujada, cada control, las LoRAs y los deslizadores con sus fuerzas; una toma en modo Directo no tiene partitura, y *Escribirla a partir del sonido* le pide una al transcriptor), me gusta, no me gusta, favorita, una nota, renombrar, **espacios** (una toma puede estar en varios), **mover a** un espacio (en una tarjeta marcada: cada toma marcada, fuera del espacio abierto), ocultar, enviar al Escritor, copiar, descargar, **exportar a un DAW** (proyecto de REAPER o DAWproject, en cualquier toma: con sus stems una vez que el Pulidor los ha separado), a la papelera. **En una tarjeta marcada, con otras marcadas**, el menú actúa sobre todas, y su cabecera dice sobre cuántas: me gusta, no me gusta, favorita, portada, quitar la portada, espacios, ocultar, un ZIP; las portadas de varias y la regeneración de varias preguntan antes, porque cuestan minutos de una tarjeta gráfica.
 
-**Dibujar la portada**: un modelo de lenguaje pequeño (Qwen3-4B) lee el estilo y las palabras de la toma y escribe un prompt de imagen; un modelo SDXL (CyberRealistic XL) lo pinta, a 768 px, en cerca de medio minuto en una tarjeta de 16 GB. Se ve en el reproductor, en la tarjeta, en el panel multimedia del escritorio y dentro del MP3 que descargas (como su portada). Cuando una toma ya tiene su imagen, el menú dice *Abrir la portada* (sobre la página, como un clic en la imagen de la tarjeta o en el cuadrado del reproductor) y *Redibujar la portada* (un prompt nuevo y una imagen nueva; la anterior se guarda junto a la toma, en `artwork-removed/`). Los dos modelos vienen con `heresy/fetch-heresy.sh --artwork` (14 GB, pregunta antes).
+**Dibujar la portada**: un modelo de lenguaje pequeño (Qwen3-4B) lee el estilo y las palabras de la toma y escribe un prompt de imagen; Krea 2 Muse lo pinta, a 1024 px, en cerca de medio minuto en una tarjeta de 16 GB (en una tarjeta menor, un SDXL, CyberRealistic XL; el pintor se elige en *Motor → Portada*). Se ve en el reproductor, en la tarjeta, en el panel multimedia del escritorio y dentro del MP3 que descargas (como su portada). Cuando una toma ya tiene su imagen, el menú dice *Abrir la portada* (sobre la página, como un clic en la imagen de la tarjeta o en el cuadrado del reproductor) y *Redibujar la portada* (un prompt nuevo y una imagen nueva; la anterior se guarda junto a la toma, en `artwork-removed/`). Los dos modelos vienen con `heresy/fetch-heresy.sh --artwork` (14 GB, pregunta antes).
 
 ### Los instrumentos bajo el estilo <!-- #the-instruments-under-the-style -->
 
@@ -277,11 +305,11 @@ Bajo el campo Estilo, el estudio nombra lo que pide tu prompt: una ficha por cad
 
 ### Portadas: qué las dibuja, qué no puede, otro pintor <!-- #artwork-what-draws-it-what-it-cannot-another-painter -->
 
-**Qué las dibuja.** Un modelo de lenguaje pequeño (Qwen3-4B) lee el estilo y las palabras de la toma y escribe un prompt de imagen, con su tema primero; un modelo SDXL lo pinta (1024 px, guardada a 768). Cuando la toma lleva el nombre de un instrumento (la prueba de un instrumento), el estudio les dice a ambos cómo es el instrumento y de dónde es, y Omni (el modelo del oyente) mira la imagen: cuando no encuentra el instrumento, vuelve a escribir el prompt a partir de lo que vio, y el pintor lo intenta otra vez, tres imágenes como mucho. Cerca de medio minuto por imagen en una tarjeta de 16 GB.
+**Qué las dibuja.** Un modelo de lenguaje pequeño (Qwen3-4B) lee el estilo y las palabras de la toma y escribe un prompt de imagen, con su tema primero; Krea 2 Muse lo pinta (1024 px), o un SDXL donde Krea no cabe (*Motor → Portada*). Cuando la toma lleva el nombre de un instrumento (la prueba de un instrumento), el estudio les dice a ambos cómo es el instrumento y de dónde es, y Omni (el modelo del oyente) mira la imagen: cuando no encuentra el instrumento, vuelve a escribir el prompt a partir de lo que vio, y el pintor lo intenta otra vez, tres imágenes como mucho. Cerca de medio minuto por imagen en una tarjeta de 16 GB.
 
 **Qué no puede** (una advertencia, dicha sin rodeos): el pintor dibuja lo que conoce. Un instrumento que nunca ha visto por su nombre (el duduk, el morin juur, el jomús, los cuencos cantores de cristal…) sale como una conjetura: una flauta de madera, un violín, unos cuencos de cocina. Cuando Omni no encontró el instrumento en ninguna de las tres imágenes, la imagen queda marcada como **≈ una suposición**, en la vista superpuesta y en la chuleta de instrumentos. Una portada es el ánimo de la toma, no una imagen de referencia de un instrumento: para saber cómo es un instrumento, búscalo.
 
-**Consejo pro: otro pintor.** El estudio pinta con el SDXL al que apunte el enlace `artwork/SDXL-Artwork-Model`; el nuestro es `CyberRealistic-XL-v10`. Pon otro finetune de SDXL a su lado, como carpeta de diffusers o como un único archivo `.safetensors` (como los da Civitai), y apunta el enlace hacia él, en relativo:
+**Consejo pro: otro pintor.** Cuando el pintor es un SDXL (elegido en *Motor → Portada*, o en una tarjeta de menos de 16 GB), es el SDXL al que apunte el enlace `artwork/SDXL-Artwork-Model`; el nuestro es `CyberRealistic-XL-v10`. Pon otro finetune de SDXL a su lado, como carpeta de diffusers o como un único archivo `.safetensors` (como los da Civitai), y apunta el enlace hacia él, en relativo:
 
 ```bash
 cd artwork && ln -sfn MyFavourite-XL.safetensors SDXL-Artwork-Model
@@ -652,7 +680,7 @@ Cómo consiguió su sonido el promo del estudio: un narrador dice las líneas de
 | **←** **→** (con **Shift**: 30 s) | en cualquier parte salvo un campo de texto o un menú | 5 segundos atrás o adelante |
 | **M** | en cualquier parte salvo un campo de texto | sonido apagado y encendido |
 | las teclas multimedia | el teclado, unos auriculares, el panel multimedia del escritorio | reproducir, pausa, anterior, siguiente |
-| **Ctrl+Alt+1** … **9** | en cualquier parte | **1** Creador, **2** Escritor, **3** Pulidor, **5** Bibliotecario, **7** Entrenador, **8** fuera, a tu DAW, **9** el Motor; el **4** queda para la sala del Artista, el **6** para una sala que vendrá (Ctrl+1…9 son las pestañas del propio navegador) |
+| **Ctrl+Alt+1** … **9** | en cualquier parte | **1** Creador, **2** Escritor, **3** Pulidor, **4** Artista, **5** Bibliotecario, **7** Entrenador, **8** fuera, a tu DAW, **9** el Motor; el **6** queda para una sala que vendrá (Ctrl+1…9 son las pestañas del propio navegador) |
 | **Esc** | en cualquier parte | cierra lo que esté abierto: un menú, un diálogo, la guía, una vista a pantalla completa, la sala del Motor |
 | **F1** (o **Shift+F1**) | en cualquier parte | esta guía, en la sala donde estás; otra vez para cerrarla (la ayuda del navegador no aparece) |
 | **Mayús+Tab** | el Creador | la tecla de los marcos, no la vuelta atrás por los campos: un marco levantado cambia al otro, y si no hay ninguno levantado, se levanta el del formulario (Compose); un diálogo, un menú y la barra de búsqueda conservan su propio Mayús+Tab |

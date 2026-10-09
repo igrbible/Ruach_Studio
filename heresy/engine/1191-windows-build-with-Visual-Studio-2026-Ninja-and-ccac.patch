@@ -1,7 +1,7 @@
 From ed797b578af85da3ad3f19f9c8cd06f02bedb964 Mon Sep 17 00:00:00 2001
 From: Pascal <admin@serveurperso.com>
 Date: Wed, 7 Oct 2026 13:14:07 +0200
-Subject: [PATCH 1191/1252] windows: build with Visual Studio 2026, Ninja and
+Subject: [PATCH 1191/1259] windows: build with Visual Studio 2026, Ninja and
  ccache from a clean build dir
 
 (cherry picked from commit b8f8aaf7fbedc4b41fe60494d68995e0b6d03110)

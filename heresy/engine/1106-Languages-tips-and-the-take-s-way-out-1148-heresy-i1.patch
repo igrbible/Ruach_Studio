@@ -2,7 +2,7 @@ From 0024948225262f621b4eb11e2e448f6bf48730e6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Sat, 3 Oct 2026 10:47:52 -0600
-Subject: [PATCH 1106/1252] Languages, tips and the take's way out (1148):
+Subject: [PATCH 1106/1259] Languages, tips and the take's way out (1148):
  heresy-i18n.js (catalogs keyed by the page's English, text and the attributes
  people read, the language kept with the settings, no English flash on a
  reload, the bar's button, the logo's words in seven languages); a tip for

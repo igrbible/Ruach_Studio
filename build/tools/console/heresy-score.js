@@ -85,6 +85,15 @@
     if ($("takeMarkers")) $("takeMarkers").addEventListener("click", function () { markersOut(takeAbc, takeTitle); });
     if (!$("abc")) return;
     $("abc").addEventListener("input", form);
+    // HERESY 1262 (Viktor 09.10.2026: «Recite on a score либо не вижу, либо не там смотрю»): a score the page itself puts into the
+    // field (a take loaded into the form, Edit score, an example) sends no input event, so its rows stayed hidden and MIDI dim
+    // until a key was pressed in it; the field's own value setter tells the check as well
+    (function () {
+      var el = $("abc"), d = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+      if (!d || !d.set) return;
+      Object.defineProperty(el, "value", { configurable: true, enumerable: true,
+        get: function () { return d.get.call(this); }, set: function (v) { d.set.call(this, v); form(); } });
+    })();
     $("formMidi").addEventListener("click", function () { midiOut($("abc").value, hooks.title()); });
     $("formMarkers").addEventListener("click", function () { markersOut($("abc").value, hooks.title()); });
     $("voiceShiftBtn").addEventListener("click", function () {

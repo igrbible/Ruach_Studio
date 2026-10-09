@@ -1,0 +1,51 @@
+From f889099549a768a45f7314b0c04143966487280b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 13:50:07 -0600
+Subject: [PATCH 1259/1259] =?UTF-8?q?HERESY=201169=20=C2=B7=201263:=20a=20?=
+ =?UTF-8?q?step=20lets=20go=20of=20the=20full=20picture=20the=20step=20bef?=
+ =?UTF-8?q?ore=20was=20still=20fetching,=20so=20a=20slow=20link=20serves?=
+ =?UTF-8?q?=20the=20one=20shown?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-artist.js | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index bbe5453..4392382 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -292,7 +292,7 @@
+       '<button type="button" class="art-step art-next" aria-label="' + esc(tr("Next")) + '" data-tip="' + esc(tr("Next (→)")) + '">›</button>';
+     document.body.appendChild(back);
+     i = Math.max(0, Math.min(list.length - 1, i || 0));
+-    var loads = 0;
++    var loads = 0, coming = null;                       // coming: the full picture on its way
+     // HERESY 1263 (Viktor 09.10.2026: «листалка картинок у Артиста не работает. < и > не меняют картинку но описаловка меняется»):
+     // through a slow link (Forge over a VPN) a full PNG of 2 or 3 MB takes seconds, and the browser goes on showing the picture before
+     // until the new one has come, under the new caption. A step now shows the new picture's thumb at once (the gallery has it
+@@ -313,7 +313,8 @@
+       st.classList.toggle("is-on", !!p.star);
+       st.dataset.tip = p.star ? tr("Starred: ☆ takes the star off") : tr("Star it: the gallery's ★ shows the starred");
+       var img = back.querySelector(".art-img"), full = fileUrl(r.id, p.file), small = p.thumb ? fileUrl(r.id, p.thumb) : "";
+-      var tok = ++loads, pre = new Image();
++      if (coming) { coming.onload = coming.onerror = null; coming.src = ""; }   // the step before's full picture: let go
++      var tok = ++loads, pre = coming = new Image();
+       back.style.setProperty("--ar", sh.w + "/" + sh.h);
+       fit(img, p);
+       img.classList.remove("is-broken");
+@@ -337,6 +338,7 @@
+       document.removeEventListener("keydown", key, true);
+       window.removeEventListener("resize", resized);
+       loads++;                                           // a picture still coming lands nowhere
++      if (coming) { coming.onload = coming.onerror = null; coming.src = ""; }
+       state.view = null;
+       back.classList.add("is-leaving");
+       setTimeout(function () { back.remove(); }, now ? 0 : 120);
+-- 
+2.43.0
+

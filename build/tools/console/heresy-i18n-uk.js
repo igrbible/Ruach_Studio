@@ -1050,7 +1050,7 @@ RuachI18n.add("uk", {
 "Its picture: see it whole": "Картинка: подивитися цілком",
 "On the cards now:": "Зараз на картах:",
 "Drag to widen or narrow the workspaces; a double click folds them away": "Тягни, щоб розширити або звузити колонку просторів; подвійне клацання згортає її",
-"Fold the workspaces away: the cards take one column more": "Згорнути простори: карткам додасться колонка",
+"Fold the workspaces away: the cards grow wider": "Згорнути простори: картки стануть ширшими",
 "Show the workspaces": "Показати простори",
 "regen": "реджен",
 "Regenerated with a new seed from {0}": "Перегенеровано з новим зерном із {0}",

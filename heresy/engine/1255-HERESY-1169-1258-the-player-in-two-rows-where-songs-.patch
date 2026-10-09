@@ -1,0 +1,155 @@
+From f88704c4468ca47294e15c174170b060d3d6de18 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 8 Oct 2026 21:58:12 -0600
+Subject: [PATCH 1255/1259] =?UTF-8?q?HERESY=201169=20=C2=B7=201258:=20the?=
+ =?UTF-8?q?=20player=20in=20two=20rows=20where=20songs=20are=20heard=20(Cr?=
+ =?UTF-8?q?eator,=20Refiner,=20Librarian),=20one=20row=20in=20the=20Writer?=
+ =?UTF-8?q?,=20the=20Artist,=20the=20Trainer=20and=20the=20Engine=20and=20?=
+ =?UTF-8?q?over=20a=20lifted=20frame=20or=20the=20lyrics;=20its=20take=20a?=
+ =?UTF-8?q?nd=20place=20kept=20through=20a=20reload=20(F5);=20the=20Artist?=
+ =?UTF-8?q?=20folds=20its=20Takes=20at=20first=20and=20keeps=20its=20serve?=
+ =?UTF-8?q?r=20log=20on=20the=20left?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 21 +++++++++++--------
+ tools/console/app.js  | 48 +++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 57 insertions(+), 12 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index bb64255..74c1a0b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3817,18 +3817,23 @@ body[data-frame="compose"] .k-plan #setupLibRow { flex-wrap: wrap; }
+ /* the player in one row in the Creator, as when the page is scaled up (HERESY 1150; Viktor 05.10.2026: «в такой раскладке
+    на странице Творца плеер делаем минималистичным, как в увеличенном режиме скейла. А в других комнатах оставляем текущие
+    версии плеера»): from 1660 px (below it the scaled-up rule already does it) */
++/* HERESY 1258 (Viktor 08.10.2026: «Двухуровневый аудиоплеер наш давай оставим только в аудиотворческих комнатах… В остальных
++   одноуровневый… когда делаем распахивание фреймов и редактора в оверлей, сворачиваем полный плеер в одноуровневый ради экономии
++   места»): the waveform over the controls where songs are heard and compared, the Creator, the Refiner, the Librarian; one row
++   in the Writer, the Artist, the Trainer and the Engine, and in the Creator while a frame is lifted or its lyrics are over
++   everything. From 1660 px: below it every room has had one row since 1150 */
+ @media (min-width: 1660px) {
+-  body[data-tab="create"] { --playbar-h: 70px; }
+-  body[data-tab="create"] #playbar { flex-direction: row; align-items: center; gap: 14px; padding: 8px 18px; }
+-  body[data-tab="create"] #playbar .pb-row { display: contents; }
+-  body[data-tab="create"] #playbar .playbar-id { order: 1; flex: 0 1 360px; }
++  body:is([data-tab="write"], [data-tab="artist"], [data-tab="train"], [data-frame], :has(#lyrOver), :has(#view-engine:not(.is-hidden))) { --playbar-h: 70px; }
++  body:is([data-tab="write"], [data-tab="artist"], [data-tab="train"], [data-frame], :has(#lyrOver), :has(#view-engine:not(.is-hidden))) #playbar { flex-direction: row; align-items: center; gap: 14px; padding: 8px 18px; }
++  body:is([data-tab="write"], [data-tab="artist"], [data-tab="train"], [data-frame], :has(#lyrOver), :has(#view-engine:not(.is-hidden))) #playbar .pb-row { display: contents; }
++  body:is([data-tab="write"], [data-tab="artist"], [data-tab="train"], [data-frame], :has(#lyrOver), :has(#view-engine:not(.is-hidden))) #playbar .playbar-id { order: 1; flex: 0 1 360px; }
+   /* a long name wraps to two lines here too, never cut (HERESY 1106) */
+-  body[data-tab="create"] #playbar .pb-names strong {
++  body:is([data-tab="write"], [data-tab="artist"], [data-tab="train"], [data-frame], :has(#lyrOver), :has(#view-engine:not(.is-hidden))) #playbar .pb-names strong {
+     white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.25;
+   }
+-  body[data-tab="create"] #playbar #wave { order: 2; flex: 1 1 160px; width: auto; min-width: 120px; height: 40px; }
+-  body[data-tab="create"] #playbar .pb-ctrl { order: 3; flex: none; }
+-  body[data-tab="create"] #playbar .pb-side { order: 4; flex: none; }
++  body:is([data-tab="write"], [data-tab="artist"], [data-tab="train"], [data-frame], :has(#lyrOver), :has(#view-engine:not(.is-hidden))) #playbar #wave { order: 2; flex: 1 1 160px; width: auto; min-width: 120px; height: 40px; }
++  body:is([data-tab="write"], [data-tab="artist"], [data-tab="train"], [data-frame], :has(#lyrOver), :has(#view-engine:not(.is-hidden))) #playbar .pb-ctrl { order: 3; flex: none; }
++  body:is([data-tab="write"], [data-tab="artist"], [data-tab="train"], [data-frame], :has(#lyrOver), :has(#view-engine:not(.is-hidden))) #playbar .pb-side { order: 4; flex: none; }
+ }
+ 
+ /* HERESY 1167 (Viktor 05.10.2026: «У нас наш лимит в 80 символов не вмещается полностью в карточке. Что если заголовок
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 55e3006..4882208 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -528,8 +528,10 @@
+   // HERESY 1017: the takes list folds to a strip on the right and back; kept per browser
+   // HERESY 1167 (Viktor: «У Писателя пусть по умолчанию вкладка Takes будет свёрнута»): each room keeps its own fold; the
+   // Writer's starts folded
+-  function libFoldKey() { return document.body.dataset.tab === "write" ? "yue2.libFolded.write" : "yue2.libFolded"; }
+-  function libFolded() { var v = recall(libFoldKey()); return v === null ? libFoldKey() === "yue2.libFolded.write" : v === "1"; }
++  // HERESY 1258 (Viktor 08.10.2026: «комнате художника предлагаю колонку Taker… по умолчанию свёрнутой»): the Artist folds its own,
++  // folded until unfolded, as the Writer does
++  function libFoldKey() { var t = document.body.dataset.tab; return t === "write" || t === "artist" ? "yue2.libFolded." + t : "yue2.libFolded"; }
++  function libFolded() { var v = recall(libFoldKey()); return v === null ? libFoldKey() !== "yue2.libFolded" : v === "1"; }
+   function paintLibFold() {
+     var folded = libFolded();
+     $("library").classList.toggle("is-folded", folded);
+@@ -538,7 +540,7 @@
+     window.dispatchEvent(new Event("resize"));
+   }
+   $("libFold").addEventListener("click", function () { store(libFoldKey(), "1"); paintLibFold(); });
+-  $("libUnfold").addEventListener("click", function () { store(libFoldKey(), libFoldKey() === "yue2.libFolded.write" ? "0" : null); paintLibFold(); });
++  $("libUnfold").addEventListener("click", function () { store(libFoldKey(), libFoldKey() !== "yue2.libFolded" ? "0" : null); paintLibFold(); });
+   if (window.HeresyIcons) $("libUnfold").querySelector(".lib-unfold-icon").innerHTML = window.HeresyIcons.svg("expand");
+   paintLibFold();
+ 
+@@ -4963,6 +4965,42 @@
+   }
+ 
+   $("playBtn").addEventListener("click", togglePlay);
++  // HERESY 1258 (Viktor 08.10.2026: «Плеер при F5 не держит последний трек и его позицию. Ты фиксил, но не работает как
++  // ожидалось»): F5 in the Librarian reads the list again and never stopped the music, but elsewhere a reload is a reload
++  // (1202 asks first), and the player kept nothing of itself. Now its take, its place and whether it played are kept in this
++  // browser (not in the settings file: they change every second) as it pauses or seeks, every two seconds while it plays and
++  // as the page goes; the first list after the reload puts them back, and it plays on where the browser lets it unasked
++  // (else the browser's «press ▶»). Kept only once that first list has been read, so the page's start never wipes them
++  var PLAYER_AT = "ruach.playerAt", playerKeptAt = 0, playerBack = false;
++  function keepPlayer() {
++    if (!playerBack) return;
++    var t = STATE.playerTake;
++    try {
++      if (!t || t.session || !audio.getAttribute("src")) localStorage.removeItem(PLAYER_AT);
++      else localStorage.setItem(PLAYER_AT, JSON.stringify({ name: t.name, at: Math.round((audio.currentTime || 0) * 10) / 10, playing: isPlaying() }));
++    } catch (e) { /* a private window keeps nothing */ }
++  }
++  audio.addEventListener("timeupdate", function () { if (Date.now() - playerKeptAt > 2000) { playerKeptAt = Date.now(); keepPlayer(); } });
++  ["pause", "ended", "seeked", "emptied"].forEach(function (ev) { audio.addEventListener(ev, keepPlayer); });
++  window.addEventListener("pagehide", keepPlayer);
++  window.addEventListener("beforeunload", keepPlayer);
++  function restorePlayer() {
++    if (playerBack) return;
++    playerBack = true;
++    var kept = null;
++    try { kept = JSON.parse(localStorage.getItem(PLAYER_AT) || "null"); } catch (e) { kept = null; }
++    var take = kept && kept.name ? findTake(kept.name) : null;
++    if (!take || isPlaying()) return;
++    if (!STATE.playerTake || STATE.playerTake.name !== take.name) loadPlayer(take, false);
++    var at = +kept.at || 0;
++    var back = function () {
++      audio.removeEventListener("loadedmetadata", back);
++      try { audio.currentTime = Math.min(at, Math.max(0, (audio.duration || at) - 0.5)); } catch (e) { /* not seekable yet */ }
++      paintTimes();
++      if (kept.playing) audio.play().catch(playRefused);
++    };
++    if (audio.readyState >= 1) back(); else audio.addEventListener("loadedmetadata", back);
++  }
+   ["play", "pause", "ended", "emptied"].forEach(function (ev) {   // HERESY 1042: the Librarian's buttons follow the player
+     audio.addEventListener(ev, function () { if (window.HeresyCollection) window.HeresyCollection.paintPlaying(); });
+   });
+@@ -5683,6 +5721,7 @@
+       paintCoverTakes();
+       if (STATE.take) { paintDecodeSwitch(); paintSoundSwitch(); }
+       restorePostTake();   // HERESY 1132
++      restorePlayer();     // HERESY 1258: after the Refiner's take, so the player's own comes back over it
+     });
+   }
+ 
+@@ -7774,6 +7813,7 @@
+     if (tab === "create") drawWave();
+     else frameOver(null);                            // HERESY 1168: a frame lifted in the Creator does not follow to another room
+     window.dispatchEvent(new Event("resize"));   // pictures measure their new width
++    placeLogDock();                              // HERESY 1258: left in the Artist, back where it was in the others
+   }
+   // HERESY 1166: a room in the bar leaves the Engine page for that room (asked first when the GPU roles are not saved)
+   all(".topbar [data-tab]").forEach(function (b) { b.addEventListener("click", function () { leaveEngine().then(function (ok) { if (ok) setTab(b.dataset.tab); }); }); });
+@@ -8491,7 +8531,7 @@
+     var d = $("logDock");
+     if (!d) return;
+     var f = document.body.dataset.frame;
+-    d.classList.toggle("is-left", !!f);
++    d.classList.toggle("is-left", !!f || document.body.dataset.tab === "artist");   // HERESY 1258: «Серверный лог… в левую сторону» in the Artist
+     d.style.maxWidth = "";
+     d.style.bottom = "";
+     if (!f) return;
+-- 
+2.43.0
+

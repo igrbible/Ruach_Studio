@@ -2,7 +2,7 @@ From 2d7163349358bf37883ba341484bf42b3d618fa1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 8 Oct 2026 14:59:17 -0600
-Subject: [PATCH 1251/1252] HERESY 1169: Full plan by default (and after New
+Subject: [PATCH 1251/1259] HERESY 1169: Full plan by default (and after New
  song); the score's Max tokens up to 8192, its default still 6144; the tip and
  the clamps' reasons in seven languages
 MIME-Version: 1.0

@@ -2,7 +2,7 @@ From 5656d00292dc9944aee57af7ead1a64fb9366e2f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Sat, 3 Oct 2026 11:04:26 -0600
-Subject: [PATCH 1107/1252] The bar gives way by what it holds; the (i) drawn,
+Subject: [PATCH 1107/1259] The bar gives way by what it holds; the (i) drawn,
  not written; the instruments the styles named (1149): fitBar hides WORKSPACE,
  then narrows the workspace box, wherever the right side comes within 18 px of
  the centred logo (Viktor at 1920 and 110 %: 14 px); every help mark's letter

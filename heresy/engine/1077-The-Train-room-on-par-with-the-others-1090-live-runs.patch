@@ -2,7 +2,7 @@ From 8d0b3d212ae672261ed42eff546e84cfca2bf3dc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 04:35:58 -0600
-Subject: [PATCH 1077/1252] The Train room on par with the others (1090): live
+Subject: [PATCH 1077/1259] The Train room on par with the others (1090): live
  runs on top, the steps in a row as in Post, the telemetry with both halves
  explained, epochs into loras/, out of it or downloaded, a column of run cards
  (archive, trash, restore); the player steps down to a strip here; adapters

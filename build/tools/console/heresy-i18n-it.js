@@ -1049,7 +1049,7 @@ RuachI18n.add("it", {
 "Its picture: see it whole": "La sua immagine: vedila intera",
 "On the cards now:": "Ora sulle schede:",
 "Drag to widen or narrow the workspaces; a double click folds them away": "Trascina per allargare o restringere gli spazi; un doppio clic li comprime",
-"Fold the workspaces away: the cards take one column more": "Comprimi gli spazi: le schede guadagnano una colonna",
+"Fold the workspaces away: the cards grow wider": "Comprimi gli spazi: le schede si allargano",
 "Show the workspaces": "Mostra gli spazi",
 "regen": "regen",
 "Regenerated with a new seed from {0}": "Rigenerato con un nuovo seme da {0}",

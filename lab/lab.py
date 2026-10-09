@@ -16,6 +16,10 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET /art?name=TAKE               its artwork (JPEG, 768 px)
   GET /art/draw?name=TAKE[&again=1][&seed=N]   draw it (art_job.py): 202 while drawing, then what was drawn; a redraw keeps the old picture in artwork-removed/ (1235)
   GET /art/remove?name=TAKE        HERESY 1156: the picture taken off, kept beside the take (artwork-removed/)
+  POST /artist/draw {prompt, shapes, seed, count, painter, take}   HERESY 1255: the Artist room (artist.py): a run of pictures
+       from a prompt of one's own; GET /artist/runs · GET /artist/file?id=&file= · POST /artist/cover {id, file, name} ·
+       POST /artist/trash {id} · POST /artist/restore {id} · GET /artist/prompt?name=TAKE ·
+       POST /artist/star {id, file, star} (1257)
   POST /jobs/cancel {key}          HERESY 1165: a job waiting for a card off the queue (a running one is refused)
   POST /regen {names, same_seeds}  HERESY 1160: made again, new seeds; same_seeds (1165): its own, at a probe's full length
   GET /activity?since=SEQ          HERESY 1157: the lab's GPU work as it starts and ends, and what runs now
@@ -103,6 +107,8 @@ import dawbridge  # noqa: E402   HERESY 1102
 import rpp  # noqa: E402   HERESY 1104
 import diamond  # noqa: E402   HERESY 1166
 import updates  # noqa: E402   HERESY 1169
+import artist  # noqa: E402   HERESY 1255
+import places  # noqa: E402   HERESY 1261: where the user's work lives (outputs, trash, artist, writer)
 
 heavy = threading.Lock()
 jobs = {}            # take name -> {"status": "queued" | "running" | "failed", "error": …, "started": …}
@@ -236,6 +242,11 @@ def studio_restart():
         raise RuntimeError(f"the studio does not answer: {e}")
     if hw.get("busy"):
         raise ValueError("the studio is rendering now: restart it when the run is done")
+    # HERESY 1259: only a studio that runs as its systemd unit is restarted from here. Under Pinokio or by hand (./start.sh) there is
+    # no unit: «restarting» was a word for nothing, and the page then said the studio was back. The card is saved all the same.
+    if subprocess.run(["systemctl", "--user", "is-active", "--quiet", "ruach-studio"], timeout=10).returncode != 0:
+        raise ValueError("the studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again "
+                         "there to move it; the card is saved")
 
     def later():
         time.sleep(1)
@@ -660,11 +671,14 @@ def settings_put(body, scope=""):
     d.mkdir(parents=True, exist_ok=True)
     p = scoped("settings", scope)
     with SETTINGS_LOCK:
-        cur = {} if data.get("reset") else settings_get(scope).get("keys", {})
+        was = settings_get(scope)
+        cur = {} if data.get("reset") else was.get("keys", {})
         cur.update(keys)
         for k in removed:
             cur.pop(k, None)
-        out = {"saved_at": float(data.get("saved_at") or time.time()), "keys": cur}
+        # HERESY 1261: the parts of the file the page does not own (places' "paths") stay through its saves and its Reset
+        out = {k: v for k, v in was.items() if k not in ("saved_at", "keys")}
+        out.update(saved_at=float(data.get("saved_at") or time.time()), keys=cur)
         if p.is_file():
             shutil.copy2(p, str(p) + ".bak")               # one step back, if a write ever goes wrong
         tmp = Path(str(p) + ".part")
@@ -1278,7 +1292,7 @@ ACT = {"seq": 0, "lines": collections.deque(maxlen=400), "seen": {}}
 ACT_LOCK = threading.Lock()
 ACT_SAY = {"art": "artwork", "stems": "stems (BS-Roformer, htdemucs)", "remaster": "remaster", "upscale": "upscale (UniverSR)",
            "debuzz": "debuzz", "timing": "lyrics timing (Whisper)", "textend": "lyrics check (Whisper)", "spectrum": "spectrum",
-           "inspect": "inspection", "train": "LoRA training", "listen": "listener (Omni)"}
+           "inspect": "inspection", "train": "LoRA training", "listen": "listener (Omni)", "artist": "the Artist"}
 
 
 def act_say(text):
@@ -1543,6 +1557,22 @@ def regen(names, same_seeds=False):
 AUDIO_TYPES = {".flac": "audio/flac", ".wav": "audio/wav", ".mp3": "audio/mpeg"}
 
 
+# HERESY 1255: the Artist rooms runs reach the labs queue, cards, activity and takes through these
+artist.setup(kit=KIT, jobs=jobs, lock=jobs_lock, wait_card=wait_card, turn=turn, free_gpu=free_gpu, say=act_say,
+             take_dir=take_dir, pair=art_pair, copy=art_copy, painter=art_painter, py=ART_PY)
+
+
+def lab_busy():
+    """HERESY 1261: the lab works on something: the card is held, or a job waits or runs."""
+    with jobs_lock:
+        return heavy.locked() or any(v.get("status") in ("queued", "running") for v in jobs.values())
+
+
+# HERESY 1261: where the user's work lives; its record beside the page's keys in user/settings.json, under the same lock
+places.setup(KIT, busy=lab_busy, settings_lock=SETTINGS_LOCK, settings_file=config_dir() / "settings.json",
+             studio_port=os.environ.get("YUE2CPP_PORT", "41867"), say=lambda s: print(s, file=sys.stderr, flush=True))
+
+
 class Handler(BaseHTTPRequestHandler):
     def send_file(self, path, ctype="application/octet-stream", download=None):
         size = path.stat().st_size
@@ -1608,6 +1638,10 @@ class Handler(BaseHTTPRequestHandler):
         if url.path.startswith("/api/"):
             return self.api("GET", url, q, None)
         try:
+            if url.path == "/places":                       # HERESY 1261: where the user's work lives, and a move under way
+                return self.send(200, places.listing(q.get("refresh") == "1"))
+            if url.path == "/places/plan":
+                return self.send(200, places.plan(q.get("name", ""), q.get("to", "")))
             if url.path == "/health":
                 with jobs_lock:
                     active = {k: v["status"] for k, v in jobs.items()}
@@ -1643,6 +1677,13 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/art/remove":                    # HERESY 1156
                 r = art_remove(q.get("name", ""))
                 return self.send(409 if r.get("error") else 200, r)
+            if url.path == "/artist/runs":                   # HERESY 1255: the Artist room
+                return self.send(200, artist.runs())
+            if url.path == "/artist/file":
+                p, ctype = artist.picture(q.get("id", ""), q.get("file", ""))
+                return self.send_file(p, ctype)
+            if url.path == "/artist/prompt":
+                return self.send(200, artist.prompt_for(q.get("name", "")))
             if url.path == "/art/draw":
                 seed = q.get("seed", "")
                 r = art_async(q.get("name", ""), q.get("again") == "1", int(seed) if seed.isdigit() else None, q.get("painter"))
@@ -1768,6 +1809,22 @@ class Handler(BaseHTTPRequestHandler):
             if size <= 0 or size > 1024 ** 3:
                 raise ValueError("send the file as the body, up to 1 GB")
             body = self.rfile.read(size)
+            if url.path in ("/places/move", "/places/relink"):   # HERESY 1261
+                data = json.loads(body.decode("utf-8"))
+                fn = places.move if url.path == "/places/move" else places.relink
+                return self.send(202 if url.path == "/places/move" else 200, fn(data, q.get("scope", "")))
+            if url.path.startswith("/artist/"):             # HERESY 1255: the Artist room
+                data = json.loads(body.decode("utf-8"))
+                if url.path == "/artist/draw":
+                    return self.send(202, artist.draw(data))
+                if url.path == "/artist/cover":
+                    return self.send(200, artist.cover(data))
+                if url.path == "/artist/star":               # HERESY 1257
+                    return self.send(200, artist.star(data))
+                if url.path == "/artist/trash":
+                    return self.send(200, artist.trash(str(data.get("id") or "")))
+                if url.path == "/artist/restore":
+                    return self.send(200, artist.restore(str(data.get("id") or "")))
             if url.path == "/jobs/cancel":                   # HERESY 1165: {key}: a waiting job off the queue
                 return self.send(200, job_cancel(str(json.loads(body.decode("utf-8")).get("key") or "")))
             if url.path == "/regen":                         # HERESY 1160: {names}: made again with new seeds
@@ -1915,6 +1972,7 @@ def prune_loop():
 if __name__ == "__main__":
     threading.Thread(target=prune_loop, daemon=True).start()
     threading.Thread(target=act_watch, daemon=True).start()     # HERESY 1157
+    places.boot()                    # HERESY 1261: a folder linked back from the record, a missing one made, a dangling one said
     print(f"[lab] heresy-lab on :{PORT} · outputs {OUTPUTS} · whisper {WHISPER_DIR}", file=sys.stderr, flush=True)
     training.resume(KIT)            # HERESY 1072: runs still going in their own units are watched again
     for r in _regen_pending():           # HERESY 1160: regenerations still owed their swap

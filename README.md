@@ -132,7 +132,7 @@ What it needs:
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
-[INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent.
+[INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
 
 ## Dependencies
 
@@ -203,7 +203,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
-### Done Since rc2 (Coming in rc3)
+### Done › 2.0.0-rc3 (October 2026)
 
 - **The Writer's models with their prices**, from OpenRouter's list, as you type.
 - **Every button that cannot be undone behind a dialog**, and drawing artwork for several takes or regenerating several asked first.
@@ -214,15 +214,20 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **The winged woman drawn again**: her back to us, the right arm bent a little upward, the left hidden but for the upper arm.
 - **The Refiner's chain in the order of the work**: the stems split from the debuzzed and upscaled take and mixed by the remaster, the top drawn anew at the end.
 - **The guide's Score and Voices on a Score**: YuE2's ABC line by line, and how a narrator and a choir are timed on one take.
+- **The Artist room, an early preview**: pictures for your songs from a prompt of your own, in three shapes from one seed, painted by Krea 2 Muse, seen developing step by step and kept in a gallery; a square one becomes a take's cover.
+- **[Pinokio](https://pinokio.co) on Linux**: install, start, update and more models from its menu; the work is done by bash scripts that run the same from a terminal ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
+- **The player where the songs are**: in two rows where they are heard and compared, in one elsewhere, and back with its take and its place after a reload.
+- **Fewer tips**: none repeats what the screen already says.
 
-### To Do › rc3 and After
+### To Do › rc4 and After
 
-2.0.0-rc2 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+2.0.0-rc3 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
 
-- **The Artist room**: covers in three shapes at once from one seed (1:1 for the album, 16:9 for a video, 9:16 for a short), the title and the artist written on them, the painter of your choice, the versions of each take's picture.
+- **The Artist room, the rest of it**: three columns as wide as you drag them (the prompt, the picture as it develops with its run's data, the gallery), Stop while it draws, a reference picture to start from, repainting and outpainting on a canvas, several LoRA adapters at once, an upscale, Qwen Image as a second painter, the title and the artist written on the cover, the versions of each take's picture.
 - **Five more languages** for the page: Chinese, French, Portuguese, German and Japanese. Right-to-left languages (Arabic, Hebrew, Urdu) come once the page itself runs right to left.
 - **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its services itself (Ctrl+1…6 for the rooms there), packed as an **AppImage**: the studio, its Python and its CUDA libraries in one file, the models fetched at the first start, and the models and the songs kept wherever you choose on your disk.
-- **A one-click install with [Pinokio](https://pinokio.computer)**: install and start the studio in one click, on Linux and on Windows 11 through the same WSL2 path (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)).
+- **Pinokio on Windows 11**: the launcher runs on Linux now; on Windows its steps will run inside WSL2, the path of INSTALL_WINDOWS.md (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)).
+- **Where your work lives, chosen in the Engine**: the songs, the trash, the pictures and the Writer's documents moved to another disk from the page (the lab knows them already: [CHANGELOG](CHANGELOG.md)).
 - **A score editor as a DAW has one**: a piano roll, a chord lane, the lyrics over the notes, sections copied and moved, a MIDI keyboard to play ideas in; [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System) (Apache-2.0) shows the way.
 - **The interface's new words in all seven languages**: what came since rc1 is in English until the pass before 2.0.0.
 - **Native plugins** for REAPER, Waveform and Bitwig, once the studio has found its people.

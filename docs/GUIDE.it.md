@@ -17,13 +17,14 @@ YuE2 ha **due metà**, e quasi tutto ciò che regoli nello studio mira a una del
 | **Musica** (AR, il modello linguistico) | scrive la canzone: prima una partitura (notazione ABC), poi i token musicali, 25 al secondo | la modalità di pianificazione, la partitura, il seme musicale, la forza musicale di una LoRA |
 | **Suono** (NAR + VAE) | trasforma i token in suono | il seme sonoro, il VAE, la forza sonora di una LoRA, i passi e il risolutore |
 
-### Le cinque stanze <!-- #the-five-rooms -->
+### Le sei stanze <!-- #the-six-rooms -->
 
 | stanza | a cosa serve |
 |---|---|
 | **Creatore** | il modulo della canzone e il take che stai ascoltando |
 | **Scrittore** | le tue canzoni come documenti con versioni; un modello di chat scrive bozze e rivede con te |
 | **Rifinitore** | dopo il render: spettro, artefatti, antironzio, verifica del testo, stem, remaster, upscale |
+| **Artista** | immagini per le tue canzoni da un prompt tuo: quadrata, larga e alta da un seme; la quadrata diventa la copertina di un take (un'anteprima) |
 | **Bibliotecario** | tutti i take: spazi, ricerca, mi piace, note, azioni in blocco, il cestino |
 | **Addestratore LoRA** | adattatori LoRA dalle tue canzoni: il set, l'esecuzione, la sua telemetria e le sue epoche |
 
@@ -31,7 +32,7 @@ YuE2 ha **due metà**, e quasi tutto ciò che regoli nello studio mira a una del
 
 ![La barra: le stanze, lo spazio e i pochi pulsanti che usi sempre](guide/bar.png)
 
-Le stanze aprono la barra nell'ordine del lavoro: Creatore, Scrittore, Rifinitore, il posto dell'Artista (in grigio: la stanza delle immagini per le tue canzoni arriva in una prossima versione) e Bibliotecario; il logo sta al centro, l'Addestratore subito dopo; a destra, lo spazio, la spia del motore (verde: pronto; ambra: al lavoro; rossa: qualcosa non è andato) e i pochi pulsanti. Il puntatore sulla spia (o un clic) apre **cosa gira e cosa aspetta**: le canzoni, le rigenerazioni e il lavoro del laboratorio sulle schede video (copertine, stem, upscale, Whisper). Ciò che aspetta esce dalla sua coda con la sua ✕, premuta due volte (la prima pressione chiede conferma); ciò che gira già si ferma dove è mostrato: una canzone nella sua esecuzione, un addestramento nell'Addestratore.
+Le stanze aprono la barra nell'ordine del lavoro: Creatore, Scrittore, Rifinitore, Artista (un'anteprima: immagini per le tue canzoni) e Bibliotecario; il logo sta al centro, l'Addestratore subito dopo; a destra, lo spazio, la spia del motore (verde: pronto; ambra: al lavoro; rossa: qualcosa non è andato) e i pochi pulsanti. Il puntatore sulla spia (o un clic) apre **cosa gira e cosa aspetta**: le canzoni, le rigenerazioni e il lavoro del laboratorio sulle schede video (copertine, stem, upscale, Whisper). Ciò che aspetta esce dalla sua coda con la sua ✕, premuta due volte (la prima pressione chiede conferma); ciò che gira già si ferma dove è mostrato: una canzone nella sua esecuzione, un addestramento nell'Addestratore.
 
 - **Spazio**: lo spazio in mano. L'elenco dei take mostra solo quello, e ogni nuovo take vi finisce dentro. *Tutti gli spazi* mostra tutto. Dove la barra è stretta (il logo senza le sue parole), se ne va anche la parola *Spazio*; il selettore resta.
 - **IT** (le due lettere della lingua): la pagina in un'altra lingua, salvata con le tue impostazioni: English, Русский, Українська, Беларуская, Ελληνικά, Español, Italiano, ognuna chiamata con le sue parole. Numeri e date seguono la lingua, e questa guida si apre in essa.
@@ -57,6 +58,7 @@ Le stanze aprono la barra nell'ordine del lavoro: Creatore, Scrittore, Rifinitor
 ### Il lettore, i take e il log del server <!-- #the-player-the-takes-and-the-server-log -->
 
 - **Il lettore** in basso: la forma d'onda da un lato all'altro, una nuvola morbida con la parte già ascoltata nel colore d'accento (un clic salta lì); sotto, il take (la sua copertina quando ce l'ha, il titolo, le prime parole dello stile, 👍 👎 ★), poi **casuale**, precedente, riproduci, successivo e **ripeti** (spento · tutto l'elenco di nuovo · questo take di nuovo, segnato 1), poi il tempo (un clic sulla durata totale lo trasforma nel tempo rimanente), *riproduci al clic* (un clic in un elenco riproduce subito il take), *continua a riprodurre* (quando un take finisce, parte il successivo dell'elenco), la **velocità** (da 0.50× a 2.00×, l'intonazione conservata), il volume e un punto di stato (pulsa mentre suona un take). Ciò che non ti serve in quel momento resta tenue finché non arriva il puntatore; ogni icona dice cosa fa quando il puntatore ci si posa. Il puntatore sulla forma d'onda mostra il tempo a cui salterebbe un clic. I tasti multimediali della tastiera e di una cuffia governano il lettore, e il pannello multimediale del desktop mostra il take. ⏪ e ⏩ vanno al segno precedente o successivo ogni 15 secondi da 0:00, ← e → ai segni di 5 secondi (con Shift, di 30). La pillola di stato all'estremità destra del lettore (verde mentre suona un take, del colore d'accento mentre se ne fa uno) apre il take o l'esecuzione; con Compose sollevato sopra la stanza, gira la cornice su quella del take.
+- **Due righe o una**: la forma d'onda sopra i pulsanti del lettore resta dove le canzoni si ascoltano e si confrontano (Creatore, Rifinitore, Bibliotecario); nello Scrittore, nell'Artista, nell'Addestratore e nel Motore il lettore sta in una riga, come nel Creatore mentre una cornice è sollevata o il testo è sopra tutto. Dopo un ricaricamento (F5) torna con il suo take e il suo punto. Nell'Artista i take partono richiusi e il log del server sta a sinistra.
 - **La linea verso lo studio** appare accanto al log del server (*Forge · 85 ms*, o *qui* sulla stessa macchina). Quando lo studio è lontano, un mi piace, un preferito o un fissaggio si vedono subito e lo studio li conferma soltanto.
 - **Take** a destra: cerca con parole, `*` e `?`; *Preferiti*; richiudi la colonna con »; ⋯ per le azioni proprie dell'elenco.
 - **Il log del server** sta proprio sopra il lettore in ogni stanza: chiuso, mostra l'ultima cosa detta dal motore (in rosso quando qualcosa non è andato); aperto, dieci righe, *Segui*, *Copia* e la via al log completo nel Motore. Con una cornice sollevata sopra la stanza, sta a sinistra, lontano dai pulsanti della cornice.
@@ -244,6 +246,32 @@ La **catena** esegue più passi in un colpo: *Antironzio → Upscale → Stem �
 6. **Remaster**: mixa gli stem o usa il take così com'è; pulizia, de-esser, a scelta riaccordatura 440 → 432 Hz, loudness (LUFS) e true peak. Ogni passata è un nuovo ramo. Il preset e il de-esser agiscono sugli stem prima del mix: con il take o un qualsiasi file singolo come sorgente sono spenti, e nella catena agiscono quando essa separa gli stem.
 7. **Upscale**: UniverSR ridisegna la parte alta dello spettro; l'originale resta campione per campione sotto il taglio. Su un remaster (l'ultimo passo della catena) l'intero file si abbassa se la nuova parte alta supera il tetto di true peak del remaster.
 
+## Artista <!-- #artist -->
+
+*Un'anteprima: quello che c'è qui funziona, e il resto della stanza arriva nelle prossime versioni.*
+
+### Immagini per le tue canzoni <!-- #pictures-for-your-songs -->
+
+Scrivi a frasi quello che vedi per la canzone: Krea 2 Muse legge il prompt come una descrizione, non come un elenco di tag. Prima ciò che c'è nell'immagine, poi la luce, i colori e la tecnica (olio, inchiostro, una fotografia), e alla fine *no text* quando non vuoi lettere. **From the take** mette il prompt da cui è stata dipinta la copertina del take che hai in mano, o uno fatto del suo titolo e del suo stile, per avere da dove cominciare.
+
+**Forme**: **1:1** (1280 × 1280) per la copertina, **16:9** (1920 × 1080) per un video, **9:16** (1080 × 1920) per uno short. Le forme di una pressione condividono il seme, perciò escono come una serie: la stessa scena con gli stessi colori, ciascuna composta per la sua cornice e non un'unica immagine tagliata tre volte. **Variations** dipinge anche i semi successivi (il seme, il seme + 1, …), ciascuno in tutte le forme. **Seed**: vuoto per uno nuovo ogni volta; il seme di un'immagine che ti è piaciuta la ridipinge (ogni giro mostra il suo seme, e **To the form** lo riporta con il prompt).
+
+**Painter**: Krea 2 Muse di Stable Yogi, **Q4** su una scheda con 12,5 GB liberi, **Q8** (più fine) con 18,5 GB. Un'immagine richiede circa 35 s in 1:1 e 47 s in 16:9 o 9:16 su una RTX 3090, più circa 25 s per caricare il pittore a ogni pressione. Una pressione aspetta nella coda del laboratorio una scheda con spazio, come le copertine e gli stem; mentre aspetta, **Off the queue** la ritira. Ogni immagine passa dal filtro dei contenuti che la licenza del pittore richiede: quella che segnala non viene tenuta, e il giro lo dice.
+
+**Live preview** (attivo per impostazione predefinita): il posto dell'immagine che si sta dipingendo mostra ogni suo passo, dal rumore all'immagine, a un ottavo della grandezza e senza il decodificatore, quindi non costa nulla; spento, il posto aspetta l'immagine finita.
+
+### Una copertina per il take <!-- #a-cover-for-the-take -->
+
+Un clic su un'immagine la apre sopra la pagina nella sua forma (← → scorrono il giro, Esc chiude), con **Download** (PNG, a grandezza piena). Un'immagine quadrata ha **Set as cover**: diventa la copertina del take che hai in mano (sceglilo a destra), nella sua scheda, nel player e nel suo MP3. La copertina che aveva resta accanto al take (`artwork-removed/`), come la tiene un ridisegno, e l'altra lettera di una coppia A/B riceve anche la nuova quando non ne ha una sua.
+
+I giri restano nella cartella `artist/` dello studio, i più nuovi in alto. **Again** ridipinge un giro da un seme nuovo; **Trash** lo sposta in `trash/artist/`, da dove torna se riporti la sua cartella in `artist/`.
+
+**Runs o Gallery**: i giri mostrano ogni pressione di Draw con il suo prompt e il suo seme; la galleria mostra tutte le immagini di tutti i giri in un'unica griglia, le più nuove per prime, per forma (1:1, 16:9, 9:16) o con la stella (☆ su un'immagine le mette la stella), in tre grandezze. Un'immagine aperta dalla galleria scorre tutta la galleria, con ★, To the form (il suo prompt, il seme e la forma), Set as cover e Download.
+
+### Cosa arriva all'Artista <!-- #coming-to-the-artist -->
+
+Un'immagine di riferimento da cui partire; ridipingere una parte di un'immagine ed estenderla oltre i bordi, su una tela; più adattatori LoRA insieme; un upscale; Qwen Image come secondo pittore; il titolo e l'artista scritti sulla copertina.
+
 ## Bibliotecario <!-- #librarian -->
 
 ### Tutti i take <!-- #every-take -->
@@ -255,7 +283,7 @@ La **catena** esegue più passi in un colpo: *Antironzio → Upscale → Stem �
 - **Cerca** con parole, `*` e `?`; **ordina** per più nuovi, più vecchi, per titolo, più lunghi; **Riquadri** o **Elenco**: tutti e tre nella riga dell'intestazione, accanto ai conteggi.
 - **Una scheda** porta la copertina del suo take nell'angolo in alto a destra, accanto al titolo, quando ce l'ha (*Disegna la copertina* nel menu del take); un clic mostra l'immagine intera sopra lo studio, dove ‹ › e i tasti freccia scorrono le immagini delle schede mostrate, ▶ riproduce il suo take ed Esc chiude. La scheda che suona brilla dei picchi della canzone stessa.
 - **Take freschi**: un take che non hai ancora riprodotto porta una leggera linea tratteggiata; il suo primo ascolto la toglie. Un take rigenerato porta un'etichetta *regen* e conserva la sua nota, il suo mi piace e la sua stella.
-- **La colonna degli spazi**: trascinane il bordo per allargarla o restringerla; « la richiude, e le schede guadagnano una colonna in più.
+- **La colonna degli spazi**: trascinane il bordo per allargarla o restringerla; « la richiude, e le schede si allargano: le colonne restano le stesse, e l'occhio non perde il segno.
 - **Sezioni**: uno spazio può avere sezioni, al massimo due livelli di profondità (⋯ accanto al suo nome → *Nuova sezione…*), per ordinare ciò che contiene senza un nuovo spazio ogni volta. Uno spazio mostra anche i take delle sue sezioni. Tutto ciò da cui il Rifinitore ricava qualcosa va da solo nella sezione *Rifiniti* dei suoi spazi.
 - **Trascina una scheda su uno spazio** a sinistra per spostarla lì (tutte le selezionate, quando è selezionata); tieni premuto **Ctrl** per aggiungerla lì e lasciarla anche qui. Lo studio chiede prima, e Ctrl+Z la riporta indietro.
 - **Take fissati**: fino a quattro in ogni spazio, in una striscia del loro tono sopra le schede (clic destro su un take → *Fissa qui*; × lo sgancia). Quando selezioni dei take, la barra dei selezionati prende il posto della striscia, così le schede non si spostano mai. Quella barra è una fila di icone incorniciate: la scelta, i segni, gli spazi, l'esportazione e il cestino in fondo; ognuna si dice al passaggio del puntatore.
@@ -269,7 +297,7 @@ La **catena** esegue più passi in un colpo: *Antironzio → Upscale → Stem �
 
 **Rigenera con un nuovo seme** (sopra lo Scrittore nel menu del take): il take rifatto con tutto ciò con cui era stato fatto, ma con semi nuovi; il nuovo eredita gli spazi e la nota del vecchio, e il vecchio aspetta nella sezione *Sorgente della rigenerazione* del suo spazio (il suo spazio non lo mostra tra i propri) finché non la svuoti; il nuovo conserva la sua nota, il suo mi piace, la sua stella e la sua immagine. Una prova esce con i suoi due minuti interi. Riproduci, apri nel Creatore o nel Rifinitore, il foglio (la sua partitura), la scheda tecnica (tutto ciò con cui è stato fatto: lo stile e il testo, la partitura disegnata, ogni manopola, le LoRA e gli slider con le loro forze; un take in modalità Diretto non ha partitura, e *Scrivila dal suono* ne chiede una al trascrittore), mi piace, non mi piace, preferito, una nota, rinomina, **spazi** (un take può stare in più spazi), **sposta in** uno spazio (su una scheda selezionata: ogni take selezionato, fuori dallo spazio aperto), nascondi, manda allo Scrittore, copia, scarica, **esporta in una DAW** (progetto REAPER o DAWproject, su qualsiasi take: con i suoi stem una volta che il Rifinitore li ha separati), nel cestino. **Su una scheda selezionata, con altre selezionate**, il menu agisce su tutte, e la sua testata dice su quante: mi piace, non mi piace, preferito, copertina, togliere la copertina, spazi, nascondi, uno ZIP; le copertine di più take e la rigenerazione di più take chiedono prima, perché costano minuti di una scheda video.
 
-**Disegna la copertina**: un piccolo modello linguistico (Qwen3-4B) legge lo stile e le parole del take e scrive un prompt per un'immagine; un modello SDXL (CyberRealistic XL) la dipinge, a 768 px, in circa mezzo minuto su una scheda da 16 GB. Si vede nel lettore, sulla scheda, nel pannello multimediale del desktop e dentro l'MP3 che scarichi (come sua copertina). Quando un take ha la sua immagine, il menu dice *Apri la copertina* (sopra la pagina, come un clic sull'immagine della scheda o sul quadrato del lettore) e *Ridisegna la copertina* (un nuovo prompt e una nuova immagine; la vecchia resta accanto al take, in `artwork-removed/`). I due modelli arrivano con `heresy/fetch-heresy.sh --artwork` (14 GB, chiede prima).
+**Disegna la copertina**: un piccolo modello linguistico (Qwen3-4B) legge lo stile e le parole del take e scrive un prompt per un'immagine; Krea 2 Muse la dipinge, a 1024 px, in circa mezzo minuto su una scheda da 16 GB (su una scheda più piccola un SDXL, CyberRealistic XL; il pittore si sceglie in *Motore → Copertina*). Si vede nel lettore, sulla scheda, nel pannello multimediale del desktop e dentro l'MP3 che scarichi (come sua copertina). Quando un take ha la sua immagine, il menu dice *Apri la copertina* (sopra la pagina, come un clic sull'immagine della scheda o sul quadrato del lettore) e *Ridisegna la copertina* (un nuovo prompt e una nuova immagine; la vecchia resta accanto al take, in `artwork-removed/`). I due modelli arrivano con `heresy/fetch-heresy.sh --artwork` (14 GB, chiede prima).
 
 ### Gli strumenti sotto lo stile <!-- #the-instruments-under-the-style -->
 
@@ -277,11 +305,11 @@ Sotto il campo Stile, lo studio nomina ciò che il tuo prompt chiede: un chip pe
 
 ### Copertine: cosa le disegna, cosa non sa fare, un altro pittore <!-- #artwork-what-draws-it-what-it-cannot-another-painter -->
 
-**Cosa le disegna.** Un piccolo modello linguistico (Qwen3-4B) legge lo stile e le parole del take e scrive un prompt per un'immagine, il soggetto per primo; un modello SDXL la dipinge (1024 px, conservata a 768). Quando il take porta il nome di uno strumento (la prova di uno strumento), lo studio dice a entrambi com'è fatto lo strumento e di dove è, e Omni (il modello dell'ascoltatore) guarda l'immagine: quando non trova lo strumento, riscrive il prompt da ciò che ha visto, e il pittore ci riprova, al massimo tre immagini. Circa mezzo minuto per immagine su una scheda da 16 GB.
+**Cosa le disegna.** Un piccolo modello linguistico (Qwen3-4B) legge lo stile e le parole del take e scrive un prompt per un'immagine, il soggetto per primo; Krea 2 Muse la dipinge (1024 px), o un SDXL dove Krea non ci sta (*Motore → Copertina*). Quando il take porta il nome di uno strumento (la prova di uno strumento), lo studio dice a entrambi com'è fatto lo strumento e di dove è, e Omni (il modello dell'ascoltatore) guarda l'immagine: quando non trova lo strumento, riscrive il prompt da ciò che ha visto, e il pittore ci riprova, al massimo tre immagini. Circa mezzo minuto per immagine su una scheda da 16 GB.
 
 **Cosa non sa fare** (un'avvertenza, detta senza giri di parole): il pittore disegna ciò che conosce. Uno strumento che non ha mai visto per nome (il duduk, il morin khuur, il khomus, le campane tibetane di cristallo…) esce come un'ipotesi: un flauto di legno, un violino, ciotole da cucina. Dove Omni non ha trovato lo strumento in nessuna delle tre immagini, l'immagine è segnata **≈ un'ipotesi**, nella vista sovrapposta e nel prontuario degli strumenti. Una copertina è l'umore del take, non un'immagine di riferimento di uno strumento: per sapere com'è fatto uno strumento, cercalo.
 
-**Consiglio da pro: un altro pittore.** Lo studio dipinge con l'SDXL a cui punta il link `artwork/SDXL-Artwork-Model`; il nostro è `CyberRealistic-XL-v10`. Metti accanto un altro finetune di SDXL, come cartella diffusers o come un unico file `.safetensors` (come li dà Civitai), e punta il link su di esso, in relativo:
+**Consiglio da pro: un altro pittore.** Quando il pittore è un SDXL (scelto in *Motore → Copertina* o su una scheda sotto i 16 GB), è l'SDXL a cui punta il link `artwork/SDXL-Artwork-Model`; il nostro è `CyberRealistic-XL-v10`. Metti accanto un altro finetune di SDXL, come cartella diffusers o come un unico file `.safetensors` (come li dà Civitai), e punta il link su di esso, in relativo:
 
 ```bash
 cd artwork && ln -sfn MyFavourite-XL.safetensors SDXL-Artwork-Model
@@ -652,7 +680,7 @@ Come il promo dello studio ha avuto il suo suono: un narratore dice le righe del
 | **←** **→** (con **Shift**: 30 s) | ovunque tranne un campo di testo o un menu | 5 secondi indietro o avanti |
 | **M** | ovunque tranne un campo di testo | suono spento e acceso |
 | i tasti multimediali | la tastiera, una cuffia, il pannello multimediale del desktop | riproduci, pausa, precedente, successivo |
-| **Ctrl+Alt+1** … **9** | ovunque | **1** Creatore, **2** Scrittore, **3** Rifinitore, **5** Bibliotecario, **7** Addestratore, **8** fuori, nella tua DAW, **9** il Motore; il **4** è tenuto per la stanza dell'Artista, il **6** per una stanza che verrà (Ctrl+1…9 sono le schede del browser stesso) |
+| **Ctrl+Alt+1** … **9** | ovunque | **1** Creatore, **2** Scrittore, **3** Rifinitore, **4** Artista, **5** Bibliotecario, **7** Addestratore, **8** fuori, nella tua DAW, **9** il Motore; il **6** è tenuto per una stanza che verrà (Ctrl+1…9 sono le schede del browser stesso) |
 | **Esc** | ovunque | chiude ciò che è aperto: un menu, una finestra di dialogo, la guida, una vista a schermo intero, la stanza del Motore |
 | **F1** (o **Shift+F1**) | ovunque | questa guida, sulla stanza in cui sei; di nuovo per chiuderla (l'aiuto del browser non compare) |
 | **Maiusc+Tab** | il Creatore | il tasto dei riquadri, non il ritorno indietro tra i campi: un riquadro sollevato passa all'altro, e se nessuno è sollevato si solleva quello del modulo (Compose); una finestra di dialogo, un menu e la barra di ricerca tengono il loro Maiusc+Tab |

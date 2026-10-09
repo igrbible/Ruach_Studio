@@ -528,8 +528,10 @@
   // HERESY 1017: the takes list folds to a strip on the right and back; kept per browser
   // HERESY 1167 (Viktor: «У Писателя пусть по умолчанию вкладка Takes будет свёрнута»): each room keeps its own fold; the
   // Writer's starts folded
-  function libFoldKey() { return document.body.dataset.tab === "write" ? "yue2.libFolded.write" : "yue2.libFolded"; }
-  function libFolded() { var v = recall(libFoldKey()); return v === null ? libFoldKey() === "yue2.libFolded.write" : v === "1"; }
+  // HERESY 1258 (Viktor 08.10.2026: «комнате художника предлагаю колонку Taker… по умолчанию свёрнутой»): the Artist folds its own,
+  // folded until unfolded, as the Writer does
+  function libFoldKey() { var t = document.body.dataset.tab; return t === "write" || t === "artist" ? "yue2.libFolded." + t : "yue2.libFolded"; }
+  function libFolded() { var v = recall(libFoldKey()); return v === null ? libFoldKey() !== "yue2.libFolded" : v === "1"; }
   function paintLibFold() {
     var folded = libFolded();
     $("library").classList.toggle("is-folded", folded);
@@ -538,7 +540,7 @@
     window.dispatchEvent(new Event("resize"));
   }
   $("libFold").addEventListener("click", function () { store(libFoldKey(), "1"); paintLibFold(); });
-  $("libUnfold").addEventListener("click", function () { store(libFoldKey(), libFoldKey() === "yue2.libFolded.write" ? "0" : null); paintLibFold(); });
+  $("libUnfold").addEventListener("click", function () { store(libFoldKey(), libFoldKey() !== "yue2.libFolded" ? "0" : null); paintLibFold(); });
   if (window.HeresyIcons) $("libUnfold").querySelector(".lib-unfold-icon").innerHTML = window.HeresyIcons.svg("expand");
   paintLibFold();
 
@@ -3458,7 +3460,7 @@
         var gone = !!QP.gone[r.key], armed = QP.armed === r.key;
         return '<li class="q-row' + (r.run ? " is-run" : " is-wait") + (gone ? " is-gone" : "") + '" data-q="' + escape(r.key) + '">' +
           '<span class="q-dot" aria-hidden="true"></span><span class="q-what">' + escape(r.what) + "</span>" +
-          '<span class="q-name" translate="no" title="' + escape(r.name) + '">' + escape(r.name) + '</span><span class="q-state"></span>' +
+          '<span class="q-name" translate="no">' + escape(r.name) + '</span><span class="q-state"></span>' +
           (r.run || gone ? "<span></span>" : '<button type="button" class="q-off' + (armed ? " is-armed" : "") + '" data-q-off="' + escape(r.key) + '" aria-label="' +
             (armed ? "Press again to take it off" : "Take it off the queue") + '">' + (armed ? "Take it off?" : "\u2715") + "</button>") + "</li>";
       }).join("") : '<li class="q-empty">Nothing runs and nothing waits.</li>';
@@ -4017,6 +4019,7 @@
     if (document.body.dataset.tab === "post") paintPost();   // HERESY 1014
     if (typeof paintNote === "function") setTimeout(paintNote, 0);   // HERESY 1044
     if (window.HeresyPost) window.HeresyPost.setTake({ name: take.name });   // HERESY 1029: before the tools report
+    if (window.HeresyArtist) window.HeresyArtist.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1255: its cover
     if (window.HeresyInspect) window.HeresyInspect.setTake({ name: take.name, label: displayTitle(take) });   // HERESY 1025
     if (window.HeresyDerived) window.HeresyDerived.setTake({ name: take.name, label: displayTitle(take), seconds: take.seconds });   // HERESY 1021; 1060 its length for the estimates
     setTimeout(paintCardFolds, 0);   // HERESY 1009: the peeks read the texts filled below
@@ -4071,7 +4074,7 @@
         '<button type="button" class="btn ghost small icon-act" id="dislikeTake" data-rate="-1" aria-pressed="' + (rated < 0) + '" aria-label="Dislike" data-tip="Dislike">' +
         (IC ? IC.ui("dislike") : "👎") + "</button>" : "") +
       '<button type="button" class="btn ghost small icon-act' + (take.favorite ? " is-on" : "") + '" id="favTake" aria-pressed="' +
-      (take.favorite ? "true" : "false") + '" aria-label="Favourite" data-tip="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '">' +
+      (take.favorite ? "true" : "false") + '" aria-label="Favourite">' +
       (window.HeresyIcons ? window.HeresyIcons.ui("star") : take.favorite ? "★" : "☆") + "</button>" +   // HERESY 1169: drawn, as Compose's
       // HERESY 1167 (Viktor: «Жму на мигалку, открывает в Творце "медицинскую карту". А как обратно из неё перейти в
       // Библиотеку на этот же трек?»): the Librarian with this take in sight, flashed
@@ -4762,7 +4765,6 @@
     $("playbar").classList.add("is-empty");
     $("playbarTitle").textContent = "Nothing loaded";
     $("playbarTitle").setAttribute("translate", "yes");
-    $("playbarTitle").dataset.tip = "Pick a take on the right";
     paintCover(null);
     $("timeNow").textContent = "0:00";
     $("timeTotal").textContent = "0:00";
@@ -4898,11 +4900,10 @@
       }
     }
     $("playbar").classList.remove("is-empty");
-    // just the name; its style prompt on hover (downloads are on the song page)
+    // just the name (HERESY 1260, Viktor 09.10.2026, of the style on hover: «Это лишнее. И так всё под рукой»)
     $("playbarTitle").textContent = displayTitle(take);
     $("playbarTitle").setAttribute("translate", "no");
     paintRate();   // HERESY 1042
-    if (take.style) $("playbarTitle").dataset.tip = take.style; else $("playbarTitle").removeAttribute("data-tip");
     paintCover(take);                                       // HERESY 1106: the subtitle and the cover tile
     paintMp3();
     $("timeTotal").textContent = clock(take.seconds);
@@ -4962,6 +4963,42 @@
   }
 
   $("playBtn").addEventListener("click", togglePlay);
+  // HERESY 1258 (Viktor 08.10.2026: «Плеер при F5 не держит последний трек и его позицию. Ты фиксил, но не работает как
+  // ожидалось»): F5 in the Librarian reads the list again and never stopped the music, but elsewhere a reload is a reload
+  // (1202 asks first), and the player kept nothing of itself. Now its take, its place and whether it played are kept in this
+  // browser (not in the settings file: they change every second) as it pauses or seeks, every two seconds while it plays and
+  // as the page goes; the first list after the reload puts them back, and it plays on where the browser lets it unasked
+  // (else the browser's «press ▶»). Kept only once that first list has been read, so the page's start never wipes them
+  var PLAYER_AT = "ruach.playerAt", playerKeptAt = 0, playerBack = false;
+  function keepPlayer() {
+    if (!playerBack) return;
+    var t = STATE.playerTake;
+    try {
+      if (!t || t.session || !audio.getAttribute("src")) localStorage.removeItem(PLAYER_AT);
+      else localStorage.setItem(PLAYER_AT, JSON.stringify({ name: t.name, at: Math.round((audio.currentTime || 0) * 10) / 10, playing: isPlaying() }));
+    } catch (e) { /* a private window keeps nothing */ }
+  }
+  audio.addEventListener("timeupdate", function () { if (Date.now() - playerKeptAt > 2000) { playerKeptAt = Date.now(); keepPlayer(); } });
+  ["pause", "ended", "seeked", "emptied"].forEach(function (ev) { audio.addEventListener(ev, keepPlayer); });
+  window.addEventListener("pagehide", keepPlayer);
+  window.addEventListener("beforeunload", keepPlayer);
+  function restorePlayer() {
+    if (playerBack) return;
+    playerBack = true;
+    var kept = null;
+    try { kept = JSON.parse(localStorage.getItem(PLAYER_AT) || "null"); } catch (e) { kept = null; }
+    var take = kept && kept.name ? findTake(kept.name) : null;
+    if (!take || isPlaying()) return;
+    if (!STATE.playerTake || STATE.playerTake.name !== take.name) loadPlayer(take, false);
+    var at = +kept.at || 0;
+    var back = function () {
+      audio.removeEventListener("loadedmetadata", back);
+      try { audio.currentTime = Math.min(at, Math.max(0, (audio.duration || at) - 0.5)); } catch (e) { /* not seekable yet */ }
+      paintTimes();
+      if (kept.playing) audio.play().catch(playRefused);
+    };
+    if (audio.readyState >= 1) back(); else audio.addEventListener("loadedmetadata", back);
+  }
   ["play", "pause", "ended", "emptied"].forEach(function (ev) {   // HERESY 1042: the Librarian's buttons follow the player
     audio.addEventListener(ev, function () { if (window.HeresyCollection) window.HeresyCollection.paintPlaying(); });
   });
@@ -5682,6 +5719,7 @@
       paintCoverTakes();
       if (STATE.take) { paintDecodeSwitch(); paintSoundSwitch(); }
       restorePostTake();   // HERESY 1132
+      restorePlayer();     // HERESY 1258: after the Refiner's take, so the player's own comes back over it
     });
   }
 
@@ -5785,9 +5823,9 @@
       return '<article class="take' + active + (extras ? " has-rate" : "") + (take.favorite ? " is-fav" : "") + (HC && HC.isHidden(take.name) ? " is-hidden-take" : "") + (HC && HC.isFresh && HC.isFresh(take.name) ? " is-fresh" : "") +
         (window.HeresyRegen && window.HeresyRegen.has(take.name) ? " is-regenerating" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
         (extras ? "" : '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
-        '" title="' + (take.favorite ? "Remove from favourites" : "Keep as a favourite") + '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>") +
+        '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>") +
         '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>' +
-        (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '" title="Load into the Refiner">Refine</button>') +
+        (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '">Refine</button>') +
         '<a class="take-dl" data-dl="1" href="' + escape(downloadUrl(take)) + '" download="' + escape(audioFileName(take)) +
         '" title="Download ' + formatExt(take.format).toUpperCase() + '" aria-label="Download">⤓</a>' +
         (!convertible(take) ? "" : '<a class="take-mp3" data-dl="1" href="' + escape(mp3Url(take)) + '" download="' + escape(fileTitle(take)) +
@@ -6773,7 +6811,7 @@
   // where the whole page scrolls (the Engine page) the browser keeps the content in place by taking those 53 px off the
   // scroll, and from 25 px that would land under 4 px and grow it again, round and round
   (function () {
-    var PAGES = "#view-compose, #view-take, #view-write, #view-post, #view-collection, #view-train, #view-engine";
+    var PAGES = "#view-compose, #view-take, #view-write, #view-post, #view-artist, #view-collection, #view-train, #view-engine";
     document.body.classList.add("bar-tall");
     document.addEventListener("scroll", function (event) {
       var el = event.target === document ? document.scrollingElement : event.target;
@@ -7751,16 +7789,18 @@
     if (take && document.body.dataset.tab === "post") store("yue2.postTake", take.name);   // HERESY 1132: for F5
   }
   function setTab(tab) {
-    if (["create", "write", "post", "collection", "train"].indexOf(tab) < 0) tab = "create";
+    if (["create", "write", "post", "artist", "collection", "train"].indexOf(tab) < 0) tab = "create";   // HERESY 1255: the Artist
     document.body.dataset.tab = tab;
     $("view-compose").classList.toggle("is-hidden", tab !== "create");
     $("view-take").classList.toggle("is-hidden", tab !== "create");
     $("view-write").classList.toggle("is-hidden", tab !== "write");
     $("view-post").classList.toggle("is-hidden", tab !== "post");
+    $("view-artist").classList.toggle("is-hidden", tab !== "artist");            // HERESY 1255
     $("view-collection").classList.toggle("is-hidden", tab !== "collection");   // HERESY 1041
     $("view-train").classList.toggle("is-hidden", tab !== "train");             // HERESY 1063
     if (tab === "train" && window.HeresyTrain) window.HeresyTrain.reload();
     if (tab === "collection" && window.HeresyCollection) window.HeresyCollection.reload();
+    if (tab === "artist" && window.HeresyArtist) window.HeresyArtist.reload();      // HERESY 1255
     if (tab === "write") refreshChat().catch(function () {});   // HERESY 1110: the Writing room says its state at once
     paintLibFold();                                   // HERESY 1167: each room its own fold
     all(".topbar [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
@@ -7771,6 +7811,7 @@
     if (tab === "create") drawWave();
     else frameOver(null);                            // HERESY 1168: a frame lifted in the Creator does not follow to another room
     window.dispatchEvent(new Event("resize"));   // pictures measure their new width
+    placeLogDock();                              // HERESY 1258: left in the Artist, back where it was in the others
   }
   // HERESY 1166: a room in the bar leaves the Engine page for that room (asked first when the GPU roles are not saved)
   all(".topbar [data-tab]").forEach(function (b) { b.addEventListener("click", function () { leaveEngine().then(function (ok) { if (ok) setTab(b.dataset.tab); }); }); });
@@ -8189,6 +8230,9 @@
     return sr > 0 && fr > 0 && sr % fr === 0 ? { period: sr / fr, rate: sr } : null;
   }
   if (window.HeresyPost) window.HeresyPost.init({ toast: toast, frame: vaeFrame });   // HERESY 1029; 1054 the chain
+  // HERESY 1255: the Artist room: the take in hand for its cover, the takes' pictures asked again when one is set
+  if (window.HeresyArtist) window.HeresyArtist.init({ toast: toast, artUrl: artUrl, refreshArts: refreshArts,
+    take: function () { return STATE.take ? { name: STATE.take.name, label: displayTitle(STATE.take) } : null; } });
   if (window.HeresyDerived) window.HeresyDerived.init({   // HERESY 1021
     frame: vaeFrame,
     compare: function (path) {
@@ -8485,7 +8529,7 @@
     var d = $("logDock");
     if (!d) return;
     var f = document.body.dataset.frame;
-    d.classList.toggle("is-left", !!f);
+    d.classList.toggle("is-left", !!f || document.body.dataset.tab === "artist");   // HERESY 1258: «Серверный лог… в левую сторону» in the Artist
     d.style.maxWidth = "";
     d.style.bottom = "";
     if (!f) return;
@@ -8518,7 +8562,7 @@
   // places, by his plan (the DAW to live inside the Refiner): «Творец 1, Писатель 2, Огранщик 3, Художник 4, Библиотекарь 5,
   // EMPTY 6, Тренер 7, Экспорт в Local DAW 8, Движок 9». 4 waits for the Artist room, 6 for a room to come. Each presses
   // its own button (leaving the Engine asks as it does); read by the key's code, so in any layout and from the number pad
-  var ROOM_KEYS = { 1: "create", 2: "write", 3: "post", 5: "collection", 7: "train" };
+  var ROOM_KEYS = { 1: "create", 2: "write", 3: "post", 4: "artist", 5: "collection", 7: "train" };   // HERESY 1255: 4 the Artist
   window.addEventListener("keydown", function (event) {
     if (!event.ctrlKey || !event.altKey || event.shiftKey || event.metaKey) return;
     var m = /^(?:Digit|Numpad)([1-9])$/.exec(event.code || "");
@@ -8528,7 +8572,6 @@
     if (btn) btn.click();
     else if (n === 8) $("dawOpen").click();
     else if (n === 9) $("engineToggle").click();
-    else if (n === 4) toast("Ctrl+Alt+4 is kept for the Artist room, which comes in a later release");
   }, true);
   // HERESY 1169 (Viktor 07.10.2026: «Давай шорткат Shift+Tab блокируем для обратного хождения по полям, а именно для
   // переключения между композером и Исполнителем. И когда фрейм опущен, из обычной страницы… эта комбинация подымает оверлей во

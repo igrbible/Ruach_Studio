@@ -9,7 +9,7 @@
   "use strict";
 
   var SEEN = "yue2.guideSeen", LAST = "yue2.guideTab";
-  var ROOM_TAB = { create: "creator", write: "writer", post: "refiner", collection: "librarian", train: "lora" };
+  var ROOM_TAB = { create: "creator", write: "writer", post: "refiner", artist: "artist", collection: "librarian", train: "lora" };   // HERESY 1255: the Artist
   var state = { tabs: null, title: "", lead: "", el: null, loading: null, lang: "" };
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }

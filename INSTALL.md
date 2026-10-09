@@ -48,6 +48,14 @@ heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 
 ./fetch-models.sh --check                # what is here, what is missing; downloads nothing
 ```
 
+## With Pinokio
+
+[Pinokio](https://pinokio.co) installs and starts the studio from its menu, on the same kind of machine: Linux x86_64 with an NVIDIA card. In Pinokio, download it from its address, `https://github.com/igrbible/Ruach_Studio`, and press **Install**. Pinokio first brings its AI bundle (conda, git, ffmpeg, uv and the CUDA toolkit 12.8; your own `/usr/local/cuda-12.8` is used instead when it is there), then the install does what the steps above do: the Python environments, the engine, and the models with the backbone your card takes (BF16 from 24 GB, Q8_0 from 16, Q6_K from 12). Each step says what it does, and a step that fails ends the install with its reason on the last line; **Install again** goes on from there.
+
+**Start** runs the lab and the studio, each in a terminal of its own, and **Open the studio** opens the page (from another machine of your network: the address `start.sh` prints in that terminal). **More models** offers the Artist's painter, the style listener and the trainer's base, each asked first with its size. **Update** takes the newest release; **Reset** takes away the Python environments and the engine's build, never your songs, models or settings.
+
+The work is done by the bash scripts in `pinokio/`, which run the same from a terminal (`bash pinokio/install.sh`). Under Pinokio there are no systemd units: stop, start and update the studio from Pinokio's menu. On Windows 11 the studio runs through WSL2, by hand for now ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)).
+
 ## After an update
 
 ```bash
@@ -63,11 +71,12 @@ The page is read from disk at every load: `./build.sh` and a reload of the brows
 tools/test-real.sh                         # the engine on the CPU, its page and a 1-second song, in a library of its own (1–4 minutes)
 node tools/cdp-console.mjs                 # the page against a stand-in server (about 2 minutes)
 node heresy/tools/check-player.mjs         # the player: a click plays, play-on goes to the next take
+node heresy/tools/check-pinokio.mjs        # the Pinokio launcher without Pinokio: its menu, its scripts, the lines it waits for
 tools/test_downloaders.sh                  # the model downloaders, offline
 .venv/bin/python tools/test_flac.py        # the engine's FLAC against the reference flac (needs flac and metaflac)
 ```
 
-Measured on the machine it was made on: 6 passed (the page part 14), 314 passed and 8 skipped, 3, 14 and 18 passed. None of them touches your songs, your settings or your services; the real-server test proves it at its end. The page tests take Chrome from `YUE2_CHROME` when it is not on the `PATH`; on Ubuntu 24.04, Playwright's *Chrome for Testing* needs `--no-sandbox` there (AppArmor), Google Chrome's own package does not.
+Measured on the machine it was made on: 6 passed (the page part 14), 470 passed and 7 skipped, 3, 62, 14 and 18 passed. None of them touches your songs, your settings or your services; the real-server test proves it at its end. The page tests take Chrome from `YUE2_CHROME` when it is not on the `PATH`; on Ubuntu 24.04, Playwright's *Chrome for Testing* needs `--no-sandbox` there (AppArmor), Google Chrome's own package does not.
 
 ## When something is wrong
 

@@ -1,7 +1,7 @@
 From adb20e1658dfcd3b557d22d9caec95a5d0f8769d Mon Sep 17 00:00:00 2001
 From: Pascal <admin@serveurperso.com>
 Date: Mon, 28 Sep 2026 11:28:10 +0200
-Subject: [PATCH 1189/1252] ggml: fork update
+Subject: [PATCH 1189/1259] ggml: fork update
 
 (cherry picked from commit 11c1ecb084329200e22fcb286e252b847442ea5c)
 ---

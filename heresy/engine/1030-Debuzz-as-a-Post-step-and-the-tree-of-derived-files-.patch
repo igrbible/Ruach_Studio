@@ -2,7 +2,7 @@ From db6e01afb10b62feeb5cd5465d093fd680b7d3e6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Wed, 30 Sep 2026 23:55:26 -0600
-Subject: [PATCH 1030/1252] Debuzz as a Post step, and the tree of derived
+Subject: [PATCH 1030/1259] Debuzz as a Post step, and the tree of derived
  files under every step
 
 - Debuzz (step 3, after Artifacts): lab/debuzz.py on the take or a file of the tree, 60-100 %
