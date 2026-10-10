@@ -19,7 +19,8 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   POST /artist/draw {prompt, shapes, seed, count, painter, take}   HERESY 1255: the Artist room (artist.py): a run of pictures
        from a prompt of one's own; GET /artist/runs · GET /artist/file?id=&file= · POST /artist/cover {id, file, name} ·
        POST /artist/trash {id} · POST /artist/restore {id} · GET /artist/prompt?name=TAKE ·
-       POST /artist/star {id, file, star} (1257)
+       POST /artist/star {id, file, star} (1257) · POST /artist/stop {id} (1270)
+  GET  /fonts/NAME.woff2           HERESY 1274: the page's fonts (lab/fonts/, OFL), cached a year
   POST /jobs/cancel {key}          HERESY 1165: a job waiting for a card off the queue (a running one is refused)
   POST /regen {names, same_seeds}  HERESY 1160: made again, new seeds; same_seeds (1165): its own, at a probe's full length
   GET /activity?since=SEQ          HERESY 1157: the lab's GPU work as it starts and ends, and what runs now
@@ -57,6 +58,8 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
        GET /train/listen?name= · POST /train/listen {dataset, model} · POST /train/styles {dataset, trigger, shared, tags} (1078)
        GET /train/starter · POST /train/starter {name}: the starter sets from Hugging Face into datasets/raw/ (HERESY 1100)
        GET /collection/diamonds · POST /collection/diamonds {name, restore}: the 💎 workspaces from Hugging Face (HERESY 1166)
+       GET /weights · POST /weights/check · POST /weights/fetch {part | backbone | listener | artwork | trainer}: what the
+       install brings, here or not, fetched again by heresy/fetch-heresy.sh, and the extras (weights.py, HERESY 1289)
   GET /daw                       which DAWs the studio's machine has: REAPER, Waveform, … (HERESY 1102)
   POST /daw/reaper {name, midi}  the take as a REAPER project in its derived/ (the engine serves it); midi: the
                                  page's MIDI of the score, base64 (HERESY 1104)
@@ -110,6 +113,7 @@ import updates  # noqa: E402   HERESY 1169
 import artist  # noqa: E402   HERESY 1255
 import places  # noqa: E402   HERESY 1261: where the user's work lives (outputs, trash, artist, writer)
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
+import weights  # noqa: E402   HERESY 1289: the Engine's Models card over heresy/fetch-heresy.sh
 
 heavy = threading.Lock()
 jobs = {}            # take name -> {"status": "queued" | "running" | "failed", "error": …, "started": …}
@@ -1592,7 +1596,7 @@ places.setup(KIT, busy=lab_busy, settings_lock=SETTINGS_LOCK, settings_file=conf
 
 
 class Handler(BaseHTTPRequestHandler):
-    def send_file(self, path, ctype="application/octet-stream", download=None):
+    def send_file(self, path, ctype="application/octet-stream", download=None, cache=None):
         size = path.stat().st_size
         rng = self.headers.get("Range", "")
         start, end = 0, size - 1
@@ -1608,6 +1612,8 @@ class Handler(BaseHTTPRequestHandler):
         if rng:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         self.send_header("Access-Control-Allow-Origin", "*")
+        if cache:                                          # HERESY 1274: a file that never changes under its name (the fonts)
+            self.send_header("Cache-Control", cache)
         if download:                                       # HERESY 1090: saved under this name
             self.send_header("Content-Disposition", 'attachment; filename="' + download.replace('"', "") + '"')
         self.send_header("Content-Length", str(length))
@@ -1664,9 +1670,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, places.listing(q.get("refresh") == "1"))
             if url.path == "/places/plan":
                 return self.send(200, places.plan(q.get("name", ""), q.get("to", "")))
+            if url.path == "/weights":                      # HERESY 1289: what the install brings, and a run under way
+                return self.send(200, weights.listing(KIT))
             if url.path == "/health":
                 with jobs_lock:
                     active = {k: v["status"] for k, v in jobs.items()}
+                if weights.running():                       # HERESY 1289: a download under way is a job too (a restart cuts it)
+                    active["weights"] = "running"
                 return self.send(200, {"ok": True, "busy": heavy.locked(), "jobs": active, "whisper": WHISPER_DIR.is_dir()})
             if url.path == "/gloss":
                 if q.get("cached") == "1":
@@ -1699,6 +1709,12 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/art/remove":                    # HERESY 1156
                 r = art_remove(q.get("name", ""))
                 return self.send(409 if r.get("error") else 200, r)
+            if url.path.startswith("/fonts/"):               # HERESY 1274: the page's fonts, in the studio itself (no CDN)
+                name = url.path[len("/fonts/"):]
+                font = HERE / "fonts" / name
+                if not re.fullmatch(r"[A-Za-z0-9_-]+\.woff2", name) or not font.is_file():
+                    return self.send(404, {"error": "no such font"})
+                return self.send_file(font, "font/woff2", cache="public, max-age=31536000, immutable")
             if url.path == "/artist/runs":                   # HERESY 1255: the Artist room
                 return self.send(200, artist.runs())
             if url.path == "/artist/file":
@@ -1831,6 +1847,10 @@ class Handler(BaseHTTPRequestHandler):
             if size <= 0 or size > 1024 ** 3:
                 raise ValueError("send the file as the body, up to 1 GB")
             body = self.rfile.read(size)
+            if url.path == "/weights/check":                # HERESY 1289
+                return self.send(202, weights.check(KIT))
+            if url.path == "/weights/fetch":                # HERESY 1289: on the user's word; a test page fetches nothing
+                return self.send(202, weights.fetch(KIT, json.loads(body.decode("utf-8")), q.get("scope", "")))
             if url.path in ("/places/move", "/places/relink"):   # HERESY 1261
                 data = json.loads(body.decode("utf-8"))
                 fn = places.move if url.path == "/places/move" else places.relink
@@ -1845,6 +1865,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, artist.star(data))
                 if url.path == "/artist/trash":
                     return self.send(200, artist.trash(str(data.get("id") or "")))
+                if url.path == "/artist/stop":               # HERESY 1270
+                    return self.send(200, artist.stop(str(data.get("id") or "")))
                 if url.path == "/artist/restore":
                     return self.send(200, artist.restore(str(data.get("id") or "")))
             if url.path == "/jobs/cancel":                   # HERESY 1165: {key}: a waiting job off the queue

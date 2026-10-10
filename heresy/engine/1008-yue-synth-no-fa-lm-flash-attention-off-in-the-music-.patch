@@ -1,7 +1,7 @@
 From 23d507a885e2fcaa03b2f9d88458845bfa104399 Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 14:20:52 -0600
-Subject: [PATCH 1008/1265] yue-synth --no-fa-lm: flash attention off in the
+Subject: [PATCH 1008/1286] yue-synth --no-fa-lm: flash attention off in the
  music half only
 
 HERESY 1008. For A/B tests of the attention kernel on the tokens: the sound

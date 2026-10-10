@@ -262,6 +262,35 @@
 
   function init(hooks) {
     state.hooks = hooks;
+    // HERESY 1268 (Viktor 09.10.2026: «В комнате Писателя дай возможность регулировать ширину левой колонки со списком документов»): the
+    // documents column's edge dragged (its width kept in this browser), ← → from the keyboard, Home or a double click for its own 280 px
+    (function () {
+      var book = document.querySelector(".wr-book"), rz = $("wrResizer"), side = document.querySelector(".wr-side");
+      if (!book || !rz || !side) return;
+      var KEY = "yue2.wrSideW", MIN = 200, MAX = 640, DEF = 280;
+      function setW(w) { w = Math.max(MIN, Math.min(MAX, Math.round(w))); book.style.setProperty("--wr-side-w", w + "px"); rz.setAttribute("aria-valuenow", String(w)); return w; }
+      rz.setAttribute("aria-valuemin", String(MIN)); rz.setAttribute("aria-valuemax", String(MAX));
+      setW(parseInt(recall(KEY), 10) || DEF);
+      rz.addEventListener("pointerdown", function (e) {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        rz.setPointerCapture(e.pointerId);
+        rz.classList.add("is-drag"); document.body.classList.add("is-resizing");
+        var x0 = e.clientX, w0 = side.getBoundingClientRect().width;
+        function move(ev) { setW(w0 + ev.clientX - x0); }
+        function up() {
+          rz.classList.remove("is-drag"); document.body.classList.remove("is-resizing");
+          rz.removeEventListener("pointermove", move); rz.removeEventListener("pointerup", up); rz.removeEventListener("pointercancel", up);
+          store(KEY, String(Math.round(side.getBoundingClientRect().width)));
+        }
+        rz.addEventListener("pointermove", move); rz.addEventListener("pointerup", up); rz.addEventListener("pointercancel", up);
+      });
+      rz.addEventListener("dblclick", function () { store(KEY, null); setW(DEF); });
+      rz.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); store(KEY, String(setW(side.getBoundingClientRect().width + (e.key === "ArrowRight" ? 16 : -16)))); }
+        else if (e.key === "Home") { e.preventDefault(); e.stopPropagation(); store(KEY, null); setW(DEF); }
+      });
+    })();
     $("wrSearch").addEventListener("input", function () { state.q = this.value; paintList(); });
     $("wrList").addEventListener("click", function (e) { var b = e.target.closest("[data-doc]"); if (b) open(b.dataset.doc); });
     $("wrNew").addEventListener("click", function () {
@@ -390,7 +419,7 @@
     loadList();
   }
 
-  window.HeresyWriter = { init: init, landed: landed, reload: loadList, open: open, fromCreate: fromCreate, md: md,
+  window.HeresyWriter = { init: init, landed: landed, reload: loadList, open: open, fromCreate: fromCreate, md: md, flush: flush,   // HERESY 1269: Ctrl+S
                           // HERESY 1167: the document open in the notebook, and putting one into the Creator (for the writing room)
                           openDoc: function () { return state.doc || null; }, inHand: function () { return recall(HAND_KEY) || ""; },
                           putInCreator: function (doc) { return flush().then(function () { return intoCreate(doc); }); },

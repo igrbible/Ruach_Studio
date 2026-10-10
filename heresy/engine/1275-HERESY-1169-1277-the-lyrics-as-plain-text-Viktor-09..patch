@@ -1,0 +1,132 @@
+From 3931f9382715cbd5b06ae690c98a744825d1ebfc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 19:28:21 -0600
+Subject: [PATCH 1275/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201277:=20the?=
+ =?UTF-8?q?=20lyrics=20as=20plain=20text=20(Viktor=2009.10.2026:=20=C2=AB?=
+ =?UTF-8?q?=D0=9A=D0=BD=D0=BE=D0=BF=D0=BA=D1=83=20=D1=8D=D0=BA=D1=81=D0=BF?=
+ =?UTF-8?q?=D0=BE=D1=80=D1=82=D0=B0/=D0=B8=D0=BC=D0=BF=D0=BE=D1=80=D1=82?=
+ =?UTF-8?q?=D0=B0=20=D1=81=D0=BE=D0=B4=D0=B5=D1=80=D0=B6=D0=B8=D0=BC=D0=BE?=
+ =?UTF-8?q?=D0=B3=D0=BE=20=D1=80=D0=B5=D0=B4=D0=B0=D0=BA=D1=82=D0=BE=D1=80?=
+ =?UTF-8?q?=D0=B0=20=D0=B2=20=D0=B3=D0=BE=D0=BB=D1=8B=D0=B9=20txt=20=D1=84?=
+ =?UTF-8?q?=D0=BE=D1=80=D0=BC=D0=B0=D1=82,=20=D0=B0=D0=B2=D1=82=D0=BE=20?=
+ =?UTF-8?q?=D0=B8=D0=BC=D1=8F=20=D1=84=D0=B0=D0=B9=D0=BB=D0=B0=20=D0=BF?=
+ =?UTF-8?q?=D0=BE=20Title=20=D1=82=D1=80=D0=B5=D0=BA=D0=B0=C2=BB):=20besid?=
+ =?UTF-8?q?e=20=E2=A4=A2,=20saved=20as=20Title.txt=20(UTF-8,=20LF)=20and?=
+ =?UTF-8?q?=20a=20.txt=20put=20in=20their=20place=20(asked=20first,=20one?=
+ =?UTF-8?q?=20Ctrl+Z=20back;=20not=20UTF-8=20or=20too=20long=20refused=20o?=
+ =?UTF-8?q?ut=20loud;=20an=20empty=20Title=20takes=20the=20file's=20name)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  1 +
+ tools/console/app.js          | 49 +++++++++++++++++++++++++++++++++++
+ tools/console/heresy-icons.js |  3 +++
+ tools/console/index.html      |  2 +-
+ 4 files changed, 54 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3870d37..9209fbf 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4544,6 +4544,7 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ /* «ещё один оверлей поверх оверлея!… поверх всего где-то 60% ширины экрана, и шрифт автоматом на 10% крупнее»: the lyrics over
+    everything (app.js lyricsOver moves the box there and back) */
+ .lyr-big { margin-left: 6px; vertical-align: middle; }
++.lyr-txt { margin-left: 2px; }   /* HERESY 1277: the .txt pair beside ⤢ */
+ .lyr-over { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 40; display: flex; align-items: center; justify-content: center;
+   background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55)); backdrop-filter: blur(3px); }
+ .lyr-over-box { zoom: var(--lyr-z, 1.54); width: calc(60vw / var(--lyr-z, 1.54)); height: calc((100vh - var(--playbar-h)) * .94 / var(--lyr-z, 1.54)); display: flex; flex-direction: column; gap: 8px;
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 09d7771..872c15e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8496,6 +8496,55 @@
+     box.querySelector('[data-lyr-z="0"]').disabled = k === 0;
+   }
+   $("lyricsBig").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); lyricsOver(!lyrOver); });
++  // HERESY 1277 (Viktor 09.10.2026: «Кнопку экспорта/импорта содержимого редактора в голый txt формат, авто имя файла по Title
++  // трека»): the lyrics saved as «Title.txt» (UTF-8, LF, a newline at the end), and a .txt put in their place: asked first when
++  // the box has words, put in as typed (one Ctrl+Z brings the old ones back); a file that is not UTF-8, or longer than the box
++  // holds, is refused out loud, never cut or garbled; an empty Title takes the file's name
++  function lyricsTxtName() {
++    var t = $("title").value.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim().replace(/^\.+/, "").slice(0, 120).trim();
++    return (t || "lyrics") + ".txt";
++  }
++  $("lyricsTxtOut").addEventListener("click", function (e) {
++    e.preventDefault(); e.stopPropagation();
++    var text = $("lyrics").value.replace(/\r\n?/g, "\n");
++    if (!text.trim()) { toast("The lyrics are empty: nothing to save", "bad"); return; }
++    downloadText(lyricsTxtName(), /\n$/.test(text) ? text : text + "\n", "text/plain;charset=utf-8");
++    toast("The lyrics saved as " + lyricsTxtName(), "good");
++  });
++  var lyricsTxtFile = document.createElement("input");
++  lyricsTxtFile.type = "file";
++  lyricsTxtFile.accept = ".txt,text/plain";
++  lyricsTxtFile.id = "lyricsTxtFile";
++  lyricsTxtFile.hidden = true;
++  document.body.appendChild(lyricsTxtFile);
++  $("lyricsTxtIn").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); lyricsTxtFile.value = ""; lyricsTxtFile.click(); });
++  lyricsTxtFile.addEventListener("change", function () { if (lyricsTxtFile.files && lyricsTxtFile.files[0]) lyricsFromTxt(lyricsTxtFile.files[0]); });
++  function lyricsFromTxt(file) {
++    return file.text().then(function (raw) {
++      var text = raw.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").replace(/\s+$/, "");
++      var area = $("lyrics"), max = parseInt(area.getAttribute("maxlength"), 10) || 10000, now = area.value;
++      if (/\uFFFD/.test(text)) return toast(file.name + " is not UTF-8 text: save it as UTF-8 and open it again", "bad");
++      if (!text) return toast(file.name + " is empty", "bad");
++      if (text.length > max) return toast(file.name + " holds " + text.length + " characters; the lyrics take up to " + max, "bad");
++      var go = !now.trim() || now === text ? Promise.resolve(true)
++        : window.HeresyDialog.confirm("Put " + file.name + " in place of the lyrics?\n\nThe words now in the box go; Ctrl+Z in the box brings them back.", { ok: "Replace" });
++      return go.then(function (yes) {
++        if (!yes) return;
++        area.focus({ preventScroll: true });
++        area.setSelectionRange(0, area.value.length);
++        var ok = false;
++        try { ok = document.execCommand("insertText", false, text); } catch (e) { ok = false; }
++        if (!ok) { area.value = text; area.dispatchEvent(new Event("input", { bubbles: true })); }
++        area.setSelectionRange(0, 0);
++        area.scrollTop = 0;
++        if (!$("title").value.trim()) {
++          $("title").value = file.name.replace(/\.txt$/i, "").trim();
++          $("title").dispatchEvent(new Event("input", { bubbles: true }));
++        }
++        toast("The lyrics from " + file.name, "good");
++      });
++    }).catch(function (e) { toast("Could not read " + file.name + ": " + e.message, "bad"); });
++  }
+   // HERESY 1269 (Viktor 09.10.2026: «Шорткат на попап/fullscreen редактора Лирики — Alt+E (перебиваем шорткат браузера)»; «Если лирика
+   // поверх всего, и применил Shift+Tab — схлопывание этого попапа и переносимся в сам фрейм попап»): Alt+E lifts the lyrics and puts them
+   // back, in the Creator; Shift+Tab over the lifted lyrics puts them back into the form and lifts its frame, the cursor in the lyrics
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 8c99765..b19695b 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -67,6 +67,9 @@
+     playon: '<path d="M3 5h12"/><path d="M3 12h9"/><path d="M3 19h6"/><path d="M17 8v12"/><path d="m13 16 4 4 4-4"/>',
+     // HERESY 1275: a sound when a run ends (Lucide's bell, ISC)
+     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
++    // HERESY 1277: the lyrics out to a .txt and in from one (Lucide's file-down and file-up, ISC)
++    "file-down": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>',
++    "file-up": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/>',
+     "vol-hi": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/>',
+     "vol-lo": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/>',
+     "vol-off": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>',
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 07ca8d3..dd05e33 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -586,7 +586,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         </section>
+         <section class="k-card k-lyrics">
+           <label class="field" data-fold="lyrics">
+-            <span class="label" data-head="section tags on their own line">Lyrics <button type="button" class="btn ghost small icon-btn lyr-big" id="lyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The lyrics over everything" data-tip="The lyrics over everything, a tenth larger: Esc or this button puts them back"></button></span>
++            <span class="label" data-head="section tags on their own line">Lyrics <button type="button" class="btn ghost small icon-btn lyr-big" id="lyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The lyrics over everything" data-tip="The lyrics over everything, a tenth larger: Esc or this button puts them back"></button><!-- HERESY 1277 (Viktor 09.10.2026: «Кнопку экспорта/импорта содержимого редактора в голый txt формат, авто имя файла по Title трека») --><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtOut" data-ui="file-down" aria-label="Save the lyrics as a .txt" data-tip="Save the lyrics as a plain .txt, named by the Title"></button><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtIn" data-ui="file-up" aria-label="Open a .txt into the lyrics" data-tip="Put a plain .txt (UTF-8) in place of the lyrics: asked first when the box has words; Ctrl+Z in the box brings them back"></button></span>
+             <!-- HERESY 1168 (Viktor: «теперь, когда у нас две отдельные колонки в левом фрейме, поле лирики можно увеличить на десять
+                  строк»): 16 rows to 26; the lyrics' meter (heresy-lyrics.js) draws beside it and counts under it -->
+             <textarea id="lyrics" rows="16" data-max-rows="26" spellcheck="true" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
+-- 
+2.43.0
+

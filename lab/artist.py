@@ -14,6 +14,7 @@ A run goes to KIT/trash/artist/ and comes back from there.
     POST /artist/cover {id, file, name}     a square picture becomes the take's artwork
     POST /artist/star {id, file, star}      HERESY 1257: a picture starred or not
     POST /artist/trash {id} · POST /artist/restore {id}   the run to the trash and back
+    POST /artist/stop {id}                  HERESY 1270: a waiting run off the queue, a drawing one's painter ended («stopped»)
     GET  /artist/prompt?name=TAKE           a prompt to start from: the one the take's artwork was drawn from, else
                                             one from its title and style"""
 import collections, json, os, random, re, shutil, subprocess, threading, time
@@ -147,6 +148,7 @@ def work(d, run, job):
                 env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", ART_PAINTER=run["painter"])
                 p = subprocess.Popen([str(H["py"]), str(HERE / "artist_job.py"), str(d)], env=env, text=True,
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                job["proc"] = p                      # HERESY 1270: for Stop
                 errs = collections.deque(maxlen=40)
                 t = threading.Thread(target=lambda: errs.extend(p.stderr), daemon=True)
                 t.start()
@@ -172,6 +174,8 @@ def work(d, run, job):
                 finally:
                     watch.cancel()
                 t.join(timeout=5)
+                if job.get("stop"):                  # HERESY 1270: ended on purpose; what it finished is kept
+                    raise Stopped()
                 if p.returncode != 0:
                     last = [x.strip() for x in errs if x.strip()]
                     raise RuntimeError("the painter stopped: " + (last[-1][-300:] if last else f"exit {p.returncode}"))
@@ -185,12 +189,39 @@ def work(d, run, job):
                  f"on GPU {gpu}" + (f" · {flagged} not kept: the content filter flagged them" if flagged else ""))
     except Exception as e:                           # Cancelled (taken off the queue) included
         run.pop("live", None)
+        if job.get("stop"):                          # HERESY 1270: Stop, waiting or drawing
+            kept = [x for x in run["pictures"] if x.get("kept")]
+            run.update(status="stopped", ended=time.time())
+            write(d, run)
+            H["say"](f"the Artist · {run['id']} · stopped: {len(kept)} of {run['of']} picture(s) kept")
+            return
         run.update(status="failed", error=str(e), ended=time.time())
         write(d, run)
         H["say"](f"the Artist · {run['id']} · failed: {e}")
     finally:
         with H["lock"]:
             H["jobs"].pop(key, None)
+
+
+class Stopped(Exception):
+    """HERESY 1270: a run ended by Stop."""
+
+
+def stop(rid):
+    """HERESY 1270 (Viktor 09.10.2026: «Кнопку DRAW нужно заменять на STOP»): a run waiting for its card or its turn is taken off the
+    queue; a drawing one has its painter ended (terminated, killed after five seconds if it lingers). Either ends «stopped», with the
+    pictures it finished."""
+    rid = str(rid or "")
+    with H["lock"]:
+        job = H["jobs"].get("artist:" + rid)
+        if not job:
+            raise ValueError("this run is not drawing")
+        job["stop"] = job["cancel"] = True
+        p = job.get("proc")
+    if p is not None and p.poll() is None:
+        p.terminate()
+        threading.Timer(5, lambda: p.poll() is None and p.kill()).start()
+    return {"id": rid, "stopping": True}
 
 
 def picture(rid, name):

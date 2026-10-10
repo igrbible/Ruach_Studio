@@ -2,7 +2,7 @@ From d89cb38fccac28d31895043557007a45ec5dfa64 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 00:28:57 -0600
-Subject: [PATCH 1067/1265] Train: a track's own style from the raw folder
+Subject: [PATCH 1067/1286] Train: a track's own style from the raw folder
  fills its style field
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

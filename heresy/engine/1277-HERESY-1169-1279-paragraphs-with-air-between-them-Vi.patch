@@ -1,0 +1,214 @@
+From 3ab405106c4ca9e404ccb13eccc3949476d297d9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 19:58:36 -0600
+Subject: [PATCH 1277/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201279:=20para?=
+ =?UTF-8?q?graphs=20with=20air=20between=20them=20(Viktor=2009.10.2026:=20?=
+ =?UTF-8?q?=C2=AB=D0=9F=D0=BE=20=D0=B2=D1=81=D0=B5=D0=B9=20=D1=81=D1=82?=
+ =?UTF-8?q?=D1=83=D0=B4=D0=B8=D0=B8=20=D0=B4=D0=BE=D0=B1=D0=B0=D0=B2=D1=8C?=
+ =?UTF-8?q?=20=D1=81=D0=BF=D0=B5=D0=B9=D1=81=D0=B8=D0=BD=D0=B3=20=D0=BC?=
+ =?UTF-8?q?=D0=B5=D0=B6=D0=B4=D1=83=20=D0=BF=D0=B0=D1=80=D0=B0=D0=B3=D1=80?=
+ =?UTF-8?q?=D0=B0=D1=84=D0=B0=D0=BC=D0=B8=20=D0=B2=20=D1=82=D1=83=D0=BB?=
+ =?UTF-8?q?=D1=82=D0=B8=D0=BF=D0=B0=D1=85,=20=D0=B3=D0=B0=D0=B9=D0=B4?=
+ =?UTF-8?q?=D0=B0=D1=85=20=D0=B8=20=D1=87=D0=B8=D1=82=D1=88=D0=B8=D1=82?=
+ =?UTF-8?q?=D0=B0=D1=85.=20=D0=A2=D0=B0=D0=BA=20=D0=BA=D1=80=D0=B0=D1=81?=
+ =?UTF-8?q?=D0=B8=D0=B2=D0=B5=D0=B5=20=D1=82=D0=B8=D0=BF=D0=BE=D0=B3=D1=80?=
+ =?UTF-8?q?=D0=B0=D1=84=D0=B8=D1=87=D0=B5=D1=81=D0=BA=D0=B8,=20=D0=BD?=
+ =?UTF-8?q?=D0=BE=20=D0=BD=D0=B5=20=D1=81=D0=BB=D0=BE=D0=BC=D0=B0=D0=B9=20?=
+ =?UTF-8?q?=D1=80=D0=B5=D0=B4=D0=B0=D0=BA=D1=82=D0=BE=D1=80=20=D0=BB=D0=B8?=
+ =?UTF-8?q?=D1=80=D0=B8=D0=BA=D0=B8=C2=BB):=20a=20plain=20tip's=20lines=20?=
+ =?UTF-8?q?as=20paragraphs=20(0.45=20em,=200.8=20em=20after=20a=20blank=20?=
+ =?UTF-8?q?line,=20its=20text=20unchanged),=20the=20guide's=20items=200.55?=
+ =?UTF-8?q?=20em=20apart,=20the=20cheat-sheet's=20=C2=ABHow=20the=20probes?=
+ =?UTF-8?q?=20were=20made=C2=BB=20in=20three=20paragraphs=20(its=20six=20t?=
+ =?UTF-8?q?ranslations=20split=20at=20the=20same=20sentences);=20the=20lyr?=
+ =?UTF-8?q?ics'=20box=20untouched?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css               |  9 ++++++++-
+ tools/console/app.js                | 19 ++++++++++++++++++-
+ tools/console/heresy-i18n-be.js     |  3 +++
+ tools/console/heresy-i18n-el.js     |  3 +++
+ tools/console/heresy-i18n-es.js     |  3 +++
+ tools/console/heresy-i18n-it.js     |  3 +++
+ tools/console/heresy-i18n-ru.js     |  3 +++
+ tools/console/heresy-i18n-uk.js     |  3 +++
+ tools/console/heresy-instruments.js |  4 ++--
+ 9 files changed, 46 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 9209fbf..2ad9531 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1744,6 +1744,11 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex;
+   transition: opacity .12s ease, visibility .12s;
+ }
+ .tip.is-on { opacity: 1; visibility: visible; }
++/* HERESY 1279: a plain tip's lines as paragraphs, air between them (the blocks themselves hold no line ends to keep) */
++.tip.tip-paras { white-space: normal; }
++.tip .tip-p { margin: 0; color: inherit; white-space: pre-line; }
++.tip .tip-p + .tip-p { margin-top: .45em; }
++.tip .tip-p.tip-gap { margin-top: .8em; }
+ .tip.tip-rich { max-width: min(600px, calc(100vw - 16px)); padding: 11px 13px; white-space: normal; }
+ .tip .tip-kind { display: block; margin-bottom: 6px; font: 600 12.5px/1.4 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+ .tip .tip-kind code { letter-spacing: 0; text-transform: none; color: var(--amber); }
+@@ -3197,7 +3202,8 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+ .hg-body h4 { margin: 18px 0 6px; font-size: 14.5px; }
+ .hg-body p { margin: 0 0 10px; }
+ .hg-body ul, .hg-body ol { margin: 0 0 12px; padding-left: 22px; }
+-.hg-body li { margin: 3px 0; }
++.hg-body li { margin: 0 0 .55em; }   /* HERESY 1279: each item a paragraph, with air (3 px before) */
++.hg-body li > :is(ul, ol) { margin: .45em 0 0; }
+ .hg-body code { font: 12.5px var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--sunk); }
+ .hg-body pre { padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); overflow-x: auto; }
+ .hg-body pre code { padding: 0; background: none; }
+@@ -4177,6 +4183,7 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .hi-more { font-size: 14.5px; color: var(--muted); }
+ .hi-more summary { cursor: pointer; color: var(--ink); width: max-content; }
+ .hi-more p { margin: 6px 0 2px; line-height: 1.5; }
++.hi-more p + p { margin-top: .55em; }   /* HERESY 1279: its three paragraphs */
+ .hi-tools input, .hi-tools select, .hi-tools label { font-size: 15px; }
+ .hi-table { font-size: 15.5px; }
+ .hi-home { font-size: 14px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 872c15e..9b1ce28 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -412,11 +412,28 @@
+   document.body.appendChild(tip);
+   var tipFor = null, tipKept = false;   // HERESY 1167: kept = reached by the keyboard, it stays while focused
+ 
++  // HERESY 1279 (Viktor 09.10.2026: «По всей студии добавь спейсинг между параграфами в тултипах, гайдах и читшитах. Так
++  // красивее типографически, но не сломай редактор лирики»): a plain tip's lines are its paragraphs, with air between them (a
++  // blank line in the text a little more); its text stays the same for whoever reads it (the line ends kept between them)
++  function tipParagraphs(el, text) {
++    var parts = String(text == null ? "" : text).split(/(\n[ \t]*\n\s*|\n)/);
++    if (parts.length < 3) { el.textContent = text; return; }
++    for (var i = 0; i < parts.length; i += 2) {
++      if (i) el.appendChild(document.createTextNode(parts[i - 1]));
++      var p = document.createElement("p");
++      p.className = "tip-p" + (i && /\n[ \t]*\n/.test(parts[i - 1]) ? " tip-gap" : "");
++      p.textContent = parts[i];
++      el.appendChild(p);
++    }
++    el.classList.add("tip-paras");
++  }
++
+   function showTip(target) {
+     var ref = target.dataset.tipRef;
+     tip.textContent = "";
++    tip.classList.remove("tip-paras");
+     if (ref) tip.appendChild(document.getElementById(ref).content.cloneNode(true));
+-    else tip.textContent = target.dataset.tip;
++    else tipParagraphs(tip, target.dataset.tip);
+     if (target.dataset.tipHead) {   // HERESY 1168: a label's short note, moved off the label, is the tip's first line
+       var head = document.createElement("div");
+       head.className = "tip-head";
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index b0c76d2..471f48a 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -2784,6 +2784,9 @@ RuachI18n.add("be", {
+ "painted by an image model: some show an instrument not quite as it really is": "іх малюе мадэль выяў: на некаторых інструмент не зусім такі, як насамрэч",
+ "How the probes were made": "Як рабіліся пробы",
+ "What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Што YuE2 прасілі зайграць, па адным інструменце ці стылі за раз, пробамі па дзве хвіліны (першыя — па хвіліне), па два сіды на кожную, A і B. Бываюць пробы выдатныя, A і B сыходзяцца, а інструмент не той, што прасілі. Інструмент фармуе стыль усёй рэчы: назваўшы яго, рухаеш і аранжыроўку. Трэск або шолах паперы, як на зацёртай плытцы, — няўдалы сід: зрабі нанова на іншым.",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for.": "Што YuE2 прасілі зайграць, па адным інструменце ці стылі за раз, пробамі па дзве хвіліны (першыя — па хвіліне), па два сіды на кожную, A і B. Бываюць пробы выдатныя, A і B сыходзяцца, а інструмент не той, што прасілі.",
++"An instrument shapes the style of the whole piece: naming one moves the arrangement too.": "Інструмент фармуе стыль усёй рэчы: назваўшы яго, рухаеш і аранжыроўку.",
++"A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Трэск або шолах паперы, як на зацёртай плытцы, — няўдалы сід: зрабі нанова на іншым.",
+ "{#0} heard by ear": "на слых пачута: {0}",
+ "Fails when named so: ask for it as the ancient triangular harp (the row below).": "Пад гэтай назвай не выходзіць: прасі яго як старажытную трохкутную арфу (радок ніжэй).",
+ "Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Спрабавалі шмат разоў, без поспеху: YuE2 не ведае шафара. Пробы заўсёды даюць іншую дудку ці рог, ніколі не шафар, нават блізка. Яго пробы (ніжэй) пакінутыя: бяры іх як той рог ці трубу, якімі яны аказаліся. Яго адаптар шафар ведае: loras/shofar-yt-r16 на эпосе 110, вуха Віктара: «Выбух мозгу: ніводзін шафарыст такога не чуў. Цэлая медытацыя. Стопрацэнтна йеменскі шафар, рог антылопы ў два метры» (167 перанатрэнаваная, слабая і тонкая; 66 недатрэнаваная, у ёй труба).",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index a316c9d..095fb13 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -2783,6 +2783,9 @@ RuachI18n.add("el", {
+ "painted by an image model: some show an instrument not quite as it really is": "τις ζωγραφίζει ένα μοντέλο εικόνων: σε μερικές το όργανο δεν είναι ακριβώς όπως στην πραγματικότητα",
+ "How the probes were made": "Πώς έγιναν οι δοκιμές",
+ "What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Τι ζητήθηκε από το YuE2 να παίξει, ένα όργανο ή ένα ύφος τη φορά, σε δοκιμές δύο λεπτών (ενός λεπτού οι πρώτες), με δύο σπόρους η καθεμία, A και B. Κάποιες δοκιμές είναι εξαιρετικές και τα A και B συμφωνούν, όμως το όργανο δεν είναι αυτό που ζητήθηκε. Ένα όργανο διαμορφώνει το ύφος όλου του κομματιού: όταν το ονομάζεις, κινείς και την ενορχήστρωση. Ένα τρίξιμο ή θρόισμα χαρτιού, σαν σε φθαρμένο δίσκο, είναι άτυχος σπόρος: φτιάξ' το ξανά με άλλον.",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for.": "Τι ζητήθηκε από το YuE2 να παίξει, ένα όργανο ή ένα ύφος τη φορά, σε δοκιμές δύο λεπτών (ενός λεπτού οι πρώτες), με δύο σπόρους η καθεμία, A και B. Κάποιες δοκιμές είναι εξαιρετικές και τα A και B συμφωνούν, όμως το όργανο δεν είναι αυτό που ζητήθηκε.",
++"An instrument shapes the style of the whole piece: naming one moves the arrangement too.": "Ένα όργανο διαμορφώνει το ύφος όλου του κομματιού: όταν το ονομάζεις, κινείς και την ενορχήστρωση.",
++"A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Ένα τρίξιμο ή θρόισμα χαρτιού, σαν σε φθαρμένο δίσκο, είναι άτυχος σπόρος: φτιάξ' το ξανά με άλλον.",
+ "{#0} heard by ear": "ακούστηκαν με το αυτί: {0}",
+ "Fails when named so: ask for it as the ancient triangular harp (the row below).": "Αποτυγχάνει με αυτό το όνομα: ζήτησέ το ως αρχαία τριγωνική άρπα (η γραμμή από κάτω).",
+ "Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Δοκιμάστηκε πολλές φορές, χωρίς επιτυχία: το YuE2 δεν ξέρει το σοφάρ. Οι δοκιμές δίνουν πάντα άλλον αυλό ή κέρας, ποτέ σοφάρ, ούτε καν κοντά. Οι δοκιμές του (παρακάτω) κρατήθηκαν: πάρε τες ως το κέρας ή την τρομπέτα που αποδείχτηκαν. Ο προσαρμογέας του το ξέρει: loras/shofar-yt-r16 στην εποχή 110, το αυτί του Viktor: «Συγκλονιστικό: κανείς παίκτης σοφάρ δεν έχει ακούσει κάτι τέτοιο. Ολόκληρος διαλογισμός. Εκατό τοις εκατό υεμενίτικο σοφάρ, κέρας αντιλόπης δύο μέτρων» (η 167 υπερεκπαιδευμένη, αδύναμη και λεπτή· η 66 ανεκπαίδευτη, με τρομπέτα μέσα).",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 9cfb928..c4f185d 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -2783,6 +2783,9 @@ RuachI18n.add("es", {
+ "painted by an image model: some show an instrument not quite as it really is": "las pinta un modelo de imágenes: en algunas el instrumento no es del todo como es en realidad",
+ "How the probes were made": "Cómo se hicieron las pruebas",
+ "What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Lo que se pidió tocar a YuE2, un instrumento o un estilo cada vez, en pruebas de dos minutos (un minuto las primeras), con dos semillas cada una, A y B. Algunas pruebas son magníficas, y A y B coinciden, pero el instrumento no es el pedido. Un instrumento da forma al estilo de toda la pieza: al nombrarlo mueves también el arreglo. Un chasquido o un roce de papel, como en un disco gastado, es una semilla desafortunada: hazla de nuevo con otra.",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for.": "Lo que se pidió tocar a YuE2, un instrumento o un estilo cada vez, en pruebas de dos minutos (un minuto las primeras), con dos semillas cada una, A y B. Algunas pruebas son magníficas, y A y B coinciden, pero el instrumento no es el pedido.",
++"An instrument shapes the style of the whole piece: naming one moves the arrangement too.": "Un instrumento da forma al estilo de toda la pieza: al nombrarlo mueves también el arreglo.",
++"A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Un chasquido o un roce de papel, como en un disco gastado, es una semilla desafortunada: hazla de nuevo con otra.",
+ "{#0} heard by ear": "escuchados de oído: {0}",
+ "Fails when named so: ask for it as the ancient triangular harp (the row below).": "Falla con ese nombre: pídelo como el arpa triangular antigua (la fila de abajo).",
+ "Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Probado muchas veces, sin éxito: YuE2 no conoce el shofar. Las pruebas siempre dan otra flauta o cuerno, nunca un shofar, ni de cerca. Sus pruebas (abajo) se conservan: tómalas como el cuerno o la trompeta que resultaron ser. Su adaptador sí lo conoce: loras/shofar-yt-r16 en la época 110, el oído de Viktor: «Alucinante: ningún intérprete de shofar ha oído algo así. Toda una meditación. Cien por cien un shofar yemení, un cuerno de antílope de dos metros» (la 167 sobreentrenada, débil y fina; la 66 poco entrenada, con una trompeta dentro).",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index ac04d38..9d41b19 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -2783,6 +2783,9 @@ RuachI18n.add("it", {
+ "painted by an image model: some show an instrument not quite as it really is": "le dipinge un modello di immagini: in alcune lo strumento non è proprio com'è davvero",
+ "How the probes were made": "Come sono state fatte le prove",
+ "What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Cosa è stato chiesto di suonare a YuE2, uno strumento o uno stile alla volta, in prove di due minuti (un minuto le prime), due semi ciascuna, A e B. Alcune prove sono superbe, e A e B concordano, eppure lo strumento non è quello chiesto. Uno strumento dà forma allo stile di tutto il brano: nominarlo sposta anche l'arrangiamento. Un crepitio o un fruscio di carta, come su un disco consumato, è un seme sfortunato: rifallo con un altro.",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for.": "Cosa è stato chiesto di suonare a YuE2, uno strumento o uno stile alla volta, in prove di due minuti (un minuto le prime), due semi ciascuna, A e B. Alcune prove sono superbe, e A e B concordano, eppure lo strumento non è quello chiesto.",
++"An instrument shapes the style of the whole piece: naming one moves the arrangement too.": "Uno strumento dà forma allo stile di tutto il brano: nominarlo sposta anche l'arrangiamento.",
++"A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Un crepitio o un fruscio di carta, come su un disco consumato, è un seme sfortunato: rifallo con un altro.",
+ "{#0} heard by ear": "ascoltati a orecchio: {0}",
+ "Fails when named so: ask for it as the ancient triangular harp (the row below).": "Non riesce con questo nome: chiedilo come l'antica arpa triangolare (la riga sotto).",
+ "Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Provato molte volte, senza successo: YuE2 non conosce lo shofar. Le prove danno sempre un altro flauto o corno, mai uno shofar, nemmeno vicino. Le sue prove (sotto) sono conservate: prendile come il corno o la tromba che si sono rivelate. Il suo adattatore lo conosce: loras/shofar-yt-r16 all'epoca 110, l'orecchio di Viktor: «Da togliere il fiato: nessun suonatore di shofar ha mai sentito nulla di simile. Un'intera meditazione. Al cento per cento uno shofar yemenita, un corno di antilope lungo due metri» (la 167 sovrallenata, debole e sottile; la 66 poco allenata, con una tromba dentro).",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 9f16e5c..4d76d9a 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -2791,6 +2791,9 @@ RuachI18n.add("ru", {
+ "painted by an image model: some show an instrument not quite as it really is": "их рисует модель изображений: на некоторых инструмент не совсем такой, как на самом деле",
+ "How the probes were made": "Как делались пробы",
+ "What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Что YuE2 просили сыграть, по одному инструменту или стилю за раз, пробами по две минуты (первые — по минуте), по два сида на каждую, A и B. Бывают пробы превосходные, A и B сходятся, а инструмент не тот, что просили. Инструмент формирует стиль всей вещи: назвав его, двигаешь и аранжировку. Треск или шелест бумаги, как на заезженной пластинке, — неудачный сид: сделай заново на другом.",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for.": "Что YuE2 просили сыграть, по одному инструменту или стилю за раз, пробами по две минуты (первые — по минуте), по два сида на каждую, A и B. Бывают пробы превосходные, A и B сходятся, а инструмент не тот, что просили.",
++"An instrument shapes the style of the whole piece: naming one moves the arrangement too.": "Инструмент формирует стиль всей вещи: назвав его, двигаешь и аранжировку.",
++"A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Треск или шелест бумаги, как на заезженной пластинке, — неудачный сид: сделай заново на другом.",
+ "{#0} heard by ear": "на слух услышано: {0}",
+ "Fails when named so: ask for it as the ancient triangular harp (the row below).": "Под этим названием не выходит: проси его как древнюю треугольную арфу (строка ниже).",
+ "Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Пробовали много раз, без успеха: YuE2 не знает шофара. Пробы всегда дают другую дудку или рог, никогда не шофар, даже близко. Его пробы (ниже) оставлены: бери их как тот рог или трубу, которыми они оказались. Его адаптер шофар знает: loras/shofar-yt-r16 на эпохе 110, ухо Виктора: «Взрыв мозга: ни один шофарист такого не слышал. Целая медитация. Стопроцентно йеменский шофар, рог антилопы в два метра» (167 перетренирована, слабая и тонкая; 66 недотренирована, в ней труба).",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index bfddd7b..62c1c92 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -2784,6 +2784,9 @@ RuachI18n.add("uk", {
+ "painted by an image model: some show an instrument not quite as it really is": "їх малює модель зображень: на деяких інструмент не зовсім такий, як насправді",
+ "How the probes were made": "Як робилися проби",
+ "What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for. An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Що YuE2 просили зіграти, по одному інструменту чи стилю за раз, пробами по дві хвилини (перші — по хвилині), по два сіди на кожну, A і B. Бувають проби чудові, A і B сходяться, а інструмент не той, що просили. Інструмент формує стиль усієї речі: назвавши його, рухаєш і аранжування. Тріск або шелест паперу, як на заїждженій платівці, — невдалий сід: зроби наново на іншому.",
++"What YuE2 was asked to play, one instrument or one style at a time, in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the instrument is not the one asked for.": "Що YuE2 просили зіграти, по одному інструменту чи стилю за раз, пробами по дві хвилини (перші — по хвилині), по два сіди на кожну, A і B. Бувають проби чудові, A і B сходяться, а інструмент не той, що просили.",
++"An instrument shapes the style of the whole piece: naming one moves the arrangement too.": "Інструмент формує стиль усієї речі: назвавши його, рухаєш і аранжування.",
++"A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.": "Тріск або шелест паперу, як на заїждженій платівці, — невдалий сід: зроби наново на іншому.",
+ "{#0} heard by ear": "на слух почуто: {0}",
+ "Fails when named so: ask for it as the ancient triangular harp (the row below).": "Під цією назвою не виходить: проси його як давню трикутну арфу (рядок нижче).",
+ "Probed many times, without success: YuE2 does not know the shofar. The probes always give another pipe or horn, never a shofar, not even close. Its probes (below) are kept: take one as the horn or trumpet it turned out to be. Its adapter knows it: loras/shofar-yt-r16 at epoch 110, Viktor's ear: «Mind-blowing: no shofar player has heard the like. A whole meditation. One hundred percent a Yemenite shofar, an antelope horn two metres long» (167 overtrained, weak and thin; 66 undertrained, a trumpet in it).": "Пробували багато разів, без успіху: YuE2 не знає шофара. Проби завжди дають іншу дудку чи ріг, ніколи не шофар, навіть близько. Його проби (нижче) залишено: бери їх як той ріг чи трубу, якими вони виявилися. Його адаптер шофар знає: loras/shofar-yt-r16 на епосі 110, вухо Віктора: «Вибух мозку: жоден шофарист такого не чув. Ціла медитація. Стовідсотково єменський шофар, ріг антилопи на два метри» (167 перетренована, слабка й тонка; 66 недотренована, у ній труба).",
+diff --git a/tools/console/heresy-instruments.js b/tools/console/heresy-instruments.js
+index 4645299..d777188 100644
+--- a/tools/console/heresy-instruments.js
++++ b/tools/console/heresy-instruments.js
+@@ -399,10 +399,10 @@
+       '<li><b>The pictures</b><span>painted by an image model: some show an instrument not quite as it really is</span></li></ul>' +
+       '<details class="hi-more"><summary>How the probes were made</summary><p>What YuE2 was asked to play, one instrument or one style at a time, ' +
+       "in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the " +
+-      "instrument is not the one asked for. " +
++      "instrument is not the one asked for.</p><p>" +   // HERESY 1279: three paragraphs, air between them
+       // HERESY 1162 (Viktor: «инструмент играет весомый вклад в формирование стиля композиции»; «потрескивание и шелест бумаги, как
+       // будто на заезженной пластинке — артефакт неудачного зерна»)
+-      "An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.</p></details>" +
++      "An instrument shapes the style of the whole piece: naming one moves the arrangement too.</p><p>A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.</p></details>" +
+       '<div class="hi-tools"><input type="search" id="hiSearch" placeholder="Search: name, home, sound" autocomplete="off" />' +
+       '<select id="hiFam" aria-label="Family"><option value="">every family</option>' +
+       Object.keys(DATA.families).map(function (k) { return '<option value="' + k + '">' + esc(DATA.families[k]) + "</option>"; }).join("") + "</select>" +
+-- 
+2.43.0
+

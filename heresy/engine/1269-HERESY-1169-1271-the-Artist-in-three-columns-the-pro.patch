@@ -1,0 +1,331 @@
+From 8008ad763bf5933a693dc7737135f0836cfd0e37 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 17:30:08 -0600
+Subject: [PATCH 1269/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201271:=20the?=
+ =?UTF-8?q?=20Artist=20in=20three=20columns=20(the=20prompt=20and=20its=20?=
+ =?UTF-8?q?knobs=20|=20the=20stage:=20the=20run=20being=20painted=20develo?=
+ =?UTF-8?q?ps=20there,=20else=20the=20picture=20picked=20in=20the=20librar?=
+ =?UTF-8?q?y,=20its=20run's=20data=20and=20actions=20under=20it=20|=20the?=
+ =?UTF-8?q?=20library),=20the=20outer=20two=20as=20wide=20as=20their=20edg?=
+ =?UTF-8?q?es=20are=20dragged=20(kept);=20a=20click=20in=20the=20library?=
+ =?UTF-8?q?=20picks=20for=20the=20stage,=20the=20stage's=20picture=20opens?=
+ =?UTF-8?q?=20it=20over=20the=20page?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ tools/console/app.css          |  28 ++++++
+ tools/console/heresy-artist.js | 174 +++++++++++++++++++++++++++++++--
+ tools/console/index.html       |  14 +++
+ 3 files changed, 209 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 45ca138..e5845e3 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4747,3 +4747,31 @@ body[data-tab="artist"] .col-grip.left { display: none; }
+ /* HERESY 1270: the Artist's Draw is Stop while a run waits or draws, in the theme's colour for what ends something */
+ #arDraw.is-stop { background: var(--bad); border-color: var(--bad); color: #fff; }
+ #arDraw.is-stop:hover { filter: brightness(1.08); }
++/* HERESY 1271: the Artist in three columns, the outer two as wide as their edges are dragged (kept), the stage the rest */
++.ar-cols { display: grid; grid-template-columns: var(--ar-l, 380px) 12px minmax(280px, 1fr) 12px var(--ar-r, 560px); column-gap: 4px; align-items: start; margin-top: 14px; }
++.ar-left, .ar-stage, .ar-right { min-width: 0; }
++.ar-left, .ar-stage { position: sticky; top: 8px; }
++.ar-cols .ar-form { margin: 0; }
++.ar-cols .ar-bar { margin: 0; }
++.ar-cols .ar-runs { margin: 12px 0 28px; }
++.ar-left .ar-knobs { gap: 10px 12px; }
++.ar-left .ar-go { margin-left: 0; flex: 1 1 100%; justify-content: space-between; }
++.ar-left .ar-go #arDraw { min-width: 8em; }
++.ar-resizer { align-self: stretch; min-height: 220px; display: flex; justify-content: center; cursor: col-resize; touch-action: none; outline: none; }
++.ar-resizer::before { content: ""; width: 2px; height: 100%; border-radius: 1px; background: transparent; transition: background .12s; }
++.ar-resizer:hover::before, .ar-resizer.is-drag::before, .ar-resizer:focus-visible::before { background: var(--line-strong-a); }
++.ar-stage { display: flex; flex-direction: column; gap: 10px; }
++.ar-stage-pic { position: relative; display: block; align-self: center; padding: 0; overflow: hidden; border: 1px solid var(--line-a); border-radius: var(--r-md);
++  background: var(--field); cursor: zoom-in; }
++.ar-stage-pic img { display: block; width: 100%; height: 100%; object-fit: contain; }
++.ar-stage-pic.is-loading img { filter: blur(1.5px); }
++.ar-stage-pic.is-live { cursor: default; border-color: var(--amber-dim); }
++.ar-stage-empty { display: grid; place-items: center; min-height: 240px; padding: 20px; border: 1px dashed var(--line-a); border-radius: var(--r-md);
++  color: var(--dim); font-size: 13px; text-align: center; }
++.ar-stage-data { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
++.ar-stage-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-variant-numeric: tabular-nums; }
++.ar-stage-prompt { color: var(--ink); font-size: 13px; line-height: 1.45; white-space: pre-wrap; max-height: 9.5em; overflow: auto; }
++.ar-stage-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
++.ar-stage-acts .ar-vstar { font-size: 18px; }
++.ar-thumb.is-sel { border-color: var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 35%, transparent); }
++@media (max-width: 1280px) { .ar-cols { grid-template-columns: minmax(0, 1fr); } .ar-resizer { display: none; } .ar-left, .ar-stage { position: static; } }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 2a97814..193de62 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -89,6 +89,7 @@
+     state.sending = true;
+     paintForm();
+     return api("/artist/draw", body).then(function (run) {
++      state.pinSel = false;                              // HERESY 1271: the stage follows the new run
+       state.runs.unshift(run);
+       paintRuns();
+       toast(tr("The Artist draws") + " " + run.of + " " + tr(run.of === 1 ? "picture" : "pictures") + " · " + tr("seed") + " " + run.seed + ": " +
+@@ -145,6 +146,8 @@
+       state.runs.forEach(function (r) {           // a run that ended while the room looked on says so
+         if (!was[r.id] || live(r)) return;
+         var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length;
++        var last = (r.pictures || []).filter(function (p) { return p.kept; }).pop();   // HERESY 1271: the stage takes its last picture
++        if (last) { state.sel = { id: r.id, file: last.file }; state.pinSel = false; }
+         if (r.status === "done") toast(tr("The Artist drew") + " " + kept + " " + tr("of") + " " + r.of + " " + tr(r.of === 1 ? "picture" : "pictures"), kept ? "good" : "bad");
+         else if (r.status === "stopped") toast(tr("The Artist stopped:") + " " + kept + " " + tr("of") + " " + r.of + " " + tr(r.of === 1 ? "picture" : "pictures") + " " + tr("kept"));   // HERESY 1270
+         else toast(tr("The Artist's run failed:") + " " + (r.error || ""), "bad");
+@@ -238,7 +241,8 @@
+           '<button type="button" class="ar-star' + (it.p.star ? " is-on" : "") + '" data-act="gstar" aria-pressed="' + (it.p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + (it.p.star ? "★" : "☆") + "</button></figure>";
+       }).join("") + "</div>";
+   }
+-  function paintRuns() {
++  function paintRuns() { paintRunsList(); paintStage(); }   // HERESY 1271: the library, then the stage
++  function paintRunsList() {
+     var box = $("arRuns");
+     paintBar();
+     if (state.look === "gallery" && state.runs.length) return paintGallery();
+@@ -294,6 +298,153 @@
+     });
+   }
+ 
++  // ------------------------------------------------------------------ HERESY 1271: the stage
++  // the run being painted develops here (its step at the stage's size); else the picture picked in the library (else the newest), its run
++  // under it with its actions; a picked picture stays while a run paints until the next Draw
++  function keptList(r) { return (r.pictures || []).filter(function (x) { return x.kept; }).map(function (x) { return { r: r, p: x }; }); }
++  function selected() {
++    var s = state.sel, found = null, newest = null;
++    state.runs.forEach(function (r) {
++      (r.pictures || []).forEach(function (p) {
++        if (!p.kept) return;
++        if (!newest) newest = { r: r, p: p };
++        if (s && r.id === s.id && p.file === s.file) found = { r: r, p: p };
++      });
++      if (newest && newest.r === r) { var k = keptList(r); newest = k[k.length - 1]; }
++    });
++    return found || newest;
++  }
++  function pick(it) {
++    if (!it || !it.p || !it.p.kept) return;
++    state.sel = { id: it.r.id, file: it.p.file };
++    state.pinSel = true;
++    paintStage();
++  }
++  function stageList(it) {                               // what ‹ › walk over the page: the gallery as shown, else the picture's run
++    var list = state.look === "gallery" ? items() : keptList(it.r), at = -1;
++    list.forEach(function (x, k) { if (x.r.id === it.r.id && x.p.file === it.p.file) at = k; });
++    return at < 0 ? { list: keptList(it.r), at: Math.max(0, keptList(it.r).map(function (x) { return x.p; }).indexOf(it.p)) } : { list: list, at: at };
++  }
++  function stageData(r, p, n) {
++    var meta = [];
++    if (p) meta.push(p.shape + " · " + p.w + "×" + p.h, tr("seed") + " " + p.seed);
++    else meta.push((r.shapes || []).join(" · ") + (r.count > 1 ? " × " + r.count : ""), tr("seed") + " " + r.seed + (r.count > 1 ? "…" + (r.seed + r.count - 1) : ""));
++    meta.push(PAINTERS[r.painter] || r.painter || "", when(r.created));
++    if (r.took) meta.push(Math.round(r.took) + " s");
++    if (r.gpu != null) meta.push("GPU " + r.gpu);
++    if (n) meta.push(tr("drawing") + " " + n + " " + tr("of") + " " + r.of);
++    var acts = "";
++    if (p) {
++      var take = state.take, square = p.shape === "1:1";
++      acts =
++        '<button type="button" class="btn ghost small" data-stage="form" data-tip="' + esc(tr("Its prompt, seed and shape back in the form")) + '">' + esc(tr("To the form")) + "</button>" +
++        (square ? '<button type="button" class="btn ghost small ar-cover" data-stage="cover"' + (take ? "" : " disabled") + ' data-tip="' +
++          esc(take ? tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" : tr("Pick a take on the right to give it this cover")) + '">' + esc(tr("Set as cover")) + "</button>" : "") +
++        '<a class="ar-dl" aria-label="' + esc(tr("Download")) + '" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '" href="' + esc(fileUrl(r.id, p.file)) +
++        '" download="' + esc("ruach-artist-" + r.id + "-" + p.file) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
++        '<button type="button" class="btn ghost small" data-stage="view" data-tip="' + esc(tr("Over the whole page: ← → walk the pictures, Esc closes")) + '">' + esc(tr("Over the page")) + "</button>" +
++        '<button type="button" class="pb-btn ar-vstar' + (p.star ? " is-on" : "") + '" data-stage="star" aria-pressed="' + (p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + (p.star ? "★" : "☆") + "</button>";
++    }
++    return '<div class="ar-stage-data"><div class="ar-stage-meta" translate="no">' + meta.filter(Boolean).map(function (m) { return "<span>" + esc(m) + "</span>"; }).join("") + "</div>" +
++      '<div class="ar-stage-prompt" translate="no">' + esc(r.prompt || "") + "</div>" + (acts ? '<div class="ar-stage-acts">' + acts + "</div>" : "") + "</div>";
++  }
++  function fitStage() {
++    var b = document.querySelector("#arStage .ar-stage-pic"), box = $("arStage");
++    if (!b || !box || !box.clientWidth) return;
++    var w = +b.dataset.w || 1, h = +b.dataset.h || 1, maxH = Math.max(240, window.innerHeight - 330), k = Math.min(box.clientWidth / w, maxH / h);
++    b.style.width = Math.floor(w * k) + "px";
++    b.style.height = Math.floor(h * k) + "px";
++  }
++  function paintStage() {
++    var box = $("arStage");
++    if (!box) return;
++    var run = drawingRun(), it = (!run || state.pinSel) ? selected() : null, key, html;
++    if (run && !state.pinSel) {
++      var n = (run.pictures || []).length + 1, step = run.status === "running" && run.live && run.live.live === n ? run.live : null;
++      var sh = shapeOf((run.shapes || ["1:1"])[(n - 1) % (run.shapes || ["1:1"]).length]);
++      key = "live:" + run.id + ":" + run.status + ":" + n + ":" + (step ? step.step : 0) + ":" + (run.waiting || "");
++      html = run.status === "running"
++        ? '<div class="ar-stage-pic is-live" data-w="' + sh.w + '" data-h="' + sh.h + '">' + (step ? '<img alt="" draggable="false" src="' + esc(fileUrl(run.id, step.file) + "&v=" + step.step) + '" />' +
++          '<span class="ar-stepno">' + step.step + " / " + step.of + "</span>" : '<div class="ar-stage-empty">' + esc(tr("painting…")) + "</div>") + "</div>" + stageData(run, null, n)
++        : '<div class="ar-stage-empty">' + esc(tr(run.waiting ? "waits for a card" : "in the queue")) + "</div>" + stageData(run, null, 0);
++    } else if (it) {
++      var s2 = shapeOf(it.p.shape), take = state.take;
++      key = "pic:" + it.r.id + ":" + it.p.file + ":" + (it.p.star ? 1 : 0) + ":" + (take ? take.name : "");
++      html = '<button type="button" class="ar-stage-pic" data-stage="view" data-w="' + (it.p.w || s2.w) + '" data-h="' + (it.p.h || s2.h) + '" aria-label="' + esc(tr("Look at it over the page")) + '">' +
++        '<img alt="" draggable="false" /></button>' + stageData(it.r, it.p, 0);
++    } else {
++      key = "empty";
++      html = '<div class="ar-stage-empty">' + esc(tr("The picture picked in the library shows here, with its run; a run being painted develops here.")) + "</div>";
++    }
++    Array.prototype.forEach.call(document.querySelectorAll("#arRuns .ar-thumb.is-sel"), function (x) { x.classList.remove("is-sel"); });
++    if (it) markPicked(it);
++    if (key === state.stageKey) return fitStage();
++    state.stageKey = key;
++    box.innerHTML = html;
++    if (it) {                                            // the thumb at once, the full picture when it has come (1263's way)
++      var img = box.querySelector(".ar-stage-pic img"), pic = box.querySelector(".ar-stage-pic"), full = fileUrl(it.r.id, it.p.file), small = it.p.thumb ? fileUrl(it.r.id, it.p.thumb) : "";
++      var tok = state.stageLoads = (state.stageLoads || 0) + 1, pre = new Image();
++      pic.classList.toggle("is-loading", !!small);
++      img.src = small || full;
++      pre.onload = function () { if (tok !== state.stageLoads) return; img.src = full; pic.classList.remove("is-loading"); };
++      pre.onerror = function () { if (tok === state.stageLoads) pic.classList.remove("is-loading"); };
++      pre.src = full;
++    }
++    fitStage();
++  }
++  function markPicked(it) {
++    if (state.look === "gallery") {
++      var list = items();
++      list.forEach(function (x, k) { if (x.r.id === it.r.id && x.p.file === it.p.file) { var b = document.querySelector('#arRuns .ar-gpic[data-g="' + k + '"] .ar-thumb'); if (b) b.classList.add("is-sel"); } });
++    } else {
++      var fig = document.querySelector('#arRuns .ar-run[data-id="' + it.r.id + '"] .ar-pic[data-i="' + it.r.pictures.indexOf(it.p) + '"] .ar-thumb');
++      if (fig) fig.classList.add("is-sel");
++    }
++  }
++  function stageAct(e) {
++    var b = e.target.closest("[data-stage]");
++    if (!b || b.disabled) return;
++    var it = selected();
++    if (!it) return;
++    var act = b.dataset.stage;
++    if (act === "view") { var w = stageList(it); view(w.list, w.at); }
++    else if (act === "star") star(it.r, it.p, !it.p.star);
++    else if (act === "cover") cover(it.r, it.p);
++    else if (act === "form") { fillForm({ prompt: it.r.prompt, shapes: [it.p.shape], count: 1, seed: it.p.seed, painter: it.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
++  }
++  function edges() {                                     // the two edges: dragged, ← →, Home or a double click; the widths kept
++    var cols = $("arCols");
++    if (!cols) return;
++    var E = { l: { key: "yue2.arL", min: 280, max: 640, def: 380, col: ".ar-left", prop: "--ar-l", sign: 1 },
++              r: { key: "yue2.arR", min: 300, max: 900, def: 560, col: ".ar-right", prop: "--ar-r", sign: -1 } };
++    Object.keys(E).forEach(function (s) {
++      var e = E[s], rz = $(s === "l" ? "arEdgeL" : "arEdgeR"), col = cols.querySelector(e.col);
++      if (!rz || !col) return;
++      function setW(w) { w = Math.max(e.min, Math.min(e.max, Math.round(w))); cols.style.setProperty(e.prop, w + "px"); rz.setAttribute("aria-valuenow", String(w)); fitStage(); return w; }
++      rz.setAttribute("aria-valuemin", String(e.min)); rz.setAttribute("aria-valuemax", String(e.max));
++      setW(parseInt(recall(e.key), 10) || e.def);
++      rz.addEventListener("pointerdown", function (ev) {
++        if (ev.button !== 0) return;
++        ev.preventDefault();
++        rz.setPointerCapture(ev.pointerId);
++        rz.classList.add("is-drag"); document.body.classList.add("is-resizing");
++        var x0 = ev.clientX, w0 = col.getBoundingClientRect().width;
++        function move(m) { setW(w0 + e.sign * (m.clientX - x0)); }
++        function up() {
++          rz.classList.remove("is-drag"); document.body.classList.remove("is-resizing");
++          rz.removeEventListener("pointermove", move); rz.removeEventListener("pointerup", up); rz.removeEventListener("pointercancel", up);
++          keep(e.key, String(Math.round(col.getBoundingClientRect().width)));
++        }
++        rz.addEventListener("pointermove", move); rz.addEventListener("pointerup", up); rz.addEventListener("pointercancel", up);
++      });
++      rz.addEventListener("dblclick", function () { keep(e.key, null); setW(e.def); });
++      rz.addEventListener("keydown", function (k) {
++        if (k.key === "ArrowLeft" || k.key === "ArrowRight") { k.preventDefault(); k.stopPropagation(); keep(e.key, String(setW(col.getBoundingClientRect().width + e.sign * (k.key === "ArrowRight" ? 16 : -16)))); }
++        else if (k.key === "Home") { k.preventDefault(); k.stopPropagation(); keep(e.key, null); setW(e.def); }
++      });
++    });
++  }
++
+   // ------------------------------------------------------------------ a picture over the page
+   function view(list, i) {                           // list: [{r, p}], the run's or the gallery's
+     if (!list.length) return;
+@@ -409,17 +560,14 @@
+       var g = e.target.closest("[data-act^=g]");
+       if (g) {                                          // the gallery's own: look, star
+         var list = items(), at = +g.closest(".ar-gpic").dataset.g;
+-        if (g.dataset.act === "gview") view(list, at);
++        if (g.dataset.act === "gview") pick(list[at]);    // HERESY 1271: to the stage
+         else if (g.dataset.act === "gstar") star(list[at].r, list[at].p, !list[at].p.star);
+         return;
+       }
+       var b = e.target.closest("[data-act]"), r = b && runOf(b);
+       if (!b || !r || b.disabled) return;
+       var act = b.dataset.act, fig = b.closest(".ar-pic"), p = fig && r.pictures[+fig.dataset.i];
+-      if (act === "view") {
+-        var kept = (r.pictures || []).filter(function (x) { return x.kept; }).map(function (x) { return { r: r, p: x }; });
+-        view(kept, kept.map(function (x) { return x.p; }).indexOf(r.pictures[+fig.dataset.i]));
+-      }
++      if (act === "view") pick({ r: r, p: r.pictures[+fig.dataset.i] });   // HERESY 1271: to the stage
+       else if (act === "cover" && p) cover(r, p);
+       else if (act === "form") { fillForm(r, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, shapes, variations and seed")); }
+       else if (act === "again") draw(r);
+@@ -441,11 +589,23 @@
+       if (b.dataset.size) { state.size = b.dataset.size; keep(KEY.size, state.size === "m" ? null : state.size); }
+       paintRuns();
+     });
++    // HERESY 1271: the stage's own actions; a double click in the library opens a picture over the page at once; the edges
++    $("arStage").addEventListener("click", stageAct);
++    $("arRuns").addEventListener("dblclick", function (e) {
++      var t = e.target.closest(".ar-thumb");
++      if (!t) return;
++      var it = selected();
++      if (it) { var w = stageList(it); view(w.list, w.at); }
++    });
++    window.addEventListener("resize", fitStage);
++    if (window.ResizeObserver) new ResizeObserver(function () { fitStage(); }).observe($("arStage"));   // shown after a hidden tab: its size then
++    edges();
+     $("arLive").checked = recall(KEY.live) !== "0";
+     $("arLive").addEventListener("change", function () { keep(KEY.live, this.checked ? null : "0"); });
+     window.addEventListener("ruach-lang", function () { paintForm(); paintHead(); paintRuns(); });
+     if (state.hooks.take) setTake(state.hooks.take()); else paintHead();
+     paintForm();
+   }
+-  window.HeresyArtist = { init: init, reload: function () { paintHead(); return load(); }, setTake: setTake };
++  // HERESY 1271: the room entered, the stage follows a painting run again (the picture picked stays picked otherwise)
++  window.HeresyArtist = { init: init, reload: function () { state.pinSel = false; paintHead(); return load(); }, setTake: setTake };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index a497364..ab2d8b9 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1414,6 +1414,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     <div class="col-head post-head artist-head"><h2>Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a reference picture, repainting on a canvas, LoRAs and the upscale come in the releases after">Early preview</span>
+       <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Krea 2 Muse</span>
+       <span class="post-take" id="arTake" translate="no"></span><span class="col-note" id="arTakeNote">pick a take on the right to give it a cover</span></div>
++    <!-- HERESY 1271 (Viktor 09.10.2026: «Канвас комнаты Художника можно разделить на три колонки, каждая регулируется по ширине. В левой
++         промптинг с параметрами. В средней проявка изображения и активное выбранное как в InvokeAI, и ниже данные по прогону самого
++         изображения, правая колонка — библиотека генераций»): the prompt and its knobs | the stage | the library -->
++    <div class="ar-cols" id="arCols">
++      <div class="ar-left">
+     <div class="ar-form">
+       <label class="field"><span class="label">Prompt <em>what to paint, said in sentences (Krea 2 reads them); Ctrl+Enter draws</em></span>
+         <textarea id="arPrompt" rows="5" spellcheck="false" data-tip="What to paint, said in sentences: what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph); end with no text when you want no letters in it. Ctrl+Enter draws" placeholder="A woman in a white linen dress dancing alone in a birch grove at dusk, warm lanterns in the branches, painted in soft oils, no text."></textarea></label>
+@@ -1428,6 +1433,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <div class="ar-go"><span class="row-hint" id="arCost"></span><button type="button" class="btn primary" id="arDraw">Draw</button></div>
+       </div>
+     </div>
++      </div>
++      <div class="ar-resizer" id="arEdgeL" data-edge="l" role="separator" aria-orientation="vertical" tabindex="0"
++           aria-label="The prompt's column: drag to widen; ← → from the keyboard; Home or a double click for its own width"></div>
++      <div class="ar-stage" id="arStage" aria-live="polite"></div>
++      <div class="ar-resizer" id="arEdgeR" data-edge="r" role="separator" aria-orientation="vertical" tabindex="0"
++           aria-label="The library's column: drag to widen; ← → from the keyboard; Home or a double click for its own width"></div>
++      <div class="ar-right">
+     <!-- HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта?»): the runs, or every picture as one gallery -->
+     <div class="ar-bar" id="arBar">
+       <span class="ar-looks" role="group" aria-label="How to show them"><button type="button" class="chip" data-look="runs" data-tip="Each press of Draw with its prompt, seed and pictures, the newest on top">Runs</button><button type="button" class="chip" data-look="gallery" data-tip="Every picture of every run in one grid, the newest first: filter by shape or by star, three sizes">Gallery</button></span>
+@@ -1436,6 +1448,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <span class="ar-total" id="arTotal"></span>
+     </div>
+     <div class="ar-runs" id="arRuns"></div>
++      </div>
++    </div>
+   </section>
+ 
+ 
+-- 
+2.43.0
+

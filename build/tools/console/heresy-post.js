@@ -133,10 +133,15 @@
       if (job.status === "done" && chain.started === name) {
         chain.started = "";
         chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain is done: " + job.steps.length + " steps; Artifacts now shows the final file");
+        if (window.RuachChime) window.RuachChime.ring(true);   // HERESY 1275
         // HERESY 1059: the checks were made on the final file: the Artifacts step shows that one, not the take
         if (job.final && window.HeresyInspect && window.HeresyInspect.useSource && job.steps.some(function (s) { return s.step === "inspect"; })) window.HeresyInspect.useSource(job.final);
       }
-      if (job.status === "failed" && chain.started === name) { chain.started = ""; chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain stopped at " + (job.error || "a step"), "bad"); }
+      if (job.status === "failed" && chain.started === name) {
+        chain.started = "";
+        chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain stopped at " + (job.error || "a step"), "bad");
+        if (window.RuachChime) window.RuachChime.ring(false);   // HERESY 1275
+      }
     }).catch(function () { /* the lab will answer on the next take */ });
   }
   function runChain() {

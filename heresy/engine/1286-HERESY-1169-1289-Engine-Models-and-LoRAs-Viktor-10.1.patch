@@ -1,0 +1,388 @@
+From 4e4dac32b2d275d9276dc2ad2d899d4f58dfdd09 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 22:54:41 -0600
+Subject: [PATCH 1286/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201289:=20Engi?=
+ =?UTF-8?q?ne=20=E2=86=92=20Models=20and=20LoRAs=20(Viktor=2010.10.2026:?=
+ =?UTF-8?q?=20=C2=AB=D0=98=20=D0=BD=D1=83=D0=B6=D0=BD=D0=BE=20=D0=B2=20Eng?=
+ =?UTF-8?q?ine=20=D0=B4=D0=BE=D0=B1=D0=B0=D0=B2=D0=B8=D1=82=D1=8C=20=D0=B4?=
+ =?UTF-8?q?=D0=BE=D0=BA=D0=B0=D1=87=D0=BA=D1=83=20=D0=BC=D0=BE=D0=B4=D0=B5?=
+ =?UTF-8?q?=D0=BB=D0=B5=D0=B9=20=D0=B8=20LoRA=C2=BB):=20what=20the=20insta?=
+ =?UTF-8?q?ll=20brings,=20part=20by=20part,=20as=20its=20last=20whole=20ru?=
+ =?UTF-8?q?n=20found=20it=20(the=20install's=20own=20run=20too,=20said=20a?=
+ =?UTF-8?q?t=20once=20without=20asking=20anyone);=20a=20part=20not=20whole?=
+ =?UTF-8?q?=20lists=20what=20is=20not=20here=20and=20is=20fetched=20again?=
+ =?UTF-8?q?=20from=20the=20studio,=20a=20download=20cut=20short=20going=20?=
+ =?UTF-8?q?on=20where=20it=20stopped;=20one=20Fetch=20for=20everything=20m?=
+ =?UTF-8?q?issing;=20the=20extras=20(another=20backbone,=20the=20style=20l?=
+ =?UTF-8?q?istener,=20the=20Artist's=20painter,=20the=20trainer's=20base)?=
+ =?UTF-8?q?=20a=20row=20each=20with=20their=20variants=20and=20sizes,=20ea?=
+ =?UTF-8?q?ch=20asked=20with=20its=20size=20first;=20the=20run's=20words?=
+ =?UTF-8?q?=20while=20it=20goes,=20what=20came=20when=20it=20is=20over,=20?=
+ =?UTF-8?q?and=20Restart=20the=20engine=20where=20a=20backbone,=20a=20deco?=
+ =?UTF-8?q?der=20or=20the=20sliders=20came=20(LoRAs=20the=20engine=20reads?=
+ =?UTF-8?q?=20each=20time).=20And=20a=20button=20the=20Engine=20hides=20st?=
+ =?UTF-8?q?ays=20hidden:=20.btn's=20own=20display=20won=20over=20the=20att?=
+ =?UTF-8?q?ribute,=20so=20Updates'=20=C2=ABUpdate=C2=BB=20and=20=C2=ABWhat?=
+ =?UTF-8?q?'s=20new=C2=BB=20showed=20with=20nothing=20new=20to=20offer?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  38 +++++-
+ tools/console/app.js            |   3 +
+ tools/console/heresy-weights.js | 220 ++++++++++++++++++++++++++++++++
+ tools/console/index.html        |  19 +++
+ 4 files changed, 277 insertions(+), 3 deletions(-)
+ create mode 100644 tools/console/heresy-weights.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 091f66b..4face4d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -554,6 +554,7 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+ .engine-grid > .eg-about { order: 12; }
+ .engine-grid > .eg-updates { order: 13; }   /* HERESY 1169: a row of its own under About */
+ .engine-grid > .eg-folders { order: 14; }   /* HERESY 1283: a row of its own under Updates */
++.engine-grid > .eg-models { order: 7; }     /* HERESY 1289: under Sliders (the same order: the page's own sequence then) */
+ @media (min-width: 1400px) {
+   .engine-grid { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); }
+   .engine-grid > .eg-server   { grid-area: 1 / 1 / 2 / 11; }    /* Server over Hardware | the log    1/3 · 2/3 */
+@@ -567,14 +568,45 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+   .engine-grid > .eg-vae      { grid-area: 6 / 1 / 7 / 6; }     /* VAEs | LoRAs                      1/6 · 5/6 */
+   .engine-grid > .eg-loras    { grid-area: 6 / 6 / 7 / 31; }
+   .engine-grid > .eg-sliders  { grid-area: 7 / 1 / 8 / 31; }
+-  .engine-grid > .eg-about    { grid-area: 8 / 1 / 9 / 31; }
+-  .engine-grid > .eg-updates  { grid-area: 9 / 1 / 10 / 31; }
+-  .engine-grid > .eg-folders  { grid-area: 10 / 1 / 11 / 31; }  /* HERESY 1283 */
++  .engine-grid > .eg-models   { grid-area: 8 / 1 / 9 / 31; }    /* HERESY 1289: Models and LoRAs under Sliders */
++  .engine-grid > .eg-about    { grid-area: 9 / 1 / 10 / 31; }
++  .engine-grid > .eg-updates  { grid-area: 10 / 1 / 11 / 31; }
++  .engine-grid > .eg-folders  { grid-area: 11 / 1 / 12 / 31; }  /* HERESY 1283 */
+   /* the log fills its column beside Server and Hardware, 260px at least */
+   .eg-log .log-body { flex: 1 1 0; height: auto; min-height: 260px; }
+   /* a sixth is narrower than two tiles: the decoders one under another */
+   .eg-vae .vae-list { grid-template-columns: minmax(0, 1fr); }
+ }
++/* HERESY 1289: the Models and LoRAs card: a part of what the install brings a row (its name, size and sum | its Fetch), what is
++   not here listed under it; an extra a row (its name and what it is | its variant | its Fetch); a run's words under them */
++.wt-line.is-good { color: var(--good); }
++.wt-line.is-bad { color: var(--bad); }
++.wt-parts, .wt-extras { display: flex; flex-direction: column; }
++.wt-part, .wt-extra { padding: 7px 0; border-top: 1px solid var(--line-soft); }
++.wt-part:first-child, .wt-extra:first-child { border-top: 0; }
++.wt-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
++.wt-head b, .wt-x-name b { font-weight: 600; }
++.wt-size, .wt-sum { font-size: 12.5px; color: var(--muted); }
++.wt-part.is-whole .wt-sum { color: var(--good); }
++.wt-head .btn { margin-left: auto; }
++.wt-rows { list-style: none; margin: 5px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
++.wt-row { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; }
++.wt-row code { font: 12px var(--mono); overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
++.wt-st { flex: 0 0 auto; min-width: 58px; font: 600 11.5px var(--mono); color: var(--muted); }
++.wt-st.is-here, .wt-st.is-fetched { color: var(--good); }
++.wt-st.is-missing, .wt-st.is-differs, .wt-st.is-unknown { color: var(--amber); }
++.wt-st.is-failed { color: var(--bad); }
++.wt-extra { display: grid; grid-template-columns: minmax(0, 1fr) minmax(190px, auto) auto; gap: 6px 14px; align-items: center; }
++.wt-x-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
++.wt-x-name span { font-size: 12px; color: var(--muted); }
++.wt-extra select { width: auto; }
++.wt-log { margin: 10px 0 0; max-height: 240px; overflow: auto; padding: 8px 10px; border-radius: var(--r-sm); background: var(--sunk);
++  font: 12px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
++.wt-log .wt-st { min-width: 0; }
++/* HERESY 1289: a button the Engine hides stays hidden: .btn's own display won over the attribute (Updates' «Update» and «What's
++   new» showed with nothing new, getComputedStyle 10.10.2026), as the GPU card's rule of its own already says for its button */
++.engine-grid .btn[hidden] { display: none; }
++@media (max-width: 760px) { .wt-extra { grid-template-columns: minmax(0, 1fr); } .wt-head .btn { margin-left: 0; } }
+ /* HERESY 1283: the Folders card, a folder a row: its name and what it holds | where it lives | its size | its buttons */
+ .pl-rows { display: flex; flex-direction: column; }
+ .pl-row { display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(0, 3fr) minmax(120px, auto) auto; gap: 6px 16px; align-items: center;
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 2099350..08b8ef7 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -255,6 +255,7 @@
+       $("view-engine").classList.remove("is-hidden");
+       scrollLogToEnd();
+       if (window.HeresyPlaces) window.HeresyPlaces.load();   // HERESY 1283: the Folders card asks the lab when the page is seen
++      if (window.HeresyWeights) window.HeresyWeights.load(); // HERESY 1289: and the Models and LoRAs card
+     } else if (view === "take") {
+       $("view-engine").classList.add("is-hidden");
+       drawWave();
+@@ -7532,6 +7533,8 @@
+     dawproject: function () { var t = dawTake(); return t ? dawProject(t).catch(function (e) { toast("No DAWproject: " + e.message, "bad"); throw e; }) : Promise.reject(new Error("no take in hand")); } });
+   // HERESY 1169: new releases on GitHub (Engine → Updates) and the 💎 sets offered on a new studio and after an update
+   if (window.HeresyPlaces) window.HeresyPlaces.init({ toast: toast });   // HERESY 1283: Engine → Folders
++  // HERESY 1289: Engine → Models and LoRAs; after a fetch the engine's lists are asked again (LoRAs it reads each time)
++  if (window.HeresyWeights) window.HeresyWeights.init({ toast: toast, props: pollProps });
+   if (window.HeresyUpdates) window.HeresyUpdates.init({ toast: toast,
+     hub: function () { if (window.HeresyCollection && window.HeresyCollection.hubOpen) window.HeresyCollection.hubOpen(); },
+     idle: function () { return !STATE.jobs.some(function (j) { return isLive(j); }); } });
+diff --git a/tools/console/heresy-weights.js b/tools/console/heresy-weights.js
+new file mode 100644
+index 0000000..24395e2
+--- /dev/null
++++ b/tools/console/heresy-weights.js
+@@ -0,0 +1,220 @@
++// HERESY 1289 (Viktor 10.10.2026: «И нужно в Engine добавить докачку моделей и LoRA»): the Engine's Models and LoRAs card, over
++// the lab's weights.py, which runs heresy/fetch-heresy.sh. What the install brings, part by part, as its last whole run found it
++// (the install's own run too: the card says it at once and asks no one); a part not whole lists what is not here and has its
++// Fetch, and one Fetch takes everything missing, each asked with its size first; a download cut short goes on where it stopped.
++// The extras (another backbone, the style listener, the Artist's painter, the trainer's base) a row each, with their variants
++// and sizes, a variant here said so. While a run goes, its words; when it is over, what came; where a backbone, a decoder or
++// the sliders came, that the engine lists them at its next start (Restart the engine, where the studio runs as a service).
++// A test page (?scope=…) fetches nothing: the lab refuses.
++//
++//   HeresyWeights.init(hooks) · HeresyWeights.load() · HeresyWeights.state()   (the last for the checks)
++(function () {
++  "use strict";
++  var S = { data: null, timer: 0, hooks: {}, pick: {}, was: "" };
++  var STATES = { here: 1, differs: 1, missing: 1, fetched: 1, unknown: 1, failed: 1 };
++  function $(id) { return document.getElementById(id); }
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function toast(t, k) { if (S.hooks.toast) S.hooks.toast(t, k); }
++  function gb(b) {
++    if (b == null || !isFinite(b)) return "";
++    return b >= Math.pow(2, 30) ? (b / Math.pow(2, 30)).toFixed(1) + " GB" : Math.max(0, Math.round(b / Math.pow(2, 20))) + " MB";
++  }
++  function dur(sec) {
++    sec = Math.max(0, Math.round(sec));
++    if (sec < 60) return sec + " s";
++    var m = Math.round(sec / 60);
++    return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + (m % 60) + " min";
++  }
++  function cap(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
++  function when(t) {
++    var d = new Date(t * 1000), now = new Date();
++    var hm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
++    return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString() + " " + hm;
++  }
++  function scoped(path) {                                      // a test page says so to the lab, which then fetches nothing
++    var m = /[?&]scope=([^&#]+)/.exec(location.search);
++    return m ? path + (path.indexOf("?") < 0 ? "?" : "&") + "scope=" + m[1] : path;
++  }
++  function lab(path, body) {
++    var opt = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {};
++    return fetch("/lab" + (body ? scoped(path) : path), opt)
++      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; }); });
++  }
++  function seen() { var v = $("view-engine"); return !!(v && !v.classList.contains("is-hidden")); }
++  function job() { return (S.data && S.data.job) || null; }
++  function running() { var j = job(); return !!(j && j.status === "running"); }
++  function parts() { return (S.data && S.data.last && S.data.last.parts) || []; }
++  function whole(p) { return p.rows.every(function (r) { return r.state === "here" || r.state === "fetched"; }); }
++
++  function load() {
++    clearTimeout(S.timer);
++    return lab("/weights").then(take).catch(function (e) {
++      $("wtLine").textContent = tr("The lab does not answer:") + " " + e.message;
++    }).then(schedule);
++  }
++  // a run's end, seen once: what came, the LoRA list asked again, and the restart said where the engine needs one
++  function take(d) {
++    var j = d.job, was = S.was;
++    S.data = d;
++    S.was = j ? j.status + ":" + j.started : "";
++    if (j && j.status !== "running" && was === "running:" + j.started && j.kind === "fetch") {
++      var c = j.counts || {};
++      toast(tr("{0}: {1} fetched, {2} failed").replace("{0}", cap(tr(j.what))).replace("{1}", c.fetched || 0).replace("{2}", c.failed || 0), c.failed ? "bad" : "good");
++      if (S.hooks.props) S.hooks.props();
++    }
++    paint();
++  }
++  // while the card is seen and a run goes: every 1.5 s (a reopened Engine asks again)
++  function schedule() {
++    clearTimeout(S.timer);
++    if (seen() && running()) S.timer = setTimeout(load, 1500);
++  }
++
++  function paint() {
++    var d = S.data;
++    if (!d || !$("wtParts")) return;
++    var busy = running();
++    paintLine(d);
++    $("wtParts").innerHTML = parts().map(function (p) {
++      var bad = p.rows.filter(function (r) { return r.state !== "here"; }), ok = whole(p);
++      var here = p.rows.length - bad.length;
++      var sum = ok ? tr("all here") : tr("{0} here, {1} not").replace("{0}", here).replace("{1}", bad.filter(function (r) { return r.state !== "fetched"; }).length);
++      return '<div class="wt-part' + (ok ? " is-whole" : "") + '" data-part="' + esc(p.part) + '">' +
++        '<div class="wt-head"><b>' + esc(tr(p.label)) + '</b><span class="wt-size">' + esc(p.size) + '</span><span class="wt-sum">' + esc(sum) + "</span>" +
++        (ok ? "" : '<button type="button" class="btn ghost small" data-wt-part="' + esc(p.part) + '"' + (busy ? " disabled" : "") + ">" + esc(tr("Fetch")) + "</button>") + "</div>" +
++        (bad.length ? '<ul class="wt-rows">' + bad.map(function (r) {
++          return '<li class="wt-row"><span class="wt-st is-' + esc(r.state) + '">' + esc(tr(r.state)) + '</span><code translate="no">' + esc(r.text) + "</code></li>";
++        }).join("") + "</ul>" : "") + "</div>";
++    }).join("");
++    var all = $("wtFetch");
++    all.hidden = !d.script || (!!d.last && parts().every(whole));
++    all.disabled = busy;
++    $("wtCheck").disabled = busy || !d.script;
++    $("wtExtras").innerHTML = (d.extras || []).map(function (e) {
++      var pick = S.pick[e.name] || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;
++      var v = e.variants.filter(function (x) { return x.id === pick; })[0] || e.variants[0];
++      return '<div class="wt-extra" data-extra="' + esc(e.name) + '"><div class="wt-x-name"><b>' + esc(tr(e.label)) + "</b><span>" + esc(tr(e.what)) + "</span></div>" +
++        '<select data-wt-pick="' + esc(e.name) + '" aria-label="' + esc(tr(e.label)) + '">' + e.variants.map(function (x) {
++          return '<option value="' + esc(x.id) + '"' + (x.id === v.id ? " selected" : "") + ">" + esc((x.label || x.id) + " · " + x.size + (x.here ? " · " + tr("here") : "")) + "</option>";
++        }).join("") + "</select>" +
++        '<button type="button" class="btn ghost small" data-wt-extra="' + esc(e.name) + '"' + (busy || v.here || !d.script ? " disabled" : "") + ">" + esc(tr(v.here ? "Here" : "Fetch")) + "</button></div>";
++    }).join("");
++    paintLog(job());
++    var j = job();
++    $("wtRestart").hidden = !(j && j.status !== "running" && j.restart);
++  }
++  function paintLine(d) {
++    var el = $("wtLine"), j = d.job, txt, cls = "";
++    if (!d.script) txt = tr("This tree has no heresy/fetch-heresy.sh: nothing to check or fetch from here.");
++    else if (j && j.status === "running") {
++      var phase = j.kind === "check" ? tr("checking") : j.checking ? tr("checking what is here after it") : tr("fetching");
++      txt = cap(tr(j.what)) + ": " + phase + "… " + dur(d.now - j.started) +
++        (j.written >= 1048576 ? " · " + tr("the disk has {0} less free than when it began").replace("{0}", gb(j.written)) : "");
++    } else if (j && j.kind === "fetch") {
++      var c = j.counts || {};
++      txt = tr("{0}: {1} fetched, {2} failed, in {3}.").replace("{0}", cap(tr(j.what))).replace("{1}", c.fetched || 0).replace("{2}", c.failed || 0).replace("{3}", dur(j.ended - j.started)) +
++        (j.restart ? " " + tr("The engine lists a new backbone, decoder or slider at its next start.") : "");
++      cls = c.failed || j.status === "failed" ? "is-bad" : "is-good";
++    } else if (d.last && d.last.counts) {
++      var n = d.last.counts;
++      txt = tr("The last {0} ({1}): {2} here, {3} missing, {4} failed.").replace("{0}", tr(d.last.mode === "check" ? "check" : "fetch")).replace("{1}", when(d.last.at))
++        .replace("{2}", n.here).replace("{3}", n.missing).replace("{4}", n.failed) + (n.unknown ? " " + tr("{0} unknown: the pinned file list could not be read (offline?).").replace("{0}", n.unknown) : "");
++    } else txt = tr("No check has run here yet: Check again says what is here.");
++    el.textContent = txt;
++    el.className = "upd-line wt-line " + cls;
++  }
++  function paintLog(j) {
++    var el = $("wtLog");                  // a run's words while it goes, and a fetch's after it (a check's verdicts are the parts)
++    el.hidden = !(j && j.lines && j.lines.length && (j.status === "running" || j.kind === "fetch"));
++    if (el.hidden) return;
++    var stick = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
++    el.innerHTML = j.lines.map(function (l) {
++      var m = /^(\w+)(\s+)(.*)$/.exec(l);
++      return m && STATES[m[1]] ? '<span class="wt-st is-' + m[1] + '">' + m[1] + "</span>" + m[2] + esc(m[3]) : esc(l);
++    }).join("\n");
++    if (stick || running()) el.scrollTop = el.scrollHeight;
++  }
++
++  function start(body, ask, ok) {
++    if (running()) return;
++    return window.HeresyDialog.confirm(ask, { ok: ok || tr("Fetch") }).then(function (yes) {
++      if (!yes) return;
++      return lab("/weights/fetch", body).then(function (d) { take(d); schedule(); });
++    }).catch(function (e) { toast(tr("Not fetched:") + " " + e.message, "bad"); });
++  }
++  var HOW = "Each file comes at the revision the release pins and is checked against its size; a download cut short goes on where it stopped.";
++  function fetchPart(name) {
++    var p = parts().filter(function (x) { return x.part === name; })[0];
++    if (!p) return;
++    start({ part: name }, tr("Fetch {0}?").replace("{0}", tr(p.label)) + "\n\n" + tr("About {0}.").replace("{0}", p.size) + " " + tr(HOW));
++  }
++  function fetchAll() {
++    var need = parts().filter(function (p) { return !whole(p); });
++    var list = need.length ? need.map(function (p) { return "· " + tr(p.label) + " (" + p.size + ")"; }).join("\n") : tr("Everything the install brings that is not here.");
++    start({ part: "missing" }, tr("Fetch what is missing?") + "\n\n" + list + "\n\n" + tr(HOW));
++  }
++  var AFTER = { backbone: "The engine lists it at its next start; Compute then offers it.",
++                listener: "The Trainer's listener hears a set's songs with it; a GGUF one needs llama.cpp built in vendor/llama.cpp (the fetch says how).",
++                artwork: "The Artist paints with it.",
++                trainer: "The Trainer starts from it." };
++  function fetchExtra(name) {
++    var e = ((S.data && S.data.extras) || []).filter(function (x) { return x.name === name; })[0];
++    if (!e) return;
++    var id = S.pick[name] || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;
++    var v = e.variants.filter(function (x) { return x.id === id; })[0];
++    if (!v || v.here) return;
++    var body = {};
++    body[name] = v.id;
++    start(body, tr("Fetch {0}: {1} ({2})?").replace("{0}", tr(e.label)).replace("{1}", v.label || v.id).replace("{2}", v.size) +
++      (v.note ? "\n\n" + tr(v.note.charAt(0).toUpperCase() + v.note.slice(1)) + "." : "") + "\n\n" + tr(AFTER[name] || "") + " " + tr(HOW));
++  }
++  function check() {
++    if (running()) return;
++    return lab("/weights/check", {}).then(function (d) { take(d); schedule(); })
++      .catch(function (e) { toast(tr("Not checked:") + " " + e.message, "bad"); });
++  }
++  // the engine reads its backbones, decoders and sliders when it starts: a restart where it runs as a service, else said how
++  function restart() {
++    return window.HeresyDialog.confirm(tr("Restart the engine?") + "\n\n" + tr("It then lists what came; the page reconnects by itself. Nothing may be rendering."), { ok: tr("Restart") })
++      .then(function (yes) {
++        if (!yes) return;
++        return lab("/studio/restart", {}).then(function () {
++          toast(tr("The engine restarts…"));
++          var tries = 0;
++          (function wait() {
++            setTimeout(function () {
++              fetch("/hardware").then(function (r) { if (!r.ok) throw new Error(); toast(tr("The engine is back"), "good"); if (S.hooks.props) S.hooks.props(); })
++                .catch(function () { if (++tries < 60) wait(); });
++            }, 2000);
++          })();
++        });
++      }).catch(function (e) {
++        toast(/as a service/.test(e.message) ? tr("The studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.")
++          : tr("Not restarted:") + " " + e.message, "bad");
++      });
++  }
++
++  function init(hooks) {
++    S.hooks = hooks || {};
++    var card = $("modelsCard");
++    if (!card) return;
++    card.addEventListener("click", function (e) {
++      var b = e.target.closest("button");
++      if (!b || b.disabled) return;
++      if (b.dataset.wtPart) fetchPart(b.dataset.wtPart);
++      else if (b.dataset.wtExtra) fetchExtra(b.dataset.wtExtra);
++      else if (b.id === "wtFetch") fetchAll();
++      else if (b.id === "wtCheck") check();
++      else if (b.id === "wtRestart") restart();
++    });
++    card.addEventListener("change", function (e) {
++      var s = e.target.closest("select[data-wt-pick]");
++      if (!s) return;
++      S.pick[s.dataset.wtPick] = s.value;
++      paint();
++    });
++    window.addEventListener("ruach-lang", paint);
++  }
++  window.HeresyWeights = { init: init, load: load, state: function () { return { data: S.data, running: running(), pick: S.pick }; } };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index b58ee60..942fdf4 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -362,6 +362,24 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <ul class="lora-list slider-list" id="sliderCard"></ul>
+     </div>
+ 
++    <!-- HERESY 1289 (Viktor 10.10.2026: «И нужно в Engine добавить докачку моделей и LoRA»): what the install brings, part by part,
++         as its last whole run found it; a part not whole fetched again from here (a download cut short goes on where it stopped);
++         the extras each asked with its size (heresy-weights.js over the lab's weights.py, which runs heresy/fetch-heresy.sh) -->
++    <div class="card wide eg-models" id="modelsCard">
++      <h3>Models and LoRAs <span class="info" tabindex="-1" role="img" aria-label="About models and LoRAs" data-tip="What the studio downloads beside itself: the decoders and the sliders, Whisper, the stems' models, UniverSR and the LoRAs, which the install brings, and the extras you ask for. Each file comes from Hugging Face at the revision the release pins and is checked against its size; a download cut short goes on where it stopped. Nothing is downloaded until you press Fetch."></span></h3>
++      <p class="upd-line wt-line" id="wtLine">Asking the lab…</p>
++      <h4 class="lora-sub">What the install brings</h4>
++      <div class="wt-parts" id="wtParts"></div>
++      <h4 class="lora-sub">More models</h4>
++      <div class="wt-extras" id="wtExtras"></div>
++      <pre class="wt-log" id="wtLog" hidden translate="no"></pre>
++      <div class="card-actions">
++        <button type="button" class="btn ghost small" id="wtRestart" hidden data-tip="The engine reads its backbones, decoders and sliders when it starts">Restart the engine</button>
++        <button type="button" class="btn ghost small" id="wtCheck" data-tip="Compare what is here with the pinned lists again; nothing is downloaded">Check again</button>
++        <button type="button" class="btn primary small" id="wtFetch" hidden>Fetch what is missing</button>
++      </div>
++    </div>
++
+ 
+     <!-- credits: upstream project names, not paths (build-page.sh's folder-name guard skips this block) -->
+     <!-- HERESY 1169 (Viktor 07.10.2026: «проверка на обновления — раз в сутки, неделю, месяц, никогда, кнопка "проверить сейчас"…
+@@ -1869,6 +1887,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ <script src="heresy-dialog.js"></script>
+ <script src="heresy-updates.js"></script>
+ <script src="heresy-places.js"></script>
++<script src="heresy-weights.js"></script>
+ <script src="heresy-gpulive.js"></script>
+ <script src="heresy-settings.js"></script>
+ <script src="heresy-i18n.js"></script>
+-- 
+2.43.0
+

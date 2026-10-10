@@ -15,23 +15,35 @@
 #   heresy/fetch-heresy.sh --trainer bf16|int8 [--yes]
 #                                      also the base for the studio's own LoRA trainer (lab/trainer), asked first
 #                                      with its size; bf16 trains on unquantized weights, int8 on a smaller card
+#   heresy/fetch-heresy.sh --backbone BF16|Q8_0|Q6_K|Q5_K_M [--yes]
+#                                      also another YuE2 backbone beside the one the install took for the card, asked
+#                                      first with its size (HERESY 1285: BF16 where a 16 GB card took Q8_0)
+#   heresy/fetch-heresy.sh --only extras,whisper,stems,upscale,loras
+#                                      HERESY 1289: those parts of what the install brings, the others left alone; with
+#                                      none, only what the options above ask for (the Engine's Models card fetches so)
+#
+# The LoRAs come too: the Kit's library (tools/download-loras.sh, 11 adapters from 8 repos) and the studio's own
+# (heresy/fetch-ruach-loras.py: six voices, the duduk and the shofar), under the names the 💎 sets' takes use.
 #
 # Hugging Face repos come at the revisions in heresy/hf-revisions.txt (the Kit's tools/hf-revisions.txt
 # for those it pins too), through the Kit's own pinned downloader (tools/hf-env.sh, in .venv), and
 # count as here only when every file has the pinned revision's size (tools/hf_expect.py): a downloader
 # that says "done" is not proof, and neither is one file being there.
+# The legacy and blend decoders and the sliders come converted, from goldhub/Ruach_Studio_Models_v2 (HERESY 1290): no checkpoints.
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
     --listener) LISTENER="${2:-}"; shift ;;
     --trainer) TRAINER="${2:-}"; shift ;;
+    --backbone) BACKBONE="${2:-}"; shift ;;
+    --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
-    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --artwork, --artwork-q8, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --artwork, --artwork-q8, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -41,12 +53,34 @@ G=$'\e[1;32m' Y=$'\e[1;33m' R=$'\e[1;31m' D=$'\e[2m' X=$'\e[0m'
 if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G="" Y="" R="" D="" X=""; fi
 have=0; odd=0; got=0; miss=0; failed=0; unknown=0
 
-say_here() { echo "${G}here${X}      $1 ${D}$2${X}"; have=$((have+1)); }
-say_odd()  { echo "${Y}differs${X}   $1 ${D}$2${X}"; odd=$((odd+1)); }
-say_miss() { echo "${Y}missing${X}   $1 ${D}$2${X}"; miss=$((miss+1)); }
-say_got()  { echo "${G}fetched${X}   $1 ${D}$2${X}"; got=$((got+1)); }
-say_unknown() { echo "${Y}unknown${X}   $1 ${D}$2${X}"; unknown=$((unknown+1)); }
-say_fail() { echo "${R}failed${X}    $1 ${D}$2${X}"; failed=$((failed+1)); }
+say_here() { echo "${G}here${X}      $1 ${D}$2${X}"; have=$((have+1)); note here "$1" "$2"; }
+say_odd()  { echo "${Y}differs${X}   $1 ${D}$2${X}"; odd=$((odd+1)); note differs "$1" "$2"; }
+say_miss() { echo "${Y}missing${X}   $1 ${D}$2${X}"; miss=$((miss+1)); note missing "$1" "$2"; }
+say_got()  { echo "${G}fetched${X}   $1 ${D}$2${X}"; got=$((got+1)); note fetched "$1" "$2"; }
+say_unknown() { echo "${Y}unknown${X}   $1 ${D}$2${X}"; unknown=$((unknown+1)); note unknown "$1" "$2"; }
+say_fail() { echo "${R}failed${X}    $1 ${D}$2${X}"; failed=$((failed+1)); note failed "$1" "$2"; }
+
+# HERESY 1285 (Viktor 09.10.2026, his first install through Pinokio: «Некоторые вещи не скачались. Смотри в логе»): a download
+# that fails says why (the downloader's last words, not only «failed»), and is tried once more after half a minute: a burst of
+# requests earns a 429 from Hugging Face, and on his laptop every repo after the sliders' thousand files failed at once
+mkdir -p "$ROOT/tmp"; LOG="$ROOT/tmp/fetch-heresy.last.log"
+
+# HERESY 1289 (Viktor 10.10.2026: «И нужно в Engine добавить докачку моделей и LoRA»): each part of what the install brings says
+# its name for --only; a whole run (an install's too) keeps its verdicts in tmp/fetch-heresy.list, a line each (the verdict, what,
+# its words, tab-separated; a part's line starts with ##), put in place only when the run is over: the Engine's Models card shows
+# the last whole run at once, asking no one, and fetches a part at a time
+want() { [ -z "$ONLY" ] || [[ "$ONLY" == *",$1,"* ]]; }
+LIST=""; [ -z "$ONLY" ] && LIST="$ROOT/tmp/fetch-heresy.list.part" && : >"$LIST"
+note() { [ -n "$LIST" ] && printf '%s\t%s\t%s\n' "$1" "$2" "$3" >>"$LIST"; return 0; }
+part() { echo; echo "$2 ${D}(--only $1)${X}"; note "##" "$1" "$2"; }    # a part of what the install brings
+asked() { echo; echo "$2"; note "##" "$1" "$2"; }                         # what an option asks for
+why() { grep -av "^[[:space:]]*$" "$LOG" 2>/dev/null | grep -aviE "it/s|%\||Fetching [0-9]+ files|Download complete|Moving file|Downloading" | tail -2 | tr '\n' ' ' | cut -c1-260; }
+again() {   # again CMD…: run into $LOG; once more after 30 s when it fails
+  "$@" >"$LOG" 2>&1 && return 0
+  echo "${D}          failed once ($(why)); once more in 30 s${X}"
+  sleep 30
+  "$@" >"$LOG" 2>&1
+}
 
 # the Kit's machinery: pinned downloader, caches in tmp/, hf_complete (sizes against the pinned list)
 # --check downloads no weights; it may cache a pinned revision's file list in tmp/hf/expect (a few KB)
@@ -68,12 +102,16 @@ hf_repo() {
     hf_complete "$repo" "$rev" "$dir" "$@" >/dev/null 2>&1; rc=$?
     # 0 complete · 1 something differs · 2 the expected list could not be read (offline): not a verdict
     case $rc in 0) state=here ;; 1) state=differs ;; *) state=unknown ;; esac
+    # HERESY 1285: a folder our own download began at this very revision is unfinished, not someone's other copy: it goes on
+    # (the downloader keeps each file's revision under .cache/huggingface/download)
+    [ "$state" = differs ] && grep -rqs -- "$rev" "$dir/.cache/huggingface/download" && state=partial
   fi
   case "$state:$MODE" in
     here:*)        say_here "$dir" "$tag"; return ;;
     unknown:*)     say_unknown "$dir" "$tag — the pinned file list could not be read (offline?); kept"; return ;;
     differs:check|differs:fetch) say_odd "$dir" "$tag — kept; not the pinned copy (--replace fetches it)"; return ;;
     missing:check) say_miss "$dir" "$tag"; return ;;
+    partial:check) say_miss "$dir" "$tag — unfinished: a fetch goes on from there"; return ;;
   esac
   hf_ready >/dev/null || { say_fail "$dir" "(the pinned downloader would not install: tools/hf-env.sh)"; return; }
   if [ "$state" = differs ]; then          # --replace: the old copy steps aside whole, nothing of it mixes in
@@ -81,8 +119,35 @@ hf_repo() {
     mkdir -p "$ROOT/tmp/replaced" && mv "$dir" "$aside" && echo "${D}          the old copy → ${aside#"$ROOT"/} (delete it when the new one works)${X}"
   fi
   mkdir -p "$dir"
-  "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$dir" "$@" >/dev/null 2>&1
-  if hf_complete "$repo" "$rev" "$dir" "$@" >/dev/null 2>&1; then say_got "$dir" "$tag"; else say_fail "$dir" "$tag"; fi
+  again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$dir" "$@"
+  if hf_complete "$repo" "$rev" "$dir" "$@" >/dev/null 2>&1; then say_got "$dir" "$tag"; else say_fail "$dir" "$tag: $(why)"; fi
+}
+
+# --- files of a repo laid out as the studio's own folders, straight into place:  hf_into WHAT REPO INCLUDE…
+# HERESY 1290: what is missing comes (the downloader keeps a file that matches the pin, by its SHA-256); a file here that differs
+# from the pin is kept, as hf_repo keeps a folder (--replace sets it aside into tmp/replaced/ and fetches the pinned one)
+hf_into() {
+  local what=$1 repo=$2 rev out rc wrong; shift 2; rev=$(pin "$repo")   # wrong, not odd: say_odd counts in the global odd
+  local tag="($repo @ ${rev:0:7})"; [ "$rev" = main ] && tag="($repo @ main: not pinned)"
+  out=$(hf_complete "$repo" "$rev" "$ROOT" --include "$@" 2>&1); rc=$?
+  case $rc in
+    0) say_here "$what" "$tag"; return ;;
+    2) say_unknown "$what" "$tag — the pinned file list could not be read (offline?)"; return ;;
+  esac
+  wrong=$(printf '%s\n' "$out" | sed -n 's/^[[:space:]]*\(.*\): [0-9]* bytes, expected [0-9]* (incomplete or wrong)$/\1/p')
+  if [ $MODE = check ]; then say_miss "$what" "$tag: $(printf '%s\n' "$out" | head -1 | sed 's/^[^:]*: //')"; return; fi
+  if [ -n "$wrong" ] && [ $MODE != replace ]; then
+    say_odd "$what" "$tag — kept: $(printf '%s\n' "$wrong" | wc -l | tr -d ' ') here differ from the pin, the first $(printf '%s\n' "$wrong" | head -1) (--replace fetches them)"
+    return
+  fi
+  if [ -n "$wrong" ]; then
+    local aside="$ROOT/tmp/replaced/$(date +%Y%m%d-%H%M%S)" f
+    while IFS= read -r f; do mkdir -p "$aside/$(dirname "$f")" && mv "$ROOT/$f" "$aside/$f"; done <<< "$wrong"
+    echo "${D}          the old copies → ${aside#"$ROOT"/} (delete them when the new ones work)${X}"
+  fi
+  hf_ready >/dev/null || { say_fail "$what" "(the pinned downloader would not install: tools/hf-env.sh)"; return; }
+  again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$ROOT" --include "$@"
+  if hf_complete "$repo" "$rev" "$ROOT" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
 }
 
 # --- a repo kept in a Hugging Face cache (as the lab's code loads it):  hf_cached REPO HF_HOME
@@ -98,8 +163,8 @@ hf_cached() {
     return
   fi
   hf_ready >/dev/null || { say_fail "$repo" "(the pinned downloader would not install)"; return; }
-  HF_HOME="$home" HF_HUB_CACHE="$home/hub" "$HF" download --quiet "$repo" --revision "$rev" "$@" >/dev/null 2>&1
-  if [ -d "$snap" ] && hf_complete "$repo" "$rev" "$snap" "$@" >/dev/null 2>&1; then say_got "$repo" "$tag"; else say_fail "$repo" "$tag"; fi
+  again env HF_HOME="$home" HF_HUB_CACHE="$home/hub" "$HF" download --quiet "$repo" --revision "$rev" "$@"
+  if [ -d "$snap" ] && hf_complete "$repo" "$rev" "$snap" "$@" >/dev/null 2>&1; then say_got "$repo" "$tag"; else say_fail "$repo" "$tag: $(why)"; fi
 }
 
 # --- a separation model through audio-separator (it keeps its own list; no Hugging Face pin):
@@ -111,9 +176,9 @@ sep_model() {
   if [ $MODE = check ]; then say_miss "$dir" "(audio-separator: $model)"; return; fi
   [ -x "$SEP" ] || { say_fail "$model" "(no audio-separator: lab/install-venv.sh)"; return; }
   mkdir -p "$dir"
-  "$SEP" --download_model_only -m "$model" --model_file_dir "$dir" >/dev/null 2>&1
+  again "$SEP" --download_model_only -m "$model" --model_file_dir "$dir"
   ok=1; for f in "$@"; do [ -s "$dir/$f" ] || ok=0; done
-  if [ $ok = 1 ]; then say_got "$dir" "(audio-separator: $model)"; else say_fail "$model" "→ $dir"; fi
+  if [ $ok = 1 ]; then say_got "$dir" "(audio-separator: $model)"; else say_fail "$model" "→ $dir: $(why)"; fi
 }
 
 # --- a git clone:  clone URL DIR
@@ -126,37 +191,43 @@ clone() {
 
 echo "${D}Ruach Studio · $ROOT · $MODE${X}"
 
-# The legacy and blend decoders and the 16 sliders are not published as GGUF: the Kit's
-# convert-models.sh makes them (convert-extras.py) from these checkpoints.
-echo; echo "Checkpoints for the extra decoders and the sliders (then: ./convert-models.sh)"
 # only the files that work are judged (a README that moved on is no reason to download 0.5 GB again)
 WORK=(--include "*.safetensors" "*.bin" "*.json" "*.yaml" "*.py" "*.txt")
-hf_repo m-a-p/YuE2-Vae-legacy               "$ROOT/checkpoints/YuE2-Vae-legacy"      "${WORK[@]}"
-hf_repo Mothersuperior/YuE2-Vae-merge-0.666 "$ROOT/checkpoints/YuE2-Vae-merge-0.666" "${WORK[@]}"
-hf_repo ntc-ai/yue2-particle-sliders        "$ROOT/checkpoints/particle-sliders"
-made=1
-for f in YuE2-Vae-legacy-F32.gguf YuE2-Vae-blend-F32.gguf; do [ -s "$ROOT/models/$f" ] || made=0; done
-ls "$ROOT"/sliders/*.gguf >/dev/null 2>&1 || made=0
-if [ $made = 1 ]; then say_here "legacy, blend and sliders as GGUF" "(models/, sliders/)"
-else say_miss "legacy, blend or sliders as GGUF" "→ ./convert-models.sh once the checkpoints are here"; fi
 
-echo; echo "Whisper large-v3 (CTranslate2, float16): lyrics check, karaoke timing, trim to the text"
-hf_repo Systran/faster-whisper-large-v3 "$ROOT/whisper/whisper-large-v3-ct2-float16" "${WORK[@]}"
+# HERESY 1290 (Viktor 10.10.2026: «зачем нам конвертировать модели каждый раз? Может в репо положим сконвертированные и пропишем их
+# в коде вместо тех, что ты конвертируешь каждый раз у юзера?»; «в этот goldhub/Ruach_Studio_Models_v2 у нас идёт только продакшн»):
+# the legacy and blend decoders and the 16 sliders come converted, from our models repo v2 at its pin, straight into models/ and
+# sliders/ where the engine reads them (1.3 GB, converted once: byte for byte what convert-extras.py makes from the pinned
+# checkpoints, which no install fetches any more; convert-models.sh stays for whoever wants to make them on their own machine)
+if want extras; then
+  part extras "The extra decoders and the sliders, converted once (goldhub/Ruach_Studio_Models_v2)"
+  hf_into "legacy and blend decoders, 16 sliders (models/, sliders/)" goldhub/Ruach_Studio_Models_v2 \
+          "models/YuE2-Vae-legacy-F32.gguf" "models/YuE2-Vae-blend-F32.gguf" "sliders/*"
+fi
 
-echo; echo "Stems"
-sep_model model_bs_roformer_ep_317_sdr_12.9755.ckpt "$ROOT/separation/roformer" \
-          model_bs_roformer_ep_317_sdr_12.9755.ckpt model_bs_roformer_ep_317_sdr_12.9755.yaml
-sep_model htdemucs_ft.yaml "$ROOT/separation/demucs" htdemucs_ft.yaml \
-          f7e0c4bc-ba3fe64a.th d12395a8-e57c48e6.th 92cfc3b6-ef3bcb9c.th 04573f0d-f3cf25b2.th
+if want whisper; then
+  part whisper "Whisper large-v3 (CTranslate2, float16): lyrics check, karaoke timing, trim to the text"
+  hf_repo Systran/faster-whisper-large-v3 "$ROOT/whisper/whisper-large-v3-ct2-float16" "${WORK[@]}"
+fi
 
-echo; echo "Upscale: UniverSR"
-hf_cached woongzip1/universr-audio "$ROOT/hf_cache" "${WORK[@]}"
-clone https://github.com/woongzip1/UniverSR.git "$ROOT/vendor/UniverSR"
+if want stems; then
+  part stems "Stems"
+  sep_model model_bs_roformer_ep_317_sdr_12.9755.ckpt "$ROOT/separation/roformer" \
+            model_bs_roformer_ep_317_sdr_12.9755.ckpt model_bs_roformer_ep_317_sdr_12.9755.yaml
+  sep_model htdemucs_ft.yaml "$ROOT/separation/demucs" htdemucs_ft.yaml \
+            f7e0c4bc-ba3fe64a.th d12395a8-e57c48e6.th 92cfc3b6-ef3bcb9c.th 04573f0d-f3cf25b2.th
+fi
+
+if want upscale; then
+  part upscale "Upscale: UniverSR"
+  hf_cached woongzip1/universr-audio "$ROOT/hf_cache" "${WORK[@]}"
+  clone https://github.com/woongzip1/UniverSR.git "$ROOT/vendor/UniverSR"
+fi
 
 # HERESY 1079: the style listener, only when asked for, and asked again with its size: a download of 7 to 22 GB
 # is never a surprise (Viktor: a user may be on a metered link). Peaks measured 02.10.2026 on a 120 s excerpt.
 if [ -n "$LISTENER" ]; then
-  echo; echo "The style listener: Qwen2.5-Omni-7B ($LISTENER)"
+  asked listener "The style listener: Qwen2.5-Omni-7B ($LISTENER)"
   # HERESY 1077b: every GGUF with mradermacher's Q8_0 audio projector (1.5 GB): the ladder measured 02.10.2026
   # heard the same tags from Q8_0 down to Q4_K_M with it as with the f16 one (2.6 GB), a GB less and twice as fast
   OMNI="$ROOT/checkpoints/Qwen2.5-Omni-7B-GGUF"      # (not G: that one is the green of the output)
@@ -202,7 +273,7 @@ fi
 if [ $ARTWORK = 1 ]; then
   BIG=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | sort -n | tail -1); BIG=${BIG:-0}
   if [ "$BIG" -ge 16000 ] 2>/dev/null; then
-    echo; echo "Artwork: Krea 2 Muse (a card of ${BIG} MB here), its text encoder and VAE, the content filter, the prompt writer"
+    asked artwork "Artwork: Krea 2 Muse (a card of ${BIG} MB here), its text encoder and VAE, the content filter, the prompt writer"
     K_MUSE="$ROOT/artwork/Krea-2-Muse"; K_TURBO="$ROOT/artwork/Krea-2-Turbo"
     K_WANT=("artwork/Krea-2-Muse/museByStableYogi_v35Q4Extended.gguf")
     [ $ARTQ8 = 1 ] && K_WANT+=("artwork/Krea-2-Muse/museByStableYogi_v35Q8Extended.gguf")
@@ -218,10 +289,10 @@ if [ $ARTWORK = 1 ]; then
       elif [ $MODE = check ]; then say_miss "$K_MUSE" "(goldhub/Ruach_Studio_Models)"
       else
         hf_ready >/dev/null || { say_fail "$K_MUSE" "(the pinned downloader would not install: tools/hf-env.sh)"; }
-        "$HF" download --quiet goldhub/Ruach_Studio_Models --include "${K_WANT[@]}" "artwork/Krea-2-Muse/NOTICE.txt" \
-              "artwork/Krea-2-Muse/LICENSE.pdf" "artwork/Krea-2-Turbo/*" --local-dir "$ROOT" >/dev/null 2>&1
+        again "$HF" download --quiet goldhub/Ruach_Studio_Models --include "${K_WANT[@]}" "artwork/Krea-2-Muse/NOTICE.txt" \
+              "artwork/Krea-2-Muse/LICENSE.pdf" "artwork/Krea-2-Turbo/*" --local-dir "$ROOT"
         if k_here; then say_got "$K_MUSE" "(goldhub/Ruach_Studio_Models; Krea 2 Community License: LICENSE.pdf, NOTICE.txt)"
-        else say_fail "$K_MUSE" "(goldhub/Ruach_Studio_Models)"; fi
+        else say_fail "$K_MUSE" "(goldhub/Ruach_Studio_Models: $(why))"; fi
       fi
       hf_repo Falconsai/nsfw_image_detection "$ROOT/artwork/nsfw-filter" --include "config.json" "model.safetensors" "preprocessor_config.json"
       hf_repo Qwen/Qwen3-4B-Instruct-2507 "$ROOT/artwork/Qwen3-4B-Instruct-2507" "${WORK[@]}" LICENSE
@@ -230,7 +301,7 @@ if [ $ARTWORK = 1 ]; then
   fi
 fi
 if [ $ARTWORK = 1 ] && ! [ "${BIG:-0}" -ge 16000 ] 2>/dev/null; then
-  echo; echo "Artwork: the painter and the prompt writer (SDXL: no card here has the 16 GB Krea 2 wants)"
+  asked artwork "Artwork: the painter and the prompt writer (SDXL: no card here has the 16 GB Krea 2 wants)"
   A_DIR="$ROOT/artwork/CyberRealistic-XL-v10"
   a_here() { [ -s "$A_DIR/model_index.json" ] && [ -s "$A_DIR/unet/diffusion_pytorch_model.safetensors" ]; }
   go=1
@@ -243,8 +314,8 @@ if [ $ARTWORK = 1 ] && ! [ "${BIG:-0}" -ge 16000 ] 2>/dev/null; then
     elif [ $MODE = check ]; then say_miss "$A_DIR" "(goldhub/Ruach_Studio_Models)"
     else
       hf_ready >/dev/null || { say_fail "$A_DIR" "(the pinned downloader would not install: tools/hf-env.sh)"; }
-      "$HF" download --quiet goldhub/Ruach_Studio_Models --include "artwork/CyberRealistic-XL-v10/*" --local-dir "$ROOT" >/dev/null 2>&1
-      if a_here; then say_got "$A_DIR" "(goldhub/Ruach_Studio_Models)"; else say_fail "$A_DIR" "(goldhub/Ruach_Studio_Models)"; fi
+      again "$HF" download --quiet goldhub/Ruach_Studio_Models --include "artwork/CyberRealistic-XL-v10/*" --local-dir "$ROOT"
+      if a_here; then say_got "$A_DIR" "(goldhub/Ruach_Studio_Models)"; else say_fail "$A_DIR" "(goldhub/Ruach_Studio_Models: $(why))"; fi
     fi
     # HERESY 1156 (Viktor: «на нашу модель дать рядом относительный симлинк SDXL-Artwork-Model, чтобы на этот симлинк
     # можно было бы посадить другие веса SDXL»): the studio paints with whatever SDXL this link points at. Made once,
@@ -266,7 +337,7 @@ fi
 # MERT-v2-FullSong (the Kit's tools/download-checkpoints.sh) and Mothersuperior's realaudio tokenizer head
 # (CC BY-NC 4.0, as MERT: fetched by the user from its authors, never shipped with the studio).
 if [ -n "$TRAINER" ]; then
-  echo; echo "The LoRA trainer's base: Comfy-Org/YuE2 ($TRAINER)"
+  asked trainer "The LoRA trainer's base: Comfy-Org/YuE2 ($TRAINER)"
   case "$TRAINER" in
     bf16) T_FILE=checkpoints/yue2_3b_bf16.safetensors; SIZE="7.8 GB" ;;
     int8) T_FILE=checkpoints/yue2_3b_int8_convrot.safetensors; SIZE="4.0 GB" ;;
@@ -284,7 +355,66 @@ if [ -n "$TRAINER" ]; then
   else say_miss "$ROOT/checkpoints/MERT-v2-FullSong" "→ tools/download-checkpoints.sh"; fi
 fi
 
+# HERESY 1285 (Viktor 09.10.2026: «BF16 не скачалась, потому что ты честно вычислил backbone для 16GB VRAM, но, на эту видеокарту
+# RTX5000 можно ли будет со студии докачать BF16?»): another backbone beside the one the install took, asked with its size.
+# A card of compute 7.5 (Turing: Quadro RTX, RTX 20xx) has no BF16 tensor cores: BF16 runs there, slower than Q8_0
+if [ -n "$BACKBONE" ]; then
+  case "$BACKBONE" in BF16) B_SIZE="7.2 GB" ;; Q8_0) B_SIZE="3.8 GB" ;; Q6_K) B_SIZE="2.9 GB" ;; Q5_K_M) B_SIZE="2.6 GB" ;;
+    *) echo "${R}--backbone takes BF16, Q8_0, Q6_K or Q5_K_M${X}"; exit 2 ;; esac
+  B_FILE="$ROOT/models/YuE2-3B-$BACKBONE.gguf"
+  asked backbone "The backbone YuE2-3B $BACKBONE (m-a-p's YuE2 as GGUF: Serveurperso/YuE2-GGUF)"
+  if [ -s "$B_FILE" ]; then say_here "$B_FILE" "(download-models.sh)"
+  elif [ $MODE = check ]; then say_miss "$B_FILE" "($B_SIZE: --backbone $BACKBONE fetches it)"
+  else
+    go=1
+    if [ $YES = 0 ]; then
+      CAP=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | sort -n | tail -1)
+      [ "$BACKBONE" = BF16 ] && [ "${CAP%%.*}" -lt 8 ] 2>/dev/null && echo "${Y}          this card (compute $CAP) has no BF16 tensor cores: BF16 runs, slower than Q8_0${X}"
+      printf "%s" "Download $B_SIZE? The studio's Engine (Compute) chooses between the backbones after its next start. [y/N] "
+      read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+    fi
+    if [ $go = 1 ]; then
+      if again "$ROOT/download-models.sh" --quant "$BACKBONE" && [ -s "$B_FILE" ]; then say_got "$B_FILE" "(download-models.sh, $B_SIZE)"
+      else say_fail "$B_FILE" "(download-models.sh: $(why))"; fi
+    fi
+  fi
+fi
+
+# HERESY 1285 (Viktor 09.10.2026: «LoRA пока что не скачались. Только Standard VAE»): the LoRAs the 💎 sets were made with come
+# with the install, each under the name their takes use: the Kit's library (11 adapters from 8 repos, 1.3 GB) and the studio's
+# own (goldhub/Ruach_Studio_LoRAs: six voices, the duduk and the shofar, 0.8 GB)
+if want loras; then
+  part loras "LoRAs: the Kit's library and Ruach Studio's own"
+  if [ $MODE = check ]; then
+    if "$ROOT/tools/download-loras.sh" --verify >"$LOG" 2>&1; then say_here "loras/ (the Kit's library)" "(tools/download-loras.sh)"
+    else say_miss "loras/ (the Kit's library)" "(tools/download-loras.sh: $(why))"; fi
+  else
+    if again "$ROOT/tools/download-loras.sh"; then
+      sum=$(grep -a "^loras" "$LOG" | tail -1 | sed 's/\x1b\[[0-9;]*m//g' | tr -s ' ' | cut -c7-120)
+      case "$sum" in "downloaded 0 "*) say_here "loras/ (the Kit's library)" "($sum)" ;; *) say_got "loras/ (the Kit's library)" "($sum)" ;; esac
+    else say_fail "loras/ (the Kit's library)" "(tools/download-loras.sh: $(why))"; fi
+  fi
+  OWN="$ROOT/tmp/fetch-ruach-loras.out"
+  "$HPY" "$ROOT/heresy/fetch-ruach-loras.py" $([ $MODE = check ] && echo --check) >"$OWN" 2>&1
+  grep -av "^#counts " "$OWN" | grep -av "^[[:space:]]*$"
+  # HERESY 1289: its verdicts into the list too, as the others' (the first word the verdict, the rest what and its words)
+  if [ -n "$LIST" ]; then
+    grep -av "^#counts " "$OWN" | grep -av "^[[:space:]]*$" | sed 's/\x1b\[[0-9;]*m//g' | while read -r st rest; do note "$st" "$rest" ""; done
+  fi
+  c=$(grep -a "^#counts " "$OWN" | tail -1)
+  if [ -n "$c" ]; then
+    n() { echo "$c" | grep -o "$1=[0-9]*" | cut -d= -f2; }
+    have=$((have + $(n here))); got=$((got + $(n fetched))); miss=$((miss + $(n missing))); failed=$((failed + $(n failed)))
+  else
+    say_fail "loras/ (the studio's own)" "(heresy/fetch-ruach-loras.py said nothing to count)"
+  fi
+fi
+
 echo
-echo "${D}LoRAs: tools/download-loras.sh (the Kit's library); your own go into loras/ with an entry in loras/sources.json.${X}"
+echo "${D}Your own LoRAs go into loras/, a folder each, with an entry in loras/sources.json.${X}"
 echo "here ${G}$have${X} · unknown $unknown · differs $([ $odd -gt 0 ] && echo "$Y")$odd${X} · fetched ${G}$got${X} · missing $([ $miss -gt 0 ] && echo "$Y")$miss${X} · failed $([ $failed -gt 0 ] && echo "$R")$failed${X}"
+if [ -n "$LIST" ]; then   # HERESY 1289: the run is over: its list takes the last one's place, with its counts and when
+  note "#sum" "$have $unknown $odd $got $miss $failed" "$MODE $(date +%s)"
+  mv -f "$LIST" "${LIST%.part}"
+fi
 [ $failed = 0 ]

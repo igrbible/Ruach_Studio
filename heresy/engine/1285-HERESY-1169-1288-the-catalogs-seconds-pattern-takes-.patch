@@ -1,0 +1,131 @@
+From f1845108f2e2a10bf1270d1c91c5685aac809af7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 22:08:41 -0600
+Subject: [PATCH 1285/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201288:=20the?=
+ =?UTF-8?q?=20catalogs'=20seconds=20pattern=20takes=20a=20number=20only=20?=
+ =?UTF-8?q?(his=20screenshot:=20=C2=ABThe=20studio's=20=F0=9F=92=8E=20set?=
+ =?UTF-8?q?=20c=C2=BB:=20=C2=AB{0}s=C2=BB=20took=20every=20untranslated=20?=
+ =?UTF-8?q?text=20ending=20in=20s,=20in=20all=20six=20languages),=20and=20?=
+ =?UTF-8?q?Ctrl+N=20is=20New=20song=20where=20the=20page=20is=20handed=20t?=
+ =?UTF-8?q?he=20key=20(Viktor=2009.10.2026:=20=C2=AB=D0=BC=D0=BE=D0=B6?=
+ =?UTF-8?q?=D0=BD=D0=BE=20=D0=B1=D1=83=D0=B4=D0=B5=D1=82=20=D0=B2=20=D0=9F?=
+ =?UTF-8?q?=D0=B8=D0=BD=D0=BE=D0=BA=D0=B8=D0=BE=20Ctrl+N=20=D0=B8=D1=81?=
+ =?UTF-8?q?=D0=BF=D0=BE=D0=BB=D1=8C=D0=B7=D0=BE=D0=B2=D0=B0=D1=82=D1=8C?=
+ =?UTF-8?q?=C2=BB)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            | 9 +++++++++
+ tools/console/heresy-i18n-be.js | 2 +-
+ tools/console/heresy-i18n-el.js | 2 +-
+ tools/console/heresy-i18n-es.js | 2 +-
+ tools/console/heresy-i18n-it.js | 2 +-
+ tools/console/heresy-i18n-ru.js | 2 +-
+ tools/console/heresy-i18n-uk.js | 2 +-
+ 7 files changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 8aa795e..2099350 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1508,6 +1508,15 @@
+   paintDice();
+ 
+   // A new song: everything about the song back to its default; the VAE, output and theme choices stay
++  // HERESY 1288 (Viktor 09.10.2026, the studio in Pinokio: «можно будет в Пинокио Ctrl+N использовать»): Ctrl+N is New song,
++  // in the Creator, where the page is handed the key (Pinokio's window); a browser keeps Ctrl+N for its own new window
++  document.addEventListener("keydown", function (e) {
++    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || (e.code !== "KeyN" && (e.key || "").toLowerCase() !== "n")) return;
++    e.preventDefault();
++    if (document.querySelector(".hd-back.is-on")) return;          // a question open: it is answered first
++    if (document.body.dataset.tab !== "create") setTab("create");
++    $("newSong").click();
++  });
+   function newSong() {
+     ["title", "style", "lyrics", "abc", "lmSeed", "soundSeed", "cfg"].forEach(function (id) { $(id).value = ""; });
+     setCot("full");                                   // HERESY 1169 · 1253 (Viktor 08.10.2026: «Full as the default»; 1167 had Direct)
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 471f48a..53ce7e5 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1445,7 +1445,7 @@ RuachI18n.add("be", {
+ "Set the chat server address under Engine first": "Спачатку задай адрас чат-сервера ў «Рухавіку»",
+ "No model is loaded in the chat server. Load one there; this page never loads or switches models.": "У чат-серверы не загружана мадэль. Загрузі яе там; гэтая старонка не загружае і не мяняе мадэляў.",
+ "The writer did not return usable JSON. Try again, or load another model.": "Пісьменнік не вярнуў прыдатнага JSON. Паспрабуй яшчэ раз або загрузі іншую мадэль.",
+-"{0}s": "{0} с",
++"{#0}s": "{0} с",
+ "{#0} lines": {"one": "{0} радок", "few": "{0} радкі", "many": "{0} радкоў", "other": "{0} радка"},
+ "{#0} sections": {"one": "{0} раздзел", "few": "{0} раздзелы", "many": "{0} раздзелаў", "other": "{0} раздзела"},
+ "rewritten once": "перапісана адзін раз",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 095fb13..9bc56c4 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1444,7 +1444,7 @@ RuachI18n.add("el", {
+ "Set the chat server address under Engine first": "Όρισε πρώτα τη διεύθυνση του διακομιστή συνομιλίας στη Μηχανή",
+ "No model is loaded in the chat server. Load one there; this page never loads or switches models.": "Δεν υπάρχει φορτωμένο μοντέλο στον διακομιστή συνομιλίας. Φόρτωσε ένα εκεί· αυτή η σελίδα δεν φορτώνει ούτε αλλάζει ποτέ μοντέλα.",
+ "The writer did not return usable JSON. Try again, or load another model.": "Ο συγγραφέας δεν επέστρεψε χρησιμοποιήσιμο JSON. Δοκίμασε ξανά ή φόρτωσε άλλο μοντέλο.",
+-"{0}s": "{0} s",
++"{#0}s": "{0} s",
+ "{#0} lines": {"one": "{0} γραμμή", "other": "{0} γραμμές"},
+ "{#0} sections": {"one": "{0} ενότητα", "other": "{0} ενότητες"},
+ "rewritten once": "ξαναγράφτηκε μία φορά",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index c4f185d..437b6f3 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1444,7 +1444,7 @@ RuachI18n.add("es", {
+ "Set the chat server address under Engine first": "Configura primero la dirección del servidor de chat en Motor",
+ "No model is loaded in the chat server. Load one there; this page never loads or switches models.": "No hay ningún modelo cargado en el servidor de chat. Carga uno allí; esta página nunca carga ni cambia modelos.",
+ "The writer did not return usable JSON. Try again, or load another model.": "El escritor no devolvió un JSON utilizable. Inténtalo de nuevo o carga otro modelo.",
+-"{0}s": "{0} s",
++"{#0}s": "{0} s",
+ "{#0} lines": {"one": "{0} línea", "many": "{0} líneas", "other": "{0} líneas"},
+ "{#0} sections": {"one": "{0} sección", "many": "{0} secciones", "other": "{0} secciones"},
+ "rewritten once": "reescrito una vez",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 9d41b19..07d0be4 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1444,7 +1444,7 @@ RuachI18n.add("it", {
+ "Set the chat server address under Engine first": "Imposta prima l'indirizzo del server di chat in Motore",
+ "No model is loaded in the chat server. Load one there; this page never loads or switches models.": "Nessun modello caricato nel server di chat. Caricane uno lì; questa pagina non carica né cambia mai modelli.",
+ "The writer did not return usable JSON. Try again, or load another model.": "Lo scrittore non ha restituito un JSON utilizzabile. Riprova o carica un altro modello.",
+-"{0}s": "{0} s",
++"{#0}s": "{0} s",
+ "{#0} lines": {"one": "{0} riga", "many": "{0} righe", "other": "{0} righe"},
+ "{#0} sections": {"one": "{0} sezione", "many": "{0} sezioni", "other": "{0} sezioni"},
+ "rewritten once": "riscritto una volta",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 4d76d9a..400aba0 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1452,7 +1452,7 @@ RuachI18n.add("ru", {
+ "Set the chat server address under Engine first": "Сначала задай адрес чат-сервера в «Движке»",
+ "No model is loaded in the chat server. Load one there; this page never loads or switches models.": "В чат-сервере не загружена модель. Загрузи её там; эта страница не загружает и не меняет моделей.",
+ "The writer did not return usable JSON. Try again, or load another model.": "Писатель не вернул пригодного JSON. Попробуй ещё раз или загрузи другую модель.",
+-"{0}s": "{0} с",
++"{#0}s": "{0} с",
+ "{#0} lines": { "one": "{0} строка", "few": "{0} строки", "many": "{0} строк", "other": "{0} строки" },
+ "{#0} sections": { "one": "{0} раздел", "few": "{0} раздела", "many": "{0} разделов", "other": "{0} раздела" },
+ "rewritten once": "переписано один раз",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 62c1c92..16d36f2 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1445,7 +1445,7 @@ RuachI18n.add("uk", {
+ "Set the chat server address under Engine first": "Спершу задай адресу чат-сервера в «Рушії»",
+ "No model is loaded in the chat server. Load one there; this page never loads or switches models.": "У чат-сервері не завантажено модель. Завантаж її там; ця сторінка не завантажує й не змінює моделей.",
+ "The writer did not return usable JSON. Try again, or load another model.": "Письменник не повернув придатного JSON. Спробуй ще раз або завантаж іншу модель.",
+-"{0}s": "{0} с",
++"{#0}s": "{0} с",
+ "{#0} lines": {"one": "{0} рядок", "few": "{0} рядки", "many": "{0} рядків", "other": "{0} рядка"},
+ "{#0} sections": {"one": "{0} розділ", "few": "{0} розділи", "many": "{0} розділів", "other": "{0} розділу"},
+ "rewritten once": "переписано один раз",
+-- 
+2.43.0
+

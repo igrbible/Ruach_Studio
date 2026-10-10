@@ -399,10 +399,10 @@
       '<li><b>The pictures</b><span>painted by an image model: some show an instrument not quite as it really is</span></li></ul>' +
       '<details class="hi-more"><summary>How the probes were made</summary><p>What YuE2 was asked to play, one instrument or one style at a time, ' +
       "in probes of two minutes (one minute for the first ones), two seeds each, A and B. Some probes are superb, and A and B agree, yet the " +
-      "instrument is not the one asked for. " +
+      "instrument is not the one asked for.</p><p>" +   // HERESY 1279: three paragraphs, air between them
       // HERESY 1162 (Viktor: «инструмент играет весомый вклад в формирование стиля композиции»; «потрескивание и шелест бумаги, как
       // будто на заезженной пластинке — артефакт неудачного зерна»)
-      "An instrument shapes the style of the whole piece: naming one moves the arrangement too. A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.</p></details>" +
+      "An instrument shapes the style of the whole piece: naming one moves the arrangement too.</p><p>A crackle or a rustle of paper, as on a worn record, is an unlucky seed: make it again on another.</p></details>" +
       '<div class="hi-tools"><input type="search" id="hiSearch" placeholder="Search: name, home, sound" autocomplete="off" />' +
       '<select id="hiFam" aria-label="Family"><option value="">every family</option>' +
       Object.keys(DATA.families).map(function (k) { return '<option value="' + k + '">' + esc(DATA.families[k]) + "</option>"; }).join("") + "</select>" +

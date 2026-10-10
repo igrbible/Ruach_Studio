@@ -2,7 +2,7 @@ From e1d54d7e27dfd64c55cfb4bd19ad73e6103e4a3e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Sat, 3 Oct 2026 20:40:01 -0600
-Subject: [PATCH 1122/1265] The page in Russian, whole (1166, part one): every
+Subject: [PATCH 1122/1286] The page in Russian, whole (1166, part one): every
  text the code makes, its pieces translated
 
 The code's toasts, dialogs, menus, hints and tips were English in a Russian page: 1,307 new Russian keys

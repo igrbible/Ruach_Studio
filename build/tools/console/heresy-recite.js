@@ -83,7 +83,20 @@
     return /^[a-z][a-z -]*$/.test(w) ? w.replace(/\s+/g, " ") : "verse";
   }
 
+  // HERESY 1268 (Viktor 09.10.2026, his picture of the question: «59 lines do not fit and are left out»): where eighths leave lines out
+  // and the score's unit can write a sixteenth (a native score's L:1/16), the lines are laid again a syllable a sixteenth, as rap is said,
+  // and that is offered when it leaves fewer out
   function lay(abc, lyrics, opts) {
+    opts = opts || {};
+    var r = layWith(abc, lyrics, opts);
+    if (r.dropped.length && !opts.step && r.sixteenths) {
+      var r2 = null;
+      try { r2 = layWith(abc, lyrics, Object.assign({}, opts, { step: 16 })); } catch (e) { r2 = null; }
+      if (r2 && r2.dropped.length < r.dropped.length) return r2;
+    }
+    return r;
+  }
+  function layWith(abc, lyrics, opts) {
     opts = opts || {};
     var HL = window.HeresyLyrics;
     if (!HL || !HL.syllables) fail("The lyrics' counter is not loaded");
@@ -100,6 +113,8 @@
     if (!unit) fail("The score's unit length (L:) is not one this tool reads");
     var eighth = (1 / 8) / unit;
     if (eighth < 1 || eighth !== Math.round(eighth)) fail("The score's unit (L:" + field("L") + ") is too long to write a syllable an eighth");
+    var step = opts.step === 16 ? eighth / 2 : eighth;   // HERESY 1268: a syllable's length
+    if (step < 1 || step !== Math.round(step)) fail("The score's unit (L:" + field("L") + ") is too long to write a syllable a sixteenth");
     var q = /^(\d+)\/(\d+)\s*=\s*(\d+)/.exec(field("Q") || "1/4=120"), bpm = q ? +q[3] : 120, beat = q ? +q[1] / +q[2] : 1 / 4;
     var unitSec = unit / beat * 60 / bpm;
     var meterUnits = function (text) { var m = /^M:\s*(\d+)\/(\d+)/.exec(text); return m ? (+m[1] / +m[2]) / unit : null; };
@@ -152,12 +167,12 @@
       var seq = [];
       text.split(/\s+/).filter(Boolean).forEach(function (w) {
         var n = syl(w);
-        for (var k = 0; k < n; k++) seq.push([eighth, "r"]);
-        if (n && /[.!?…]["»”)]*$/.test(w)) seq.push([2 * eighth, "z"]);
-        else if (n && /[,:;—–]["»”)]*$/.test(w)) seq.push([eighth, "z"]);
+        for (var k = 0; k < n; k++) seq.push([step, "r"]);
+        if (n && /[.!?…]["»”)]*$/.test(w)) seq.push([2 * step, "z"]);
+        else if (n && /[,:;—–]["»”)]*$/.test(w)) seq.push([step, "z"]);
       });
       while (seq.length && seq[seq.length - 1][1] === "z") seq.pop();
-      if (seq.length) seq[seq.length - 1] = [2 * eighth, "e"];
+      if (seq.length) seq[seq.length - 1] = [2 * step, "e"];
       return seq;
     };
     // the lines on the bars: a line from the start of a bar, a section on an even bar after a bar's rest
@@ -270,7 +285,8 @@
     if (lastBar + 1 < bars.length) text.push("[Outro]");
     if (/\[(?:end|END|End)\]/.test(String(lyrics))) text.push("[End]");
     return { abc: out.join("\n") + "\n", lyrics: text.join("\n\n") + "\n", lines: plan, dropped: dropped, bars: bars.length,
-             firstBar: plan[0].bar + 1, lastBar: lastBar + 1, key: key, bpm: bpm, seconds: Math.round(t), lang: lang };
+             firstBar: plan[0].bar + 1, lastBar: lastBar + 1, key: key, bpm: bpm, seconds: Math.round(t), lang: lang,
+             step: opts.step === 16 ? 16 : 8, sixteenths: eighth >= 2 && eighth % 2 === 0 };
   }
 
   // ---- the button in the form's Score card
@@ -291,7 +307,7 @@
       try {
         r = lay($("abc").value, $("lyrics").value, { vocalise: $("reciteVocalise").checked, style: ($("style") || {}).value || "" });
       } catch (e) { say(e.recite ? e.message : "The lyrics could not be laid on this score: " + e.message, true); return; }
-      var text = "Recite the lyrics on this score?\n\n" + r.lines.length + " lines on bars " + r.firstBar + "–" + r.lastBar + " of " + r.bars + " (" + r.key + ", " + r.bpm + " BPM, " + clock(r.seconds) + "): a syllable an eighth on a tone of each bar's chord, a breath after a comma and a full stop, the line's last syllable a quarter lower; the instruments, chords, key and tempo stay. The score and the lyrics in the form are replaced: Ctrl+Z in each box brings the old ones back." +
+      var text = "Recite the lyrics on this score?\n\n" + r.lines.length + " lines on bars " + r.firstBar + "–" + r.lastBar + " of " + r.bars + " (" + r.key + ", " + r.bpm + " BPM, " + clock(r.seconds) + "): " + (r.step === 16 ? "a syllable a sixteenth (as rap is said: eighths left lines out)" : "a syllable an eighth") + " on a tone of each bar's chord, a breath after a comma and a full stop, the line's last syllable " + (r.step === 16 ? "an eighth" : "a quarter") + " lower; the instruments, chords, key and tempo stay. The score and the lyrics in the form are replaced: Ctrl+Z in each box brings the old ones back." +
         (r.dropped.length ? "\n\n" + r.dropped.length + " lines do not fit and are left out, from «" + r.dropped[0].slice(0, 40) + "»." : "");
       window.HeresyDialog.confirm(text, { ok: "Recite them" }).then(function (ok) {
         if (!ok) return;

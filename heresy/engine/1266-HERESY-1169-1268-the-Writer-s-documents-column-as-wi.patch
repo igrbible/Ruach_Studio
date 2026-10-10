@@ -1,0 +1,215 @@
+From 09b8bb570dd359810355853de722d57119e37874 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 16:48:33 -0600
+Subject: [PATCH 1266/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201268:=20the?=
+ =?UTF-8?q?=20Writer's=20documents=20column=20as=20wide=20as=20its=20edge?=
+ =?UTF-8?q?=20is=20dragged=20(kept,=20=E2=86=90=20=E2=86=92,=20Home);=20no?=
+ =?UTF-8?q?=20peek=20on=20hover=20in=20the=20Librarian;=20the=20Score's=20?=
+ =?UTF-8?q?tools=20after=20its=20tabs,=20the=20full=20screen=20on=20the=20?=
+ =?UTF-8?q?row;=20the=20Writer's=20document=20in=20hand=20a=20chip=20on=20?=
+ =?UTF-8?q?its=20own=20line;=20the=20LoRA=20strength=20tip=20at=2014=20pt;?=
+ =?UTF-8?q?=20Recite=20in=20sixteenths=20where=20eighths=20leave=20lines?=
+ =?UTF-8?q?=20out?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ tools/console/app.css              | 21 +++++++++++++++++++--
+ tools/console/heresy-collection.js |  9 +++------
+ tools/console/heresy-recite.js     | 28 ++++++++++++++++++++++------
+ tools/console/heresy-writer.js     | 29 +++++++++++++++++++++++++++++
+ tools/console/index.html           |  3 +++
+ 5 files changed, 76 insertions(+), 14 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 5796c76..2f155ea 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2409,7 +2409,12 @@ body.coll-dragging .coll-peek { display: none; }
+ 
+ /* HERESY 1047: the Writer's notebook */
+ .wr-book { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 22px; }
+-@media (max-width: 1000px) { .wr-book { grid-template-columns: minmax(0, 1fr); } }
++/* HERESY 1268: the documents column as wide as its edge is dragged (the width kept in this browser) */
++.wr-book { grid-template-columns: var(--wr-side-w, 280px) 12px minmax(0, 1fr); column-gap: 4px; }
++.wr-resizer { align-self: stretch; min-height: 160px; display: flex; justify-content: center; cursor: col-resize; touch-action: none; outline: none; }
++.wr-resizer::before { content: ""; width: 2px; height: 100%; border-radius: 1px; background: transparent; transition: background .12s; }
++.wr-resizer:hover::before, .wr-resizer.is-drag::before, .wr-resizer:focus-visible::before { background: var(--line-strong-a); }
++@media (max-width: 1000px) { .wr-book { grid-template-columns: minmax(0, 1fr); } .wr-resizer { display: none; } }
+ .wr-side { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 8px; }
+ .wr-side-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+ .wr-side-bar .btn { white-space: nowrap; }   /* HERESY 1168: its buttons whole, a row more when they need it */
+@@ -4631,7 +4636,7 @@ body:not([data-frame]) .frame-fs { display: none; }
+ .hd-check.is-on .hd-item-ico { color: var(--amber); }
+ 
+ /* HERESY 1169 · 1242: a LoRA strength over the pointer while it hovers or drags its slider (16 pt), framed in its zone's colour */
+-.lora-vtip { position: fixed; z-index: 130; transform: translate(-50%, calc(-100% - 14px)); padding: 3px 10px; border: 2px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--ink); font: 600 16pt/1.25 var(--mono); white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
++.lora-vtip { position: fixed; z-index: 130; transform: translate(-50%, calc(-100% - 14px)); padding: 3px 10px; border: 2px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--ink); font: 600 14pt/1.25 var(--mono); white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+ .lora-vtip[hidden] { display: none; }
+ .lora-vtip.is-green { border-color: #3f9a4a; }
+ .lora-vtip.is-amber { border-color: #e0b030; }
+@@ -4727,3 +4732,15 @@ body[data-tab="artist"] .col-grip.left { display: none; }
+ .ar-gpic:hover .ar-star, .ar-star:focus-visible, .ar-star.is-on { opacity: 1; }
+ .ar-star.is-on, .ar-vstar.is-on { color: #f2c14e; }
+ .ar-view .ar-vstar { font-size: 18px; }
++/* HERESY 1268 (Viktor 09.10.2026: «В узкой колонке в блоке Score кнопка full screen съезжает на новую строку. Можно уменьшить пустоту
++   между кнопкой ABC и Print»): the tools follow the tabs, the gaps halved: the full screen stays on the row */
++.score-head { gap: 6px; }
++.score-head > .spacer { flex: 0 0 8px; }
++/* HERESY 1268 (Viktor 09.10.2026: «прицепка смотрится ugly. Перенеси её на строку ниже и красиво отформатируй»): the document in
++   hand on a line of its own under the Writer's row, a chip: ✎ its name, ✕ to put it down */
++.wr-hand.is-on::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
++.wr-hand.is-on .wr-hand-doc { order: 3; max-width: 100%; gap: 2px; padding: 1px 3px 1px 8px; border: 1px solid color-mix(in oklab, var(--amber) 35%, transparent);
++  border-radius: var(--r-pill, 999px); background: color-mix(in oklab, var(--amber) 6%, transparent); }
++.wr-hand-doc .wr-hand-name { padding: 2px; font-weight: 500; }
++.wr-hand-doc .wr-hand-x { padding: 2px 6px; border-radius: var(--r-pill, 999px); line-height: 1; }
++.wr-hand-doc .wr-hand-x:hover { color: var(--ink); background: color-mix(in oklab, var(--amber) 14%, transparent); }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index efd5bd7..7e8bdd4 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -1019,12 +1019,9 @@
+     // HERESY 1167 (Viktor: «задержку в пропадании на 1200ms, чтобы успеть мышкой перескочить, а при наведении разворачивать
+     // вниз»): the peek shown stays while the pointer crosses other cards on its way to it (a card rested on for 400 ms takes
+     // its place); it goes 1200 ms after the pointer leaves the cards; entered, it stays and opens downward
+-    $("collGrid").addEventListener("mouseover", function (e) {
+-      var card = e.target.closest(".coll-card[data-name]");
+-      if (!card || card.dataset.name === peekFor) return;
+-      clearTimeout(peekTimer); clearTimeout(peekHide);
+-      peekTimer = setTimeout(function () { showPeek(card); }, 400);
+-    });
++    // HERESY 1268 (Viktor 09.10.2026: «Убери из тултипа в плеере вывод промпта трека. Это лишнее. И так всё под рукой. И пройдись по
++    // таким местам и убери лишние тултипы»; his picture of the Librarian with the peek open over the cards): no peek on hover any more,
++    // the take's style and lyrics are a click away (its sheet)
+     $("collGrid").addEventListener("mouseleave", function () { clearTimeout(peekTimer); clearTimeout(peekHide); peekHide = setTimeout(hidePeek, 1200); });
+     $("collPeek").addEventListener("mouseenter", function () { clearTimeout(peekTimer); clearTimeout(peekHide); });
+     $("collPeek").addEventListener("mouseleave", function () { clearTimeout(peekHide); peekHide = setTimeout(hidePeek, 300); });
+diff --git a/tools/console/heresy-recite.js b/tools/console/heresy-recite.js
+index bba0af4..072713b 100644
+--- a/tools/console/heresy-recite.js
++++ b/tools/console/heresy-recite.js
+@@ -83,7 +83,20 @@
+     return /^[a-z][a-z -]*$/.test(w) ? w.replace(/\s+/g, " ") : "verse";
+   }
+ 
++  // HERESY 1268 (Viktor 09.10.2026, his picture of the question: «59 lines do not fit and are left out»): where eighths leave lines out
++  // and the score's unit can write a sixteenth (a native score's L:1/16), the lines are laid again a syllable a sixteenth, as rap is said,
++  // and that is offered when it leaves fewer out
+   function lay(abc, lyrics, opts) {
++    opts = opts || {};
++    var r = layWith(abc, lyrics, opts);
++    if (r.dropped.length && !opts.step && r.sixteenths) {
++      var r2 = null;
++      try { r2 = layWith(abc, lyrics, Object.assign({}, opts, { step: 16 })); } catch (e) { r2 = null; }
++      if (r2 && r2.dropped.length < r.dropped.length) return r2;
++    }
++    return r;
++  }
++  function layWith(abc, lyrics, opts) {
+     opts = opts || {};
+     var HL = window.HeresyLyrics;
+     if (!HL || !HL.syllables) fail("The lyrics' counter is not loaded");
+@@ -100,6 +113,8 @@
+     if (!unit) fail("The score's unit length (L:) is not one this tool reads");
+     var eighth = (1 / 8) / unit;
+     if (eighth < 1 || eighth !== Math.round(eighth)) fail("The score's unit (L:" + field("L") + ") is too long to write a syllable an eighth");
++    var step = opts.step === 16 ? eighth / 2 : eighth;   // HERESY 1268: a syllable's length
++    if (step < 1 || step !== Math.round(step)) fail("The score's unit (L:" + field("L") + ") is too long to write a syllable a sixteenth");
+     var q = /^(\d+)\/(\d+)\s*=\s*(\d+)/.exec(field("Q") || "1/4=120"), bpm = q ? +q[3] : 120, beat = q ? +q[1] / +q[2] : 1 / 4;
+     var unitSec = unit / beat * 60 / bpm;
+     var meterUnits = function (text) { var m = /^M:\s*(\d+)\/(\d+)/.exec(text); return m ? (+m[1] / +m[2]) / unit : null; };
+@@ -152,12 +167,12 @@
+       var seq = [];
+       text.split(/\s+/).filter(Boolean).forEach(function (w) {
+         var n = syl(w);
+-        for (var k = 0; k < n; k++) seq.push([eighth, "r"]);
+-        if (n && /[.!?…]["»”)]*$/.test(w)) seq.push([2 * eighth, "z"]);
+-        else if (n && /[,:;—–]["»”)]*$/.test(w)) seq.push([eighth, "z"]);
++        for (var k = 0; k < n; k++) seq.push([step, "r"]);
++        if (n && /[.!?…]["»”)]*$/.test(w)) seq.push([2 * step, "z"]);
++        else if (n && /[,:;—–]["»”)]*$/.test(w)) seq.push([step, "z"]);
+       });
+       while (seq.length && seq[seq.length - 1][1] === "z") seq.pop();
+-      if (seq.length) seq[seq.length - 1] = [2 * eighth, "e"];
++      if (seq.length) seq[seq.length - 1] = [2 * step, "e"];
+       return seq;
+     };
+     // the lines on the bars: a line from the start of a bar, a section on an even bar after a bar's rest
+@@ -270,7 +285,8 @@
+     if (lastBar + 1 < bars.length) text.push("[Outro]");
+     if (/\[(?:end|END|End)\]/.test(String(lyrics))) text.push("[End]");
+     return { abc: out.join("\n") + "\n", lyrics: text.join("\n\n") + "\n", lines: plan, dropped: dropped, bars: bars.length,
+-             firstBar: plan[0].bar + 1, lastBar: lastBar + 1, key: key, bpm: bpm, seconds: Math.round(t), lang: lang };
++             firstBar: plan[0].bar + 1, lastBar: lastBar + 1, key: key, bpm: bpm, seconds: Math.round(t), lang: lang,
++             step: opts.step === 16 ? 16 : 8, sixteenths: eighth >= 2 && eighth % 2 === 0 };
+   }
+ 
+   // ---- the button in the form's Score card
+@@ -291,7 +307,7 @@
+       try {
+         r = lay($("abc").value, $("lyrics").value, { vocalise: $("reciteVocalise").checked, style: ($("style") || {}).value || "" });
+       } catch (e) { say(e.recite ? e.message : "The lyrics could not be laid on this score: " + e.message, true); return; }
+-      var text = "Recite the lyrics on this score?\n\n" + r.lines.length + " lines on bars " + r.firstBar + "–" + r.lastBar + " of " + r.bars + " (" + r.key + ", " + r.bpm + " BPM, " + clock(r.seconds) + "): a syllable an eighth on a tone of each bar's chord, a breath after a comma and a full stop, the line's last syllable a quarter lower; the instruments, chords, key and tempo stay. The score and the lyrics in the form are replaced: Ctrl+Z in each box brings the old ones back." +
++      var text = "Recite the lyrics on this score?\n\n" + r.lines.length + " lines on bars " + r.firstBar + "–" + r.lastBar + " of " + r.bars + " (" + r.key + ", " + r.bpm + " BPM, " + clock(r.seconds) + "): " + (r.step === 16 ? "a syllable a sixteenth (as rap is said: eighths left lines out)" : "a syllable an eighth") + " on a tone of each bar's chord, a breath after a comma and a full stop, the line's last syllable " + (r.step === 16 ? "an eighth" : "a quarter") + " lower; the instruments, chords, key and tempo stay. The score and the lyrics in the form are replaced: Ctrl+Z in each box brings the old ones back." +
+         (r.dropped.length ? "\n\n" + r.dropped.length + " lines do not fit and are left out, from «" + r.dropped[0].slice(0, 40) + "»." : "");
+       window.HeresyDialog.confirm(text, { ok: "Recite them" }).then(function (ok) {
+         if (!ok) return;
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index dfffdb2..65fca86 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -262,6 +262,35 @@
+ 
+   function init(hooks) {
+     state.hooks = hooks;
++    // HERESY 1268 (Viktor 09.10.2026: «В комнате Писателя дай возможность регулировать ширину левой колонки со списком документов»): the
++    // documents column's edge dragged (its width kept in this browser), ← → from the keyboard, Home or a double click for its own 280 px
++    (function () {
++      var book = document.querySelector(".wr-book"), rz = $("wrResizer"), side = document.querySelector(".wr-side");
++      if (!book || !rz || !side) return;
++      var KEY = "yue2.wrSideW", MIN = 200, MAX = 640, DEF = 280;
++      function setW(w) { w = Math.max(MIN, Math.min(MAX, Math.round(w))); book.style.setProperty("--wr-side-w", w + "px"); rz.setAttribute("aria-valuenow", String(w)); return w; }
++      rz.setAttribute("aria-valuemin", String(MIN)); rz.setAttribute("aria-valuemax", String(MAX));
++      setW(parseInt(recall(KEY), 10) || DEF);
++      rz.addEventListener("pointerdown", function (e) {
++        if (e.button !== 0) return;
++        e.preventDefault();
++        rz.setPointerCapture(e.pointerId);
++        rz.classList.add("is-drag"); document.body.classList.add("is-resizing");
++        var x0 = e.clientX, w0 = side.getBoundingClientRect().width;
++        function move(ev) { setW(w0 + ev.clientX - x0); }
++        function up() {
++          rz.classList.remove("is-drag"); document.body.classList.remove("is-resizing");
++          rz.removeEventListener("pointermove", move); rz.removeEventListener("pointerup", up); rz.removeEventListener("pointercancel", up);
++          store(KEY, String(Math.round(side.getBoundingClientRect().width)));
++        }
++        rz.addEventListener("pointermove", move); rz.addEventListener("pointerup", up); rz.addEventListener("pointercancel", up);
++      });
++      rz.addEventListener("dblclick", function () { store(KEY, null); setW(DEF); });
++      rz.addEventListener("keydown", function (e) {
++        if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); store(KEY, String(setW(side.getBoundingClientRect().width + (e.key === "ArrowRight" ? 16 : -16)))); }
++        else if (e.key === "Home") { e.preventDefault(); e.stopPropagation(); store(KEY, null); setW(DEF); }
++      });
++    })();
+     $("wrSearch").addEventListener("input", function () { state.q = this.value; paintList(); });
+     $("wrList").addEventListener("click", function (e) { var b = e.target.closest("[data-doc]"); if (b) open(b.dataset.doc); });
+     $("wrNew").addEventListener("click", function () {
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 01eee2b..a497364 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1047,6 +1047,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <input type="search" id="wrSearch" placeholder="Search all four parts · * and ?" autocomplete="off" />
+         <div class="wr-list" id="wrList"></div>
+       </aside>
++      <!-- HERESY 1268 (Viktor 09.10.2026: «В комнате Писателя дай возможность регулировать ширину левой колонки со списком документов») -->
++      <div class="wr-resizer" id="wrResizer" role="separator" aria-orientation="vertical" tabindex="0"
++           aria-label="The documents column: drag to widen; ← → from the keyboard; Home or a double click for its own width"></div>
+       <div class="wr-main">
+         <p class="row-hint wr-none" id="wrEmpty">Pick a document, or start one. A document is a title, STYLE, LYRICS, NOTES and PARAMS; it remembers its versions and the takes made from it.</p>
+         <div class="wr-doc" id="wrDoc" hidden>
+-- 
+2.43.0
+

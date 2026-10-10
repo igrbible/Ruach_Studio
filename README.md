@@ -49,7 +49,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
   <img src="docs/guide/studio-create.png" alt="Ruach Studio: the song form, the take you are listening to, and every take" width="100%">
 </p>
 
-Around the model there is a whole studio of five rooms: the **Creator** makes the song, the **Writer** writes it with a chat model, the **Refiner** finishes it, the **Librarian** keeps every take, and the **LoRA Trainer** teaches YuE2 your own songs with its own trainer.
+Around the model there is a whole studio of six rooms: the **Creator** makes the song, the **Writer** writes it with a chat model, the **Refiner** finishes it, the **Artist** paints its pictures, the **Librarian** keeps every take, and the **LoRA Trainer** teaches YuE2 your own songs with its own trainer.
 
 **The full guide, room by room, is inside the studio** (the **?** in the bar) and here: [docs/GUIDE.md](docs/GUIDE.md).
 
@@ -62,10 +62,13 @@ Around the model there is a whole studio of five rooms: the **Creator** makes th
   </tr>
   <tr>
     <td width="50%"><img src="docs/guide/studio-post.png" alt="Refiner"><br><sub><b>Refiner</b>: spectrum, artifacts, debuzz, a lyrics check by Whisper, stems, remaster, upscale; a chain runs them in one go</sub></td>
-    <td width="50%"><img src="docs/guide/studio-collection.png" alt="Librarian"><br><sub><b>Librarian</b>: every take in workspaces, searched, liked, noted, locked, exported; the heading counts what the open collection holds</sub></td>
+    <td width="50%"><img src="docs/guide/studio-artist.png" alt="Artist"><br><sub><b>Artist</b>: pictures for your songs from a prompt of your own, square, wide and tall from one seed; the run develops on the stage, a square picture becomes the take's cover (an early preview)</sub></td>
   </tr>
   <tr>
+    <td width="50%"><img src="docs/guide/studio-collection.png" alt="Librarian"><br><sub><b>Librarian</b>: every take in workspaces, searched, liked, noted, locked, exported; the heading counts what the open collection holds</sub></td>
     <td width="50%"><img src="docs/guide/studio-train.png" alt="LoRA Trainer"><br><sub><b>LoRA Trainer</b>: LoRA adapters from your own songs: the set, the run, both halves' curves explained, the epochs worth hearing first</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/guide/studio-engine.png" alt="Engine"><br><sub><b>Engine</b>: the model, memory, which card does what, decoders, adapters, the writer's model, the look, the log</sub></td>
   </tr>
 </table>
@@ -162,7 +165,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | yt-dlp | the audio of long recordings for instrument sets |
 | [UniverSR](https://github.com/woongzip1/UniverSR) (cloned at its tested commit) | upscale |
 
-**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras; sizes, sources and licences in the models card, `heresy/docs/hf-models-README.md`):
+**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras; sizes, sources and licences in the models card, `heresy/docs/hf-models-README.md`; the legacy and blend decoders and the sliders come converted, from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2)):
 
 | | what for | licence |
 |---|---|---|
@@ -177,7 +180,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | CyberRealistic XL v10 (SDXL) and Qwen3-4B-Instruct-2507 · extra | the artwork of a take | CreativeML Open RAIL++-M · Apache-2.0 |
 | YuE2-3B for training (bf16 or int8) · extra | the LoRA trainer | CC BY-NC 4.0 |
 
-**In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC) and the logo's words (Montserrat, SIL OFL, as paths) are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **From the internet, when the page can reach it:** [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, from cdnjs.cloudflare.com, and the fonts (Noto Sans and Noto Sans Mono by default; IBM Plex Sans and Mono, Bodoni Moda, Michroma and Space Grotesk to choose from; SIL OFL) from Google Fonts.
+**In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Noto Sans and Noto Sans Mono by default; IBM Plex Sans and Mono, Bodoni Moda, Michroma, Space Grotesk, Raleway, Roboto and Lato to choose from; SIL OFL) are served by the lab from `lab/fonts/`. The page loads no script, stylesheet or font from the internet.
 
 **Optional:** a chat server for the Writer (vLLM, LM Studio or Ollama on your machine) or OpenRouter (the cloud, your key); a DAW (above); `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`).
 
@@ -220,15 +223,27 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **Fewer tips**: none repeats what the screen already says.
 - **The cards live**: each card's load and memory second by second, under it in Engine → GPUs and beside the server log, the studio's card framed.
 
-### To Do › rc4 and After
+### Done › 2.0.0-rc4 (October 2026)
 
-2.0.0-rc3 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+- **The models converted once**: the legacy and blend decoders and the sixteen sliders come as GGUF from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2), so nothing is converted on your machine and no checkpoints are fetched.
+- **Engine → Models and LoRAs**: what the install brings, part by part, here or not, fetched again from the studio (a download cut short goes on where it stopped), and the extras each asked with its size.
+- **Engine → Folders**: the songs, the trash, the Artist's pictures and the Writer's documents moved to any disk from the page, checked file by file.
+- **The downloads made whole**: a failure says why and is tried again, the LoRAs come with the install, BF16 beside Q8_0 from Pinokio's More models.
+- **The Artist in three columns**: the prompt, the picture as it develops with its run's data, the gallery in even tiles; Stop while it draws.
+- **Find and replace** in the lyrics and the style (F4 or Ctrl+H), the lyrics as a `.txt` named by the Title, a second tag on a line, ♂ and ♀ in the Style.
+- **The player**: the take's menu on its wave, the sections on the wave, a sound when a run ends.
+- **Nothing from the internet in the page**: abcjs and ten font families served by the studio itself; Ctrl+S, Ctrl+N and F5 that keep your work.
 
-- **The Artist room, the rest of it**: three columns as wide as you drag them (the prompt, the picture as it develops with its run's data, the gallery), Stop while it draws, a reference picture to start from, repainting and outpainting on a canvas, several LoRA adapters at once, an upscale, Qwen Image as a second painter, the title and the artist written on the cover, the versions of each take's picture.
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### To Do › rc5 and After
+
+2.0.0-rc4 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+
+- **The Artist room, the rest of it**: a reference picture to start from, repainting and outpainting on a canvas, several LoRA adapters at once, an upscale, Qwen Image as a second painter, the title and the artist written on the cover, the versions of each take's picture.
 - **Five more languages** for the page: Chinese, French, Portuguese, German and Japanese. Right-to-left languages (Arabic, Hebrew, Urdu) come once the page itself runs right to left.
 - **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its services itself (Ctrl+1…6 for the rooms there), packed as an **AppImage**: the studio, its Python and its CUDA libraries in one file, the models fetched at the first start, and the models and the songs kept wherever you choose on your disk.
 - **Pinokio on Windows 11**: the launcher runs on Linux now; on Windows its steps will run inside WSL2, the path of INSTALL_WINDOWS.md (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)).
-- **Where your work lives, chosen in the Engine**: the songs, the trash, the pictures and the Writer's documents moved to another disk from the page (the lab knows them already: [CHANGELOG](CHANGELOG.md)).
 - **A score editor as a DAW has one**: a piano roll, a chord lane, the lyrics over the notes, sections copied and moved, a MIDI keyboard to play ideas in; [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System) (Apache-2.0) shows the way.
 - **The interface's new words in all seven languages**: what came since rc1 is in English until the pass before 2.0.0.
 - **Native plugins** for REAPER, Waveform and Bitwig, once the studio has found its people.

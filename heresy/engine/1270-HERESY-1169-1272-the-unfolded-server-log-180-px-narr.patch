@@ -1,0 +1,34 @@
+From bd8a67baef7159ae9f053888fc6fc543dd9198f2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 17:50:22 -0600
+Subject: [PATCH 1270/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201272:=20the?=
+ =?UTF-8?q?=20unfolded=20server=20log=20180=20px=20narrower=20with=20its?=
+ =?UTF-8?q?=20cards=20(720=20px,=20tall=20980)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ tools/console/app.css | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index e5845e3..67c632d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3136,8 +3136,9 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+    200-400px, В две колонки… главная карта особо обрамлена. Пометки над блоками графов — какая роль карты»): the cards live. Beside the
+    log the dock grows 300 px for a column of the cards with a role (none without a card: then it keeps its width); in Engine → GPUs a
+    row under each card. The bars: the load above, the memory below, a second each, two minutes wide. */
+-.log-dock.has-gpus:not(.is-folded) { width: min(900px, calc(100vw - 32px)); }
+-.log-dock.has-gpus.is-tall { width: min(1160px, calc(100vw - 32px)); }
++/* HERESY 1272 (Viktor 09.10.2026: «на полной развёртке фрейм серверного лога очень широкий. ужми ширину на 150-200px»): 180 px narrower */
++.log-dock.has-gpus:not(.is-folded) { width: min(720px, calc(100vw - 32px)); }
++.log-dock.has-gpus.is-tall { width: min(980px, calc(100vw - 32px)); }
+ .log-dock-main { display: grid; grid-template-columns: minmax(0, 1fr); }
+ .log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr) 290px; }
+ .log-dock.is-folded .log-dock-main, .log-dock-gpus:empty { display: none; }
+-- 
+2.43.0
+

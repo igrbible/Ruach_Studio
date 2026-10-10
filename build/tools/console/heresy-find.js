@@ -17,24 +17,32 @@
 // words typed in the box count the matches again and leave the view where it is; Esc from the box closes the bar and leaves
 // the cursor where he put it (from the bar's own field Esc still goes back to the match).
 //
-//   HeresyFind.open(box) · HeresyFind.close() · HeresyFind.state()   (the last for the checks)
+// HERESY 1276 (Viktor 09.10.2026: «В редактор можно добавить F4/Ctrl+H, с учётом регистра и без»): F4 or Ctrl+H opens a second
+// row, the words to put instead: Enter replaces the match in hand and goes on to the next, Ctrl+Enter (All) replaces every
+// match at once; each goes in as typed (execCommand), so Ctrl+Z takes it back, All in one step. Aa (Alt+C) finds only as the
+// case is typed (kept in yue2.findCase); his hand's kin stay kin in capitals (О finds O, Е finds Ё).
+//
+//   HeresyFind.open(box, replace) · HeresyFind.close() · HeresyFind.state()   (the last for the checks)
 (function () {
   "use strict";
   var BOXES = { lyrics: "lyrics", style: "style", wrStyle: "style", wrLyrics: "lyrics", wrNotes: "notes" };
   var ALIKE = { "о": "[оoע]", "o": "[оoע]", "а": "[аaע]", "a": "[аaע]", "е": "[еёe]", "ё": "[еёe]", "ע": "[עоoаa]" };
+  var CASED = { "О": "[ОO]", "O": "[ОO]", "А": "[АA]", "A": "[АA]", "Е": "[ЕЁE]", "Ё": "[ЕЁE]" };   // HERESY 1276: the kin in capitals
   var MARK = /[\u0300-\u036f]/;
   var bar = null, input = null, count = null, box = null, hits = [], at = -1, marks = [], mirror = null, queued = false;
+  var rep = null, repRow = null, caseBtn = null, cased = false;
+  try { cased = localStorage.getItem("yue2.findCase") === "1"; } catch (e) { /* the default: any case */ }
 
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   // the box's text as it is searched: combining marks left out, letters lower case; and where each letter stands in the box
-  function fold(text) {
+  function fold(text, keepCase) {
     var out = "", map = [];
     for (var i = 0; i < text.length; i++) {
       var c = text[i];
       if (MARK.test(c)) continue;
-      var low = c.toLowerCase();
+      var low = keepCase ? c : c.toLowerCase();
       out += low.length === 1 ? low : c;
       map.push(i);
     }
@@ -42,18 +50,18 @@
     return { text: out, map: map };
   }
   // the words to find as a pattern over the folded text: marks out, each letter with its kin
-  function pattern(q) {
+  function pattern(q, keepCase) {
     var out = "";
     for (var i = 0; i < q.length; i++) {
       var c = q[i];
       if (MARK.test(c)) continue;
-      var low = c.toLowerCase();
-      out += ALIKE[low] || low.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      var low = keepCase ? c : c.toLowerCase();
+      out += (keepCase && CASED[c]) || ALIKE[low] || low.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
     return out ? new RegExp(out, "g") : null;
   }
-  function find(text, q) {
-    var re = pattern(q), f = fold(text), out = [], m;
+  function find(text, q, keepCase) {
+    var re = pattern(q, keepCase), f = fold(text, keepCase), out = [], m;
     if (!re) return out;
     while ((m = re.exec(f.text)) !== null) {
       if (!m[0].length) { re.lastIndex++; continue; }
@@ -71,23 +79,43 @@
     bar.setAttribute("role", "search");
     bar.hidden = true;
     bar.innerHTML = '<input type="search" class="find-q" id="findQ" autocomplete="off" spellcheck="false" aria-label="Find in this box" data-tip="Find in this box only: Enter for the next, Shift+Enter for the one before, Esc back to the box with it selected. A stress mark is not looked for; ё is е; о and а find ע and the Latin o and a too" />' +
+      '<button type="button" class="btn ghost small find-btn find-case" data-find="case" aria-pressed="false" aria-label="Match case (Alt+C)" data-tip="Match case (Alt+C): on, only as the case is typed; off, any case">Aa</button>' +
       '<span class="find-n mono" id="findN" aria-live="polite"></span>' +
       '<button type="button" class="btn ghost small find-btn" data-find="prev" aria-label="The one before (Shift+Enter)" data-tip="The one before (Shift+Enter)">&#x2191;</button>' +
       '<button type="button" class="btn ghost small find-btn" data-find="next" aria-label="The next (Enter)" data-tip="The next (Enter)">&#x2193;</button>' +
-      '<button type="button" class="btn ghost small find-btn" data-find="close" aria-label="Close (Esc)" data-tip="Close (Esc): back to the box, the match selected">&#x2715;</button>';
+      '<button type="button" class="btn ghost small find-btn" data-find="close" aria-label="Close (Esc)" data-tip="Close (Esc): back to the box, the match selected">&#x2715;</button>' +
+      '<div class="find-rep" hidden><input type="text" class="find-r" id="findR" autocomplete="off" spellcheck="false" aria-label="Replace with" placeholder="Replace with" />' +
+      '<button type="button" class="btn ghost small find-btn" data-find="one" aria-label="Replace (Enter)" data-tip="Replace the match in hand and go on to the next (Enter)">Replace</button>' +
+      '<button type="button" class="btn ghost small find-btn" data-find="all" aria-label="Replace all (Ctrl+Enter)" data-tip="Replace every match at once (Ctrl+Enter); one Ctrl+Z in the box takes it all back">All</button></div>';
     document.body.appendChild(bar);
     input = bar.querySelector(".find-q");
     count = bar.querySelector(".find-n");
+    rep = bar.querySelector(".find-r");
+    repRow = bar.querySelector(".find-rep");
+    caseBtn = bar.querySelector(".find-case");
+    paintCase();
     input.addEventListener("input", function () { search(true); });
     input.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === "F3") { e.preventDefault(); step(e.shiftKey ? -1 : 1); }
       else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); }
+    });
+    rep.addEventListener("keydown", function (e) {               // HERESY 1276
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); replaceAll(); }
+      else if (e.key === "Enter") { e.preventDefault(); replaceOne(); }
+      else if (e.key === "F3") { e.preventDefault(); step(e.shiftKey ? -1 : 1); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); }
+    });
+    bar.addEventListener("keydown", function (e) {               // Alt+C: the case, from either field
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.code === "KeyC" || (e.key || "").toLowerCase() === "c")) { e.preventDefault(); toggleCase(); }
     });
     bar.addEventListener("mousedown", function (e) { if (e.target.closest("[data-find]")) e.preventDefault(); });   // the box keeps its words selected
     bar.addEventListener("click", function (e) {
       var b = e.target.closest("[data-find]");
       if (!b) return;
       if (b.dataset.find === "close") close(true);
+      else if (b.dataset.find === "case") toggleCase();
+      else if (b.dataset.find === "one") replaceOne();
+      else if (b.dataset.find === "all") replaceAll();
       else step(b.dataset.find === "prev" ? -1 : 1);
     });
   }
@@ -100,9 +128,64 @@
     bar.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, r.right - w - 6)) + "px";
   }
 
+  // HERESY 1276: Aa, the case as typed or any; kept for the next time
+  function paintCase() {
+    if (!caseBtn) return;
+    caseBtn.setAttribute("aria-pressed", cased ? "true" : "false");
+    caseBtn.classList.toggle("is-on", cased);
+  }
+  function toggleCase() {
+    cased = !cased;
+    try { if (cased) localStorage.setItem("yue2.findCase", "1"); else localStorage.removeItem("yue2.findCase"); } catch (e) { /* this time only */ }
+    paintCase();
+    search(false);
+  }
+  // the words put in as typed, so the box's own Ctrl+Z takes them back (the lyrics' editor does the same, 1169)
+  function typeIn(s) {
+    var ok = false;
+    try { ok = s ? document.execCommand("insertText", false, s) : document.execCommand("delete"); } catch (e) { ok = false; }
+    if (!ok) {
+      var a = box.selectionStart, b = box.selectionEnd;
+      box.value = box.value.slice(0, a) + s + box.value.slice(b);
+      box.setSelectionRange(a + s.length, a + s.length);
+      box.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+  function replaceOne() {
+    if (!box) return;
+    if (!hits.length || at < 0) { search(false); if (!hits.length) return; }
+    var h = hits[at], put = rep.value, top = box.scrollTop;
+    box.focus({ preventScroll: true });
+    box.setSelectionRange(h[0], h[1]);
+    typeIn(put);
+    box.scrollTop = top;
+    hits = find(box.value, input.value, cased);                  // and on to the next after the words put in
+    var after = h[0] + put.length;
+    at = hits.findIndex(function (x) { return x[0] >= after; });
+    if (at < 0) at = hits.length ? 0 : -1;
+    show();
+    rep.focus();
+  }
+  function replaceAll() {
+    if (!box) return;
+    var list = find(box.value, input.value, cased);
+    if (!list.length) { search(false); return; }
+    var v = box.value, put = rep.value, out = "", from = 0, top = box.scrollTop;
+    list.forEach(function (h) { out += v.slice(from, h[0]) + put; from = h[1]; });
+    out += v.slice(from);
+    box.focus({ preventScroll: true });
+    box.setSelectionRange(0, v.length);
+    typeIn(out);                                                 // one step for Ctrl+Z
+    box.setSelectionRange(list[0][0], list[0][0]);
+    box.scrollTop = top;
+    search(false, true);
+    count.textContent = tr("{0} replaced").replace("{0}", list.length);
+    rep.focus();
+  }
+
   function search(fromCaret, quiet) {
     if (!box) return;
-    hits = find(box.value, input.value);
+    hits = find(box.value, input.value, cased);
     if (!hits.length) at = -1;
     else if (fromCaret || at < 0) {
       var caret = box.selectionStart || 0;
@@ -222,18 +305,19 @@
     requestAnimationFrame(function () { queued = false; place(); paintMarks(); });
   }
 
-  function open(target) {
+  function open(target, replace) {
     build();
     if (box && box !== target) box.removeEventListener("input", onBoxInput);
     box = target;
     box.addEventListener("input", onBoxInput);
     bar.hidden = false;
+    repRow.hidden = !replace;                                    // HERESY 1276: F4 and Ctrl+H, the second row
+    bar.classList.toggle("is-rep", !!replace);
     input.placeholder = tr({ lyrics: "Find in the lyrics", style: "Find in the style", notes: "Find in the notes" }[BOXES[box.id]] || "Find in this box");
     var sel = box.value.slice(box.selectionStart, box.selectionEnd);
     if (sel && sel.indexOf("\n") < 0 && sel.length < 80) input.value = sel;   // the words selected in the box, as a browser does
     place();
-    input.focus();
-    input.select();
+    if (replace && input.value) { rep.focus(); rep.select(); } else { input.focus(); input.select(); }
     search(true);
   }
 
@@ -263,6 +347,14 @@
       if (bar && !bar.hidden && el === input) { e.preventDefault(); input.select(); }
       return;
     }
+    // HERESY 1276: F4 or Ctrl+H, find and replace: from a song's box, or from the bar's own find field
+    var plain = !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
+    if ((e.key === "F4" && plain) || ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyH" || key === "h"))) {
+      var at4 = document.activeElement;
+      if (at4 && BOXES[at4.id] && at4.tagName === "TEXTAREA") { e.preventDefault(); open(at4, true); return; }
+      if (bar && !bar.hidden && box && (at4 === input || at4 === rep)) { e.preventDefault(); open(box, true); return; }
+      return;
+    }
     if (bar && !bar.hidden && e.key === "F3") { e.preventDefault(); step(e.shiftKey ? -1 : 1); return; }
     if (bar && !bar.hidden && e.key === "Escape" && document.activeElement === box) { e.preventDefault(); close(false); }   // the cursor stays where he put it
   }, true);
@@ -273,5 +365,6 @@
   });
 
   window.HeresyFind = { open: open, close: close, find: find,
-    state: function () { return { open: !!(bar && !bar.hidden), box: box ? box.id : null, at: at, hits: hits.length, said: count ? count.textContent : "" }; } };
+    state: function () { return { open: !!(bar && !bar.hidden), box: box ? box.id : null, at: at, hits: hits.length, said: count ? count.textContent : "",
+      replace: !!(repRow && !repRow.hidden), cased: cased }; } };
 })();

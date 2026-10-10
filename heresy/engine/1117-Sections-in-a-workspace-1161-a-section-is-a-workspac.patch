@@ -2,7 +2,7 @@ From b79646f71e47111139acbbfd7f5b13323b721882 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Sat, 3 Oct 2026 14:13:11 -0600
-Subject: [PATCH 1117/1265] =?UTF-8?q?Sections=20in=20a=20workspace=20(1161?=
+Subject: [PATCH 1117/1286] =?UTF-8?q?Sections=20in=20a=20workspace=20(1161?=
  =?UTF-8?q?):=20a=20section=20is=20a=20workspace=20named=20by=20its=20path?=
  =?UTF-8?q?=20(Parent=20/=20Section,=20two=20levels=20below=20at=20most);?=
  =?UTF-8?q?=20on=20the=20left=20under=20its=20workspace,=20indented,=20by?=

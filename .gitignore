@@ -7,6 +7,8 @@
 !/outputs/.gitkeep
 /trash/*
 !/trash/.gitkeep
+/artist/*
+!/artist/.gitkeep
 /writer/*
 !/writer/.gitkeep
 /writer-*/
@@ -14,8 +16,12 @@
 # ---- weights, downloaded or converted on the machine (tens of GB)
 /models/*
 !/models/.gitkeep
-/checkpoints/*
-!/checkpoints/.gitkeep
+# HERESY 1290 (Viktor: «checkpoints/, по сути, это артефакт YuE2-Kit репо… Если checkpoints останется пустым, тогда его в
+# gitignore»): no install fetches checkpoints any more; what lands there is fetched later on purpose (the listener, the
+# trainer's base) or brought by hand
+/checkpoints/
+# the downloader's own notes beside files it puts in place (heresy/fetch-heresy.sh: models/, sliders/)
+/.cache/
 /whisper/*
 !/whisper/.gitkeep
 /separation/*
@@ -44,6 +50,7 @@
 /settings.json
 /start.sh.orig
 /.venv/
+/.venv-art/
 /lab/.venv/
 /lab/cache/
 /lab/*.part
@@ -53,10 +60,29 @@
 *.part
 *.bak
 .DS_Store
+# HERESY 1285: what Pinokio writes beside its scripts (its logs, its environment, the notes it leaves for agents)
+/pinokio/logs/
+/pinokio/ENVIRONMENT
+/pinokio/*.md
+/pinokio/.clinerules
+/pinokio/.cursorrules
+/pinokio/.geminiignore
+/pinokio/.windsurfrules
 
 # ---- the user's settings (single-user studio: they live here, not in ~/.config)
 /user/*
 !/user/.gitkeep
+
+# ---- training sets (HERESY 1100): the user's songs and the big downloads stay home; only the two starter
+# samples travel with the code (GTSinger, CC BY-NC-SA 4.0; the full sets: the trainer's Starter sets button)
+/datasets/src/*
+!/datasets/src/.gitkeep
+/datasets/prepared/*
+!/datasets/prepared/.gitkeep
+/datasets/raw/*
+!/datasets/raw/.gitkeep
+!/datasets/raw/GTSinger-RU-sample/
+!/datasets/raw/GTSinger-EN-sample/
 
 # ---- what the studio makes on the machine beside the shipped folders
 /artwork/*
@@ -68,3 +94,6 @@
 /artist/*
 !/artist/.gitkeep
 /VERSION.local
+# HERESY 1285: the links the extras' conversion makes in build/ (the Kit's layout)
+/build/checkpoints
+/build/models

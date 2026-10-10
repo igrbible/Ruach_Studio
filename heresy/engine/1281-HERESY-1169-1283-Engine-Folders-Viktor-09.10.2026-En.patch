@@ -1,0 +1,271 @@
+From 6306e98e552d3b5290b47207bba41738de88272a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 21:20:02 -0600
+Subject: [PATCH 1281/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201283:=20Engi?=
+ =?UTF-8?q?ne=20=E2=86=92=20Folders=20(Viktor=2009.10.2026:=20=C2=AB?=
+ =?UTF-8?q?=E2=80=A6=D0=B2=20Engine=20=E2=80=94=20=D0=BE=D0=BF=D1=86=D0=B8?=
+ =?UTF-8?q?=D0=B8=20=D0=BF=D0=BE=20=D0=B8=D0=B7=D0=BC=D0=B5=D0=BD=D0=B5?=
+ =?UTF-8?q?=D0=BD=D0=B8=D1=8E=20=D0=BB=D0=BE=D0=BA=D0=B0=D1=86=D0=B8=D0=B8?=
+ =?UTF-8?q?=20=D1=81=20=D0=BF=D0=B5=D1=80=D0=B5=D0=BD=D0=BE=D1=81=D0=BE?=
+ =?UTF-8?q?=D0=BC=20=D0=B4=D0=B0=D0=BD=D0=BD=D1=8B=D1=85=20=D1=81=20=D0=BE?=
+ =?UTF-8?q?=D0=B4=D0=BD=D0=BE=D0=B3=D0=BE=20=D0=BC=D0=B5=D1=81=D1=82=D0=B0?=
+ =?UTF-8?q?=20=D0=B2=20=D0=B4=D1=80=D1=83=D0=B3=D0=BE=D0=B5=C2=BB):=20wher?=
+ =?UTF-8?q?e=20the=20user's=20work=20lives=20(Songs,=20Trash,=20Pictures,?=
+ =?UTF-8?q?=20Writer),=20its=20files,=20size=20and=20the=20room=20on=20its?=
+ =?UTF-8?q?=20disk;=20Move=E2=80=A6=20asked,=20planned=20by=20the=20lab,?=
+ =?UTF-8?q?=20done=20on=20a=20second=20yes,=20its=20progress,=20the=20old?=
+ =?UTF-8?q?=20copy=20kept;=20Back=20home;=20Link=20again=20(heresy-places.?=
+ =?UTF-8?q?js=20over=20the=20lab's=20places.py=20of=201261)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  17 ++++
+ tools/console/app.js           |   2 +
+ tools/console/heresy-places.js | 142 +++++++++++++++++++++++++++++++++
+ tools/console/index.html       |  10 +++
+ 4 files changed, 171 insertions(+)
+ create mode 100644 tools/console/heresy-places.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 1c2493e..328a7c9 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -553,6 +553,7 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+ .engine-grid > .eg-log { order: 11; }
+ .engine-grid > .eg-about { order: 12; }
+ .engine-grid > .eg-updates { order: 13; }   /* HERESY 1169: a row of its own under About */
++.engine-grid > .eg-folders { order: 14; }   /* HERESY 1283: a row of its own under Updates */
+ @media (min-width: 1400px) {
+   .engine-grid { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); }
+   .engine-grid > .eg-server   { grid-area: 1 / 1 / 2 / 11; }    /* Server over Hardware | the log    1/3 · 2/3 */
+@@ -568,11 +569,27 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
+   .engine-grid > .eg-sliders  { grid-area: 7 / 1 / 8 / 31; }
+   .engine-grid > .eg-about    { grid-area: 8 / 1 / 9 / 31; }
+   .engine-grid > .eg-updates  { grid-area: 9 / 1 / 10 / 31; }
++  .engine-grid > .eg-folders  { grid-area: 10 / 1 / 11 / 31; }  /* HERESY 1283 */
+   /* the log fills its column beside Server and Hardware, 260px at least */
+   .eg-log .log-body { flex: 1 1 0; height: auto; min-height: 260px; }
+   /* a sixth is narrower than two tiles: the decoders one under another */
+   .eg-vae .vae-list { grid-template-columns: minmax(0, 1fr); }
+ }
++/* HERESY 1283: the Folders card, a folder a row: its name and what it holds | where it lives | its size | its buttons */
++.pl-rows { display: flex; flex-direction: column; }
++.pl-row { display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(0, 3fr) minmax(120px, auto) auto; gap: 6px 16px; align-items: center;
++  padding: 8px 0; border-top: 1px solid var(--line-soft); }
++.pl-row:first-child { border-top: 0; }
++.pl-name, .pl-where { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
++.pl-name span, .pl-note { font-size: 12px; color: var(--muted); }
++.pl-path { font: 12.5px var(--mono); overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
++.pl-size { font-size: 12.5px; color: var(--muted); text-align: right; white-space: nowrap; }
++.pl-acts { display: inline-flex; gap: 6px; justify-content: flex-end; }
++.pl-row.is-missing .pl-path, .pl-bad { color: var(--bad); }
++.pl-job { margin: 8px 0 0; }
++.pl-job.is-bad { color: var(--bad); }
++.pl-job.is-good { color: var(--good); }
++@media (max-width: 760px) { .pl-row { grid-template-columns: minmax(0, 1fr); } .pl-size { text-align: left; } .pl-acts { justify-content: flex-start; } }
+ /* the Appearance card: two parts under a thin line, like the drawers */
+ .appearance-card { container-type: inline-size; }
+ .appearance-card .look-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e700544..ef77072 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -254,6 +254,7 @@
+       if (!$("view-engine").classList.contains("is-hidden")) return void leaveEngine();
+       $("view-engine").classList.remove("is-hidden");
+       scrollLogToEnd();
++      if (window.HeresyPlaces) window.HeresyPlaces.load();   // HERESY 1283: the Folders card asks the lab when the page is seen
+     } else if (view === "take") {
+       $("view-engine").classList.add("is-hidden");
+       drawWave();
+@@ -7502,6 +7503,7 @@
+     reaper: function () { var t = dawTake(); return t ? reaperProject(t) : Promise.reject(new Error("no take in hand")); },
+     dawproject: function () { var t = dawTake(); return t ? dawProject(t).catch(function (e) { toast("No DAWproject: " + e.message, "bad"); throw e; }) : Promise.reject(new Error("no take in hand")); } });
+   // HERESY 1169: new releases on GitHub (Engine → Updates) and the 💎 sets offered on a new studio and after an update
++  if (window.HeresyPlaces) window.HeresyPlaces.init({ toast: toast });   // HERESY 1283: Engine → Folders
+   if (window.HeresyUpdates) window.HeresyUpdates.init({ toast: toast,
+     hub: function () { if (window.HeresyCollection && window.HeresyCollection.hubOpen) window.HeresyCollection.hubOpen(); },
+     idle: function () { return !STATE.jobs.some(function (j) { return isLive(j); }); } });
+diff --git a/tools/console/heresy-places.js b/tools/console/heresy-places.js
+new file mode 100644
+index 0000000..3a65daf
+--- /dev/null
++++ b/tools/console/heresy-places.js
+@@ -0,0 +1,142 @@
++// HERESY 1283 (Viktor 09.10.2026: «время в движок Студии допилить кастомные пути для пользовательских данных… Предусмотри, чтобы
++// RC3 автоматом подтягивал существующие пути развёртки, и в Engine — опции по изменению локации с переносом данных с одного
++// места в другое»): the Engine's Folders card, over the lab's places.py of 1261. Where each folder of the user's work lives
++// (Songs, Trash, Pictures, Writer), what it holds and the room left on its disk. Move… asks where to, has the lab say what the
++// move would do (a rename on the same disk; else a copy, checked file by file, then the link switched, the old copy kept,
++// renamed), and moves only on a second yes; the move's progress shows while it runs, and where the old copy stays when it is
++// done. Back home brings a folder that lives elsewhere into the studio's folder again; Link again where the record knows a place
++// the studio's folder does not point to (a fresh clone, a disk mounted late). A test page (?scope=…) moves nothing: the lab refuses.
++//
++//   HeresyPlaces.init(hooks) · HeresyPlaces.load() · HeresyPlaces.state()   (the last for the checks)
++(function () {
++  "use strict";
++  var S = { data: null, timer: 0, hooks: {}, asked: false };
++  function $(id) { return document.getElementById(id); }
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
++  function toast(t, k) { if (S.hooks.toast) S.hooks.toast(t, k); }
++  function gb(b) {
++    if (b == null || !isFinite(b)) return "";
++    return b >= Math.pow(2, 40) ? (b / Math.pow(2, 40)).toFixed(2) + " TB" : b >= Math.pow(2, 30) ? (b / Math.pow(2, 30)).toFixed(1) + " GB" : Math.max(0, Math.round(b / Math.pow(2, 20))) + " MB";
++  }
++  function count(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f"); }
++  function scoped(path) {                                      // a test page says so to the lab, which then moves nothing
++    var m = /[?&]scope=([^&#]+)/.exec(location.search);
++    return m ? path + (path.indexOf("?") < 0 ? "?" : "&") + "scope=" + m[1] : path;
++  }
++  function lab(path, body) {
++    var opt = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {};
++    return fetch("/lab" + (body ? scoped(path) : path), opt)
++      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; }); });
++  }
++  function seen() { var v = $("view-engine"); return !!(v && !v.classList.contains("is-hidden")); }
++  function moving() { var j = S.data && S.data.job; return !!(j && j.phase !== "done" && j.phase !== "failed"); }
++  function place(name) { return ((S.data && S.data.places) || []).filter(function (p) { return p.name === name; })[0] || null; }
++
++  function load(refresh) {
++    clearTimeout(S.timer);
++    return lab("/places" + (refresh ? "?refresh=1" : "")).then(function (d) { S.data = d; paint(); }).catch(function (e) {
++      $("plRows").innerHTML = '<p class="hint pl-bad">' + esc(tr("The lab does not answer:")) + " " + esc(e.message) + "</p>";
++    }).then(schedule);
++  }
++  // while the card is seen: every 2 s while a move runs or a size is being counted, else nothing (a reopened Engine asks again)
++  function schedule() {
++    clearTimeout(S.timer);
++    var counting = S.data && S.data.places && S.data.places.some(function (p) { return p.counting; });
++    if (seen() && (moving() || counting)) S.timer = setTimeout(load, 2000);
++  }
++
++  var PHASE = { starting: "Starting…", count: "Counting what to copy…", rename: "Renaming…", check: "Checking the copy against the folder…", "switch": "Switching the link…" };
++  function paint() {
++    var d = S.data, box = $("plRows");
++    if (!d || !box) return;
++    var busy = moving();
++    box.innerHTML = d.places.map(function (p) {
++      var size = p.bytes != null ? count(p.files) + " " + tr("files") + " · " + gb(p.bytes) : p.counting ? tr("counting…") : "";
++      var note = p.missing ? tr("not there: a disk not mounted?") : p.linked ? tr("linked from the studio's folder") : tr("in the studio's folder");
++      if (p.elsewhere) note = tr("the record says it lives at") + " " + p.elsewhere;
++      var acts = '<button type="button" class="btn ghost small" data-pl-move="' + esc(p.name) + '"' + (busy || p.missing ? " disabled" : "") + ">" + esc(tr("Move…")) + "</button>";
++      if (p.linked && !p.missing) acts += '<button type="button" class="btn ghost small" data-pl-home="' + esc(p.name) + '"' + (busy ? " disabled" : "") + ">" + esc(tr("Back home")) + "</button>";
++      if ((p.missing || p.elsewhere) && p.record && p.record.at) acts += '<button type="button" class="btn ghost small" data-pl-relink="' + esc(p.name) + '"' + (busy ? " disabled" : "") + ">" + esc(tr("Link again")) + "</button>";
++      return '<div class="pl-row' + (p.missing ? " is-missing" : "") + '" data-name="' + esc(p.name) + '">' +
++        '<div class="pl-name"><b>' + esc(tr(p.label)) + "</b><span>" + esc(tr(p.what)) + "</span></div>" +
++        '<div class="pl-where"><code class="pl-path" translate="no">' + esc(p.real) + '</code><span class="pl-note">' + esc(note) +
++          (p.free != null && !p.missing ? " · " + esc(gb(p.free)) + " " + esc(tr("free on its disk")) : "") + "</span></div>" +
++        '<div class="pl-size mono">' + esc(size) + '</div><div class="pl-acts">' + acts + "</div></div>";
++    }).join("");
++    paintJob(d.job);
++  }
++  function paintJob(j) {
++    var el = $("plJob");
++    if (!el) return;
++    el.hidden = !j;
++    if (!j) return;
++    var label = (place(j.name) || {}).label || j.name, txt;
++    if (j.phase === "done") {
++      txt = tr("{0} moved to {1}.").replace("{0}", tr(label)).replace("{1}", j.home ? tr("the studio's folder") : j.to) +
++        (j.old ? " " + tr("The old copy stays at {0}: remove it after a look.").replace("{0}", j.old) : "");
++    } else if (j.phase === "failed") {
++      txt = tr("{0} did not move: {1}").replace("{0}", tr(label)).replace("{1}", j.error || "");
++    } else if (j.phase === "copy") {
++      var pct = j.total ? Math.min(100, Math.round(j.done / j.total * 100)) : 0;
++      txt = tr("Copying {0}: {1} %, {2} of {3}, {4} of {5} files").replace("{0}", tr(label)).replace("{1}", pct).replace("{2}", gb(j.done)).replace("{3}", gb(j.total))
++        .replace("{4}", count(j.files)).replace("{5}", count(j.of));
++    } else {
++      txt = tr(label) + ": " + tr(PHASE[j.phase] || j.phase);
++    }
++    el.textContent = txt;
++    el.classList.toggle("is-bad", j.phase === "failed");
++    el.classList.toggle("is-good", j.phase === "done");
++  }
++
++  function move(name, home) {
++    var p = place(name);
++    if (!p || moving()) return;
++    var L = tr(p.label);
++    var ask = home ? Promise.resolve("") : window.HeresyDialog.prompt(
++      tr("Move {0} to another folder").replace("{0}", L) + "\n\n" +
++      tr("A folder that is there already; {0} goes into it as «{1}». On the same disk it is renamed at once; on another it is copied, checked file by file, then the link is switched, and the old copy stays, renamed, for you to remove after a look.")
++        .replace("{0}", L).replace("{1}", p.name) +
++      (S.data.wsl ? "\n\n" + tr("A Windows path works too: D:\\Music is /mnt/d/Music.") : ""), "", { ok: tr("Plan the move"), max: 1000, placeholder: "/mnt/data/Ruach" });
++    return ask.then(function (to) {
++      if (to == null || (!home && !String(to).trim())) return;
++      return lab("/places/plan?name=" + encodeURIComponent(name) + "&to=" + encodeURIComponent(to)).then(function (pl) {
++        if (!pl.ok) return window.HeresyDialog.alert(tr("{0} cannot move there").replace("{0}", L) + "\n\n" + pl.why);
++        var how = pl.same_disk ? tr("The same disk: the folder is renamed there at once, nothing is copied.")
++          : tr("Another disk: {0} copied (free there: {1}), checked file by file, then the link switched. The old copy stays, renamed, until you remove it.")
++            .replace("{0}", pl.need == null ? tr("all it holds") : gb(pl.need)).replace("{1}", gb(pl.free));
++        return window.HeresyDialog.confirm(tr("Move {0} to {1}?").replace("{0}", L).replace("{1}", pl.home ? tr("the studio's folder") : pl.dest) + "\n\n" + how + "\n\n" +
++          tr("Nothing may render or run while it moves; the studio says so if something does."), { ok: tr("Move") }).then(function (yes) {
++          if (!yes) return;
++          return lab("/places/move", { name: name, to: to }).then(function (d) { S.data = d; paint(); schedule(); });
++        });
++      });
++    }).catch(function (e) { toast(tr("Not moved:") + " " + e.message, "bad"); });
++  }
++  function relink(name) {
++    var p = place(name);
++    if (!p || !p.record || !p.record.at) return;
++    return window.HeresyDialog.confirm(tr("Link {0} to {1} again?").replace("{0}", tr(p.label)).replace("{1}", p.record.at) + "\n\n" +
++      tr("The record says it lives there; the studio's folder is pointed at it again. Nothing is copied or deleted."), { ok: tr("Link again") }).then(function (yes) {
++      if (!yes) return;
++      return lab("/places/relink", { name: name }).then(function (d) { S.data = d; paint(); toast(tr("{0} linked again").replace("{0}", tr(p.label)), "good"); });
++    }).catch(function (e) { toast(tr("Not linked:") + " " + e.message, "bad"); });
++  }
++
++  function init(hooks) {
++    S.hooks = hooks || {};
++    var box = $("plRows");
++    if (!box) return;
++    box.addEventListener("click", function (e) {
++      var b = e.target.closest("button");
++      if (!b || b.disabled) return;
++      if (b.dataset.plMove) move(b.dataset.plMove, false);
++      else if (b.dataset.plHome) move(b.dataset.plHome, true);
++      else if (b.dataset.plRelink) relink(b.dataset.plRelink);
++    });
++    var again = $("plRefresh");
++    if (again) again.addEventListener("click", function () { load(true); });
++    window.addEventListener("ruach-lang", paint);
++  }
++  window.HeresyPlaces = { init: init, load: load, state: function () { return { data: S.data, moving: moving() }; } };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index dd05e33..b58ee60 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -385,6 +385,15 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       </div>
+     </div>
+ 
++    <!-- HERESY 1283 (Viktor 09.10.2026: «…в Engine — опции по изменению локации с переносом данных с одного места в другое»): where
++         the user's work lives, and a move asked twice (heresy-places.js over the lab's places.py of 1261) -->
++    <div class="card wide eg-folders" id="foldersCard">
++      <h3>Folders <span class="info" tabindex="-1" role="img" aria-label="About folders" data-tip="Where your work lives: the songs (with the workspaces fetched from Hugging Face), the trash, the Artist's pictures and the Writer's documents. Each may live on any disk: the studio's folder then holds a link to it, and everything reads it there as before. The models, the LoRAs and the training sets keep their places."></span></h3>
++      <div class="pl-rows" id="plRows"><p class="hint">Asking the lab…</p></div>
++      <p class="hint pl-job" id="plJob" hidden></p>
++      <div class="card-actions"><button type="button" class="btn ghost small" id="plRefresh" data-tip="Count the folders' files and sizes again">Count again</button></div>
++    </div>
++
+     <div class="card wide about-card eg-about" id="aboutCard">
+       <div class="about-head">
+         <h3>About</h3>
+@@ -1859,6 +1868,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ </template>
+ <script src="heresy-dialog.js"></script>
+ <script src="heresy-updates.js"></script>
++<script src="heresy-places.js"></script>
+ <script src="heresy-gpulive.js"></script>
+ <script src="heresy-settings.js"></script>
+ <script src="heresy-i18n.js"></script>
+-- 
+2.43.0
+

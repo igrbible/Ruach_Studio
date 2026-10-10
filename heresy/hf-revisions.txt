@@ -10,3 +10,5 @@ Comfy-Org/YuE2 2f76ca75e6ee094169de899cc7fc99d6887e2196
 GTSinger/GTSinger 4426c862beed558b7e1cb8a4dce7e8c0c83bb208
 Qwen/Qwen3-4B-Instruct-2507 cdbee75f17c01a7cc42f958dc650907174af0554   # HERESY 1120: the artwork prompt writer (pinned 02.10.2026)
 Falconsai/nsfw_image_detection 96cb0d0342c7afb80cab76ecc58b265fa44da256   # HERESY 1167: the artwork's content filter (Krea 2 Community License 4.2; pinned 05.10.2026)
+goldhub/Ruach_Studio_LoRAs 2a4662dfc973bd7b3432a333886323c9ed2e1470   # HERESY 1285: the studio's own LoRAs, six voices and two instruments (pinned 09.10.2026)
+goldhub/Ruach_Studio_Models_v2 434cc28a30bd3d9a82e9a42bbff32174e3eedc77   # HERESY 1290: the decoders and sliders converted once (pinned 10.10.2026)

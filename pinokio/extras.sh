@@ -2,7 +2,8 @@
 # Ruach Studio under Pinokio (HERESY 1259): the models the studio starts without, each asked first with its size by
 # heresy/fetch-heresy.sh (answer y or n in this terminal), chosen by the biggest card here: the Artist's painter (Krea 2 Muse
 # where a card has 16 GB, its Q8 too on 24 GB; SDXL below), the style listener (Qwen2.5-Omni, Q8_0 from 12 GB, else Q4_K_M)
-# and the base the LoRA trainer trains on (bf16 on 24 GB, else int8). From a terminal: bash pinokio/extras.sh
+# and the base the LoRA trainer trains on (bf16 on 24 GB, else int8); HERESY 1285: and the BF16 backbone where the install took
+# Q8_0 (Viktor 09.10.2026: «на эту видеокарту RTX5000 можно ли будет со студии докачать BF16?»). From a terminal: bash pinokio/extras.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -12,8 +13,9 @@ V=$(ruach_vram)
 ART=(--artwork); [ "$V" -ge 23000 ] && ART+=(--artwork-q8)
 LISTENER=Q8_0; [ "$V" -lt 12000 ] && LISTENER=Q4_K_M
 TRAINER=bf16; [ "$V" -lt 23000 ] && TRAINER=int8
-echo "a card of $V MiB: the painter ${ART[*]}, the listener $LISTENER, the trainer's base $TRAINER"
-bash heresy/fetch-heresy.sh "${ART[@]}" --listener "$LISTENER" --trainer "$TRAINER" || stop "a download did not complete (fetch-heresy.sh says which above): run it again to go on"
+BB=(); [ -s "$ROOT/models/YuE2-3B-BF16.gguf" ] || BB=(--backbone BF16)
+echo "a card of $V MiB: the painter ${ART[*]}, the listener $LISTENER, the trainer's base $TRAINER$([ ${#BB[@]} -gt 0 ] && echo ", the BF16 backbone")"
+bash heresy/fetch-heresy.sh "${ART[@]}" --listener "$LISTENER" --trainer "$TRAINER" "${BB[@]}" || stop "a download did not complete (the lines marked failed above say which and why): run it again to go on"
 
 # the listener's GGUF runs through llama.cpp's llama-mtmd-cli (fetch-heresy.sh clones it): built here, with the studio's toolchain
 L="$ROOT/vendor/llama.cpp"

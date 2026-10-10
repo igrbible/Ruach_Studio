@@ -162,11 +162,12 @@ if [ -d "$LORAS" ]; then
     args+=(--loras "$LORAS")
     row loras "${B}$(find -L "$LORAS" -name '*.safetensors' -not -path '*/.*' 2>/dev/null | count)${X} files in ${B}$(find -L "$LORAS" -mindepth 1 -maxdepth 1 -type d -not -name '.*' 2>/dev/null | count)${X} folders ${D}· $(du -shL "$LORAS" 2>/dev/null | cut -f1 | tr -d ' ') · loras/: files, folders or links${X}"
 fi
-if [ -f "$SLIDERS/catalog.json" ]; then
+if [ -f "$SLIDERS/catalog.json" ] && ls "$SLIDERS"/*.gguf >/dev/null 2>&1; then
     args+=(--sliders "$SLIDERS")
     row sliders "${B}$(ls "$SLIDERS"/*.gguf 2>/dev/null | count)${X} voice/genre sliders"
 else
-    row sliders "${Y}not converted${X} ${D}(./convert-models.sh)${X}"
+    # HERESY 1290: they come converted, from goldhub/Ruach_Studio_Models_v2 (the catalog alone, as the repository keeps it, is not them)
+    row sliders "${Y}not here${X} ${D}(heresy/fetch-heresy.sh --only extras, or Engine → Models and LoRAs)${X}"
 fi
 nsongs=$(find "$OUTPUTS" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | count)
 row library "${B}$nsongs${X} $([ "$nsongs" = 1 ] && echo song || echo songs) ${D}· $(du -sh "$OUTPUTS" 2>/dev/null | cut -f1 | tr -d ' ') in ${OUTPUTS#"$ROOT"/}/${X}"

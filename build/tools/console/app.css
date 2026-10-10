@@ -553,6 +553,8 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
 .engine-grid > .eg-log { order: 11; }
 .engine-grid > .eg-about { order: 12; }
 .engine-grid > .eg-updates { order: 13; }   /* HERESY 1169: a row of its own under About */
+.engine-grid > .eg-folders { order: 14; }   /* HERESY 1283: a row of its own under Updates */
+.engine-grid > .eg-models { order: 7; }     /* HERESY 1289: under Sliders (the same order: the page's own sequence then) */
 @media (min-width: 1400px) {
   .engine-grid { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); }
   .engine-grid > .eg-server   { grid-area: 1 / 1 / 2 / 11; }    /* Server over Hardware | the log    1/3 · 2/3 */
@@ -566,13 +568,60 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
   .engine-grid > .eg-vae      { grid-area: 6 / 1 / 7 / 6; }     /* VAEs | LoRAs                      1/6 · 5/6 */
   .engine-grid > .eg-loras    { grid-area: 6 / 6 / 7 / 31; }
   .engine-grid > .eg-sliders  { grid-area: 7 / 1 / 8 / 31; }
-  .engine-grid > .eg-about    { grid-area: 8 / 1 / 9 / 31; }
-  .engine-grid > .eg-updates  { grid-area: 9 / 1 / 10 / 31; }
+  .engine-grid > .eg-models   { grid-area: 8 / 1 / 9 / 31; }    /* HERESY 1289: Models and LoRAs under Sliders */
+  .engine-grid > .eg-about    { grid-area: 9 / 1 / 10 / 31; }
+  .engine-grid > .eg-updates  { grid-area: 10 / 1 / 11 / 31; }
+  .engine-grid > .eg-folders  { grid-area: 11 / 1 / 12 / 31; }  /* HERESY 1283 */
   /* the log fills its column beside Server and Hardware, 260px at least */
   .eg-log .log-body { flex: 1 1 0; height: auto; min-height: 260px; }
   /* a sixth is narrower than two tiles: the decoders one under another */
   .eg-vae .vae-list { grid-template-columns: minmax(0, 1fr); }
 }
+/* HERESY 1289: the Models and LoRAs card: a part of what the install brings a row (its name, size and sum | its Fetch), what is
+   not here listed under it; an extra a row (its name and what it is | its variant | its Fetch); a run's words under them */
+.wt-line.is-good { color: var(--good); }
+.wt-line.is-bad { color: var(--bad); }
+.wt-parts, .wt-extras { display: flex; flex-direction: column; }
+.wt-part, .wt-extra { padding: 7px 0; border-top: 1px solid var(--line-soft); }
+.wt-part:first-child, .wt-extra:first-child { border-top: 0; }
+.wt-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.wt-head b, .wt-x-name b { font-weight: 600; }
+.wt-size, .wt-sum { font-size: 12.5px; color: var(--muted); }
+.wt-part.is-whole .wt-sum { color: var(--good); }
+.wt-head .btn { margin-left: auto; }
+.wt-rows { list-style: none; margin: 5px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.wt-row { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; }
+.wt-row code { font: 12px var(--mono); overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+.wt-st { flex: 0 0 auto; min-width: 58px; font: 600 11.5px var(--mono); color: var(--muted); }
+.wt-st.is-here, .wt-st.is-fetched { color: var(--good); }
+.wt-st.is-missing, .wt-st.is-differs, .wt-st.is-unknown { color: var(--amber); }
+.wt-st.is-failed { color: var(--bad); }
+.wt-extra { display: grid; grid-template-columns: minmax(0, 1fr) minmax(190px, auto) auto; gap: 6px 14px; align-items: center; }
+.wt-x-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wt-x-name span { font-size: 12px; color: var(--muted); }
+.wt-extra select { width: auto; }
+.wt-log { margin: 10px 0 0; max-height: 240px; overflow: auto; padding: 8px 10px; border-radius: var(--r-sm); background: var(--sunk);
+  font: 12px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+.wt-log .wt-st { min-width: 0; }
+/* HERESY 1289: a button the Engine hides stays hidden: .btn's own display won over the attribute (Updates' «Update» and «What's
+   new» showed with nothing new, getComputedStyle 10.10.2026), as the GPU card's rule of its own already says for its button */
+.engine-grid .btn[hidden] { display: none; }
+@media (max-width: 760px) { .wt-extra { grid-template-columns: minmax(0, 1fr); } .wt-head .btn { margin-left: 0; } }
+/* HERESY 1283: the Folders card, a folder a row: its name and what it holds | where it lives | its size | its buttons */
+.pl-rows { display: flex; flex-direction: column; }
+.pl-row { display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(0, 3fr) minmax(120px, auto) auto; gap: 6px 16px; align-items: center;
+  padding: 8px 0; border-top: 1px solid var(--line-soft); }
+.pl-row:first-child { border-top: 0; }
+.pl-name, .pl-where { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pl-name span, .pl-note { font-size: 12px; color: var(--muted); }
+.pl-path { font: 12.5px var(--mono); overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+.pl-size { font-size: 12.5px; color: var(--muted); text-align: right; white-space: nowrap; }
+.pl-acts { display: inline-flex; gap: 6px; justify-content: flex-end; }
+.pl-row.is-missing .pl-path, .pl-bad { color: var(--bad); }
+.pl-job { margin: 8px 0 0; }
+.pl-job.is-bad { color: var(--bad); }
+.pl-job.is-good { color: var(--good); }
+@media (max-width: 760px) { .pl-row { grid-template-columns: minmax(0, 1fr); } .pl-size { text-align: left; } .pl-acts { justify-content: flex-start; } }
 /* the Appearance card: two parts under a thin line, like the drawers */
 .appearance-card { container-type: inline-size; }
 .appearance-card .look-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
@@ -1744,6 +1793,11 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; 
   transition: opacity .12s ease, visibility .12s;
 }
 .tip.is-on { opacity: 1; visibility: visible; }
+/* HERESY 1279: a plain tip's lines as paragraphs, air between them (the blocks themselves hold no line ends to keep) */
+.tip.tip-paras { white-space: normal; }
+.tip .tip-p { margin: 0; color: inherit; white-space: pre-line; }
+.tip .tip-p + .tip-p { margin-top: .45em; }
+.tip .tip-p.tip-gap { margin-top: .8em; }
 .tip.tip-rich { max-width: min(600px, calc(100vw - 16px)); padding: 11px 13px; white-space: normal; }
 .tip .tip-kind { display: block; margin-bottom: 6px; font: 600 12.5px/1.4 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
 .tip .tip-kind code { letter-spacing: 0; text-transform: none; color: var(--amber); }
@@ -2409,7 +2463,12 @@ body.coll-dragging .coll-peek { display: none; }
 
 /* HERESY 1047: the Writer's notebook */
 .wr-book { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 22px; }
-@media (max-width: 1000px) { .wr-book { grid-template-columns: minmax(0, 1fr); } }
+/* HERESY 1268: the documents column as wide as its edge is dragged (the width kept in this browser) */
+.wr-book { grid-template-columns: var(--wr-side-w, 280px) 12px minmax(0, 1fr); column-gap: 4px; }
+.wr-resizer { align-self: stretch; min-height: 160px; display: flex; justify-content: center; cursor: col-resize; touch-action: none; outline: none; }
+.wr-resizer::before { content: ""; width: 2px; height: 100%; border-radius: 1px; background: transparent; transition: background .12s; }
+.wr-resizer:hover::before, .wr-resizer.is-drag::before, .wr-resizer:focus-visible::before { background: var(--line-strong-a); }
+@media (max-width: 1000px) { .wr-book { grid-template-columns: minmax(0, 1fr); } .wr-resizer { display: none; } }
 .wr-side { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 8px; }
 .wr-side-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .wr-side-bar .btn { white-space: nowrap; }   /* HERESY 1168: its buttons whole, a row more when they need it */
@@ -3131,8 +3190,9 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
    200-400px, В две колонки… главная карта особо обрамлена. Пометки над блоками графов — какая роль карты»): the cards live. Beside the
    log the dock grows 300 px for a column of the cards with a role (none without a card: then it keeps its width); in Engine → GPUs a
    row under each card. The bars: the load above, the memory below, a second each, two minutes wide. */
-.log-dock.has-gpus:not(.is-folded) { width: min(900px, calc(100vw - 32px)); }
-.log-dock.has-gpus.is-tall { width: min(1160px, calc(100vw - 32px)); }
+/* HERESY 1272 (Viktor 09.10.2026: «на полной развёртке фрейм серверного лога очень широкий. ужми ширину на 150-200px»): 180 px narrower */
+.log-dock.has-gpus:not(.is-folded) { width: min(720px, calc(100vw - 32px)); }
+.log-dock.has-gpus.is-tall { width: min(980px, calc(100vw - 32px)); }
 .log-dock-main { display: grid; grid-template-columns: minmax(0, 1fr); }
 .log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr) 290px; }
 .log-dock.is-folded .log-dock-main, .log-dock-gpus:empty { display: none; }
@@ -3191,7 +3251,8 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
 .hg-body h4 { margin: 18px 0 6px; font-size: 14.5px; }
 .hg-body p { margin: 0 0 10px; }
 .hg-body ul, .hg-body ol { margin: 0 0 12px; padding-left: 22px; }
-.hg-body li { margin: 3px 0; }
+.hg-body li { margin: 0 0 .55em; }   /* HERESY 1279: each item a paragraph, with air (3 px before) */
+.hg-body li > :is(ul, ol) { margin: .45em 0 0; }
 .hg-body code { font: 12.5px var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--sunk); }
 .hg-body pre { padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); overflow-x: auto; }
 .hg-body pre code { padding: 0; background: none; }
@@ -3658,7 +3719,7 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
    (shuffle, repeat, play on click, play on, the speed and the volume: the phone has its own keys for the volume) */
 @media (max-width: 600px) {
   #playbar .pb-row { justify-content: space-between; gap: 6px; }
-  #playbar #pbShuffle, #playbar #pbRepeat, #playbar #clickPlay, #playbar #autoplay, #playbar #playSpeed, #playbar .volume { display: none; }
+  #playbar #pbShuffle, #playbar #pbRepeat, #playbar #clickPlay, #playbar #autoplay, #playbar #runChime, #playbar #playSpeed, #playbar .volume { display: none; }
   #playbar .pb-ctrl { position: static; transform: none; margin: 0; }
   #playbar .pb-side { margin-left: auto; gap: 6px; }
   #playbar .time { font-size: 11.5px; white-space: nowrap; }
@@ -3990,6 +4051,11 @@ html.i18n-wait .boot-veil > * { visibility: hidden; }
   border-radius: 50%; color: var(--amber); vertical-align: 0; }
 .label-end .hi-open:hover, .label-end .hi-open:focus-visible { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
 .label-end .hi-open svg { width: 16px; height: 16px; display: block; }
+/* HERESY 1281: ♂ and ♀ in the Style's head, lit by what the Style says */
+.voice-togs { display: inline-flex; align-items: center; gap: 2px; }
+.voice-tog { width: 24px; height: 24px; min-width: 0; padding: 0; display: inline-grid; place-items: center; color: var(--dim); }
+.voice-tog .ui-ico { width: 16px; height: 16px; }
+.voice-tog.is-on { color: var(--amber); border-color: var(--amber); }
 .style-warn { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border: 1px solid var(--amber); border-radius: 999px;
   color: var(--amber); background: color-mix(in srgb, var(--amber) 9%, transparent); font: 600 10.5px/1.5 var(--sans); letter-spacing: .1em;
   text-transform: uppercase; cursor: help; }
@@ -4145,6 +4211,11 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
   font: 400 clamp(12px, .95vw, 16px)/1.45 var(--sans); color: var(--dim); animation: boot-in 1.1s .15s ease both; }
 .boot-osem b { font-weight: 600; color: var(--ink); font-size: 1.12em; letter-spacing: .6em; margin-right: -.6em; }
 .boot-osem .boot-osem-say { font-style: italic; color: var(--muted); }
+/* HERESY 1286 (Viktor 09.10.2026: «OSEM с девизом сделай на 20% крупнее, дай больше пространства между Лого и OSEM, а также сам
+   прогресс бар опусти в подвал, 160 пикселов от пола»): the slogan a fifth larger and 32 px further from the logo; the line at the
+   foot, 160 px above the window's floor */
+.boot-osem { margin-top: 26px; font-size: clamp(14.4px, 1.14vw, 19.2px); }
+html.booting .boot-veil .boot-line { position: absolute; left: 50%; bottom: 160px; transform: translateX(-50%); }
 /* HERESY 1167 (Viktor: «Карточки у библиотекаря до сих пор слишком красные. Возьми начальный #f2edef и в градиенте дневной темы
    доводи его в правый низ… до нулевой альфы»): by day the card's wash from #f2edef in its top left to nothing at its bottom
    right; a little deeper when hovered, held or checked */
@@ -4171,6 +4242,7 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
 .hi-more { font-size: 14.5px; color: var(--muted); }
 .hi-more summary { cursor: pointer; color: var(--ink); width: max-content; }
 .hi-more p { margin: 6px 0 2px; line-height: 1.5; }
+.hi-more p + p { margin-top: .55em; }   /* HERESY 1279: its three paragraphs */
 .hi-tools input, .hi-tools select, .hi-tools label { font-size: 15px; }
 .hi-table { font-size: 15.5px; }
 .hi-home { font-size: 14px; }
@@ -4311,6 +4383,13 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
 .find-bar.is-none .find-q { border-color: var(--bad); }
 .find-n { min-width: 64px; font-size: 11.5px; color: var(--muted); text-align: center; }
 .find-btn { min-width: 28px; padding: 2px 6px; }
+/* HERESY 1276: the second row, the words to put instead; Aa lit when the case counts */
+.find-bar { flex-wrap: wrap; max-width: 440px; }
+.find-bar .find-rep { flex-basis: 100%; display: flex; align-items: center; gap: 4px; }
+.find-bar .find-rep[hidden] { display: none; }
+.find-bar .find-r { width: 190px; height: 28px; }
+.find-case { font-weight: 600; }
+.find-case.is-on { color: var(--amber); border-color: var(--amber); }
 .find-mark { position: fixed; z-index: 44; pointer-events: none; border-radius: 2px;
   background: color-mix(in srgb, var(--amber) 36%, transparent); outline: 1px solid color-mix(in srgb, var(--amber) 75%, transparent); }
 .find-mirror { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; white-space: pre-wrap;
@@ -4531,6 +4610,7 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 /* «ещё один оверлей поверх оверлея!… поверх всего где-то 60% ширины экрана, и шрифт автоматом на 10% крупнее»: the lyrics over
    everything (app.js lyricsOver moves the box there and back) */
 .lyr-big { margin-left: 6px; vertical-align: middle; }
+.lyr-txt { margin-left: 2px; }   /* HERESY 1277: the .txt pair beside ⤢ */
 .lyr-over { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 40; display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55)); backdrop-filter: blur(3px); }
 .lyr-over-box { zoom: var(--lyr-z, 1.54); width: calc(60vw / var(--lyr-z, 1.54)); height: calc((100vh - var(--playbar-h)) * .94 / var(--lyr-z, 1.54)); display: flex; flex-direction: column; gap: 8px;
@@ -4631,7 +4711,7 @@ body:not([data-frame]) .frame-fs { display: none; }
 .hd-check.is-on .hd-item-ico { color: var(--amber); }
 
 /* HERESY 1169 · 1242: a LoRA strength over the pointer while it hovers or drags its slider (16 pt), framed in its zone's colour */
-.lora-vtip { position: fixed; z-index: 130; transform: translate(-50%, calc(-100% - 14px)); padding: 3px 10px; border: 2px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--ink); font: 600 16pt/1.25 var(--mono); white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+.lora-vtip { position: fixed; z-index: 130; transform: translate(-50%, calc(-100% - 14px)); padding: 3px 10px; border: 2px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--ink); font: 600 14pt/1.25 var(--mono); white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
 .lora-vtip[hidden] { display: none; }
 .lora-vtip.is-green { border-color: #3f9a4a; }
 .lora-vtip.is-amber { border-color: #e0b030; }
@@ -4722,8 +4802,57 @@ body[data-tab="artist"] .col-grip.left { display: none; }
 .ar-gallery { display: flex; flex-wrap: wrap; gap: 10px; }
 .ar-gpic { position: relative; margin: 0; }
 .ar-gpic .ar-thumb { height: var(--g-h, 200px); }
+/* HERESY 1284 (Viktor 09.10.2026: «Колонка с картинками у Художника - всё свалено в кучу. Сделай честный тайлинг»): even tiles in
+   equal columns that fill the column edge to edge; every tile the same box (square, or the one shape's own), the picture whole in it */
+.ar-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--g-h, 200px), 100%), 1fr)); gap: 8px; }
+.ar-gallery .ar-gpic { min-width: 0; }
+.ar-gallery .ar-gpic .ar-thumb { width: 100%; height: auto; aspect-ratio: var(--cell, 1 / 1); }
+.ar-gallery .ar-gpic .ar-thumb img { object-fit: contain; }
 .ar-star { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0;
   border-radius: 50%; background: rgba(0, 0, 0, .45); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .12s ease; }
 .ar-gpic:hover .ar-star, .ar-star:focus-visible, .ar-star.is-on { opacity: 1; }
 .ar-star.is-on, .ar-vstar.is-on { color: #f2c14e; }
 .ar-view .ar-vstar { font-size: 18px; }
+/* HERESY 1268 (Viktor 09.10.2026: «В узкой колонке в блоке Score кнопка full screen съезжает на новую строку. Можно уменьшить пустоту
+   между кнопкой ABC и Print»): the tools follow the tabs, the gaps halved: the full screen stays on the row */
+.score-head { gap: 6px; }
+.score-head > .spacer { flex: 0 0 8px; }
+/* HERESY 1268 (Viktor 09.10.2026: «прицепка смотрится ugly. Перенеси её на строку ниже и красиво отформатируй»): the document in
+   hand on a line of its own under the Writer's row, a chip: ✎ its name, ✕ to put it down */
+.wr-hand.is-on::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
+.wr-hand.is-on .wr-hand-doc { order: 3; max-width: 100%; gap: 2px; padding: 1px 3px 1px 8px; border: 1px solid color-mix(in oklab, var(--amber) 35%, transparent);
+  border-radius: var(--r-pill, 999px); background: color-mix(in oklab, var(--amber) 6%, transparent); }
+.wr-hand-doc .wr-hand-name { padding: 2px; font-weight: 500; }
+.wr-hand-doc .wr-hand-x { padding: 2px 6px; border-radius: var(--r-pill, 999px); line-height: 1; }
+.wr-hand-doc .wr-hand-x:hover { color: var(--ink); background: color-mix(in oklab, var(--amber) 14%, transparent); }
+/* HERESY 1270: the Artist's Draw is Stop while a run waits or draws, in the theme's colour for what ends something */
+#arDraw.is-stop { background: var(--bad); border-color: var(--bad); color: #fff; }
+#arDraw.is-stop:hover { filter: brightness(1.08); }
+/* HERESY 1271: the Artist in three columns, the outer two as wide as their edges are dragged (kept), the stage the rest */
+.ar-cols { display: grid; grid-template-columns: var(--ar-l, 380px) 12px minmax(280px, 1fr) 12px var(--ar-r, 560px); column-gap: 4px; align-items: start; margin-top: 14px; }
+.ar-left, .ar-stage, .ar-right { min-width: 0; }
+.ar-left, .ar-stage { position: sticky; top: 8px; }
+.ar-cols .ar-form { margin: 0; }
+.ar-cols .ar-bar { margin: 0; }
+.ar-cols .ar-runs { margin: 12px 0 28px; }
+.ar-left .ar-knobs { gap: 10px 12px; }
+.ar-left .ar-go { margin-left: 0; flex: 1 1 100%; justify-content: space-between; }
+.ar-left .ar-go #arDraw { min-width: 8em; }
+.ar-resizer { align-self: stretch; min-height: 220px; display: flex; justify-content: center; cursor: col-resize; touch-action: none; outline: none; }
+.ar-resizer::before { content: ""; width: 2px; height: 100%; border-radius: 1px; background: transparent; transition: background .12s; }
+.ar-resizer:hover::before, .ar-resizer.is-drag::before, .ar-resizer:focus-visible::before { background: var(--line-strong-a); }
+.ar-stage { display: flex; flex-direction: column; gap: 10px; }
+.ar-stage-pic { position: relative; display: block; align-self: center; padding: 0; overflow: hidden; border: 1px solid var(--line-a); border-radius: var(--r-md);
+  background: var(--field); cursor: zoom-in; }
+.ar-stage-pic img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.ar-stage-pic.is-loading img { filter: blur(1.5px); }
+.ar-stage-pic.is-live { cursor: default; border-color: var(--amber-dim); }
+.ar-stage-empty { display: grid; place-items: center; min-height: 240px; padding: 20px; border: 1px dashed var(--line-a); border-radius: var(--r-md);
+  color: var(--dim); font-size: 13px; text-align: center; }
+.ar-stage-data { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.ar-stage-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-variant-numeric: tabular-nums; }
+.ar-stage-prompt { color: var(--ink); font-size: 13px; line-height: 1.45; white-space: pre-wrap; max-height: 9.5em; overflow: auto; }
+.ar-stage-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ar-stage-acts .ar-vstar { font-size: 18px; }
+.ar-thumb.is-sel { border-color: var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 35%, transparent); }
+@media (max-width: 1280px) { .ar-cols { grid-template-columns: minmax(0, 1fr); } .ar-resizer { display: none; } .ar-left, .ar-stage { position: static; } }

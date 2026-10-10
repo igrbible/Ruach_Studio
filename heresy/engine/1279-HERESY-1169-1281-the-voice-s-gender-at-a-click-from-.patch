@@ -1,0 +1,143 @@
+From 5d5ebdd6ea49a5736f9974324f6166109281b371 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 20:28:11 -0600
+Subject: [PATCH 1279/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201281:=20the?=
+ =?UTF-8?q?=20voice's=20gender=20at=20a=20click=20(from=20SUNO=20v6,=20TOD?=
+ =?UTF-8?q?O.md:=20=C2=ABVocal=20gender=20at=20a=20click=20(male,=20female?=
+ =?UTF-8?q?):=20its=20words=20put=20into=20the=20Style=C2=BB):=20=E2=99=82?=
+ =?UTF-8?q?=20and=20=E2=99=80=20in=20the=20Style's=20head,=20lit=20by=20wh?=
+ =?UTF-8?q?at=20the=20Style=20says;=20a=20click=20turns=20the=20other=20ge?=
+ =?UTF-8?q?nder's=20word=20(the=20case=20kept)=20or=20puts=20=C2=ABmale=20?=
+ =?UTF-8?q?vocals=C2=BB=20/=20=C2=ABfemale=20vocals=C2=BB=20before=20a=20c?=
+ =?UTF-8?q?losing=20BPM;=20the=20lit=20one=20takes=20its=20tag=20out;=20on?=
+ =?UTF-8?q?e=20Ctrl+Z=20back?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css         |  5 +++
+ tools/console/app.js          | 74 +++++++++++++++++++++++++++++++++++
+ tools/console/heresy-icons.js |  3 ++
+ 3 files changed, 82 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 2ad9531..1c2493e 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4002,6 +4002,11 @@ html.i18n-wait .boot-veil > * { visibility: hidden; }
+   border-radius: 50%; color: var(--amber); vertical-align: 0; }
+ .label-end .hi-open:hover, .label-end .hi-open:focus-visible { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
+ .label-end .hi-open svg { width: 16px; height: 16px; display: block; }
++/* HERESY 1281: ♂ and ♀ in the Style's head, lit by what the Style says */
++.voice-togs { display: inline-flex; align-items: center; gap: 2px; }
++.voice-tog { width: 24px; height: 24px; min-width: 0; padding: 0; display: inline-grid; place-items: center; color: var(--dim); }
++.voice-tog .ui-ico { width: 16px; height: 16px; }
++.voice-tog.is-on { color: var(--amber); border-color: var(--amber); }
+ .style-warn { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border: 1px solid var(--amber); border-radius: 999px;
+   color: var(--amber); background: color-mix(in srgb, var(--amber) 9%, transparent); font: 600 10.5px/1.5 var(--sans); letter-spacing: .1em;
+   text-transform: uppercase; cursor: help; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 49eb740..15f2de4 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -7823,6 +7823,80 @@
+     paintKeys();
+   }
+ 
++  // HERESY 1281 (from SUNO v6, TODO.md: «Vocal gender at a click (male, female): its words put into the Style»): ♂ and ♀ in the
++  // Style's head. A click puts «male vocals» or «female vocals» into the Style: where it names the other gender that word turns
++  // (the case kept); where it names none, a tag of its own on the first line, before a closing «… BPM», else at the line's end;
++  // a click on the lit one takes the tag that says it out. Each change goes in as typed: one Ctrl+Z gives the Style back
++  var VOICE_RE = /\b(fe)?male\b/i;
++  function voiceOf(style) { var m = String(style || "").match(VOICE_RE); return m ? (m[1] ? "female" : "male") : ""; }
++  function paintVoice() {
++    var v = voiceOf($("style").value);
++    ["male", "female"].forEach(function (g) {
++      var b = $("voice-" + g);
++      if (!b) return;
++      b.classList.toggle("is-on", v === g);
++      b.setAttribute("aria-pressed", v === g ? "true" : "false");
++    });
++  }
++  function sameCase(word, like) {
++    if (like === like.toUpperCase()) return word.toUpperCase();
++    return like.charAt(0) === like.charAt(0).toUpperCase() ? word.charAt(0).toUpperCase() + word.slice(1) : word;
++  }
++  function voiceStyle(v, g) {
++    var lines = v.split("\n"), at = -1;
++    lines.some(function (l, i) { if (VOICE_RE.test(l)) { at = i; return true; } return false; });
++    if (at >= 0) {
++      var tags = lines[at].split(","), k = -1;
++      tags.some(function (t, i) { if (VOICE_RE.test(t)) { k = i; return true; } return false; });
++      var m = tags[k].match(VOICE_RE);
++      if ((m[1] ? "female" : "male") === g) {                  // the lit one: the tag that says it goes
++        tags.splice(k, 1);
++        lines[at] = tags.map(function (t) { return t.trim(); }).filter(Boolean).join(", ");
++      } else {                                                 // the other gender: its word turns
++        tags[k] = tags[k].replace(VOICE_RE, function (w) { return sameCase(g, w); });
++        lines[at] = tags.join(",");
++      }
++      return lines.join("\n");
++    }
++    var first = lines[0].split(",").map(function (t) { return t.trim(); }).filter(Boolean), put = g + " vocals";
++    var bpm = first.length && /^\d+(\.\d+)?\s*bpm$/i.test(first[first.length - 1]) ? first.length - 1 : first.length;
++    first.splice(bpm, 0, put);
++    lines[0] = first.join(", ");
++    return lines.join("\n");
++  }
++  function setVoice(g) {
++    var box = $("style"), v = box.value, out = voiceStyle(v, g), ok = false;
++    if (out === v) return;
++    box.focus({ preventScroll: true });
++    box.setSelectionRange(0, v.length);
++    try { ok = document.execCommand("insertText", false, out); } catch (e) { ok = false; }
++    if (!ok) { box.value = out; box.dispatchEvent(new Event("input", { bubbles: true })); }
++    box.setSelectionRange(out.length, out.length);
++    paintVoice();
++  }
++  (function () {
++    var label = $("style").closest(".field").querySelector(".label"), end = $("styleLabelEnd");
++    if (!end) { end = document.createElement("span"); end.className = "label-end"; end.id = "styleLabelEnd"; label.appendChild(end); }
++    var wrap = document.createElement("span");
++    wrap.className = "voice-togs";
++    [["male", "mars", "Male vocals in the Style: a click puts them there (in place of female ones); a click on the lit one takes their tag out"],
++     ["female", "venus", "Female vocals in the Style: a click puts them there (in place of male ones); a click on the lit one takes their tag out"]].forEach(function (d) {
++      var b = document.createElement("button");
++      b.type = "button";
++      b.id = "voice-" + d[0];
++      b.className = "btn ghost small icon-btn voice-tog";
++      b.setAttribute("aria-pressed", "false");
++      b.setAttribute("aria-label", d[0] === "male" ? "Male vocals" : "Female vocals");
++      b.dataset.tip = d[2];
++      b.innerHTML = window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(d[1]) : (d[0] === "male" ? "\u2642" : "\u2640");
++      b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); setVoice(d[0]); });   // the head does not fold
++      wrap.appendChild(b);
++    });
++    end.insertBefore(wrap, end.firstChild);
++    $("style").addEventListener("input", paintVoice);
++    paintVoice();
++  })();
++
+   /* ---------------------------------------------- HERESY 1014: three workspaces */
+   // Create (the form and the take, as the Kit has it), Write (the writing room with the
+   // song beside it) and Post (what is done to a finished take). The takes list stays in all
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index b19695b..328273a 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -67,6 +67,9 @@
+     playon: '<path d="M3 5h12"/><path d="M3 12h9"/><path d="M3 19h6"/><path d="M17 8v12"/><path d="m13 16 4 4 4-4"/>',
+     // HERESY 1275: a sound when a run ends (Lucide's bell, ISC)
+     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
++    // HERESY 1281: the voice's gender in the Style (Lucide's mars and venus, ISC)
++    mars: '<path d="M16 3h5v5"/><path d="m21 3-6.75 6.75"/><circle cx="10" cy="14" r="6"/>',
++    venus: '<path d="M12 15v7"/><path d="M9 19h6"/><circle cx="12" cy="9" r="6"/>',
+     // HERESY 1277: the lyrics out to a .txt and in from one (Lucide's file-down and file-up, ISC)
+     "file-down": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>',
+     "file-up": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/>',
+-- 
+2.43.0
+

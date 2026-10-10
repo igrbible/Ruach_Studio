@@ -1,0 +1,231 @@
+From c3cf49c3a08beab7a250e6ea1b7c98eac25719a7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 19:02:37 -0600
+Subject: [PATCH 1273/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201275:=20a=20?=
+ =?UTF-8?q?sound=20when=20a=20run=20ends=20(Viktor=2028.09.2026:=20=C2=AB?=
+ =?UTF-8?q?=D0=B7=D0=B2=D1=83=D0=BA=D0=BE=D0=B2=D0=BE=D0=B5=20=D0=BE=D0=BF?=
+ =?UTF-8?q?=D0=BE=D0=B2=D0=B5=D1=89=D0=B5=D0=BD=D0=B8=D0=B5=20=D0=BF=D1=80?=
+ =?UTF-8?q?=D0=B8=20=D0=BE=D0=BA=D0=BE=D0=BD=D1=87=D0=B0=D0=BD=D0=B8=D0=B8?=
+ =?UTF-8?q?=20=D0=B3=D0=B5=D0=BD=D0=B5=D1=80=D0=B0=D1=86=D0=B8=D0=B8=C2=BB?=
+ =?UTF-8?q?):=20=F0=9F=94=94=20in=20the=20player,=20on=20by=20default;=20t?=
+ =?UTF-8?q?wo=20notes=20up=20when=20a=20song,=20a=20score,=20a=20transcrip?=
+ =?UTF-8?q?tion,=20a=20new=20version,=20the=20Artist's=20pictures,=20a=20R?=
+ =?UTF-8?q?efiner's=20chain=20or=20a=20LoRA's=20training=20is=20done=20(a?=
+ =?UTF-8?q?=20queue=20of=20runs=20once,=20at=20its=20end),=20two=20down=20?=
+ =?UTF-8?q?when=20one=20fails;=20none=20over=20a=20new=20song=20that=20pla?=
+ =?UTF-8?q?ys=20itself,=20none=20for=20a=20run=20from=20elsewhere=20or=20o?=
+ =?UTF-8?q?ne=20cancelled;=20made=20in=20the=20page,=20as=20loud=20as=20th?=
+ =?UTF-8?q?e=20player?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  2 +-
+ tools/console/app.js           | 52 ++++++++++++++++++++++++++++++++--
+ tools/console/heresy-artist.js |  1 +
+ tools/console/heresy-icons.js  |  2 ++
+ tools/console/heresy-post.js   |  7 ++++-
+ tools/console/heresy-train.js  |  7 +++++
+ tools/console/index.html       |  3 ++
+ 7 files changed, 70 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 67c632d..9aa45d9 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3664,7 +3664,7 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
+    (shuffle, repeat, play on click, play on, the speed and the volume: the phone has its own keys for the volume) */
+ @media (max-width: 600px) {
+   #playbar .pb-row { justify-content: space-between; gap: 6px; }
+-  #playbar #pbShuffle, #playbar #pbRepeat, #playbar #clickPlay, #playbar #autoplay, #playbar #playSpeed, #playbar .volume { display: none; }
++  #playbar #pbShuffle, #playbar #pbRepeat, #playbar #clickPlay, #playbar #autoplay, #playbar #runChime, #playbar #playSpeed, #playbar .volume { display: none; }
+   #playbar .pb-ctrl { position: static; transform: none; margin: 0; }
+   #playbar .pb-side { margin-left: auto; gap: 6px; }
+   #playbar .time { font-size: 11.5px; white-space: nowrap; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 69f4066..09d7771 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -2455,6 +2455,7 @@
+     if (!isLive(job)) return;
+     job.error = message;
+     settle(job, "failed");
++    chimeFor(job, false);   // HERESY 1275: two notes down
+     if (/^Broken score: /.test(message) && !toasted["babel" + job.id]) {
+       toasted["babel" + job.id] = true;
+       return showBrokenScore(job, message.replace(/^Broken score: /, ""), (data && data.abc) || "");
+@@ -2539,7 +2540,7 @@
+   function finishJob(job, data) {
+     if (!isLive(job) || job.finishing) return;
+     job.finishing = true;
+-    if (job.kind === "transcribe") { settle(job, "done"); return finishTranscription(job); }
++    if (job.kind === "transcribe") { settle(job, "done"); chimeFor(job, true); return finishTranscription(job); }   // HERESY 1275
+     if (job.request.plan) { settle(job, "done"); return finishPlan(job, data); }
+     var names = data.takes || [];
+     var land = names.length || STATE.library ? Promise.resolve(names) : sessionTakes(job);
+@@ -2567,10 +2568,12 @@
+       if (watching) openTake(job.takes[0]);
+       // HERESY 1167 (Viktor: «Если плеер неактивен, по окончанию генерации трека прямо в проигрыш его»): a song made here
+       // plays when it is done, unless something plays (the player's «Play new takes»)
++      var plays = false;
+       if (job.kind !== "external" && !playing && playNew()) {
+         var fresh = findTake(job.takes[0]);
+-        if (fresh) playNow(fresh);
++        if (fresh) { playNow(fresh); plays = true; }
+       }
++      if (!plays) chimeFor(job, true);   // HERESY 1275: the end heard, unless the new song itself is
+     }).catch(function (error) {
+       job.error = error.message;
+       settle(job, "failed");
+@@ -2610,6 +2613,7 @@
+         if (seed && /^\d+$/.test(String(seed))) { $("lmSeed").value = String(seed); paintDice(); }
+         $("scoreDrawer").open = true;
+         toast("Score planned. Check its sections under Supply your own score; Generate now renders exactly this score.", "good");
++        chimeFor(job, true);   // HERESY 1275 (an instrumental run after it rings when it ends)
+       }
+       if (STATE.job === job && !STATE.take) showPlanScore(job);
+     }).catch(function (error) { toast("Could not fetch the planned score: " + error.message, "bad"); });
+@@ -2629,6 +2633,7 @@
+   function replayLanded(job) {
+     var name = job.takes[0];
+     toastOnce(job.id, (job.what || "New version") + " ready — " + job.title, "good");
++    chimeFor(job, true);   // HERESY 1275
+     // Only switch if you are still listening to the take it came from.
+     if (name && STATE.take && STATE.take.name === job.parent && !isPlaying()) openTake(name, { keep: true });
+     else if (STATE.take) { paintDecodeSwitch(); paintSoundSwitch(); }
+@@ -5368,6 +5373,49 @@
+   }
+   $("playNew").addEventListener("click", function () { store("yue2.playNew", playNew() ? "off" : null); paintPlayNew(); });
+   paintPlayNew();
++  // HERESY 1275 (Viktor 28.09.2026: «звуковое оповещение при окончании генерации»): a sound when a run made here ends, two
++  // notes up when it is done, two down when it failed; made here (no file), as loud as the player, none when it is muted
++  function runChime() { return recall("yue2.runChime") !== "off"; }
++  function paintRunChime() {
++    var on = runChime();
++    $("runChime").setAttribute("aria-pressed", on ? "true" : "false");
++    $("runChime").classList.toggle("is-on", on);
++  }
++  $("runChime").addEventListener("click", function () { store("yue2.runChime", runChime() ? "off" : null); paintRunChime(); });
++  paintRunChime();
++  var chimeCtx = null;
++  function chime(ok) {
++    var level = audio.muted ? 0 : audio.volume;
++    if (!runChime() || !level) return false;
++    try {
++      chimeCtx = chimeCtx || new (window.AudioContext || window.webkitAudioContext)();
++      if (chimeCtx.state === "suspended") chimeCtx.resume();
++      var t0 = chimeCtx.currentTime + 0.03;
++      (ok ? [880, 1318.5] : [659.25, 440]).forEach(function (hz, i) {   // a fifth up (A5, E6) or down (E5, A4)
++        var o = chimeCtx.createOscillator(), g = chimeCtx.createGain(), at = t0 + i * 0.17;
++        o.type = "sine";
++        o.frequency.value = hz;
++        g.gain.setValueAtTime(0.0001, at);
++        g.gain.exponentialRampToValueAtTime(0.2 * level, at + 0.015);
++        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.9);
++        o.connect(g);
++        g.connect(chimeCtx.destination);
++        o.start(at);
++        o.stop(at + 0.95);
++      });
++    } catch (e) { return false; }
++    window.RuachChime.rung.push(ok ? "done" : "failed");
++    if (window.RuachChime.rung.length > 20) window.RuachChime.rung.shift();
++    return true;
++  }
++  // a run of this page, seen to its end here: not one from elsewhere, not one that ended while the page was away; a queue
++  // of runs (versions, runs started one after another) is heard once, when its last one ends; a failure at once
++  function chimeFor(job, ok) {
++    if (job.kind === "external" || (job.restored && !job.seenRunning)) return;
++    if (ok && STATE.jobs.some(function (j) { return j !== job && isLive(j) && !j.provisional && j.kind !== "external"; })) return;
++    chime(ok);
++  }
++  window.RuachChime = { ring: chime, rung: [] };   // the other rooms ring it too (the Artist, the Refiner, the Trainer)
+   function paintPlayOn() {
+     var on = playOn();
+     $("autoplay").setAttribute("aria-pressed", on ? "true" : "false");
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 193de62..f1a9662 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -151,6 +151,7 @@
+         if (r.status === "done") toast(tr("The Artist drew") + " " + kept + " " + tr("of") + " " + r.of + " " + tr(r.of === 1 ? "picture" : "pictures"), kept ? "good" : "bad");
+         else if (r.status === "stopped") toast(tr("The Artist stopped:") + " " + kept + " " + tr("of") + " " + r.of + " " + tr(r.of === 1 ? "picture" : "pictures") + " " + tr("kept"));   // HERESY 1270
+         else toast(tr("The Artist's run failed:") + " " + (r.error || ""), "bad");
++        if (r.status !== "stopped" && window.RuachChime) window.RuachChime.ring(r.status === "done" && kept > 0);   // HERESY 1275: heard too
+       });
+       paintRuns();
+       paintForm();                                       // HERESY 1270: Stop back to Draw when the run ends
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 502e367..8c99765 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -65,6 +65,8 @@
+     playnew: '<polygon points="5 4 15 11 5 18 5 4"/><path d="M19 15v6"/><path d="M16 18h6"/>',
+     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+     playon: '<path d="M3 5h12"/><path d="M3 12h9"/><path d="M3 19h6"/><path d="M17 8v12"/><path d="m13 16 4 4 4-4"/>',
++    // HERESY 1275: a sound when a run ends (Lucide's bell, ISC)
++    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+     "vol-hi": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/>',
+     "vol-lo": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/>',
+     "vol-off": '<path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>',
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index 5e74797..d7530b4 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -133,10 +133,15 @@
+       if (job.status === "done" && chain.started === name) {
+         chain.started = "";
+         chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain is done: " + job.steps.length + " steps; Artifacts now shows the final file");
++        if (window.RuachChime) window.RuachChime.ring(true);   // HERESY 1275
+         // HERESY 1059: the checks were made on the final file: the Artifacts step shows that one, not the take
+         if (job.final && window.HeresyInspect && window.HeresyInspect.useSource && job.steps.some(function (s) { return s.step === "inspect"; })) window.HeresyInspect.useSource(job.final);
+       }
+-      if (job.status === "failed" && chain.started === name) { chain.started = ""; chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain stopped at " + (job.error || "a step"), "bad"); }
++      if (job.status === "failed" && chain.started === name) {
++        chain.started = "";
++        chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain stopped at " + (job.error || "a step"), "bad");
++        if (window.RuachChime) window.RuachChime.ring(false);   // HERESY 1275
++      }
+     }).catch(function () { /* the lab will answer on the next take */ });
+   }
+   function runChain() {
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 1c37710..41ada66 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -74,8 +74,15 @@
+     if (document.body.dataset.tab !== "train") return;
+     state.timer = setTimeout(function () {
+       if (document.hidden || document.body.dataset.tab !== "train") return schedule();
++      var wasLive = runs().filter(isLive).map(function (r) { return r.name; });   // HERESY 1275: a run that ends while the room looks on
+       Promise.all([api("/train/datasets"), api("/train/trash").catch(function () { return { trash: state.trash }; })]).then(function (d) {
+         state.data = d[0]; state.trash = d[1].trash || [];
++        wasLive.forEach(function (name) {
++          var r = runOf(name);
++          if (!r || isLive(r) || (r.status !== "done" && r.status !== "failed")) return;   // stopped by hand: nothing to say
++          toast(r.status === "done" ? "Training " + name + " is done" : "Training " + name + " failed" + (r.error ? ": " + r.error : ""), r.status !== "done");
++          if (window.RuachChime) window.RuachChime.ring(r.status === "done");
++        });
+         paintLive(); paintList(); paintPills(); gate();
+         if (state.pane === "run") paintRun();
+       }).catch(function () { /* the next tick tries again */ }).then(schedule);
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 1b3bbbf..07ca8d3 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1699,6 +1699,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       data-tip="Play new takes: a song made here plays when it is done, unless something plays. Click to only open it." data-ui="playnew">✦</button>
+     <button type="button" class="icon-btn pb-tog autoplay-btn" id="autoplay" aria-pressed="true" aria-label="Play on"
+       data-tip="Play on: when a take ends, the next one down the list starts, into the history. Click to stop after each take." data-ui="playon">↓</button>
++    <!-- HERESY 1275 (Viktor 28.09.2026: «звуковое оповещение при окончании генерации») -->
++    <button type="button" class="icon-btn pb-tog autoplay-btn" id="runChime" aria-pressed="true" aria-label="A sound when a run ends"
++      data-tip="A sound when a run made here ends: two notes up when it is done (a queue of runs once, when its last one ends), two down when one fails. None over a new song that starts playing by itself; as loud as the player. Click to make none." data-ui="bell">🔔</button>
+     <select class="speed-pick mono" id="playSpeed" aria-label="Playback speed" data-tip="Playback speed: slower to hear a detail, faster to skim; the pitch stays">
+     <option value="0.5">0.50×</option><option value="0.75">0.75×</option><option value="1" selected>1.00×</option><option value="1.25">1.25×</option><option value="1.5">1.50×</option><option value="1.75">1.75×</option><option value="2">2.00×</option>
+     </select>
+-- 
+2.43.0
+

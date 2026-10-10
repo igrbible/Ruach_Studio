@@ -923,7 +923,7 @@ const dialogNow = async () => {
   await answerDialog(false);
   return d;
 };
-await ev(`window.__staysAlive = 1; document.getElementById("lyrics").value = "[Verse]\\nстрока песни"; true`);
+await ev(`window.__staysAlive = 1; window.ruachEdited(true); document.getElementById("lyrics").value = "[Verse]\\nстрока песни"; true`);
 const rl = { f5: await reloadKey({ key: "F5", code: "F5" }) };
 rl.song = await dialogNow();
 rl.ctrlR = await reloadKey({ key: "r", code: "KeyR", ctrlKey: true });
@@ -1755,7 +1755,7 @@ const ar = await ev(`(async () => {
   const live = document.querySelector(".ar-run.is-live");
   out.live = live ? live.dataset.id + ":" + live.querySelectorAll(".ar-pic.is-wait").length : "";
   out.liveFirst = document.querySelector("#arRuns .ar-run") === live;
-  document.querySelector('.ar-run[data-id="20261008-160000-aaaa"] .ar-thumb').click(); await wait(250);
+  document.querySelector('.ar-run[data-id="20261008-160000-aaaa"] .ar-thumb').click(); await wait(80); document.querySelector('#arStage [data-stage="view"]').click(); await wait(250);   // 1271: picked, then over the page
   const v = document.querySelector(".ar-view");
   out.view = v ? v.querySelector(".art-count").textContent + " " + v.querySelector(".art-title").textContent : "";
   out.square = v ? v.style.getPropertyValue("--ar") : "";
@@ -1816,6 +1816,9 @@ const ar7 = await ev(`(async () => {
     next: places[1] ? places[1].textContent.trim() : "", liveOn: $("arLive").checked, filtersHidden: $("arFilters").hidden };
   $("arLive").checked = false; $("arLive").dispatchEvent(new Event("change", { bubbles: true }));
   $("arPrompt").value = "A boat."; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  // HERESY 1270: Draw is Stop while a run draws: the running one done first, then Draw
+  window.__ar7Runs.forEach((r) => { if (r.status === "running") r.status = "done"; });
+  for (let i = 0; i < 60 && $("arDraw").classList.contains("is-stop"); i++) await wait(100);
   $("arDraw").click(); await wait(300);
   const asked = window.__ar7Asked.filter((a) => a[0] === "draw").map((a) => a[1]);
   out.previewAsked = asked.length ? asked[0].preview : "none"; out.liveKept = localStorage.getItem("yue2.arLive");
@@ -1829,7 +1832,7 @@ const ar7 = await ev(`(async () => {
   document.querySelector('.ar-gpic[data-g="0"] .ar-star').click(); await wait(250);
   out.star = (window.__ar7Asked.filter((a) => a[0] === "star")[0] || [])[1] || null;
   out.starOn = document.querySelector('.ar-gpic[data-g="0"] .ar-star').classList.contains("is-on");
-  document.querySelector('.ar-gpic[data-g="0"] .ar-thumb').click(); await wait(250);
+  document.querySelector('.ar-gpic[data-g="0"] .ar-thumb').click(); await wait(80); document.querySelector('#arStage [data-stage="view"]').click(); await wait(250);   // 1271: picked, then over the page
   const v = document.querySelector(".ar-view");
   out.view = v ? v.querySelector(".art-count").textContent : "";
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); await wait(80);
@@ -2011,7 +2014,7 @@ const v63 = await ev(`(async () => {
   await wait(500);
   document.querySelector('#arBar [data-look="gallery"]').click(); await wait(300);
   const t = document.querySelector('.ar-gpic[data-g="0"] .ar-thumb'); if (!t) return { none: true };
-  t.click(); await wait(60);
+  t.click(); await wait(60); document.querySelector('#arStage [data-stage="view"]').click(); await wait(60);   // 1271: picked, then over the page
   const v = document.querySelector(".ar-view"), img = v.querySelector(".art-img");
   const one = { src: img.getAttribute("src"), w: img.style.width, h: img.style.height, loading: img.classList.contains("is-loading") };
   v.querySelector(".art-next").click(); await wait(60);
@@ -2066,7 +2069,7 @@ const g64 = await ev(`(async () => {
   window.fetch = window.__g64; delete window.__g64;
   return out;
 })()`);
-check("the unfolded log grows wider for a column of the cards (600 → 900 px at 1920)", g64.gpus && g64.w >= 880 && g64.w - (g64.w0 > 500 ? g64.w0 : 600) >= 200, JSON.stringify({ w0: g64.w0, w: g64.w, gpus: g64.gpus }));
+check("the unfolded log grows wider for a column of the cards (600 → 720 px at 1920, 1272: 180 px under 1264's 900)", g64.gpus && g64.w >= 700 && g64.w <= 740 && g64.w - (g64.w0 > 500 ? g64.w0 : 600) >= 100, JSON.stringify({ w0: g64.w0, w: g64.w, gpus: g64.gpus }));
 check("  the dock stays inside the window, as tall as its cards (not the whole log)", g64.top >= 0 && g64.h < 1080 * 0.7, JSON.stringify({ top: g64.top, h: g64.h }));
 check("  each card's block says its role, the studio's card framed, its bars drawn and its numbers given",
   g64.cards.length === 3 && /Studio/.test(g64.cards[0].role) && g64.cards[0].main && !g64.cards[1].main && /Training voice-r16 · Lab jobs/.test(g64.cards[1].role) &&
@@ -2098,6 +2101,655 @@ check("the bar's logo is the name alone (no figure, no cloud, no compact cut), i
 check("  one height: no tall bar at the page's top, the bar and the logo the same when a room scrolls", !lg66.tall && lg66.scrolledBarH === 52 && lg66.scrolledH === 28, JSON.stringify(lg66));
 check("  the favicon is R in English; each language has its letter (Р for the Cyrillic names, Π for the Greek)", lg66.fav &&
   /ru:Р/.test(lg66.letters) && /uk:Р/.test(lg66.letters) && /be:Р/.test(lg66.letters) && /el:Π/.test(lg66.letters) && /es:R/.test(lg66.letters) && /it:R/.test(lg66.letters), JSON.stringify(lg66));
+
+// HERESY 1169 · 1268 (Viktor 09.10.2026: «В комнате Писателя дай возможность регулировать ширину левой колонки со списком документов»;
+// his pictures of what was undone: the Librarian's peek over the cards, the Score's full screen on a row of its own, the Writer's chip;
+// «LoRA: сила над указателем… уменьшить до 14»; the Recite question leaving 59 lines out)
+section("the Writer's column dragged; no peek in the Librarian; the Score's row; the chip; the LoRA tip; Recite in sixteenths");
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+const wr68 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), was = localStorage.getItem("yue2.wrSideW");
+  document.querySelector('.topbar [data-tab="write"]').click(); await wait(300);
+  const rz = document.getElementById("wrResizer"), side = document.querySelector(".wr-side"), w0 = Math.round(side.getBoundingClientRect().width);
+  rz.focus(); rz.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); await wait(50);
+  const w1 = Math.round(side.getBoundingClientRect().width), kept = localStorage.getItem("yue2.wrSideW");
+  rz.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })); await wait(50);
+  const w2 = Math.round(side.getBoundingClientRect().width), gone = localStorage.getItem("yue2.wrSideW");
+  if (was) localStorage.setItem("yue2.wrSideW", was);
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  return { w0, w1, kept, w2, gone, role: rz.getAttribute("role"), cursor: getComputedStyle(rz).cursor }; })()`);
+check("the Writer's documents column: its edge widens it (→ 16 px, kept), a double click gives it its 280 px back", wr68.w1 === wr68.w0 + 16 && wr68.kept === String(wr68.w1) &&
+  wr68.w2 === 280 && wr68.gone === null && wr68.role === "separator" && wr68.cursor === "col-resize", JSON.stringify(wr68));
+const pk68 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  document.querySelector('.topbar [data-tab="collection"]').click(); await wait(500);
+  const card = document.querySelector("#collGrid .coll-card[data-name]");
+  if (card) card.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+  await wait(700);
+  const o = { card: !!card, peek: !document.getElementById("collPeek").hidden };
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  return o; })()`);
+check("  the Librarian: a card rested on shows no peek (its style and lyrics are a click away)", !pk68.peek, JSON.stringify(pk68));
+const st68 = await ev(`(() => { const h = document.querySelector(".score-head"), sp = h && h.querySelector(":scope > .spacer");
+  const hand = document.getElementById("wrHandBox"), was = hand.className, name = document.getElementById("wrHandName"), nameWas = name.textContent;
+  hand.classList.add("is-on"); name.textContent = "A song in hand with a long enough title to show the chip";
+  const doc = hand.querySelector(".wr-hand-doc").getBoundingClientRect(), acts = hand.querySelector(".wr-hand-acts").getBoundingClientRect(), cs = getComputedStyle(hand.querySelector(".wr-hand-doc"));
+  const o = { gap: h && getComputedStyle(h).columnGap, grow: sp && getComputedStyle(sp).flexGrow, below: doc.top >= acts.bottom - 1, round: parseFloat(cs.borderTopLeftRadius) > 0, border: cs.borderTopStyle };
+  hand.className = was; name.textContent = nameWas;
+  const tip = document.createElement("div"); tip.className = "lora-vtip"; document.body.appendChild(tip); o.tipPx = getComputedStyle(tip).fontSize; tip.remove();
+  return o; })()`);
+check("  the Score's tools follow its tabs (gaps of 6 px, no stretching gap): the full screen keeps its row", st68.gap === "6px" && st68.grow === "0", JSON.stringify(st68));
+check("  the Writer's document in hand on a line of its own under the Writer's row, a chip", st68.below && st68.round && st68.border === "solid", JSON.stringify(st68));
+check("  the LoRA strength over the pointer at 14 pt", st68.tipPx === "18.6667px", JSON.stringify(st68));
+const RS68 = 'X:1\nT:\nM:4/4\nL:1/16\nQ:1/4=100\nV: Vocal clef=treble name="Vocal Melody" snm="Vocal"\nV: Ins clef=treble name="Ins Melody" snm="Inst."\nK:Am\n% verse\nV: Vocal\n"Am"z16|"F"z16|"C"z16|"G"z16|\nV: Ins\nA4c4e4c4|F4A4c4A4|C4E4G4E4|G4B4d4B4|\n';
+const RL68 = "[Verse]\nРаз два три четыре пять шесть семь восемь\nДевять десять одиннадцать двенадцать\nТринадцать четырнадцать пятнадцать";
+const rc68 = await ev(`(() => { const r8 = HeresyRecite.lay(${JSON.stringify(RS68)}, ${JSON.stringify(RL68)}, { step: 8 }), r = HeresyRecite.lay(${JSON.stringify(RS68)}, ${JSON.stringify(RL68)}, {});
+  let parsed = "ok"; try { HeresyAbc.parse(r.abc); } catch (e) { parsed = e.message; }
+  return { d8: r8.dropped.length, d: r.dropped.length, step: r.step, parsed }; })()`);
+check("  Recite: where eighths leave lines out, the lines are laid a syllable a sixteenth (fewer left out, the score still the studio's)", rc68.d8 > 0 && rc68.d < rc68.d8 && rc68.step === 16 && rc68.parsed === "ok", JSON.stringify(rc68));
+
+// HERESY 1169 · 1269 (Viktor 09.10.2026: «Пометка строк через Alt+K в редакторе не персистентна»; «Шорткат на попап/fullscreen редактора
+// Лирики — Alt+E»; «Блокируем браузерные Ctrl+S и Ctrl+Shift+S. Оба шортката сохраняют все изменения в текущей сессии. Если нет правок в
+// комнатах — при F5 не выводим диалоговое окно»; «Если лирика поверх всего, и применил Shift+Tab — схлопывание этого попапа и переносимся
+// в сам фрейм попап»)
+section("the lyrics' marks with their text; Alt+E; Shift+Tab from the lifted lyrics; Ctrl+S keeps everything");
+const key69 = async (code, key, vk, modifiers) => {
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key, code, windowsVirtualKeyCode: vk, modifiers });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: vk, modifiers });
+  await sleep(200);
+};
+await ev(`(() => { document.querySelector('#tabs [data-tab="create"]').click(); const f = document.querySelector('[data-fold="lyrics"]'); if (f.classList.contains("is-folded")) f.querySelector(".label").click();
+  const a = document.getElementById("lyrics"); window.__lyr69 = a.value; a.value = "[Verse]\\nодин\\nдва\\nтри"; a.scrollIntoView({ block: "center" });
+  a.focus(); const at = a.value.indexOf("два"); a.setSelectionRange(at, at); return true; })()`);
+await sleep(250);
+await key69("KeyK", "k", 75, 1);
+const mk69 = await ev(`(async () => { const wait = (ms) => new Promise((r) => setTimeout(r, ms)), a = document.getElementById("lyrics"), w = a.parentNode;
+  const marked = () => [...w.querySelectorAll(".lyr-num.is-mark")].map((n) => n.textContent).join();
+  const one = marked(); a.value = "другой текст"; await wait(120); const other = marked();
+  a.value = "[Verse]\\nодин\\nдва\\nтри"; await wait(120); const back = marked();
+  return { one, other, back }; })()`);
+check("the lyrics' marks come back with their text when the page puts it into the box (a reload, a take loaded); another text has none", mk69.one === "3" && mk69.other === "" && mk69.back === "3", JSON.stringify(mk69));
+await key69("KeyE", "e", 69, 1);
+const ae1 = await ev(`window.ruachLyricsOver()`);
+await key69("KeyE", "e", 69, 1);
+const ae2 = await ev(`window.ruachLyricsOver()`);
+await key69("KeyE", "e", 69, 1);
+await key69("Tab", "Tab", 9, 8);
+const st69 = await ev(`({ over: window.ruachLyricsOver(), frame: document.body.dataset.frame || null, focus: (document.activeElement || {}).id || "" })`);
+await key69("Escape", "Escape", 27, 0);
+await sleep(300);
+check("Alt+E lifts the lyrics over everything and puts them back; Shift+Tab over them puts them back into the form, lifts its frame, the cursor in the lyrics", ae1 === true && ae2 === false &&
+  st69.over === false && st69.frame === "compose" && st69.focus === "lyrics", JSON.stringify({ ae1, ae2, st69 }));
+await ev(`window.ruachEdited(true); true`);
+await key69("KeyS", "s", 83, 2);
+await sleep(400);
+const cs69 = await ev(`({ edited: window.ruachEdited(), said: [...document.querySelectorAll("#toasts .toast")].some((t) => /^Saved: the song in the form/.test(t.textContent)) })`);
+await ev(`(() => { const a = document.getElementById("lyrics"); a.value = window.__lyr69; a.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+check("Ctrl+S keeps everything (the form, the Writer's open document, the settings) instead of the browser's Save page; after it the page counts nothing as edited", cs69.said && cs69.edited === false, JSON.stringify(cs69));
+
+// HERESY 1169 · 1270 (Viktor 09.10.2026: «Запустил два раза генерацию картинки в комнате Художника… Кнопку DRAW нужно заменять на STOP»)
+section("the Artist's Draw is Stop while a run draws");
+const ar70Was = await ev(`document.body.dataset.tab`);
+await ev(`(() => { const real = window.fetch; window.__ar70Fetch = real; window.__ar70Asked = [];
+  const run = { id: "20261009-170000-eeee", prompt: "A boat.", shapes: ["1:1"], seed: 5, count: 1, painter: "krea2-q4", created: 1791580000, status: "running", of: 1, pictures: [], gpu: 1 };
+  window.__ar70Runs = [run];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => {
+    u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: window.__ar70Runs });
+    if (u.startsWith("/lab/artist/stop")) { const b = JSON.parse(o.body); window.__ar70Asked.push(b); window.__ar70Runs.forEach((r) => { if (r.id === b.id) r.status = "stopped"; }); return json({ id: b.id, stopping: true }); }
+    if (u.startsWith("/lab/artist/draw")) { window.__ar70Asked.push({ draw: 1 }); return json({}, 500); }
+    return real(u, o);
+  };
+  return true; })()`);
+await ev(`document.getElementById("tabArtist").click(); true`);
+await waitFor(`document.querySelectorAll('#arRuns .ar-run[data-id="20261009-170000-eeee"]').length === 1`, 4000, 50);
+const ar70 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), b = document.getElementById("arDraw");
+  const o = { text: b.textContent, stop: b.classList.contains("is-stop"), enabled: !b.disabled };
+  document.getElementById("arPrompt").value = "Another boat."; document.getElementById("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  document.getElementById("arPrompt").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true, cancelable: true }));
+  await wait(200);
+  b.click();
+  for (let i = 0; i < 50 && b.classList.contains("is-stop"); i++) await wait(100);
+  const st = document.querySelector('.ar-run[data-id="20261009-170000-eeee"] .ar-state');
+  o.asked = window.__ar70Asked; o.after = b.textContent; o.stopAfter = b.classList.contains("is-stop"); o.state = st ? st.textContent : "";
+  window.fetch = window.__ar70Fetch;
+  return o; })()`);
+await ev(`document.querySelector('.topbar [data-tab="' + ${JSON.stringify(ar70Was || "create")} + '"]').click(); true`);
+await sleep(300);
+check("the Artist's Draw is Stop while a run draws (Ctrl+Enter draws no second run meanwhile); Stop asks the lab to stop that run, the run says stopped, and the button is Draw again",
+  ar70.text === "Stop" && ar70.stop && ar70.enabled && ar70.asked.length === 1 && ar70.asked[0].id === "20261009-170000-eeee" && ar70.after === "Draw" && !ar70.stopAfter && /^stopped/.test(ar70.state),
+  JSON.stringify(ar70));
+
+// HERESY 1169 · 1271 (Viktor 09.10.2026: «Канвас комнаты Художника можно разделить на три колонки, каждая регулируется по ширине. В левой
+// промптинг с параметрами. В средней проявка изображения и активное выбранное как в InvokeAI, и ниже данные по прогону самого изображения,
+// правая колонка — библиотека генераций»)
+section("the Artist in three columns: the prompt, the stage, the library");
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+const ar71Was = await ev(`document.body.dataset.tab`);
+await ev(`(() => { const real = window.fetch; window.__ar71Fetch = real;
+  const pic = (n, shape, w, h, seed) => { const f = String(n).padStart(2, "0") + "-" + shape.replace(":", "x") + "-s" + seed; return { n, shape, seed, w, h, kept: true, file: f + ".png", thumb: "thumbs/" + f + ".jpg" }; };
+  window.__ar71Done = { id: "20261009-180000-ffff", prompt: "A harbour at night, lanterns on the water.", shapes: ["1:1", "16:9"], seed: 40, count: 1, painter: "krea2-q4", created: 1791590000,
+    status: "done", of: 2, took: 80, gpu: 2, pictures: [pic(1, "1:1", 1280, 1280, 40), pic(2, "16:9", 1920, 1080, 40)] };
+  window.__ar71Runs = [{ id: "20261009-181000-gggg", prompt: "A storm.", shapes: ["16:9"], seed: 9, count: 1, painter: "krea2-q4", created: 1791590600, status: "running", of: 1, gpu: 1, pictures: [],
+    live: { live: 1, step: 3, of: 12, file: "preview/03.jpg" } }, window.__ar71Done];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => { u = String(u); if (u.startsWith("/lab/artist/runs")) return json({ runs: window.__ar71Runs }); if (u.startsWith("/lab/artist/stop")) return json({}); return real(u, o); };
+  localStorage.removeItem("yue2.arLook"); localStorage.removeItem("yue2.arL"); localStorage.removeItem("yue2.arR");
+  return true; })()`);
+await ev(`document.getElementById("tabArtist").click(); if (window.HeresyArtist && window.HeresyArtist.reload) window.HeresyArtist.reload(); true`);
+await waitFor(`document.querySelectorAll('#arRuns .ar-run[data-id="20261009-180000-ffff"]').length === 1`, 4000, 50);
+await sleep(300);
+const ar71 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), box = (el) => { const r = el.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.right), Math.round(r.top)]; };
+  const L = document.querySelector(".ar-left"), S = $("arStage"), R = document.querySelector(".ar-right");
+  const o = { l: box(L), s: box(S), r: box(R), prompt: !!L.querySelector("#arPrompt"), draw: !!L.querySelector("#arDraw"), lib: !!R.querySelector("#arRuns") && !!R.querySelector("#arBar") };
+  const lp = S.querySelector(".ar-stage-pic.is-live");
+  o.live = { shown: !!lp, src: lp && lp.querySelector("img") ? lp.querySelector("img").getAttribute("src") : "", step: (S.querySelector(".ar-stepno") || {}).textContent || "",
+    meta: (S.querySelector(".ar-stage-meta") || {}).textContent || "" };
+  window.__ar71Runs = [window.__ar71Done];                 // the painting run gone: the newest picture on the stage
+  if (window.HeresyArtist && window.HeresyArtist.reload) window.HeresyArtist.reload();
+  await wait(500);
+  o.newest = S.querySelector(".ar-stage-pic") ? S.querySelector(".ar-stage-pic").dataset.w : "";
+  document.querySelector('.ar-run[data-id="20261009-180000-ffff"] .ar-pic[data-i="0"] .ar-thumb').click(); await wait(150);
+  const sp = S.querySelector(".ar-stage-pic"), img = sp && sp.querySelector("img");
+  o.picked = { w: sp && sp.dataset.w, src: img && img.getAttribute("src"), meta: (S.querySelector(".ar-stage-meta") || {}).textContent || "", prompt: (S.querySelector(".ar-stage-prompt") || {}).textContent || "",
+    sel: document.querySelectorAll("#arRuns .ar-thumb.is-sel").length, size: sp ? [parseInt(sp.style.width, 10), parseInt(sp.style.height, 10)] : null, view: !!document.querySelector(".ar-view") };
+  if (sp) sp.click(); await wait(200);
+  const v = document.querySelector(".ar-view");
+  o.over = v ? v.querySelector(".art-title").textContent : "";
+  if (v) v.querySelector(".art-close").click(); await wait(200);
+  const e = $("arEdgeL"), w0 = Math.round(L.getBoundingClientRect().width);
+  e.focus(); e.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); await wait(50);
+  o.edge = { w0, w1: Math.round(L.getBoundingClientRect().width), kept: localStorage.getItem("yue2.arL") };
+  e.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })); await wait(50);
+  o.edge.back = Math.round(L.getBoundingClientRect().width); o.edge.gone = localStorage.getItem("yue2.arL");
+  window.fetch = window.__ar71Fetch;
+  return o; })()`);
+await ev(`document.querySelector('.topbar [data-tab="' + ${JSON.stringify(ar71Was || "create")} + '"]').click(); true`);
+await sleep(300);
+check("the Artist in three columns at 1920: the prompt with its knobs and Draw on the left, the stage in the middle, the library (its bar and runs) on the right",
+  ar71.l[1] <= ar71.s[0] && ar71.s[1] <= ar71.r[0] && ar71.prompt && ar71.draw && ar71.lib, JSON.stringify({ l: ar71.l, s: ar71.s, r: ar71.r }));
+check("  a run painting develops on the stage, its step counted, its run's data under it", ar71.live.shown && /preview%2F03\.jpg|preview\/03\.jpg/.test(ar71.live.src) && ar71.live.step === "3 / 12" &&
+  /drawing 1 of 1/.test(ar71.live.meta), JSON.stringify(ar71.live));
+check("  with none painting, the newest picture; a click in the library picks one for the stage (no window over the page), its shape kept, its run's data under it, the thumb marked; the stage's picture opens it over the page",
+  ar71.newest === "1920" && ar71.picked.w === "1280" && /01-1x1-s40/.test(ar71.picked.src) && /seed 40/.test(ar71.picked.meta) && /1:1 · 1280×1280/.test(ar71.picked.meta) && /harbour/.test(ar71.picked.prompt) &&
+  ar71.picked.sel === 1 && !ar71.picked.view && !!ar71.picked.size && Math.abs(ar71.picked.size[0] - ar71.picked.size[1]) <= 1 && /1:1/.test(ar71.over), JSON.stringify(ar71.picked) + " " + ar71.newest + " " + ar71.over);
+check("  the prompt's edge widens its column (→ 16 px, kept), a double click gives it its 380 px back", ar71.edge.w1 === ar71.edge.w0 + 16 && ar71.edge.kept === String(ar71.edge.w1) &&
+  ar71.edge.back === 380 && ar71.edge.gone === null, JSON.stringify(ar71.edge));
+
+// HERESY 1169 · 1275 (Viktor 28.09.2026: «звуковое оповещение при окончании генерации»)
+section("a sound when a run ends");
+const ch75 = await ev(`(() => { const b = document.getElementById("runChime"), a = document.getElementById("audio"), was = { muted: a.muted, vol: a.volume };
+  const o = { on: b.getAttribute("aria-pressed"), icon: !!b.querySelector("svg"), inBar: !!b.closest("#playbar"), after: b.previousElementSibling ? b.previousElementSibling.id : "", tip: b.dataset.tip || "" };
+  const rung = window.RuachChime.rung.slice(); window.RuachChime.rung.length = 0;
+  a.muted = false; a.volume = 0.5; o.rings = window.RuachChime.ring(true); o.ringsLow = window.RuachChime.ring(false);
+  a.muted = true; o.muted = window.RuachChime.ring(true);
+  a.muted = false; a.volume = 0; o.silent = window.RuachChime.ring(true);
+  a.muted = was.muted; a.volume = was.vol;
+  b.click(); o.offKept = localStorage.getItem("yue2.runChime"); o.offPressed = b.getAttribute("aria-pressed"); o.off = window.RuachChime.ring(true);
+  b.click(); o.backKept = localStorage.getItem("yue2.runChime"); o.backPressed = b.getAttribute("aria-pressed");
+  o.rung = window.RuachChime.rung.join(); window.RuachChime.rung.length = 0; rung.forEach((x) => window.RuachChime.rung.push(x));
+  return o; })()`);
+check("🔔 in the player after Play on, on by default, its bell drawn: a sound when a run ends (two notes up, two down when it failed)",
+  ch75.on === "true" && ch75.icon && ch75.inBar && ch75.after === "autoplay" && /two notes up when it is done .*two down when one fails/.test(ch75.tip) && ch75.rings === true && ch75.ringsLow === true,
+  JSON.stringify(ch75));
+check("  none when the player is muted or at nothing; a click makes none (kept), a second brings it back", ch75.muted === false && ch75.silent === false &&
+  ch75.offKept === "off" && ch75.offPressed === "false" && ch75.off === false && ch75.backKept === null && ch75.backPressed === "true" && ch75.rung === "done,failed",
+  JSON.stringify(ch75));
+
+// HERESY 1169 · 1276 (Viktor 09.10.2026: «В редактор можно добавить F4/Ctrl+H, с учётом регистра и без»)
+section("find and replace in the lyrics: F4 and Ctrl+H, the case as typed or any");
+const fr76Was = await ev(`(() => { document.querySelector('#tabs [data-tab="create"]').click(); const f = document.querySelector('[data-fold="lyrics"]'); if (f.classList.contains("is-folded")) f.querySelector(".label").click();
+  const a = document.getElementById("lyrics"), was = a.value; a.value = "[Verse]\\nСвет и свет. СВЕТ!\\nОн обе́щано пришёл"; a.dispatchEvent(new Event("input", { bubbles: true }));
+  a.focus(); a.setSelectionRange(0, 0); const q0 = document.getElementById("findQ"); if (q0) q0.value = ""; try { localStorage.removeItem("yue2.findCase"); } catch (e) {} return was; })()`);
+await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "F4", code: "F4", windowsVirtualKeyCode: 115 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "F4", code: "F4", windowsVirtualKeyCode: 115 });
+await waitFor(`window.HeresyFind.state().open && window.HeresyFind.state().replace`, 3000, 50);
+const fr76 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), a = document.getElementById("lyrics"), q = document.getElementById("findQ"), r = document.getElementById("findR");
+  const typeQ = (v) => { q.value = v; q.dispatchEvent(new Event("input", { bubbles: true })); };
+  const o = { f4: window.HeresyFind.state(), focusQ: document.activeElement === q };
+  typeQ("свет"); await wait(50); o.any = window.HeresyFind.state().hits;
+  document.querySelector('.find-bar [data-find="case"]').click(); await wait(50);
+  o.cased = { hits: window.HeresyFind.state().hits, on: window.HeresyFind.state().cased, kept: localStorage.getItem("yue2.findCase") };
+  r.value = "огонь"; r.focus();
+  r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })); await wait(50);
+  o.one = a.value.split("\\n")[1];
+  q.focus(); q.dispatchEvent(new KeyboardEvent("keydown", { key: "c", code: "KeyC", altKey: true, bubbles: true, cancelable: true })); await wait(50);
+  o.caseOff = { on: window.HeresyFind.state().cased, kept: localStorage.getItem("yue2.findCase"), hits: window.HeresyFind.state().hits };
+  r.focus(); r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true, cancelable: true })); await wait(50);
+  o.all = a.value.split("\\n")[1]; o.said = window.HeresyFind.state().said;
+  a.focus(); document.execCommand("undo"); await wait(50); o.undo = a.value.split("\\n")[1];
+  typeQ("обещано"); r.value = "сказано"; r.focus(); r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })); await wait(50);
+  o.mark = a.value.split("\\n")[2];
+  window.HeresyFind.close(); await wait(50);
+  a.focus(); a.setSelectionRange(0, 0);
+  return o; })()`);
+await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "h", code: "KeyH", windowsVirtualKeyCode: 72, modifiers: 2 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "h", code: "KeyH", windowsVirtualKeyCode: 72, modifiers: 2 });
+const frH = await waitFor(`window.HeresyFind.state().open && window.HeresyFind.state().replace ? window.HeresyFind.state() : null`, 3000, 50);
+await ev(`(() => { window.HeresyFind.close(); const a = document.getElementById("lyrics"); a.value = ${JSON.stringify(fr76Was)}; a.dispatchEvent(new Event("input", { bubbles: true })); a.blur();
+  try { localStorage.removeItem("yue2.findCase"); } catch (e) {} return true; })()`);
+check("F4 in the lyrics opens find with a second row to replace; any case finds Свет, свет and СВЕТ, Aa only свет (kept)",
+  fr76.f4.open && fr76.f4.replace && fr76.f4.box === "lyrics" && fr76.focusQ && fr76.any === 3 && fr76.cased.hits === 1 && fr76.cased.on && fr76.cased.kept === "1", JSON.stringify(fr76));
+check("  Enter replaces the match in hand, Alt+C turns the case off again, Ctrl+Enter replaces them all (counted), one Ctrl+Z takes All back; a stress mark is part of the match; Ctrl+H opens it too",
+  fr76.one === "Свет и огонь. СВЕТ!" && !fr76.caseOff.on && fr76.caseOff.kept === null && fr76.caseOff.hits === 2 && fr76.all === "огонь и огонь. огонь!" && fr76.said === "2 replaced" &&
+  fr76.undo === "Свет и огонь. СВЕТ!" && fr76.mark === "Он сказано пришёл" && !!frH && frH.box === "lyrics", JSON.stringify({ fr76, frH }));
+
+// HERESY 1169 · 1277 (Viktor 09.10.2026: «Кнопку экспорта/импорта содержимого редактора в голый txt формат, авто имя файла по Title трека»)
+section("the lyrics as plain text: saved as Title.txt, a .txt put in their place");
+const tx77Was = await ev(`(() => { document.querySelector('#tabs [data-tab="create"]').click(); const f = document.querySelector('[data-fold="lyrics"]'); if (f.classList.contains("is-folded")) f.querySelector(".label").click();
+  const a = document.getElementById("lyrics"), t = document.getElementById("title"), was = { lyrics: a.value, title: t.value };
+  a.value = "[Verse]\\nстрока одна\\nи вторая"; a.dispatchEvent(new Event("input", { bubbles: true })); t.value = "Ночь / Тест: 1?"; t.dispatchEvent(new Event("input", { bubbles: true }));
+  return was; })()`);
+const tx77 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = HTMLAnchorElement.prototype.click; let got = null;
+  HTMLAnchorElement.prototype.click = function () { if (this.download) { got = { name: this.download, href: this.href }; return; } return real.call(this); };
+  const fold = document.querySelector('[data-fold="lyrics"]').classList.contains("is-folded");
+  document.getElementById("lyricsTxtOut").click();
+  HTMLAnchorElement.prototype.click = real;
+  const o = { name: got && got.name, body: got ? await (await fetch(got.href)).text() : null, foldKept: document.querySelector('[data-fold="lyrics"]').classList.contains("is-folded") === fold,
+    icons: [...document.querySelectorAll(".lyr-txt")].map((b) => !!b.querySelector("svg")).join() };
+  return o; })()`);
+await ev(`(() => { const dt = new DataTransfer(); dt.items.add(new File(["\\uFEFF[Chorus]\\r\\nиз файла\\r\\n\\r\\n"], "Из файла.txt", { type: "text/plain" }));
+  const i = document.getElementById("lyricsTxtFile"); i.files = dt.files; i.dispatchEvent(new Event("change")); return true; })()`);
+const tx77Ask = await waitFor(`(() => { const b = document.querySelector(".hd-back.is-on:not(.is-leaving)"); return b && b.querySelector(".hd-yes") ? b.querySelector(".hd-title").textContent + " | " + b.querySelector(".hd-yes").textContent : null; })()`, 3000, 50);
+await answerDialog(true);
+await sleep(200);
+const tx77In = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), a = document.getElementById("lyrics"), t = document.getElementById("title");
+  const o = { lyrics: a.value, title: t.value };
+  a.focus(); document.execCommand("undo"); await wait(50); o.undo = a.value;
+  const dt = new DataTransfer(); dt.items.add(new File([new Uint8Array([0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2])], "cp1251.txt", { type: "text/plain" }));
+  const i = document.getElementById("lyricsTxtFile"); i.files = dt.files; i.dispatchEvent(new Event("change")); await wait(300);
+  o.refused = a.value === o.undo; o.toast = [...document.querySelectorAll(".toast")].map((x) => x.textContent).filter((x) => /UTF-8/.test(x)).length > 0;
+  a.value = ""; a.dispatchEvent(new Event("input", { bubbles: true })); t.value = ""; t.dispatchEvent(new Event("input", { bubbles: true }));
+  const dt2 = new DataTransfer(); dt2.items.add(new File(["[Intro]\\nтихо"], "Песня из файла.txt", { type: "text/plain" }));
+  i.files = dt2.files; i.dispatchEvent(new Event("change")); await wait(300);
+  o.empty = { lyrics: a.value, title: t.value, asked: !!document.querySelector(".hd-back.is-on:not(.is-leaving)") };
+  return o; })()`);
+await ev(`(() => { const a = document.getElementById("lyrics"), t = document.getElementById("title"); a.value = ${JSON.stringify(tx77Was.lyrics)}; a.dispatchEvent(new Event("input", { bubbles: true })); a.blur();
+  t.value = ${JSON.stringify(tx77Was.title)}; t.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+check("the lyrics saved as plain text: named by the Title (the signs a file name cannot hold dropped), UTF-8 lines as they are, a newline at the end; the head does not fold",
+  tx77.name === "Ночь Тест 1.txt" && tx77.body === "[Verse]\nстрока одна\nи вторая\n" && tx77.foldKept && tx77.icons === "true,true", JSON.stringify(tx77));
+check("  a .txt put in their place: asked first, its byte-order mark, Windows line ends and trailing blank lines dropped, the Title kept; one Ctrl+Z brings the old words back; a file not UTF-8 refused out loud; an empty Title takes the file's name, an empty box is not asked",
+  /^Put Из файла\.txt in place of the lyrics\?/.test(tx77Ask || "") && /Replace$/.test(tx77Ask || "") && tx77In.lyrics === "[Chorus]\nиз файла" && tx77In.title === "Ночь / Тест: 1?" &&
+  tx77In.undo === "[Verse]\nстрока одна\nи вторая" && tx77In.refused && tx77In.toast && tx77In.empty.lyrics === "[Intro]\nтихо" && tx77In.empty.title === "Песня из файла" && !tx77In.empty.asked,
+  JSON.stringify({ tx77Ask, tx77In }));
+
+// HERESY 1169 · 1278 (Viktor 09.10.2026: «`[` вторым/третьим в одной строке после валидного тега. Авто пробел между тегами в одной строке. Но такое только с подсказкой несекционных тегов»)
+section("a second and a third tag on a line: the tags that are no section, a space put between them");
+const ch78Was = await ev(`document.getElementById("lyrics").value`);
+await tcSet("[Verse 1]\nстрока\n[Interlude]");
+await sleep(150);
+await tcKey("[", "BracketLeft", 219, { text: "[" });
+const ch78a = { ...(await tcState()), tail: (await tcTail(13)).tail };
+await send("Input.insertText", { text: "br" });
+await sleep(60);
+const ch78b = await tcState();
+await tcKey("Enter", "Enter", 13, { text: "\r" });
+const ch78c = { ...(await tcTail(19)), open: (await tcState()).open };
+await tcKey("[", "BracketLeft", 219, { text: "[" });
+const ch78d = { ...(await tcState()), tail: (await tcTail(21)).tail };
+await send("Input.insertText", { text: "si" });
+await sleep(60);
+await tcKey("Enter", "Enter", 13, { text: "\r" });
+const ch78e = (await tcTail(29)).tail;
+await tcKey("[", "BracketLeft", 219, { text: "[" });
+const ch78f = { open: (await tcState()).open, tail: (await tcTail(10)).tail };
+await tcSet("[Chorus]");
+await tcKey(" ", "Space", 32, { modifiers: 2 });
+const ch78g = { ...(await tcState()), tail: (await tcTail(10)).tail };
+await send("Input.insertText", { text: "sp" });
+await sleep(60);
+await tcKey("Enter", "Enter", 13, { text: "\r" });
+const ch78h = await ev(`(() => { const a = document.getElementById("lyrics"); return { value: a.value, sel: a.value.slice(a.selectionStart, a.selectionEnd) }; })()`);
+await tcSet("");
+await tcKey("[", "BracketLeft", 219, { text: "[" });
+const ch78i = await tcState();
+await tcKey("Escape", "Escape", 27);
+await ev(`(() => { const a = document.getElementById("lyrics"); a.value = ${JSON.stringify(ch78Was)}; a.dispatchEvent(new Event("input", { bubbles: true })); a.blur(); return true; })()`);
+check("a «[» right after a line's tag gets its space and opens the tags that are no section: who sings (the examples'), Female Vocals, Break and Silence (TEST); no section among them",
+  ch78a.open && ch78a.chain && ch78a.tail === "[Interlude] [" && ch78a.tags[0] === "[Male Vocals]" && ch78a.tags.includes("[Female Vocals]") && ch78a.tags.includes("[Break]") &&
+  ch78a.tags.includes("[Silence]") && !ch78a.tags.some((t) => /^\[(Verse|Chorus|Bridge|Intro|Outro)/.test(t)) && ch78b.active === "[Break]", JSON.stringify({ ch78a, ch78b }));
+check("  Enter puts it on the same line (no new line); a third is offered the same way; a fourth is not",
+  ch78c.tail === "[Interlude] [Break]" && ch78c.caret && !ch78c.open && ch78d.open && ch78d.chain && ch78d.tail === "[Interlude] [Break] [" &&
+  ch78e === "[Interlude] [Break] [Silence]" && !ch78f.open && ch78f.tail === "[Silence][", JSON.stringify({ ch78c, ch78d, ch78e, ch78f }));
+check("  Ctrl+Space after a tag types « [» and opens them (no Latin layout needed); [Spoken: …] leaves its «…» selected; at a line's start the sections as before",
+  ch78g.open && ch78g.chain && ch78g.tail === "[Chorus] [" && ch78h.value === "[Chorus] [Spoken: …]" && ch78h.sel === "…" && ch78i.open && !ch78i.chain && ch78i.tags[0] === "[Intro]",
+  JSON.stringify({ ch78g, ch78h, ch78i }));
+
+// HERESY 1169 · 1279 (Viktor 09.10.2026: «По всей студии добавь спейсинг между параграфами в тултипах, гайдах и читшитах. Так красивее типографически, но не сломай редактор лирики»)
+section("paragraphs with air between them: a tip's lines, the guide's items, the cheat-sheet's prose");
+const pa79 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {};
+  await wait(900);                                    // a press of the mouse just before gives the focus no tip
+  const b = document.createElement("button"); b.type = "button"; b.textContent = "probe"; b.style.cssText = "position:fixed;left:300px;top:300px";
+  b.dataset.tip = "Line one\\nLine two\\n\\nAfter a blank"; document.body.appendChild(b); b.focus(); await wait(150);
+  const t = document.querySelector(".tip.is-on"), ps = t ? [...t.querySelectorAll(".tip-p")] : [];
+  o.tip = { n: ps.length, gap: ps.map((p) => p.classList.contains("tip-gap")).join(), text: t ? t.textContent : "", ws: t ? getComputedStyle(t).whiteSpace : "",
+    m: ps.map((p) => parseFloat(getComputedStyle(p).marginTop)).join(), color: ps[0] ? getComputedStyle(ps[0]).color === getComputedStyle(t).color : false };
+  b.blur(); b.remove(); await wait(100);
+  const one = document.createElement("button"); one.type = "button"; one.textContent = "probe"; one.dataset.tip = "Just one line"; one.style.cssText = "position:fixed;left:300px;top:300px";
+  document.body.appendChild(one); one.focus(); await wait(150);
+  const t1 = document.querySelector(".tip.is-on"); o.single = t1 ? { paras: t1.classList.contains("tip-paras"), ps: t1.querySelectorAll(".tip-p").length, text: t1.textContent } : null;
+  one.blur(); one.remove(); await wait(100);
+  return o; })()`);
+// the guide's rule measured on an item of its own (the mock serves no guide to open)
+const pa79g = await ev(`(() => { const d = document.createElement("div"); d.className = "hg-body"; d.style.cssText = "position:fixed;left:-2000px;top:0;width:600px";
+  d.innerHTML = "<ul><li>one</li><li>two</li></ul>"; document.body.appendChild(d); const m = parseFloat(getComputedStyle(d.querySelector("li")).marginBottom); d.remove(); return m; })()`);
+await ev(`window.HeresyInstruments.open(); true`);
+await waitFor(`document.querySelectorAll(".hi-more p").length > 0`, 4000, 50);
+const pa79s = await ev(`(() => { const ps = [...document.querySelectorAll(".hi-more p")]; return { n: ps.length, m: ps[1] ? parseFloat(getComputedStyle(ps[1]).marginTop) : 0, last: ps.length ? ps[ps.length - 1].textContent : "" }; })()`);
+await ev(`(() => { const c = document.getElementById("hiClose"); if (c) c.click(); return true; })()`);
+await sleep(300);
+check("a tip's lines are its paragraphs with air between them, a blank line a little more; what it says is unchanged; one line stays plain text",
+  pa79.tip.n === 3 && pa79.tip.gap === "false,false,true" && pa79.tip.text === "Line one\nLine two\n\nAfter a blank" && pa79.tip.ws === "normal" && pa79.tip.color &&
+  /^0,6\.\d+,11\.\d+$/.test(pa79.tip.m) && !!pa79.single && !pa79.single.paras && pa79.single.ps === 0 && pa79.single.text === "Just one line", JSON.stringify(pa79));
+check("  the guide's items 0.55 em apart (8 px), the cheat-sheet's «How the probes were made» in three paragraphs with air between them",
+  pa79g >= 7.5 && pa79g <= 8.5 && pa79s.n === 3 && pa79s.m >= 7 && /^A crackle or a rustle of paper/.test(pa79s.last), JSON.stringify({ pa79g, pa79s }));
+
+// HERESY 1169 · 1280 (TODO.md, the rooms' audit: the take's menu over the player's wave)
+section("the take's menu over the player's wave and its name");
+await ev(`(() => { const a = document.getElementById("audio"); a.pause(); a.muted = true; document.querySelector('#tabs [data-tab="create"]').click(); return true; })()`);
+// not Nachtzug: the peaks' check further on wants that one never heard yet (its peaks not in the page's cache)
+const wm80Name = await ev(`(() => { const c = [...document.querySelectorAll("#libList .take[data-name]:not(.is-running-row)")].find((x) => !/nachtzug/.test(x.dataset.name)); if (!c) return null; c.click(); return c.dataset.name; })()`);
+await waitFor(`!!(document.getElementById("playbarTitle").textContent && document.getElementById("playbarTitle").textContent !== "Nothing loaded")`, 4000, 50);
+const wm80At = await ev(`(() => { const w = document.getElementById("wave").getBoundingClientRect(), n = document.getElementById("playbarTitle").getBoundingClientRect();
+  return { wx: Math.round(w.left + w.width * 0.3), wy: Math.round(w.top + w.height / 2), nx: Math.round(n.left + 6), ny: Math.round(n.top + n.height / 2), t: document.getElementById("audio").currentTime }; })()`);
+await send("Input.dispatchMouseEvent", { type: "mousePressed", x: wm80At.wx, y: wm80At.wy, button: "right", clickCount: 1 });
+await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: wm80At.wx, y: wm80At.wy, button: "right", clickCount: 1 });
+const wm80a = await waitFor(`(() => { const m = document.querySelector(".hm-menu"); if (!m) return null; const r = m.getBoundingClientRect();
+  return { items: [...m.querySelectorAll(".hm-item .hm-label")].map((x) => x.textContent).slice(0, 4), near: Math.abs(r.left - ${wm80At.wx}) < 260, t: document.getElementById("audio").currentTime }; })()`, 3000, 50);
+await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+await waitFor(`!document.querySelector(".hm-menu")`, 2000, 50);
+await send("Input.dispatchMouseEvent", { type: "mousePressed", x: wm80At.nx, y: wm80At.ny, button: "right", clickCount: 1 });
+await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: wm80At.nx, y: wm80At.ny, button: "right", clickCount: 1 });
+const wm80b = await waitFor(`!!document.querySelector(".hm-menu .hm-item")`, 3000, 50);
+await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+await waitFor(`!document.querySelector(".hm-menu")`, 2000, 50);
+check("a right click on the player's wave opens the take's menu there (Play or Pause first, as in a list) and does not jump; one on its name too",
+  !!wm80Name && !!wm80a && /^(Play|Pause)$/.test(wm80a.items[0] || "") && wm80a.near && Math.abs(wm80a.t - wm80At.t) < 0.5 && !!wm80b, JSON.stringify({ wm80Name, wm80At, wm80a, wm80b }));
+
+// HERESY 1169 · 1281 (from SUNO v6, TODO.md: «Vocal gender at a click (male, female): its words put into the Style»)
+section("the voice's gender at a click: ♂ and ♀ in the Style's head");
+const vg81 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), s = document.getElementById("style"), was = s.value, o = {};
+  document.querySelector('#tabs [data-tab="create"]').click();
+  const set = (v) => { s.value = v; s.dispatchEvent(new Event("input", { bubbles: true })); };
+  const lit = () => ["male", "female"].filter((g) => document.getElementById("voice-" + g).classList.contains("is-on")).join() || "none";
+  const fold = () => document.querySelector('[data-fold="style"]').classList.contains("is-folded");
+  set("Russian, folk rock, accordion, 96 BPM"); await wait(30);
+  const f0 = fold(); o.start = lit();
+  document.getElementById("voice-female").click(); await wait(30); o.female = { v: s.value, lit: lit() };
+  document.getElementById("voice-male").click(); await wait(30); o.male = { v: s.value, lit: lit() };
+  document.getElementById("voice-male").click(); await wait(30); o.off = { v: s.value, lit: lit() };
+  s.focus(); document.execCommand("undo"); await wait(30); o.undo = { v: s.value, lit: lit() };
+  set("Dark pop, whispery Female Vocals\\nwide stereo"); await wait(30);
+  document.getElementById("voice-male").click(); await wait(30); o.caseKept = s.value;
+  set(""); document.getElementById("voice-male").click(); await wait(30); o.empty = s.value;
+  set("raspy male"); o.rawLit = lit();
+  o.folded = fold() !== f0; o.icons = !!document.querySelector("#voice-male svg") && !!document.querySelector("#voice-female svg");
+  o.inHead = !!document.getElementById("voice-male").closest('[data-fold="style"] > .label');
+  set(was); s.blur();
+  return o; })()`);
+check("♂ and ♀ in the Style's head: female vocals go in before the BPM, ♂ turns them male, ♂ again takes the tag out, one Ctrl+Z brings it back; lit by what the Style says",
+  vg81.start === "none" && vg81.female.v === "Russian, folk rock, accordion, female vocals, 96 BPM" && vg81.female.lit === "female" &&
+  vg81.male.v === "Russian, folk rock, accordion, male vocals, 96 BPM" && vg81.male.lit === "male" && vg81.off.v === "Russian, folk rock, accordion, 96 BPM" && vg81.off.lit === "none" &&
+  vg81.undo.v === "Russian, folk rock, accordion, male vocals, 96 BPM" && vg81.undo.lit === "male", JSON.stringify(vg81));
+check("  the case and the words around kept (whispery Female Vocals → whispery Male Vocals, the next line untouched); an empty Style takes the tag alone; «raspy male» lights ♂; the head does not fold",
+  vg81.caseKept === "Dark pop, whispery Male Vocals\nwide stereo" && vg81.empty === "male vocals" && vg81.rawLit === "male" && !vg81.folded && vg81.icons && vg81.inHead, JSON.stringify(vg81));
+
+// HERESY 1169 · 1282 (from SUNO v6, TODO.md: «Sections on the wave… a click on one goes there»)
+section("the take's sections on the player's wave");
+await ev(`(() => { const a = document.getElementById("audio"); a.pause(); a.muted = true; document.querySelector('#tabs [data-tab="create"]').click();
+  if (!document.getElementById("playbarTitle").textContent || document.getElementById("playbarTitle").textContent === "Nothing loaded") {
+    const c = [...document.querySelectorAll("#libList .take[data-name]:not(.is-running-row)")].find((x) => !/nachtzug/.test(x.dataset.name)); if (c) c.click(); }
+  return true; })()`);
+await waitFor(`isFinite(document.getElementById("audio").duration) && document.getElementById("audio").duration > 0.2`, 6000, 100);
+const ws82 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), a = document.getElementById("audio"), w = document.getElementById("wave"), d = a.duration, o = {};
+  o.fromScore = window.ruachWaveSections(${JSON.stringify(RSCORE)}).map((s) => s.name + "@" + s.t.toFixed(1)).join();
+  window.ruachWaveSections([{ t: 0, name: "intro" }, { t: d * 0.5, name: "chorus" }], true);
+  const r = w.getBoundingClientRect();
+  return { o, d, x: Math.round(r.left + r.width * 0.5 + 3), x2: Math.round(r.left + r.width * 0.75), y: Math.round(r.top + r.height / 2) }; })()`);
+await send("Input.dispatchMouseEvent", { type: "mousePressed", x: ws82.x, y: ws82.y, button: "left", clickCount: 1 });
+await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: ws82.x, y: ws82.y, button: "left", clickCount: 1 });
+await sleep(150);
+const ws82a = await ev(`document.getElementById("audio").currentTime`);
+await send("Input.dispatchMouseEvent", { type: "mousePressed", x: ws82.x2, y: ws82.y, button: "left", clickCount: 1 });
+await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: ws82.x2, y: ws82.y, button: "left", clickCount: 1 });
+await sleep(150);
+const ws82b = await ev(`document.getElementById("audio").currentTime`);
+await ev(`(() => { window.ruachWaveSections([], true); const a = document.getElementById("audio"); a.pause(); a.currentTime = 0; return true; })()`);
+check("a score's sections as times at its tempo (intro at 0, the verse two bars of 100 BPM later); on the player's wave a click 3 px by a section's line goes to its very start, one far from any where it lands",
+  ws82.o.fromScore === "intro@0.0,verse@4.8" && Math.abs(ws82a - ws82.d * 0.5) < 0.02 && Math.abs(ws82b - ws82.d * 0.75) < ws82.d * 0.02, JSON.stringify({ ws82, ws82a, ws82b }));
+
+// HERESY 1169 · 1283 (Viktor 09.10.2026: «…в Engine — опции по изменению локации с переносом данных с одного места в другое»)
+section("Engine → Folders: where the work lives, and a move asked twice");
+const pl83 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, asked = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const row = (name, label, extra) => Object.assign({ name, label, what: label + " things", path: "/s/" + name, real: "/s/" + name, linked: false, here: true, record: null,
+    free: 107374182400, counting: false, files: 1234, bytes: 2147483648 }, extra || {});
+  let job = null;
+  const listing = () => ({ places: [row("outputs", "Songs"), row("trash", "Trash", { linked: true, real: "/mnt/b/trash" }),
+    row("artist", "Pictures", { missing: true, linked: true, here: false, real: "/mnt/gone/artist", record: { at: "/mnt/gone/artist" } }),
+    row("writer", "Writer", { counting: true, files: undefined, bytes: undefined })], job, wsl: false, home: "/s" });
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/places/plan")) { asked.push(u); return json({ ok: true, dest: "/mnt/big/outputs", home: false, same_disk: false, need: 2147483648, free: 107374182400, why: "" }); }
+    if (u.startsWith("/lab/places/move")) { asked.push(JSON.stringify(JSON.parse(o.body)) + " " + u.split("?")[0]);
+      job = { name: "outputs", phase: "copy", done: 1073741824, total: 2147483648, files: 617, of: 1234, to: "/mnt/big/outputs", home: false, old: "", error: "" }; return json(listing()); }
+    if (u.startsWith("/lab/places")) return json(listing());
+    return real(u, o); };
+  document.getElementById("engineToggle").click();
+  await until(() => document.querySelectorAll("#plRows .pl-row").length === 4);
+  const o = { rows: document.querySelectorAll("#plRows .pl-row").length, last: [...document.querySelectorAll("#view-engine .engine-grid > .card")].pop().id };
+  o.texts = [...document.querySelectorAll("#plRows .pl-row")].map((r) => r.querySelector(".pl-name b").textContent + "|" + r.querySelector(".pl-size").textContent + "|" +
+    r.querySelector(".pl-note").textContent + "|" + [...r.querySelectorAll("button")].map((b) => b.textContent + (b.disabled ? "(off)" : "")).join("+"));
+  document.querySelector('#plRows [data-pl-move="outputs"]').click();
+  const input = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-input"));
+  o.ask = document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-title").textContent;
+  input.value = "/mnt/big"; document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes").click();
+  const b2 = await until(() => { const b = document.querySelector(".hd-back.is-on:not(.is-leaving)"); return b && !b.querySelector(".hd-input") ? b : null; });
+  o.confirm = b2 ? { title: b2.querySelector(".hd-title").textContent, body: (b2.querySelector(".hd-body") || {}).textContent || "", yes: b2.querySelector(".hd-yes").textContent } : null;
+  if (b2) b2.querySelector(".hd-yes").click();
+  await until(() => !document.getElementById("plJob").hidden);
+  await wait(100);
+  o.job = document.getElementById("plJob").textContent;
+  o.off = document.querySelector('#plRows [data-pl-move="trash"]').disabled;
+  o.asked = asked;
+  window.fetch = real;
+  document.getElementById("engineToggle").click();
+  await until(() => document.getElementById("view-engine").classList.contains("is-hidden"));
+  return o; })()`);
+check("Engine → Folders: each folder a row, its size and the room on its disk, Back home for a linked one, Link again for one not there; About still the last card",
+  pl83.rows === 4 && pl83.last === "aboutCard" && /^Songs\|1.234 files · 2\.0 GB\|in the studio's folder · 100\.0 GB free on its disk\|Move…$/.test(pl83.texts[0]) &&
+  /^Trash\|.*\|linked from the studio's folder · 100\.0 GB free on its disk\|Move…\+Back home$/.test(pl83.texts[1]) &&
+  /^Pictures\|1.234 files · 2\.0 GB\|not there: a disk not mounted\?\|Move…\(off\)\+Link again$/.test(pl83.texts[2]) &&
+  /^Writer\|counting…\|/.test(pl83.texts[3]), JSON.stringify(pl83.texts));
+check("  Move… asks where, the lab's plan says what will happen, and it moves only on the second yes; then its progress, and no second move meanwhile",
+  pl83.ask === "Move Songs to another folder" && !!pl83.confirm && pl83.confirm.title === "Move Songs to /mnt/big/outputs?" && /^Another disk: 2\.0 GB copied \(free there: 100\.0 GB\)/.test(pl83.confirm.body) &&
+  pl83.confirm.yes === "Move" && pl83.asked[0] === "/lab/places/plan?name=outputs&to=%2Fmnt%2Fbig" && pl83.asked[1] === '{"name":"outputs","to":"/mnt/big"} /lab/places/move' &&
+  /^Copying Songs: 50 %, 1\.0 GB of 2\.0 GB, 617 of 1.234 files$/.test(pl83.job) && pl83.off, JSON.stringify(pl83));
+
+// HERESY 1169 · 1284 (Viktor 09.10.2026: «Колонка с картинками у Художника - всё свалено в кучу. Сделай честный тайлинг»)
+section("the Artist's gallery in even tiles");
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+const ar84Was = await ev(`({ tab: document.body.dataset.tab, look: localStorage.getItem("yue2.arLook"), filter: localStorage.getItem("yue2.arFilter"), size: localStorage.getItem("yue2.arSize") })`);
+await ev(`(() => { const real = window.fetch; window.__ar84Fetch = real;
+  const pic = (n, shape, w, h) => { const f = String(n).padStart(2, "0") + "-" + shape.replace(":", "x"); return { n, shape, seed: n, w, h, kept: true, file: f + ".png", thumb: "thumbs/" + f + ".jpg" }; };
+  const run = { id: "20261009-210000-tile", prompt: "Tiles.", shapes: ["1:1", "16:9", "9:16"], seed: 1, count: 3, painter: "krea2-q4", created: 1791600000, status: "done", of: 7, took: 60, gpu: 2,
+    pictures: [pic(1, "1:1", 1280, 1280), pic(2, "16:9", 1920, 1080), pic(3, "9:16", 1080, 1920), pic(4, "1:1", 1280, 1280), pic(5, "16:9", 1920, 1080), pic(6, "9:16", 1080, 1920), pic(7, "16:9", 1920, 1080)] };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => { u = String(u); if (u.startsWith("/lab/artist/runs")) return json({ runs: [run] }); return real(u, o); };
+  localStorage.setItem("yue2.arLook", "gallery"); localStorage.setItem("yue2.arFilter", "all"); localStorage.setItem("yue2.arSize", "s");
+  return true; })()`);
+await ev(`document.getElementById("tabArtist").click(); if (window.HeresyArtist && window.HeresyArtist.reload) window.HeresyArtist.reload(); true`);
+await ev(`(() => { const b = document.querySelector('#arBar [data-look="gallery"]'); if (b) b.click(); const f = document.querySelector('#arFilters [data-filter="all"]'); if (f) f.click();
+  const s = document.querySelector('#arSizes [data-size="s"]'); if (s) s.click(); return true; })()`);
+await waitFor(`document.querySelectorAll(".ar-gallery .ar-gpic").length === 7`, 4000, 50);
+await sleep(200);
+const ar84 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), box = (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; };
+  const tiles = () => [...document.querySelectorAll(".ar-gallery .ar-gpic .ar-thumb")].map(box);
+  const o = { all: tiles(), fit: getComputedStyle(document.querySelector(".ar-gallery .ar-thumb img")).objectFit, col: box(document.querySelector(".ar-gallery")) };
+  document.querySelector('#arFilters [data-filter="16:9"]').click(); await wait(150); o.wide = tiles();
+  document.querySelector('#arFilters [data-filter="all"]').click(); await wait(100);
+  window.fetch = window.__ar84Fetch;
+  return o; })()`);
+await ev(`(() => { const w = ${JSON.stringify(ar84Was)}; ["look", "filter", "size"].forEach((k) => { const key = "yue2.ar" + k[0].toUpperCase() + k.slice(1); if (w[k] == null) localStorage.removeItem(key); else localStorage.setItem(key, w[k]); });
+  if (window.HeresyArtist && window.HeresyArtist.reload) window.HeresyArtist.reload(); document.querySelector('.topbar [data-tab="' + (w.tab || "create") + '"]').click(); return true; })()`);
+await sleep(300);
+const ar84Cols = new Set(ar84.all.map((t) => t[0])).size, ar84Sizes = new Set(ar84.all.map((t) => t[2] + "x" + t[3])).size, ar84Right = Math.max(...ar84.all.map((t) => t[0] + t[2]));
+check("the gallery in even tiles: every tile the same square box in equal columns filling the column edge to edge, each picture whole (contain), whatever its shape",
+  ar84.all.length === 7 && ar84Sizes === 1 && Math.abs(ar84.all[0][2] - ar84.all[0][3]) <= 1 && ar84Cols >= 2 && Math.abs(ar84Right - (ar84.col[0] + ar84.col[2])) <= 2 && ar84.fit === "contain",
+  JSON.stringify({ ar84, ar84Cols, ar84Sizes, ar84Right }));
+check("  one shape shown: its own tiles (16:9 boxes), all alike",
+  ar84.wide.length === 3 && new Set(ar84.wide.map((t) => t[2] + "x" + t[3])).size === 1 && Math.abs(ar84.wide[0][2] / ar84.wide[0][3] - 16 / 9) < 0.05, JSON.stringify(ar84.wide));
+
+// HERESY 1169 · 1286 (Viktor 09.10.2026: «OSEM с девизом сделай на 20% крупнее, дай больше пространства между Лого и OSEM, а также сам прогресс бар опусти в подвал, 160 пикселов от пола»)
+section("the veil: the slogan larger and further from the logo, the line at the foot");
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+const bv86 = await ev(`(() => {
+  const h = document.documentElement, had = h.classList.contains("booting"), v = document.getElementById("bootVeil");
+  h.classList.add("booting"); h.classList.remove("veil-lift", "i18n-wait");
+  const r = (s) => { const e = v.querySelector(s).getBoundingClientRect(); return { top: Math.round(e.top), bottom: Math.round(e.bottom), cx: Math.round(e.left + e.width / 2) }; };
+  const o = { logo: r(".boot-logo"), osem: r(".boot-osem"), words: r(".boot-words"), line: r(".boot-line"), vh: window.innerHeight, vw: window.innerWidth,
+    font: parseFloat(getComputedStyle(v.querySelector(".boot-osem")).fontSize) };
+  if (!had) h.classList.remove("booting");
+  return o; })()`);
+check("the veil: OSEM a fifth larger (19.2 px at 1920), 50 px or more under the logo; the line 160 px above the floor, in the middle; the words stay under the slogan",
+  Math.abs(bv86.font - 19.2) < 0.3 && bv86.osem.top - bv86.logo.bottom >= 50 && Math.abs(bv86.vh - bv86.line.bottom - 160) <= 1 &&
+  Math.abs(bv86.line.cx - bv86.vw / 2) <= 2 && bv86.words.top > bv86.osem.bottom && bv86.words.bottom < bv86.line.top, JSON.stringify(bv86));
+
+// HERESY 1169 · 1287 (Viktor 09.10.2026: «Ручной пресет памяти не даёт мне выбрать объём VRAM из доступных 16GB VRAM. В реалии я бы на этом железе выбрал бы 14GB, чтобы не было OOM»)
+section("the memory preset: Auto within N GB, under the card's own size");
+const mp87 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), sel = document.getElementById("memPreset");
+  document.getElementById("engineToggle").click(); await wait(300);
+  const o = { opts: [...sel.options].map((x) => x.value), was: sel.value, ctx: document.getElementById("setMaxSeq").value, vae: document.getElementById("setVaeCore").value };
+  const pick = [...sel.options].map((x) => x.value).filter((v) => /^auto:/.test(v))[0];
+  o.pick = pick;
+  if (pick) { sel.value = pick; sel.dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
+    o.set = { ctx: document.getElementById("setMaxSeq").value, vae: document.getElementById("setVaeCore").value, label: sel.selectedOptions[0].textContent }; }
+  sel.value = o.was; document.getElementById("setMaxSeq").value = o.ctx; document.getElementById("setVaeCore").value = o.vae;
+  document.getElementById("engineToggle").click(); await wait(300);
+  if (document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-no")) { document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-no").click(); await wait(300); }
+  return o; })()`);
+check("Auto within N GB offered under the card's own size, down to 8 GB; choosing one sets that budget's knobs (its context and VAE tiles), as Auto does",
+  mp87.opts[0] === "auto" && mp87.opts[mp87.opts.length - 1] === "manual" && (!mp87.pick || (/^Auto within \d+ GB: /.test(mp87.set.label) && mp87.set.ctx !== "" && mp87.set.vae !== "")),
+  JSON.stringify(mp87));
+
+// HERESY 1169 · 1288 (Viktor's screenshot of 09.10.2026: «The studio's 💎 set c»; «можно будет в Пинокио Ctrl+N использовать»)
+section("the seconds' pattern takes numbers only; Ctrl+N is New song");
+const i88 = await ev(`(() => { const L = window.RuachI18n; const o = {};
+  ["ru", "uk", "be", "el", "es", "it"].forEach((c) => { o[c] = [L.look("The studio's 💎 sets", c), L.look("Open the sets", c), L.look("12s", c), L.look("2.5s", c)]; });
+  return o; })()`);
+await ev(`(() => { const s = document.getElementById("title"); window.__n88 = s.value; s.value = "Ctrl N test"; s.dispatchEvent(new Event("input", { bubbles: true })); document.querySelector('#tabs [data-tab="write"]') && document.querySelector('#tabs [data-tab="write"]').click(); return true; })()`);
+await sleep(200);
+await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "n", code: "KeyN", windowsVirtualKeyCode: 78, modifiers: 2 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "n", code: "KeyN", windowsVirtualKeyCode: 78, modifiers: 2 });
+const n88 = await waitFor(`(() => { const b = document.querySelector(".hd-back.is-on:not(.is-leaving)"); return b ? { title: b.querySelector(".hd-title").textContent, tab: document.body.dataset.tab } : null; })()`, 3000, 50);
+await answerDialog(false);
+await ev(`(() => { const s = document.getElementById("title"); s.value = window.__n88; s.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+check("the seconds' pattern takes a number only: an untranslated «… sets» stays as it is in all six languages (no «set с»), «12s» and «2.5s» are seconds",
+  Object.keys(i88).every((c) => i88[c][0] === null && i88[c][1] === null && /^12 [сs]$/.test(i88[c][2]) && /^2\.5 [сs]$/.test(i88[c][3])), JSON.stringify(i88));
+check("  Ctrl+N from another room: the Creator, and New song asks first (words in the form)", !!n88 && n88.tab === "create" && /new song/i.test(n88.title), JSON.stringify(n88));
+
+// HERESY 1169 · 1289 (Viktor 10.10.2026: «И нужно в Engine добавить докачку моделей и LoRA»)
+section("Engine → Models and LoRAs: what the install brings, fetched again from the studio, the extras asked with their sizes");
+const wt89 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, asked = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Math.round(Date.now() / 1000);
+  const last = { mode: "check", at: now - 60, counts: { here: 7, unknown: 0, differs: 0, fetched: 0, missing: 2, failed: 0 }, parts: [
+    { part: "extras", label: "Checkpoints for the extra decoders and the sliders, made into GGUF here", size: "1.3 GB, and as much again made from it",
+      rows: [{ state: "here", text: "checkpoints/YuE2-Vae-legacy (m-a-p/YuE2-Vae-legacy @ 5ddd12f)" }, { state: "here", text: "legacy, blend and sliders as GGUF (models/, sliders/)" }] },
+    { part: "loras", label: "LoRAs: the Kit's library and Ruach Studio's own", size: "2.1 GB",
+      rows: [{ state: "here", text: "loras/ (the Kit's library) (tools/download-loras.sh)" },
+             { state: "missing", text: "loras/duduk-yt-r16/duduk-yt-r16-e200.safetensors (goldhub/Ruach_Studio_LoRAs @ 2a4662d), 56 MB" },
+             { state: "missing", text: "loras/shofar-yt-r16/shofar-yt-r16-e099.safetensors (goldhub/Ruach_Studio_LoRAs @ 2a4662d), 56 MB" }] }] };
+  const extras = [{ name: "backbone", label: "Backbone", what: "M-A-P's YuE2 as GGUF", restart: true, variants: [
+      { id: "BF16", size: "7.2 GB", note: "the whole model", here: false }, { id: "Q8_0", size: "3.8 GB", here: true }] },
+    { name: "trainer", label: "LoRA trainer's base", what: "Comfy-Org/YuE2", variants: [{ id: "bf16", size: "7.8 GB", here: false }, { id: "int8", size: "4.0 GB", here: false }] }];
+  let job = null;
+  const listing = () => ({ script: true, last, extras, parts: {}, job, now });
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/weights/fetch")) { asked.push(o.body + " " + u.split("?")[0]);
+      job = { kind: "fetch", what: "the LoRAs", status: "running", started: now - 4, ended: null, rc: null, counts: null, restart: false, written: 58720256,
+              lines: ["", "LoRAs: the Kit's library and Ruach Studio's own (--only loras)", "here      loras/ (the Kit's library) (tools/download-loras.sh)",
+                      "fetched   loras/duduk-yt-r16/duduk-yt-r16-e200.safetensors (goldhub/Ruach_Studio_LoRAs @ 2a4662d)"] };
+      return json(listing()); }
+    if (u.startsWith("/lab/weights")) return json(listing());
+    return real(u, o); };
+  document.getElementById("engineToggle").click();
+  await until(() => document.querySelectorAll("#wtParts .wt-part").length === 2);
+  const o = { cards: [...document.querySelectorAll("#view-engine .engine-grid > .card")].map((c) => c.id || c.className.split(" ").pop()) };
+  o.line = document.getElementById("wtLine").textContent;
+  o.parts = [...document.querySelectorAll("#wtParts .wt-part")].map((p) => p.querySelector(".wt-sum").textContent + "|" + p.querySelectorAll(".wt-row").length + "|" +
+    [...p.querySelectorAll("button")].map((b) => b.textContent).join("+"));
+  o.all = !document.getElementById("wtFetch").hidden;
+  o.shown = [...document.querySelectorAll("#view-engine .btn[hidden]")].filter((b) => getComputedStyle(b).display !== "none").map((b) => b.id || b.textContent);
+  o.extras = [...document.querySelectorAll("#wtExtras .wt-extra")].map((x) => x.querySelector("select").value + "|" + [...x.querySelectorAll("option")].map((op) => op.textContent).join(";") +
+    "|" + x.querySelector("button").textContent + (x.querySelector("button").disabled ? "(off)" : ""));
+  const pick = async (v) => { const s = document.querySelector('#wtExtras select[data-wt-pick="backbone"]'); s.value = v; s.dispatchEvent(new Event("change", { bubbles: true })); await wait(50); };
+  await pick("Q8_0");
+  const hb = document.querySelector('#wtExtras [data-wt-extra="backbone"]');
+  o.hereBtn = hb.textContent + (hb.disabled ? "(off)" : "");
+  await pick("BF16");
+  document.querySelector('#wtExtras [data-wt-extra="backbone"]').click();
+  const d1 = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+  o.ask1 = d1 ? d1.querySelector(".hd-title").textContent + " / " + ((d1.querySelector(".hd-body") || {}).textContent || "") : null;
+  if (d1) d1.querySelector(".hd-no").click();
+  await until(() => !document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+  document.querySelector('#wtParts [data-wt-part="loras"]').click();
+  const d2 = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+  o.ask2 = d2 ? d2.querySelector(".hd-title").textContent + " / " + ((d2.querySelector(".hd-body") || {}).textContent || "") + " / " + d2.querySelector(".hd-yes").textContent : null;
+  if (d2) d2.querySelector(".hd-yes").click();
+  await until(() => /fetching/.test(document.getElementById("wtLine").textContent));
+  o.run = document.getElementById("wtLine").textContent;
+  o.log = document.getElementById("wtLog").hidden ? null : [...document.querySelectorAll("#wtLog .wt-st")].map((s) => s.className + ":" + s.textContent).join(",");
+  o.off = document.getElementById("wtCheck").disabled && document.querySelector('#wtExtras [data-wt-extra="trainer"]').disabled && document.querySelector('#wtParts [data-wt-part="loras"]').disabled;
+  job = Object.assign({}, job, { status: "done", ended: now + 6, rc: 0, counts: { here: 15, unknown: 0, differs: 0, fetched: 2, missing: 0, failed: 0 }, restart: false });
+  await window.HeresyWeights.load();
+  o.done = document.getElementById("wtLine").textContent;
+  o.restart = !document.getElementById("wtRestart").hidden;
+  job = Object.assign({}, job, { started: now - 3, what: "the backbone BF16", restart: true, counts: { here: 0, unknown: 0, differs: 0, fetched: 1, missing: 0, failed: 0 } });
+  await window.HeresyWeights.load();
+  o.done2 = document.getElementById("wtLine").textContent;
+  o.restart2 = !document.getElementById("wtRestart").hidden;
+  o.asked = asked;
+  window.fetch = real;
+  document.getElementById("engineToggle").click();
+  await until(() => document.getElementById("view-engine").classList.contains("is-hidden"));
+  return o; })()`);
+const wtAt = wt89.cards.indexOf("modelsCard");
+check("Engine → Models and LoRAs: under Sliders, About still the last card; the last run said at once, a part not whole with what is missing and its Fetch, a whole one «all here»",
+  wtAt > 0 && wt89.cards[wtAt - 1] === "eg-sliders" && wt89.cards[wt89.cards.length - 1] === "aboutCard" &&
+  /^The last check \(.+\): 7 here, 2 missing, 0 failed\.$/.test(wt89.line) && wt89.parts[0] === "all here|0|" && wt89.parts[1] === "1 here, 2 not|2|Fetch" && wt89.all,
+  JSON.stringify({ cards: wt89.cards, line: wt89.line, parts: wt89.parts }));
+check("  a button the Engine hides stays hidden (Updates' «Update» and «What's new» showed with nothing new: .btn's display won over the attribute)",
+  wt89.shown.length === 0, JSON.stringify(wt89.shown));
+check("  the extras: each variant with its size, one here said so (its button «Here», off), the first not here picked",
+  wt89.extras[0] === "BF16|BF16 · 7.2 GB;Q8_0 · 3.8 GB · here|Fetch" && wt89.extras[1] === "bf16|bf16 · 7.8 GB;int8 · 4.0 GB|Fetch" && wt89.hereBtn === "Here(off)",
+  JSON.stringify({ extras: wt89.extras, here: wt89.hereBtn }));
+check("  Fetch asks first with the size (No sends nothing); a part's Fetch sends that part alone, then the run's words while it goes, every button off",
+  !!wt89.ask1 && wt89.ask1.indexOf("Fetch Backbone: BF16 (7.2 GB)? / The whole model.") === 0 && /next start; Compute then offers it/.test(wt89.ask1) &&
+  !!wt89.ask2 && wt89.ask2.indexOf("Fetch LoRAs: the Kit's library and Ruach Studio's own? / About 2.1 GB. Each file comes at the revision the release pins") === 0 && / \/ Fetch$/.test(wt89.ask2) &&
+  wt89.asked.length === 1 && wt89.asked[0] === '{"part":"loras"} /lab/weights/fetch' &&
+  wt89.run === "The LoRAs: fetching… 4 s · the disk has 56 MB less free than when it began" && wt89.log === "wt-st is-here:here,wt-st is-fetched:fetched" && wt89.off,
+  JSON.stringify({ ask1: wt89.ask1, ask2: wt89.ask2, asked: wt89.asked, run: wt89.run, log: wt89.log, off: wt89.off }));
+check("  when it is over, what came; a restart offered only where a backbone, a decoder or the sliders came (LoRAs the engine reads each time)",
+  wt89.done === "The LoRAs: 2 fetched, 0 failed, in 10 s." && !wt89.restart &&
+  wt89.done2 === "The backbone BF16: 1 fetched, 0 failed, in 9 s. The engine lists a new backbone, decoder or slider at its next start." && wt89.restart2,
+  JSON.stringify({ done: wt89.done, restart: wt89.restart, done2: wt89.done2, restart2: wt89.restart2 }));
 // ================================================================== fonts
 section("fonts (Engine page)");
 const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"), kids = [...s.children], hr = kids.findIndex(k => k.tagName === "HR");
@@ -2105,8 +2757,8 @@ const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"
   return { first: kids.slice(0, hr).map(k => k.textContent), hr, system: kids.slice(hr + 1).map(k => k.value), value: s.value,
     heading: document.getElementById("fontHeading").options[0].textContent, mono: document.getElementById("fontMono").value,
     card: cards.findIndex(c => c.id === "appearanceCard"), about: cards.findIndex(c => c.id === "aboutCard"), n: cards.length }; })()`);
-check("Fonts: the app's fonts first (the default marked), a line, then the fonts this computer has", fontMenu.first.join() === "Noto Sans (default),Noto Sans Mono,IBM Plex Sans,IBM Plex Mono,Bodoni Moda,Space Grotesk,Michroma" &&
-  fontMenu.hr === 7 && fontMenu.system.length >= 1 && fontMenu.value === "Noto Sans" && fontMenu.heading === "Same as the text (default)" &&
+check("Fonts: the app's fonts first (the default marked), a line, then the fonts this computer has", fontMenu.first.join() === "Noto Sans (default),Noto Sans Mono,IBM Plex Sans,IBM Plex Mono,Bodoni Moda,Space Grotesk,Michroma,Raleway,Roboto,Lato" &&
+  fontMenu.hr === 10 && !fontMenu.system.some((f) => ["Noto Sans", "Roboto", "Lato", "Raleway"].includes(f)) && fontMenu.system.length >= 1 && fontMenu.value === "Noto Sans" && fontMenu.heading === "Same as the text (default)" &&
   fontMenu.mono === "Noto Sans Mono" && /* HERESY 1167: Viktor's fonts are the app's own */ fontMenu.card >= 0 && fontMenu.about === fontMenu.n - 1, JSON.stringify({ ...fontMenu, system: fontMenu.system.slice(0, 6) }));
 // HERESY 1166 (Viktor 04.10.2026: «как всё ужать и передвинуть, чтобы на 1080p всё встало красиво и не таким длинным
 // полотенцем»): his rows on one grid of thirty: Server over Hardware beside the log (1/3 · 2/3), Compute | GPUs (2/5 · 3/5),
@@ -3019,6 +3671,7 @@ await shot("transcription");
 
 // ============================================================ cancel + fail
 section("queued, cancel and failure");
+await ev(`window.RuachChime.rung.length = 0; true`);   // HERESY 1275: what this section's runs sound
 await ev(`(() => { const set = (id, v) => { document.getElementById(id).value = v; }; set("title", "Cancel Me"); set("abc", ""); set("lmSeed", ""); set("soundSeed", "");
   set("style", "slow test MOCK-SLOW"); document.querySelector('#modes input[value="full"]').click(); return true; })()`);
 await click("#generateBtn");
@@ -3042,6 +3695,8 @@ await ev(`document.getElementById("style").value = "fail test MOCK-FAIL"; docume
 await click("#generateBtn");
 const failedRun = await waitFor(`document.getElementById("runState").dataset.s === "failed" && !document.getElementById("runError").classList.contains("is-hidden")`, 10000);
 check("a failed run shows the server's error", !!failedRun, await ev(`document.getElementById("runError").textContent`));
+const chimeFail = await waitFor(`window.RuachChime.rung.join() === "failed" ? "failed" : null`, 3000, 50);
+check("  two notes down say so (1275: a sound when a run ends); the cancelled runs made none", chimeFail === "failed", await ev(`window.RuachChime.rung.join()`));
 // HERESY 1168 (Viktor: «Когда идёт генерация, счётчик тикает, но стоит во время генерации нажать F5, счётчик времени обнуляется»)
 // «Play new takes» on by its own button: the page's settings mirror keeps it through the reload (localStorage alone does not)
 await ev(`(() => { document.getElementById("audio").pause(); const b = document.getElementById("playNew"); if (b.getAttribute("aria-pressed") !== "true") b.click();
@@ -3065,6 +3720,7 @@ const heldPlays = await waitFor(`!document.getElementById("audio").paused && /ho
 check("  and when it is done it plays (Play new takes), as a run that never saw an F5", !!heldPlays,
   await ev(`JSON.stringify({ s: document.getElementById("runState").dataset.s, title: document.getElementById("takeTitle").textContent, paused: document.getElementById("audio").paused,
     src: (document.getElementById("audio").src || "").slice(-44), playNew: localStorage.getItem("yue2.playNew"), toasts: [...document.querySelectorAll(".toast")].map(t => t.textContent.slice(0, 50)) })`));
+check("  and no sound over it: the new song itself is heard (1275)", (await ev(`window.RuachChime.rung.join()`)) === "", await ev(`window.RuachChime.rung.join()`));
 await ev(`document.getElementById("audio").pause(); true`);
 await shot("run-failed");
 
@@ -3712,8 +4368,8 @@ const vtipOn = await ev(`(async () => { const r = document.querySelector('#loraP
   document.getElementById("loraPicker").dispatchEvent(new PointerEvent("pointerleave", { bubbles: false }));
   out.gone = !!t && t.hidden && !document.body.classList.contains("lora-vtip-on");
   return out; })()`);
-check("  a LoRA strength stands over the pointer (16 pt, exact: 0.875) framed in its zone's colour while the pointer is on its slider, the label's tip aside; it goes when the pointer leaves",
-  vtipOn.shown && vtipOn.text === "Sound 0.875" && vtipOn.size === "21.3333px" && /is-green/.test(vtipOn.cls || "") && vtipOn.above && vtipOn.tipAside && vtipOn.gone, JSON.stringify(vtipOn));
+check("  a LoRA strength stands over the pointer (14 pt since 1268, exact: 0.875) framed in its zone's colour while the pointer is on its slider, the label's tip aside; it goes when the pointer leaves",
+  vtipOn.shown && vtipOn.text === "Sound 0.875" && vtipOn.size === "18.6667px" && /is-green/.test(vtipOn.cls || "") && vtipOn.above && vtipOn.tipAside && vtipOn.gone, JSON.stringify(vtipOn));
 await ev(`(() => { const r = document.querySelector('#loraPicker input[data-half="ar"][data-lora="sv-billie-yue2-lora/sv_billie.safetensors"]');
   r.value = "0.5"; r.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
 // HERESY 1166 (Viktor 04.10.2026: «ползунок Music Together не работает. Подсчёт общей силы не работает»): the music half
@@ -3918,6 +4574,8 @@ const ranHidden = await waitFor(`!document.getElementById("chain").hidden && doc
 const doneShown = await waitFor(`document.getElementById("takeTitle").textContent === "Play Here Test" && !document.getElementById("playHere").classList.contains("is-hidden") && document.getElementById("audio").paused`, 30000, 200);
 check("while the song is made nothing is offered to play; when it is done, ▶ Play this song is there (Play new takes off)", !!ranHidden && !!doneShown,
   JSON.stringify({ ranHidden, doneShown }));
+const chimeDone = await waitFor(`window.RuachChime.rung.slice(-1)[0] === "done" ? window.RuachChime.rung.join() : null`, 3000, 50);
+check("  and two notes up say it is done (1275: a sound when a run ends)", !!chimeDone, await ev(`window.RuachChime.rung.join()`));
 await ev(`localStorage.removeItem("yue2.playNew"); true`);
 
 section("delete non-favourites");
@@ -3931,9 +4589,10 @@ check("Delete non-favourites keeps only the favourite", !!onlyFav && left.length
 await shot("library-favourites");
 
 section("loading without waiting");
-const loading = await ev(`(() => { const f = document.querySelector('link[href*="fonts.googleapis.com/css2"]'), a = document.querySelector('script[src*="abcjs"]');
-  return { fonts: f && f.getAttribute("onload") === "this.media='all'", engraver: a && a.defer && /__abcjsLanded/.test(a.getAttribute("onload") || ""), loaded: typeof window.ABCJS }; })()`);
-check("the fonts and the score engraver load beside the page, never in front of it", loading.fonts && loading.engraver && loading.loaded === "object", JSON.stringify(loading));
+const loading = await ev(`(() => { const faces = [...document.styleSheets].map((s) => { try { return [...s.cssRules].filter((r) => r instanceof CSSFontFaceRule).map((r) => r.style.getPropertyValue("src")).join(" "); } catch (e) { return ""; } }).join(" ");
+  const remote = [...document.querySelectorAll("link[href], script[src]")].map((e) => e.getAttribute("href") || e.getAttribute("src")).filter((u) => u.indexOf("http") === 0 || u.indexOf("//") === 0);
+  return { remote, local: faces.indexOf("/lab/fonts/") >= 0, gstatic: faces.indexOf("gstatic") >= 0 || faces.indexOf("googleapis") >= 0, loaded: typeof window.ABCJS, version: window.ABCJS && window.ABCJS.signature }; })()`);
+check("the fonts and the score engraver come with the studio itself, no CDN (1274): no remote script or stylesheet, the fonts' faces from /lab/fonts/, abcjs in the page", !loading.remote.length && loading.local && !loading.gstatic && loading.loaded === "object", JSON.stringify(loading));
 const late = await ev(`(async () => { const real = window.ABCJS, pause = (ms) => new Promise(r => setTimeout(r, ms));
   window.ABCJS = undefined;
   // open songs until one with a score is showing (the engraver held back all the while)

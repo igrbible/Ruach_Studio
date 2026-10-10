@@ -1,0 +1,112 @@
+From 9f595ac1b41bc1c38dedae6ded3e864c99d7416d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 17:15:11 -0600
+Subject: [PATCH 1268/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201270:=20the?=
+ =?UTF-8?q?=20Artist's=20Draw=20is=20Stop=20while=20a=20run=20waits=20or?=
+ =?UTF-8?q?=20draws=20(the=20lab's=20POST=20/artist/stop:=20a=20waiting=20?=
+ =?UTF-8?q?run=20off=20the=20queue,=20a=20drawing=20one's=20painter=20ende?=
+ =?UTF-8?q?d),=20no=20second=20Draw=20meanwhile=20(Ctrl+Enter=20neither);?=
+ =?UTF-8?q?=20a=20stopped=20run=20says=20so,=20with=20the=20pictures=20it?=
+ =?UTF-8?q?=20finished?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ tools/console/app.css          |  3 +++
+ tools/console/heresy-artist.js | 27 ++++++++++++++++++++++++---
+ 2 files changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 2f155ea..45ca138 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4744,3 +4744,6 @@ body[data-tab="artist"] .col-grip.left { display: none; }
+ .wr-hand-doc .wr-hand-name { padding: 2px; font-weight: 500; }
+ .wr-hand-doc .wr-hand-x { padding: 2px 6px; border-radius: var(--r-pill, 999px); line-height: 1; }
+ .wr-hand-doc .wr-hand-x:hover { color: var(--ink); background: color-mix(in oklab, var(--amber) 14%, transparent); }
++/* HERESY 1270: the Artist's Draw is Stop while a run waits or draws, in the theme's colour for what ends something */
++#arDraw.is-stop { background: var(--bad); border-color: var(--bad); color: #fff; }
++#arDraw.is-stop:hover { filter: brightness(1.08); }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 4392382..2a97814 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -37,6 +37,8 @@
+   function fileUrl(id, file) { return "/lab/artist/file?id=" + encodeURIComponent(id) + "&file=" + encodeURIComponent(file); }
+   function shapeOf(id) { return SHAPES.filter(function (s) { return s.id === id; })[0] || SHAPES[0]; }
+   function live(r) { return r && (r.status === "queued" || r.status === "running"); }
++  // HERESY 1270 (Viktor 09.10.2026: «Кнопку DRAW нужно заменять на STOP»): the run Stop stops: the drawing one, else the newest waiting
++  function drawingRun() { return state.runs.filter(function (r) { return r.status === "running"; })[0] || state.runs.filter(live)[0] || null; }
+   function when(t) {
+     if (!t) return "";
+     var d = new Date(t * 1000), locs = window.RuachI18n ? window.RuachI18n.locales() : undefined;
+@@ -54,7 +56,11 @@
+     var shapes = shapesPicked(), count = +$("arCount").value || 1, n = shapes.length * count;
+     var secs = 25 + count * shapes.reduce(function (a, id) { return a + shapeOf(id).s; }, 0);
+     $("arCost").textContent = n ? tr(n === 1 ? "1 picture" : n + " pictures") + " · " + tr(minutes(secs)) + " " + tr("on one card") : tr("pick a shape");
+-    $("arDraw").disabled = !n || !$("arPrompt").value.trim() || state.sending;
++    var busy = drawingRun();                             // HERESY 1270: Draw is Stop while a run waits or draws
++    $("arDraw").textContent = tr(busy ? "Stop" : "Draw");
++    $("arDraw").classList.toggle("is-stop", !!busy);
++    $("arDraw").dataset.tip = busy ? tr("Stop the run: a waiting one leaves the queue, a drawing one ends now; the pictures it finished stay") : "";
++    $("arDraw").disabled = busy ? !!state.stopping : (!n || !$("arPrompt").value.trim() || state.sending);
+     Array.prototype.forEach.call(document.querySelectorAll("#arShapes label"), function (l) { l.classList.toggle("is-on", l.querySelector("input").checked); });
+   }
+   function keepForm() {
+@@ -91,6 +97,15 @@
+     }).catch(function (e) { toast(tr("The Artist cannot draw:") + " " + e.message, "bad"); })
+       .then(function () { state.sending = false; paintForm(); });
+   }
++  function stopRun() {                                   // HERESY 1270
++    var r = drawingRun();
++    if (!r) return;
++    state.stopping = true;
++    paintForm();
++    api("/artist/stop", { id: r.id }).then(function () { toast(tr("Stopping the run: the pictures it finished stay")); })
++      .catch(function (e) { toast(tr("The run did not stop:") + " " + e.message, "bad"); })
++      .then(function () { state.stopping = false; return load(); });
++  }
+   function fromTake() {
+     var take = state.take;
+     if (!take) return toast(tr("Pick a take on the right first"), "bad");
+@@ -131,9 +146,11 @@
+         if (!was[r.id] || live(r)) return;
+         var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length;
+         if (r.status === "done") toast(tr("The Artist drew") + " " + kept + " " + tr("of") + " " + r.of + " " + tr(r.of === 1 ? "picture" : "pictures"), kept ? "good" : "bad");
++        else if (r.status === "stopped") toast(tr("The Artist stopped:") + " " + kept + " " + tr("of") + " " + r.of + " " + tr(r.of === 1 ? "picture" : "pictures") + " " + tr("kept"));   // HERESY 1270
+         else toast(tr("The Artist's run failed:") + " " + (r.error || ""), "bad");
+       });
+       paintRuns();
++      paintForm();                                       // HERESY 1270: Stop back to Draw when the run ends
+       schedule();
+     }).catch(function (e) {
+       $("arRuns").innerHTML = '<p class="ar-empty">' + esc(tr("The lab does not answer:")) + " " + esc(e.message) + "</p>";
+@@ -151,6 +168,10 @@
+     if (r.status === "running") return '<span class="ar-state is-run">' + esc(tr("drawing")) + " " + (r.pictures || []).length + " " + esc(tr("of")) + " " + r.of +
+       (r.gpu != null ? " · GPU " + esc(r.gpu) : "") + "</span>";
+     if (r.status === "failed") return '<span class="ar-state is-bad">' + esc(tr("failed")) + "</span> " + '<span class="ar-why">' + esc(r.error || "") + "</span>";
++    if (r.status === "stopped") {                       // HERESY 1270
++      var k0 = (r.pictures || []).filter(function (p) { return p.kept; }).length;
++      return '<span class="ar-state is-bad">' + esc(tr("stopped")) + "</span> " + '<span class="ar-why">' + k0 + " " + esc(tr("of")) + " " + r.of + " " + esc(tr("kept")) + "</span>";
++    }
+     var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length;
+     return '<span class="ar-state">' + kept + " " + esc(tr(kept === 1 ? "picture" : "pictures")) + (r.took ? " · " + Math.round(r.took) + " s" : "") + "</span>";
+   }
+@@ -379,10 +400,10 @@
+     ["arCount", "arPainter"].forEach(function (id) { $(id).addEventListener("change", function () { keepForm(); paintForm(); }); });
+     $("arShapes").addEventListener("change", function () { keepForm(); paintForm(); });
+     $("arSeedNew").addEventListener("click", function () { $("arSeed").value = ""; keepForm(); paintForm(); $("arSeed").focus(); });
+-    $("arDraw").addEventListener("click", function () { draw(); });
++    $("arDraw").addEventListener("click", function () { if (drawingRun()) stopRun(); else draw(); });   // HERESY 1270
+     $("arFromTake").addEventListener("click", fromTake);
+     $("arPrompt").addEventListener("keydown", function (e) {
+-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("arDraw").disabled) { e.preventDefault(); draw(); }
++      if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("arDraw").disabled && !drawingRun()) { e.preventDefault(); draw(); }
+     });
+     $("arRuns").addEventListener("click", function (e) {
+       var g = e.target.closest("[data-act^=g]");
+-- 
+2.43.0
+

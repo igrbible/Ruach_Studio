@@ -1,13 +1,13 @@
 #!/bin/bash
-# Ruach Studio · fetch-models.sh — every weight in one go: the Kit's models, then ours.
+# Ruach Studio · fetch-models.sh — every weight in one go: YuE2 (m-a-p's models as GGUF), then the studio's own.
 #
 #   ./fetch-models.sh                     BF16 backbone + F32 VAE + SheetSage2, then heresy/fetch-heresy.sh
 #   ./fetch-models.sh --quant Q8_0        a Q8_0 backbone instead (3.8 GB; for 12-16 GB cards)
 #   ./fetch-models.sh --check             say what is here and what is missing, download nothing
 #
-# The Kit's part is its own ./download-models.sh (pinned, every file checked after download); ours is
-# heresy/fetch-heresy.sh (Whisper, the stems' models, UniverSR, the checkpoints for the extra decoders
-# and the sliders). Both are safe to run again: what is here stays.
+# The first part is ./download-models.sh (the Kit's downloader: pinned, every file checked after download); ours is
+# heresy/fetch-heresy.sh (the extra decoders and the sliders, converted once, from goldhub/Ruach_Studio_Models_v2; Whisper,
+# the stems' models, UniverSR, the LoRAs). Both are safe to run again: what is here stays.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHECK=0; KIT_ARGS=(--transcriber)
@@ -24,7 +24,7 @@ done
 B=$'\e[1m' X=$'\e[0m'; if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then B="" X=""; fi
 rc=0
 
-echo "${B}1 · the Kit's models${X}"
+echo "${B}1 · YuE2: m-a-p's models as GGUF (Serveurperso/YuE2-GGUF)${X}"
 if [ $CHECK = 1 ]; then
   for f in "$ROOT"/models/YuE2-3B-*.gguf "$ROOT"/models/YuE2-Vae-F32.gguf "$ROOT"/models/SheetSage2-*.gguf; do
     [ -s "$f" ] && echo "here      ${f#"$ROOT"/}" || { echo "missing   ${f#"$ROOT"/}"; rc=1; }
@@ -37,8 +37,4 @@ fi
 echo; echo "${B}2 · Ruach Studio's own${X}"
 "$ROOT/heresy/fetch-heresy.sh" $([ $CHECK = 1 ] && echo --check) || rc=1
 
-if [ $CHECK = 0 ]; then
-  echo
-  echo "Then, once: ./convert-models.sh   (the legacy and blend decoders and the sliders, from the checkpoints)"
-fi
 exit $rc

@@ -1,0 +1,128 @@
+From cd8f54c1803952b69b2359963d187a0326f50f4a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 16:55:00 -0600
+Subject: [PATCH 1267/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201269:=20the?=
+ =?UTF-8?q?=20lyrics'=20Alt+K=20marks=20back=20with=20their=20text=20(the?=
+ =?UTF-8?q?=20box's=20value=20setter=20looks=20for=20them);=20Alt+E=20lift?=
+ =?UTF-8?q?s=20the=20lyrics=20and=20puts=20them=20back;=20Shift+Tab=20over?=
+ =?UTF-8?q?=20them=20puts=20them=20into=20the=20lifted=20form;=20Ctrl+S=20?=
+ =?UTF-8?q?and=20Ctrl+Shift+S=20keep=20everything=20of=20the=20session;=20?=
+ =?UTF-8?q?F5=20asks=20only=20after=20something=20was=20typed?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ tools/console/app.js           | 45 ++++++++++++++++++++++++++++++++++
+ tools/console/heresy-lyrics.js | 10 ++++++++
+ tools/console/heresy-writer.js |  2 +-
+ 3 files changed, 56 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 69daf59..2495a21 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8447,6 +8447,26 @@
+     box.querySelector('[data-lyr-z="0"]').disabled = k === 0;
+   }
+   $("lyricsBig").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); lyricsOver(!lyrOver); });
++  // HERESY 1269 (Viktor 09.10.2026: «Шорткат на попап/fullscreen редактора Лирики — Alt+E (перебиваем шорткат браузера)»; «Если лирика
++  // поверх всего, и применил Shift+Tab — схлопывание этого попапа и переносимся в сам фрейм попап»): Alt+E lifts the lyrics and puts them
++  // back, in the Creator; Shift+Tab over the lifted lyrics puts them back into the form and lifts its frame, the cursor in the lyrics
++  window.addEventListener("keydown", function (e) {
++    if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === "KeyE" && document.body.dataset.tab === "create") {
++      if (document.querySelector(".hd-back.is-on")) return;
++      e.preventDefault(); e.stopImmediatePropagation();
++      lyricsOver(!lyrOver);
++      return;
++    }
++    if (e.key === "Tab" && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && lyrOver) {
++      if (document.querySelector(".hd-back.is-on, .tc-pop:not([hidden]), .find-bar:not([hidden])")) return;
++      e.preventDefault(); e.stopImmediatePropagation();
++      var area = $("lyrics"), at = area.selectionStart;
++      lyricsOver(false);
++      if (document.body.dataset.frame !== "compose") frameOver("compose");
++      area.focus({ preventScroll: true });
++      try { area.setSelectionRange(at, at); } catch (err) { /* a box without a cursor */ }
++    }
++  }, true);
+   document.addEventListener("keydown", function (e) {
+     if (e.key !== "Escape" || !lyrOver) return;
+     if (document.querySelector(".hd-back.is-on, .tc-pop:not([hidden]), .find-bar:not([hidden]), .hi-back:not([hidden])")) return;
+@@ -8585,6 +8605,30 @@
+   // (the document in hand gets a version, or a new one is made); Ctrl+F5 reloads at once; in the Librarian F5 reads the
+   // library again, as before
+   var reloading = false;
++  // HERESY 1269 (Viktor 09.10.2026: «Блокируем браузерные Ctrl+S и Ctrl+Shift+S. Оба шортката сохраняют все изменения в текущей сессии.
++  // Если нет правок в комнатах — при F5 не выводим диалоговое окно»): what is typed in a room since the page came (or since Ctrl+S) makes
++  // the reload keys ask; with nothing typed the page reloads at once. Ctrl+S and Ctrl+Shift+S keep everything now: the song in the form,
++  // the Writer's open document, the page's settings on disk; never the browser's Save page
++  var edited = false;
++  document.addEventListener("input", function (e) {
++    var t = e.target;
++    if (!e.isTrusted || !t || !t.matches || !t.matches("textarea, input:not([type=search]):not([type=file])")) return;
++    if (t.closest("#view-compose, #view-take, #view-write, #view-post, #view-artist, #lyrOver")) edited = true;
++  }, true);
++  function saveAll() {
++    saveDraft();
++    if (window.HeresySettings && window.HeresySettings.flush) window.HeresySettings.flush();
++    var w = window.HeresyWriter && window.HeresyWriter.flush ? window.HeresyWriter.flush() : null;
++    return Promise.resolve(w).then(function () { edited = false; toast("Saved: the song in the form, the Writer's open document, the settings"); },
++      function (e) { toast("Not everything was saved: " + ((e && e.message) || e), "bad"); });
++  }
++  window.ruachSaveAll = saveAll;   // for the checks
++  window.ruachEdited = function (v) { if (v !== undefined) edited = !!v; return edited; };   // read, and set by the checks
++  window.addEventListener("keydown", function (event) {
++    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.code !== "KeyS") return;
++    event.preventDefault(); event.stopImmediatePropagation();
++    saveAll();
++  }, true);
+   window.addEventListener("keydown", function (event) {
+     // (Viktor: «Помимо F5 можно ещё Ctrl+Shift+R»): F5 and Shift+F5, Ctrl+R and Ctrl+Shift+R; Ctrl+F5 is the reload at once
+     var f5 = event.key === "F5" && !event.ctrlKey && !event.metaKey && !event.altKey;
+@@ -8592,6 +8636,7 @@
+     if ((!f5 && !ctrlR) || (f5 && !event.shiftKey && document.body.dataset.tab === "collection") || reloading) return;
+     event.preventDefault();
+     if (document.querySelector(".hd-back:not(.is-leaving)")) return;   // a dialog is open already (this one too)
++    if (!edited) { reloading = true; saveDraft(); location.reload(); return; }   // HERESY 1269: nothing typed, nothing to ask
+     var song = !!($("style").value.trim() || $("lyrics").value.trim());
+     window.HeresyDialog.confirm("Reload the page?\n\n" +
+       "It takes: the boxes' undo history, a lifted frame, the music playing, a writer's answer still on its way, an upload under way.\n\n" +
+diff --git a/tools/console/heresy-lyrics.js b/tools/console/heresy-lyrics.js
+index 3d6d600..a129749 100644
+--- a/tools/console/heresy-lyrics.js
++++ b/tools/console/heresy-lyrics.js
+@@ -377,6 +377,16 @@
+     function keepMarks() { store(KEY, marks.length ? JSON.stringify({ sig: sig(area.value), marks: marks }) : null); }
+     function recallMarks() { try { var o = JSON.parse(recall(KEY) || "null"); return o && o.sig === sig(area.value) && Array.isArray(o.marks) ? o.marks : null; } catch (e) { return null; } }
+     marks = recallMarks() || [];
++    // HERESY 1269 (Viktor 09.10.2026: «Пометка строк через Alt+K в редакторе не персистентна»): the text the page itself puts into the box
++    // (the form brought back after a reload, a take or a document loaded) sends no input event, so its marks were never looked for; the
++    // box's own value setter looks for them now: the same text, its marks back; another text, none
++    (function () {
++      var d = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
++      if (!d || !d.set) return;
++      Object.defineProperty(area, "value", { configurable: true, enumerable: true,
++        get: function () { return d.get.call(this); },
++        set: function (v) { d.set.call(this, v); was = d.get.call(this); marks = recallMarks() || []; later(); } });
++    })();
+     function shown() { return recall("yue2.lyrNums") !== "off"; }
+     function draw() {
+       queued = false;
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index 65fca86..623db59 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -419,7 +419,7 @@
+     loadList();
+   }
+ 
+-  window.HeresyWriter = { init: init, landed: landed, reload: loadList, open: open, fromCreate: fromCreate, md: md,
++  window.HeresyWriter = { init: init, landed: landed, reload: loadList, open: open, fromCreate: fromCreate, md: md, flush: flush,   // HERESY 1269: Ctrl+S
+                           // HERESY 1167: the document open in the notebook, and putting one into the Creator (for the writing room)
+                           openDoc: function () { return state.doc || null; }, inHand: function () { return recall(HAND_KEY) || ""; },
+                           putInCreator: function (doc) { return flush().then(function () { return intoCreate(doc); }); },
+-- 
+2.43.0
+

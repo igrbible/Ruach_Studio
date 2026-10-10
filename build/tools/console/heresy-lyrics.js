@@ -377,6 +377,16 @@
     function keepMarks() { store(KEY, marks.length ? JSON.stringify({ sig: sig(area.value), marks: marks }) : null); }
     function recallMarks() { try { var o = JSON.parse(recall(KEY) || "null"); return o && o.sig === sig(area.value) && Array.isArray(o.marks) ? o.marks : null; } catch (e) { return null; } }
     marks = recallMarks() || [];
+    // HERESY 1269 (Viktor 09.10.2026: «Пометка строк через Alt+K в редакторе не персистентна»): the text the page itself puts into the box
+    // (the form brought back after a reload, a take or a document loaded) sends no input event, so its marks were never looked for; the
+    // box's own value setter looks for them now: the same text, its marks back; another text, none
+    (function () {
+      var d = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+      if (!d || !d.set) return;
+      Object.defineProperty(area, "value", { configurable: true, enumerable: true,
+        get: function () { return d.get.call(this); },
+        set: function (v) { d.set.call(this, v); was = d.get.call(this); marks = recallMarks() || []; later(); } });
+    })();
     function shown() { return recall("yue2.lyrNums") !== "off"; }
     function draw() {
       queued = false;

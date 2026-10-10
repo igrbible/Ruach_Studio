@@ -2,6 +2,69 @@
 
 Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): one machine with an NVIDIA card, your own songs, nothing in a cloud. It grew over [YuE2 Kit](https://github.com/IronWolve/yue2-kit) v12 by IronWolve, which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by ServeurpersoCom. Every change has a number (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each change to the engine and the page as a patch of its own.
 
+## 2.0.0-rc4 · 2026-10-10
+
+The fourth release candidate, cut as a whole: everything the studio does today, the Artist room as it stands among it, and what reproducing the install under Pinokio on Ubuntu 24.04 showed, made whole. The models the studio used to convert on every machine come converted now, from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2), and the install fetches no checkpoints (HERESY 1169, patches 1268–1290). The Plenio score editor in the Refiner and the Artist's further tools go on toward the next candidate.
+
+### Everywhere
+
+- The unfolded server log 180 px narrower with its cards (720 px; tall 980).
+- **TODO.md**: everything planned and wished for, in one list, kept up to date.
+- **Nothing from the internet in the page**: abcjs (6.7.1), which draws the staff, is inside the page now, and the page's fonts are served by the studio itself (their Latin, Cyrillic and Greek). `heresy/tools/check-vendored.sh` says when a newer abcjs is out.
+- **Raleway, Roboto and Lato** join the studio's own fonts in Engine → Appearance: ten now.
+- **A sound when a run ends** (🔔 in the player, on by default): two notes up when a song, a score, a new version, the Artist's pictures, a Refiner's chain or a LoRA's training is done (a queue of runs once, when its last one ends), two down when one fails; none over a new song that starts playing by itself. As loud as the player, silent when it is muted.
+- **Paragraphs with air between them**: a tip's lines, the guide's items and the cheat-sheet's «How the probes were made»; the lyrics' box untouched.
+- **The veil**: OSEM and its words a fifth larger and further from the logo; the loading line at the foot, 160 px above the floor.
+- **Untranslated words keep their s**: the catalogs' pattern for seconds («12s») took any English text ending in s, so a string not yet translated lost it («The studio's 💎 set с»); it takes a number only now.
+- **Ctrl+N** is New song where the page is handed the key (Pinokio's window); a browser keeps Ctrl+N for its own new window.
+- **The take's menu in the player**: a right click on the player's wave, its picture or its title opens the take's menu, as in a list.
+- **Sections on the wave** (from SUNO v6): the player's wave shows the take's sections from its score (a thin line at each start, its name at the foot); a click by a line goes to the section's very start; the time under the pointer names its section.
+- The logo's words and the icon's letter ready for the languages planned next: French, Portuguese, German, Japanese, Chinese.
+
+### The Visiting Card and the README
+
+- Six rooms counted, the Artist among them; each language's page wears its own icon (Р for the Cyrillic names, Π for the Greek).
+
+### Creator
+
+- **The lyrics' keys**: Alt+E lifts the lyrics over everything and puts them back; Shift+Tab over them puts them into the lifted form, the cursor in the lyrics; the Alt+K marks come back with their text after a reload or a take loaded.
+- **Find and replace** in the lyrics, the style and the Writer's boxes: **F4** or **Ctrl+H**; Enter replaces the match in hand and goes on, Ctrl+Enter replaces them all, one Ctrl+Z takes it back; **Aa** (Alt+C) finds only as the case is typed.
+- **The lyrics as plain text**: beside ⤢, one button saves them as a `.txt` named by the Title, the other puts a `.txt` in their place (asked first, Ctrl+Z brings the old words back; a file that is not UTF-8 is refused out loud; an empty Title takes the file's name).
+- **A second and a third tag on a line**: a «[» after a line's tag gets its space by itself and offers the tags that are no section (who sings, Break, Silence); the tag stays on its line.
+- **The voice's gender at a click** (from SUNO v6): ♂ and ♀ in the Style's head put «male vocals» or «female vocals» into the Style (in place of the other gender's word, else before the BPM); the lit one takes its tag out; one Ctrl+Z gives the Style back.
+- **Ctrl+S and Ctrl+Shift+S** keep everything now (the song in the form, the Writer's open document, the settings), never the browser's Save page; **F5** asks only when something was typed since the page came or since Ctrl+S, and reloads at once otherwise.
+- **Recite in sixteenths**: where eighths would leave lines out (a rap of 120 lines on a 2/4 score), a syllable is a sixteenth, as rap is said.
+- The Writer's document in hand a chip on a line of its own under the Writer's row; the Score's tools right after its tabs, so the full screen stays on the row; the LoRA strength over the pointer at 14 pt.
+
+### Writer
+
+- **The documents list as wide as you drag its edge** (kept; ← → from the keyboard, a double click for its own width).
+
+### Artist
+
+- **Three columns**: the prompt and its knobs | the stage (the run being painted develops there, else the picture picked in the library, its run's data and actions under it) | the library; the outer two as wide as their edges are dragged. A click in the library picks a picture for the stage; the stage's picture opens it over the page.
+- **Draw is Stop while a run waits or draws**: a waiting run leaves the queue, a drawing one ends at once, the pictures it finished stay; no second run is started meanwhile by a double press.
+- **The gallery in even tiles**: equal columns filling the library edge to edge, every tile the same box (square, or the shape's own when one shape is shown), each picture whole in it.
+
+### Librarian
+
+- No peek in the corner on hover: a take's style and lyrics are a click away, in its sheet.
+
+### Install and Pinokio
+
+- **The converted models come converted**: the legacy and blend decoders and the sixteen sliders are fetched as GGUF from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) at a pinned revision (1.3 GB, byte for byte what a conversion of their pinned sources makes), straight into `models/` and `sliders/`; nothing is converted on your machine and no checkpoints are fetched, so `checkpoints/` leaves the repository (what lands there later is what you ask for: the style listener, the trainer's base).
+- **The downloads made whole** (the first install through Pinokio, on a 16 GB laptop card): a download that fails says why and is tried again after half a minute; a folder or a file a download left unfinished goes on at the next run; the sliders no longer pull their source repository's 4.1 GB in 974 files, whose burst of requests earned a 429 that failed Whisper and the upscaler after it.
+- **The LoRAs come with the install**: the Kit's library (11 adapters from 8 repos) and the studio's own (six voices, the duduk and the shofar), each under the name the 💎 sets' takes use.
+- **BF16 beside Q8_0**: Pinokio's **More models** (or `heresy/fetch-heresy.sh --backbone BF16`) brings the full backbone to a card the install gave Q8_0.
+- The install's log says YuE2's models are m-a-p's; Pinokio's own files beside its scripts and `.venv-art/` stay out of git, so **Update** keeps working.
+
+### Engine
+
+- **Folders**: where your work lives (the songs with the fetched workspaces, the trash, the Artist's pictures, the Writer's documents), what each holds and the room on its disk; **Move…** to any folder or disk, planned first and done on a second yes (on another disk copied, checked, then switched; the old copy kept until you remove it); **Back home**; **Link again** when a disk comes back.
+- **Memory within N GB**: Auto for the whole card, or Auto within N GB (a laptop's desktop and browser keep their gigabyte or two: 14 of 16); the Compute card says where BF16 comes from when it is not here.
+- **Models and LoRAs**: what the install brings, part by part (the extra decoders and the sliders, Whisper, the stems' models, UniverSR, the LoRAs), as its last run found it; a part not whole lists what is missing and is fetched again from here, a download cut short going on where it stopped; the extras (another backbone, the style listener, the Artist's painter, the trainer's base) each with its variants and sizes, asked first. When a backbone, a decoder or the sliders came, **Restart the engine** (LoRAs it reads each time).
+- Engine → Updates no longer shows **Update** and **What's new** when there is nothing new.
+
 ## 2.0.0-rc3 · 2026-10-09
 
 The third release candidate: the Artist room in an early preview, Pinokio on Linux, and what two days of the rooms' audit asked for (HERESY 1169, patches 1199–1267).

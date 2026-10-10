@@ -2,7 +2,7 @@ From d484f12f6aa0ec29ce704e3bb08d27280cf58387 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 12:10:32 -0600
-Subject: [PATCH 1045/1265] The Collection keeps you in the Collection: a peek
+Subject: [PATCH 1045/1286] The Collection keeps you in the Collection: a peek
  on hover, a sheet on click
 
 A pointer resting 400 ms on a card shows a peek: title, age, length, mode, 200 characters of the

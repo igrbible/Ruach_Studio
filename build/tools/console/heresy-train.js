@@ -74,8 +74,15 @@
     if (document.body.dataset.tab !== "train") return;
     state.timer = setTimeout(function () {
       if (document.hidden || document.body.dataset.tab !== "train") return schedule();
+      var wasLive = runs().filter(isLive).map(function (r) { return r.name; });   // HERESY 1275: a run that ends while the room looks on
       Promise.all([api("/train/datasets"), api("/train/trash").catch(function () { return { trash: state.trash }; })]).then(function (d) {
         state.data = d[0]; state.trash = d[1].trash || [];
+        wasLive.forEach(function (name) {
+          var r = runOf(name);
+          if (!r || isLive(r) || (r.status !== "done" && r.status !== "failed")) return;   // stopped by hand: nothing to say
+          toast(r.status === "done" ? "Training " + name + " is done" : "Training " + name + " failed" + (r.error ? ": " + r.error : ""), r.status !== "done");
+          if (window.RuachChime) window.RuachChime.ring(r.status === "done");
+        });
         paintLive(); paintList(); paintPills(); gate();
         if (state.pane === "run") paintRun();
       }).catch(function () { /* the next tick tries again */ }).then(schedule);

@@ -2,7 +2,7 @@ From 66b211c081969127df9a58462ab2d93ff473aaa0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Wed, 7 Oct 2026 18:50:38 -0600
-Subject: [PATCH 1207/1265] HERESY 1169: a measure whose beat numbers skip one
+Subject: [PATCH 1207/1286] HERESY 1169: a measure whose beat numbers skip one
  is written with the beats it has, an odd bar, and the log says so, instead of
  failing the whole score
 

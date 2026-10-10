@@ -1,0 +1,127 @@
+From 19f681d649b20d6d6e590f49978284beed57ad24 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 20:46:44 -0600
+Subject: [PATCH 1280/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201282:=20sect?=
+ =?UTF-8?q?ions=20on=20the=20wave=20(from=20SUNO=20v6,=20TODO.md:=20=C2=AB?=
+ =?UTF-8?q?Sections=20on=20the=20wave:=20the=20take's=20sections=20from=20?=
+ =?UTF-8?q?its=20score=E2=80=A6=20as=20labelled=20blocks=20over=20the=20pl?=
+ =?UTF-8?q?ayer's=20waveform;=20a=20click=20on=20one=20goes=20there=C2=BB)?=
+ =?UTF-8?q?:=20the=20take's=20score=20(its=20own,=20else=20the=20one=20wri?=
+ =?UTF-8?q?tten=20from=20its=20sound)=20gives=20each=20section's=20start?=
+ =?UTF-8?q?=20at=20its=20tempo;=20the=20player's=20wave=20draws=20a=20thin?=
+ =?UTF-8?q?=20line=20at=20each=20and=20its=20name=20at=20the=20foot;=20a?=
+ =?UTF-8?q?=20click=20by=20a=20line=20goes=20to=20its=20very=20start;=20th?=
+ =?UTF-8?q?e=20time=20under=20the=20pointer=20names=20its=20section?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 67 +++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 66 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 15f2de4..e700544 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5508,8 +5508,54 @@
+   $("wave").addEventListener("click", function (event) {
+     var rect = this.getBoundingClientRect();
+     var ratio = (event.clientX - rect.left) / rect.width;
+-    if (isFinite(audio.duration)) audio.currentTime = ratio * audio.duration;
++    if (!isFinite(audio.duration)) return;
++    var t = ratio * audio.duration, near = null;              // HERESY 1282: a click by a section's line goes to its very start
++    waveSections().forEach(function (s) {
++      if (Math.abs((s.t - t) / audio.duration * rect.width) <= 6 && (!near || Math.abs(s.t - t) < Math.abs(near.t - t))) near = s;
++    });
++    audio.currentTime = near ? near.t : t;
+   });
++  // HERESY 1282 (from SUNO v6, TODO.md: «Sections on the wave: the take's sections from its score… as labelled blocks over the
++  // player's waveform; a click on one goes there»): the take's score (its own, from its request; else the one written from its
++  // sound) gives each section's start in seconds at the score's tempo (HeresyAbc.markers); the wave draws a thin line at each
++  // and its name at the foot of its block; the time under the pointer names its section
++  STATE.waveSections = { name: "", list: [] };
++  var sectionsNone = {};                                       // the takes with no score written from their sound: asked once
++  function sectionsFrom(abc) {
++    if (!abc || !window.HeresyAbc) return [];
++    try {
++      return window.HeresyAbc.markers(window.HeresyAbc.parse(abc)).filter(function (m) { return isFinite(m.seconds) && m.seconds >= 0 && m.name; })
++        .map(function (m) { return { t: m.seconds, name: String(m.name).replace(/^%\s*/, "").trim() }; });
++    } catch (e) { return []; }
++  }
++  function waveSections() { var ws = STATE.waveSections; return STATE.playerTake && ws && ws.name === STATE.playerTake.name ? ws.list : []; }
++  function loadWaveSections(take) {
++    var name = take.name;
++    STATE.waveSections = { name: name, list: [] };
++    if (take.session) return;
++    var got = take.has_score ? getRequest(take).then(function (req) { return (req && req.abc) || ""; })
++      : sectionsNone[name] ? Promise.resolve("")
++      : fetch("/lab/score?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; })
++          .then(function (d) { if (!d || !d.abc) sectionsNone[name] = true; return (d && d.abc) || ""; });
++    got.then(function (abc) {
++      if (!STATE.playerTake || STATE.playerTake.name !== name) return;
++      STATE.waveSections = { name: name, list: sectionsFrom(abc) };
++      drawWave();
++    }).catch(function () {});
++  }
++  function sectionAt(t) {
++    var at = null;
++    waveSections().forEach(function (s) { if (s.t <= t + 0.01) at = s; });
++    return at;
++  }
++  audio.addEventListener("durationchange", function () { if (waveSections().length) drawWave(); });   // the lines need the length
++  // for the checks: the sections of a score, or (a list, use) laid on the take in the player
++  window.ruachWaveSections = function (abc, use) {
++    if (abc === undefined) return STATE.waveSections;
++    var list = Array.isArray(abc) ? abc : sectionsFrom(abc);
++    if (use && STATE.playerTake) { STATE.waveSections = { name: STATE.playerTake.name, list: list }; drawWave(); }
++    return list;
++  };
+   // HERESY 1280 (TODO.md, the rooms' audit: the take's menu over the player's wave): a right click on the player's wave, its
+   // picture or its name opens the menu of the take in the player, as one on the take in a list does
+   function playerTakeMenu(event) {
+@@ -5527,6 +5573,7 @@
+   function loadPeaks(take) {
+     var url = takeAudioUrl(take);
+     STATE.peaks = STATE.peakCache[url] || null;
++    loadWaveSections(take);                                    // HERESY 1282
+     drawWave();
+     if (STATE.peaks || STATE.peakLoading[url]) return;
+     STATE.peakLoading[url] = true;
+@@ -5690,6 +5737,22 @@
+       }
+     }
+ 
++    // HERESY 1282: the take's sections: a thin line at each start, its name at the foot of its block where there is room
++    var secs = waveSections();
++    if (secs.length && isFinite(audio.duration) && audio.duration > 0) {
++      ctx.font = '600 9px "IBM Plex Mono", monospace';
++      var lastEnd = -1e9;                                    // the first name always has room
++      secs.forEach(function (s) {
++        if (s.t >= audio.duration) return;
++        var sx = Math.round(s.t / audio.duration * width) + 0.5;
++        if (s.t > 0.05) { ctx.fillStyle = themeRGBA("ink", 0.24); ctx.fillRect(sx - 0.5, 2, 1, height - 4); }
++        var name = s.name.toUpperCase(), lw = ctx.measureText(name).width + 6;
++        if (sx + 2 < lastEnd + 4 || sx + 2 + lw > width) return;   // no room: the line alone
++        ctx.fillStyle = themeRGBA("panel", 0.72); ctx.fillRect(sx + 2, height - 13, lw, 11);
++        ctx.fillStyle = themeRGBA("ink", 0.62); ctx.fillText(name, sx + 5, height - 4.5);
++        lastEnd = sx + 2 + lw;
++      });
++    }
+     if (progress > 0) {
+       ctx.fillStyle = themeRGBA("ink", 1);
+       ctx.fillRect(progress * width - 0.5, 4, 1.5, height - 8);
+@@ -5697,6 +5760,8 @@
+     // HERESY 1111: where a click would go, and when that is
+     if (STATE.waveHover != null && isFinite(audio.duration) && audio.duration > 0) {
+       var hx = Math.max(0, Math.min(1, STATE.waveHover)) * width, label = clock(STATE.waveHover * audio.duration);
++      var hs = sectionAt(STATE.waveHover * audio.duration);  // HERESY 1282: and its section
++      if (hs) label += " \u00b7 " + hs.name;
+       ctx.fillStyle = themeRGBA("ink", 0.35); ctx.fillRect(hx - 0.5, 2, 1, height - 4);
+       ctx.font = '11px "IBM Plex Mono", monospace';
+       var tw = ctx.measureText(label).width + 10, tx = Math.min(width - tw - 2, Math.max(2, hx + 6));
+-- 
+2.43.0
+

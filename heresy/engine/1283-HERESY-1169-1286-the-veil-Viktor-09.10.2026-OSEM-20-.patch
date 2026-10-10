@@ -1,0 +1,48 @@
+From a989cc3151c9e2e91ba75c9f543686c76a198ddb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 22:08:40 -0600
+Subject: [PATCH 1283/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201286:=20the?=
+ =?UTF-8?q?=20veil=20(Viktor=2009.10.2026:=20=C2=ABOSEM=20=D1=81=20=D0=B4?=
+ =?UTF-8?q?=D0=B5=D0=B2=D0=B8=D0=B7=D0=BE=D0=BC=20=D1=81=D0=B4=D0=B5=D0=BB?=
+ =?UTF-8?q?=D0=B0=D0=B9=20=D0=BD=D0=B0=2020%=20=D0=BA=D1=80=D1=83=D0=BF?=
+ =?UTF-8?q?=D0=BD=D0=B5=D0=B5,=20=D0=B4=D0=B0=D0=B9=20=D0=B1=D0=BE=D0=BB?=
+ =?UTF-8?q?=D1=8C=D1=88=D0=B5=20=D0=BF=D1=80=D0=BE=D1=81=D1=82=D1=80=D0=B0?=
+ =?UTF-8?q?=D0=BD=D1=81=D1=82=D0=B2=D0=B0=20=D0=BC=D0=B5=D0=B6=D0=B4=D1=83?=
+ =?UTF-8?q?=20=D0=9B=D0=BE=D0=B3=D0=BE=20=D0=B8=20OSEM,=20=D0=B0=20=D1=82?=
+ =?UTF-8?q?=D0=B0=D0=BA=D0=B6=D0=B5=20=D1=81=D0=B0=D0=BC=20=D0=BF=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=B3=D1=80=D0=B5=D1=81=D1=81=20=D0=B1=D0=B0=D1=80=20?=
+ =?UTF-8?q?=D0=BE=D0=BF=D1=83=D1=81=D1=82=D0=B8=20=D0=B2=20=D0=BF=D0=BE?=
+ =?UTF-8?q?=D0=B4=D0=B2=D0=B0=D0=BB,=20160=20=D0=BF=D0=B8=D0=BA=D1=81?=
+ =?UTF-8?q?=D0=B5=D0=BB=D0=BE=D0=B2=20=D0=BE=D1=82=20=D0=BF=D0=BE=D0=BB?=
+ =?UTF-8?q?=D0=B0=C2=BB):=20the=20slogan=20a=20fifth=20larger=20and=20furt?=
+ =?UTF-8?q?her=20from=20the=20logo,=20the=20line=20160=20px=20above=20the?=
+ =?UTF-8?q?=20window's=20floor?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6510c6c..091f66b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4179,6 +4179,11 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+   font: 400 clamp(12px, .95vw, 16px)/1.45 var(--sans); color: var(--dim); animation: boot-in 1.1s .15s ease both; }
+ .boot-osem b { font-weight: 600; color: var(--ink); font-size: 1.12em; letter-spacing: .6em; margin-right: -.6em; }
+ .boot-osem .boot-osem-say { font-style: italic; color: var(--muted); }
++/* HERESY 1286 (Viktor 09.10.2026: «OSEM с девизом сделай на 20% крупнее, дай больше пространства между Лого и OSEM, а также сам
++   прогресс бар опусти в подвал, 160 пикселов от пола»): the slogan a fifth larger and 32 px further from the logo; the line at the
++   foot, 160 px above the window's floor */
++.boot-osem { margin-top: 26px; font-size: clamp(14.4px, 1.14vw, 19.2px); }
++html.booting .boot-veil .boot-line { position: absolute; left: 50%; bottom: 160px; transform: translateX(-50%); }
+ /* HERESY 1167 (Viktor: «Карточки у библиотекаря до сих пор слишком красные. Возьми начальный #f2edef и в градиенте дневной темы
+    доводи его в правый низ… до нулевой альфы»): by day the card's wash from #f2edef in its top left to nothing at its bottom
+    right; a little deeper when hovered, held or checked */
+-- 
+2.43.0
+

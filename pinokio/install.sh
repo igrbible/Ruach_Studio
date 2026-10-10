@@ -52,8 +52,9 @@ step "⑥ the models: pinned, checked, each with its size"
 Q=$(ruach_quant)
 echo "  the backbone for a card of $(ruach_vram) MiB: ${Q:-BF16}"
 [ "$Q" = Q5_K_M ] && echo "${Y}  under 12 GB: the studio is made for 12 GB and more; short songs only${X}"
-bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (fetch-models.sh says which above): Install again goes on from there"
+# HERESY 1285: what did not come is named above with its reason; the studio starts without it, and Install again goes on from there
+bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (the lines marked failed above say which and why): the studio starts without it; Install again goes on from there"
 
 echo
 echo "${G}Ruach Studio is installed.${X} Start it from Pinokio's menu (by hand: ./lab/start-lab.sh, then ./start.sh)."
-echo "${D}More models when you want them, each asked first with its size: «More models» in the menu (heresy/fetch-heresy.sh).${X}"
+echo "${D}More models when you want them, each asked first with its size: «More models» in the menu (the Artist's painter, the style listener, the trainer's base, the BF16 backbone beside a Q8_0 one).${X}"

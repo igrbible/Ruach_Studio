@@ -1,0 +1,43 @@
+From 8bccc07c6a93343003f90721c4ba52d5675a8807 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 20:14:55 -0600
+Subject: [PATCH 1278/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201280:=20the?=
+ =?UTF-8?q?=20take's=20menu=20in=20the=20player=20(TODO.md,=20the=20rooms'?=
+ =?UTF-8?q?=20audit):=20a=20right=20click=20on=20the=20player's=20wave,=20?=
+ =?UTF-8?q?its=20picture=20or=20its=20title=20opens=20the=20menu=20of=20th?=
+ =?UTF-8?q?e=20take=20in=20the=20player,=20as=20one=20on=20it=20in=20a=20l?=
+ =?UTF-8?q?ist;=20a=20left=20click=20on=20the=20wave=20still=20jumps?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 9b1ce28..49eb740 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5510,6 +5510,16 @@
+     var ratio = (event.clientX - rect.left) / rect.width;
+     if (isFinite(audio.duration)) audio.currentTime = ratio * audio.duration;
+   });
++  // HERESY 1280 (TODO.md, the rooms' audit: the take's menu over the player's wave): a right click on the player's wave, its
++  // picture or its name opens the menu of the take in the player, as one on the take in a list does
++  function playerTakeMenu(event) {
++    var t = STATE.playerTake && findTake(STATE.playerTake.name);
++    if (!t || t.session) return;
++    event.preventDefault();
++    takeMenu(t.name, event.clientX, event.clientY);
++  }
++  $("wave").addEventListener("contextmenu", playerTakeMenu);
++  document.querySelector("#playbar .playbar-id").addEventListener("contextmenu", playerTakeMenu);
+ 
+   // The server reads the audio once and caches 900 peak values per take. The
+   // browser decode below is only the fallback: a take kept in this tab, or a
+-- 
+2.43.0
+

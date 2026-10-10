@@ -2,7 +2,7 @@ From f28ed3bf499bfff74a7135a62cff81c9a18c3e4b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 8 Oct 2026 21:36:08 -0600
-Subject: [PATCH 1254/1265] =?UTF-8?q?HERESY=201169=20=C2=B7=201257:=20the?=
+Subject: [PATCH 1254/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201257:=20the?=
  =?UTF-8?q?=20Artist's=20live=20preview=20(each=20step's=20latents=20as=20?=
  =?UTF-8?q?a=20picture=20in=20the=20place=20being=20painted,=20the=20Wan?=
  =?UTF-8?q?=202.1=20VAE's=20latent-to-RGB=20factors=20as=20InvokeAI=20carr?=

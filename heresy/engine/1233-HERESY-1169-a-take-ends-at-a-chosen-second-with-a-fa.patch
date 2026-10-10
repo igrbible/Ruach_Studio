@@ -2,7 +2,7 @@ From e862ee3b6d652f3c1d7a031356277751f3c532df Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 8 Oct 2026 02:50:47 -0600
-Subject: [PATCH 1233/1265] HERESY 1169: a take ends at a chosen second with a
+Subject: [PATCH 1233/1286] HERESY 1169: a take ends at a chosen second with a
  fade (end_at, fade_out in the request): with decode_from its kept latents are
  decoded only so far, in seconds; fade_out brings the last seconds down on a
  half cosine in both the decode and the render jobs

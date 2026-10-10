@@ -1,0 +1,112 @@
+From b21e98329cbd83c7791431582346e59e7493232c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 22:08:41 -0600
+Subject: [PATCH 1284/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201287:=20the?=
+ =?UTF-8?q?=20memory=20preset=20within=20N=20GB=20(Viktor=2009.10.2026:=20?=
+ =?UTF-8?q?=C2=AB=D0=A0=D1=83=D1=87=D0=BD=D0=BE=D0=B9=20=D0=BF=D1=80=D0=B5?=
+ =?UTF-8?q?=D1=81=D0=B5=D1=82=20=D0=BF=D0=B0=D0=BC=D1=8F=D1=82=D0=B8=20?=
+ =?UTF-8?q?=D0=BD=D0=B5=20=D0=B4=D0=B0=D1=91=D1=82=20=D0=BC=D0=BD=D0=B5=20?=
+ =?UTF-8?q?=D0=B2=D1=8B=D0=B1=D1=80=D0=B0=D1=82=D1=8C=20=D0=BE=D0=B1=D1=8A?=
+ =?UTF-8?q?=D1=91=D0=BC=20VRAM=20=D0=B8=D0=B7=20=D0=B4=D0=BE=D1=81=D1=82?=
+ =?UTF-8?q?=D1=83=D0=BF=D0=BD=D1=8B=D1=85=2016GB=20VRAM.=20=D0=92=20=D1=80?=
+ =?UTF-8?q?=D0=B5=D0=B0=D0=BB=D0=B8=D0=B8=20=D1=8F=20=D0=B1=D1=8B=20=D0=BD?=
+ =?UTF-8?q?=D0=B0=20=D1=8D=D1=82=D0=BE=D0=BC=20=D0=B6=D0=B5=D0=BB=D0=B5?=
+ =?UTF-8?q?=D0=B7=D0=B5=20=D0=B2=D1=8B=D0=B1=D1=80=D0=B0=D0=BB=20=D0=B1?=
+ =?UTF-8?q?=D1=8B=2014GB,=20=D1=87=D1=82=D0=BE=D0=B1=D1=8B=20=D0=BD=D0=B5?=
+ =?UTF-8?q?=20=D0=B1=D1=8B=D0=BB=D0=BE=20OOM=C2=BB):=20Auto=20for=20the=20?=
+ =?UTF-8?q?whole=20card=20and=20Auto=20within=20N=20GB=20down=20to=208,=20?=
+ =?UTF-8?q?the=20knobs=20for=20that=20much;=20the=20Compute=20card=20says?=
+ =?UTF-8?q?=20where=20BF16=20comes=20from=20when=20it=20is=20not=20here?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js | 41 ++++++++++++++++++++++++++++++-----------
+ 1 file changed, 30 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index ef77072..8aa795e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3654,16 +3654,31 @@
+   // The choice is kept (yue2.memPreset: auto | manual) and nothing is guessed from the knobs: Auto shows
+   // only while the knobs are still what Auto set for this GPU; a knob moved by hand makes it Manual.
+   var PRESET_KEY = "yue2.memPreset";
++  // HERESY 1287 (Viktor 09.10.2026, a 16 GB laptop card: «Ручной пресет памяти не даёт мне выбрать объём VRAM из доступных 16GB VRAM.
++  // В реалии я бы на этом железе выбрал бы 14GB, чтобы не было OOM»): Auto within N GB, from a gigabyte under the card down to 8:
++  // the knobs for that much, the rest of the card left to what else runs on it. «auto» is the whole card, «auto:14» within 14 GB
++  function budgetOf(v) { return v === "auto" ? gpuGib() : /^auto:\d+$/.test(v || "") ? parseInt(v.slice(5), 10) : 0; }
+   function shownPreset(settings) {
+-    var a = autoKnobs(gpuGib());
+-    if (recall(PRESET_KEY) !== "auto" || !a) return "manual";
+-    return a.max_seq === settings.max_seq && a.vae_core === settings.vae_core ? "auto" : "manual";
++    var kept = recall(PRESET_KEY) || "", a = autoKnobs(budgetOf(kept));
++    if (!/^auto(:\d+)?$/.test(kept) || !a) return "manual";
++    return a.max_seq === settings.max_seq && a.vae_core === settings.vae_core ? kept : "manual";
+   }
+-  // Auto says what it found and what it sets.
++  // Auto says what it found and what it sets; each budget under the card, what it sets for that much
+   function paintPresetSizes() {
+-    var gib = gpuGib(), a = autoKnobs(gib), o = $("memPreset").querySelector('option[value="auto"]');
+-    if (o) o.textContent = "Auto" + (gib ? " (" + gib.toFixed(1) + " GB found" + (a ? ": " +
+-      (a.max_seq ? "context " + a.max_seq.toLocaleString(loc()) : "whole context") + ", VAE tiles " + a.vae_core : ": too small for YuE2") + ")" : " (detect)");
++    var gib = gpuGib(), a = autoKnobs(gib), sel = $("memPreset"), was = sel.value, o = sel.querySelector('option[value="auto"]');
++    var knobs = function (k) { return (k.max_seq ? "context " + k.max_seq.toLocaleString(loc()) : "whole context") + ", VAE tiles " + k.vae_core; };
++    if (o) o.textContent = "Auto" + (gib ? " (" + gib.toFixed(1) + " GB found" + (a ? ": " + knobs(a) : ": too small for YuE2") + ")" : " (detect)");
++    Array.prototype.slice.call(sel.querySelectorAll('option[value^="auto:"]')).forEach(function (x) { x.remove(); });
++    var manual = sel.querySelector('option[value="manual"]');
++    for (var n = Math.ceil(gib) - 1; n >= 8; n--) {
++      var k = autoKnobs(n);
++      if (!k) continue;
++      var opt = document.createElement("option");
++      opt.value = "auto:" + n;
++      opt.textContent = "Auto within " + n + " GB: " + knobs(k);
++      sel.insertBefore(opt, manual);
++    }
++    if (was && sel.querySelector('option[value="' + was + '"]')) sel.value = was;
+   }
+ 
+   // Top-bar model choice: the backbone files the server was started with.
+@@ -3735,6 +3750,10 @@
+     else notes.push("Context " + rows.toLocaleString(loc()) + " rows: songs up to about " + clock(Math.max(0, rows - 2500) / FRAME_RATE) +
+                     " with a typical prompt; longer ones will not fit.");
+     notes.push($("setKeepLoaded").checked ? "Models stay in GPU memory between songs." : "Each stage leaves GPU memory when it is done.");
++    // HERESY 1287 (Viktor 09.10.2026: «BF16 не скачалась… можно ли будет со студии докачать BF16?»): where the full backbone comes from
++    if (STATE.settings && (STATE.settings.models || []).length && (STATE.settings.models || []).indexOf("BF16") < 0) {
++      notes.push("BF16 (7.2 GB) is not on this machine: Pinokio's «More models» fetches it, or heresy/fetch-heresy.sh --backbone BF16; the studio offers it after its next start.");
++    }
+     $("computeHint").textContent = notes.map(tr).join(" ");   // HERESY 1166
+   }
+ 
+@@ -3776,13 +3795,13 @@
+ 
+   $("memPreset").addEventListener("change", function () {
+     STATE.settingsDirty = true;
+-    if (this.value !== "auto") return paintComputeHint();          // Manual: the knobs stay as they are, yours
+-    var gib = gpuGib(), a = autoKnobs(gib);
++    if (!/^auto/.test(this.value)) return paintComputeHint();      // Manual: the knobs stay as they are, yours
++    var gib = budgetOf(this.value), a = autoKnobs(gib);            // HERESY 1287: the whole card, or within N GB
+     if (!a) { this.value = "manual"; return toast(gib ? gib.toFixed(1) + " GB is too small for YuE2: set the knobs by hand" : "No GPU detected: set the knobs by hand", "bad"); }
+     $("setMaxSeq").value = a.max_seq;
+     $("setVaeCore").value = a.vae_core;
+     paintComputeHint();
+-    toast("Auto for " + gib.toFixed(1) + " GB: " + (a.max_seq ? "context " + a.max_seq.toLocaleString(loc()) : "whole context") +
++    toast((this.value === "auto" ? "Auto for " + gib.toFixed(1) + " GB: " : "Auto within " + gib + " GB: ") + (a.max_seq ? "context " + a.max_seq.toLocaleString(loc()) : "whole context") +
+           ", VAE tiles " + a.vae_core + "; the backbone and keeping models loaded stay your choice. Press Save to apply.");
+   });
+ 
+@@ -3797,7 +3816,7 @@
+     try { next = readSettingsForm(); } catch (error) { return toast(error.message, "bad"); }
+     var current = STATE.settings || {}, changed = {};
+     SETTING_KEYS.forEach(function (key) { if (next[key] !== undefined && next[key] !== current[key]) changed[key] = next[key]; });
+-    store(PRESET_KEY, $("memPreset").value === "auto" ? "auto" : "manual");   // HERESY 1071
++    store(PRESET_KEY, /^auto(:\d+)?$/.test($("memPreset").value) ? $("memPreset").value : "manual");   // HERESY 1071; 1287: «auto:14» too
+     if (!Object.keys(changed).length) { paintSettings(STATE.settings || {}, true); return toast("Saved: the knobs were already so"); }
+     var button = this;
+     button.disabled = true;
+-- 
+2.43.0
+

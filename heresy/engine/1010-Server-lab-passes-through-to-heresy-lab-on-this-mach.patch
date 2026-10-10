@@ -1,7 +1,7 @@
 From f7a0df688ce7aa587a7283b3fdc9791d502c5ef5 Mon Sep 17 00:00:00 2001
 From: heresy <heresy@local>
 Date: Wed, 30 Sep 2026 15:39:43 -0600
-Subject: [PATCH 1010/1265] Server: /lab/ passes through to heresy-lab on this
+Subject: [PATCH 1010/1286] Server: /lab/ passes through to heresy-lab on this
  machine
 
 HERESY 1010. GET /lab/<path>?<query> is forwarded as it is to 127.0.0.1:41870

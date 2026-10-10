@@ -1,0 +1,161 @@
+From dcf7891d10c7410d3e548869d2eae5937223bf0f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 9 Oct 2026 19:38:08 -0600
+Subject: [PATCH 1276/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201278:=20a=20?=
+ =?UTF-8?q?second=20and=20a=20third=20tag=20on=20a=20line=20(Viktor=2009.1?=
+ =?UTF-8?q?0.2026:=20=C2=AB`[`=20=D0=B2=D1=82=D0=BE=D1=80=D1=8B=D0=BC/?=
+ =?UTF-8?q?=D1=82=D1=80=D0=B5=D1=82=D1=8C=D0=B8=D0=BC=20=D0=B2=20=D0=BE?=
+ =?UTF-8?q?=D0=B4=D0=BD=D0=BE=D0=B9=20=D1=81=D1=82=D1=80=D0=BE=D0=BA=D0=B5?=
+ =?UTF-8?q?=20=D0=BF=D0=BE=D1=81=D0=BB=D0=B5=20=D0=B2=D0=B0=D0=BB=D0=B8?=
+ =?UTF-8?q?=D0=B4=D0=BD=D0=BE=D0=B3=D0=BE=20=D1=82=D0=B5=D0=B3=D0=B0.=20?=
+ =?UTF-8?q?=D0=90=D0=B2=D1=82=D0=BE=20=D0=BF=D1=80=D0=BE=D0=B1=D0=B5=D0=BB?=
+ =?UTF-8?q?=20=D0=BC=D0=B5=D0=B6=D0=B4=D1=83=20=D1=82=D0=B5=D0=B3=D0=B0?=
+ =?UTF-8?q?=D0=BC=D0=B8=20=D0=B2=20=D0=BE=D0=B4=D0=BD=D0=BE=D0=B9=20=D1=81?=
+ =?UTF-8?q?=D1=82=D1=80=D0=BE=D0=BA=D0=B5.=20=D0=9D=D0=BE=20=D1=82=D0=B0?=
+ =?UTF-8?q?=D0=BA=D0=BE=D0=B5=20=D1=82=D0=BE=D0=BB=D1=8C=D0=BA=D0=BE=20?=
+ =?UTF-8?q?=D1=81=20=D0=BF=D0=BE=D0=B4=D1=81=D0=BA=D0=B0=D0=B7=D0=BA=D0=BE?=
+ =?UTF-8?q?=D0=B9=20=D0=BD=D0=B5=D1=81=D0=B5=D0=BA=D1=86=D0=B8=D0=BE=D0=BD?=
+ =?UTF-8?q?=D0=BD=D1=8B=D1=85=20=D1=82=D0=B5=D0=B3=D0=BE=D0=B2=C2=BB):=20a?=
+ =?UTF-8?q?fter=20one=20or=20two=20whole=20tags=20a=20=C2=AB[=C2=BB=20gets?=
+ =?UTF-8?q?=20its=20space=20and=20offers=20who=20sings,=20Female=20Vocals,?=
+ =?UTF-8?q?=20Break=20and=20Silence=20(TEST);=20the=20tag=20stays=20on=20i?=
+ =?UTF-8?q?ts=20line,=20a=20=C2=AB=E2=80=A6=C2=BB=20left=20selected;=20Ctr?=
+ =?UTF-8?q?l+Space=20types=20=C2=AB=20[=C2=BB=20there?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-complete.js | 57 ++++++++++++++++++++++++++++----
+ 1 file changed, 51 insertions(+), 6 deletions(-)
+
+diff --git a/tools/console/heresy-complete.js b/tools/console/heresy-complete.js
+index 1b49cf0..1ba066c 100644
+--- a/tools/console/heresy-complete.js
++++ b/tools/console/heresy-complete.js
+@@ -18,6 +18,11 @@
+ // after Genius's guide to song sections) with how often the examples write it; the box as high whatever the list holds,
+ // lower only where the player would cut it; Genius's sections none of the examples writes last, marked TEST.
+ //
++// HERESY 1278 (Viktor 09.10.2026: «`[` вторым/третьим в одной строке после валидного тега. Авто пробел между тегами в одной
++// строке. Но такое только с подсказкой несекционных тегов»): after one or two closed tags on a line a «[» opens the list too,
++// with the tags that are no section only: who sings (the examples'), and Female Vocals, Break and Silence (his; TEST). «][»
++// gets its space by itself, Ctrl+Space there types « [»; a chained tag stays on its line, a «…» in it left selected.
++//
+ //   HeresyComplete.attach(textarea) · HeresyComplete.state()   (the last for the checks)
+ (function () {
+   "use strict";
+@@ -50,6 +55,28 @@
+     return rows.slice().sort(function (a, b) { return pos(a) - pos(b); });
+   }
+ 
++  // HERESY 1278: the tags a line takes after its first: who sings, as the examples write it, then the ones he writes too
++  var CHAIN_MORE = { "Female Vocals": "A woman sings the lines that follow; the examples write only Male Vocals",
++    "Break": "A pause in the singing while the music goes on", "Silence": "The voice and the music stop for a moment" };
++  function chainTags() {
++    var g = window.HeresyInstruments && window.HeresyInstruments.lyricTags ? window.HeresyInstruments.lyricTags() : [];
++    var who = g.filter(function (x) { return /^Who sings/.test(x.group || ""); })[0];
++    var rows = (who ? who.rows : [["[Male Vocals]", 25, ""]]).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: r[1], note: r[2] || "", test: !r[1] }; });
++    var male = rows.findIndex(function (r) { return r.name === "Male Vocals"; });
++    rows.splice(male + 1, 0, { name: "Female Vocals", n: 0, note: CHAIN_MORE["Female Vocals"], test: true });
++    rows.push({ name: "Break", n: 0, note: CHAIN_MORE.Break, test: true }, { name: "Silence", n: 0, note: CHAIN_MORE.Silence, test: true });
++    return rows;
++  }
++  function offerChain(q) {
++    var head = fold(q), out = [];
++    chainTags().forEach(function (t, k) {
++      var r = rank(t.name, head);
++      if (r) out.push({ tag: "[" + t.name + "]", note: t.note, n: t.n, rank: r, k: k, next: false, test: !!t.test, chain: true });
++    });
++    return out.sort(function (a, b) { return (a.rank - b.rank) || (a.k - b.k); });
++  }
++  var CHAINED = /^\s*(?:\[[^\[\]\n]+\]\s*){1,2}$/;              // one or two whole tags, the next would be the second or the third
++
+   function fold(q) {
+     if (!/[а-яёіїєґ]/i.test(q)) return q;
+     return q.toLowerCase().split("").map(function (c) { var i = RU.indexOf(c); return i >= 0 ? EN[i] : UK[c] || c; }).join("");
+@@ -103,9 +130,10 @@
+   function context() {
+     if (!box || box.readOnly || box.disabled || box.selectionStart !== box.selectionEnd) return null;
+     var v = box.value, c = box.selectionStart, ls = c > 0 ? v.lastIndexOf("\n", c - 1) + 1 : 0, le = v.indexOf("\n", c);
+-    var m = v.slice(ls, c).match(/^(\s*)\[([^\[\]\n]*)$/), rest = v.slice(c, le < 0 ? v.length : le);
++    var m = v.slice(ls, c).match(/^(\s*)\[([^\[\]\n]*)$/), rest = v.slice(c, le < 0 ? v.length : le), chain = false;
++    if (!m) { m = v.slice(ls, c).match(/^(\s*(?:\[[^\[\]\n]+\]\s*){1,2})\[([^\[\]\n]*)$/); chain = !!m; }   // HERESY 1278
+     if (!m || (rest.indexOf("]") >= 0 && rest.trim() !== "]")) return null;
+-    return { from: ls + m[1].length, q: m[2], to: rest.trim() === "]" ? c + rest.indexOf("]") + 1 : c };
++    return { from: ls + m[1].length, q: m[2], to: rest.trim() === "]" ? c + rest.indexOf("]") + 1 : c, chain: chain };
+   }
+ 
+   function build() {
+@@ -220,7 +248,7 @@
+     var keep = cx.q === query && items[at] ? items[at].tag : null;
+     from = cx.from;
+     query = cx.q;
+-    items = offer(box.value, cx.q);
++    items = cx.chain ? offerChain(cx.q) : offer(box.value, cx.q);
+     if (!items.length) return hide();
+     at = -1;
+     if (keep) items.forEach(function (it, i) { if (at < 0 && it.tag === keep && it.there === undefined) at = i; });
+@@ -264,7 +292,9 @@
+     hide();
+     box.focus({ preventScroll: true });
+     box.setSelectionRange(cx.from, cx.to);
+-    insert(it.tag + "\n");
++    insert(it.tag + (cx.chain ? "" : "\n"));                       // HERESY 1278: a chained tag stays on its line
++    var dots = it.tag.indexOf("…");
++    if (dots >= 0) box.setSelectionRange(cx.from + dots, cx.from + dots + 1);   // [Spoken: …]: the words typed in its place
+     shut = -1;
+   }
+   function move(d) {
+@@ -280,6 +310,7 @@
+       if (cx) { e.preventDefault(); shut = -1; return fill(cx); }
+       var v = box.value, c = box.selectionStart, ls = c > 0 ? v.lastIndexOf("\n", c - 1) + 1 : 0;
+       if (box.selectionStart === box.selectionEnd && !box.readOnly && /^\s*$/.test(v.slice(ls, c))) { e.preventDefault(); shut = -1; insert("["); }
++      else if (box.selectionStart === box.selectionEnd && !box.readOnly && CHAINED.test(v.slice(ls, c))) { e.preventDefault(); shut = -1; insert(/\]$/.test(v.slice(ls, c)) ? " [" : "["); }   // HERESY 1278
+       return;
+     }
+     if (!visible()) return;
+@@ -289,6 +320,16 @@
+     } else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); shut = from; hide(); }
+   }
+ 
++  // HERESY 1278: a «[» typed right after a line's first or second whole tag: a space put before it, as typed (Ctrl+Z takes it back)
++  function spaceBefore() {
++    var v = box.value, c = box.selectionStart;
++    if (c < 2 || box.selectionEnd !== c || v[c - 1] !== "[" || v[c - 2] !== "]") return;
++    var ls = v.lastIndexOf("\n", c - 2) + 1;
++    if (!CHAINED.test(v.slice(ls, c - 1))) return;
++    box.setSelectionRange(c - 1, c);
++    insert(" [");
++  }
++
+   var boxes = [];
+   function attach(area) {
+     if (!area || boxes.indexOf(area) >= 0) return;
+@@ -296,7 +337,11 @@
+     area.setAttribute("aria-autocomplete", "list");
+     area.setAttribute("aria-controls", "tcList");
+     area.setAttribute("aria-expanded", "false");
+-    area.addEventListener("input", function (e) { box = area; check(/^insert(Text|CompositionText)$/.test(e.inputType || "")); });
++    area.addEventListener("input", function (e) {
++      box = area;
++      if (e.inputType === "insertText" && e.data === "[") spaceBefore();   // HERESY 1278: «][» gets its space
++      check(/^insert(Text|CompositionText)$/.test(e.inputType || ""));
++    });
+     area.addEventListener("keydown", function (e) { box = area; onKey(e); });
+     area.addEventListener("keyup", function (e) { if (box === area && visible() && !/^(ArrowUp|ArrowDown|Enter|Tab|Escape)$/.test(e.key)) check(false); });
+     area.addEventListener("mouseup", function () { if (box === area && visible()) check(false); });
+@@ -309,7 +354,7 @@
+ 
+   window.HeresyComplete = { attach: attach, offer: offer,
+     state: function () {
+-      return { open: visible(), box: box ? box.id : null, at: at, active: items[at] ? items[at].tag : null,
++      return { open: visible(), box: box ? box.id : null, at: at, active: items[at] ? items[at].tag : null, chain: !!(items[0] && items[0].chain),
+         tags: items.map(function (it) { return it.tag + (it.there !== undefined ? "@" + (it.there + 1) : ""); }) };
+     } };
+ })();
+-- 
+2.43.0
+

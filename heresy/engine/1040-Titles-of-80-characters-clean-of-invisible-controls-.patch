@@ -2,7 +2,7 @@ From 8ff4f36b2e8100dee547b11e6f118da1424c08d4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Thu, 1 Oct 2026 10:59:26 -0600
-Subject: [PATCH 1040/1265] Titles of 80 characters, clean of invisible
+Subject: [PATCH 1040/1286] Titles of 80 characters, clean of invisible
  controls; play on click, with a switch
 
 - The title (and a rename) holds at most 80 characters and never the invisible characters that

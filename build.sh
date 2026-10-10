@@ -127,6 +127,18 @@ for name in re.findall(r'<script src="(heresy-[a-z0-9-]+\.js)"></script>', html)
     if "</script" in text.lower():
         sys.exit(f"{name} contains '</script>', which would end its inlined block")
     swaps.append((f'<script src="{name}"></script>', "<script>\n" + text + "</script>"))
+# HERESY 1274 (Viktor 09.10.2026: «abcjs и шрифты ложи всё в репо… Минимум интернета из Студии на локальной машине»): what the page
+# carries of others' (vendor/: abcjs, the fonts' faces) is inlined as our own is; the font files themselves the lab serves (/lab/fonts/)
+for name in re.findall(r'<script src="(vendor/[A-Za-z0-9._-]+\.js)"></script>', html):
+    text = (src / name).read_text(encoding="utf-8")
+    if "</script" in text.lower():
+        sys.exit(f"{name} contains '</script>', which would end its inlined block")
+    swaps.append((f'<script src="{name}"></script>', "<script>\n" + text + "\n</script>"))
+for name in re.findall(r'<link rel="stylesheet" href="(vendor/[A-Za-z0-9._-]+\.css)" />', html):
+    text = (src / name).read_text(encoding="utf-8")
+    if "</style" in text.lower():
+        sys.exit(f"{name} contains '</style>', which would end its inlined block")
+    swaps.append((f'<link rel="stylesheet" href="{name}" />', "<style>\n" + text + "</style>"))
 found = []
 for marker, replacement in swaps:
     count = html.count(marker)

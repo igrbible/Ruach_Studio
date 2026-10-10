@@ -2,7 +2,7 @@ From cdf5f0bbb383a40d039caa1bfc0908284f59cec3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 2 Oct 2026 09:57:18 -0600
-Subject: [PATCH 1079/1265] =?UTF-8?q?Which=20card=20does=20what=20(1091):?=
+Subject: [PATCH 1079/1286] =?UTF-8?q?Which=20card=20does=20what=20(1091):?=
  =?UTF-8?q?=20Engine=20=E2=86=92=20GPUs,=20synthesis=20waits=20while=20a?=
  =?UTF-8?q?=20run=20trains=20on=20the=20studio's=20card,=20the=20Train=20d?=
  =?UTF-8?q?ialog=20says=20when=20it=20may;=20the=20cursor=20reading=20keep?=

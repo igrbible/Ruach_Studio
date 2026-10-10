@@ -1019,12 +1019,9 @@
     // HERESY 1167 (Viktor: «задержку в пропадании на 1200ms, чтобы успеть мышкой перескочить, а при наведении разворачивать
     // вниз»): the peek shown stays while the pointer crosses other cards on its way to it (a card rested on for 400 ms takes
     // its place); it goes 1200 ms after the pointer leaves the cards; entered, it stays and opens downward
-    $("collGrid").addEventListener("mouseover", function (e) {
-      var card = e.target.closest(".coll-card[data-name]");
-      if (!card || card.dataset.name === peekFor) return;
-      clearTimeout(peekTimer); clearTimeout(peekHide);
-      peekTimer = setTimeout(function () { showPeek(card); }, 400);
-    });
+    // HERESY 1268 (Viktor 09.10.2026: «Убери из тултипа в плеере вывод промпта трека. Это лишнее. И так всё под рукой. И пройдись по
+    // таким местам и убери лишние тултипы»; his picture of the Librarian with the peek open over the cards): no peek on hover any more,
+    // the take's style and lyrics are a click away (its sheet)
     $("collGrid").addEventListener("mouseleave", function () { clearTimeout(peekTimer); clearTimeout(peekHide); peekHide = setTimeout(hidePeek, 1200); });
     $("collPeek").addEventListener("mouseenter", function () { clearTimeout(peekTimer); clearTimeout(peekHide); });
     $("collPeek").addEventListener("mouseleave", function () { clearTimeout(peekHide); peekHide = setTimeout(hidePeek, 300); });

@@ -45,6 +45,7 @@ Without systemd: `./lab/start-lab.sh` and then `./start.sh` (it stays in the ter
 heresy/fetch-heresy.sh --listener Q8_0   # the style listener (Qwen2.5-Omni) for training sets, 9.6 GB
 heresy/fetch-heresy.sh --artwork         # artwork for takes (CyberRealistic XL + Qwen3-4B), 14 GB, a 16 GB card
 heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 7.8 GB (int8: 4.0 GB)
+heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 7.2 GB
 ./fetch-models.sh --check                # what is here, what is missing; downloads nothing
 ```
 
@@ -52,7 +53,7 @@ heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 
 
 [Pinokio](https://pinokio.co) installs and starts the studio from its menu, on the same kind of machine: Linux x86_64 with an NVIDIA card. In Pinokio, download it from its address, `https://github.com/igrbible/Ruach_Studio`, and press **Install**. Pinokio first brings its AI bundle (conda, git, ffmpeg, uv and the CUDA toolkit 12.8; your own `/usr/local/cuda-12.8` is used instead when it is there), then the install does what the steps above do: the Python environments, the engine, and the models with the backbone your card takes (BF16 from 24 GB, Q8_0 from 16, Q6_K from 12). Each step says what it does, and a step that fails ends the install with its reason on the last line; **Install again** goes on from there.
 
-**Start** runs the lab and the studio, each in a terminal of its own, and **Open the studio** opens the page (from another machine of your network: the address `start.sh` prints in that terminal). **More models** offers the Artist's painter, the style listener and the trainer's base, each asked first with its size. **Update** takes the newest release; **Reset** takes away the Python environments and the engine's build, never your songs, models or settings.
+**Start** runs the lab and the studio, each in a terminal of its own, and **Open the studio** opens the page (from another machine of your network: the address `start.sh` prints in that terminal). **More models** offers the Artist's painter, the style listener, the trainer's base and, where the install took Q8_0 for a smaller card, the BF16 backbone, each asked first with its size. The install itself brings the LoRAs the studio's 💎 sets were made with; a download that fails says why, and **Install** again goes on from where it stopped. The studio's **Engine → Models and LoRAs** says the same from inside: what is here, what is missing, and a **Fetch** for each part and for every extra, each asked first with its size. **Update** takes the newest release; **Reset** takes away the Python environments and the engine's build, never your songs, models or settings.
 
 The work is done by the bash scripts in `pinokio/`, which run the same from a terminal (`bash pinokio/install.sh`). Under Pinokio there are no systemd units: stop, start and update the studio from Pinokio's menu. On Windows 11 the studio runs through WSL2, by hand for now ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)).
 

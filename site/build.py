@@ -223,6 +223,11 @@ if __name__ == "__main__":
         if code != "en" and own.is_file():
             a = page.rfind("<svg", 0, page.index('class="ruach-logo"'))
             page = page[:a] + own.read_text(encoding="utf-8").strip() + page[page.index("</svg>", a) + 6:]
+        # HERESY 1272 (Viktor 09.10.2026: «На сайте обнови фавку»): the icons of the page's language, the name's first letter on the
+        # logo's cloud: Р for the Cyrillic names, Π for the Greek (src/brand: make_letter_icon.py)
+        letter = {"ru": "er", "uk": "er", "be": "er", "el": "pi", "ja": "ja", "zh": "zh"}.get(code)   # 1273: ル, 鲁 for the languages planned next
+        if letter:
+            page = re.sub(r"assets/ruach-icon-(32|180|192)\.png", lambda m: "assets/ruach-icon-" + letter + "-" + m.group(1) + ".png", page)
         page = typeset(page, code)
         out = here / ("index.html" if code == "en" else code + "/index.html")
         out.parent.mkdir(parents=True, exist_ok=True)
