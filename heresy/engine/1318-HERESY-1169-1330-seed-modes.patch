@@ -1,0 +1,196 @@
+From 78a29a51caf70912da0af876d1a7146efd9ee249 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 16:21:47 -0600
+Subject: [PATCH 1318/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201330:=20seed?=
+ =?UTF-8?q?=20modes?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «Для SEED сделай рандом -1, рандом fixed, fixed, next, prev»; «можно и в творце».
+
+heresy-seedmode.js: beside the Creator's music and sound seeds (a row of its own under each: the dice sits inside the field) and the Artist's seed (beside ⟲): Random (−1), Random fixed, Fixed, Next, Previous, kept in this browser for each field. Before a run the field as its mode wants it; after it Next and Previous move it past the seeds the run used (the versions, the sound variations, the Artist's variations; BigInt for the 64-bit seeds). A number in a field is that seed as it always was (Random turns Fixed), an emptied field a new seed each run (Fixed turns Random).
+
+Suite: 600/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            |  4 ++
+ tools/console/app.js             | 11 ++++++
+ tools/console/heresy-artist.js   |  7 +++-
+ tools/console/heresy-seedmode.js | 66 ++++++++++++++++++++++++++++++++
+ tools/console/index.html         |  1 +
+ 5 files changed, 87 insertions(+), 2 deletions(-)
+ create mode 100644 tools/console/heresy-seedmode.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a4e7913..bbb8214 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5067,3 +5067,7 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
+ .log-dock-grip:hover::after, .log-dock-grip.is-on::after { background: var(--amber); }
+ .log-dock.is-left .log-dock-grip { left: auto; right: -4px; }
+ .log-dock.is-folded .log-dock-grip { display: none; }
++/* HERESY 1330: a seed's mode beside its field */
++.seed-mode { flex: none; width: auto; min-width: 0; max-width: 9.5em; font-size: 12px; padding-right: 22px; }
++.seedfield .seed-mode { display: block; margin-top: 6px; width: 100%; max-width: none; }
++.ar-seed-row input { flex: 1 1 auto; min-width: 5em; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index d829d36..fb08990 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1508,6 +1508,10 @@
+     $(d[1]).addEventListener("mouseover", paintDice);   // seeds the page fills in (Retake, a plan) fire no input
+   });
+   paintDice();
++  // HERESY 1330: each seed's mode beside its dice (Random −1, Random fixed, Fixed, Next, Previous)
++  var SEEDMODE = window.HeresySeedMode ? { music: HeresySeedMode.attach($("lmSeed"), "yue2.seedMode.music", { after: $("rollLmSeed").parentNode, big: true }),
++                                          sound: HeresySeedMode.attach($("soundSeed"), "yue2.seedMode.sound", { after: $("rollSoundSeed").parentNode, big: true }) } : {};
++  ["lmSeed", "soundSeed"].forEach(function (id) { $(id).addEventListener("input", paintDice); });
+ 
+   // A new song: everything about the song back to its default; the VAE, output and theme choices stay
+   // HERESY 1288 (Viktor 09.10.2026, the studio in Pinokio: «можно будет в Пинокио Ctrl+N использовать»): Ctrl+N is New song,
+@@ -1863,9 +1867,11 @@
+     }
+     scoreAnswered = false;
+     lintAnswered = false;
++    if (!STATE.codes) { if (SEEDMODE.music) SEEDMODE.music.before(); if (SEEDMODE.sound) SEEDMODE.sound.before(); paintDice(); }   // HERESY 1330
+     var body, instrumental = $("instrumental").checked;
+     try { body = buildRequest(false, instrumental); } catch (error) { return toast(error.message, "bad"); }
+     var versions = Math.max(1, Math.min(10, parseInt($("versions").value, 10) || 1));
++    var seedsGone = { music: body.lm_seed, sound: body.seed, versions: versions, variations: body.synth_batch_size || 1 };   // HERESY 1330
+     if (instrumental) {
+       if (body.semantic_tokens) return toast("Loaded codes already fix the music; clear them to make an instrumental", "bad");
+       if (!body.abc) return planForInstrumental(body, versions);
+@@ -1878,6 +1884,11 @@
+       }
+     }
+     queueVersions(body, versions);
++    if (!body.semantic_tokens) {                         // HERESY 1330: Next or Previous moves past the seeds this Generate used
++      if (SEEDMODE.music) SEEDMODE.music.after(seedsGone.versions, seedsGone.music);
++      if (SEEDMODE.sound) SEEDMODE.sound.after(seedsGone.variations, seedsGone.sound);
++      paintDice();
++    }
+   });
+ 
+   // HERESY 1169: what a pass of probes needs on the card, by the parts measured on a 24 GB one (07.10.2026, tmp/claude-vram):
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 3605468..5df52b5 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -425,7 +425,7 @@
+   }
+   function draw(again) {
+     var body = again ? { prompt: again.prompt, shapes: again.shapes, count: again.count, seed: null, painter: again.painter }
+-      : { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value };
++      : (function () { if (state.seedMode) state.seedMode.before(); return { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value }; })();   // HERESY 1330: the seed as its mode wants it
+     if (again && again.model) body.model = again.model;                 // HERESY 1318: the fp8 fine-tune
+     else if (!again && !$("arModelBox").hidden) body.model = $("arModel").value;
+     // HERESY 1326 (Viktor 10.10.2026, 14:57: «ловлю ошибку. Хотя выбрано всё правильно»): 1319 put the sampling between the two
+@@ -449,6 +449,7 @@
+     state.sending = true;
+     paintForm();
+     return api("/artist/draw", body).then(function (run) {
++      if (!again && state.seedMode) { state.seedMode.after(run.count || body.count, run.seed); keepForm(); }   // HERESY 1330: Next or Previous past its seeds
+       state.pinSel = false;                              // HERESY 1271: the stage follows the new run
+       state.runs.unshift(run);
+       paintRuns();
+@@ -1209,7 +1210,9 @@
+     ["arPrompt", "arSeed"].forEach(function (id) { $(id).addEventListener("input", function () { keepForm(); paintForm(); }); });
+     ["arCount", "arPainter"].forEach(function (id) { $(id).addEventListener("change", function () { keepForm(); paintForm(); }); });
+     $("arShapes").addEventListener("change", function () { keepForm(); paintForm(); });
+-    $("arSeedNew").addEventListener("click", function () { $("arSeed").value = ""; keepForm(); paintForm(); $("arSeed").focus(); });
++    $("arSeedNew").addEventListener("click", function () { $("arSeed").value = ""; if (state.seedMode) state.seedMode.set("random"); keepForm(); paintForm(); $("arSeed").focus(); });
++    // HERESY 1330 (Viktor 10.10.2026: «Для SEED сделай рандом -1, рандом fixed, fixed, next, prev»): the seed's mode beside ⟲
++    state.seedMode = window.HeresySeedMode ? window.HeresySeedMode.attach($("arSeed"), "yue2.arSeedMode", { after: $("arSeedNew") }) : null;
+     $("arDraw").addEventListener("click", function () { if (drawingRun()) stopRun(); else draw(); });   // HERESY 1270
+     // HERESY 1316: the adapters: the library, a strength, a word into the prompt, one taken off; the family follows the painter
+     $("arLoraAdd").addEventListener("click", openLoraLib);
+diff --git a/tools/console/heresy-seedmode.js b/tools/console/heresy-seedmode.js
+new file mode 100644
+index 0000000..598e59a
+--- /dev/null
++++ b/tools/console/heresy-seedmode.js
+@@ -0,0 +1,66 @@
++/* HERESY 1169 · 1330 (Viktor 10.10.2026: «Для SEED сделай рандом -1, рандом fixed, fixed, next, prev»; «можно и в творце»): a seed field's
++   mode, beside it, kept in this browser for each field: Random (−1: a new seed each run, the field empty), Random, fixed (a random seed put in
++   now and kept), Fixed (the seed as typed), Next (after a run: the seed plus the seeds the run used), Previous (minus them). A field left
++   empty in Random fixed, Next or Previous gets a random seed before the run (an empty Fixed is a new seed each run, as an empty field always was), so the run's seed is known and the next one follows from it.
++   HeresySeedMode.attach(input, key, { after: element, big: true for the 64-bit seeds of a song }) → { mode(), before(), after(used, seed) } */
++(function () {
++  var MODES = [["random", "Random (−1)"], ["roll", "Random, fixed"], ["fixed", "Fixed"], ["next", "Next"], ["prev", "Previous"]];
++  var TIPS = { random: "A new seed each run: the field stays empty (−1)", roll: "A random seed put in now, then kept for every run (choose it again for another)",
++               fixed: "The seed as written, every run", next: "After each run the seed moves on past the seeds it used", prev: "After each run the seed moves back by the seeds it used" };
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
++  function keep(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private window */ } }
++  function roll() { return String(Math.floor(Math.random() * 2147483647)); }
++  function attach(input, key, opts) {
++    opts = opts || {};
++    if (!input) return null;
++    var sel = document.createElement("select");
++    sel.className = "seed-mode";
++    sel.setAttribute("aria-label", tr("The seed's mode"));
++    sel.innerHTML = MODES.map(function (m) { return '<option value="' + m[0] + '">' + tr(m[1]) + "</option>"; }).join("");
++    var was = recall(key);
++    sel.value = MODES.some(function (m) { return m[0] === was; }) ? was : (input.value.trim() ? "fixed" : "random");
++    var tip = function () { sel.dataset.tip = tr(TIPS[sel.value]); };
++    tip();
++    (opts.after || input).insertAdjacentElement("afterend", sel);
++    var said = function () { input.dispatchEvent(new Event("input", { bubbles: true })); };
++    sel.addEventListener("change", function () {
++      keep(key, sel.value === "random" ? null : sel.value);
++      if (sel.value === "random") { input.value = ""; said(); }
++      else if (sel.value === "roll" || !input.value.trim()) { input.value = roll(); said(); }
++      tip();
++    });
++    var ctl = {
++      el: sel,
++      mode: function () { return sel.value; },
++      set: function (m) { sel.value = m; keep(key, m === "random" ? null : m); tip(); },
++      before: function () {                              // the field as the mode wants it for this run
++        // a seed in the field means that seed, as it always did (typed, or put in by Retake, a prompt file, a plan): Random became
++        // Fixed; only choosing Random empties the field
++        var has = /^\d+$/.test(input.value.trim());
++        if (sel.value === "random" || sel.value === "fixed") { if (has && sel.value === "random") ctl.set("fixed"); }   // an empty field: a new seed, as ever
++        else if (!has) { input.value = roll(); said(); }   // Random fixed, Next and Previous need a seed to keep or to move from
++      },
++      after: function (used, seed) {                     // the run went out with this seed and used so many
++        if (sel.value !== "next" && sel.value !== "prev") return;
++        var v = String(seed != null ? seed : input.value).trim();
++        if (!/^\d+$/.test(v)) return;
++        var n = Math.max(1, +used || 1), next;
++        if (opts.big && window.BigInt) {
++          var b = BigInt(v) + (sel.value === "next" ? BigInt(n) : -BigInt(n));
++          next = String(b < 0n ? 0n : b);
++        } else next = String(Math.max(0, +v + (sel.value === "next" ? n : -n)));
++        input.value = next;
++        said();
++      }
++    };
++    // a seed typed into the field while it was Random: the field means it, so Fixed
++    ["input", "change"].forEach(function (ev) { input.addEventListener(ev, function () {
++      var v = input.value.trim();
++      if (sel.value === "random" && /^\d+$/.test(v)) ctl.set("fixed");      // a seed typed: that seed
++      else if (sel.value === "fixed" && !v) ctl.set("random");               // the field emptied: a new one each run
++    }); });
++    return ctl;
++  }
++  window.HeresySeedMode = { attach: attach, modes: MODES.map(function (m) { return m[0]; }) };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index ab7ad56..5607d12 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1950,6 +1950,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <p>Probes &times; Variations is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
+ </template>
+ <script src="heresy-dialog.js"></script>
++<script src="heresy-seedmode.js"></script>
+ <script src="heresy-updates.js"></script>
+ <script src="heresy-places.js"></script>
+ <script src="heresy-weights.js"></script>
+-- 
+2.43.0
+

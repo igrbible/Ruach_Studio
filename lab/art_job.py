@@ -28,6 +28,12 @@ SDXL stays for cards too small for it. ART_PAINTER says which: krea2-q4 (11.6 GB
 filter before it is kept (Krea 2 Community License, 4.2: Falconsai/nsfw_image_detection in artwork/nsfw-filter): flagged, it
 is dropped and the next seed tries.
 
+HERESY 1338 (Viktor 10.10.2026: «в Engine не забудь прописать выборы всех генеративных art моделей»; the plan he took: «Автообложки
+дублей с Lightning»): Qwen-Image paints a take's artwork as well, through the Artist room's loader (artist_qwen.build): 2512 from the
+GGUF Q4 or Q6 with Lightning at 1.0 and 8 steps, an fp8 fine-tune (ART_MODEL, a file in artwork/Qwen-Image-2512/checkpoints/) with
+Lightning at 0.55 and 12 steps, or 2.1 (Qwen's research licence: the page says what that means for a song that is sold), drawn at
+1328 px and kept at 1024, through the same content filter.
+
 Prints one JSON line: the prompt, the seed, the models, each picture the critic saw and its word, the time taken."""
 import json, os, random, re, subprocess, sys, time
 from pathlib import Path
@@ -59,7 +65,7 @@ MUSE = {"krea2-q4": KIT / "artwork" / "Krea-2-Muse" / "museByStableYogi_v35Q4Ext
         "krea2-q8": KIT / "artwork" / "Krea-2-Muse" / "museByStableYogi_v35Q8Extended.gguf"}
 FILTER = KIT / "artwork" / "nsfw-filter"
 KREA_STEPS = 8
-PAINTERS = ("krea2-q4", "krea2-q8", "sdxl")
+PAINTERS = ("krea2-q4", "krea2-q8", "sdxl", "qwen2512-q4", "qwen2512-q6", "qwen2512-fp8", "qwen21")   # HERESY 1338: the Qwen painters
 # the GGUF's names (Krea's own) → diffusers' (checked on all 430, the values against Krea's own weights, 05.10.2026)
 KREA_RULES = [
     (r"^blocks\.(\d+)\.", r"transformer_blocks.\1."), (r"^txtfusion\.", "text_fusion."),
@@ -170,6 +176,60 @@ class Krea:
         return round(scores.get("nsfw", 0.0), 3)
 
 
+class Qwen:
+    """HERESY 1338: Qwen-Image as a take's painter, through the Artist room's loader (artist_qwen.build) with Lightning on: the base at
+    1.0 and 8 steps, a fine-tune at 0.55 and 12; 2.1 its parts on the card in turn. to("cpu") gives the card to the critic, as Krea's."""
+    NAMES = {"qwen2512-q4": "Qwen-Image 2512 (Q4)", "qwen2512-q6": "Qwen-Image 2512 (Q6)", "qwen2512-fp8": "Qwen-Image 2512 fine-tune",
+             "qwen21": "Qwen-Image 2.1"}
+
+    def __init__(self, painter, model=None):
+        import artist_qwen
+        self.aq, self.painter = artist_qwen, painter
+        speed = {"lightning": artist_qwen.SPEED["fine"][0]} if painter == "qwen2512-fp8" else {}   # a fine-tune's Lightning only when asked
+        self.pipe, _, self.steps, self.cfg = artist_qwen.build(painter, model, [], speed)
+        self.pipe.set_progress_bar_config(disable=True)
+        self.name = self.NAMES[painter] + (" · " + Path(str(model)).stem if model else "") + (" with Lightning" if painter != "qwen21" and self.cfg <= 1.0 else "")
+        self.where = "cpu"
+        if painter == "qwen21":
+            self.pipe.enable_model_cpu_offload()
+
+    def to(self, device):
+        if self.painter != "qwen21":                    # 2.1 moves its own parts
+            self.pipe.transformer.to(device)
+            self.pipe.vae.to(device)
+            self.where = device
+        return self
+
+    def draw(self, prompt, seed):
+        import gc
+        import torch
+        (gw, gh), _ = self.aq.SHAPES["1:1"]
+        g = torch.Generator("cuda").manual_seed(seed)
+        if self.painter == "qwen21":
+            return self.pipe(prompt=prompt, width=gw, height=gh, num_inference_steps=self.steps, generator=g).images[0]
+        if self.where == "cuda":                        # the encoder's turn on the card
+            self.to("cpu")
+            torch.cuda.empty_cache()
+        dev = torch.device("cuda" if torch.cuda.mem_get_info()[0] >= self.aq.ENC_ROOM else "cpu")   # 1338b: the room free now
+        self.pipe.text_encoder.to(dev)
+        with torch.inference_mode():
+            e, m = self.pipe.encode_prompt(prompt, device=dev)
+            ne, nm = self.pipe.encode_prompt(self.aq.NEGATIVE, device=dev) if self.cfg > 1 else (None, None)
+        self.pipe.text_encoder.to("cpu")
+        gc.collect()
+        torch.cuda.empty_cache()
+        self.to("cuda")
+        self.pipe.vae.enable_tiling()
+        kw = {"prompt_embeds": e.to("cuda"), "prompt_embeds_mask": m.to("cuda") if m is not None else None, "width": gw, "height": gh,
+              "num_inference_steps": self.steps, "true_cfg_scale": self.cfg, "generator": g}
+        if ne is not None:
+            kw.update(negative_prompt_embeds=ne.to("cuda"), negative_prompt_embeds_mask=nm.to("cuda") if nm is not None else None)
+        return self.pipe(**kw).images[0]
+
+    def flagged(self, img):
+        return self.aq.flagged(img)
+
+
 def painter_numbers(name):
     steps, cfg, sampler = STEPS, CFG, "dpmpp"
     if re.search(r"turbo|lightning|hyper|lcm", name, re.I):
@@ -252,6 +312,9 @@ def painter():
     """The painter ART_PAINTER names (HERESY 1167): Krea 2 Muse at Q4 or Q8, or the SDXL behind the link (ours without it),
     and the name it is known by. Anything not an SDXL behind the link is refused with what it is, before a minute is spent."""
     kind = which_painter()
+    if kind.startswith("qwen"):                          # HERESY 1338
+        q = Qwen(kind, os.environ.get("ART_MODEL") or None)
+        return q, q.name, (q.steps, q.cfg, "flow-euler")
     if kind != "sdxl":
         return Krea(kind), "Krea 2 Muse by Stable Yogi (" + kind[-2:].upper() + ")", (KREA_STEPS, 0.0, "flow-euler")
     import torch
@@ -290,7 +353,7 @@ def painter():
 
 def paint(pipe, numbers, prompt, seed, out):
     import torch
-    if isinstance(pipe, Krea):                       # HERESY 1167: Krea 2 Muse, then the content filter
+    if isinstance(pipe, (Krea, Qwen)):               # HERESY 1167: Krea 2 Muse, then the content filter; 1338: Qwen-Image as well
         img = pipe.draw(prompt, seed)
         score = pipe.flagged(img)
         if score is not None and score >= 0.5:
@@ -429,7 +492,7 @@ def main():
                       "painter": painter_name, "critic": crit[0].stem if crit else None,
                       "subject": subject["name"] if subject else None, "seen": seen, "why": why, "tries": tries,
                       "size": KEEP, "steps": numbers[0], "cfg": numbers[1], "sampler": numbers[2], "vram_peak_gb": peak,
-                      "negative": NEGATIVE if not isinstance(pipe, Krea) else "",   # Krea 2 Turbo paints without guidance
+                      "negative": NEGATIVE if not isinstance(pipe, (Krea, Qwen)) else "",   # Krea 2 Turbo paints without guidance; 1338: Qwen with Lightning
                       "took": {"prompt": round(t1 - t0, 1), "paint": round(time.time() - t1 - took_critic, 1),
                                "critic": round(took_critic, 1)}},
                      ensure_ascii=False), flush=True)

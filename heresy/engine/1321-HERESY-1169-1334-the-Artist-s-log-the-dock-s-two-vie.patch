@@ -1,0 +1,296 @@
+From 31c7a26aa672bf8daf7f2f467e6210f2a86c894b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 17:04:26 -0600
+Subject: [PATCH 1321/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201334:=20the?=
+ =?UTF-8?q?=20Artist's=20log;=20the=20dock's=20two=20views;=20the=20log's?=
+ =?UTF-8?q?=20own=20window?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «Сделал 4 вариации... не вышло. Скорее всего ошибка. И ошибки, если не успеешь прочитать в попап сообщении, не найдёшь его. Нужен отдельный логгер для Художника. Можно прикрутить его к фрейму логгера сервера отдельной вкладкой. И по фрейму логгера идея... детачить, переносить на другой монитор, поддерживать поверх окон и т.п.».
+
+The Artist's own log, kept in this browser (the last 400 lines): what was asked (painter, fine-tune, shapes, seed, sampling, adapters), what the lab answered (a refusal in its own words), each run's way to its end (waits and why, paints on GPU N, done, stopped, failed and why), the lab's lines about the Artist. The dock's two views, Server and Artist, each room its own (the Artist's room opens on its log); Copy takes the view's lines; the folded line says the view's last. ⧉: the log in a window of its own, a mirror of both views: Chrome's Document Picture-in-Picture stays over every window, else a pop-up to carry to another monitor.
+
+Suite: 607/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |   8 +++
+ tools/console/app.js           | 112 ++++++++++++++++++++++++++++++++-
+ tools/console/heresy-artist.js |  28 ++++++++-
+ tools/console/index.html       |   5 ++
+ 4 files changed, 148 insertions(+), 5 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 3c0361b..971ccdd 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5090,3 +5090,11 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
+ /* HERESY 1333: the sampling's warnings the matrix earned */
+ .ar-samp-warn { color: var(--amber); margin: 2px 0 4px; }
+ .ar-samp-warn[hidden] { display: none; }
++/* HERESY 1334: the dock's two views; the log's own window */
++.log-dock-views { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line-a); border-radius: var(--r-sm, 4px); }
++.log-view { border: 0; background: none; color: var(--muted); font: inherit; font-size: 11px; padding: 2px 8px; border-radius: 3px; cursor: pointer; }
++.log-view.is-on { background: var(--hover); color: var(--ink); }
++.log-dock-body[hidden] { display: none; }
++body.log-pop { margin: 0; background: var(--panel); color: var(--ink); display: flex; flex-direction: column; height: 100vh; }
++.log-pop-head { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--line-a); }
++body.log-pop .log-dock-body { flex: 1 1 auto; height: auto; overflow: auto; padding: 8px 12px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 114b59e..1eb113a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3091,6 +3091,7 @@
+   }
+ 
+   function addLogLine(text, client) {
++    if (!client && /\bthe Artist\b/.test(text)) artLogAdd(text.replace(/^\[Lab\]\s*/, "lab · "), logClass(text, client), true);   // HERESY 1334
+     LOG.lines.push({ text: text, client: client });
+     if (LOG.lines.length > LOG_KEEP) LOG.lines.splice(0, LOG.lines.length - LOG_KEEP);
+     LOG.pending.push({ text: text, client: client });
+@@ -3137,10 +3138,11 @@
+       if (dockFollow) dock.scrollTop = dock.scrollHeight;
+       else if (gone) dock.scrollTop = Math.max(0, dock.scrollTop - gone);
+       var lastLine = pending[pending.length - 1];
+-      if (lastLine) {
++      if (lastLine && logView() === "server") {          // HERESY 1334: the folded line says the view's last
+         $("logDockLast").textContent = (lastLine.text || " ").slice(0, 160);
+         $("logDockLast").className = "log-dock-last mono " + logClass(lastLine.text, lastLine.client);
+       }
++      popMirror("server", fragment.childNodes);          // HERESY 1334: and the log's own window, when it is open
+     }
+     body.appendChild(fragment);
+     var cut = 0, keepBody = follow ? LOG_KEEP : LOG_KEEP * 5;       // HERESY 1166: the same in Engine's log
+@@ -3151,6 +3153,104 @@
+ 
+   function scrollLogToEnd() { if ($("logFollow").checked) $("logBody").scrollTop = $("logBody").scrollHeight; }
+ 
++  // HERESY 1169 · 1334 (Viktor 10.10.2026: «Нужен отдельный логгер для Художника. Можно прикрутить его к фрейму логгера сервера отдельной
++  // вкладкой. И по фрейму логгера идея... детачить, переносить на другой монитор, поддерживать поверх окон»): the Artist's log, kept in this
++  // browser; the dock's two views, each room its own; a window of the log's own, mirroring both
++  var ARTLOG_MAX = 400, artLog = (function () { try { var a = JSON.parse(localStorage.getItem("yue2.artistLog") || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } })();
++  function hhmmss(ms) { var d = new Date(ms); return [d.getHours(), d.getMinutes(), d.getSeconds()].map(function (n) { return (n < 10 ? "0" : "") + n; }).join(":"); }
++  function artLogRow(e, doc) { var row = (doc || document).createElement("div"); row.className = "log-line " + (e.k || ""); row.textContent = (e.lab ? "" : hhmmss(e.t) + "  ") + e.x; return row; }
++  function artLogAdd(text, kind, lab) {
++    if (!Array.isArray(artLog)) return;                 // a line before the page has its log: the lab's history comes again
++    var x = String(text || "");
++    if (lab && artLog.slice(-200).some(function (e) { return e.x === x; })) return;   // the server's history comes again with each page
++    var e = { t: Date.now(), x: x, k: kind || "", lab: !!lab };
++    artLog.push(e);
++    if (artLog.length > ARTLOG_MAX) artLog.splice(0, artLog.length - ARTLOG_MAX);
++    try { localStorage.setItem("yue2.artistLog", JSON.stringify(artLog)); } catch (err) { /* the browser's room is full: the page keeps it */ }
++    var box = $("logDockArtist");
++    if (box) {
++      box.appendChild(artLogRow(e));
++      while (box.childElementCount > ARTLOG_MAX) box.removeChild(box.firstChild);
++      if ($("logDockFollow").checked) box.scrollTop = box.scrollHeight;
++    }
++    if (logView() === "artist") paintDockLast();
++    popMirror("artist", [artLogRow(e)]);
++  }
++  window.RuachArtistLog = { add: function (text, kind) { artLogAdd(text, kind, false); }, lines: function () { return artLog.slice(); } };
++  function logView() {
++    var tab = document.body.dataset.tab || "create", v = recall("yue2.logView." + tab);
++    return v === "artist" || v === "server" ? v : tab === "artist" ? "artist" : "server";
++  }
++  function paintDockLast() {
++    var last = $("logDockLast");
++    if (!last) return;
++    if (logView() === "artist") {
++      var e = artLog[artLog.length - 1];
++      last.textContent = e ? e.x.slice(0, 160) : tr("the Artist's log is empty");
++      last.className = "log-dock-last mono " + (e ? e.k : "");
++    } else {
++      var l = LOG.lines[LOG.lines.length - 1];
++      if (l) { last.textContent = (l.text || " ").slice(0, 160); last.className = "log-dock-last mono " + logClass(l.text, l.client); }
++    }
++  }
++  function paintLogView() {
++    var v = logView();
++    all(".log-view").forEach(function (b) { var on = b.dataset.view === v; b.classList.toggle("is-on", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
++    if ($("logDockBody")) $("logDockBody").hidden = v !== "server";
++    if ($("logDockArtist")) { $("logDockArtist").hidden = v !== "artist"; if (v === "artist" && $("logDockFollow").checked) $("logDockArtist").scrollTop = $("logDockArtist").scrollHeight; }
++    paintDockLast();
++  }
++  window.ruachLogView = paintLogView;
++  (function () {
++    var box = $("logDockArtist");
++    if (box) artLog.forEach(function (e) { box.appendChild(artLogRow(e)); });
++    all(".log-view").forEach(function (b) {
++      b.addEventListener("click", function () { store("yue2.logView." + (document.body.dataset.tab || "create"), b.dataset.view); paintLogView(); });
++    });
++    paintLogView();
++  })();
++  // the log's own window: Document Picture-in-Picture (over every window) where the browser has it, else a pop-up; a mirror of both logs
++  var POP = null;
++  function popMirror(view, rows) {
++    if (!POP || POP.win.closed) return;
++    var box = POP[view];
++    Array.prototype.forEach.call(rows, function (r) { box.appendChild(POP.win.document.importNode(r, true)); });
++    while (box.childElementCount > LOG_KEEP * 2) box.removeChild(box.firstChild);
++    if (POP.follow.checked) box.scrollTop = box.scrollHeight;
++  }
++  function popFill(win) {
++    var d = win.document;
++    Array.prototype.forEach.call(document.querySelectorAll('style, link[rel="stylesheet"]'), function (n) { d.head.appendChild(d.importNode(n, true)); });
++    if (document.documentElement.dataset.theme) d.documentElement.dataset.theme = document.documentElement.dataset.theme;
++    d.title = "Ruach Studio · " + tr("Server log");
++    d.body.className = "log-pop";
++    d.body.innerHTML = '<div class="log-pop-head"><span class="log-dock-views"><button type="button" class="log-view" data-view="server">' + tr("Server") +
++      '</button><button type="button" class="log-view" data-view="artist">' + tr("Artist") + '</button></span><label class="check small-check"><input type="checkbox" checked /> <span>' + tr("Follow") +
++      '</span></label></div><div class="log-dock-body mono" data-body="server"></div><div class="log-dock-body log-dock-artist mono" data-body="artist" hidden></div>';
++    POP = { win: win, server: d.querySelector('[data-body="server"]'), artist: d.querySelector('[data-body="artist"]'), follow: d.querySelector("input") };
++    Array.prototype.forEach.call(($("logDockBody") || {}).childNodes || [], function (r) { POP.server.appendChild(d.importNode(r, true)); });
++    artLog.forEach(function (e) { POP.artist.appendChild(artLogRow(e, d)); });
++    var view = function (v) {
++      Array.prototype.forEach.call(d.querySelectorAll(".log-view"), function (b) { b.classList.toggle("is-on", b.dataset.view === v); });
++      POP.server.hidden = v !== "server"; POP.artist.hidden = v !== "artist";
++      var box = POP[v]; box.scrollTop = box.scrollHeight;
++    };
++    Array.prototype.forEach.call(d.querySelectorAll(".log-view"), function (b) { b.addEventListener("click", function () { view(b.dataset.view); }); });
++    view(logView());
++    win.addEventListener("pagehide", function () { POP = null; });
++  }
++  if ($("logDockPop")) $("logDockPop").addEventListener("click", function () {
++    if (POP && !POP.win.closed) { try { POP.win.focus(); } catch (e) { /* over the others already */ } return; }
++    if (window.documentPictureInPicture && documentPictureInPicture.requestWindow) {
++      documentPictureInPicture.requestWindow({ width: 820, height: 480 }).then(popFill).catch(function (e) { toast(e.message, "bad"); });
++      return;
++    }
++    var w = window.open("", "ruach-log", "popup,width=900,height=560");
++    if (!w) return toast(tr("The browser kept the log's window from opening: allow pop-ups for the studio"), "bad");
++    popFill(w);
++  });
++  window.ruachLogPop = function () { return POP; };
++
+   $("logCopy").addEventListener("click", function () {
+     navigator.clipboard.writeText(LOG.lines.map(function (l) { return l.text; }).join("\n"))
+       .then(function () { toast("Server log copied (" + LOG.lines.length + " lines)"); })
+@@ -3169,7 +3269,12 @@
+     }
+     fold(recall("yue2.logDock") !== "open");
+     $("logDockTab").addEventListener("click", function () { fold(!dock.classList.contains("is-folded")); });
+-    $("logDockCopy").addEventListener("click", function () { $("logCopy").click(); });
++    $("logDockCopy").addEventListener("click", function () {   // HERESY 1334: the view's own lines
++      if (logView() !== "artist") return $("logCopy").click();
++      navigator.clipboard.writeText(artLog.map(function (e) { return (e.lab ? "" : hhmmss(e.t) + "  ") + e.x; }).join("\n"))
++        .then(function () { toast(tr("The Artist's log copied") + " (" + artLog.length + ")"); })
++        .catch(function () { toast("The browser refused clipboard access", "bad"); });
++    });
+     $("logDockEngine").addEventListener("click", function () {
+       $("engineToggle").click();
+       setTimeout(function () { var b = $("logBody"); if (b) b.scrollIntoView({ block: "center" }); }, 120);
+@@ -9219,7 +9324,8 @@
+     var d = $("logDock");
+     if (!d) return;
+     var f = document.body.dataset.frame, left = !!f || logDockLeft();
+-    d.classList.toggle("is-left", left);   // HERESY 1258: «Серверный лог… в левую сторону» in the Artist; 1301: as each room was left
++    d.classList.toggle("is-left", left);
++    if (window.ruachLogView) window.ruachLogView();   // HERESY 1334: each room its view of the log   // HERESY 1258: «Серверный лог… в левую сторону» in the Artist; 1301: as each room was left
+     var sb = $("logDockSide");
+     if (sb) {                              // HERESY 1301: its arrow points where a click takes the dock
+       var say = left ? "The log to the right side of the page, kept for this room" : "The log to the left side of the page, kept for this room";
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 5dae006..e99cab8 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -14,6 +14,8 @@
+   ];
+   var PAINTERS = { "krea2-q4": "Krea 2 Muse · Q4", "krea2-q8": "Krea 2 Muse · Q8" };
+   var PAINTER_INFO = {};                                 // HERESY 1318: the lab's word on each painter (need, family, note, models)
++  // HERESY 1334: the Artist's own log (the dock's Artist view), what it is asked and what comes of it
++  function alog(text, kind) { if (window.RuachArtistLog) window.RuachArtistLog.add(text, kind); }
+   function painterLabel(r) {                            // HERESY 1322: an upscaler's run says so, with its factor
+     return r.kind === "upscale" ? tr("Upscale") + " " + (r.target ? String(r.target).toUpperCase() : "\u00d7" + r.factor) : PAINTERS[r.painter] || r.painter || "";
+   }
+@@ -460,7 +462,11 @@
+     if (!body.shapes.length) return toast(tr("Pick a shape: 1:1, 16:9 or 9:16"), "bad");
+     state.sending = true;
+     paintForm();
++    alog(tr("Draw asked:") + " " + (PAINTERS[body.painter] || body.painter) + (body.model ? " · " + String(body.model).replace(/\.safetensors$/, "") : "") + " · " + body.shapes.join(", ") +
++      (body.count > 1 ? " × " + body.count : "") + " · " + tr("seed") + " " + (body.seed == null ? tr("new") : body.seed) + (body.sampling ? " · " + JSON.stringify(body.sampling) : "") +
++      (body.loras ? " · LoRA " + body.loras.map(function (l) { return loraName(loraFind(l.id), l.id) + " " + l.weight; }).join(", ") : "") + (body.ref ? " · " + tr("from a reference") : ""));
+     return api("/artist/draw", body).then(function (run) {
++      alog(tr("Run") + " " + run.id + ": " + run.of + " " + tr(run.of === 1 ? "picture" : "pictures") + ", " + tr("seed") + " " + run.seed + " · " + tr("in the queue"));
+       if (!again && state.seedMode) { state.seedMode.after(run.count || body.count, run.seed); keepForm(); }   // HERESY 1330: Next or Previous past its seeds
+       state.pinSel = false;                              // HERESY 1271: the stage follows the new run
+       state.runs.unshift(run);
+@@ -468,7 +474,7 @@
+       toast(tr("The Artist draws") + " " + run.of + " " + tr(run.of === 1 ? "picture" : "pictures") + " · " + tr("seed") + " " + run.seed + ": " +
+         tr("it waits for a card with room, then paints (Engine → GPUs says which card does what)"));
+       schedule(1500);
+-    }).catch(function (e) { toast(tr("The Artist cannot draw:") + " " + e.message, "bad"); })
++    }).catch(function (e) { toast(tr("The Artist cannot draw:") + " " + e.message, "bad"); alog(tr("The Artist cannot draw:") + " " + e.message, "bad"); })
+       .then(function () { state.sending = false; paintForm(); });
+   }
+   function stopRun() {                                   // HERESY 1270
+@@ -523,8 +529,26 @@
+   }
+ 
+   // ------------------------------------------------------------------ the runs
++  // HERESY 1334: each run's way to its end, said once a change (the first look only takes them in)
++  function logRuns(runs) {
++    var seen = state.logSeen, first = !seen;
++    state.logSeen = seen = seen || {};
++    runs.forEach(function (r) {
++      var mark = r.status + "|" + (r.waiting || "") + "|" + (r.gpu == null ? "" : r.gpu);
++      if (seen[r.id] === mark) return;
++      seen[r.id] = mark;
++      if (first) return;
++      var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length, who = tr("Run") + " " + r.id + " (" + painterLabel(r) + ")";
++      if (r.status === "queued") alog(who + ": " + (r.waiting ? tr("waits:") + " " + r.waiting : tr("in the queue")));
++      else if (r.status === "running") alog(who + ": " + tr("paints on GPU") + " " + r.gpu);
++      else if (r.status === "done") alog(who + ": " + tr("done") + ", " + kept + " " + tr("of") + " " + r.of + (r.took ? " · " + Math.round(r.took) + " s" : ""), kept ? "good" : "bad");
++      else if (r.status === "stopped") alog(who + ": " + tr("stopped") + ", " + kept + " " + tr("of") + " " + r.of + " " + tr("kept"));
++      else if (r.status === "failed") alog(who + ": " + tr("failed:") + " " + (r.error || ""), "bad");
++    });
++  }
+   function load() {
+     return api("/artist/runs").then(function (d) {
++      logRuns(d.runs || []);                             // HERESY 1334
+       var was = {};
+       state.runs.forEach(function (r) { if (live(r)) was[r.id] = 1; });
+       state.runs = d.runs || [];
+@@ -749,7 +773,7 @@
+       paintRuns();
+       toast(tr("Upscaling") + " " + (UP_TARGETS[target] ? String(target).toUpperCase() : "\u00d7" + target) + " · " + model.replace(/\.(pth|safetensors)$/, "") + ": " + tr("about half a minute on a card"));
+       schedule(1500);
+-    }).catch(function (e) { toast(tr("Not upscaled:") + " " + e.message, "bad"); });
++    }).catch(function (e) { toast(tr("Not upscaled:") + " " + e.message, "bad"); alog(tr("Not upscaled:") + " " + e.message, "bad"); });
+   }
+   // HERESY 1321 (Viktor 10.10.2026: «Удаление картинки или массива выбранных»): pictures picked with Ctrl (or ⌘) + click, a range with
+   // Shift + click; the bar says how many, with Star, Trash and ✕; Esc lets go
+diff --git a/tools/console/index.html b/tools/console/index.html
+index cd64fce..a0d6096 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1817,18 +1817,23 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     <button type="button" class="log-dock-tab" id="logDockTab" aria-expanded="false" data-tip="The server log, in every room: click to unfold or fold">
+       <span class="lamp" id="logDockLamp"></span><b>Server log</b><span class="net-say mono" id="netSay"></span><span class="log-dock-last mono" id="logDockLast">connecting</span></button>
+     <span class="log-dock-acts">
++      <span class="log-dock-views" id="logDockViews" role="tablist" aria-label="Which log">
++        <button type="button" role="tab" class="log-view is-on" data-view="server" aria-selected="true" data-tip="The server's log: the engine and the lab">Server</button>
++        <button type="button" role="tab" class="log-view" data-view="artist" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button></span>
+       <label class="check small-check"><input type="checkbox" id="logDockFollow" checked data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read." /> <span>Follow</span></label>
+       <!-- HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, or back -->
+       <button type="button" class="btn ghost small log-dock-tall" id="logDockTall" aria-pressed="false" aria-label="Full height"
+         data-tip="The log the window's full height, or back">⤢</button>
+       <button type="button" class="btn ghost small" id="logDockCopy">Copy</button>
+       <button type="button" class="btn ghost small" id="logDockEngine" data-tip="The whole log, in Engine">Engine</button>
++      <button type="button" class="btn ghost small" id="logDockPop" aria-label="The log in a window of its own" data-tip="The log in a window of its own: over every window where the browser can (Chrome), else one to carry to another monitor">⧉</button>
+     </span>
+   </div>
+   <!-- HERESY 1264 (Viktor 09.10.2026: «btop ересь можно прикрутить и к фрейму лога сервера. Разрешаю сделать его шире на 200-400px, В две
+        колонки. В одной живой лог, в другой живая шкала активных GPU, где главная карта особо обрамлена»): the log and the cards, live -->
+   <div class="log-dock-main">
+     <div class="log-dock-body mono" id="logDockBody" role="log" aria-live="off"></div>
++    <div class="log-dock-body log-dock-artist mono" id="logDockArtist" role="log" aria-live="off" hidden></div>
+     <div class="log-dock-gpus" id="logDockGpus" aria-label="The cards, live"></div>
+   </div>
+ </aside>
+-- 
+2.43.0
+

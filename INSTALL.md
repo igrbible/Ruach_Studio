@@ -7,10 +7,10 @@ One Linux machine with an NVIDIA card. The studio runs there; you use it from a 
 | | |
 |---|---|
 | system | Linux x86_64. Made and tested on **Ubuntu 24.04** (kernel 7.0, driver 595). |
-| GPU | NVIDIA, **24 GB** runs everything at full precision; **16 GB** runs songs with the Q8_0 model; **12 GB** with Q6_K or Q5_K_M (shorter songs, int8 training). |
+| GPU | NVIDIA, **24 GB** runs everything at full precision; **8 to 16 GB** run songs with the Q8_0 model (measured: 5.1 GB with a context of 12 288 rows, 7.7 GB with the whole); **6 GB** Q8_0 with shorter songs, less Q6_K; int8 training under 24 GB. |
 | CUDA | the **CUDA toolkit 12.8** (`nvcc`), in `/usr/local/cuda-12.8` or on the `PATH`; a driver that supports it |
 | tools | `git`, `cmake` 3.24 or newer, `ninja` (optional, faster), `gcc`/`g++` 13, `python3.12` with `python3.12-venv`, `ffmpeg`, `curl` |
-| disk | about 10 GB for the program and its Python, **30–60 GB** for the models (the download says each size first), and room for your songs |
+| disk | **about 30 GB**, measured on fresh installs: the program and its two Pythons 16 GB, the models 13 GB for a 16 GB card (16.5 GB with BF16 for 24 GB); the Artist's models 26 GB more when you take them (41 GB with Krea 2 Muse Q8; 15 GB with SDXL on a card under 16 GB), the 💎 sets 5 GB; and room for your songs |
 | tests only | `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test; Node.js 22+ and Chrome or Chromium for the page tests. The studio itself needs none of them: FLAC is made by the engine and by ffmpeg |
 
 On Ubuntu 24.04, everything but CUDA in one line:
@@ -26,7 +26,7 @@ CUDA 12.8: NVIDIA's own repository for Ubuntu 24.04 (developer.nvidia.com → CU
 ```bash
 git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_Studio
 
-./lab/install-venv.sh      # Python: torch for CUDA 12.8 and the studio's packages, in .venv (about 8 GB, a few minutes)
+./lab/install-venv.sh      # Python: torch for CUDA 12.8 and the studio's packages, in .venv (8.5 GB) and the Artist's .venv-art (7.4 GB), a few minutes
 ./fetch-models.sh          # every model the studio uses, pinned and checked (asks before the big ones)
 ./build.sh --server        # the page and the engine (the first build of the engine: a few minutes)
 ./systemd/install-units.sh # the two services
@@ -43,7 +43,8 @@ Without systemd: `./lab/start-lab.sh` and then `./start.sh` (it stays in the ter
 
 ```bash
 heresy/fetch-heresy.sh --listener Q8_0   # the style listener (Qwen2.5-Omni) for training sets, 9.6 GB
-heresy/fetch-heresy.sh --artwork         # artwork for takes (CyberRealistic XL + Qwen3-4B), 14 GB, a 16 GB card
+heresy/fetch-heresy.sh --artwork         # the Artist's models: Krea 2 Muse Q4 with its parts, the filter, the prompt writer, 26 GB (a card under 16 GB: SDXL, 15 GB)
+heresy/fetch-heresy.sh --qwen 2512-q4    # the Artist's Qwen-Image 2512 at Q4 with Lightning (Apache-2.0), 31 GB, a 16 GB card (2512-q6: 34.5 GB, 24 GB; 2.1: 33 GB, research licence)
 heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 7.8 GB (int8: 4.0 GB)
 heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 7.2 GB
 ./fetch-models.sh --check                # what is here, what is missing; downloads nothing
@@ -51,7 +52,7 @@ heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 
 
 ## With Pinokio
 
-[Pinokio](https://pinokio.co) installs and starts the studio from its menu, on the same kind of machine: Linux x86_64 with an NVIDIA card. In Pinokio, download it from its address, `https://github.com/igrbible/Ruach_Studio`, and press **Install**. Pinokio first brings its AI bundle (conda, git, ffmpeg, uv and the CUDA toolkit 12.8; your own `/usr/local/cuda-12.8` is used instead when it is there), then the install does what the steps above do: the Python environments, the engine, and the models with the backbone your card takes (BF16 from 24 GB, Q8_0 from 16, Q6_K from 12). Each step says what it does, and a step that fails ends the install with its reason on the last line; **Install again** goes on from there.
+[Pinokio](https://pinokio.co) installs and starts the studio from its menu, on the same kind of machine: Linux x86_64 with an NVIDIA card. In Pinokio, download it from its address, `https://github.com/igrbible/Ruach_Studio`, and press **Install**. Pinokio first brings its AI bundle (conda, git, ffmpeg, uv and the CUDA toolkit 12.8; your own `/usr/local/cuda-12.8` is used instead when it is there), then the install does what the steps above do: the Python environments, the engine, and the models with the backbone your card takes (BF16 from 24 GB, Q8_0 from 7, Q6_K below). Each step says what it does, and a step that fails ends the install with its reason on the last line; **Install again** goes on from there.
 
 **Start** runs the lab and the studio, each in a terminal of its own, and **Open the studio** opens the page (from another machine of your network: the address `start.sh` prints in that terminal). **More models** offers the Artist's painter, the style listener, the trainer's base and, where the install took Q8_0 for a smaller card, the BF16 backbone, each asked first with its size. The install itself brings the LoRAs the studio's 💎 sets were made with; a download that fails says why, and **Install** again goes on from where it stopped. The studio's **Engine → Models and LoRAs** says the same from inside: what is here, what is missing, and a **Fetch** for each part and for every extra, each asked first with its size. **Update** takes the newest release; **Reset** takes away the Python environments and the engine's build, never your songs, models or settings.
 

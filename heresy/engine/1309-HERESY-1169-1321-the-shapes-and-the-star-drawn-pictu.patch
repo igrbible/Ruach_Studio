@@ -1,0 +1,279 @@
+From 7301ff034437ec2a6f95ce11b59f5b6ad6c1c45e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 14:04:15 -0600
+Subject: [PATCH 1309/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201321:=20the?=
+ =?UTF-8?q?=20shapes=20and=20the=20star=20drawn;=20pictures=20picked=20and?=
+ =?UTF-8?q?=20put=20aside?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «aspect ratios — переноси размеры картинок в тултипы, а отображение трёх вариантов — SVG КВАДРАТ, горизонтальное и вертикальное расположение прямоугольника… `Starred` слово тоже убрать, звезда наша SVG»; «Удаление картинки или массива выбранных».
+
+The shapes in the form and in the gallery's filter are drawn, their sizes in the tips; the star drawn in the filter, the tiles and the stage. Ctrl (⌘) + click picks pictures, Shift + click a range, a bar says how many with Star, Trash and ✕ (Esc lets go); the stage's Trash puts one aside; the Trash look shows the pictures put aside, each with Restore, and Restore all.
+
+Suite: 580/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  23 ++++++
+ tools/console/heresy-artist.js | 124 ++++++++++++++++++++++++++++++---
+ 2 files changed, 137 insertions(+), 10 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index d0a89c9..b59324b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4912,6 +4912,29 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
+ .ar-shapes { display: flex; gap: 6px; flex-wrap: wrap; }
+ .ar-shape { display: inline-flex; align-items: center; gap: 6px; user-select: none; white-space: nowrap; }
+ .ar-shape input { margin: 0; accent-color: var(--amber); }
++/* HERESY 1321: the shapes and the star drawn; the picked pictures; the pictures put aside */
++.ar-shape { position: relative; padding: 4px 8px; }
++.ar-shape input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
++.ar-shape-ico { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; }
++.ar-shape.is-on .ar-shape-ico, .ar-fshape.is-on .ar-shape-ico { fill: color-mix(in srgb, var(--amber) 22%, transparent); }
++.ar-fshape { display: inline-grid; place-items: center; padding: 3px 8px; }
++.ar-star-ico { width: 18px; height: 18px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
++.ar-star-ico.is-on { fill: #f2c14e; stroke: #f2c14e; }
++.ar-fshape .ar-star-ico.is-on { fill: currentColor; stroke: currentColor; }
++.ar-pic.is-picked { position: relative; }
++.ar-gpic.is-picked, .ar-pic.is-picked { outline: 3px solid var(--amber); outline-offset: -3px; border-radius: var(--r-md); }
++.ar-gpic.is-picked::after, .ar-pic.is-picked::after { content: "\2713"; position: absolute; top: 6px; left: 6px; width: 22px; height: 22px; display: grid; place-items: center;
++  border-radius: 999px; background: var(--amber); color: #111; font: 700 13px/1 var(--sans); pointer-events: none; }
++.ar-picked { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--line-a); }
++.ar-picked[hidden] { display: none; }
++.ar-picked-n { font-size: 12.5px; color: var(--amber); white-space: nowrap; }
++.ar-aside-box { margin: 0 0 14px; padding: 0 0 12px; border-bottom: 1px solid var(--line-a); }
++.ar-aside-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12.5px; color: var(--muted); }
++.ar-aside-head b { color: var(--ink); }
++.ar-aside-head .btn { margin-left: auto; }
++.ar-aside-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
++.ar-aside-pic { margin: 0; display: flex; flex-direction: column; gap: 4px; }
++.ar-aside-pic img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; opacity: .85; background: var(--ground); }
+ .ar-shape.is-on { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); }
+ .ar-seed { width: 13.5em; flex: none; }
+ .ar-seed-row { display: flex; gap: 6px; align-items: center; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index e377da6..a6e801f 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -18,7 +18,15 @@
+     live: "yue2.arLive", look: "yue2.arLook", filter: "yue2.arFilter", size: "yue2.arSize" };
+   // HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта? Изучи интерфейс и функционал InvokeAI»):
+   // the pictures as runs or as one gallery (InvokeAI's grid: every picture, the newest first, filtered, starred, three sizes)
+-  var FILTERS = [["all", "All"], ["1:1", "1:1"], ["16:9", "16:9"], ["9:16", "9:16"], ["star", "★ Starred"]];
++  var FILTERS = [["all", "All"], ["1:1", "1:1"], ["16:9", "16:9"], ["9:16", "9:16"], ["star", "Starred"]];
++  // HERESY 1321 (Viktor 10.10.2026: «aspect ratios… SVG КВАДРАТ, горизонтальное и вертикальное расположение прямоугольника»; «звезда наша SVG»)
++  function shapeIcon(id) {
++    var r = { "1:1": [4, 4, 12, 12], "16:9": [1.5, 5.5, 17, 9], "9:16": [5.5, 1.5, 9, 17] }[id] || [4, 4, 12, 12];
++    return '<svg class="ar-shape-ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '" rx="1.6"/></svg>';
++  }
++  function starIcon(on) {
++    return '<svg class="ar-star-ico' + (on ? " is-on" : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.9l2.75 5.95 6.5.75-4.85 4.45 1.3 6.45L12 17.3l-5.7 3.2 1.3-6.45L2.75 9.6l6.5-.75z"/></svg>';
++  }
+   var SIZES = [["s", "S", 130], ["m", "M", 200], ["l", "L", 300]];
+   var state = { hooks: null, runs: [], take: null, timer: 0, sending: false, open: {}, view: null, first: true,
+     look: "runs", filter: "all", size: "m" };
+@@ -475,6 +483,10 @@
+       var was = {};
+       state.runs.forEach(function (r) { if (live(r)) was[r.id] = 1; });
+       state.runs = d.runs || [];
++      state.runs.forEach(function (r) {                // HERESY 1321: a picture put aside is not the room's any more (the Trash look has it)
++        r.asides = (r.pictures || []).filter(function (p) { return p.aside; }).length;
++        if (r.asides) r.pictures = r.pictures.filter(function (p) { return !p.aside; });
++      });
+       state.runs.forEach(function (r) {           // a run that ended while the room looked on says so
+         if (!was[r.id] || live(r)) return;
+         var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length;
+@@ -573,15 +585,16 @@
+         return '<figure class="ar-gpic" style="--ar:' + sh.w + "/" + sh.h + '" data-g="' + i + '">' +
+           '<button type="button" class="ar-thumb" data-act="gview" aria-label="' + esc(tr("Look at it")) + '" data-tip="' + esc(it.p.shape + " · " + tr("seed") + " " + it.p.seed + " · " + when(it.r.created)) + '">' +
+           '<img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(it.r.id, it.p.thumb || it.p.file)) + '" /></button>' +
+-          '<button type="button" class="ar-star' + (it.p.star ? " is-on" : "") + '" data-act="gstar" aria-pressed="' + (it.p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + (it.p.star ? "★" : "☆") + "</button></figure>";
++          '<button type="button" class="ar-star' + (it.p.star ? " is-on" : "") + '" data-act="gstar" aria-pressed="' + (it.p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(it.p.star) + "</button></figure>";   // HERESY 1321
+       }).join("") + "</div>";
+   }
+-  function paintRuns() { paintRunsList(); paintStage(); }   // HERESY 1271: the library, then the stage
++  function paintRuns() { paintRunsList(); paintStage(); paintPicked(); }   // HERESY 1271: the library, then the stage; 1321: the picked
+   // HERESY 1310 (Viktor's list for the Artist: «a trash list in the room»): the runs in the trash, each with Restore
+   function paintTrash() {
+     var box = $("arRuns");
+     if (!state.trashed) box.innerHTML = '<p class="ar-empty">' + esc(tr("Reading the trash…")) + "</p>";   // once: a refresh keeps the list
+-    api("/artist/trashed").then(function (d) {
++    Promise.all([api("/artist/trashed"), api("/artist/asides").catch(function () { return { pictures: [] }; })]).then(function (x) {   // HERESY 1321
++      var d = x[0], pics = x[1].pictures || [];
+       if (state.look !== "trash") return;
+       var runs = d.runs || [];
+       state.trashed = runs;
+@@ -594,7 +607,17 @@
+           '<div class="ar-trun-pics">' + pics.slice(0, 6).map(function (p) {
+             return '<img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(r.id, p.thumb || p.file) + "&trash=1") + '" />';
+           }).join("") + "</div></div>";
+-      }).join("") : '<p class="ar-empty">' + esc(tr("The trash is empty.")) + "</p>";
++      }).join("") : (pics.length ? "" : '<p class="ar-empty">' + esc(tr("The trash is empty.")) + "</p>");
++      if (pics.length) {                                  // HERESY 1321: the pictures put aside, each with Restore
++        box.insertAdjacentHTML("afterbegin", '<div class="ar-aside-box"><div class="ar-aside-head"><b>' + esc(tr("Pictures put aside")) + "</b> <span>" + pics.length + "</span>" +
++          '<button type="button" class="btn ghost small" data-back-all="1">' + esc(tr("Restore all")) + "</button></div>" +
++          '<div class="ar-aside-grid">' + pics.map(function (p, i) {
++            return '<figure class="ar-aside-pic" data-ai="' + i + '" title="' + esc(p.prompt || "") + '"><img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(p.id, p.thumb || p.file)) + '" />' +
++              '<button type="button" class="btn ghost small" data-back="' + i + '">' + esc(tr("Restore")) + "</button></figure>";
++          }).join("") + "</div></div>");
++        state.asidePics = pics;
++      }
++      $("arTotal").textContent = (pics.length ? pics.length + " " + tr(pics.length === 1 ? "picture" : "pictures") + " · " : "") + runs.length + " " + tr(runs.length === 1 ? "run" : "runs") + " " + tr("in the trash");
+     }).catch(function (e) { box.innerHTML = '<p class="ar-empty">' + esc(tr("The trash could not be read:") + " " + e.message) + "</p>"; });
+   }
+   function restoreRun(id) {
+@@ -647,6 +670,53 @@
+       paintRuns();
+     }).catch(function (e) { toast(tr("No star:") + " " + e.message, "bad"); });
+   }
++  // HERESY 1321 (Viktor 10.10.2026: «Удаление картинки или массива выбранных»): pictures picked with Ctrl (or ⌘) + click, a range with
++  // Shift + click; the bar says how many, with Star, Trash and ✕; Esc lets go
++  state.picked = {};
++  function pickKey(it) { return it.r.id + "|" + it.p.file; }
++  function pickedList() { return Object.keys(state.picked).map(function (k) { var i = k.indexOf("|"); return { id: k.slice(0, i), file: k.slice(i + 1) }; }); }
++  function togglePick(it, range, list) {
++    var k = pickKey(it);
++    if (range && state.lastPick && list) {
++      var keys = list.map(pickKey), a = keys.indexOf(state.lastPick), b = keys.indexOf(k);
++      if (a >= 0 && b >= 0) { keys.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(function (x) { state.picked[x] = 1; }); paintPicked(); return; }
++    }
++    if (state.picked[k]) delete state.picked[k]; else state.picked[k] = 1;
++    state.lastPick = k;
++    paintPicked();
++  }
++  function clearPicked() { state.picked = {}; state.lastPick = null; paintPicked(); }
++  function paintPicked() {
++    var list = items();
++    Array.prototype.forEach.call(document.querySelectorAll("#arRuns .ar-gpic[data-g]"), function (f) { var it = list[+f.dataset.g]; f.classList.toggle("is-picked", !!(it && state.picked[pickKey(it)])); });
++    Array.prototype.forEach.call(document.querySelectorAll("#arRuns .ar-pic[data-i]"), function (f) {
++      var run = runOf(f), p = run && run.pictures[+f.dataset.i];
++      f.classList.toggle("is-picked", !!(p && state.picked[run.id + "|" + p.file]));
++    });
++    var bar = $("arPicked"), n = Object.keys(state.picked).length;
++    if (!bar) return;
++    bar.hidden = !n;
++    bar.innerHTML = n ? '<span class="ar-picked-n">' + n + " " + esc(tr(n === 1 ? "picked" : "picked")) + "</span>" +
++      '<button type="button" class="chip ar-fshape" data-pick="star" aria-label="' + esc(tr("Star them")) + '" data-tip="' + esc(tr("Star them all")) + '">' + starIcon(true) + "</button>" +
++      '<button type="button" class="chip" data-pick="aside" data-tip="' + esc(tr("Put them in the trash: the library's Trash brings them back")) + '">' + esc(tr("Trash")) + "</button>" +
++      '<button type="button" class="pb-btn" data-pick="clear" aria-label="' + esc(tr("Let them go (Esc)")) + '">\u2715</button>' : "";
++  }
++  function asidePics(items, back) {
++    return api("/artist/aside", { items: items, aside: !back }).then(function (d) {
++      var n = (d.done || []).length;
++      toast(back ? tr("Back in the room:") + " " + n + " " + tr(n === 1 ? "picture" : "pictures")
++        : n + " " + tr(n === 1 ? "picture" : "pictures") + " " + tr("in the trash: the library's Trash brings them back") + ((d.trashed || []).length ? " · " + tr("a run with nothing left went with them") : ""));
++      clearPicked();
++      return load().then(function () { if (state.look === "trash") paintTrash(); });
++    }).catch(function (e) { toast(e.message, "bad"); });
++  }
++  function starPicked() {
++    var all = pickedList(), go = function (i) {
++      if (i >= all.length) { clearPicked(); return load(); }
++      return api("/artist/star", { id: all[i].id, file: all[i].file, star: true }).then(function () { return go(i + 1); }, function (e) { toast(e.message, "bad"); return go(i + 1); });
++    };
++    return go(0);
++  }
+   function trashRun(r) {
+     return window.HeresyDialog.confirm(tr("The run and its") + " " + (r.pictures || []).filter(function (p) { return p.kept; }).length + " " + tr("pictures to the trash?") + "\n\n" +
+       tr("They go to the studio's trash/artist/ and can come back from there; a cover already given to a take stays with the take."),
+@@ -710,7 +780,8 @@
+         '<a class="ar-dl" aria-label="' + esc(tr("Download")) + '" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '" href="' + esc(fileUrl(r.id, p.file)) +
+         '" download="' + esc("ruach-artist-" + r.id + "-" + p.file) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
+         '<button type="button" class="btn ghost small" data-stage="view" data-tip="' + esc(tr("Over the whole page: ← → walk the pictures, Esc closes")) + '">' + esc(tr("Over the page")) + "</button>" +
+-        '<button type="button" class="pb-btn ar-vstar' + (p.star ? " is-on" : "") + '" data-stage="star" aria-pressed="' + (p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + (p.star ? "★" : "☆") + "</button>";
++        '<button type="button" class="pb-btn ar-vstar' + (p.star ? " is-on" : "") + '" data-stage="star" aria-pressed="' + (p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(p.star) + "</button>" +
++        '<button type="button" class="btn ghost small ar-aside" data-stage="aside" data-tip="' + esc(tr("This picture to the trash: the library's Trash brings it back")) + '">' + esc(tr("Trash")) + "</button>";   // HERESY 1321
+     }
+     return '<div class="ar-stage-data"><div class="ar-stage-meta" translate="no">' + meta.filter(Boolean).map(function (m) { return "<span>" + esc(m) + "</span>"; }).join("") + "</div>" +
+       '<div class="ar-stage-prompt" translate="no">' + esc(r.prompt || "") + "</div>" + (acts ? '<div class="ar-stage-acts">' + acts + "</div>" : "") + "</div>";
+@@ -792,6 +863,7 @@
+     else if (act === "form") { fillForm({ prompt: it.r.prompt, shapes: [it.p.shape], count: 1, seed: it.p.seed, painter: it.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
+     else if (act === "ref") setRef({ id: it.r.id, file: it.p.file, url: fileUrl(it.r.id, it.p.thumb || it.p.file) });   // HERESY 1305
+     else if (act === "compare") comparePick(it);                                                                         // HERESY 1308
++    else if (act === "aside") asidePics([{ id: it.r.id, file: it.p.file }]);                                           // HERESY 1321
+   }
+   function edges() {                                     // the two edges: dragged, ← →, Home or a double click; the widths kept
+     var cols = $("arCols");
+@@ -1054,8 +1126,8 @@
+     state.hooks = hooks || {};
+     var shapes = (recall(KEY.shapes) || "1:1").split(",");
+     $("arShapes").innerHTML = SHAPES.map(function (s) {
+-      return '<label class="chip ar-shape" data-tip="' + esc(tr("For") + " " + tr(s.say)) + '"><input type="checkbox" value="' + s.id + '"' +
+-        (shapes.indexOf(s.id) >= 0 ? " checked" : "") + " /> " + esc(s.label) + "</label>";
++      return '<label class="chip ar-shape" data-tip="' + esc(s.label + " · " + tr("for") + " " + tr(s.say)) + '" aria-label="' + esc(s.label) + '"><input type="checkbox" value="' + s.id + '"' +
++        (shapes.indexOf(s.id) >= 0 ? " checked" : "") + " />" + shapeIcon(s.id) + "</label>";   // HERESY 1321: drawn, its size in the tip
+     }).join("");
+     $("arPrompt").value = recall(KEY.prompt) || "";
+     $("arCount").value = recall(KEY.count) || "1";
+@@ -1118,6 +1190,7 @@
+       var g = e.target.closest("[data-act^=g]");
+       if (g) {                                          // the gallery's own: look, star
+         var list = items(), at = +g.closest(".ar-gpic").dataset.g;
++        if (g.dataset.act === "gview" && (e.ctrlKey || e.metaKey || e.shiftKey)) { togglePick(list[at], e.shiftKey, list); return; }   // HERESY 1321
+         if (g.dataset.act === "gview" && state.cmpA) compare(state.cmpA, list[at]);   // HERESY 1308: the other of two compared
+         else if (g.dataset.act === "gview") pick(list[at]);    // HERESY 1271: to the stage
+         else if (g.dataset.act === "gstar") star(list[at].r, list[at].p, !list[at].p.star);
+@@ -1126,6 +1199,11 @@
+       var b = e.target.closest("[data-act]"), r = b && runOf(b);
+       if (!b || !r || b.disabled) return;
+       var act = b.dataset.act, fig = b.closest(".ar-pic"), p = fig && r.pictures[+fig.dataset.i];
++      if (act === "view" && p && (e.ctrlKey || e.metaKey || e.shiftKey)) {          // HERESY 1321: picked
++        var flat = []; state.runs.forEach(function (x) { (x.pictures || []).forEach(function (q) { if (q.kept) flat.push({ r: x, p: q }); }); });
++        togglePick({ r: r, p: p }, e.shiftKey, flat);
++        return;
++      }
+       if (act === "view" && state.cmpA) compare(state.cmpA, { r: r, p: r.pictures[+fig.dataset.i] });   // HERESY 1308
+       else if (act === "view") pick({ r: r, p: r.pictures[+fig.dataset.i] });   // HERESY 1271: to the stage
+       else if (act === "cover" && p) cover(r, p);
+@@ -1139,8 +1217,28 @@
+     state.look = recall(KEY.look) === "gallery" ? "gallery" : "runs";   // HERESY 1310: the Trash look is not kept: the room opens on its runs
+     state.filter = FILTERS.some(function (f) { return f[0] === recall(KEY.filter); }) ? recall(KEY.filter) : "all";
+     state.size = SIZES.some(function (z) { return z[0] === recall(KEY.size); }) ? recall(KEY.size) : "m";
+-    $("arFilters").innerHTML = FILTERS.map(function (f) { return '<button type="button" class="chip" data-filter="' + f[0] + '">' + esc(tr(f[1])) + "</button>"; }).join("");
++    $("arFilters").innerHTML = FILTERS.map(function (f) {   // HERESY 1321: the shapes and the star drawn
++      var sh = SHAPES.filter(function (s) { return s.id === f[0]; })[0];
++      if (sh) return '<button type="button" class="chip ar-fshape" data-filter="' + f[0] + '" aria-label="' + esc(sh.label) + '" data-tip="' + esc(sh.label) + '">' + shapeIcon(f[0]) + "</button>";
++      if (f[0] === "star") return '<button type="button" class="chip ar-fshape" data-filter="star" aria-label="' + esc(tr("Starred")) + '" data-tip="' + esc(tr("The starred pictures")) + '">' + starIcon(true) + "</button>";
++      return '<button type="button" class="chip" data-filter="' + f[0] + '">' + esc(tr(f[1])) + "</button>";
++    }).join("");
+     $("arSizes").innerHTML = SIZES.map(function (z) { return '<button type="button" class="chip" data-size="' + z[0] + '" aria-label="' + esc(tr("Size") + " " + z[1]) + '">' + z[1] + "</button>"; }).join("");
++    (function () {                                    // HERESY 1321: the bar of the picked pictures
++      var pb = document.createElement("span");
++      pb.id = "arPicked"; pb.className = "ar-picked"; pb.hidden = true;
++      $("arBar").appendChild(pb);
++      pb.addEventListener("click", function (e) {
++        var b = e.target.closest("[data-pick]");
++        if (!b) return;
++        if (b.dataset.pick === "clear") clearPicked();
++        else if (b.dataset.pick === "aside") asidePics(pickedList());
++        else if (b.dataset.pick === "star") starPicked();
++      });
++      document.addEventListener("keydown", function (e) {
++        if (e.key === "Escape" && Object.keys(state.picked).length && !$("view-artist").classList.contains("is-hidden")) { clearPicked(); }
++      });
++    })();
+     $("arBar").addEventListener("click", function (e) {
+       var b = e.target.closest("[data-look], [data-filter], [data-size]");
+       if (!b) return;
+@@ -1151,7 +1249,13 @@
+     });
+     // HERESY 1271: the stage's own actions; a double click in the library opens a picture over the page at once; the edges
+     $("arStage").addEventListener("click", stageAct);
+-    $("arRuns").addEventListener("click", function (e) { var b = e.target.closest("[data-restore]"); if (b) restoreRun(b.dataset.restore); });   // HERESY 1310
++    $("arRuns").addEventListener("click", function (e) {
++      var b = e.target.closest("[data-restore]");
++      if (b) return restoreRun(b.dataset.restore);       // HERESY 1310
++      var one = e.target.closest("[data-back]"), all = e.target.closest("[data-back-all]"), pics = state.asidePics || [];   // HERESY 1321
++      if (one && pics[+one.dataset.back]) asidePics([{ id: pics[+one.dataset.back].id, file: pics[+one.dataset.back].file }], true);
++      else if (all && pics.length) asidePics(pics.map(function (p) { return { id: p.id, file: p.file }; }), true);
++    });
+     $("arRuns").addEventListener("dblclick", function (e) {
+       var t = e.target.closest(".ar-thumb");
+       if (!t) return;
+-- 
+2.43.0
+

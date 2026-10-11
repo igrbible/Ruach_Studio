@@ -1,0 +1,80 @@
+From c4514a36c1014eec9cfc87f6b0c1ca9daba06e60 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 12:32:27 -0600
+Subject: [PATCH 1304/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201317:=20the?=
+ =?UTF-8?q?=20Artist's=20stage=20keeps=20its=20frame;=20the=20wave's=20car?=
+ =?UTF-8?q?d=20in=20the=20rooms=20of=20sound?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026, driving the Artist: «Блок проявления картинки зафиксируй также вертикально, чтобы не прыгало постоянно по вертикали»; on the wave's card: «этот оверхол нужен нам только в аудио комнатах — Творец, Огранщик и Библиотекарь».
+
+A waiting run held a 240 px block, then the shape's frame when it began to paint, and the frame was sized without the row of buttons a finished picture has, so it shrank by that row at the end. Now a waiting run holds the frame too, and the row is reserved while it paints: the same frame from the queue to the picture. The card over the wave shows in the Creator, the Refiner and the Librarian only.
+
+Suite: 571/0 in the kitchen (five states of a run, one frame within a pixel; no card over the wave in the Artist).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          | 1 +
+ tools/console/app.js           | 5 +++--
+ tools/console/heresy-artist.js | 7 ++++++-
+ 3 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7bf75c5..14c442b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4953,6 +4953,7 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
+ .ar-stage-pic img { display: block; width: 100%; height: 100%; object-fit: contain; }
+ .ar-stage-pic.is-loading img { filter: blur(1.5px); }
+ .ar-stage-pic.is-live { cursor: default; border-color: var(--amber-dim); }
++.ar-stage-pic.is-live > .ar-stage-empty { position: absolute; inset: 0; min-height: 0; border: 0; border-radius: 0; }   /* HERESY 1317: the frame's own size */
+ .ar-stage-empty { display: grid; place-items: center; min-height: 240px; padding: 20px; border: 1px dashed var(--line-a); border-radius: var(--r-md);
+   color: var(--dim); font-size: 13px; text-align: center; }
+ .ar-stage-data { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index ec8319b..ea0b12e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5596,8 +5596,9 @@
+   var wavePopEl = null;
+   function wavePop(event) {
+     if (!wavePopEl) { wavePopEl = document.createElement("div"); wavePopEl.className = "wave-pop"; wavePopEl.hidden = true; document.body.appendChild(wavePopEl); }
+-    var secs = waveSections();
+-    if (!event || !secs.length || !isFinite(audio.duration) || audio.duration <= 0) { wavePopEl.hidden = true; wavePopEl.dataset.key = ""; return; }
++    var secs = waveSections(), room = document.body.dataset.tab || "create";
++    // HERESY 1317 (Viktor 10.10.2026: «этот оверхол нужен нам только в аудио комнатах — Творец, Огранщик и Библиотекарь»)
++    if (!event || !secs.length || !isFinite(audio.duration) || audio.duration <= 0 || ["create", "post", "collection"].indexOf(room) < 0) { wavePopEl.hidden = true; wavePopEl.dataset.key = ""; return; }
+     var r = $("wave").getBoundingClientRect(), t = Math.max(0, Math.min(1, (event.clientX - r.left) / r.width)) * audio.duration, s = sectionAt(t);
+     if (!s) { wavePopEl.hidden = true; return; }
+     var i = secs.indexOf(s), end = i + 1 < secs.length ? secs[i + 1].t : audio.duration, now = -1;
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 966aaee..3ae9edd 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -611,6 +611,11 @@
+     var top = getComputedStyle(box).position === "sticky" && cols ? cols.getBoundingClientRect().top + (view ? view.scrollTop : 0)
+       : (view ? view.getBoundingClientRect().top : 0) + 8;
+     var under = bar ? bar.getBoundingClientRect().height : 0, below = data ? data.offsetHeight + 10 : 0;
++    // HERESY 1317 (Viktor 10.10.2026: «Блок проявления картинки зафиксируй также вертикально»): the row of buttons a finished picture
++    // has is reserved while one paints, so the frame keeps its size from the queue to the picture
++    var acts = box.querySelector(".ar-stage-acts");
++    if (acts) state.actsH = acts.offsetHeight + 6;
++    else if (data) below += state.actsH || 37;
+     var w = +b.dataset.w || 1, h = +b.dataset.h || 1, maxH = Math.max(240, window.innerHeight - top - under - below - 12), k = Math.min(box.clientWidth / w, maxH / h);
+     b.style.width = Math.floor(w * k) + "px";
+     b.style.height = Math.floor(h * k) + "px";
+@@ -626,7 +631,7 @@
+       html = run.status === "running"
+         ? '<div class="ar-stage-pic is-live" data-w="' + sh.w + '" data-h="' + sh.h + '">' + (step ? '<img alt="" draggable="false" src="' + esc(fileUrl(run.id, step.file) + "&v=" + step.step) + '" />' +
+           '<span class="ar-stepno">' + step.step + " / " + step.of + "</span>" : '<div class="ar-stage-empty">' + esc(tr("painting…")) + "</div>") + "</div>" + stageData(run, null, n)
+-        : '<div class="ar-stage-empty">' + esc(tr(run.waiting ? "waits for a card" : "in the queue")) + "</div>" + stageData(run, null, 0);
++        : '<div class="ar-stage-pic is-live" data-w="' + sh.w + '" data-h="' + sh.h + '"><div class="ar-stage-empty">' + esc(tr(run.waiting ? "waits for a card" : "in the queue")) + "</div></div>" + stageData(run, null, 0);   // HERESY 1317: the frame from the start
+     } else if (it) {
+       var s2 = shapeOf(it.p.shape), take = state.take;
+       key = "pic:" + it.r.id + ":" + it.p.file + ":" + (it.p.star ? 1 : 0) + ":" + (take ? take.name : "");
+-- 
+2.43.0
+

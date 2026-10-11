@@ -1,0 +1,378 @@
+From 2feba278e66f0ce4e936bf0a29f4eb0f5071b29f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 02:54:38 -0600
+Subject: [PATCH 1289/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201296?=
+ =?UTF-8?q?=E2=80=931299:=20own=20LoRA=20copies=20counted=20whole,=20why?=
+ =?UTF-8?q?=20an=20artwork=20waits,=20the=20Trainer's=20log=20beside=20the?=
+ =?UTF-8?q?=20server=20log,=20the=20curves=20one=20under=20the=20other?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+1296 (Viktor 10.10.2026: «По LoRA расхождение в списке и в missing на Големе в Студии»): in Engine → Models and LoRAs a part whose odd file is one's own copy of a published LoRA («differs», kept by fetch-ruach-loras.py) counts whole, its row says why it was kept, and the part's line says «own copies kept: N» in all seven languages.
+
+1297 (Viktor 10.10.2026, his laptop's 16 GB card: «вечно "ждёт генерации"… реальный лог и сообщение о том, что модель выбранная не потянет на этом железе, не видно»): an artwork that waits for a card says why in its toast (the guard's words: the card's memory and the need), then that it starts by itself; a failed one says «No artwork:» once, not twice; a painter the lab refuses at once (no card here can hold it) ends a volley of artworks at the first take instead of the same refusal for each (HeresyArt.many).
+
+1298 (Viktor 10.10.2026: «В Тренере - The LOG перекрывает серверный фрейм. Сделай утяжку, тем более что он не нужен такой длинный для коротких строк лога/телеметрии»): a run's log at the Trainer's foot is as wide as its lines and stops short of the server log's dock, on whichever side the dock stands (a ResizeObserver and a MutationObserver follow the dock), on the dock's baseline; in a window too narrow for both it takes the width as before; another room does not show it.
+
+1299 (Viktor 10.10.2026: «Добавь также возможность выстраивать в одну колонку оба блока живого графа. Сейчас они оба NAR и AR в одной полосе»): a button beside «The log» stacks the Telemetry's two curves one under the other, each the whole width, or puts them side by side again (Lucide's rows-2 and cols-2 show what a click makes); remembered in this browser (yue2.trStacked).
+
+Suite: 540/0 in the kitchen; its time guard 240 → 330 s.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 11 +++++++++++
+ tools/console/app.js            | 17 +++++++++++-----
+ tools/console/heresy-i18n-be.js |  4 ++++
+ tools/console/heresy-i18n-el.js |  4 ++++
+ tools/console/heresy-i18n-es.js |  4 ++++
+ tools/console/heresy-i18n-it.js |  4 ++++
+ tools/console/heresy-i18n-ru.js |  4 ++++
+ tools/console/heresy-i18n-uk.js |  4 ++++
+ tools/console/heresy-icons.js   |  3 +++
+ tools/console/heresy-train.js   | 35 ++++++++++++++++++++++++++++++---
+ tools/console/heresy-weights.js |  8 +++++---
+ 11 files changed, 87 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index df33f1d..93de4d7 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3085,6 +3085,10 @@ tr.is-no .hi-tag { color: var(--bad); }
+ .tr-tile span { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+ .tr-tile b { font: 600 14px var(--mono); }
+ .tr-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
++/* HERESY 1299 (Viktor 10.10.2026: «выстраивать в одну колонку оба блока живого графа»): one under the other, each the whole width */
++.tr-charts.is-stacked { grid-template-columns: minmax(0, 1fr); }
++.tr-stack { display: inline-grid; place-items: center; padding: 4px 7px; }
++.tr-stack .ui-ico { width: 16px; height: 16px; }
+ .tr-chart { margin: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line-soft, var(--line)); border-radius: var(--r-md); background: var(--ground); }
+ .tr-chart figcaption { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 12.5px; }
+ .tr-chart figcaption .mono { font-size: 11px; color: var(--muted); }
+@@ -4147,6 +4151,13 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
+ .tr-logdock-head .spacer { flex: 1; }
+ .tr-logdock-name { font-size: 12px; }
+ .tr-logdock-body { flex: 1; margin: 0; padding: 8px 14px 10px; overflow: auto; font-size: 12px; line-height: 1.45; white-space: pre; color: var(--muted); }
++/* HERESY 1298 (Viktor 10.10.2026: «The LOG перекрывает серверный фрейм. Сделай утяжку… он не нужен такой длинный для коротких строк»):
++   as wide as its longest line, and no wider than the room beside the server log's dock (--tr-log-room, set by heresy-train.js);
++   on the dock's baseline; the Trainer's own, hidden in the other rooms */
++.tr-logdock { right: auto; width: max-content; max-width: var(--tr-log-room, calc(100vw - 32px)); min-width: min(520px, var(--tr-log-room, calc(100vw - 32px))); }
++.tr-logdock.is-right { left: auto; right: 16px; }
++body[data-tab="train"] .tr-logdock { bottom: 18px; }
++body:not([data-tab="train"]) .tr-logdock { display: none; }
+ /* HERESY 1167 (Viktor, the night of 05.10.2026: «Доделываем наш логотип… дым/туман нужно более прозрачным»; the morning of
+    06.10: «Ночное лого просто супер. А вот в дневном… Добавь песчинку красного и ещё больше осветли облако, едва заметно
+    (7-10% непрозрачности), чтобы был виден силуэт»): the cloud under the Maiden, its colour (--logo-cloud, read by the logo's
+diff --git a/tools/console/app.js b/tools/console/app.js
+index b8b29a6..c6931ff 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -5211,7 +5211,8 @@
+         if (d && (d.status === "queued" || d.status === "running")) {
+           if (d.status === "queued" && d.waiting && ARTING[name] !== "wait") {
+             ARTING[name] = "wait";
+-            toast("Artwork for “" + title + "” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)");
++            // HERESY 1297: why it waits, the guard's own words (the cards' memory and what it needs), not only that it does
++            toast("Artwork for “" + title + "” waits in the queue: " + String(d.waiting).replace(/\.\s*$/, "") + ". It starts by itself when a card has room");
+           } else if (d.status === "running") {
+             ARTING[name] = "draw";
+           }
+@@ -5222,8 +5223,11 @@
+     };
+     return ask(true).then(function (d) {
+       return refreshArts().then(function () { if (!quiet) toast("Artwork for “" + title + "” is ready"); return d; });
+-    }).catch(function (e) { toast("No artwork: " + e.message, "bad"); })
+-      .then(function (d) { delete ARTING[name]; return d; });
++    }).catch(function (e) {
++      toast("No artwork: " + String(e.message).replace(/^no artwork:\s*/i, ""), "bad");   // HERESY 1297: the lab's error begins so too
++      // HERESY 1297: a refusal (400: no card here can hold the painter) is said once; artMany stops there
++      return { status: "failed", error: e.message, refused: e.status === 400 };
++    }).then(function (d) { delete ARTING[name]; return d; });
+   }
+   // HERESY 1169 · 1235 (Viktor 08.10.2026: «Та же генерация обложек. На одну уходит до минуты в Krea 2 Muse. `Человече, ты запрашиваешь генерацию обложек на 00 треков одним залпом? Твоя видеокарта не схудится?`»): artwork for every checked take, asked first, then drawn one after another; a redraw keeps the old picture beside its take
+   function artMany(list) {
+@@ -5240,7 +5244,10 @@
+       var next = function () {
+         if (i >= todo.length) { toast("Artwork drawn: " + done + " of " + todo.length, done === todo.length ? "good" : "bad"); return; }
+         var n = todo[i++];
+-        return drawArt(n, !!artUrl(n), true).then(function (d) { if (d && d.status !== "failed") done++; }).then(next);
++        return drawArt(n, !!artUrl(n), true).then(function (d) {
++          if (d && d.status !== "failed") done++;
++          if (d && d.refused) i = todo.length;           // HERESY 1297: the same refusal would come for every take
++        }).then(next);
+       };
+       return next();
+     });
+@@ -5266,7 +5273,7 @@
+       return refreshArts().then(function () { toast("The artwork is off “" + title + "”: kept beside the take, in artwork-removed/"); });
+     }).catch(function (e) { toast("Not removed: " + e.message, "bad"); });
+   }
+-  window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts, show: showArt, unseen: artUnseen, remove: removeArt };
++  window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts, show: showArt, unseen: artUnseen, remove: removeArt, many: artMany };
+   // HERESY 1136: the studio's version (VERSION, through the API) in Engine → About
+   api("/api/v1").then(function (d) { if (d && d.studio && $("studioVersion")) $("studioVersion").textContent = d.studio; }).catch(function () {});
+   setTimeout(refreshArts, 1200);
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 53ce7e5..a9e5015 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1393,6 +1393,9 @@ RuachI18n.add("be", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Малюецца вокладка для «{0}»: промпт са стылю і слоў, потым малюнак (каля паўхвіліны)",
+ "Artwork for “{0}” is ready": "Вокладка для «{0}» гатовая",
+ "No artwork: {0}": "Вокладкі няма: {0}",
++"The curves side by side": "Крывыя побач",
++"The curves one under the other, each the whole width": "Крывыя адна пад адной, кожная на ўсю шырыню",
++"own copies kept: {#0}": "уласныя копіі пакінутыя: {0}",
+ "The artwork is off “{0}”: kept beside the take, in artwork-removed/": "Вокладка знята з «{0}»: захоўваецца побач з сэмплам, у artwork-removed/",
+ "Not removed: {0}": "Не знята: {0}",
+ "Tap ☆ on a take to keep it here.": "Націсні ☆ на сэмпле, каб трымаць яго тут.",
+@@ -2611,6 +2614,7 @@ RuachI18n.add("be", {
+ "Artwork for “{0}” already waits in the queue for a card": "Вокладка для «{0}» ужо чакае відэакарту ў чарзе",
+ "Artwork for “{0}” is being drawn already": "Вокладка для «{0}» ужо малюецца",
+ "Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "Вокладка для «{0}» чакае ў чарзе відэакарту з месцам і пачнецца сама (Рухавік → Відэакарты: якая карта чым занятая)",
++"Artwork for “{0}” waits in the queue: {1}. It starts by itself when a card has room": "Вокладка для «{0}» чакае ў чарзе: {1}. Пачнецца сама, калі на карце знойдзецца месца",
+ "Artwork waits for a card…": "Вокладка чакае відэакарту…",
+ "Drawing artwork…": "Малюецца вокладка…",
+ "Show disliked": "Паказваць неўпадабаныя",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 9bc56c4..93f7489 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1392,6 +1392,9 @@ RuachI18n.add("el", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Ζωγραφίζεται εξώφυλλο για το «{0}»: ένα prompt από το ύφος και τις λέξεις του, μετά η εικόνα (περίπου μισό λεπτό)",
+ "Artwork for “{0}” is ready": "Το εξώφυλλο για το «{0}» είναι έτοιμο",
+ "No artwork: {0}": "Χωρίς εξώφυλλο: {0}",
++"The curves side by side": "Οι καμπύλες δίπλα δίπλα",
++"The curves one under the other, each the whole width": "Οι καμπύλες η μία κάτω από την άλλη, η καθεμία σε όλο το πλάτος",
++"own copies kept: {#0}": "δικά σας αντίγραφα, κρατημένα: {0}",
+ "The artwork is off “{0}”: kept beside the take, in artwork-removed/": "Το εξώφυλλο αφαιρέθηκε από το «{0}»: κρατιέται δίπλα στη λήψη, στο artwork-removed/",
+ "Not removed: {0}": "Δεν αφαιρέθηκε: {0}",
+ "Tap ☆ on a take to keep it here.": "Πάτα ☆ σε μια λήψη για να την κρατάς εδώ.",
+@@ -2610,6 +2613,7 @@ RuachI18n.add("el", {
+ "Artwork for “{0}” already waits in the queue for a card": "Το εξώφυλλο για το «{0}» περιμένει ήδη κάρτα στην ουρά",
+ "Artwork for “{0}” is being drawn already": "Το εξώφυλλο για το «{0}» ζωγραφίζεται ήδη",
+ "Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "Το εξώφυλλο για το «{0}» περιμένει στην ουρά κάρτα με χώρο και ξεκινά μόνο του (Μηχανή → GPU: ποια κάρτα κάνει τι)",
++"Artwork for “{0}” waits in the queue: {1}. It starts by itself when a card has room": "Το εξώφυλλο για το «{0}» περιμένει στην ουρά: {1}. Θα ξεκινήσει μόνο του μόλις μια κάρτα έχει χώρο",
+ "Artwork waits for a card…": "Το εξώφυλλο περιμένει κάρτα…",
+ "Drawing artwork…": "Ζωγραφίζεται εξώφυλλο…",
+ "Show disliked": "Εμφάνιση όσων δεν μου αρέσουν",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 437b6f3..4fda24c 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1392,6 +1392,9 @@ RuachI18n.add("es", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Dibujando la portada de «{0}»: un prompt a partir de su estilo y sus palabras, luego la imagen (cerca de medio minuto)",
+ "Artwork for “{0}” is ready": "La portada de «{0}» está lista",
+ "No artwork: {0}": "Sin portada: {0}",
++"The curves side by side": "Las curvas una al lado de la otra",
++"The curves one under the other, each the whole width": "Las curvas una debajo de la otra, cada una a todo el ancho",
++"own copies kept: {#0}": "copias propias conservadas: {0}",
+ "The artwork is off “{0}”: kept beside the take, in artwork-removed/": "La portada se quitó de «{0}»: se guarda junto a la toma, en artwork-removed/",
+ "Not removed: {0}": "No se quitó: {0}",
+ "Tap ☆ on a take to keep it here.": "Toca ☆ en una toma para tenerla aquí.",
+@@ -2610,6 +2613,7 @@ RuachI18n.add("es", {
+ "Artwork for “{0}” already waits in the queue for a card": "La portada de «{0}» ya espera una GPU en la cola",
+ "Artwork for “{0}” is being drawn already": "La portada de «{0}» ya se está dibujando",
+ "Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "La portada de «{0}» espera en la cola una GPU con sitio y empieza sola (Motor → GPU dice qué hace cada tarjeta)",
++"Artwork for “{0}” waits in the queue: {1}. It starts by itself when a card has room": "La portada de «{0}» espera en la cola: {1}. Empezará sola cuando una tarjeta tenga sitio",
+ "Artwork waits for a card…": "La portada espera una GPU…",
+ "Drawing artwork…": "Dibujando la portada…",
+ "Show disliked": "Mostrar las que no me gustan",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 07d0be4..7b3ec3b 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1392,6 +1392,9 @@ RuachI18n.add("it", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Si disegna la copertina di «{0}»: un prompt dal suo stile e dalle sue parole, poi l'immagine (circa mezzo minuto)",
+ "Artwork for “{0}” is ready": "La copertina di «{0}» è pronta",
+ "No artwork: {0}": "Nessuna copertina: {0}",
++"The curves side by side": "Le curve affiancate",
++"The curves one under the other, each the whole width": "Le curve una sotto l'altra, ognuna a tutta larghezza",
++"own copies kept: {#0}": "copie proprie conservate: {0}",
+ "The artwork is off “{0}”: kept beside the take, in artwork-removed/": "La copertina è stata tolta da «{0}»: resta accanto al take, in artwork-removed/",
+ "Not removed: {0}": "Non tolta: {0}",
+ "Tap ☆ on a take to keep it here.": "Tocca ☆ su un take per tenerlo qui.",
+@@ -2610,6 +2613,7 @@ RuachI18n.add("it", {
+ "Artwork for “{0}” already waits in the queue for a card": "La copertina di «{0}» aspetta già una GPU in coda",
+ "Artwork for “{0}” is being drawn already": "La copertina di «{0}» è già in disegno",
+ "Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "La copertina di «{0}» aspetta in coda una GPU con spazio e parte da sola (Motore → GPU dice cosa fa ogni scheda)",
++"Artwork for “{0}” waits in the queue: {1}. It starts by itself when a card has room": "La copertina di «{0}» attende in coda: {1}. Partirà da sola quando una scheda avrà spazio",
+ "Artwork waits for a card…": "La copertina aspetta una GPU…",
+ "Drawing artwork…": "Si disegna la copertina…",
+ "Show disliked": "Mostra i Non mi piace",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 400aba0..ff20ee6 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1400,6 +1400,9 @@ RuachI18n.add("ru", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Рисуется обложка для «{0}»: промпт из стиля и слов, потом картинка (около полуминуты)",
+ "Artwork for “{0}” is ready": "Обложка для «{0}» готова",
+ "No artwork: {0}": "Обложки нет: {0}",
++"The curves side by side": "Кривые рядом",
++"The curves one under the other, each the whole width": "Кривые одна под другой, каждая во всю ширину",
++"own copies kept: {#0}": "свои копии оставлены: {0}",
+ "The artwork is off “{0}”: kept beside the take, in artwork-removed/": "Обложка снята с «{0}»: хранится рядом с семплом, в artwork-removed/",
+ "Not removed: {0}": "Не снято: {0}",
+ "Tap ☆ on a take to keep it here.": "Нажми ☆ на семпле, чтобы держать его здесь.",
+@@ -2618,6 +2621,7 @@ RuachI18n.add("ru", {
+ "Artwork for “{0}” already waits in the queue for a card": "Обложка для «{0}» уже ждёт видеокарту в очереди",
+ "Artwork for “{0}” is being drawn already": "Обложка для «{0}» уже рисуется",
+ "Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "Обложка для «{0}» ждёт в очереди видеокарту с местом и начнётся сама (Движок → Видеокарты: какая карта чем занята)",
++"Artwork for “{0}” waits in the queue: {1}. It starts by itself when a card has room": "Обложка для «{0}» ждёт в очереди: {1}. Начнётся сама, когда на карте найдётся место",
+ "Artwork waits for a card…": "Обложка ждёт видеокарту…",
+ "Drawing artwork…": "Рисуется обложка…",
+ "Show disliked": "Показывать непонравившиеся",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 16d36f2..e7e4e04 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1393,6 +1393,9 @@ RuachI18n.add("uk", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Малюється обкладинка для «{0}»: промпт зі стилю й слів, потім картинка (близько пів хвилини)",
+ "Artwork for “{0}” is ready": "Обкладинка для «{0}» готова",
+ "No artwork: {0}": "Обкладинки немає: {0}",
++"The curves side by side": "Криві поруч",
++"The curves one under the other, each the whole width": "Криві одна під одною, кожна на всю ширину",
++"own copies kept: {#0}": "власні копії залишено: {0}",
+ "The artwork is off “{0}”: kept beside the take, in artwork-removed/": "Обкладинку знято з «{0}»: зберігається поруч із семплом, в artwork-removed/",
+ "Not removed: {0}": "Не знято: {0}",
+ "Tap ☆ on a take to keep it here.": "Натисни ☆ на семплі, щоб тримати його тут.",
+@@ -2611,6 +2614,7 @@ RuachI18n.add("uk", {
+ "Artwork for “{0}” already waits in the queue for a card": "Обкладинка для «{0}» вже чекає на відеокарту в черзі",
+ "Artwork for “{0}” is being drawn already": "Обкладинка для «{0}» вже малюється",
+ "Artwork for “{0}” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)": "Обкладинка для «{0}» чекає в черзі на відеокарту з місцем і почнеться сама (Рушій → Відеокарти: яка карта чим зайнята)",
++"Artwork for “{0}” waits in the queue: {1}. It starts by itself when a card has room": "Обкладинка для «{0}» чекає в черзі: {1}. Почнеться сама, щойно на карті знайдеться місце",
+ "Artwork waits for a card…": "Обкладинка чекає на відеокарту…",
+ "Drawing artwork…": "Малюється обкладинка…",
+ "Show disliked": "Показувати невподобані",
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 328273a..177c474 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -121,6 +121,9 @@
+     like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+     dislike: '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+     note: '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><path d="M7 12h7M7 16h5"/>',
++    // HERESY 1299: the Telemetry's two curves side by side or one under the other (Lucide's columns-2 and rows-2, ISC)
++    "cols-2": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>',
++    "rows-2": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 12h18"/>',
+     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'
+   };
+   function ui(name, cls) {
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 41ada66..e503f51 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -22,7 +22,8 @@
+   var state = {
+     hooks: null, data: null, trash: [], raw: null, rows: [], kind: "style",
+     set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "", cmp: "",
+-    filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true
++    filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true,
++    stacked: recall("yue2.trStacked") === "1"      // HERESY 1299: the Telemetry's curves one under the other
+   };
+   function $(id) { return document.getElementById(id); }
+   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+@@ -256,8 +257,14 @@
+       document.body.appendChild(logDock);
+       logDock.querySelector(".tr-logdock-x").addEventListener("click", hideLog);
+       document.addEventListener("keydown", function (e) { if (e.key === "Escape" && logDock && !logDock.hidden) hideLog(); });
++      // HERESY 1298: placed again when the window or the server log's dock changes (folded, unfolded, full height, the other side)
++      window.addEventListener("resize", placeLog);
++      var dock = document.getElementById("logDock");
++      if (dock && window.ResizeObserver) new ResizeObserver(placeLog).observe(dock);
++      if (dock && window.MutationObserver) new MutationObserver(placeLog).observe(dock, { attributes: true, attributeFilter: ["class", "style"] });
+     }
+     logDock.hidden = false;
++    placeLog();
+     logDock.dataset.run = name;
+     logDock.querySelector(".tr-logdock-name").textContent = name;
+     logDock.querySelector(".tr-logdock-dl").href = "/lab/train/log?name=" + encodeURIComponent(name);
+@@ -265,6 +272,22 @@
+     pullLog();
+   }
+   function hideLog() { if (logDock) { logDock.hidden = true; clearTimeout(logDock.timer); } }
++  // HERESY 1298 (Viktor 10.10.2026: «The LOG перекрывает серверный фрейм. Сделай утяжку»): the panel is as wide as its lines
++  // (app.css: max-content) and no wider than the room beside the server log's dock, on the side the dock leaves free; with
++  // less than 360 px there (a narrow window) it takes the width as before
++  function placeLog() {
++    if (!logDock || logDock.hidden) return;
++    var dock = document.getElementById("logDock"), vw = document.documentElement.clientWidth, room = vw - 32, right = false;
++    if (dock && getComputedStyle(dock).display !== "none") {
++      var r = dock.getBoundingClientRect();
++      if (r.width) {
++        var dockLeft = r.left + r.width / 2 < vw / 2, beside = dockLeft ? vw - 16 - (r.right + 12) : r.left - 12 - 16;
++        if (beside >= 360) { room = Math.floor(beside); right = dockLeft; }
++      }
++    }
++    logDock.style.setProperty("--tr-log-room", room + "px");
++    logDock.classList.toggle("is-right", right);
++  }
+   function pullLog() {
+     if (!logDock || logDock.hidden) return;
+     var name = logDock.dataset.run, body = logDock.querySelector(".tr-logdock-body");
+@@ -405,6 +428,11 @@
+             .map(function (x) { return '<option value="' + esc(x.name) + '"' + (x.name === state.cmp ? " selected" : "") + ">" + esc(x.name) + (x.dataset === r.dataset ? " \u00b7 same set" : "") + "</option>"; }).join("") + "</select>" +
+           (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
+           '<button type="button" class="btn ghost small" data-act="log" data-run="' + esc(r.name) + '">The log</button>' +   // HERESY 1167
++          // HERESY 1299 (Viktor: «выстраивать в одну колонку оба блока живого графа»): the face shows what a click makes
++          '<button type="button" class="btn ghost small tr-stack" data-stack aria-pressed="' + state.stacked + '" data-tip="' +
++            esc(tr(state.stacked ? "The curves side by side" : "The curves one under the other, each the whole width")) + '" aria-label="' +
++            esc(tr(state.stacked ? "The curves side by side" : "The curves one under the other, each the whole width")) + '">' +
++            (window.HeresyIcons ? window.HeresyIcons.ui(state.stacked ? "cols-2" : "rows-2") : "") + "</button>" +
+           '<button type="button" class="btn ghost small" data-menu="' + esc(r.name) + '" aria-label="More">⋯</button></div></div>' +
+       (r.note ? '<p class="row-hint tr-note" translate="no">' + esc(r.note) + "</p>" : "") +
+       '<div class="tr-prog' + (live ? " is-live" : "") + '"><div class="tr-pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+@@ -421,7 +449,7 @@
+       "</div>" +
+       (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
+       (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
+-      '<div class="tr-charts">' +
++      '<div class="tr-charts' + (state.stacked ? " is-stacked" : "") + '">' +
+         chart(ser.flow ? "flow" : "loss", ser, r, ser.flow ? "Sound half · flow loss (NAR)" : "All together · loss",
+           "How well the sound half predicts the noise it has to take away. Lower is better. It jumps from step to step with the random noise level of each step: read the bold line, the running average.") +
+         chart("ar_ce", ser, r, "Music half · ar_ce (AR)",
+@@ -760,6 +788,7 @@
+       if (t.id === "trListenGo") return listenGo();
+       if (t.id === "trLApply") return listenApply();
+       if ((b = t.closest("[data-menu]"))) { e.stopPropagation(); return menu(b); }
++      if (t.closest("[data-stack]")) { state.stacked = !state.stacked; keep("yue2.trStacked", state.stacked ? "1" : null); return paintRun(); }   // HERESY 1299
+       if ((b = t.closest("[data-act][data-run]"))) return act(b.dataset.run, b.dataset.act);
+       if ((b = t.closest("[data-restore]"))) return restore(b.dataset.restore);
+       if ((b = t.closest("[data-purge]"))) return purge(b.dataset.purge, b.dataset.name, b.dataset.size);
+@@ -811,5 +840,5 @@
+     engineKnobs();
+   }
+ 
+-  window.HeresyTrain = { init: init, reload: load };
++  window.HeresyTrain = { init: init, reload: load, log: showLog, unlog: hideLog };   // HERESY 1298: the log for the suite
+ })();
+diff --git a/tools/console/heresy-weights.js b/tools/console/heresy-weights.js
+index 24395e2..bd13a21 100644
+--- a/tools/console/heresy-weights.js
++++ b/tools/console/heresy-weights.js
+@@ -45,7 +45,8 @@
+   function job() { return (S.data && S.data.job) || null; }
+   function running() { var j = job(); return !!(j && j.status === "running"); }
+   function parts() { return (S.data && S.data.last && S.data.last.parts) || []; }
+-  function whole(p) { return p.rows.every(function (r) { return r.state === "here" || r.state === "fetched"; }); }
++  // HERESY 1296: «differs» is a copy of one's own, kept (the Forge's voices: the published tensors, their readers' names still in the header)
++  function whole(p) { return p.rows.every(function (r) { return r.state === "here" || r.state === "fetched" || r.state === "differs"; }); }
+ 
+   function load() {
+     clearTimeout(S.timer);
+@@ -78,8 +79,9 @@
+     paintLine(d);
+     $("wtParts").innerHTML = parts().map(function (p) {
+       var bad = p.rows.filter(function (r) { return r.state !== "here"; }), ok = whole(p);
+-      var here = p.rows.length - bad.length;
+-      var sum = ok ? tr("all here") : tr("{0} here, {1} not").replace("{0}", here).replace("{1}", bad.filter(function (r) { return r.state !== "fetched"; }).length);
++      var here = p.rows.length - bad.length, own = p.rows.filter(function (r) { return r.state === "differs"; }).length;
++      var sum = (ok ? tr("all here") : tr("{0} here, {1} not").replace("{0}", here).replace("{1}", bad.filter(function (r) { return r.state !== "fetched" && r.state !== "differs"; }).length)) +
++        (own ? " · " + tr("own copies kept: " + own) : "");
+       return '<div class="wt-part' + (ok ? " is-whole" : "") + '" data-part="' + esc(p.part) + '">' +
+         '<div class="wt-head"><b>' + esc(tr(p.label)) + '</b><span class="wt-size">' + esc(p.size) + '</span><span class="wt-sum">' + esc(sum) + "</span>" +
+         (ok ? "" : '<button type="button" class="btn ghost small" data-wt-part="' + esc(p.part) + '"' + (busy ? " disabled" : "") + ">" + esc(tr("Fetch")) + "</button>") + "</div>" +
+-- 
+2.43.0
+

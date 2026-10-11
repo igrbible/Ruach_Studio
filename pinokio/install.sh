@@ -23,7 +23,7 @@ step "② the CUDA toolkit 12.8"
 [ -n "$RUACH_CUDA_HOME" ] || stop "no CUDA toolkit 12.8 (nvcc): Pinokio's AI bundle brings one, or NVIDIA's cuda-toolkit-12-8 (INSTALL.md)"
 echo "  nvcc $(ruach_nvcc_release "$RUACH_CUDA_HOME/bin/nvcc") in $RUACH_CUDA_HOME · C++: ${CXX:-$(command -v c++ || command -v g++ || echo none)} $("${CXX:-g++}" -dumpversion 2>/dev/null)"
 
-step "③ Python 3.12: .venv (the studio) and .venv-art (the Artist), about 10 GB"
+step "③ Python 3.12: .venv (the studio) and .venv-art (the Artist), about 16 GB"
 for v in .venv .venv-art; do
     [ -x "$v/bin/python" ] && continue
     [ -e "$v" ] && stop "$v is here but has no Python in it: move it away (or Reset) and install again"
@@ -51,10 +51,14 @@ bash build.sh --server --no-restart || stop "the engine did not build (build.sh 
 step "⑥ the models: pinned, checked, each with its size"
 Q=$(ruach_quant)
 echo "  the backbone for a card of $(ruach_vram) MiB: ${Q:-BF16}"
-[ "$Q" = Q5_K_M ] && echo "${Y}  under 12 GB: the studio is made for 12 GB and more; short songs only${X}"
+# HERESY 1292: what this step brings, measured on fresh installs (10.10.2026): 9.4 GB beside the backbone
+case "${Q:-BF16}" in BF16) GBS=16.5 ;; Q8_0) GBS=13.2 ;; Q6_K) GBS=12.3 ;; *) GBS=12.0 ;; esac
+echo "  about $GBS GB in all: the backbone, three decoders, the transcriber, the sliders, the LoRAs, Whisper, the stems' models, UniverSR"
+case "$Q" in Q6_K|Q5_K_M) echo "${Y}  under 7 GB: short songs only (a context of 8 192 rows); the studio is made for 12 GB and more${X}" ;; esac   # HERESY 1304
 # HERESY 1285: what did not come is named above with its reason; the studio starts without it, and Install again goes on from there
 bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (the lines marked failed above say which and why): the studio starts without it; Install again goes on from there"
 
 echo
 echo "${G}Ruach Studio is installed.${X} Start it from Pinokio's menu (by hand: ./lab/start-lab.sh, then ./start.sh)."
-echo "${D}More models when you want them, each asked first with its size: «More models» in the menu (the Artist's painter, the style listener, the trainer's base, the BF16 backbone beside a Q8_0 one).${X}"
+echo "${D}$(du -sb --exclude=outputs "$ROOT" 2>/dev/null | awk '{printf "%.1f", $1/1e9}') GB on this disk now (your songs not counted).${X}"   # HERESY 1292
+echo "${D}More models when you want them, each asked first with its size: «More models» in the menu (the Artist's models 26 GB, the style listener 6 to 22 GB, the trainer's base 4 or 7.8 GB, the BF16 backbone 7.2 GB beside a Q8_0 one).${X}"

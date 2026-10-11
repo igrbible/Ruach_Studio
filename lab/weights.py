@@ -21,13 +21,24 @@ from pathlib import Path
 
 # what the install brings, part by part (fetch-heresy.sh --only NAME): what a fetch of the whole part takes, measured on the
 # Forge 10.10.2026 (HERESY 1290: the extras come converted, from goldhub/Ruach_Studio_Models_v2: nothing is made here any more)
-PARTS = {"extras": "1.3 GB", "whisper": "2.9 GB", "stems": "0.9 GB", "upscale": "0.2 GB", "loras": "2.1 GB"}
+PARTS = {"extras": "1.3 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": "0.2 GB", "loras": "2.3 GB"}   # HERESY 1292: du -sb, decimal
 
 OMNI = "checkpoints/Qwen2.5-Omni-7B-GGUF/"
 PROJ = OMNI + "mradermacher/Qwen2.5-Omni-7B.mmproj-Q8_0.gguf"
 MUSE = "artwork/Krea-2-Muse/museByStableYogi_v35{}Extended.gguf"
+# HERESY 1297: the prompt writer by its shards' index (_here checks every shard it names), not by its config.json, which comes
+# first: a fetch cut short left the config and one shard on Viktor's laptop, and the card said «here»
 KREA = ["artwork/Krea-2-Turbo/text_encoder/model.safetensors", "artwork/Krea-2-Turbo/vae/diffusion_pytorch_model.safetensors",
-        "artwork/nsfw-filter/model.safetensors", "artwork/Qwen3-4B-Instruct-2507/config.json"]
+        "artwork/nsfw-filter/model.safetensors", "artwork/Qwen3-4B-Instruct-2507/model.safetensors.index.json"]
+# HERESY 1323 (Viktor 10.10.2026: «Забирай 2512 тоже в Студию»; «как альтернативу для менее мощных карт бери смело … Q6_K + Lightning…
+# Для 16 ГБ — Q4_K_M»; on Qwen-Image-2.1: «мы предупреждаем пользователя по этому поводу»): the Qwen painters, as artist.py's
+# qwen_ready() wants them; the sizes from the pinned file lists (Qwen/Qwen-Image-2512 25468b9: its parts 16.8 GB, the GGUF 13.2 and
+# 16.8, Lightning 0.85; Qwen/Qwen-Image-2.1 d26bb61: 33.1)
+Q2512 = "artwork/Qwen-Image-2512/"
+Q2512_PARTS = [Q2512 + "model_index.json", Q2512 + "transformer/config.json", Q2512 + "text_encoder/model.safetensors.index.json",
+               Q2512 + "vae/diffusion_pytorch_model.safetensors", Q2512 + "lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"]
+QWEN21 = ["artwork/Qwen-Image-2.1/model_index.json", "artwork/Qwen-Image-2.1/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "artwork/Qwen-Image-2.1/text_encoder/model.safetensors.index.json", "artwork/Qwen-Image-2.1/vae/diffusion_pytorch_model.safetensors"]
 # the extras, each only when asked for, with fetch-heresy.sh's own sizes and notes; a variant is here when all its files are
 EXTRAS = [
     {"name": "backbone", "label": "Backbone", "restart": True,
@@ -47,11 +58,25 @@ EXTRAS = [
          {"id": "bf16", "size": "22 GB", "note": "18.3 GB of VRAM when it listens: a 24 GB card",
           "files": ["checkpoints/Qwen2.5-Omni-7B/model.safetensors.index.json"]}]},
     None,   # the artwork's, by the biggest card here (below)
-    {"name": "trainer", "label": "LoRA trainer's base",
-     "what": "Comfy-Org/YuE2 for the Trainer, with Mothersuperior's tokenizer head (MERT-v2 comes with the Kit's tools/download-checkpoints.sh)",
+    {"name": "qwen", "label": "Qwen painters",
+     "what": "the Artist's Qwen-Image painters: 2512 with Lightning's 8 steps (Apache-2.0: its parts from Qwen, the transformer as GGUF) and 2.1 (Qwen's research licence)",
      "variants": [
-         {"id": "bf16", "size": "7.8 GB", "note": "trains on unquantized weights", "files": ["checkpoints/comfy/checkpoints/yue2_3b_bf16.safetensors"]},
-         {"id": "int8", "size": "4.0 GB", "note": "for a smaller card", "files": ["checkpoints/comfy/checkpoints/yue2_3b_int8_convrot.safetensors"]}]},
+         {"id": "2512-q4", "label": "Qwen-Image 2512 Q4", "size": "31 GB",
+          "note": "for a card of 16 GB (below 20 GB its text encoder reads the prompt on the processor: 17 GB of RAM); half a minute a picture on a 3090; less when some of it is here",
+          "files": Q2512_PARTS + [Q2512 + "gguf/qwen-image-2512-Q4_K_M.gguf"]},
+         {"id": "2512-q6", "label": "Qwen-Image 2512 Q6", "size": "34.5 GB", "note": "for a card of 24 GB; less when some of it is here",
+          "files": Q2512_PARTS + [Q2512 + "gguf/qwen-image-2512-Q6_K.gguf"]},
+         {"id": "2.1", "label": "Qwen-Image 2.1", "size": "33.1 GB",
+          "note": "under Qwen's research licence: research and evaluation only, not for commercial use (a cover for a song that is sold is commercial use); a card of 24 GB, about two minutes a picture",
+          "files": QWEN21}]},
+    # HERESY 1303: MERT-v2-FullSong comes with the base (m-a-p's own repository, 2.5 GB): the set's latent cache needs it
+    {"name": "trainer", "label": "LoRA trainer's base",
+     "what": "Comfy-Org/YuE2 for the Trainer, with Mothersuperior's tokenizer head and m-a-p's MERT-v2-FullSong (the set's latent cache hears with it)",
+     "variants": [
+         {"id": "bf16", "size": "10.3 GB", "note": "trains on unquantized weights; MERT-v2-FullSong's 2.5 GB among them, less when it is here",
+          "files": ["checkpoints/comfy/checkpoints/yue2_3b_bf16.safetensors", "checkpoints/MERT-v2-FullSong/model.safetensors"]},
+         {"id": "int8", "size": "6.5 GB", "note": "for a smaller card; MERT-v2-FullSong's 2.5 GB among them, less when it is here",
+          "files": ["checkpoints/comfy/checkpoints/yue2_3b_int8_convrot.safetensors", "checkpoints/MERT-v2-FullSong/model.safetensors"]}]},
 ]
 ARTWORK_BIG = {"name": "artwork", "label": "Artwork",
                "what": "the Artist's painter: Krea 2 Muse by Stable Yogi with Krea 2's text encoder and VAE, the content filter its licence asks for, and the prompt writer (Qwen3-4B)",
@@ -62,9 +87,9 @@ ARTWORK_BIG = {"name": "artwork", "label": "Artwork",
 ARTWORK_SMALL = {"name": "artwork", "label": "Artwork",
                  "what": "the Artist's painter (no card here has the 16 GB Krea 2 wants): SDXL CyberRealistic, and the prompt writer (Qwen3-4B)",
                  "variants": [
-                     {"id": "sdxl", "label": "SDXL CyberRealistic", "size": "14 GB", "note": "a 16 GB card when it draws",
+                     {"id": "sdxl", "label": "SDXL CyberRealistic", "size": "15 GB", "note": "a 16 GB card when it draws",
                       "files": ["artwork/CyberRealistic-XL-v10/model_index.json", "artwork/CyberRealistic-XL-v10/unet/diffusion_pytorch_model.safetensors",
-                                "artwork/Qwen3-4B-Instruct-2507/config.json"]}]}
+                                "artwork/Qwen3-4B-Instruct-2507/model.safetensors.index.json"]}]}
 
 LINE = re.compile(r"^(here|differs|missing|fetched|unknown|failed)\s+(.*)$")
 SUM = re.compile(r"^here (\d+) · unknown (\d+) · differs (\d+) · fetched (\d+) · missing (\d+) · failed (\d+)$")
@@ -199,16 +224,39 @@ def _args(body):
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(PARTS) + ") or an extra (backbone, listener, artwork, trainer)")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(PARTS) + ") or an extra (backbone, listener, artwork, qwen, trainer)")
 
 
-def _start(kit, args, what, kind, then_check):
+def _bytes(size):
+    """HERESY 1302: «7.2 GB», «56 MB» → bytes, decimal as the sizes are measured (du -sb); None where it says no number."""
+    m = re.match(r"^\s*(\d+(?:\.\d+)?)\s*(GB|MB)\b", str(size or ""))
+    return int(float(m.group(1)) * (1e9 if m.group(2) == "GB" else 1e6)) if m else None
+
+
+def _which(body):
+    """HERESY 1302: what a fetch was asked for, for the page to draw its progress at that row ({"part": …} or {"extra": …,
+    "variant": …}), and the bytes the card says it brings (None for «what is missing»: its size is not one number)."""
+    part = str(body.get("part", "") or "")
+    if part:
+        return {"part": part}, _bytes(PARTS.get(part))
+    for e in EXTRAS:
+        name = e["name"] if e else "artwork"
+        if body.get(name) is None:
+            continue
+        v = str(body[name])
+        x = (e or ARTWORK_BIG)["variants"] + ([] if e else ARTWORK_SMALL["variants"])
+        return {"extra": name, "variant": v}, _bytes(next((y["size"] for y in x if y["id"] == v), ""))
+    return {}, None
+
+
+def _start(kit, args, what, kind, then_check, which=None, expect=None):
     with LOCK:
         if JOB.get("status") == "running":
             raise ValueError(f"a run is under way ({JOB.get('what')}): one at a time")
         JOB.clear()
         JOB.update(kind=kind, what=what, args=args, status="running", started=time.time(), ended=None, rc=None, lines=[],
-                   counts=None, restart=False, free0=_free(kit) if kind == "fetch" else None)
+                   counts=None, restart=False, free0=_free(kit) if kind == "fetch" else None,
+                   which=which or {}, expect=expect)   # HERESY 1302
     threading.Thread(target=_run, args=(kit, args, then_check), daemon=True).start()
     return listing(kit)
 
@@ -224,9 +272,11 @@ def fetch(kit, body, scope=""):
         raise ValueError("a test page fetches nothing: open the studio without ?scope= to fetch")
     if not (kit / "heresy" / "fetch-heresy.sh").is_file():
         raise FileNotFoundError("no heresy/fetch-heresy.sh in this tree")
-    args, what = _args(body if isinstance(body, dict) else {})
+    body = body if isinstance(body, dict) else {}
+    args, what = _args(body)
+    which, expect = _which(body)                    # HERESY 1302: the page's progress at the row pressed
     # a part fetched alone leaves the whole list as it was: a check after it says where everything stands
-    return _start(kit, args, what, "fetch", bool(args and args[0] == "--only" and args[1] != "none"))
+    return _start(kit, args, what, "fetch", bool(args and args[0] == "--only" and args[1] != "none"), which, expect)
 
 
 def _say(kit, args):

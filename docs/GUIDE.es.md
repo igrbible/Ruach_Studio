@@ -57,12 +57,12 @@ Las salas abren la barra en el orden del trabajo: Creador, Escritor, Pulidor, Ar
 
 ### El reproductor, las tomas y el registro del servidor <!-- #the-player-the-takes-and-the-server-log -->
 
-- **El reproductor**, abajo: la forma de onda de lado a lado, una nube suave con la parte ya escuchada en el color de acento (un clic salta allí); debajo, la toma (su portada cuando la tiene, su título, las primeras palabras de su estilo, 👍 👎 ★), luego **aleatorio**, anterior, reproducir, siguiente y **repetir** (desactivado · toda la lista otra vez · esta toma otra vez, marcado con 1), luego el tiempo (un clic en la duración total lo cambia al tiempo restante), *reproducir al hacer clic* (un clic en una lista reproduce la toma de inmediato), *seguir reproduciendo* (cuando una toma termina, empieza la siguiente de la lista), *reproducir tomas nuevas* (una canción hecha aquí suena en cuanto está lista, si no suena nada), 🔔 *un sonido al terminar una ejecución* (dos notas hacia arriba cuando está lista, una sola vez para una cola de ejecuciones, dos hacia abajo cuando una falla; ninguno sobre una canción nueva que empieza sola), la **velocidad** (de 0.50× a 2.00×, conservando el tono), el volumen y un punto de estado (late mientras suena una toma). Lo que no necesitas en este momento queda tenue hasta que llega el puntero; cada icono dice qué hace cuando el puntero se posa sobre él. El puntero sobre la forma de onda muestra el tiempo al que saltaría un clic. Las teclas multimedia del teclado y de unos auriculares controlan el reproductor, y el panel multimedia del escritorio muestra la toma. ⏪ y ⏩ van a la marca anterior o siguiente cada 15 segundos desde 0:00, ← y → a las marcas de 5 segundos (con Shift, de 30). La píldora de estado al final derecho del reproductor (verde mientras suena una toma, del color del acento mientras se hace una) abre la toma o la ejecución; con Compose alzado sobre la sala, cambia el marco al de la toma. Un clic derecho en la forma de onda, la imagen o el título abre el menú de la toma, como en una lista. La forma de onda de una toma con partitura muestra sus secciones (una línea fina al inicio de cada una, su nombre al pie); un clic junto a una línea va al inicio exacto de la sección, y el tiempo bajo el puntero nombra su sección.
+- **El reproductor**, abajo: la forma de onda de lado a lado, una nube suave con la parte ya escuchada en el color de acento (un clic salta allí); debajo, la toma (su portada cuando la tiene, su título, las primeras palabras de su estilo, 👍 👎 ★), luego **aleatorio**, anterior, reproducir, siguiente y **repetir** (desactivado · toda la lista otra vez · esta toma otra vez, marcado con 1), luego el tiempo (un clic en la duración total lo cambia al tiempo restante), *reproducir al hacer clic* (un clic en una lista reproduce la toma de inmediato), *seguir reproduciendo* (cuando una toma termina, empieza la siguiente de la lista), *reproducir tomas nuevas* (una canción hecha aquí suena en cuanto está lista, si no suena nada), 🔔 *un sonido al terminar una ejecución* (dos notas hacia arriba cuando está lista, una sola vez para una cola de ejecuciones, dos hacia abajo cuando una falla; ninguno sobre una canción nueva que empieza sola), la **velocidad** (de 0.50× a 2.00×, conservando el tono), el volumen y un punto de estado (late mientras suena una toma). Lo que no necesitas en este momento queda tenue hasta que llega el puntero; cada icono dice qué hace cuando el puntero se posa sobre él. El puntero sobre la forma de onda muestra el tiempo al que saltaría un clic. Las teclas multimedia del teclado y de unos auriculares controlan el reproductor, y el panel multimedia del escritorio muestra la toma. ⏪ y ⏩ van a la marca anterior o siguiente cada 15 segundos desde 0:00, ← y → a las marcas de 5 segundos (con Shift, de 30). La píldora de estado al final derecho del reproductor (verde mientras suena una toma, del color del acento mientras se hace una) abre la toma o la ejecución; con Compose alzado sobre la sala, cambia el marco al de la toma. Un clic derecho en la forma de onda, la imagen o el título abre el menú de la toma, como en una lista. La forma de onda muestra las secciones de la toma: las etiquetas de la propia letra, cada una donde Whisper oye su primera línea (una vez por toma, cerca de medio minuto; sola en una máquina con dos tarjetas o más, si no desde el menú de la toma → *Find the sections by ear*); una toma aún no oída muestra las marcas de su partitura. Una línea fina al inicio de cada una, su nombre al pie; un clic junto a una línea va al inicio exacto de la sección; el puntero sobre la onda muestra una tarjeta con la sección, su tiempo y sus líneas tal como están escritas, iluminada la línea que suena ahí; una sección marcada con ? no se oyó con claridad.
 - **Dos filas o una**: la forma de onda sobre los botones del reproductor se queda donde las canciones se escuchan y se comparan (Creador, Pulidor, Bibliotecario); en el Escritor, el Artista, el Entrenador y el Motor el reproductor va en una fila, como en el Creador mientras un marco está alzado o la letra está por encima de todo. Tras recargar (F5) vuelve con su toma y su punto. En el Artista las tomas empiezan plegadas y el registro del servidor se coloca a la izquierda.
 - **Las tarjetas en vivo**: en Engine → GPUs cada tarjeta tiene debajo una fila propia, su carga y su memoria una barra por segundo durante dos minutos, con su temperatura y su potencia; el registro del servidor desplegado muestra a su lado las tarjetas que tienen un papel, cada una con su papel encima, la del estudio enmarcada.
 - **La línea al estudio** aparece junto al registro del servidor (*Forge · 85 ms*, o *aquí* en la misma máquina). Cuando el estudio está lejos, un me gusta, una favorita o una fijación se ven al instante y el estudio solo los confirma.
 - **Tomas**, a la derecha: busca con palabras, `*` y `?`; *Favoritas*; pliega la columna con »; ⋯ para las acciones propias de la lista.
-- **El registro del servidor** está justo encima del reproductor en cada sala: plegado, muestra lo último que dijo el motor (en rojo cuando algo falló); desplegado, diez líneas, *Seguir*, *Copiar* y el camino al registro completo en el Motor. Con un marco alzado sobre la sala, se coloca a la izquierda, lejos de los botones del marco.
+- **El registro del servidor** está justo encima del reproductor en cada sala: plegado, muestra lo último que dijo el motor (en rojo cuando algo falló); desplegado, diez líneas, *Seguir*, *Copiar* y el camino al registro completo en el Motor. Con un marco alzado sobre la sala, se coloca a la izquierda, lejos de los botones del marco. La flecha de su borde interior lo lleva al otro lado de la página, y cada sala recuerda su lado (el del Artista, el izquierdo). Su borde exterior se arrastra para ensancharlo, hasta 1200 px (el ancho se guarda; un doble clic devuelve el suyo); con las tarjetas al lado mide 920 px, su columna 390. El marco tiene dos vistas, **Server** y **Artist** (el registro propio del Artista: qué se pidió, qué respondió el laboratorio, el camino de cada tanda hasta su final), y cada sala abre la suya; **⧉** abre el registro en una ventana propia, sobre todas las ventanas en Chrome o para llevarla a otro monitor.
 
 ![El registro del servidor, desplegado](guide/log-dock.png)
 
@@ -74,7 +74,7 @@ Las salas abren la barra en el orden del trabajo: Creador, Escritor, Pulidor, Ar
 
 - **Empezar por una idea**: una línea sobre la canción; el modelo de chat del Escritor redacta el título, el estilo y la letra (*Escribir el brief*).
 - **Título**, **Tonalidad**: la tonalidad va a la partitura (`K:`). Con una partitura en el formulario, una tonalidad nueva la transporta allí; sin ella, la elección espera y transportará la partitura que llegue.
-- **Semilla musical** y **Semilla sonora**: los dados de las dos mitades. Vacía es aleatoria; un número repite una toma. Conserva la semilla musical y cambia la sonora para oír la misma canción renderizada de otra manera. Están las primeras en *Muestreo y eliminación de ruido*.
+- **Semilla musical** y **Semilla sonora**: los dados de las dos mitades. Vacía es aleatoria; un número repite una toma. Conserva la semilla musical y cambia la sonora para oír la misma canción renderizada de otra manera. Están las primeras en *Muestreo y eliminación de ruido*. Junto a cada una, su **modo**: *Random (−1)* una semilla nueva cada vez (el campo vacío), *Random, fixed* una al azar puesta y guardada, *Fixed* la escrita, *Next* y *Previous* la mueven tras cada Generate más allá de las semillas usadas (las versiones para la música, las variaciones para el sonido). La semilla del Artista tiene los mismos modos.
 - **Estilo**: idioma, género, voz, instrumentos, tempo. *Guardar estilo…* lo guarda con un nombre. **♂** y **♀** en su cabecera ponen *male vocals* o *female vocals* en él (en lugar de la palabra del otro género, si no antes del BPM); el encendido quita su etiqueta.
 
 ### La chuleta de instrumentos ♪ <!-- #the-instruments-cheat-sheet -->
@@ -143,7 +143,7 @@ Cada fuerza está en un **camino**: el verde es seguro, el amarillo es su límit
 ### Versiones, remezclas y tu propia partitura <!-- #covers-remixes-and-your-own-score -->
 
 - **Versión o remezcla**: toma la melodía de una grabación (*Transcribir*: solo su melodía, no la letra ni el cantante), o la melodía de una de tus tomas, y dale un estilo nuevo.
-- **Tu propia partitura**: una partitura ABC, seguida en Plan completo y en Solo melodía. Transponla (a la más cercana, hacia arriba o hacia abajo), mueve una voz por grados de la escala, importa un archivo MIDI (una línea melódica por voz), exporta MIDI o marcadores para un DAW, carga un ejemplo, vuélvela instrumental.
+- **Tu propia partitura**: una partitura ABC, seguida en Plan completo y en Solo melodía. Transponla (a la más cercana, hacia arriba o hacia abajo), mueve una voz por grados de la escala, importa un archivo MIDI (una línea melódica por voz), exporta MIDI o marcadores para un DAW, carga un ejemplo, vuélvela instrumental. **Generate** con una partitura aquí pregunta primero: sobre esta partitura o una nueva (el campo se vacía y el modelo de la canción escribe una). La partitura recuerda los adaptadores y las fuerzas de música con que se escribió (un plan, la partitura propia de una toma); cuando los de ahora difieren, lo dice una línea bajo ella y la propia pregunta: con otras fuerzas la música puede apartarse de la partitura, sobre todo en Industrial Rock e instrumentales. En Full la partitura sigue abierta mientras tenga algo.
 - **Recitar la letra sobre una partitura** (*Lay the lyrics on this score…*, bajo la partitura cuando se lee): el narrador del promo del estudio, para tus palabras. Cada línea va sobre los compases de la partitura, una sílaba una corchea (una semicorchea, como se dice el rap, donde con corcheas quedarían líneas fuera) en un tono del acorde de su compás, una respiración tras una coma y un punto, la última sílaba de la línea una negra más abajo; cada sección empieza en una frase de dos compases tras un compás de silencio, o tras un vocalise si lo marcas. Los instrumentos, los acordes, la tonalidad y el tempo se quedan; las secciones de la partitura siguen tus etiquetas, con una intro y un outro alrededor. Para spoken word, lecturas y rap sobre una base: haz la base, *Escribirla a partir del sonido*, y luego esto; pregunta antes, y Ctrl+Z en cada cuadro devuelve el texto anterior.
 
 ### Muestreo y eliminación de ruido <!-- #sampling-and-denoising -->
@@ -178,8 +178,8 @@ Cuando la mitad musical escribe basura como partitura (los adaptadores llevados 
 
 - **La cabecera**: ▶ y los botones de la toma en su primera fila (👍 👎 ☆, el Bibliotecario, renombrar, borrar), y al final ⇆ y ⤡, que alzan un marco sobre la sala; debajo, el título en una sola línea; más abajo, cómo se hizo.
 - **Descargar**: WAV, FLAC (las mismas muestras, unas tres cuartas partes del tamaño), MP3 al bitrate que elijas.
-- **Hacer de nuevo**: *Nueva toma* (una toma nueva con la misma petición), *Usar como base* (la petición de vuelta al formulario), *Volver a renderizar el sonido* (la misma música, sonido nuevo), *Regenerar desde…* (conservar el comienzo, escribir el resto de nuevo), *Transcribir esta toma*, *Recortar al texto* (cortar una cola tras la última línea cantada), *End at…* (la toma termina en el momento que elijas, con un fundido de sus últimos 2 s; desde sus latentes guardados, en segundos).
-- **Pulidor**: *Espectro*, *Revisión de la letra*. **Archivos**: la petición y la partitura.
+- **Hacer de nuevo**: *Nueva toma* (una toma nueva con la misma petición), *Usar como base* (la petición de vuelta al formulario), *Volver a renderizar el sonido* (la misma música, sonido nuevo), *Regenerar desde…* (conservar el comienzo, escribir el resto de nuevo), *Transcribir esta toma*, *Recortar al texto* (cortar una cola tras la última línea cantada), *End at…* (la toma termina en el momento que elijas, con un fundido de sus últimos 2 s; desde sus latentes guardados, en segundos), *Fade in…* (los primeros segundos suben desde el silencio, 2 s si no dices otra cosa; del mismo modo).
+- **Pulidor**: *Espectro*, *Revisión de la letra*. **Archivos**: la petición y la partitura. *Loop…*: 1, 2, 4 u 8 compases sobre las barras de compás de la partitura desde el compás donde está el reproductor, sin costura (su final fluye a su inicio), guardado como WAV con su tempo y tonalidad en el nombre.
 - **Nota**: qué funciona, qué arreglar, adónde va.
 - La tarjeta de abajo dice cómo se hizo: modo, formato, VAE, modelo, pasos, la forma, los deslizadores, las LoRAs con sus fuerzas, ambas semillas (cópialas para repetirla).
 - **Sobre la sala** (⤡) la toma va en dos columnas: qué hacer con ella, su estilo y su letra a la izquierda; cómo se hizo, su VAE y su partitura a la derecha. Una toma nueva se abre con Style y Lyrics plegados; las herramientas van en grupos enmarcados.
@@ -228,7 +228,7 @@ Elige una toma a la derecha; las herramientas trabajan sobre ella o sobre uno de
 
 Todo lo que se hace a partir de una toma cuelga de su **árbol** (*Creado a partir de esta toma*), lo más nuevo arriba: primero **el original**, con su reproductor y su FLAC, luego cada rama, reproducible y utilizable como fuente del paso siguiente. Lo que corre se muestra donde miras: en la cabecera de la sala, arriba del bloque del propio paso y como un punto que late en su pestaña. El bloque de cada paso lista lo que hizo para la toma (*Creado aquí*: un clic lo encuentra en el árbol), y el paso abierto ilumina sus propias ramas.
 
-**Comparar todas** (en la fila del original, o *Comparar* en cualquier rama) abre todas las versiones en un solo reproductor, como SUNO cambia de versión: el original, el que pasó por el antizumbido, las remasterizaciones, los reescalados, los stems. Un clic en otra versión, o su número (1–9), la reproduce **desde el mismo segundo**; la barra espaciadora reproduce y pausa, ← → mueven cinco segundos, Esc cierra.
+**Comparar todas** (en la fila del original, o *Comparar* en cualquier rama) abre todas las versiones en un solo reproductor, como SUNO cambia de versión: el original, el que pasó por el antizumbido, las remasterizaciones, los reescalados, los stems. Un clic en otra versión, o su número (1–9), la reproduce **desde el mismo segundo**; la barra espaciadora reproduce y pausa, ← → mueven cinco segundos, Esc cierra. También está en él, tras el original, la misma música en otras tomas: sus re-renderizados con otro VAE u otra semilla sonora, cada uno con su VAE, su semilla y cuándo se hizo; una toma marcada con «no me gusta» no aparece.
 
 ### Importar una pista <!-- #import-a-track -->
 
@@ -250,33 +250,121 @@ La **cadena** ejecuta varios pasos de una vez: *Antizumbido → Reescalado → S
 
 ## Artista <!-- #artist -->
 
-*Un adelanto: lo que hay aquí funciona, y el resto de la sala llega en las versiones siguientes.*
+La sala que pinta: una portada para cada toma, un 16:9 para su vídeo, un 9:16 para un short, desde tus palabras, desde una imagen tuya o desde ambas. El formulario a la izquierda, el escenario en el centro, la biblioteca a la derecha.
 
 ### Imágenes para tus canciones <!-- #pictures-for-your-songs -->
 
-Escribe con frases lo que ves para la canción: Krea 2 Muse lee el prompt como una descripción, no como una lista de etiquetas. Primero lo que hay en la imagen, luego la luz, los colores y la técnica (óleo, tinta, una fotografía), y al final *no text* cuando no quieras letras en ella. **From the take** pone el prompt con el que se pintó la portada de la toma que tienes en la mano, o uno hecho de su título y su estilo, para tener por dónde empezar.
+Escribe con frases lo que ves para la canción: Krea 2 Muse y Qwen-Image leen el prompt como una descripción, no como una lista de etiquetas. Primero lo que hay en la imagen, luego la luz, los colores y la técnica (óleo, tinta, una fotografía), y al final *no text* cuando no quieras letras en ella. **From the take** pone el prompt con el que se pintó la portada de la toma que tienes en la mano, o uno hecho de su título y su estilo, para tener por dónde empezar.
 
-**Formas**: **1:1** (1280 × 1280) para la portada, **16:9** (1920 × 1080) para un vídeo, **9:16** (1080 × 1920) para un short. Las formas de una pulsación comparten su semilla, así que salen como una serie: la misma escena con los mismos colores, cada una compuesta para su propio marco y no una sola imagen recortada tres veces. **Variations** pinta también las semillas siguientes (la semilla, la semilla + 1, …), cada una en todas las formas. **Seed**: vacía para una nueva cada vez; la semilla de una imagen que te gustó la vuelve a pintar (cada tanda muestra su semilla, y **To the form** la devuelve con el prompt).
+**Formas**: **1:1** (1280 × 1280) para la portada, **16:9** (1920 × 1080) para un vídeo, **9:16** (1080 × 1920) para un short. Las formas de una pulsación comparten su semilla, así que salen como una serie: la misma escena con los mismos colores, cada una compuesta para su propio marco y no una sola imagen recortada tres veces. **Variations** pinta también las semillas siguientes (la semilla, la semilla + 1, …), cada una en todas las formas.
 
-**Painter**: Krea 2 Muse de Stable Yogi, **Q4** en una tarjeta con 12,5 GB libres, **Q8** (más fina) con 18,5 GB. Una imagen tarda unos 35 s en 1:1 y 47 s en 16:9 o 9:16 en una RTX 3090, y unos 25 s más en cargar el pintor por pulsación. Una pulsación espera en la cola del laboratorio una tarjeta con sitio, como las portadas y los stems; mientras espera, **Off the queue** la retira. Cada imagen pasa por el filtro de contenido que pide la licencia del pintor: la que marca no se guarda, y la tanda lo dice.
+**Seed**, con su modo al lado: **Random** (−1: una semilla nueva en cada pulsación, el campo vacío), **Random, fixed** (una semilla al azar puesta al momento y guardada), **Fixed** (la escrita), **Next** y **Previous** (tras una pulsación, el campo pasa más allá de las semillas que usaron sus variaciones). Un número en el campo es esa semilla (Random pasa a Fixed); un campo vaciado es una semilla nueva en cada pulsación (Fixed pasa a Random); ⟲ es Random otra vez. La semilla de una imagen que te gustó la vuelve a pintar: cada tanda muestra su semilla, y **To the form** la devuelve con el prompt.
 
-**Tres columnas**: a la izquierda el prompt y sus mandos, en el centro el escenario (allí se revela la tanda que se pinta; si no, la imagen elegida, los datos de su tanda y sus acciones debajo), a la derecha la biblioteca; los bordes entre ellas se arrastran (← → desde el teclado, un doble clic para su ancho de origen).
+**Tres columnas**: a la izquierda el prompt y sus mandos, en el centro el escenario (allí se revela la tanda que se pinta; si no, la imagen elegida, los datos de su tanda y sus acciones debajo), a la derecha la biblioteca; los bordes entre ellas se arrastran (← → desde el teclado, un doble clic para su ancho de origen). Las elecciones de la columna se estiran con ella y nunca quedan más estrechas que los nombres de los pintores.
 
-**Live preview** (activo por defecto): el sitio de la imagen que se pinta muestra cada uno de sus pasos, del ruido a la imagen, a un octavo de su tamaño y sin el decodificador, así que no cuesta nada; apagado, el sitio espera la imagen terminada.
+**Live preview** (activo por defecto): el sitio de la imagen que se pinta muestra cada uno de sus pasos, del ruido a la imagen, a un octavo de su tamaño y sin el decodificador, así que no cuesta nada; apagado, el sitio espera la imagen terminada. Una barra al pie de la columna izquierda sigue la tanda, imagen a imagen y paso a paso.
 
 **Stop**: mientras una tanda espera o pinta, *Draw* es *Stop*: la que espera sale de la cola, la que pinta termina al instante; las imágenes que acabó se quedan.
 
+### Los pintores <!-- #the-painters -->
+
+**Krea 2 Muse** de Stable Yogi, un fine-tune de Krea 2 Turbo (Krea 2 Community License): **Q4** en una tarjeta con 12,5 GB libres, **Q8** (más fina) con 18,5 GB. Como modelo Turbo, pinta en sus propios pocos pasos sin guidance: unos 35 s por imagen en 1:1 y 47 s en 16:9 o 9:16 en una RTX 3090, y unos 25 s más de carga por pulsación.
+
+**Qwen-Image 2512** (Apache-2.0) desde un GGUF en **Q4** (una tarjeta de 15,5 GB) o **Q6** (20 GB), o un **fine-tune fp8** suyo (22,5 GB: los archivos únicos de ComfyUI puestos en `artwork/Qwen-Image-2512/checkpoints/`, elegidos bajo el pintor); alrededor de medio minuto por imagen con Lightning, tras un minuto o dos de carga. **Qwen-Image 2.1**, bajo la Qwen Research Licence (solo investigación y evaluación: no para una portada que vendes), pinta desde palabras y edita una imagen de referencia con las palabras del prompt; una máscara y *Paint around it* piden Krea 2 o Qwen-Image 2512.
+
+Cada pintor aparece solo cuando sus archivos están aquí; a los que faltan los nombra la nota bajo la elección del pintor. **Engine → Models and LoRAs → Qwen painters** descarga Qwen-Image 2512 en Q4 (31 GB) o Q6 (34,5 GB) con Lightning, y Qwen-Image 2.1 (33,1 GB), cada uno preguntando antes con su tamaño (2.1 también con su licencia). Desde una terminal: `heresy/fetch-heresy.sh --qwen 2512-q4`.
+
+**Qué tarjeta pinta**: una pulsación espera en la cola del laboratorio una tarjeta con sitio, como las portadas de las tomas y los stems; mientras espera, **Off the queue** la retira. Una tarjeta que nada más usa toma una tanda cuya necesidad cabe en su memoria menos 512 MiB (la parte del propio runtime de CUDA); una tarjeta en uso la toma cuando su memoria libre cabe la necesidad. Un pintor que ninguna tarjeta de aquí puede sostener se rechaza al instante, con las cifras y el pintor que cabría, en vez de esperar para siempre. Qwen-Image lee el prompt con su codificador de texto (Qwen2.5-VL-7B, 15,5 GB) en la tarjeta cuando su espacio libre lo cabe, si no en el procesador, antes de que llegue el pintor: la imagen es la misma de las dos maneras.
+
+**El filtro de contenido**: cada imagen pasa por el filtro que pide la licencia de Krea 2, la pinte quien la pinte (la regla del estudio para todo pintor): la que marca no se guarda, y la tanda lo dice.
+
+### Lightning <!-- #lightning -->
+
+**Qué es**: Lightning (lightx2v, Apache-2.0) es un adaptador que enseña a Qwen-Image 2512 a pintar en pocos pasos sin guidance: el largo camino guiado del propio modelo, destilado en 8 pasos. Su archivo vive en `artwork/Qwen-Image-2512/lightning/` (`Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors`, 0,85 GB) y llega con la descarga de los pintores Qwen.
+
+**Cómo lo pone el estudio**: con Lightning encendido, el pintor lo carga como un adaptador más bajo tus propios LoRA, con su fuerza: **1.0** para los GGUF Q4 y Q6 (la base de la que se destiló, en los 8 pasos que dan sus autores) y **0.55** para un fine-tune fp8, en 12 pasos (un fine-tune se ha alejado de la base, y Lightning a toda fuerza tiraría de él hacia atrás; el ajuste del propio Viktor en ComfyUI). La programación pasa a ser la de Lightning: un desplazamiento de log 3 a cualquier tamaño, como se entrenó. La guidance queda apagada (true CFG 1): una pasada del modelo por paso.
+
+**Con él apagado**, el pintor toma el camino propio de 2512: 30 pasos por defecto (de 10 a 60) y **guidance** 4 (true CFG con su negativo vacío: dos pasadas por paso). Sesenta pasadas contra ocho: el pintado en sí tarda unas siete veces más, la carga igual, y da el detalle y la luz de un realismo acabado.
+
+**Sus valores por defecto**: los GGUF Q4 y Q6 pintan con él (bocetos, tarjetas más pequeñas); un fine-tune fp8 pinta sin él salvo que lo enciendas (realismo acabado); la portada propia de una toma se pinta con él (*Engine → Artwork*). La regla detrás: Lightning para bocetos y portadas, no para realismo profesional.
+
+**El interruptor**: en Sampling, con su fuerza al lado; encendido, los pasos van de 4 a 16 y Guidance se oculta; apagado, Guidance aparece. Sin su archivo no hay interruptor, y 2512 pinta a su manera. Krea 2 Muse no tiene ninguno: como modelo Turbo, sus pocos pasos son los suyos. La fuerza se guarda para cada pintor; la suma de tus adaptadores (*Together*, más abajo) no cuenta Lightning.
+
+**Lo que cuesta**: en una RTX 3090 a 1328 × 1328, Qwen-Image 2512 con Lightning pinta en unos 30 s por imagen en Q4 (14,3 GB en el pico) y 32 s en Q6 (17,6 GB); un fine-tune fp8 a 0.55 y 12 pasos en 37 s (21,0 GB). La portada de una toma con Lightning tardó cerca de minuto y medio con la carga y el prompt.
+
+### Samplers y programaciones <!-- #samplers-and-schedules -->
+
+**Sampling** bajo el pintor, plegado, con sus valores en su resumen: los pasos, el sampler y la programación, guardados para cada pintor; **Reset** devuelve los del pintor. Los pasos: Krea 2, y Qwen-Image 2512 con Lightning, de 4 a 16; si no, de 10 a 60; un número fuera del rango se queda en su borde. La estimación de tiempo del formulario cuenta las pasadas del sampler.
+
+**Los samplers**: en cada paso el modelo dice hacia dónde está la imagen; el sampler decide cómo ir hasta allí.
+
+- **Euler**: una pasada por paso, el paso sencillo; la referencia, y con el que se destiló Lightning.
+- **Euler SDE**: Euler con un poco de ruido fresco en cada paso: más grano, algo menos de fidelidad.
+- **ER-SDE**: un resolvedor estocástico de tercer orden (ER-SDE-Solver-3), una pasada por paso, guardando los dos pasos anteriores: más fino que Euler en el mismo tiempo.
+- **RES 2s** y **RES 3s**: los métodos de un solo paso del resolvedor exponencial refinado, dos y tres pasadas por paso, devolviendo la mitad del ruido tras cada uno; sus gemelos **ODE** no devuelven ninguno, así que una semilla pinta una imagen, la más cercana al camino exacto.
+- **Heun++** (heunpp2): tres pasadas por paso donde puede, luego dos, y una al final.
+- **Exponential Heun** (exp_heun_2_x0, y su SDE): un método exponencial de segundo orden, dos pasadas por paso; el SDE devuelve el ruido.
+
+Un sampler de dos o tres pasadas por paso cuesta dos o tres veces el tiempo de Euler con los mismos pasos; en los 8 pasos de Lightning los órdenes altos cambian el detalle, no la composición. Frente al camino exacto de un flujo de juguete en 8 pasos se ordenan como dicen sus órdenes: Euler 0,138, Heun++ 0,111, Heun exponencial 0,084, RES 2s 0,058, RES 3s 0,046 (el error: menos es más cerca).
+
+**Las programaciones** dicen dónde se gastan los pasos, de todo el ruido a nada:
+
+- **Simple**: por igual en el tiempo propio del pintor, con su desplazamiento.
+- **Karras** y **Exponential**: más pasos con poco ruido, para el detalle.
+- **Beta** y **Beta 57**: densas en los dos extremos, escasas en el medio (Beta 57 con 0,5 y 0,7).
+- **KL optimal**: el espaciado que Align Your Steps halló óptimo.
+- **SGM uniform**: uniforme en el tiempo, sin su último paso.
+- **Bong tangent**: dos pendientes de arcotangente, de todo el ruido a la mitad y de la mitad a nada.
+
+**Lo que mostraron dos matrices** (54 imágenes a través de un laboratorio de prueba, un prompt, una semilla): cada sampler y cada programación pintaron una imagen entera con Krea 2 Muse. En Qwen-Image 2512 **con Lightning, Karras, Exponential y KL optimal pueden pintar el motivo dos veces** (dos faros donde se pidió uno): con Lightning quédate con Simple, Beta, Beta 57, SGM uniform o Bong tangent. **Sin Lightning, Euler SDE pinta Qwen suave y brumoso**: Euler, ER-SDE o RES guardan el detalle. El formulario dice ambas cosas cuando vienen al caso.
+
+**De dónde vienen**: escritos para el estudio a partir de los artículos de los métodos y las fórmulas de ComfyUI (GPL-3.0, que la AGPL del estudio puede aceptar); los de RES4LYF se leyeron solo por sus matemáticas, porque su licencia prohíbe servicios comerciales: nada de su código está aquí; Heun++ es de Carzit (MIT).
+
+### Adaptadores <!-- #adapters -->
+
+**LoRA** bajo el pintor: los adaptadores de su familia (Krea 2, Qwen-Image 2.1, Qwen-Image 2512, SDXL), hasta cuatro, cada uno con su fuerza (de 0 a 1.5); un clic en una de sus palabras clave la pone en el prompt. **Add…** abre la biblioteca: las carpetas a la izquierda, las tarjetas con sus imágenes, una búsqueda. Los adaptadores viven en la carpeta del estudio `artwork/loras/<familia>/` (`krea2`, `qwen-image-2.1`, `qwen-image-2512`, `sdxl`): cualquier carpeta dentro se vuelve un grupo, y una imagen junto a un archivo con su nombre (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) se ve en su tarjeta. Tómalos de Civitai por su modelo base (Krea 2, Qwen, SDXL 1.0) y deja ahí el `.safetensors`; **Look up on Civitai** envía solo el SHA-256 de cada archivo y guarda la respuesta junto a él (`NAME.civitai.info`: su nombre, su modelo base y sus palabras clave, y su primera imagen marcada como segura cuando no tiene una). También se lee lo que el LoRA Manager de ComfyUI o Stability Matrix escribieron junto a un archivo. Un adaptador hecho para otro modelo, que no alcanzaría ninguna capa del pintor, detiene la tanda y lo dice.
+
+**Together**: desde dos adaptadores, una barra bajo ellos da la suma de sus fuerzas en la carretera del Creador: verde hasta 1.2, ámbar hasta 1.8, rojo más allá. Los adaptadores apilados se suman, y pasado cerca de 1.8 una imagen se quema (colores y bordes pasados de rosca) por modesto que sea cada uno; las zonas son una primera medida para imágenes, a ajustar a ojo. Arrastra la barra para mover todos a la vez, cada uno en proporción a donde estaba.
+
+### Una imagen desde la que pintar <!-- #a-picture-to-paint-from -->
+
+**Reference picture**: una imagen desde la que pintar, como image to image: suéltala en su sitio bajo el prompt, pégala (Ctrl+V), elige un archivo o toma la imagen del escenario con **As reference**. **How much it may change** dice cuán lejos de ella empieza la pintura: 0.3 la deja casi como está, 0.6 conserva su composición y cambia su materia, 0.9 pinta la escena del prompt con su luz y sus colores, 1.0 pinta de nuevo. La imagen cubre cada forma y se recorta desde el centro; **Again** pinta desde la de la tanda; ✕ vuelve a pintar desde el ruido.
+
+**Mask…** a su lado pinta sobre la imagen qué repintar (Paint, Erase, el pincel, Invert, Clear): el resto queda exactamente como estaba, como inpainting. **Paint around it** pone la imagen entera en el centro de cada forma y pinta de nuevo los bordes (una portada cuadrada en 16:9 o 9:16), como outpainting. **The take's cover** toma la portada de la toma elegida a la derecha. Con una máscara o **Paint around it**, cuatro opciones bajo la imagen: **Grow** (la máscara crecida tantos píxeles, o encogida), **Edge** (qué tan suave es su borde), **Soft** (repintado suave, como la differential diffusion: donde el borde es gris la imagen cambia solo en los últimos pasos, sin costura) y **Grain** (cuánto de la pintura nueva toma la parte que se conserva: su grano y su luz cosidos a lo nuevo; 0 la deja exacta).
+
+### El escenario y la biblioteca <!-- #the-stage-and-the-library -->
+
+Un clic en una imagen la pone en el escenario con su tanda debajo; un clic en la imagen del escenario (o un doble clic en una imagen) la abre sobre la página con su propia forma (← → recorren la tanda, o la galería cuando se abrió desde allí; Esc cierra), con ★, **To the form**, **Set as cover** y **Download** (PNG, tamaño completo).
+
+**Runs o Gallery**: las tandas muestran cada pulsación de Draw con su prompt y su semilla, las más nuevas arriba; la galería muestra todas las imágenes de todas las tandas en una sola cuadrícula, las más nuevas primero, por forma (1:1, 16:9, 9:16) o con estrella (☆ en una imagen le pone estrella), en tres tamaños, en mosaicos iguales: columnas iguales, cada mosaico la misma caja, cada imagen entera dentro.
+
+**Compare**: el **Compare…** del escenario y luego la otra imagen en la biblioteca: las dos quedan una sobre otra bajo un divisor que arrastras (← → lo mueven), o una al lado de la otra (S); X las intercambia, Esc cierra. **Ctrl** (o ⌘) **+ clic** elige imágenes y **Shift + clic** una serie: la barra de la biblioteca las marca con estrella o las manda a la papelera de una vez (Esc las suelta).
+
+**El menú de una imagen**: un clic derecho en cualquier imagen (de una tanda, de la galería, del escenario, la que está sobre la página): **Over the page**, **To the stage**, **To the form** (su prompt, su semilla y su forma), **All of it to the form** (también su pintor, su fine-tune, su sampling y sus adaptadores: Draw vuelve a pintar esa imagen), **As reference**, **Compare…**, **Set as cover**, **Upscale** (2K o 4K, con los tamaños que dan), **Star it**, **Pick it**, **Copy the prompt**, **Copy the seed**, **Download**, **The file in a new tab**, **Its run** (la vista Runs, su tarjeta iluminada), **To the trash**. Una tanda que se revela en el escenario no tiene menú. Sobre la página el menú se pone sobre la imagen y tiene las teclas mientras está abierto: Esc cierra el menú, el siguiente Esc la imagen.
+
+### Upscale <!-- #upscale -->
+
+**Upscale…** en el escenario hace la imagen **2K** o **4K**: su lado largo 2560 o 3840 px (una portada cuadrada 2560² o 3840², un 16:9 2560×1440 o 3840×2160) con un upscaler (ESRGAN, DAT, HAT, SPAN y sus parientes, los lee spandrel) elegido en la fila que se abre (se recuerda; primero 4x_Nomos8kDAT si está); el consejo de cada botón dice el tamaño que da, y para una imagen ya tan grande el botón está apagado. El modelo pasa tantas veces como pida el tamaño (dos como mucho) y el resultado se lleva al tamaño exacto. La imagen grande es una tanda propia junto a su fuente, menos de un minuto en una 3090; **Again** amplía la misma imagen otra vez, quizá con otro modelo. Los upscalers viven en `artwork/upscalers/` del estudio (`.pth` o `.safetensors`, también en carpetas); OpenModelDB lista cientos: mira la licencia de cada uno.
+
 ### Una portada para la toma <!-- #a-cover-for-the-take -->
 
-Un clic en una imagen la pone en el escenario, en el centro de la sala, con su tanda debajo; un clic en la imagen del escenario (o un doble clic en una imagen) la abre sobre la página con su propia forma (← → recorren la tanda, Esc cierra), con **Download** (PNG, tamaño completo). Una imagen cuadrada tiene **Set as cover**: se vuelve la portada de la toma que tienes en la mano (elígela a la derecha), en su tarjeta, en el reproductor y en su MP3. La portada que tenía se guarda junto a la toma (`artwork-removed/`), como la guarda un repintado, y la otra letra de un par A/B recibe también la nueva cuando no tiene una propia.
+Una imagen cuadrada tiene **Set as cover**: se vuelve la portada de la toma que tienes en la mano (elígela a la derecha), en su tarjeta, en el reproductor y en su MP3. La portada que tenía se guarda junto a la toma (`artwork-removed/`), como la guarda un repintado, y la otra letra de un par A/B recibe también la nueva cuando no tiene una propia.
 
-Las tandas se quedan en la carpeta `artist/` del estudio, las más nuevas arriba. **Again** pinta una tanda otra vez desde una semilla nueva; **Trash** la lleva a `trash/artist/`, de donde vuelve si mueves su carpeta otra vez a `artist/`.
+**La portada propia de una toma** (*Draw artwork* en su menú, en el Bibliotecario, para una toma o para muchas) la pinta el pintor de **Engine → Artwork**: según las tarjetas (Krea 2 Muse Q4 desde 16 GB, si no SDXL), o el que elijas: Krea 2 Muse Q4 o Q8, SDXL CyberRealistic, y los pintores Qwen que tiene esta máquina: Qwen-Image 2512 Q4 o Q6 y cada fine-tune fp8 con Lightning, Qwen-Image 2.1 con su licencia dicha (no para una canción que se vende). Un fine-tune elegido que ya no está aquí cede el sitio a la elección según las tarjetas, y la portada dice quién la pintó.
 
-**Runs o Gallery**: las tandas muestran cada pulsación de Draw con su prompt y su semilla; la galería muestra todas las imágenes de todas las tandas en una sola cuadrícula, las más nuevas primero, por forma (1:1, 16:9, 9:16) o con estrella (☆ en una imagen le pone estrella), en tres tamaños. Una imagen abierta desde la galería recorre toda la galería, con ★, To the form (su prompt, su semilla y su forma), Set as cover y Download. La galería las coloca en mosaicos iguales: columnas iguales, cada mosaico la misma caja (cuadrada, o la de su forma cuando se muestra una sola), cada imagen entera dentro.
+### La papelera del Artista <!-- #the-artist-s-trash -->
+
+Las tandas viven en la carpeta `artist/` del estudio. **Trash** en una tanda la mueve a `trash/artist/`; el **Trash** del escenario aparta una imagen. La vista **Trash**, junto a Runs y Gallery, muestra primero las imágenes apartadas, cada una con **Restore** y ✕, y **Restore all**; luego las tandas de la papelera, cada una con **Restore** y **Delete for good**; **Wipe out** en su cabecera borra todo lo que muestra. Cada borrado pregunta antes y no se deshace.
+
+**Trash (Art)** en la columna del Bibliotecario, bajo Out of sight, guarda el arte apartado en una sola lista: las tandas del Artista en la papelera, las imágenes apartadas y las portadas quitadas de las tomas (por un repintado, por Remove, por una portada nueva), cada una con su imagen y lo que pesa. Márcalas para devolverlas (una portada vuelve a su toma, y la que tiene ahora queda en su lugar) o para borrarlas para siempre, preguntando antes; sin ninguna marcada, **Wipe out the art's trash**. Las portadas de un espacio de trabajo congelado se quedan como están.
+
+### El registro del Artista <!-- #the-artist-s-log -->
+
+El marco del registro del servidor tiene dos vistas, **Server** y **Artist**, y cada sala abre la suya: la sala del Artista, la del Artista. El registro del Artista, guardado en este navegador (sus últimas 400 líneas), dice qué se pidió (el pintor, el fine-tune, las formas, la semilla, el sampling, los adaptadores), qué respondió el laboratorio (un rechazo con sus propias palabras), el camino de cada tanda hasta su final (espera y por qué, pinta en la GPU N, hecha, detenida, fallida y por qué) y las líneas propias del laboratorio sobre el Artista. **Copy** toma las líneas de la vista; plegado, el marco dice la última línea de la vista. **⧉** abre el registro en una ventana propia, con las dos vistas en espejo: en Chrome queda sobre todas las ventanas (Document Picture-in-Picture); en otros, es una ventana para llevar a otro monitor.
 
 ### Lo que viene al Artista <!-- #coming-to-the-artist -->
 
-Una imagen de referencia de la que partir; repintar una parte de una imagen y extenderla más allá de sus bordes, en un lienzo; varios adaptadores LoRA a la vez; un reescalado; Qwen Image como segundo pintor; el título y el artista escritos en la portada.
+El título y el nombre del artista escritos en la portada; un lienzo con capas, como el de InvokeAI; más upscalers (SeedVR).
 
 ## Bibliotecario <!-- #librarian -->
 
@@ -295,7 +383,7 @@ Una imagen de referencia de la que partir; repintar una parte de una imagen y ex
 - **Tomas fijadas**: hasta cuatro en cada espacio, en una franja de su propio tono sobre las tarjetas (clic derecho en una toma → *Fijar aquí*; × la desfija). Cuando marcas tomas, la barra de las marcadas ocupa el lugar de la franja, así que las tarjetas nunca se mueven. Esa barra es una fila de iconos enmarcados: la selección, las marcas, los espacios, la exportación y la papelera al final; cada uno se dice al pasar el puntero.
 - **Filtro** (el botón al final de la fila de búsqueda) abre una ventana como la elección de espacio: marca qué buscar en tres grupos (cómo se hizo: generada, importada, regenerada, re-renderizada; marcada: me gusta, no me gusta, favoritas, con nota, con portada; lo que tiene: stems, antizumbido, remasterización, reescalado), cada uno con cuántas tomas del lugar, y cómo se unen las marcadas: todas (AND), cualquiera (OR) o ninguna (NOR). *Show* las aplica; el botón dice luego cuántas hay activas y cómo se unen.
 - **Selecciona** varias, como en un gestor de archivos: marca una, y a partir de ahí un clic en cualquier parte de otra tarjeta la marca también (Shift: todo el rango). Arrastrar sobre el espacio vacío entre las tarjetas dibuja una banda que marca lo que toca; **Ctrl+arrastrar** la dibuja desde cualquier parte y conserva lo ya marcado. La barra de las marcadas flota sobre el reproductor: favorita, añadir a un espacio, mover a uno, sacar de este, ocultar, exportar un ZIP, a la papelera.
-- **La papelera** devuelve, o borra para siempre tras confirmar.
+- **La papelera** devuelve, o borra para siempre tras confirmar. **Trash (Art)**, a su lado en la columna, guarda el arte apartado (las tandas del Artista en la papelera, las imágenes apartadas, las portadas quitadas de las tomas) y lo devuelve, o lo borra para siempre tras confirmar; las portadas de un espacio de trabajo congelado se quedan.
 
 ### El menú de una toma <!-- #a-take-s-menu -->
 
@@ -303,7 +391,7 @@ Una imagen de referencia de la que partir; repintar una parte de una imagen y ex
 
 **Regenerar con una semilla nueva** (encima del Escritor en el menú de la toma): la toma hecha de nuevo con todo aquello con lo que se hizo, pero con semillas nuevas; la nueva hereda los espacios y la nota de la antigua, y la antigua espera en la sección *Origen de la regeneración* de su espacio (su espacio no la muestra entre las suyas) hasta que la vacíes; la nueva conserva su nota, su me gusta, su estrella y su imagen. Una prueba sale con sus dos minutos completos. Reproducir, abrir en el Creador o en el Pulidor, la hoja (su partitura), la ficha técnica (todo aquello con lo que se hizo: el estilo y la letra, la partitura dibujada, cada control, las LoRAs y los deslizadores con sus fuerzas; una toma en modo Directo no tiene partitura, y *Escribirla a partir del sonido* le pide una al transcriptor), me gusta, no me gusta, favorita, una nota, renombrar, **espacios** (una toma puede estar en varios), **mover a** un espacio (en una tarjeta marcada: cada toma marcada, fuera del espacio abierto), ocultar, enviar al Escritor, copiar, descargar, **exportar a un DAW** (proyecto de REAPER o DAWproject, en cualquier toma: con sus stems una vez que el Pulidor los ha separado), a la papelera. **En una tarjeta marcada, con otras marcadas**, el menú actúa sobre todas, y su cabecera dice sobre cuántas: me gusta, no me gusta, favorita, portada, quitar la portada, espacios, ocultar, un ZIP; las portadas de varias y la regeneración de varias preguntan antes, porque cuestan minutos de una tarjeta gráfica.
 
-**Dibujar la portada**: un modelo de lenguaje pequeño (Qwen3-4B) lee el estilo y las palabras de la toma y escribe un prompt de imagen; Krea 2 Muse lo pinta, a 1024 px, en cerca de medio minuto en una tarjeta de 16 GB (en una tarjeta menor, un SDXL, CyberRealistic XL; el pintor se elige en *Motor → Portada*). Se ve en el reproductor, en la tarjeta, en el panel multimedia del escritorio y dentro del MP3 que descargas (como su portada). Cuando una toma ya tiene su imagen, el menú dice *Abrir la portada* (sobre la página, como un clic en la imagen de la tarjeta o en el cuadrado del reproductor) y *Redibujar la portada* (un prompt nuevo y una imagen nueva; la anterior se guarda junto a la toma, en `artwork-removed/`). Los dos modelos vienen con `heresy/fetch-heresy.sh --artwork` (14 GB, pregunta antes).
+**Dibujar la portada**: un modelo de lenguaje pequeño (Qwen3-4B) lee el estilo y las palabras de la toma y escribe un prompt de imagen; Krea 2 Muse lo pinta, a 1024 px, en cerca de medio minuto en una tarjeta de 16 GB (en una tarjeta menor, un SDXL, CyberRealistic XL; el pintor se elige en *Motor → Portada*). Se ve en el reproductor, en la tarjeta, en el panel multimedia del escritorio y dentro del MP3 que descargas (como su portada). Cuando una toma ya tiene su imagen, el menú dice *Abrir la portada* (sobre la página, como un clic en la imagen de la tarjeta o en el cuadrado del reproductor) y *Redibujar la portada* (un prompt nuevo y una imagen nueva; la anterior se guarda junto a la toma, en `artwork-removed/`). Los dos modelos vienen con `heresy/fetch-heresy.sh --artwork` (14 GB, pregunta antes). *Engine → Artwork* ofrece también los pintores Qwen que hay aquí: Qwen-Image 2512 y sus fine-tunes fp8 con Lightning, y Qwen-Image 2.1 (ver Artista › Una portada para la toma).
 
 ### Los instrumentos bajo el estilo <!-- #the-instruments-under-the-style -->
 
@@ -311,7 +399,7 @@ Bajo el campo Estilo, el estudio nombra lo que pide tu prompt: una ficha por cad
 
 ### Portadas: qué las dibuja, qué no puede, otro pintor <!-- #artwork-what-draws-it-what-it-cannot-another-painter -->
 
-**Qué las dibuja.** Un modelo de lenguaje pequeño (Qwen3-4B) lee el estilo y las palabras de la toma y escribe un prompt de imagen, con su tema primero; Krea 2 Muse lo pinta (1024 px), o un SDXL donde Krea no cabe (*Motor → Portada*). Cuando la toma lleva el nombre de un instrumento (la prueba de un instrumento), el estudio les dice a ambos cómo es el instrumento y de dónde es, y Omni (el modelo del oyente) mira la imagen: cuando no encuentra el instrumento, vuelve a escribir el prompt a partir de lo que vio, y el pintor lo intenta otra vez, tres imágenes como mucho. Cerca de medio minuto por imagen en una tarjeta de 16 GB.
+**Qué las dibuja.** Un modelo de lenguaje pequeño (Qwen3-4B) lee el estilo y las palabras de la toma y escribe un prompt de imagen, con su tema primero; Krea 2 Muse lo pinta (1024 px), o un SDXL donde Krea no cabe (*Motor → Portada*). Cuando la toma lleva el nombre de un instrumento (la prueba de un instrumento), el estudio les dice a ambos cómo es el instrumento y de dónde es, y Omni (el modelo del oyente) mira la imagen: cuando no encuentra el instrumento, vuelve a escribir el prompt a partir de lo que vio, y el pintor lo intenta otra vez, tres imágenes como mucho. Cerca de medio minuto por imagen en una tarjeta de 16 GB. Un pintor Qwen elegido allí pinta con Lightning: a 1328 px, y se guarda a 1024.
 
 **Qué no puede** (una advertencia, dicha sin rodeos): el pintor dibuja lo que conoce. Un instrumento que nunca ha visto por su nombre (el duduk, el morin juur, el jomús, los cuencos cantores de cristal…) sale como una conjetura: una flauta de madera, un violín, unos cuencos de cocina. Cuando Omni no encontró el instrumento en ninguna de las tres imágenes, la imagen queda marcada como **≈ una suposición**, en la vista superpuesta y en la chuleta de instrumentos. Una portada es el ánimo de la toma, no una imagen de referencia de un instrumento: para saber cómo es un instrumento, búscalo.
 
@@ -356,11 +444,26 @@ El **oyente** (Qwen2.5-Omni, en cualquier tarjeta con unos 8 GB libres) escucha 
 
 ![Un tipo, los controles, una tarjeta](guide/train-knobs.png)
 
-- **Tipo** preajusta los controles (rango, pasos, cuánto aprende la mitad musical).
-- **Entrenador**: **Ruach Studio** (el propio del estudio, sobre pesos bf16 sin cuantizar; crea él mismo la caché latente del conjunto) o **AI-Toolkit** de Ostris (la referencia; también puede entrenar con partitura). Ambos guardan el mismo formato de LoRA; con el mismo conjunto, sus curvas coinciden época a época.
-- **Pesos base**: bf16 (tarjetas de 24 GB) o int8 (tarjetas más pequeñas, un poco menos exacto).
-- **Pasos**, **Guardar cada** N épocas (se conserva cada época), **Rango**, **Tasa de aprendizaje**, **Peso AR** (cuánto aprende la mitad musical; 0 = solo el sonido), **Ancla AR** (la mantiene cerca del modelo base), **Velocidad AR**.
-- Bajo el botón: la VRAM medida de ejecuciones anteriores, y qué tarjeta está lo bastante libre ahora.
+Elige un conjunto creado en el paso 2 y luego un **tipo**: ajusta los controles para lo que enseñas (la tabla bajo la lista), y cualquiera se puede cambiar antes de *Entrenar*. El formulario, campo a campo:
+
+- **Tipo**: estilo, voz, idioma o artista.
+- **Nombre de la ejecución**: la carpeta de la ejecución (`training/NAME/`) y los nombres de sus adaptadores (`loras/NAME/NAME-eNNN`, enseguida entre los LoRA del Creador). Un nombre pertenece a una sola ejecución: si está ocupado, la página pide otro.
+- **Entrenador**: **Ruach Studio** (el propio del estudio, sobre pesos bf16 sin cuantizar; crea él mismo la caché latente del conjunto; modo Directo) o **AI-Toolkit** de Ostris (la referencia; también puede entrenar con partitura y sobre voces separadas). Ambos guardan el mismo formato LoRA; en el mismo conjunto sus curvas coinciden época a época.
+- **Pesos base**: bf16, el modelo entero (una tarjeta de 24 GB), o int8 para tarjetas más pequeñas, algo menos exacto. El archivo del modelo base nunca cambia: solo aprende el adaptador.
+- **Pasos**: cuántos en total, una pista por paso. La mitad sonora oye una ventana de 60 segundos de la pista, cortada al azar cada vez; la musical lee la canción desde su comienzo. La ejecución se redondea a épocas enteras (una época: cada pista una vez): 2016 pistas por 12 épocas son 24 192 pasos.
+- **Guardar cada N épocas**: un adaptador al final de cada N-ésima época, cada uno para escucharlo y compararlo; se guardan todos, con el estado del optimizador junto al más reciente (una ejecución detenida conserva lo aprendido).
+- **Rango**: lo ancho que es el adaptador; su parte de los pesos y su tamaño están en la ayuda del campo (lo que cuesta cada rango y cuál para qué: abajo).
+- **Tasa de aprendizaje**: lo grande que es cada paso de la mitad sonora (AdamW, la misma toda la ejecución); el de la musical es este por la **Velocidad AR**. Los tipos mantienen 0.0001; la mitad es más suave, para una ejecución larga sobre un conjunto grande; más alta aprende más rápido y olvida más.
+- **Peso AR**, **Ancla AR (KL)**, **Velocidad AR**: los tres controles de la mitad musical, abajo.
+- **Modo** y **Separar voces y música**, solo en AI-Toolkit: **Directo** es para canciones hechas en modo Directo; **Completo (partitura)** y **Melodía**, para canciones hechas en esos modos, enseñan además a la mitad musical a escribir primero una partitura, transcrita de cada canción; **con separación**, cada canción se divide primero en voz y música, y la mitad musical aprende también la voz solo con la letra y la música solo con las etiquetas.
+- Bajo el botón: la VRAM medida de ejecuciones anteriores y qué tarjeta está ahora lo bastante libre.
+
+| tipo | rango | pasos | peso AR | ancla AR | velocidad AR | para qué |
+|---|---|---|---|---|---|---|
+| **Estilo** | 32 | 1500 | 0.5 | 0.2 | 0.5 | un sonido: género, producción, el de una banda |
+| **Voz** | 16 | 1500 | 0.3 | 0.3 | 0.5 | un timbre: la mitad musical sujeta cerca de la base |
+| **Idioma** | 32 | 3000 | 1.0 | 0.1 | 1.0 | dicción: la mitad musical debe cambiar |
+| **Artista** | 32 | 3000 | 0.7 | 0.2 | 0.7 | todo junto |
 
 ### El rango y los demás controles <!-- #rank-and-the-other-knobs -->
 
@@ -379,20 +482,55 @@ El **rango** es lo ancho que es el cambio del adaptador en cada matriz. Una LoRA
 - **Un conjunto grande de muchas voces** (horas de ellas, una etiqueta para cada voz): **64**, y **128 como mucho**, solo cuando 64 se queda corto de forma medible. El entrenador se detiene en 128: 256 cambiaría una sexta parte de los pesos que toca, más de lo que necesita cualquier conjunto de aquí.
 - El archivo del modelo base nunca cambia. El riesgo de un rango grande es el propio adaptador: a plena fuerza olvida lo que no se le mostró (cantar, si aprendió del habla).
 - **Pasos**: la mitad musical se aprende de memoria un conjunto pequeño enseguida (su pérdida cae hacia 0): las épocas verdes de la Telemetría son las primeras que vale la pena escuchar, a menudo mucho antes de la última.
-- **Tasa de aprendizaje**: mantén la del tipo; más alta aprende más rápido y olvida más.
-- **Peso AR**: 0 enseña solo el sonido (un timbre); súbelo para la dicción y el estilo, que viven en la mitad musical.
 - **La frecuencia de muestreo del material**: la mitad sonora trabaja a 48 kHz, la musical oye a 24 kHz. Una grabación de 24 kHz le enseña todo a la mitad musical, pero a la sonora solo unos agudos apagados: remuestrear no añade nada por encima de la mitad de la frecuencia original. Para un timbre, dale 44,1 o 48 kHz.
+
+### Los tres controles de la mitad musical <!-- #the-music-half-s-three-knobs -->
+
+Cada paso enseña a las dos mitades por separado. La mitad sonora siempre aprende el sonido: quitar el ruido de su ventana de la pista (la pérdida flow). La musical aprende solo cuando el **Peso AR** es mayor que 0, y entonces tiran de ella dos cosas a la vez:
+
+- **su lección** (ar_ce): predecir los propios tokens de la canción desde su comienzo, palabra a palabra y nota a nota: dicción, fraseo, hábitos melódicos, la forma de una canción;
+- **el ancla** (ar_kl): en cada uno de esos puntos el entrenador pregunta al modelo base, la misma mitad musical con el adaptador apagado, qué escribiría ahí, y multa al adaptador por cada paso que se aleje de eso.
+
+La pérdida de un paso es flow + Peso AR × ar_ce + Ancla AR × ar_kl. Lo que hace cada control:
+
+- El **Peso AR** decide si la mitad musical aprende en absoluto, y con cuánta fuerza su lección tira contra el ancla. En 0 la mitad musical sigue siendo el modelo base (su parte del adaptador queda vacía: todo ceros, medido), el adaptador es un timbre solo en la mitad sonora, y el ancla no hace nada.
+- El **Ancla AR** tira de la mitad musical de vuelta hacia el modelo base, para que conserve lo que el conjunto no muestra: cantar después de un conjunto de lecturas, otros idiomas, seguir letras nuevas, escribir una partitura. Sin ancla, se deja llevar adonde la lleve el conjunto.
+- **Los dos tiran el uno contra el otro, y solo cuenta su proporción, no su tamaño.** AdamW mide cada paso con el tamaño de sus propios gradientes recientes, así que una pérdida multiplicada por un número enseña lo mismo que antes: 0.5 con un ancla de 0.2 es 1.0 con 0.4. Lee el ancla como una parte del peso: una décima deja moverse a la mitad musical (Idioma); igual al peso, la sujeta cerca de la base (Voz).
+- La **Velocidad AR** es el verdadero acelerador de la mitad musical: su tasa de aprendizaje es la tasa de aprendizaje por esta, el único control que la hace aprender más rápido o más despacio. Los tipos la mantienen en 0.5 (Idioma en 1.0): la mitad musical se aprende de memoria un conjunto pequeño mucho antes de que la sonora tenga su timbre.
+
+Medido aquí (10.10.2026: 40 pasos sobre un conjunto de 60 lecturas, rango 16, una semilla; *movimiento*: lo grande que salió el cambio que el adaptador hace en las matrices de la mitad musical):
+
+| peso AR · ancla · velocidad | movimiento | distancia de la primera fila | ar_kl, sus diez últimos pasos |
+|---|---|---|---|
+| 0.5 · 0.2 · 0.5 (los de Estilo) | 1.32 | la misma ejecución otra vez: 1 % | 0.257 |
+| 1.0 · 0.4 · 0.5 (ambos al doble) | 1.36 | 5 % | 0.262 |
+| 0.5 · 0 · 0.5 (sin ancla) | 1.44 | 23 % | — |
+| 0.5 · 0.5 · 0.5 (el ancla igual al peso) | 1.21 | 17 % | 0.132 |
+| 0.5 · 0.2 · 1.0 (velocidad al doble) | 2.32 | 99 % | 0.443 |
+| 0 · 0 · 0.5 | 0 | no aprendió nada | — |
+
+Doblar ambos cambió el adaptador un 5 %, frente al 1 % de la misma ejecución dos veces; la parte del ancla lo movió de un sexto a un cuarto; doblar la velocidad lo llevó tres cuartos más lejos. La mitad sonora solo comparte con la musical el recorte de gradientes: de una fila a otra varió entre un 4 y un 13 %, frente al 2 % de la misma ejecución dos veces.
+
+Qué girar, según lo que oyes y ves:
+
+| cuando | gira |
+|---|---|
+| quieres solo un timbre (una voz de lecturas, un instrumento) | Peso AR bajo y el ancla igual (los 0.3 y 0.3 de Voz), o Peso AR 0 |
+| quieres la dicción de un idioma, el fraseo de un estilo | Peso AR 1.0, el ancla una décima de él, Velocidad AR 1.0 (los de Idioma) |
+| ar_ce cae pronto por debajo de 0.3: se sabe las canciones de memoria | baja la Velocidad AR o sube la parte del ancla; o escucha una época anterior |
+| el adaptador canta las melodías de las canciones de entrenamiento sobre letras nuevas, o pierde la letra | sube la parte del ancla: igual al peso, o más |
+| ar_kl se queda cerca de 0 y la dicción no llegó | sube la Velocidad AR o baja la parte del ancla |
 
 ### 4 Telemetría <!-- #4-telemetry -->
 
 ![Las curvas de ambas mitades, explicadas bajo cada una](guide/train-charts.png)
 
-Las ejecuciones que están entrenando se colocan arriba de la sala con su progreso, el tiempo restante y ambas pérdidas. La telemetría de una ejecución muestra su progreso, velocidad, tiempo, memoria y dos curvas:
+Las ejecuciones que están entrenando se colocan arriba de la sala con su progreso, el tiempo restante y ambas pérdidas. La telemetría de una ejecución muestra su progreso y luego unas fichas: la velocidad, el tiempo que lleva y el que le queda, los últimos valores de flow, ar_ce y **ar_kl** (cuánto se ha alejado la mitad musical del modelo base: 0 mientras el Peso AR es 0), el pico de VRAM y la tarjeta; luego dos curvas:
 
 - **Mitad sonora · pérdida flow**: lo bien que la mitad sonora predice el ruido que debe quitar. Salta de un paso a otro (cada paso toma un nivel de ruido al azar): lee la línea gruesa, la media móvil.
 - **Mitad musical · ar_ce**: lo bien que la mitad musical predice los propios tokens de la canción. Cerca de 0 se sabe las canciones de memoria; entonces una época anterior es el mejor adaptador.
 
-Pasa el puntero por una curva para leer el paso, su época y el valor ahí. **Comparar con…** superpone las curvas de otra ejecución sobre estas, discontinuas.
+Pasa el puntero por una curva para leer el paso, su época y el valor ahí. **Comparar con…** superpone las curvas de otra ejecución sobre estas, discontinuas. El botón junto a **El registro** pone las dos curvas una debajo de la otra, cada una a todo el ancho, o de nuevo una al lado de la otra. **El registro** se abre al pie de la sala, tan ancho como sus líneas, junto al registro del servidor.
 
 ### Las épocas que vale la pena escuchar primero <!-- #the-epochs-worth-hearing-first -->
 
@@ -415,7 +553,7 @@ Cada ejecución es una tarjeta a la derecha: *Activas*, *Todas*, *Archivadas*, *
 ![Motor](guide/studio-engine.png)
 
 - **Servidor**: lo que ejecuta el motor: el modelo, los decodificadores, el contexto, la biblioteca.
-- **Cómputo**: la copia del **modelo** (BF16 7,2 GB, Q8_0 3,8 GB, Q6_K y Q5_K_M más pequeñas), **Preajuste de memoria de la GPU** (*Auto* ajusta el contexto y los bloques del VAE a la tarjeta; *Auto within N GB* hace lo mismo para esa cantidad y deja el resto de la tarjeta a lo demás que corre en ella (en un portátil de 16 GB, 14); *Manual* te los deja a ti), **Mantener los modelos cargados**.
+- **Cómputo**: la copia del **modelo** (BF16 7,2 GB, Q8_0 3,8 GB, Q6_K y Q5_K_M más pequeñas), **Preajuste de memoria de la GPU** (*Auto* ajusta el contexto y los bloques del VAE a la tarjeta; *Auto within N GB* hace lo mismo para esa cantidad y deja el resto de la tarjeta a lo demás que corre en ella (en un portátil de 16 GB, 14); *Manual* te los deja a ti), **Mantener los modelos cargados**. **Scan the machine** dice lo que tiene la máquina y lo que le conviene (el modelo base, los controles de Auto, el pintor), como hace un estudio nuevo una vez en su primer arranque.
 - **Hardware**: la memoria de la tarjeta ahora; **Liberar el modelo** la libera al instante.
 
 ### GPU: qué tarjeta hace qué <!-- #gpus-which-card-does-what -->
@@ -428,6 +566,7 @@ En una máquina con varias tarjetas, dale a cada una su trabajo: el **estudio** 
 
 - **VAE**, **LoRAs**, **Deslizadores**: cada archivo que encontró el estudio, con su fuente y lo que hace.
 - **Modelos y LoRA** (Models and LoRAs): lo que trae la instalación, por partes (los decodificadores extra y los sliders, Whisper, los modelos de stems, UniverSR, los LoRA), tal como los encontró la última pasada, y **Check again** para mirar de nuevo. Una parte incompleta lista lo que falta y tiene su **Fetch**; **Fetch what is missing** los descarga todos; una descarga cortada sigue donde se quedó. **More models**: otro backbone (BF16 junto a Q8_0), el oyente de estilo, el pintor del Artista, la base del entrenador, cada uno con sus variantes y tamaños, la variante que ya está marcada como tal, y cada uno preguntado antes con su tamaño. Un backbone, decodificador o slider nuevo llega al motor en su próximo arranque (**Restart the engine**); los LoRA nuevos, al instante.
+- **Artwork**: quién pinta la portada de una toma: según las tarjetas (Krea 2 Muse Q4 desde 16 GB, si no SDXL) o uno elegido: Krea 2 Muse Q4 o Q8, SDXL CyberRealistic, y los pintores Qwen que tiene esta máquina (Qwen-Image 2512 Q4 o Q6 y cada fine-tune fp8, con Lightning; Qwen-Image 2.1 con su licencia dicha).
 - **Escritor**: la dirección del servidor de chat local (vLLM, LM Studio, Ollama), *Probar la conexión*.
 - **Apariencia**: 22 temas (elegidos para crear en ellos: claros y tranquilos), esquinas, las tres fuentes (texto, títulos, números).
 - **Registro del servidor**: el registro completo; **Acerca de**: cada proyecto sobre el que se apoya el estudio, enlazado.

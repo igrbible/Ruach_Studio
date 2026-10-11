@@ -1,0 +1,211 @@
+From ffb3d8070029c23dfc4202a28db29ca298d9f031 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 16:33:52 -0600
+Subject: [PATCH 1319/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201332:=20the?=
+ =?UTF-8?q?=20Artist's=20room,=20tidier;=20upscale=20by=202K=20and=204K?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «Над кнопкой РИСОВАТЬ/ОСТАНОВИТЬ пустой тултип. Центровку текста нужно внутри кнопки. И сделай капс в ней. В левой колонке сделай дропдаун селекторы адаптивными с минимальной длиной по полной длине моделей. При растяжке колонки адаптируй всё на полную ширину. В самый низ колонки можно приделать прогресс бар генерации. Апскейл… делай кнопками выбор размеров. 2K и 4K максимум»; «Artist не переводи как Артист на русский. Только как Художник».
+
+The room's header named as its tab (Художник in Russian); Draw's own tip, its word centred in capitals; the painter's and the fine-tune's choices the row wide, never narrower than their names, the column's fields stretching with it; a progress bar under Draw (picture and step, or striped while it waits); the upscale row's buttons 2K and 4K, their tips saying the size, off for a picture as large already.
+
+Suite: 602/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          | 16 ++++++++++++
+ tools/console/app.js           |  6 ++++-
+ tools/console/heresy-artist.js | 48 ++++++++++++++++++++++++++--------
+ tools/console/index.html       |  4 ++-
+ 4 files changed, 61 insertions(+), 13 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index bbb8214..6432bcc 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5071,3 +5071,19 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
+ .seed-mode { flex: none; width: auto; min-width: 0; max-width: 9.5em; font-size: 12px; padding-right: 22px; }
+ .seedfield .seed-mode { display: block; margin-top: 6px; width: 100%; max-width: none; }
+ .ar-seed-row input { flex: 1 1 auto; min-width: 5em; }
++/* HERESY 1332: Draw's word centred in capitals; the painter's and the fine-tune's choices the row wide, never narrower than their names;
++   the column's fields stretch with it; the run's progress under Draw */
++#arDraw { justify-content: center; text-align: center; text-transform: uppercase; letter-spacing: .06em; }
++.ar-left .ar-painter, .ar-left .ar-model { flex: 1 1 100%; }
++.ar-left .ar-painter select, .ar-left .ar-model select { width: 100%; min-width: max-content; }
++.ar-left .ar-knobs > .field { flex: 1 1 auto; }
++.ar-left .ar-samp-row > .field { flex: 1 1 auto; }
++.ar-left .ar-samp-row select { width: 100%; min-width: max-content; }
++.ar-progress { flex: 1 1 100%; display: flex; flex-direction: column; gap: 4px; }
++.ar-progress[hidden] { display: none; }
++.ar-progress-bar { display: block; height: 6px; border-radius: 3px; background: var(--line-a); overflow: hidden; }
++.ar-progress-bar i { display: block; height: 100%; width: 0; background: var(--amber); transition: width .4s ease; }
++.ar-progress.is-waiting .ar-progress-bar i { background: repeating-linear-gradient(-45deg, var(--amber) 0 8px, transparent 8px 16px); background-size: 22px 22px; animation: ar-wait 1s linear infinite; opacity: .55; }
++@keyframes ar-wait { from { background-position: 0 0; } to { background-position: 22px 0; } }
++@media (prefers-reduced-motion: reduce) { .ar-progress.is-waiting .ar-progress-bar i { animation: none; } }
++.ar-progress em { font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index fb08990..114b59e 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8409,7 +8409,11 @@
+   // HERESY 1169: the Artist's greyed place in the bar by the page's language (the catalogs' "Artist" is the Trainer's
+   // performer, «Артист»; the room is Viktor's «Художник», the pictures for the songs)
+   var ARTIST_ROOM = { ru: "Художник", uk: "Художник", be: "Мастак", el: "Καλλιτέχνης", es: "Artista", it: "Artista" };
+-  function paintArtistTab() { if ($("tabArtist")) $("tabArtist").textContent = ARTIST_ROOM[document.documentElement.lang] || "Artist"; }
++  function paintArtistTab() {   // HERESY 1332 (Viktor: «Artist не переводи как Артист на русский. Только как Художник»): the room's header too
++    var name = ARTIST_ROOM[document.documentElement.lang] || "Artist";
++    if ($("tabArtist")) $("tabArtist").textContent = name;
++    if ($("arRoomName")) $("arRoomName").textContent = name;
++  }
+   window.addEventListener("ruach-lang", paintArtistTab);
+   paintArtistTab();
+ 
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 5df52b5..de8d143 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -15,7 +15,7 @@
+   var PAINTERS = { "krea2-q4": "Krea 2 Muse · Q4", "krea2-q8": "Krea 2 Muse · Q8" };
+   var PAINTER_INFO = {};                                 // HERESY 1318: the lab's word on each painter (need, family, note, models)
+   function painterLabel(r) {                            // HERESY 1322: an upscaler's run says so, with its factor
+-    return r.kind === "upscale" ? tr("Upscale") + " \u00d7" + r.factor : PAINTERS[r.painter] || r.painter || "";
++    return r.kind === "upscale" ? tr("Upscale") + " " + (r.target ? String(r.target).toUpperCase() : "\u00d7" + r.factor) : PAINTERS[r.painter] || r.painter || "";
+   }
+   var KEY = { prompt: "yue2.arPrompt", shapes: "yue2.arShapes", count: "yue2.arCount", seed: "yue2.arSeed", painter: "yue2.arPainter",
+     live: "yue2.arLive", look: "yue2.arLook", filter: "yue2.arFilter", size: "yue2.arSize" };
+@@ -74,7 +74,8 @@
+     var busy = drawingRun();                             // HERESY 1270: Draw is Stop while a run waits or draws
+     $("arDraw").textContent = tr(busy ? "Stop" : "Draw");
+     $("arDraw").classList.toggle("is-stop", !!busy);
+-    $("arDraw").dataset.tip = busy ? tr("Stop the run: a waiting one leaves the queue, a drawing one ends now; the pictures it finished stay") : "";
++    $("arDraw").dataset.tip = busy ? tr("Stop the run: a waiting one leaves the queue, a drawing one ends now; the pictures it finished stay")
++      : tr("Draw the pictures picked: every shape, every variation (Ctrl+Enter)");   // HERESY 1332: a tip of its own, not an empty one
+     $("arDraw").disabled = busy ? !!state.stopping : (!n || !$("arPrompt").value.trim() || state.sending);
+     Array.prototype.forEach.call(document.querySelectorAll("#arShapes label"), function (l) { l.classList.toggle("is-on", l.querySelector("input").checked); });
+   }
+@@ -709,7 +710,10 @@
+     return api("/artist/upscalers").then(function (d) { state.upscalers = d.upscalers || []; state.stageKey = ""; paintStage(); return state.upscalers; })
+       .catch(function (e) { toast(e.message, "bad"); state.upscalers = []; });
+   }
+-  function upRow() {
++  // HERESY 1332 (Viktor: «2K и 4K максимум. Нехер ручные значения вводить»): the long side to 2560 or 3840
++  var UP_TARGETS = { "2k": 2560, "4k": 3840 };
++  function upSize(p, t) { var w = +p.w || 0, h = +p.h || 0, long = Math.max(w, h); return long ? [Math.round(w * UP_TARGETS[t] / long), Math.round(h * UP_TARGETS[t] / long)] : null; }
++  function upRow(p) {
+     var list = state.upscalers || [];
+     if (!list.length) return '<div class="ar-up-row"><span class="row-hint">' + esc(state.upscalers ? tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into artwork/upscalers/") : tr("Reading the upscalers…")) + "</span></div>";
+     var names = list.map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
+@@ -717,17 +721,22 @@
+     return '<div class="ar-up-row"><select id="arUpModel" translate="no" aria-label="' + esc(tr("The upscaler")) + '">' + list.map(function (u) {
+       return '<option value="' + esc(u.name) + '"' + (u.name === pick ? " selected" : "") + ">" + esc(u.name.replace(/\.(pth|safetensors)$/, "") + " (" + u.mb + " MB)") + "</option>";
+     }).join("") + "</select>" +
+-      '<button type="button" class="btn small" data-up="2" data-tip="' + esc(tr("Twice as large (a 4x model painted at 4x, brought down: finer than a 2x model)")) + '">\u00d72</button>' +
+-      '<button type="button" class="btn small" data-up="4" data-tip="' + esc(tr("Four times as large")) + '">\u00d74</button></div>';
++      ["2k", "4k"].map(function (t) {
++        var long = p ? Math.max(+p.w || 0, +p.h || 0) : 0, sz = p ? upSize(p, t) : null, done = long >= UP_TARGETS[t];
++        var tip = done ? tr("It is as large already") + " (" + p.w + "\u00d7" + p.h + ")" : sz ? p.w + "\u00d7" + p.h + " \u2192 " + sz[0] + "\u00d7" + sz[1] : "";
++        return '<button type="button" class="btn small" data-up="' + t + '"' + (done ? " disabled" : "") + ' data-tip="' + esc(tip) + '">' + t.toUpperCase() + "</button>";
++      }).join("") + "</div>";
+   }
+-  function upscaleIt(src, model, factor) {
++  function upscaleIt(src, model, target) {           // HERESY 1332: «2k» or «4k»; a number is 1322's factor (an older run's Again)
+     keep("yue2.arUpModel", model);
+-    return api("/artist/upscale", { id: src.id, file: src.file, model: model, factor: factor }).then(function (run) {
++    var body = { id: src.id, file: src.file, model: model };
++    if (UP_TARGETS[target]) body.target = target; else body.factor = +target || 2;
++    return api("/artist/upscale", body).then(function (run) {
+       state.upOpen = false;
+       state.pinSel = false;
+       state.runs.unshift(run);
+       paintRuns();
+-      toast(tr("Upscaling") + " \u00d7" + factor + " · " + model.replace(/\.(pth|safetensors)$/, "") + ": " + tr("about half a minute on a card"));
++      toast(tr("Upscaling") + " " + (UP_TARGETS[target] ? String(target).toUpperCase() : "\u00d7" + target) + " · " + model.replace(/\.(pth|safetensors)$/, "") + ": " + tr("about half a minute on a card"));
+       schedule(1500);
+     }).catch(function (e) { toast(tr("Not upscaled:") + " " + e.message, "bad"); });
+   }
+@@ -848,7 +857,7 @@
+         '<button type="button" class="pb-btn ar-vstar' + (p.star ? " is-on" : "") + '" data-stage="star" aria-pressed="' + (p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(p.star) + "</button>" +
+         '<button type="button" class="btn ghost small ar-aside" data-stage="aside" data-tip="' + esc(tr("This picture to the trash: the library's Trash brings it back")) + '">' + esc(tr("Trash")) + "</button>" +   // HERESY 1321
+         '<button type="button" class="btn ghost small' + (state.upOpen ? " is-on" : "") + '" data-stage="upscale" data-tip="' + esc(tr("Make it 2 or 4 times as large with an upscaler from artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN…): a run of its own")) + '">' + esc(tr("Upscale…")) + "</button>" +
+-        (state.upOpen ? upRow() : "");   // HERESY 1322
++        (state.upOpen ? upRow(p) : "");   // HERESY 1322; 1332: by the picture's size
+     }
+     return '<div class="ar-stage-data"><div class="ar-stage-meta" translate="no">' + meta.filter(Boolean).map(function (m) { return "<span>" + esc(m) + "</span>"; }).join("") + "</div>" +
+       '<div class="ar-stage-prompt" translate="no">' + esc(r.prompt || "") + "</div>" + (acts ? '<div class="ar-stage-acts">' + acts + "</div>" : "") + "</div>";
+@@ -895,6 +904,7 @@
+     }
+     Array.prototype.forEach.call(document.querySelectorAll("#arRuns .ar-thumb.is-sel"), function (x) { x.classList.remove("is-sel"); });
+     if (it) markPicked(it);
++    paintProgress();                                     // HERESY 1332
+     if (key === state.stageKey) return fitStage();
+     state.stageKey = key;
+     box.innerHTML = html;
+@@ -909,6 +919,22 @@
+     }
+     fitStage();
+   }
++  // HERESY 1332 (Viktor: «В самый низ колонки можно приделать прогресс бар генерации»): the run under way under Draw: the pictures done
++  // and the step of the one painting; waiting, a striped bar and why
++  function paintProgress() {
++    var box = $("arProgress");
++    if (!box) return;
++    var run = drawingRun();
++    if (!run) { box.hidden = true; return; }
++    box.hidden = false;
++    var of = run.of || 1, done = (run.pictures || []).length, live = run.status === "running" && run.live ? run.live : null;
++    var frac = run.status === "running" ? Math.min(1, (done + (live && live.of ? live.step / live.of : 0)) / of) : 0;
++    box.classList.toggle("is-waiting", run.status !== "running");
++    box.querySelector("i").style.width = (run.status === "running" ? Math.round(frac * 100) : 100) + "%";
++    $("arProgressSay").textContent = run.status === "running"
++      ? (run.kind === "upscale" ? tr("upscaling…") : tr("picture") + " " + Math.min(of, done + 1) + " " + tr("of") + " " + of + (live && live.of ? " · " + tr("step") + " " + live.step + " / " + live.of : "")) + " · " + Math.round(frac * 100) + "%"
++      : tr(run.waiting ? "waits for a card" : "in the queue");
++  }
+   function markPicked(it) {
+     if (state.look === "gallery") {
+       var list = items();
+@@ -937,7 +963,7 @@
+     var b = e.target.closest("#arStage [data-up]");
+     if (!b) return;
+     var it = selected(), sel = $("arUpModel");
+-    if (it && sel) upscaleIt({ id: it.r.id, file: it.p.file }, sel.value, +b.dataset.up);
++    if (it && sel && !b.disabled) upscaleIt({ id: it.r.id, file: it.p.file }, sel.value, b.dataset.up);
+   });
+   function edges() {                                     // the two edges: dragged, ← →, Home or a double click; the widths kept
+     var cols = $("arCols");
+@@ -1284,7 +1310,7 @@
+       else if (act === "view") pick({ r: r, p: r.pictures[+fig.dataset.i] });   // HERESY 1271: to the stage
+       else if (act === "cover" && p) cover(r, p);
+       else if (act === "form") { fillForm(r, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, shapes, variations and seed")); }
+-      else if (act === "again" && r.kind === "upscale" && r.upscaled_from) upscaleIt(r.upscaled_from, r.model, r.factor);   // HERESY 1322
++      else if (act === "again" && r.kind === "upscale" && r.upscaled_from) upscaleIt(r.upscaled_from, r.model, r.target || r.factor);   // HERESY 1322, 1332
+       else if (act === "again") draw(r);
+       else if (act === "trash") trashRun(r);
+       else if (act === "fold") { state.open[r.id] = !state.open[r.id]; b.classList.toggle("is-open", !!state.open[r.id]); }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 5607d12..03763e8 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1454,7 +1454,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+        own, in the shapes its pictures take, all from one seed, painted by Krea 2 Muse; a square one becomes the cover of the
+        take in hand -->
+   <section class="col artist-col is-hidden" id="view-artist">
+-    <div class="col-head post-head artist-head"><h2>Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a reference picture, repainting on a canvas, LoRAs and the upscale come in the releases after">Early preview</span>
++    <div class="col-head post-head artist-head"><h2 id="arRoomName" translate="no">Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a reference picture, repainting on a canvas, LoRAs and the upscale come in the releases after">Early preview</span>
+       <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Krea 2 Muse</span>
+       <span class="post-take" id="arTake" translate="no"></span><span class="col-note" id="arTakeNote">pick a take on the right to give it a cover</span></div>
+     <!-- HERESY 1271 (Viktor 09.10.2026: «Канвас комнаты Художника можно разделить на три колонки, каждая регулируется по ширине. В левой
+@@ -1518,6 +1518,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <!-- HERESY 1257 (Viktor 08.10.2026: «живую проявку с латентного шума до готовой картинки… В InvokeAI можно либо выключить, либо включить») -->
+         <label class="check ar-live" data-tip="Each step of the painting over its place, from the noise to the picture: an eighth of its size, seen without the decoder, so it costs nothing. Off: the place waits for the picture"><input type="checkbox" id="arLive" checked /> <span>Live preview</span></label>
+         <div class="ar-go"><span class="row-hint" id="arCost"></span><button type="button" class="btn primary" id="arDraw">Draw</button></div>
++        <!-- HERESY 1332 (Viktor: «В самый низ колонки можно приделать прогресс бар генерации»): the run under way, picture and step -->
++        <div class="ar-progress" id="arProgress" hidden><span class="ar-progress-bar"><i></i></span><em id="arProgressSay"></em></div>
+       </div>
+     </div>
+       </div>
+-- 
+2.43.0
+

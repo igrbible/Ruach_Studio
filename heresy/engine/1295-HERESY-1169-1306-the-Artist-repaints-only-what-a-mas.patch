@@ -1,0 +1,240 @@
+From 6763cf91061febb94adeb666dfe4b9f0ad413881 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 05:11:53 -0600
+Subject: [PATCH 1295/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201306:=20the?=
+ =?UTF-8?q?=20Artist=20repaints=20only=20what=20a=20mask=20says,=20as=20In?=
+ =?UTF-8?q?vokeAI's=20inpaint?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести со всем возможным ахуем».
+
+«Mask…» beside the reference opens the picture over the page with a red layer painted by the pointer: Paint and Erase (B, E), the brush's size (its ring follows the pointer; [ and ], kept), Invert, Clear, «No mask», Done (Enter; Esc leaves it as it was). Done keeps the mask as a PNG at the reference's own size, white where it repaints; the button says «Mask ✓» and the thumbnail carries the red; a new reference drops the mask. Draw sends it with the picture; «Again» on a masked run sends the run's own picture and mask; the stage says «from a reference · 1.00 · masked». Lab 1306 does the repainting (the kept part put back at every step, the reference's own pixels outside the mask).
+
+Suite: 558/0 in the kitchen; pictures of the editor and the thumbnail by tools/claude-mask-probe.mjs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  16 +++++
+ tools/console/heresy-artist.js | 125 ++++++++++++++++++++++++++++++++-
+ tools/console/index.html       |   5 +-
+ 3 files changed, 142 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index cec38da..46c040f 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4783,6 +4783,22 @@ body[data-tab="artist"] .col-grip.left { display: none; }
+ .ar-ref-on[hidden] { display: none; }
+ .ar-ref-on img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--r-sm, 6px); background: var(--ground); }
+ .ar-ref-str input { width: 100%; accent-color: var(--amber); }
++/* HERESY 1306: the mask: its red over the thumbnail, and its editor over the page */
++.ar-ref-btns { display: flex; align-items: center; gap: 6px; }
++.ar-ref-pic { position: relative; width: 72px; height: 72px; }
++.ar-ref-pic canvas { position: absolute; inset: 0; width: 72px; height: 72px; border-radius: var(--r-sm, 6px); pointer-events: none; }
++#arMaskOpen.is-on { border-color: var(--bad); color: var(--bad); }
++.ar-mask { position: fixed; inset: 0; z-index: 120; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
++  background: color-mix(in srgb, #000 72%, transparent); padding: 16px; }
++.ar-mask-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: var(--r-md); background: var(--panel);
++  border: 1px solid var(--line-a); color: var(--ink); max-width: min(96vw, 1100px); }
++.ar-mask-tools .spacer { flex: 1; }
++.ar-mask-tools .chip.is-on { border-color: var(--amber); color: var(--ink); background: color-mix(in srgb, var(--amber) 16%, transparent); }
++.ar-mask-tools input[type="range"] { width: 140px; accent-color: var(--amber); }
++.ar-mask-stage { position: relative; line-height: 0; box-shadow: 0 20px 60px -20px #000; }
++.ar-mask-stage canvas { display: block; }
++.ar-mask-stage canvas + canvas { position: absolute; inset: 0; cursor: none; opacity: .5; }
++.ar-mask-ring { position: absolute; border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #000; pointer-events: none; transform: translate(-50%, -50%); }
+ .ar-knobs { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
+ .ar-shapes { display: flex; gap: 6px; flex-wrap: wrap; }
+ .ar-shape { display: inline-flex; align-items: center; gap: 6px; user-select: none; white-space: nowrap; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 4215332..ff61421 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -84,6 +84,7 @@
+   var REF_MAX = 40 * 1048576;
+   function setRef(ref, quiet) {
+     state.ref = ref || null;
++    setMask(null);                                     // HERESY 1306: a mask belongs to its picture
+     $("arRefEmpty").hidden = !!ref;
+     $("arRefOn").hidden = !ref;
+     $("arRefImg").src = ref ? (ref.data || ref.url) : "";
+@@ -99,11 +100,129 @@
+     rd.readAsDataURL(f);
+   }
+   function paintRefSay() { $("arRefSay").textContent = (+$("arRefStr").value).toFixed(2); }
++  // HERESY 1306 (Viktor: «Артиста по модели InvokeAI постарайся на максимум вывести»): a mask on the reference, as InvokeAI's
++  // inpaint: white repaints, the rest stays; state.mask {data} at the reference's own size; its red over the thumbnail
++  function setMask(m) {
++    state.mask = m || null;
++    var c = $("arRefMask"), b = $("arMaskOpen");
++    if (b) { b.classList.toggle("is-on", !!m); b.textContent = tr(m ? "Mask ✓" : "Mask…"); }
++    if (!c) return;
++    c.hidden = !m;
++    if (!m) return;
++    var img = new Image();
++    img.onload = function () {
++      c.width = 144; c.height = 144;
++      var x = c.getContext("2d"), s = Math.max(144 / img.width, 144 / img.height), w = img.width * s, h = img.height * s;
++      x.clearRect(0, 0, 144, 144);
++      x.drawImage(img, (144 - w) / 2, (144 - h) / 2, w, h);
++      x.globalCompositeOperation = "source-in";           // the white of the mask, red
++      x.fillStyle = "rgba(220, 40, 40, .55)";
++      x.fillRect(0, 0, 144, 144);
++      x.globalCompositeOperation = "source-over";
++    };
++    img.src = m.view || m.data;
++  }
++  function maskEditor() {
++    var ref = state.ref;
++    if (!ref) return;
++    var src = ref.data || fileUrl(ref.id, ref.file), pic = new Image();
++    pic.onload = function () { openMask(pic); };
++    pic.onerror = function () { toast(tr("The picture could not be read"), "bad"); };
++    pic.src = src;
++  }
++  function openMask(pic) {
++    var back = document.createElement("div");
++    back.className = "ar-mask";
++    back.setAttribute("role", "dialog");
++    back.setAttribute("aria-label", tr("The mask: what to repaint"));
++    back.innerHTML = '<div class="ar-mask-tools"><b>' + esc(tr("What to repaint")) + "</b>" +
++      '<button type="button" class="chip is-on" data-mk="paint" data-tip="' + esc(tr("Paint what is repainted (B)")) + '">' + esc(tr("Paint")) + "</button>" +
++      '<button type="button" class="chip" data-mk="erase" data-tip="' + esc(tr("Erase: that stays as it is (E)")) + '">' + esc(tr("Erase")) + "</button>" +
++      '<label class="ar-mk-size">' + esc(tr("Brush")) + ' <input type="range" min="4" max="240" step="2" data-mk-size aria-label="' + esc(tr("The brush's size ([ and ])")) + '" /></label>' +
++      '<button type="button" class="btn ghost small" data-mk="invert" data-tip="' + esc(tr("What is painted stays, the rest is repainted")) + '">' + esc(tr("Invert")) + "</button>" +
++      '<button type="button" class="btn ghost small" data-mk="clear">' + esc(tr("Clear")) + "</button><span class=\"spacer\"></span>" +
++      '<button type="button" class="btn ghost small" data-mk="none">' + esc(tr("No mask")) + "</button>" +
++      '<button type="button" class="btn primary small" data-mk="done">' + esc(tr("Done")) + "</button></div>" +
++      '<div class="ar-mask-stage"><canvas class="ar-mk-pic"></canvas><canvas class="ar-mk-paint"></canvas><span class="ar-mask-ring" hidden></span></div>';
++    document.body.appendChild(back);
++    var fit = Math.min((window.innerWidth - 32) / pic.width, (window.innerHeight - 140) / pic.height, 1);
++    var W = Math.max(64, Math.round(pic.width * fit)), Hh = Math.max(64, Math.round(pic.height * fit));
++    var cp = back.querySelector(".ar-mk-pic"), cm = back.querySelector(".ar-mk-paint"), ring = back.querySelector(".ar-mask-ring"), size = back.querySelector("[data-mk-size]");
++    cp.width = cm.width = W; cp.height = cm.height = Hh;
++    cp.getContext("2d").drawImage(pic, 0, 0, W, Hh);
++    var g = cm.getContext("2d"), mode = "paint", down = false, last = null;
++    size.value = String(parseInt(recall("yue2.arBrush"), 10) || 60);
++    if (state.mask) {                                     // the mask kept, back on the canvas in red
++      var was = new Image();
++      was.onload = function () { g.drawImage(was, 0, 0, W, Hh); g.globalCompositeOperation = "source-in"; g.fillStyle = "#e02828"; g.fillRect(0, 0, W, Hh); g.globalCompositeOperation = "source-over"; };
++      was.src = state.mask.view || state.mask.data;
++    }
++    var setMode = function (m) { mode = m; Array.prototype.forEach.call(back.querySelectorAll("[data-mk=paint],[data-mk=erase]"), function (b) { b.classList.toggle("is-on", b.dataset.mk === m); }); };
++    var r = function () { return +size.value / 2; };
++    var at = function (e) { var b = cm.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
++    var dab = function (p) {
++      g.globalCompositeOperation = mode === "erase" ? "destination-out" : "source-over";
++      g.strokeStyle = g.fillStyle = "#e02828"; g.lineCap = "round"; g.lineJoin = "round"; g.lineWidth = r() * 2;
++      g.beginPath();
++      if (last) { g.moveTo(last.x, last.y); g.lineTo(p.x, p.y); g.stroke(); } else { g.arc(p.x, p.y, r(), 0, Math.PI * 2); g.fill(); }
++      g.globalCompositeOperation = "source-over";
++      last = p;
++    };
++    var showRing = function (e) {
++      var p = at(e), b = cm.getBoundingClientRect(), s = back.querySelector(".ar-mask-stage").getBoundingClientRect();
++      ring.hidden = false; ring.style.left = (p.x + b.left - s.left) + "px"; ring.style.top = (p.y + b.top - s.top) + "px";
++      ring.style.width = ring.style.height = (r() * 2) + "px";
++    };
++    cm.addEventListener("pointerdown", function (e) { if (e.button !== 0) return; e.preventDefault(); cm.setPointerCapture(e.pointerId); down = true; last = null; dab(at(e)); });
++    cm.addEventListener("pointermove", function (e) { showRing(e); if (down) dab(at(e)); });
++    var up = function () { down = false; last = null; };
++    cm.addEventListener("pointerup", up); cm.addEventListener("pointercancel", up);
++    cm.addEventListener("pointerleave", function () { ring.hidden = true; });
++    size.addEventListener("input", function () { keep("yue2.arBrush", size.value); });
++    var close = function () { document.removeEventListener("keydown", key, true); back.remove(); };
++    var done = function () {
++      var out = document.createElement("canvas");             // the mask at the picture's own size: white repaints, black stays
++      out.width = pic.width; out.height = pic.height;
++      var o = out.getContext("2d");
++      o.fillStyle = "#000"; o.fillRect(0, 0, out.width, out.height);
++      var white = document.createElement("canvas"); white.width = W; white.height = Hh;
++      var w2 = white.getContext("2d"); w2.drawImage(cm, 0, 0); w2.globalCompositeOperation = "source-in"; w2.fillStyle = "#fff"; w2.fillRect(0, 0, W, Hh);
++      o.drawImage(white, 0, 0, out.width, out.height);
++      var empty = !g.getImageData(0, 0, W, Hh).data.some(function (v, k) { return k % 4 === 3 && v > 0; });
++      setMask(empty ? null : { data: out.toDataURL("image/png"), view: white.toDataURL("image/png") });
++      toast(tr(empty ? "Nothing painted: no mask" : "The mask is kept: Draw repaints what is white of it, the rest stays"));
++      close();
++    };
++    var key = function (e) {
++      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
++      else if (e.key === "Enter") { e.preventDefault(); done(); }
++      else if (e.key === "b" || e.key === "B") setMode("paint");
++      else if (e.key === "e" || e.key === "E") setMode("erase");
++      else if (e.key === "[" || e.key === "]") { size.value = String(Math.max(4, Math.min(240, +size.value + (e.key === "]" ? 10 : -10)))); keep("yue2.arBrush", size.value); }
++    };
++    document.addEventListener("keydown", key, true);
++    back.addEventListener("click", function (e) {
++      var b = e.target.closest("[data-mk]");
++      if (!b) return;
++      var k = b.dataset.mk;
++      if (k === "paint" || k === "erase") setMode(k);
++      else if (k === "clear") g.clearRect(0, 0, W, Hh);
++      else if (k === "invert") {
++        var t = document.createElement("canvas"); t.width = W; t.height = Hh;
++        var tg = t.getContext("2d"); tg.fillStyle = "#e02828"; tg.fillRect(0, 0, W, Hh); tg.globalCompositeOperation = "destination-out"; tg.drawImage(cm, 0, 0);
++        g.clearRect(0, 0, W, Hh); g.drawImage(t, 0, 0);
++      } else if (k === "none") { setMask(null); close(); }
++      else if (k === "done") done();
++    });
++    state.maskEditor = { canvas: cm, paint: function (x, y, rad) { var s0 = size.value; size.value = String(rad * 2); last = null; dab({ x: x, y: y }); last = null; size.value = s0; }, done: done, close: close };
++  }
+   function draw(again) {
+     var body = again ? { prompt: again.prompt, shapes: again.shapes, count: again.count, seed: null, painter: again.painter }
+       : { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value };
+     if (again && again.ref) { body.ref = { id: again.id, file: again.ref }; body.strength = again.strength; }   // HERESY 1305: its own
+     else if (!again && state.ref) { body.ref = state.ref.data || { id: state.ref.id, file: state.ref.file }; body.strength = +$("arRefStr").value; }
++    if (again && again.ref && again.mask) body.mask = { id: again.id, file: again.mask };   // HERESY 1306: Again repaints by the run's own
++    if (!again && state.ref && state.mask) body.mask = state.mask.data;
+     body.preview = $("arLive").checked;                 // HERESY 1257: each step's picture while it paints
+     if (state.take) body.take = state.take.name;
+     if (!body.prompt) return toast(tr("Write what to paint first"), "bad");
+@@ -356,7 +475,7 @@
+     else meta.push((r.shapes || []).join(" · ") + (r.count > 1 ? " × " + r.count : ""), tr("seed") + " " + r.seed + (r.count > 1 ? "…" + (r.seed + r.count - 1) : ""));
+     meta.push(PAINTERS[r.painter] || r.painter || "", when(r.created));
+     if (r.took) meta.push(Math.round(r.took) + " s");
+-    if (r.ref) meta.push(tr("from a reference") + " · " + (+r.strength).toFixed(2));   // HERESY 1305
++    if (r.ref) meta.push(tr("from a reference") + " · " + (+r.strength).toFixed(2) + (r.masked ? " · " + tr("masked") : ""));   // HERESY 1305, 1306
+     if (r.gpu != null) meta.push("GPU " + r.gpu);
+     if (n) meta.push(tr("drawing") + " " + n + " " + tr("of") + " " + r.of);
+     var acts = "";
+@@ -583,6 +702,7 @@
+     // HERESY 1305: the reference picture: a file, a drop on its place, a paste in the room; its strength kept
+     $("arRefFile").addEventListener("change", function () { refFromFile(this.files && this.files[0]); this.value = ""; });
+     $("arRefX").addEventListener("click", function () { setRef(null); });
++    $("arMaskOpen").addEventListener("click", maskEditor);   // HERESY 1306
+     var refBox = $("arRef");
+     ["dragenter", "dragover"].forEach(function (k) { refBox.addEventListener(k, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0) { e.preventDefault(); refBox.classList.add("is-over"); } }); });
+     ["dragleave", "drop"].forEach(function (k) { refBox.addEventListener(k, function () { refBox.classList.remove("is-over"); }); });
+@@ -650,6 +770,7 @@
+     paintForm();
+   }
+   // HERESY 1271: the room entered, the stage follows a painting run again (the picture picked stays picked otherwise)
+-  window.HeresyArtistRef = { set: setRef, get: function () { return state.ref; }, fromFile: refFromFile };   // HERESY 1305: for the checks
++  window.HeresyArtistRef = { set: setRef, get: function () { return state.ref; }, fromFile: refFromFile,   // HERESY 1305: for the checks
++    mask: function () { return state.mask; }, editor: function () { return state.maskEditor; } };     // 1306
+   window.HeresyArtist = { init: init, reload: function () { state.pinSel = false; paintHead(); return load(); }, setTake: setTake };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index e9bd9f1..9687787 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1468,10 +1468,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <span class="row-hint">drop a picture here, paste one (Ctrl+V), or take the stage's with «As reference»</span>
+           <label class="btn ghost small ar-ref-pick">Choose…<input type="file" id="arRefFile" accept="image/png,image/jpeg,image/webp" hidden data-tip="A PNG, JPEG or WebP picture of your own to paint from" /></label></div>
+         <div class="ar-ref-on" id="arRefOn" hidden>
+-          <img id="arRefImg" alt="" draggable="false" />
++          <span class="ar-ref-pic"><img id="arRefImg" alt="" draggable="false" /><canvas id="arRefMask" hidden aria-hidden="true"></canvas></span>
+           <label class="field ar-ref-str"><span class="label">How much it may change <em id="arRefSay">0.60</em></span>
+             <input type="range" id="arRefStr" min="0.2" max="1" step="0.05" value="0.6" data-tip="How far from the picture the painting begins: 0.3 keeps it nearly as it is, 0.6 keeps its composition and changes its matter, 0.9 paints the prompt's scene in its light and colours, 1.0 paints anew" /></label>
+-          <button type="button" class="pb-btn ar-ref-x" id="arRefX" aria-label="No reference picture" data-tip="No reference: paint from the noise">✕</button>
++          <span class="ar-ref-btns"><button type="button" class="btn ghost small" id="arMaskOpen" data-tip="Paint what of the picture to repaint (white repaints, the rest stays as it is): as inpainting">Mask…</button>
++          <button type="button" class="pb-btn ar-ref-x" id="arRefX" aria-label="No reference picture" data-tip="No reference: paint from the noise">✕</button></span>
+         </div>
+       </div>
+       <div class="ar-knobs">
+-- 
+2.43.0
+

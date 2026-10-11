@@ -1,0 +1,212 @@
+From 309e14ede7b996e21e66f912df921205d6fd32d1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 03:43:30 -0600
+Subject: [PATCH 1291/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201301:=20the?=
+ =?UTF-8?q?=20server=20log's=20dock=20goes=20to=20either=20side=20of=20the?=
+ =?UTF-8?q?=20page=20by=20an=20arrow=20on=20its=20inner=20edge,=20kept=20f?=
+ =?UTF-8?q?or=20each=20room?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «фрейм Server Log сделаем более адаптовным. SVG иконка в левой позиции со стрелкой вправо, в правой - влево. Перемещение фрейма в другую сторону страницы, и запоминание позиции для определённой комнаты».
+
+The dock's head has a button on its inner edge (first when the dock stands right, last when it stands left): Lucide's arrow-left-to-line on the right, arrow-right-to-line on the left, pointing where a click takes it; its tip says so. The side is kept for the room (yue2.logDockSide, {"create": "left", …}); the Artist stands left by default (1258), the other rooms right; a lifted frame still puts the log left (1240) and hides the button meanwhile. The Trainer's log (1298) follows the dock to the free side by itself.
+
+Suite: 547/0 in the kitchen (the 1298 check waits after its last switch of rooms: DevTools said «Promise was collected»); pictures of both sides folded and open by tools/claude-dock-probe.mjs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  5 +++++
+ tools/console/app.js            | 28 ++++++++++++++++++++++++++--
+ tools/console/heresy-i18n-be.js |  3 +++
+ tools/console/heresy-i18n-el.js |  3 +++
+ tools/console/heresy-i18n-es.js |  3 +++
+ tools/console/heresy-i18n-it.js |  3 +++
+ tools/console/heresy-i18n-ru.js |  3 +++
+ tools/console/heresy-i18n-uk.js |  3 +++
+ tools/console/heresy-icons.js   |  3 +++
+ tools/console/index.html        |  3 +++
+ 10 files changed, 55 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index df2e00f..abadc0b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4707,6 +4707,11 @@ body:not([data-frame]) .frame-fs { display: none; }
+ 
+ /* HERESY 1169 · 1240: with a frame lifted the server log stands at the left (its width and height set by placeLogDock) */
+ .log-dock.is-left { right: auto; left: 16px; }
++/* HERESY 1301: the button that takes the dock across the page, on its inner edge; hidden while a frame is lifted (the frame decides) */
++.log-dock-side { flex: none; display: inline-grid; place-items: center; padding: 4px 6px; }
++.log-dock-side .ui-ico { width: 16px; height: 16px; }
++.log-dock.is-left .log-dock-side { order: 9; }
++body[data-frame] .log-dock-side { display: none; }
+ 
+ /* HERESY 1169 · 1241 (Viktor 08.10.2026: «Фильтр прикрути как кнопку в ту же строку с поиском и сортировкой - в самый конец справа. Минимальную длину поискового поля… 240 px, макс длина - 320px»): the filters' row gone for a button at the end of the search row; their window as the workspace's chooser */
+ #collBar { display: none !important; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index c6931ff..adc2f1a 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8845,11 +8845,34 @@
+     placeLogDock();
+   }
+   // HERESY 1169 · 1240 (Viktor 08.10.2026: «В попапе фреймов серверный лог поверх кнопки синтеза. В этом режиме смести его влево. Так не будет закрывать ничего»): with a frame lifted the log stands at the left, as wide as the room before the frame's bottom row of controls allows (Generate's row starts at 779 px at 100 %, 401 at 125 % and 156 at 150 % of a 1920 screen); with less than 220 px there it rises above that row
++  // HERESY 1301 (Viktor 10.10.2026: «Перемещение фрейма в другую сторону страницы, и запоминание позиции для определённой комнаты»):
++  // each room its side of the dock, as chosen (yue2.logDockSide); the Artist left by default (1258), the others right
++  function logDockSides() { try { return JSON.parse(recall("yue2.logDockSide") || "{}") || {}; } catch (e) { return {}; } }
++  function logDockLeft() {
++    var tab = document.body.dataset.tab || "create", side = logDockSides()[tab];
++    return side ? side === "left" : tab === "artist";
++  }
++  if ($("logDockSide")) $("logDockSide").addEventListener("click", function () {
++    var sides = logDockSides(), tab = document.body.dataset.tab || "create";
++    sides[tab] = logDockLeft() ? "right" : "left";
++    store("yue2.logDockSide", JSON.stringify(sides));
++    placeLogDock();
++  });
+   function placeLogDock() {
+     var d = $("logDock");
+     if (!d) return;
+-    var f = document.body.dataset.frame;
+-    d.classList.toggle("is-left", !!f || document.body.dataset.tab === "artist");   // HERESY 1258: «Серверный лог… в левую сторону» in the Artist
++    var f = document.body.dataset.frame, left = !!f || logDockLeft();
++    d.classList.toggle("is-left", left);   // HERESY 1258: «Серверный лог… в левую сторону» in the Artist; 1301: as each room was left
++    var sb = $("logDockSide");
++    if (sb) {                              // HERESY 1301: its arrow points where a click takes the dock
++      var say = left ? "The log to the right side of the page, kept for this room" : "The log to the left side of the page, kept for this room";
++      if (sb.dataset.side !== (left ? "left" : "right")) {
++        sb.dataset.side = left ? "left" : "right";
++        sb.innerHTML = window.HeresyIcons ? window.HeresyIcons.ui(left ? "to-right" : "to-left") : (left ? "→" : "←");
++      }
++      sb.dataset.tip = say;
++      sb.setAttribute("aria-label", say);
++    }
+     d.style.maxWidth = "";
+     d.style.bottom = "";
+     if (!f) return;
+@@ -8865,6 +8888,7 @@
+   }
+   var logDockTimer = 0;
+   window.addEventListener("resize", function () { if (!document.body.dataset.frame) return; clearTimeout(logDockTimer); logDockTimer = setTimeout(placeLogDock, 120); });
++  placeLogDock();                                    // HERESY 1301: the room's side, and the button's arrow, from the start
+   all(".frame-big").forEach(function (b) {
+     b.addEventListener("click", function () { frameOver(document.body.dataset.frame === b.dataset.frame ? null : b.dataset.frame); });
+   });
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 1922ecd..d71c193 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1393,6 +1393,9 @@ RuachI18n.add("be", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Малюецца вокладка для «{0}»: промпт са стылю і слоў, потым малюнак (каля паўхвіліны)",
+ "Artwork for “{0}” is ready": "Вокладка для «{0}» гатовая",
+ "No artwork: {0}": "Вокладкі няма: {0}",
++"The log to the right side of the page, kept for this room": "Лог — да правага краю старонкі, запомніцца для гэтага пакоя",
++"The log to the left side of the page, kept for this room": "Лог — да левага краю старонкі, запомніцца для гэтага пакоя",
++"The log to the left side of the page": "Лог — да левага краю старонкі",
+ "How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Наколькі шырока адаптар мяняе вагі: 16 для аднаго голасу ці інструмента, 32 для стылю, 64 для многіх галасоў, 128 найбольш.",
+ "Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Ці вучыцца музычная палова (тая, што піша токены песні) і наколькі моцна яе ўрок цягне супраць якара: 0 пакідае яе базавай, толькі тэмбр; падымі для дыкцыі і стылю. Лічыцца доля якара ад яе, а не яе велічыня.",
+ "Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Цягне музычную палову назад да базавай мадэлі, каб яна захавала тое, чаго ў наборы няма. Чытай яго як долю Вагі AR: дзясятая доля дае рухацца, роўны вазе трымае каля базы. Пры Вазе AR 0 нічога не робіць.",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 4f91d9a..1d2522e 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1392,6 +1392,9 @@ RuachI18n.add("el", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Ζωγραφίζεται εξώφυλλο για το «{0}»: ένα prompt από το ύφος και τις λέξεις του, μετά η εικόνα (περίπου μισό λεπτό)",
+ "Artwork for “{0}” is ready": "Το εξώφυλλο για το «{0}» είναι έτοιμο",
+ "No artwork: {0}": "Χωρίς εξώφυλλο: {0}",
++"The log to the right side of the page, kept for this room": "Το αρχείο καταγραφής στη δεξιά πλευρά της σελίδας, κρατιέται για αυτό το δωμάτιο",
++"The log to the left side of the page, kept for this room": "Το αρχείο καταγραφής στην αριστερή πλευρά της σελίδας, κρατιέται για αυτό το δωμάτιο",
++"The log to the left side of the page": "Το αρχείο καταγραφής στην αριστερή πλευρά της σελίδας",
+ "How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Πόσο πλατιά αλλάζει τα βάρη ο adapter: 16 για μία φωνή ή ένα όργανο, 32 για ένα ύφος, 64 για πολλές φωνές, 128 το πολύ.",
+ "Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Αν μαθαίνει το μουσικό μισό (αυτό που γράφει τα tokens του τραγουδιού) και πόσο δυνατά το μάθημά του τραβά ενάντια στην άγκυρα: το 0 το αφήνει βασικό, μόνο χροιά· ανέβασέ το για άρθρωση και ύφος. Μετρά το μερίδιο της άγκυρας σε αυτό, όχι το μέγεθός του.",
+ "Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Τραβά το μουσικό μισό πίσω προς το βασικό μοντέλο, ώστε να κρατήσει ό,τι το σύνολο δεν δείχνει. Διάβαζέ την ως μερίδιο του Βάρους AR: το ένα δέκατο το αφήνει να κινηθεί, όσο το βάρος το κρατά κοντά στη βάση. Με Βάρος AR 0 δεν κάνει τίποτα.",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index d175fc8..eaee155 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1392,6 +1392,9 @@ RuachI18n.add("es", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Dibujando la portada de «{0}»: un prompt a partir de su estilo y sus palabras, luego la imagen (cerca de medio minuto)",
+ "Artwork for “{0}” is ready": "La portada de «{0}» está lista",
+ "No artwork: {0}": "Sin portada: {0}",
++"The log to the right side of the page, kept for this room": "El registro al lado derecho de la página, recordado para esta sala",
++"The log to the left side of the page, kept for this room": "El registro al lado izquierdo de la página, recordado para esta sala",
++"The log to the left side of the page": "El registro al lado izquierdo de la página",
+ "How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Lo ancho que cambia el adaptador los pesos: 16 para una voz o un instrumento, 32 para un estilo, 64 para muchas voces, 128 como mucho.",
+ "Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Si la mitad musical aprende (la que escribe los tokens de la canción) y con cuánta fuerza su lección tira contra el ancla: 0 la deja como la base, solo un timbre; súbelo para la dicción y el estilo. Cuenta la parte del ancla respecto a él, no su tamaño.",
+ "Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Tira de la mitad musical de vuelta hacia el modelo base, para que conserve lo que el conjunto no muestra. Léelo como una parte del Peso AR: una décima la deja moverse; igual al peso, la sujeta cerca de la base. Con Peso AR 0 no hace nada.",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index dc45085..734b021 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1392,6 +1392,9 @@ RuachI18n.add("it", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Si disegna la copertina di «{0}»: un prompt dal suo stile e dalle sue parole, poi l'immagine (circa mezzo minuto)",
+ "Artwork for “{0}” is ready": "La copertina di «{0}» è pronta",
+ "No artwork: {0}": "Nessuna copertina: {0}",
++"The log to the right side of the page, kept for this room": "Il log sul lato destro della pagina, ricordato per questa stanza",
++"The log to the left side of the page, kept for this room": "Il log sul lato sinistro della pagina, ricordato per questa stanza",
++"The log to the left side of the page": "Il log sul lato sinistro della pagina",
+ "How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Quanto ampiamente l'adattatore cambia i pesi: 16 per una voce o uno strumento, 32 per uno stile, 64 per molte voci, 128 al massimo.",
+ "Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Se la metà musicale impara (quella che scrive i token della canzone) e quanto forte la sua lezione tira contro l'ancora: 0 la lascia com'è la base, solo un timbro; alzalo per la dizione e lo stile. Conta la quota dell'ancora rispetto a esso, non la sua grandezza.",
+ "Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Tira la metà musicale indietro verso il modello di base, perché conservi ciò che il set non mostra. Leggila come una quota del Peso AR: un decimo la lascia muovere, quanto il peso la tiene vicino alla base. Con Peso AR 0 non fa nulla.",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index e196474..9ca3bf8 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1400,6 +1400,9 @@ RuachI18n.add("ru", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Рисуется обложка для «{0}»: промпт из стиля и слов, потом картинка (около полуминуты)",
+ "Artwork for “{0}” is ready": "Обложка для «{0}» готова",
+ "No artwork: {0}": "Обложки нет: {0}",
++"The log to the right side of the page, kept for this room": "Лог — к правому краю страницы, запомнится для этой комнаты",
++"The log to the left side of the page, kept for this room": "Лог — к левому краю страницы, запомнится для этой комнаты",
++"The log to the left side of the page": "Лог — к левому краю страницы",
+ "How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Насколько широко адаптер меняет веса: 16 для одного голоса или инструмента, 32 для стиля, 64 для многих голосов, 128 самое большее.",
+ "Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Учится ли музыкальная половина (та, что пишет токены песни) и как сильно её урок тянет против якоря: 0 оставляет её базовой, только тембр; подними для дикции и стиля. Считается доля якоря от него, а не его величина.",
+ "Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Тянет музыкальную половину назад к базовой модели, чтобы она сохранила то, чего в наборе нет. Читай его как долю Веса AR: десятая доля даёт двигаться, равный весу держит у базы. При Весе AR 0 ничего не делает.",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index cf336b1..9a93b76 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1393,6 +1393,9 @@ RuachI18n.add("uk", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Малюється обкладинка для «{0}»: промпт зі стилю й слів, потім картинка (близько пів хвилини)",
+ "Artwork for “{0}” is ready": "Обкладинка для «{0}» готова",
+ "No artwork: {0}": "Обкладинки немає: {0}",
++"The log to the right side of the page, kept for this room": "Лог — до правого краю сторінки, запам'ятається для цієї кімнати",
++"The log to the left side of the page, kept for this room": "Лог — до лівого краю сторінки, запам'ятається для цієї кімнати",
++"The log to the left side of the page": "Лог — до лівого краю сторінки",
+ "How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Наскільки широко адаптер змінює ваги: 16 для одного голосу чи інструмента, 32 для стилю, 64 для багатьох голосів, 128 щонайбільше.",
+ "Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Чи вчиться музична половина (та, що пише токени пісні) і як сильно її урок тягне проти якоря: 0 лишає її базовою, лише тембр; підніми для дикції та стилю. Рахується частка якоря від неї, а не її величина.",
+ "Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Тягне музичну половину назад до базової моделі, щоб вона зберегла те, чого в наборі немає. Читай його як частку Ваги AR: десята частка дає рухатися, рівний вазі тримає біля бази. За Ваги AR 0 нічого не робить.",
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index 177c474..2d6fe34 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -121,6 +121,9 @@
+     like: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+     dislike: '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+     note: '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><path d="M7 12h7M7 16h5"/>',
++    // HERESY 1301: the server log to the other side of the page (Lucide's arrow-left-to-line and arrow-right-to-line, ISC)
++    "to-left": '<path d="M3 19V5"/><path d="m13 6-6 6 6 6"/><path d="M7 12h14"/>',
++    "to-right": '<path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/>',
+     // HERESY 1299: the Telemetry's two curves side by side or one under the other (Lucide's columns-2 and rows-2, ISC)
+     "cols-2": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>',
+     "rows-2": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 12h18"/>',
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 74d74de..0f5a03a 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1757,6 +1757,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+      (the last thing the engine said) until unfolded to ten; the same stream as Engine's log, not a second one -->
+ <aside class="log-dock is-folded" id="logDock" aria-label="Server log">
+   <div class="log-dock-head">
++    <!-- HERESY 1301 (Viktor 10.10.2026: «SVG иконка в левой позиции со стрелкой вправо, в правой - влево»): the dock to the other side,
++         kept for the room; on the dock's inner edge (app.css orders it last when the dock is on the left) -->
++    <button type="button" class="icon-btn log-dock-side" id="logDockSide" aria-label="The log to the left side of the page"></button>
+     <button type="button" class="log-dock-tab" id="logDockTab" aria-expanded="false" data-tip="The server log, in every room: click to unfold or fold">
+       <span class="lamp" id="logDockLamp"></span><b>Server log</b><span class="net-say mono" id="netSay"></span><span class="log-dock-last mono" id="logDockLast">connecting</span></button>
+     <span class="log-dock-acts">
+-- 
+2.43.0
+

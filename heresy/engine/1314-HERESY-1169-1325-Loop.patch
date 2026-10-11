@@ -1,0 +1,93 @@
+From 15a12d3ab4fab110a044d9c132d7a902867e3aa5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 15:09:52 -0600
+Subject: [PATCH 1314/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201325:=20Loop?=
+ =?UTF-8?q?=E2=80=A6?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+From SUNO v6 (TODO.md: «A loop from the song: 1, 2, 4 or 8 bars cut on the score's bar lines, seamless, as a WAV»).
+
+The take's Loop… in Files reads its score (its own, else the one written from its sound) with HeresyAbc: its bars in seconds at its tempo, its key where the loop begins; from the bar where the player stands (else the first) it asks 1, 2, 4 or 8 bars, refuses bars past the score or the take, and saves the lab's WAV as «Title · N bars from m-ss · BPM · key.wav».
+
+Suite: 589/0 in the kitchen with 1326 (the check beside End at…'s on the CDP take; its cleanup now lets a leaving dialog go).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js     | 45 ++++++++++++++++++++++++++++++++++++++++
+ tools/console/index.html |  1 +
+ 2 files changed, 46 insertions(+)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 2d6e779..4eaaf9d 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4610,6 +4610,51 @@
+       .then(function () { button.disabled = false; });
+   });
+ 
++  // HERESY 1169 · 1325 (from SUNO v6, TODO.md: «A loop from the song: 1, 2, 4 or 8 bars cut on the score's bar lines, seamless, as a
++  // WAV (SUNO's Sounds: loops and one-shots with BPM and key)»): the take's score (its own, else the one written from its sound) gives
++  // its bars in seconds at its tempo; the bar where the player stands (else the first), so many bars on; the lab cuts them from the
++  // take's own WAV, its first 30 ms crossfaded from what follows them in the song, so played round the end runs into the start
++  function barsOf(abc) {
++    var score = window.HeresyAbc.parse(abc), v = score.voices.Vocal, f = function (a) { return a[0] / a[1]; }, k = 60 / score.bpm;
++    return { bpm: score.bpm, key: score.key, keys: v.keys.map(function (x) { return { t: f(x[0]) * k, key: x[1] }; }),
++             bars: v.bars.map(function (b) { return { t: f(b[0]) * k, len: f(b[1]) * k }; }) };
++  }
++  window.ruachBarsOf = barsOf;                                 // for the checks
++  $("loopTake").addEventListener("click", function () {
++    var take = STATE.take, button = this, plan, at = 0;
++    if (!take || take.session) return;
++    var here = STATE.playerTake && STATE.playerTake.name === take.name && audio.currentTime > 0 ? audio.currentTime : null;
++    var got = take.has_score ? getRequest(take).then(function (req) { return (req && req.abc) || ""; })
++      : fetch("/lab/score?name=" + encodeURIComponent(take.name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { return (d && d.abc) || ""; });
++    got.then(function (abc) {
++      if (!abc) throw new Error("This take has no score to find its bars by: Transcribe this take writes one from its sound");
++      plan = barsOf(abc);
++      if (!plan.bars.length) throw new Error("Its score has no bars");
++      if (here !== null) plan.bars.forEach(function (b, k) { if (b.t <= here + 0.05) at = k; });
++      return window.HeresyDialog.prompt("A loop from this take\n\nFrom the bar at " + clock(plan.bars[at].t) + (here !== null ? " (where the player stands)" : " (the first: play the take and pause where the loop should begin)") +
++        ", how many bars: 1, 2, 4 or 8? Seamless, its end running into its start; saved as a WAV.", "4", { ok: "Cut the loop", placeholder: "4" });
++    }).then(function (answer) {
++      if (answer === null) throw null;
++      var n = parseInt(answer, 10), bars = plan.bars;
++      if ([1, 2, 4, 8].indexOf(n) < 0) throw new Error("1, 2, 4 or 8 bars");
++      if (at + n > bars.length) throw new Error("Only " + (bars.length - at) + " bars from there to the end of the score");
++      var start = bars[at].t, last = bars[at + n - 1], secs = last.t + last.len - start;
++      if (take.seconds && start + secs > take.seconds) throw new Error("The take ends before those bars do");
++      var key = plan.key;
++      plan.keys.forEach(function (x) { if (x.t <= start + 0.01) key = x.key; });
++      var file = (displayTitle(take) + " · " + n + " bar" + (n > 1 ? "s" : "") + " from " + clock(start) + " · " + Math.round(plan.bpm) + " BPM · " + key)
++        .replace(/[\\/:*?"<>|]+/g, "-") + ".wav";
++      button.disabled = true;
++      return fetch("/lab/loop?name=" + encodeURIComponent(take.name) + "&start=" + start.toFixed(4) + "&seconds=" + secs.toFixed(4))
++        .then(function (r) { return r.ok ? r.blob() : r.json().then(function (b) { throw new Error(b.error || r.status); }); })
++        .then(function (blob) {
++          downloadText(file, blob, "audio/wav");
++          toast("The loop: " + n + " bar" + (n > 1 ? "s" : "") + ", " + secs.toFixed(2) + " s at " + Math.round(plan.bpm) + " BPM, " + key, "good");
++        });
++    }).catch(function (error) { if (error) toast(error.message, "bad"); })
++      .then(function () { button.disabled = false; });
++  });
++
+   // HERESY 1169 · 1324 (Viktor's screenshots of SUNO v6, 09.10.2026, «Наша студия уже круче, чем СУНО»: its Fade in beside our End at…):
+   // the same take, its first seconds brought up from silence on a half cosine; from its kept latents in seconds (the very sound),
+   // else its music codes rendered again; an ended take stays ended (its request's end_at and fade_out go along)
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 44d1300..13da605 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1002,6 +1002,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <div class="tool-group tg-files"><span class="tool-cap">Files</span><div class="tool-row">
+           <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds">Request</button>
+           <button type="button" class="btn ghost small" id="dlScore" title="The score as ABC notation (.abc)">Score</button>
++          <button type="button" class="btn ghost small" id="loopTake" data-tip="A loop from this take: 1, 2, 4 or 8 bars on its score's bar lines, from the bar where the player stands (else the first), seamless (its end runs into its start), saved as a WAV named with its tempo and key">Loop…</button>
+         </div></div>
+       </div>
+ 
+-- 
+2.43.0
+

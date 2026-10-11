@@ -16,8 +16,9 @@
   function workable(w) { var p = String(w || "").split(" / "); return p.length > 1 && p[p.length - 1] === "Sourced for Regeneration" ? p.slice(0, -1).join(" / ") : String(w || ""); }
   function current() { var w = workable(recall(WS_KEY) || ""); return state.ws.indexOf(w) >= 0 ? w : ""; }
   var state = { rows: [], ws: [], trashDays: 0, place: "", q: "", kinds: {}, derived: {}, sel: {}, last: null,
-                trash: [], tsel: {}, hooks: null, loaded: false };
+                trash: [], tsel: {}, artBin: null, artBinErr: "", asel: {}, hooks: null, loaded: false };   // 1337: the art's trash, its ticked
   function $(id) { return document.getElementById(id); }
+  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }   // HERESY 1339: counts said inside a sentence
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private */ } }
@@ -199,7 +200,8 @@
       }).join("") +
       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
       '<button type="button" class="coll-place coll-new coll-hub" data-ws-hub="1">\ud83d\udc8e From Hugging Face\u2026</button>' +   // HERESY 1166
-      '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined);
+      '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden) + item("__trash", "Trash", state.trash.length || undefined) +
+      item("__trash_art", "Trash (Art)", artCount() || undefined);   // HERESY 1337
     fitSide();
   }
 
@@ -255,8 +257,10 @@
   }
   function paint() {
     paintSide();
-    var trash = state.place === "__trash";
+    var trash = inTrash();                                 // HERESY 1337: the takes' trash or the art's
     $("collBar").hidden = trash; $("collTrashBar").hidden = !trash; $("collSlot").hidden = trash; $("collHeadTools").hidden = trash;
+    $("collTrashDays").closest("label").style.display = state.place === "__trash_art" ? "none" : "";   // the takes' trash's own
+    if (state.place === "__trash_art") return paintArtBin();
     if (trash) return paintTrash();
     var rows = shown(), view = recall(VIEW_KEY) || "tiles";
     $("collGrid").className = "coll-grid " + view;
@@ -299,7 +303,7 @@
   }
   function more() {
     var s = $("collMore");
-    if (!s || s.hidden || state.place === "__trash" || LAZY.shown >= LAZY.rows.length) return;
+    if (!s || s.hidden || inTrash() || LAZY.shown >= LAZY.rows.length) return;
     var from = LAZY.shown;
     LAZY.shown = Math.min(LAZY.rows.length, from + batch());
     $("collGrid").insertAdjacentHTML("beforeend", LAZY.rows.slice(from, LAZY.shown).map(cardHtml).join(""));
@@ -523,6 +527,90 @@
     return api("/trash").then(function (d) { state.trash = d.items || []; state.tsel = {}; paint(); });
   }
 
+  // HERESY 1337 (Viktor 10.10.2026: «картинки у нас куда удаляются с обложек треков и остального? Может отдельный Trash сделать в колонке
+  // воркспейсов? `Trash (Art)`. Вижу Trash у Артиста, но пока что очистки и удаления нет.»): the art put away, one list of three kinds:
+  // the Artist's runs in the trash, the pictures put aside, the covers taken off the takes (by a redraw, by Remove, by a new cover);
+  // ticked, given back or deleted for good (asked first); a frozen workspace's covers stay as they are
+  function inTrash() { return state.place === "__trash" || state.place === "__trash_art"; }
+  function artItems() {
+    var b = state.artBin || {};
+    return (b.runs || []).map(function (r) { return { kind: "run", id: r.id, r: r, bytes: +r.bytes || 0 }; })
+      .concat((b.pictures || []).map(function (p) { return { kind: "picture", id: p.id, file: p.file, p: p, bytes: +p.bytes || 0 }; }))
+      .concat((b.covers || []).map(function (c) { return { kind: "cover", take: c.take, stamp: c.stamp, c: c, frozen: !!c.frozen, bytes: +c.bytes || 0 }; }));
+  }
+  function artKey(it) { return it.kind === "run" ? "run:" + it.id : it.kind === "picture" ? "pic:" + it.id + "|" + it.file : "cover:" + it.take + "|" + it.stamp; }
+  function artCount() { return state.artBin ? artItems().length : 0; }
+  function artDay(t) {
+    var d = new Date((+t || 0) * 1000), z = function (n) { return (n < 10 ? "0" : "") + n; };
+    return +t ? d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()) + " " + z(d.getHours()) + ":" + z(d.getMinutes()) : "";
+  }
+  function stampDay(s) { return String(s).replace(/^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d).*$/, "$1-$2-$3 $4:$5"); }
+  function loadArtBin(quiet) {
+    return api("/artist/bin").then(function (d) { state.artBin = d; state.artBinErr = ""; state.asel = {}; if (quiet) paintSide(); else paint(); })
+      .catch(function (e) { state.artBin = null; state.artBinErr = e.message || String(e); if (quiet) paintSide(); else paint(); });
+  }
+  function paintArtBin() {
+    var list = artItems(), b = state.artBin, nsel = Object.keys(state.asel).length;
+    $("collWhere").innerHTML = " \u203a <span>Trash (Art)</span>";
+    $("collNote").innerHTML = b ? "<span>" + list.length + " in the art's trash</span> · <span>" + ((+b.bytes || 0) / 1e9).toFixed(2) + " GB</span>" : "";
+    $("collGrid").className = "coll-grid list";
+    $("collEmpty").textContent = nsel ? "Delete " + nsel + " for good" : "Wipe out the art's trash";
+    $("collEmpty").disabled = !list.some(function (it) { return !it.frozen; });
+    $("collRestore").disabled = !nsel;
+    if (!b) {
+      $("collGrid").innerHTML = '<p class="row-hint coll-empty">' + esc(state.artBinErr ? "The art's trash could not be read: " + state.artBinErr : "Reading the art's trash…") + "</p>";
+      return;
+    }
+    $("collGrid").innerHTML = list.length ? list.map(function (it) {
+      var key = artKey(it), sel = !!state.asel[key], src = "", title = "", meta = [], mine = "";
+      if (it.kind === "run") {
+        var kept = (it.r.pictures || []).filter(function (p) { return p.kept; }), first = kept[0];
+        if (first) src = "/lab/artist/file?id=" + encodeURIComponent(it.id) + "&file=" + encodeURIComponent(first.thumb || first.file) + "&trash=1";
+        title = it.r.prompt || it.id;
+        meta = ["The Artist's run", kept.length + (kept.length === 1 ? " picture" : " pictures"), "in the trash since " + artDay(it.r.trashed_at)];
+      } else if (it.kind === "picture") {
+        src = "/lab/artist/file?id=" + encodeURIComponent(it.id) + "&file=" + encodeURIComponent(it.p.thumb || it.p.file);
+        title = it.p.prompt || it.file;
+        meta = ["A picture put aside", it.p.shape + " · seed " + it.p.seed, artDay(it.p.created)];
+      } else {
+        src = "/lab/artist/bin-file?take=" + encodeURIComponent(it.take) + "&stamp=" + encodeURIComponent(it.stamp);
+        title = it.c.title || it.take;
+        meta = ["A cover taken off its take", "taken off " + stampDay(it.stamp)];
+        if (it.c.prompt) mine = it.c.prompt;
+      }
+      meta.push((it.bytes / 1e6).toFixed(1) + " MB");
+      return '<article class="coll-card coll-art' + (sel ? " is-sel" : "") + (it.frozen ? " is-frozen" : "") + '" data-akind="' + it.kind + '">' +
+        '<label class="coll-check"><input type="checkbox" data-asel="' + esc(key) + '"' + (sel ? " checked" : "") + (it.frozen ? ' disabled title="Frozen: its takes are heard, never changed"' : "") + " /></label>" +
+        (src ? '<img class="coll-art-pic" alt="" loading="lazy" draggable="false" src="' + esc(src) + '" />' : '<span class="coll-art-pic"></span>') +
+        '<div class="coll-body"><div class="coll-title" translate="no">' + esc(title) + '</div><div class="coll-meta">' + meta.map(function (m) { return "<span>" + esc(m) + "</span>"; }).join(" · ") +
+        (mine ? ' · <span translate="no">' + esc(mine) + "</span>" : "") + "</div></div></article>";
+    }).join("") : '<p class="row-hint coll-empty">The art\'s trash is empty.</p>';
+  }
+  function artBinAct(op) {
+    var list = artItems(), picked = list.filter(function (it) { return state.asel[artKey(it)]; }), all = op === "delete" && !picked.length;
+    if (op === "restore" && !picked.length) return toast("Tick what to give back", true);
+    var go = all ? list.filter(function (it) { return !it.frozen; }) : picked;
+    if (!go.length) return;
+    var many = function (k, one, more) { var n = go.filter(function (it) { return it.kind === k; }).length; return n ? tr(n === 1 ? "1 " + one : n + " " + more) : ""; };   // HERESY 1339
+    var what = [many("run", "run", "runs"), many("picture", "picture", "pictures"), many("cover", "cover", "covers")].filter(Boolean).join(", ");
+    var mb = go.reduce(function (s, it) { return s + it.bytes; }, 0) / 1e6, body = { op: all ? "empty" : op };
+    if (!all) body.items = go.map(function (it) { return it.kind === "run" ? { kind: "run", id: it.id } : it.kind === "picture" ? { kind: "picture", id: it.id, file: it.file } : { kind: "cover", take: it.take, stamp: it.stamp }; });
+    var run = function () {
+      return api("/artist/bin", body).then(function (d) {
+        var n = (d.done || []).length, kept = d.kept || [];
+        toast((op === "restore" ? n + " given back" : n + " deleted for good") + (kept.length ? "; " + kept.length + " stayed: " + kept[0].why : ""), !!kept.length && !n);
+        state.asel = {};
+        if (state.hooks && state.hooks.refreshArts) state.hooks.refreshArts();          // a cover given back shows on its take
+        if (window.HeresyArtist && window.HeresyArtist.reload) window.HeresyArtist.reload();   // the Artist room's runs and pictures
+        return loadArtBin();
+      }).catch(function (e) { toast(e.message, true); });
+    };
+    if (op === "restore") return run();
+    return ask((all ? "Wipe out the art's trash: " : "Delete for good: ") + what + " (" + mb.toFixed(1) + " MB).\n\nThis cannot be undone." +
+      (all && list.some(function (it) { return it.frozen; }) ? "\n\nThe covers of a frozen workspace's takes stay." : ""), { ok: all ? "Wipe out" : "Delete for good", danger: true })
+      .then(function (ok) { if (ok) return run(); });
+  }
+
   function names() { return Object.keys(state.sel); }
 
   // HERESY 1101: a card checked or unchecked by a click on it (Shift: the whole range from the last one)
@@ -549,7 +637,7 @@
     return document.scrollingElement || document.documentElement;
   }
   function bandStart(e) {
-    if (e.button !== 0 || state.place === "__trash") return;
+    if (e.button !== 0 || inTrash()) return;
     var onCard = e.target.closest(".coll-card[data-name]");
     if (onCard && !e.ctrlKey) return;
     if (e.target.closest("button, input, a, select, textarea, .coll-title-edit") && !e.ctrlKey) return;
@@ -888,7 +976,7 @@
       var p = e.target.closest("[data-place]");
       if (!p) return;
       openPlace(p.dataset.place);                       // HERESY 1167: the bar follows
-      if (state.place === "__trash") loadTrash(); else paint();
+      if (state.place === "__trash") loadTrash(); else if (state.place === "__trash_art") loadArtBin(); else paint();   // HERESY 1337
     });
     $("collSide").addEventListener("dblclick", function (e) {
       var p = e.target.closest("[data-place]");
@@ -914,7 +1002,7 @@
     function clearDrop() { Array.prototype.forEach.call(document.querySelectorAll(".coll-place.is-drop"), function (b) { b.classList.remove("is-drop"); }); }
     $("collGrid").addEventListener("dragstart", function (e) {
       var card = e.target.closest && e.target.closest(".coll-card[data-name]");
-      if (!card || state.place === "__trash" || card.classList.contains("is-frozen") || (e.target.closest && e.target.closest("input, textarea"))) { e.preventDefault(); return; }
+      if (!card || inTrash() || card.classList.contains("is-frozen") || (e.target.closest && e.target.closest("input, textarea"))) { e.preventDefault(); return; }
       var n = card.dataset.name, list = state.sel[n] ? names() : [n], r = rowOf(n);
       drag = list;
       hidePeek();
@@ -970,6 +1058,8 @@
     $("collGrid").addEventListener("click", function (e) {
       var play = e.target.closest("[data-play]"), open = e.target.closest("[data-open]"), cb = e.target.closest("[data-sel]"), tcb = e.target.closest("[data-tsel]");
       if (tcb) { if (tcb.checked) state.tsel[tcb.dataset.tsel] = 1; else delete state.tsel[tcb.dataset.tsel]; return paint(); }
+      var acb = e.target.closest("[data-asel]");         // HERESY 1337: the art's trash
+      if (acb) { if (acb.checked) state.asel[acb.dataset.asel] = 1; else delete state.asel[acb.dataset.asel]; return paint(); }
       if (band.ate) { band.ate = false; return; }             // the click that ends a rubber band is not a click
       var artb = e.target.closest("[data-art]");             // HERESY 1155: ‹ › walk the pictures of the cards shown
       if (artb && window.HeresyArt && window.HeresyArt.show) {
@@ -1098,10 +1188,10 @@
       var mod = e.ctrlKey || e.metaKey, k = (e.key || "").toLowerCase();
       // HERESY 1167: the browser's own find sees only the cards drawn; the Librarian's search sees every take
       if (mod && k === "f") { e.preventDefault(); $("collSearch").focus(); $("collSearch").select(); return; }
-      if (mod && k === "a" && state.place !== "__trash") { e.preventDefault(); shown().forEach(function (r) { if (!r.frozen) state.sel[r.name] = 1; }); paint(); }
+      if (mod && k === "a" && !inTrash()) { e.preventDefault(); shown().forEach(function (r) { if (!r.frozen) state.sel[r.name] = 1; }); paint(); }
       else if (mod && k === "z" && undoState.fn) { e.preventDefault(); undoLast(); }
       else if (e.key === "Escape" && names().length) { state.sel = {}; paint(); }
-      else if (e.key === "Delete" && names().length && state.place !== "__trash") { e.preventDefault(); $("collTrash").click(); }
+      else if (e.key === "Delete" && names().length && !inTrash()) { e.preventDefault(); $("collTrash").click(); }
     });
     // HERESY 1162 (Viktor: «на столбик воркспейсов возможность перетягивать, менять ширину, и схлопывать эту колонку. Можно при
     // схлопнутой добавлять ещё одну колонку в тайл карточек»): its edge dragged (the width kept), « folds it away and the tiles
@@ -1186,14 +1276,19 @@
     });
     // the trash
     var chosen = function () { return Object.keys(state.tsel).map(function (k) { var p = k.split("/"); return { day: p[0], name: p[1] }; }); };
-    $("collTSelAll").addEventListener("click", function () { state.trash.forEach(function (it) { state.tsel[it.day + "/" + it.name] = 1; }); paint(); });
-    $("collTSelNone").addEventListener("click", function () { state.tsel = {}; paint(); });
+    $("collTSelAll").addEventListener("click", function () {
+      if (state.place === "__trash_art") { artItems().forEach(function (it) { if (!it.frozen) state.asel[artKey(it)] = 1; }); return paint(); }   // HERESY 1337
+      state.trash.forEach(function (it) { state.tsel[it.day + "/" + it.name] = 1; }); paint();
+    });
+    $("collTSelNone").addEventListener("click", function () { state.tsel = {}; state.asel = {}; paint(); });
     $("collRestore").addEventListener("click", function () {
+      if (state.place === "__trash_art") return artBinAct("restore");   // HERESY 1337
       var items = chosen(); if (!items.length) return toast("Tick what to give back", true);
       api("/trash", { op: "restore", items: items }).then(function (d) { toast(d.restored.length + " back in the library"); if (hooks.refreshLibrary) hooks.refreshLibrary(); return load().then(loadTrash); })
         .catch(function (e) { toast(e.message, true); });
     });
     $("collEmpty").addEventListener("click", function () {
+      if (state.place === "__trash_art") return artBinAct("delete");    // HERESY 1337
       var items = chosen(), all = !items.length;
       var n = all ? state.trash.length : items.length;
       if (!n) return;
@@ -1213,6 +1308,7 @@
     state.place = recall(WS_KEY) || "";
     load();
     api("/trash").then(function (d) { state.trash = d.items || []; paintSide(); }).catch(function () {});
+    loadArtBin(true);                                    // HERESY 1337: its number in the column
   }
 
   // HERESY 1042: likes, as SUNO has them (the player sets them)

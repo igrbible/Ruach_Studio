@@ -2,7 +2,7 @@ From 9f595ac1b41bc1c38dedae6ded3e864c99d7416d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Fri, 9 Oct 2026 17:15:11 -0600
-Subject: [PATCH 1268/1286] =?UTF-8?q?HERESY=201169=20=C2=B7=201270:=20the?=
+Subject: [PATCH 1268/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201270:=20the?=
  =?UTF-8?q?=20Artist's=20Draw=20is=20Stop=20while=20a=20run=20waits=20or?=
  =?UTF-8?q?=20draws=20(the=20lab's=20POST=20/artist/stop:=20a=20waiting=20?=
  =?UTF-8?q?run=20off=20the=20queue,=20a=20drawing=20one's=20painter=20ende?=

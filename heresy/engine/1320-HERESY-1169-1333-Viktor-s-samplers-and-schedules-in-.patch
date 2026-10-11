@@ -1,0 +1,101 @@
+From 6019ecbed29436ed8bb9a42fdb1cca1a137ed258 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 16:50:55 -0600
+Subject: [PATCH 1320/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201333:=20Vikt?=
+ =?UTF-8?q?or's=20samplers=20and=20schedules=20in=20the=20Artist?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «По моему набору семплеров хочу попросить, чтобы ты их внедрил… Семплеры: er_sde, res_*s, res_*s_ode, heun(pp2), exp_heun_2_x0(_sde). Планировщики: bong_tangent, sgm_uniform, exponential, beta, kl_optimal, beta57».
+
+The sampler's choice: Euler, Euler SDE, ER-SDE, RES 2s and 3s with their ODE ones, Heun++ 2, Exp Heun 2 x0 and its SDE; the schedule's: Simple, Karras, Exponential, Beta, Beta 57, KL optimal, SGM uniform, Bong tangent; the summary names them; the time grows by the looks a step takes (two, three). Two warnings under the sampling, as the matrix of 30 pictures showed them: Lightning under Karras or Exponential paints the subject twice; without Lightning Euler SDE paints Qwen soft.
+
+Suite: 604/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  3 +++
+ tools/console/heresy-artist.js | 17 ++++++++++++++---
+ tools/console/index.html       |  5 +++--
+ 3 files changed, 20 insertions(+), 5 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 6432bcc..3c0361b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5087,3 +5087,6 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
+ @keyframes ar-wait { from { background-position: 0 0; } to { background-position: 22px 0; } }
+ @media (prefers-reduced-motion: reduce) { .ar-progress.is-waiting .ar-progress-bar i { animation: none; } }
+ .ar-progress em { font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
++/* HERESY 1333: the sampling's warnings the matrix earned */
++.ar-samp-warn { color: var(--amber); margin: 2px 0 4px; }
++.ar-samp-warn[hidden] { display: none; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index de8d143..5dae006 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -68,8 +68,8 @@
+     var shapes = shapesPicked(), count = +$("arCount").value || 1, n = shapes.length * count;
+     var secs = 25 + count * shapes.reduce(function (a, id) { return a + shapeOf(id).s; }, 0);
+     var pk = $("arPainter").value, ps = sampNow(pk);   // HERESY 1319: the time follows the steps
+-    if (/^krea2/.test(pk)) secs = 25 + (secs - 25) * (+ps.steps || 8) / 8;
+-    if (/^qwen/.test(pk)) secs = 90 + n * (pk === "qwen21" ? 3 * (+ps.steps || 30) : 3.5 * (+ps.steps || 8) * (sampFast(pk, ps) ? 1 : 2));   // HERESY 1318: its parts; 1328: the switch first, then each picture
++    if (/^krea2/.test(pk)) secs = 25 + (secs - 25) * (+ps.steps || 8) / 8 * sampLooks(ps);   // HERESY 1333: and its looks a step
++    if (/^qwen/.test(pk)) secs = 90 + n * (pk === "qwen21" ? 3 * (+ps.steps || 30) : 3.5 * (+ps.steps || 8) * (sampFast(pk, ps) ? 1 : 2) * sampLooks(ps));   // HERESY 1318: its parts; 1328: the switch; 1333: its looks first, then each picture
+     $("arCost").textContent = n ? tr(n === 1 ? "1 picture" : n + " pictures") + " · " + tr(minutes(secs)) + " " + tr("on one card") : tr("pick a shape");
+     var busy = drawingRun();                             // HERESY 1270: Draw is Stop while a run waits or draws
+     $("arDraw").textContent = tr(busy ? "Stop" : "Draw");
+@@ -107,9 +107,14 @@
+     s.steps = Math.max(lim[0], Math.min(lim[1], Math.round(+s.steps) || lim[0]));   // within the range it is sent in
+     return s;
+   }
++  // HERESY 1333: how many looks at the model a step takes (the time grows by it)
++  var LOOKS = { res_2s: 2, res_2s_ode: 2, exp_heun_2_x0: 2, exp_heun_2_x0_sde: 2, res_3s: 3, res_3s_ode: 3, heunpp2: 3 };
++  function sampLooks(s) { return LOOKS[(s || {}).sampler] || 1; }
+   function sampFast(key, s) { return /^krea2/.test(key) || (/^qwen2512/.test(key) && !!s.lightOn && +s.lightning > 0); }
+   function sampSay(key, s) {
+-    var q = /^qwen2512/.test(key), names = { euler: "Euler", "euler-sde": "Euler SDE", simple: "Simple", karras: "Karras", exponential: "Exponential", beta: "Beta" };
++    var q = /^qwen2512/.test(key), names = { euler: "Euler", "euler-sde": "Euler SDE", simple: "Simple", karras: "Karras", exponential: "Exponential", beta: "Beta",
++      er_sde: "ER-SDE", res_2s: "RES 2s", res_2s_ode: "RES 2s ODE", res_3s: "RES 3s", res_3s_ode: "RES 3s ODE", heunpp2: "Heun++ 2", exp_heun_2_x0: "Exp Heun 2 x0",
++      exp_heun_2_x0_sde: "Exp Heun 2 x0 SDE", beta57: "Beta 57", kl_optimal: "KL optimal", sgm_uniform: "SGM uniform", bong_tangent: "Bong tangent" };   // HERESY 1333
+     return s.steps + " " + tr("steps") + " · " + names[s.sampler || "euler"] + " · " + names[s.schedule || "simple"] +
+       (q ? (sampFast(key, s) ? " · Lightning " + (+s.lightning).toFixed(2) : " · " + tr("guidance") + " " + (s.cfg || 4)) : "");
+   }
+@@ -120,6 +125,12 @@
+     $("arLightBox").hidden = !(q && lightHere(key)); $("arCfgBox").hidden = !(q && !fast);
+     if (q) { $("arLightOn").checked = !!s.lightOn; $("arLight").value = (+s.lightning).toFixed(2); $("arLight").disabled = !s.lightOn; $("arCfg").value = String(s.cfg || 4); }
+     $("arSampSay").textContent = sampSay(key, s);
++    // HERESY 1333: what the sampling matrix showed (10.10.2026, 30 pictures): Lightning under Karras or Exponential paints the subject twice;
++    // without Lightning Euler SDE paints Qwen soft and hazy
++    var warn = $("arSampWarn"), fast = sampFast(key, s), say = "";
++    if (q && fast && (s.schedule === "karras" || s.schedule === "exponential")) say = tr("With Lightning, Karras and Exponential can paint the subject twice: Simple, Beta or Beta 57 keep it whole.");
++    else if (/^qwen/.test(key) && !fast && s.sampler === "euler-sde") say = tr("Without Lightning, Euler SDE paints Qwen soft and hazy: Euler, ER-SDE or RES keep the detail.");
++    if (warn) { warn.hidden = !say; warn.textContent = say; }
+   }
+   function keepSampling(e) {
+     var key = $("arPainter").value, all = sampAll(), q = /^qwen2512/.test(key), was = sampNow(key);
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 03763e8..cd64fce 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1502,12 +1502,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em></summary>
+           <div class="ar-samp-row">
+             <label class="field ar-samp-steps"><span class="label">Steps</span><input type="number" id="arSteps" min="4" max="16" step="1" inputmode="numeric" data-tip="How many steps from the noise to the picture: Krea 2 and Qwen-Image 2512 with Lightning 4 to 16 (8 their own), 2512 without it and Qwen-Image 2.1 10 to 60" /></label>
+-            <label class="field"><span class="label">Sampler</span><select id="arSampler" data-tip="Euler: each step the same way; Euler SDE: a little fresh noise at each step, for more texture and variety"><option value="euler">Euler</option><option value="euler-sde">Euler SDE</option></select></label>
+-            <label class="field"><span class="label">Schedule</span><select id="arSchedule" data-tip="How the steps are spread from the noise to the picture: Simple (the painter's own), Karras and Exponential (more steps near the end, for detail), Beta (more at both ends)"><option value="simple">Simple</option><option value="karras">Karras</option><option value="exponential">Exponential</option><option value="beta">Beta</option></select></label>
++            <label class="field"><span class="label">Sampler</span><select id="arSampler" data-tip="How each step is taken. Euler: the plain step; Euler SDE: fresh noise each step (soft on Qwen without Lightning). ER-SDE: a stochastic solver of third order, one look a step. RES 2s and 3s: the refined exponential solver, two or three looks a step (ODE: without noise). Heun++: up to three looks a step. Exp Heun 2 x0: the exponential Heun, two looks (SDE: with noise). More looks: finer, and as many times longer"><option value="euler">Euler</option><option value="euler-sde">Euler SDE</option><option value="er_sde">ER-SDE</option><option value="res_2s">RES 2s</option><option value="res_2s_ode">RES 2s ODE</option><option value="res_3s">RES 3s</option><option value="res_3s_ode">RES 3s ODE</option><option value="heunpp2">Heun++ 2</option><option value="exp_heun_2_x0">Exp Heun 2 x0</option><option value="exp_heun_2_x0_sde">Exp Heun 2 x0 SDE</option></select></label>
++            <label class="field"><span class="label">Schedule</span><select id="arSchedule" data-tip="How the steps are spread from the noise to the picture: Simple (the painter's own), Karras and Exponential (more steps near the end, for detail; with Lightning they can paint the subject twice), Beta and Beta 57 (more at both ends), KL optimal (Align Your Steps' spacing), SGM uniform (even in time), Bong tangent (two slopes, through the middle)"><option value="simple">Simple</option><option value="karras">Karras</option><option value="exponential">Exponential</option><option value="beta">Beta</option><option value="beta57">Beta 57</option><option value="kl_optimal">KL optimal</option><option value="sgm_uniform">SGM uniform</option><option value="bong_tangent">Bong tangent</option></select></label>
+             <label class="field ar-samp-num ar-samp-light" id="arLightBox" hidden><span class="label">Lightning</span><span class="ar-light-row"><input type="checkbox" id="arLightOn" aria-label="Lightning" data-tip="Lightning: Qwen-Image 2512 in 4 to 16 steps and one pass a step, for drafts and the takes' covers; off for finished realism: 10 to 60 steps with guidance, about four times as long" /><input type="number" id="arLight" min="0.05" max="1.5" step="0.05" data-tip="Lightning's strength: 1.0 as its makers give it, lower for a fine-tune (0.55 with 12 steps)" /></span></label>
+             <label class="field ar-samp-num" id="arCfgBox" hidden><span class="label">Guidance</span><input type="number" id="arCfg" min="1" max="10" step="0.5" data-tip="Without Lightning: how closely the picture follows the prompt (true CFG, two passes a step); 4 is Qwen-Image's own" /></label>
+             <button type="button" class="btn ghost small" id="arSampReset" data-tip="The painter's own steps, sampler and schedule">Reset</button>
+           </div>
++          <p class="row-hint ar-samp-warn" id="arSampWarn" hidden></p>
+         </details>
+         <!-- HERESY 1316: the adapters of the painter's family, each at its strength -->
+         <div class="ar-loras" id="arLoras">
+-- 
+2.43.0
+

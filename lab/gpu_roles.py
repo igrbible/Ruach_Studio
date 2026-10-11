@@ -3,7 +3,11 @@ reads it from here); training only on the cards given to training; the lab's oth
 Whisper, stems, remaster, upscale) only on theirs. While a run trains on the studio's own card, the page
 does not start a synthesis: one card, one heavy job.
 
-    user/gpus.json   {"studio": 0, "train": [1, 2], "jobs": [0, 1, 2]}
+    user/gpus.json   {"studio": 0, "train": [1, 2], "jobs": [0, 1, 2], "limits": {"0": 14336}}
+
+HERESY 1294 (Viktor 10.10.2026: «ползунка для выбора лимита VRAM по GPU»): "limits", MiB a card, the most the studio's work may
+hold on it (a laptop's desktop and browser keep the rest); a card without one has its whole memory. The page's Auto sets the
+engine's knobs for the studio card's limit; the guard (gpu_guard.py) gives a card to a job only when the job fits under it.
 
 Defaults when the file is missing: the studio on GPU0; training on every other card, or on GPU0 too when
 it is the only one (then synthesis waits while it trains); jobs on every card."""
@@ -42,7 +46,25 @@ def load(kit, cards):
             keep = [i for i in saved[role] if isinstance(i, int) and (not ids or i in ids)]
             if keep:
                 roles[role] = keep
+    roles["limits"] = _limits(saved.get("limits"), cards)   # HERESY 1294
     return roles
+
+
+def _limits(got, cards):
+    """{"0": MiB} kept for the cards there are, each between 4 GiB and the card's own size (its size or more: no limit)."""
+    total = {c["index"]: c.get("total_mb") for c in cards} if isinstance(cards, list) else {}
+    out = {}
+    for k, v in (got.items() if isinstance(got, dict) else []):
+        try:
+            i, mb = int(k), int(v)
+        except (TypeError, ValueError):
+            continue
+        if total and i not in total:
+            continue
+        if mb < 4096 or (total.get(i) and mb >= total[i]):
+            continue
+        out[str(i)] = mb
+    return out
 
 
 def save(kit, data, cards):
@@ -56,6 +78,7 @@ def save(kit, data, cards):
         if not isinstance(got, list) or not got or any(not isinstance(i, int) or (ids and i not in ids) for i in got):
             raise ValueError(f"{role}: give it at least one card of {ids}")
         out[role] = sorted(set(got))
+    out["limits"] = _limits(data.get("limits"), cards)       # HERESY 1294: a card's VRAM limit, MiB
     path(kit).parent.mkdir(parents=True, exist_ok=True)
     tmp = path(kit).with_suffix(".json.part")
     tmp.write_text(json.dumps(out, indent=1), encoding="utf-8")

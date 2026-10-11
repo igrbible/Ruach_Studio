@@ -1,0 +1,290 @@
+From 10ad0758c26eaf4c0323564bd3581d216c60a2c7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 03:27:52 -0600
+Subject: [PATCH 1290/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201300:=20the?=
+ =?UTF-8?q?=20Trainer's=20form=20says=20what=20its=20knobs=20do,=20the=20r?=
+ =?UTF-8?q?ank's=20share=20in=20its=20tip,=20a=20finished=20run=20goes=20o?=
+ =?UTF-8?q?n=20to=20more=20epochs?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «В тренере смотри на RANK - подсказка под полем инлайн. И можно ли на завершённом тренинге продолжить по большему количеству эпох?»; «В гайде по LoRA Trainer ты не объяснил все параметры. Я так и не смог полностью сориентироваться по AR WEIGHT и AR ANCHOR, Пересмотри этот гайд, пожалуйста».
+
+· The rank's share of the weights and its size leave the line under its field for the first line of the field's tip (data-tip-head, translated as before).
+· The AR knobs' tips say what the trainer does and what was measured on GPU2 (heresy/MISC/claude-trainer-ab): AR weight decides whether the music half learns and how hard its lesson pulls against the anchor (0: the base, a timbre only); the anchor counts as a share of the weight (AdamW sizes every step by its own gradients, so both doubled teach the same: 5 % apart, against 1 % for the same run twice); AR speed is the music half's own throttle (0.5 → 1.0 took it three quarters farther). «How they work ›» beside AR weight opens the guide's new section «The Music Half's Three Knobs».
+· «Go on to more epochs…» in a run's ⋯ menu, for a run of the studio's own trainer that has ended with a save: asked how many epochs in all (four more offered), it sends the same run, set and knobs with the steps for them; the lab's run of the same name goes on from the last save and the optimizer's state (lab/trainer/train.py; tried 40 → 60 steps on GPU2). AI-Toolkit's runs and live ones do not offer it.
+· Steps' field takes a big set's epochs (its max 20 000 → 1 000 000: 2016 tracks for 12 epochs are 24 192 steps).
+
+Suite: 544/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  1 -
+ tools/console/heresy-i18n-be.js | 13 +++++++++++
+ tools/console/heresy-i18n-el.js | 13 +++++++++++
+ tools/console/heresy-i18n-es.js | 13 +++++++++++
+ tools/console/heresy-i18n-it.js | 13 +++++++++++
+ tools/console/heresy-i18n-ru.js | 13 +++++++++++
+ tools/console/heresy-i18n-uk.js | 13 +++++++++++
+ tools/console/heresy-train.js   | 38 ++++++++++++++++++++++++++++++---
+ tools/console/index.html        | 10 ++++-----
+ 9 files changed, 118 insertions(+), 9 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 93de4d7..df2e00f 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3283,7 +3283,6 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+ /* HERESY 1101: the trainer's way into the guide on ranks */
+ .tr-howto { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--amber); font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; cursor: pointer; }
+ .tr-howto:hover { text-decoration: underline; }
+-#trRankSay { display: block; margin-top: 3px; font-size: 11px; }
+ 
+ /* HERESY 1103: search, sort and the view in the Librarian's heading line */
+ .coll-head { flex-wrap: wrap; row-gap: 8px; }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index a9e5015..1922ecd 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1393,6 +1393,19 @@ RuachI18n.add("be", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Малюецца вокладка для «{0}»: промпт са стылю і слоў, потым малюнак (каля паўхвіліны)",
+ "Artwork for “{0}” is ready": "Вокладка для «{0}» гатовая",
+ "No artwork: {0}": "Вокладкі няма: {0}",
++"How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Наколькі шырока адаптар мяняе вагі: 16 для аднаго голасу ці інструмента, 32 для стылю, 64 для многіх галасоў, 128 найбольш.",
++"Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Ці вучыцца музычная палова (тая, што піша токены песні) і наколькі моцна яе ўрок цягне супраць якара: 0 пакідае яе базавай, толькі тэмбр; падымі для дыкцыі і стылю. Лічыцца доля якара ад яе, а не яе велічыня.",
++"Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Цягне музычную палову назад да базавай мадэлі, каб яна захавала тое, чаго ў наборы няма. Чытай яго як долю Вагі AR: дзясятая доля дае рухацца, роўны вазе трымае каля базы. Пры Вазе AR 0 нічога не робіць.",
++"The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly.": "Хуткасць навучання музычнай паловы як доля той, што вышэй: ручка, ад якой яна вучыцца хутчэй ці павольней (0.5 — удвая павольней). Малы набор яна хутка завучвае на памяць.",
++"How they work ›": "Як яны працуюць ›",
++"The music half's three knobs: the guide": "Тры ручкі музычнай паловы: у гайдзе",
++"Go on to more epochs…": "Працягнуць на больш эпох…",
++"Go on": "Працягнуць",
++"Go on with {0} to how many epochs in all?": "Працягнуць {0} да колькіх эпох усяго?",
++"It has {0} now; it goes on from its last save with the same set and knobs, on a card of its own.": "Цяпер іх {0}; ран працягнецца з апошняга захавання, з тым жа наборам і ручкамі, на сваёй карце.",
++"More epochs than {0}, please": "Патрэбна больш эпох, чым {0}",
++"{0} goes on to {#1} epochs": "{0} працягваецца да {1} эпох",
++"This run has no save to go on from": "У гэтага рана няма захавання, з якога працягнуць",
+ "The curves side by side": "Крывыя побач",
+ "The curves one under the other, each the whole width": "Крывыя адна пад адной, кожная на ўсю шырыню",
+ "own copies kept: {#0}": "уласныя копіі пакінутыя: {0}",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 93f7489..4f91d9a 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1392,6 +1392,19 @@ RuachI18n.add("el", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Ζωγραφίζεται εξώφυλλο για το «{0}»: ένα prompt από το ύφος και τις λέξεις του, μετά η εικόνα (περίπου μισό λεπτό)",
+ "Artwork for “{0}” is ready": "Το εξώφυλλο για το «{0}» είναι έτοιμο",
+ "No artwork: {0}": "Χωρίς εξώφυλλο: {0}",
++"How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Πόσο πλατιά αλλάζει τα βάρη ο adapter: 16 για μία φωνή ή ένα όργανο, 32 για ένα ύφος, 64 για πολλές φωνές, 128 το πολύ.",
++"Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Αν μαθαίνει το μουσικό μισό (αυτό που γράφει τα tokens του τραγουδιού) και πόσο δυνατά το μάθημά του τραβά ενάντια στην άγκυρα: το 0 το αφήνει βασικό, μόνο χροιά· ανέβασέ το για άρθρωση και ύφος. Μετρά το μερίδιο της άγκυρας σε αυτό, όχι το μέγεθός του.",
++"Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Τραβά το μουσικό μισό πίσω προς το βασικό μοντέλο, ώστε να κρατήσει ό,τι το σύνολο δεν δείχνει. Διάβαζέ την ως μερίδιο του Βάρους AR: το ένα δέκατο το αφήνει να κινηθεί, όσο το βάρος το κρατά κοντά στη βάση. Με Βάρος AR 0 δεν κάνει τίποτα.",
++"The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly.": "Ο ρυθμός μάθησης του μουσικού μισού ως μερίδιο του παραπάνω: η ρύθμιση που το κάνει να μαθαίνει γρηγορότερα ή πιο αργά (0.5: στο μισό). Ένα μικρό σύνολο το μαθαίνει γρήγορα απ' έξω.",
++"How they work ›": "Πώς δουλεύουν ›",
++"The music half's three knobs: the guide": "Οι τρεις ρυθμίσεις του μουσικού μισού: στον οδηγό",
++"Go on to more epochs…": "Συνέχεια σε περισσότερες εποχές…",
++"Go on": "Συνέχεια",
++"Go on with {0} to how many epochs in all?": "Συνέχεια του {0} μέχρι πόσες εποχές συνολικά;",
++"It has {0} now; it goes on from its last save with the same set and knobs, on a card of its own.": "Τώρα έχει {0}· συνεχίζει από την τελευταία αποθήκευση με το ίδιο σύνολο και τις ίδιες ρυθμίσεις, σε δική του κάρτα.",
++"More epochs than {0}, please": "Περισσότερες εποχές από {0}, παρακαλώ",
++"{0} goes on to {#1} epochs": "Το {0} συνεχίζει ως τις {1} εποχές",
++"This run has no save to go on from": "Αυτή η εκτέλεση δεν έχει αποθήκευση για να συνεχίσει",
+ "The curves side by side": "Οι καμπύλες δίπλα δίπλα",
+ "The curves one under the other, each the whole width": "Οι καμπύλες η μία κάτω από την άλλη, η καθεμία σε όλο το πλάτος",
+ "own copies kept: {#0}": "δικά σας αντίγραφα, κρατημένα: {0}",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 4fda24c..d175fc8 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1392,6 +1392,19 @@ RuachI18n.add("es", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Dibujando la portada de «{0}»: un prompt a partir de su estilo y sus palabras, luego la imagen (cerca de medio minuto)",
+ "Artwork for “{0}” is ready": "La portada de «{0}» está lista",
+ "No artwork: {0}": "Sin portada: {0}",
++"How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Lo ancho que cambia el adaptador los pesos: 16 para una voz o un instrumento, 32 para un estilo, 64 para muchas voces, 128 como mucho.",
++"Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Si la mitad musical aprende (la que escribe los tokens de la canción) y con cuánta fuerza su lección tira contra el ancla: 0 la deja como la base, solo un timbre; súbelo para la dicción y el estilo. Cuenta la parte del ancla respecto a él, no su tamaño.",
++"Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Tira de la mitad musical de vuelta hacia el modelo base, para que conserve lo que el conjunto no muestra. Léelo como una parte del Peso AR: una décima la deja moverse; igual al peso, la sujeta cerca de la base. Con Peso AR 0 no hace nada.",
++"The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly.": "La tasa de aprendizaje de la mitad musical como parte de la de arriba: el control que la hace aprender más rápido o más despacio (0.5: a la mitad). Un conjunto pequeño se lo aprende de memoria enseguida.",
++"How they work ›": "Cómo funcionan ›",
++"The music half's three knobs: the guide": "Los tres controles de la mitad musical: en la guía",
++"Go on to more epochs…": "Seguir con más épocas…",
++"Go on": "Seguir",
++"Go on with {0} to how many epochs in all?": "¿Seguir con {0} hasta cuántas épocas en total?",
++"It has {0} now; it goes on from its last save with the same set and knobs, on a card of its own.": "Ahora tiene {0}; sigue desde su último guardado con el mismo conjunto y los mismos controles, en una tarjeta propia.",
++"More epochs than {0}, please": "Más épocas que {0}, por favor",
++"{0} goes on to {#1} epochs": "{0} sigue hasta {1} épocas",
++"This run has no save to go on from": "Esta ejecución no tiene un guardado desde el que seguir",
+ "The curves side by side": "Las curvas una al lado de la otra",
+ "The curves one under the other, each the whole width": "Las curvas una debajo de la otra, cada una a todo el ancho",
+ "own copies kept: {#0}": "copias propias conservadas: {0}",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 7b3ec3b..dc45085 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1392,6 +1392,19 @@ RuachI18n.add("it", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Si disegna la copertina di «{0}»: un prompt dal suo stile e dalle sue parole, poi l'immagine (circa mezzo minuto)",
+ "Artwork for “{0}” is ready": "La copertina di «{0}» è pronta",
+ "No artwork: {0}": "Nessuna copertina: {0}",
++"How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Quanto ampiamente l'adattatore cambia i pesi: 16 per una voce o uno strumento, 32 per uno stile, 64 per molte voci, 128 al massimo.",
++"Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Se la metà musicale impara (quella che scrive i token della canzone) e quanto forte la sua lezione tira contro l'ancora: 0 la lascia com'è la base, solo un timbro; alzalo per la dizione e lo stile. Conta la quota dell'ancora rispetto a esso, non la sua grandezza.",
++"Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Tira la metà musicale indietro verso il modello di base, perché conservi ciò che il set non mostra. Leggila come una quota del Peso AR: un decimo la lascia muovere, quanto il peso la tiene vicino alla base. Con Peso AR 0 non fa nulla.",
++"The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly.": "Il learning rate della metà musicale come quota di quello sopra: la manopola che la fa imparare più in fretta o più piano (0.5: a metà). Un set piccolo lo impara presto a memoria.",
++"How they work ›": "Come funzionano ›",
++"The music half's three knobs: the guide": "Le tre manopole della metà musicale: nella guida",
++"Go on to more epochs…": "Continua con più epoche…",
++"Go on": "Continua",
++"Go on with {0} to how many epochs in all?": "Continuare {0} fino a quante epoche in tutto?",
++"It has {0} now; it goes on from its last save with the same set and knobs, on a card of its own.": "Ora ne ha {0}; riprende dal suo ultimo salvataggio con lo stesso set e le stesse manopole, su una scheda tutta sua.",
++"More epochs than {0}, please": "Più epoche di {0}, per favore",
++"{0} goes on to {#1} epochs": "{0} continua fino a {1} epoche",
++"This run has no save to go on from": "Questa esecuzione non ha un salvataggio da cui riprendere",
+ "The curves side by side": "Le curve affiancate",
+ "The curves one under the other, each the whole width": "Le curve una sotto l'altra, ognuna a tutta larghezza",
+ "own copies kept: {#0}": "copie proprie conservate: {0}",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index ff20ee6..e196474 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1400,6 +1400,19 @@ RuachI18n.add("ru", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Рисуется обложка для «{0}»: промпт из стиля и слов, потом картинка (около полуминуты)",
+ "Artwork for “{0}” is ready": "Обложка для «{0}» готова",
+ "No artwork: {0}": "Обложки нет: {0}",
++"How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Насколько широко адаптер меняет веса: 16 для одного голоса или инструмента, 32 для стиля, 64 для многих голосов, 128 самое большее.",
++"Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Учится ли музыкальная половина (та, что пишет токены песни) и как сильно её урок тянет против якоря: 0 оставляет её базовой, только тембр; подними для дикции и стиля. Считается доля якоря от него, а не его величина.",
++"Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Тянет музыкальную половину назад к базовой модели, чтобы она сохранила то, чего в наборе нет. Читай его как долю Веса AR: десятая доля даёт двигаться, равный весу держит у базы. При Весе AR 0 ничего не делает.",
++"The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly.": "Скорость обучения музыкальной половины как доля той, что выше: ручка, от которой она учится быстрее или медленнее (0.5 — вдвое медленнее). Маленький набор она быстро заучивает наизусть.",
++"How they work ›": "Как они работают ›",
++"The music half's three knobs: the guide": "Три ручки музыкальной половины: в гайде",
++"Go on to more epochs…": "Продолжить на больше эпох…",
++"Go on": "Продолжить",
++"Go on with {0} to how many epochs in all?": "Продолжить {0} до скольких эпох всего?",
++"It has {0} now; it goes on from its last save with the same set and knobs, on a card of its own.": "Сейчас их {0}; ран продолжится с последнего сохранения, с тем же набором и ручками, на своей карте.",
++"More epochs than {0}, please": "Нужно больше эпох, чем {0}",
++"{0} goes on to {#1} epochs": "{0} продолжается до {1} эпох",
++"This run has no save to go on from": "У этого рана нет сохранения, с которого продолжить",
+ "The curves side by side": "Кривые рядом",
+ "The curves one under the other, each the whole width": "Кривые одна под другой, каждая во всю ширину",
+ "own copies kept: {#0}": "свои копии оставлены: {0}",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index e7e4e04..cf336b1 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1393,6 +1393,19 @@ RuachI18n.add("uk", {
+ "Drawing artwork for “{0}”: a prompt from its style and words, then the picture (about half a minute)": "Малюється обкладинка для «{0}»: промпт зі стилю й слів, потім картинка (близько пів хвилини)",
+ "Artwork for “{0}” is ready": "Обкладинка для «{0}» готова",
+ "No artwork: {0}": "Обкладинки немає: {0}",
++"How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most.": "Наскільки широко адаптер змінює ваги: 16 для одного голосу чи інструмента, 32 для стилю, 64 для багатьох голосів, 128 щонайбільше.",
++"Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size.": "Чи вчиться музична половина (та, що пише токени пісні) і як сильно її урок тягне проти якоря: 0 лишає її базовою, лише тембр; підніми для дикції та стилю. Рахується частка якоря від неї, а не її величина.",
++"Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0.": "Тягне музичну половину назад до базової моделі, щоб вона зберегла те, чого в наборі немає. Читай його як частку Ваги AR: десята частка дає рухатися, рівний вазі тримає біля бази. За Ваги AR 0 нічого не робить.",
++"The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly.": "Швидкість навчання музичної половини як частка тієї, що вище: ручка, від якої вона вчиться швидше чи повільніше (0.5 — удвічі повільніше). Малий набір вона швидко завчає напам'ять.",
++"How they work ›": "Як вони працюють ›",
++"The music half's three knobs: the guide": "Три ручки музичної половини: у гайді",
++"Go on to more epochs…": "Продовжити на більше епох…",
++"Go on": "Продовжити",
++"Go on with {0} to how many epochs in all?": "Продовжити {0} до скількох епох усього?",
++"It has {0} now; it goes on from its last save with the same set and knobs, on a card of its own.": "Зараз їх {0}; ран продовжиться з останнього збереження, з тим самим набором і ручками, на своїй карті.",
++"More epochs than {0}, please": "Потрібно більше епох, ніж {0}",
++"{0} goes on to {#1} epochs": "{0} продовжується до {1} епох",
++"This run has no save to go on from": "У цього рану немає збереження, з якого продовжити",
+ "The curves side by side": "Криві поруч",
+ "The curves one under the other, each the whole width": "Криві одна під одною, кожна на всю ширину",
+ "own copies kept: {#0}": "власні копії залишено: {0}",
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index e503f51..6224703 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -109,8 +109,10 @@
+   // HERESY 1101: what a rank costs, measured on YuE2's shapes (224 matrices, 2048 wide; 1.41 B weights a half);
+   // said whenever the pills are, so a kind's preset is said too, not only a typed rank
+   function rankSay() {
+-    var r = parseFloat($("tr_rank").value) || 0;
+-    $("trRankSay").textContent = r ? (r * 1.04 / 16).toFixed(r < 32 ? 1 : 0) + " % of what it adapts · " + Math.round(r * 1.835) + " MB a half" + (r > 64 ? " · for large many-voice sets" : "") : "";
++    // HERESY 1300 (Viktor 10.10.2026: «В тренере смотри на RANK - подсказка под полем инлайн»): the tip's first line, not a line under it
++    var r = parseFloat($("tr_rank").value) || 0, el = $("tr_rank");
++    if (r) el.dataset.tipHead = (r * 1.04 / 16).toFixed(r < 32 ? 1 : 0) + " % of what it adapts · " + Math.round(r * 1.835) + " MB a half" + (r > 64 ? " · for large many-voice sets" : "");
++    else delete el.dataset.tipHead;
+   }
+   function paintPills() {
+     rankSay();
+@@ -232,6 +234,7 @@
+     pop.style.left = Math.max(8, Math.round(box.right - 190)) + "px";
+     pop.innerHTML = '<button type="button" role="menuitem" data-act="open">Telemetry</button>' +
+       '<button type="button" role="menuitem" data-act="log">The log</button>' +   // HERESY 1167: at the page's foot
++      (canGoOn(r) ? '<button type="button" role="menuitem" data-act="goon">Go on to more epochs…</button>' : "") +   // HERESY 1300
+       '<button type="button" role="menuitem" data-act="' + (r.archived ? "unarchive" : "archive") + '">' + (r.archived ? "Out of the archive" : "Archive") + "</button>" +
+       (isLive(r) ? '<button type="button" role="menuitem" class="danger" data-act="stop">Stop…</button>'
+                  : '<button type="button" role="menuitem" class="danger" data-act="delete">Delete…</button>');
+@@ -301,7 +304,34 @@
+       if (r && isLive(r)) logDock.timer = setTimeout(pullLog, 3000);
+     }).catch(function () { logDock.timer = setTimeout(pullLog, 6000); });
+   }
++  // HERESY 1300 (Viktor 10.10.2026: «можно ли на завершённом тренинге продолжить по большему количеству эпох?»): a run of the studio's
++  // own trainer that has ended with a save goes on to more epochs: the lab's run of the same name takes its last save and its
++  // optimizer's state (lab/trainer/train.py), the same set and knobs, only the steps more
++  function canGoOn(r) {
++    return !!r && !isLive(r) && engineOf(r) === "ruach" && (r.checkpoints || []).some(function (k) { return k.step; }) && !!(r.tracks || (r.options || {}).steps_per_epoch);
++  }
++  function goOn(name) {
++    var r = runOf(name), o = (r && r.options) || {};
++    if (!canGoOn(r)) return toast("This run has no save to go on from", true);
++    var tracks = r.tracks || o.steps_per_epoch, at = Math.max.apply(null, (r.checkpoints || []).map(function (k) { return k.step || 0; })) / tracks;
++    var now = at % 1 ? at.toFixed(1) : String(at), first = Math.floor(at) + 4;
++    window.HeresyDialog.prompt(tr("Go on with " + name + " to how many epochs in all?") + "\n\n" + tr("It has " + now + " now; it goes on from its last save with the same set and knobs, on a card of its own."),
++      String(first), { ok: "Go on", placeholder: String(first) }).then(function (v) {
++      if (v === null) return;
++      var n = parseInt(v, 10);
++      if (!(n > at && n <= 1000)) return toast(tr("More epochs than " + now + ", please"), true);
++      var spec = { dataset: r.dataset, name: r.name, kind: r.kind || "", engine: "ruach", steps: n * tracks, save_epochs: o.save_epochs || 1, rank: o.rank, lr: o.lr,
++        ar_loss_weight: o.ar_loss_weight, ar_kl_weight: o.ar_kl_weight, ar_lr_multiplier: o.ar_lr_multiplier, cot: "off", quant: o.quant || "bf16",
++        do_separation: false, note: r.note || "" };
++      return api("/train/run", spec).then(function () {
++        toast(tr(name + " goes on to " + n + " epochs"));
++        state.sel = name; keep("yue2.trRun", name);
++        return load().then(function () { showPane("run"); });
++      });
++    }).catch(function (e) { toast(e.message, true); });
++  }
+   function act(name, what) {
++    if (what === "goon") return goOn(name);          // HERESY 1300
+     if (what === "log") return showLog(name);        // HERESY 1167
+     if (what === "open") return openRun(name);
+     if (what === "archive" || what === "unarchive")
+@@ -835,10 +865,12 @@
+     });
+     $("tr_rank").addEventListener("input", paintPills);
+     $("trRankHow").addEventListener("click", function (e) { e.preventDefault(); if (window.HeresyGuide) window.HeresyGuide.open("lora", "Rank and the other knobs"); });
++    // HERESY 1300: the AR knobs, explained with what was measured
++    $("trArHow").addEventListener("click", function (e) { e.preventDefault(); if (window.HeresyGuide) window.HeresyGuide.open("lora", "The music half's three knobs"); });
+     $("trRun").addEventListener("click", startRun);
+     setKind("style");
+     engineKnobs();
+   }
+ 
+-  window.HeresyTrain = { init: init, reload: load, log: showLog, unlog: hideLog };   // HERESY 1298: the log for the suite
++  window.HeresyTrain = { init: init, reload: load, log: showLog, unlog: hideLog, goOn: goOn };   // HERESY 1298, 1300: for the suite
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 1a67bec..74d74de 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1543,13 +1543,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <label class="field tr-wide" data-tip="The run's name: its adapters land in loras/NAME/ as NAME-eNNN, ready in the Creator. A run of the same name goes on from its last checkpoint."><span class="label">Run name</span><input type="text" id="trRunName" placeholder="fosforida-style-v1" /></label>
+             <label class="field" data-tip="Ruach Studio: the studio's own trainer, on the full bf16 weights, Direct mode. AI-Toolkit (Ostris): the reference; it can also train with a score and on separated vocals. Both save the same LoRA format."><span class="label">Trainer</span><select id="tr_engine"><option value="ruach">Ruach Studio</option><option value="ai-toolkit">AI-Toolkit (reference)</option></select></label>
+             <label class="field" data-tip="The base model's weights while training: bf16, the full ones (a 24 GB card), or int8 for smaller cards, a little less exact."><span class="label">Base weights</span><select id="tr_quant"><option value="bf16">bf16</option><option value="int8">int8</option></select></label>
+-            <label class="field" data-tip="How many steps in all, one song a step. A small set is learnt by heart fast: the green epochs in the Telemetry are the ones to hear first, often before the last."><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="20000" step="50" /></label>
++            <label class="field" data-tip="How many steps in all, one song a step. A small set is learnt by heart fast: the green epochs in the Telemetry are the ones to hear first, often before the last."><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="1000000" step="50" /></label>
+             <label class="field" data-tip="An adapter is saved every this many epochs (an epoch: every song once), each to be heard and compared."><span class="label">Save every <em>epochs</em></span><input type="number" id="tr_save_epochs" min="1" max="100" step="1" value="1" /></label>
+-            <label class="field"><span class="label">Rank <button type="button" class="tr-howto" id="trRankHow" data-tip="Which rank, how many steps, the other knobs: the guide">How to choose ›</button></span><input type="number" id="tr_rank" min="4" max="128" step="4" data-tip="How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most. The line below gives its share and its size." /><span class="row-hint" id="trRankSay"></span></label>
++            <label class="field"><span class="label">Rank <button type="button" class="tr-howto" id="trRankHow" data-tip="Which rank, how many steps, the other knobs: the guide">How to choose ›</button></span><input type="number" id="tr_rank" min="4" max="128" step="4" data-tip="How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most." /></label>
+             <label class="field" data-tip="How big each step is. Keep the kind's own; higher learns faster and forgets more."><span class="label">Learning rate</span><input type="number" id="tr_lr" value="0.0001" step="0.00001" /></label>
+-            <label class="field" data-tip="How much the music half learns (the part that writes the song's tokens): 0 teaches the sound only, a timbre; raise it for diction and style, which live in the music half."><span class="label">AR weight <em>0 = sound only</em></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
+-            <label class="field" data-tip="Holds the music half near the base model, so it keeps what it was not shown; higher holds tighter."><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
+-            <label class="field" data-tip="The music half's learning rate as a share of the one above: 0.5 learns half as fast. It learns a small set by heart quickly."><span class="label">AR speed</span><input type="number" id="tr_ar_lr_multiplier" min="0" max="2" step="0.1" /></label>
++            <label class="field" data-tip="Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size."><span class="label">AR weight <em>0 = sound only</em> <button type="button" class="tr-howto" id="trArHow" data-tip="The music half's three knobs: the guide">How they work ›</button></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
++            <label class="field" data-tip="Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0."><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
++            <label class="field" data-tip="The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly."><span class="label">AR speed</span><input type="number" id="tr_ar_lr_multiplier" min="0" max="2" step="0.1" /></label>
+             <label class="field" data-tip="AI-Toolkit only (the studio's own trainer is Direct). Direct: no score, for songs made in Direct mode. Full (score) and Melody: the music half also learns to write a score first, transcribed from every song, for songs made in those modes."><span class="label">Mode</span><select id="tr_cot"><option value="off">Direct</option><option value="full">Full (score)</option><option value="melody">Melody</option></select></label>
+             <label class="check" data-tip="AI-Toolkit only. Every song is first split into voice and instrumental; the music half then also learns the voice from the lyrics alone and the music from the tags alone."><input type="checkbox" id="tr_sep" /> <span>Separate vocals and music</span></label>
+           </div>
+-- 
+2.43.0
+

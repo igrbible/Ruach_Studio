@@ -46,6 +46,7 @@
   <div class="boot-osem" translate="no"><b>OSEM</b><span class="boot-osem-say">Simply awesome</span><span>Open Source, Engaged &amp; Musical</span></div>
   <p class="boot-words">Loading the Sound Heresy</p>
   <div class="boot-line" aria-hidden="true"><i></i></div>
+  <p class="boot-ver" id="bootVer" translate="no"></p>
 </div>
 
 <!-- ---------------------------------------------------------------- topbar -->
@@ -143,6 +144,15 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script>/* HERESY 1167: the bar's logo into the veil at once (its ids renamed, as the About card's copy), and the veil's lifting */
 (function () {
   var html = document.documentElement;
+  // HERESY 1295 (Viktor 10.10.2026: «И прикрути также версию движка туда. Мелко, под бар»): the studio's version and the engine's
+  window.RuachVeilVersions = function () {
+    var ver = document.getElementById("bootVer"), said = ["", ""];
+    var say = function () { if (ver) ver.textContent = said.filter(Boolean).join(" \u00b7 "); };
+    fetch("/lab/update").then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.current) { said[0] = "Ruach Studio " + d.current; say(); } }).catch(function () {});
+    fetch("/props").then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.version) { said[1] = "engine " + d.version; say(); } }).catch(function () {});
+  };
   if (!html.classList.contains("booting")) return;
   try {
     var svg = document.querySelector(".brand .brand-full"), spot = document.getElementById("bootLogo");
@@ -158,6 +168,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       spot.appendChild(c);
     }
   } catch (e) { /* the veil without its logo */ }
+  try { window.RuachVeilVersions(); } catch (e) { /* the veil without its versions */ }
   // ready: the page parsed and its scripts run (not the load event: the web fonts may come late on a slow road), its room
   // set, the translation in
   var MIN = 7000, MAX = 17000, gone = false;
@@ -251,6 +262,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       </div>
       <p class="row-hint" id="computeHint"></p>
       <div class="card-actions">
+        <!-- HERESY 1304: the machine read again, and what suits it offered -->
+        <button type="button" class="btn ghost small" id="scanMachine" data-tip="What this machine has, and what suits it: the backbone, the context and the VAE tiles, the painter">Scan the machine</button>
         <button class="btn primary small" id="saveSettings">Save</button>
       </div>
     </div>
@@ -337,7 +350,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         </select></label>
       <p class="row-hint">Krea 2 Muse by <a href="https://civitai.com/models/2741166" target="_blank" rel="noopener noreferrer">Stable Yogi</a>, a fine-tune of
         <a href="https://krea.ai/krea-2-licensing" target="_blank" rel="noopener noreferrer">Krea 2</a> (Krea 2 Community License: its pictures pass a content filter);
-        SDXL: CyberRealistic XL by Cyberdelia. Times on an RTX 3090, the prompt and the look-over not counted.</p>
+        SDXL: CyberRealistic XL by Cyberdelia. Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
     </div>
 
     <div class="card wide lora-card eg-vae">
@@ -368,6 +381,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <div class="card wide eg-models" id="modelsCard">
       <h3>Models and LoRAs <span class="info" tabindex="-1" role="img" aria-label="About models and LoRAs" data-tip="What the studio downloads beside itself: the decoders and the sliders, Whisper, the stems' models, UniverSR and the LoRAs, which the install brings, and the extras you ask for. Each file comes from Hugging Face at the revision the release pins and is checked against its size; a download cut short goes on where it stopped. Nothing is downloaded until you press Fetch."></span></h3>
       <p class="upd-line wt-line" id="wtLine">Asking the lab…</p>
+      <div class="wt-top-prog" id="wtProg" hidden></div>   <!-- HERESY 1302: the progress of «what is missing» -->
       <h4 class="lora-sub">What the install brings</h4>
       <div class="wt-parts" id="wtParts"></div>
       <h4 class="lora-sub">More models</h4>
@@ -741,6 +755,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
                 <span class="label" data-head="ABC notation, followed in Full plan and Melody only">Score</span>
                 <textarea id="abc" rows="8" spellcheck="false" class="mono" placeholder="X:1&#10;L:1/8&#10;M:4/4&#10;K:C"></textarea>
               </label>
+              <p class="row-hint score-guard" id="scoreGuard" hidden></p>
               <!-- HERESY 1018: move the score to another key (heresy-transpose.js) -->
               <div class="transpose-row is-hidden" id="transposeRow">
                 <span class="label">Key</span><strong class="mono" id="scoreKeyNow"></strong><span aria-hidden="true">→</span>
@@ -979,6 +994,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <button type="button" class="btn ghost small" id="transcribeTake" data-tip="SheetSage2 writes this take's own sound down as a score (the server reads the take itself; nothing is uploaded), into the form for a cover: with chords, or the melody only, as chosen under Cover a recording. Good for a reading made in Direct mode, which has no score.">Transcribe this take</button>
           <button type="button" class="btn ghost small" id="trimToText" data-tip="For readings and songs that go on past their text: Whisper finds where the text ends, and the same take is rendered again from its own music codes cut there (+1.5 s). The same performance, without the returns and babble after the last line; only the sound stage runs.">Trim to the text</button>
           <button type="button" class="btn ghost small" id="endAt" data-tip="End the take at a moment: its last 2 s fade out, and nothing after it is kept. For a song that runs on past its proper end (in Full, the score's leftover bars after the last words). The moment is where the player stands when this take plays; otherwise you are asked. From the take's kept latents in seconds (the very sound), else its music codes rendered again. A new take; this one stays.">End at…</button>
+          <button type="button" class="btn ghost small" id="fadeIn" data-tip="Fade the take in: its first seconds rise from silence (2 s unless you say otherwise), for a song that starts too abruptly. From the take's kept latents in seconds (the very sound), else its music codes rendered again. A new take; this one stays.">Fade in…</button>
         </div></div>
         <div class="tool-group tg-refine"><span class="tool-cap">Refiner</span><div class="tool-row">
           <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum">Spectrum</button>
@@ -987,6 +1003,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="tool-group tg-files"><span class="tool-cap">Files</span><div class="tool-row">
           <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds">Request</button>
           <button type="button" class="btn ghost small" id="dlScore" title="The score as ABC notation (.abc)">Score</button>
+          <button type="button" class="btn ghost small" id="loopTake" data-tip="A loop from this take: 1, 2, 4 or 8 bars on its score's bar lines, from the bar where the player stands (else the first), seamless (its end runs into its start), saved as a WAV named with its tempo and key">Loop…</button>
         </div></div>
       </div>
 
@@ -1004,8 +1021,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <button type="button" class="icon-btn copy-icon" id="copyPrompt" aria-label="Copy the style" data-tip="Copy the style">
               <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 4.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v7.5A1.5 1.5 0 0 0 4 13h.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </button></div>
-          <p class="prompt-text" id="metaStyle"></p>
-          <p class="prompt-text dim" id="metaCover"></p>
+          <p class="prompt-text" id="metaStyle" translate="no"></p>
+          <p class="prompt-text dim" id="metaCover" translate="no"></p>
         </section>
 
         <section class="panel" data-card-fold="lyrics">
@@ -1194,7 +1211,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <label class="check"><input type="radio" name="draftStyleForm" value="tags" checked /> <span>the tags</span></label>
             <label class="check"><input type="radio" name="draftStyleForm" value="readable" /> <span>the readable style</span></label></div>
           <label class="field"><span class="label">Lyrics</span><textarea id="draftLyrics" rows="12" spellcheck="false"></textarea></label>
-          <details class="assist-notes" open><summary>Writing notes</summary><p id="draftNotes"></p></details>
+          <details class="assist-notes" open><summary>Writing notes</summary><p id="draftNotes" translate="no"></p></details>
           <div class="assist-apply">
             <button type="button" class="btn primary small" id="applyDraft">Apply draft</button>
             <button type="button" class="btn ghost small" id="applyLyrics">Use lyrics</button>
@@ -1437,8 +1454,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
        own, in the shapes its pictures take, all from one seed, painted by Krea 2 Muse; a square one becomes the cover of the
        take in hand -->
   <section class="col artist-col is-hidden" id="view-artist">
-    <div class="col-head post-head artist-head"><h2>Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a reference picture, repainting on a canvas, LoRAs and the upscale come in the releases after">Early preview</span>
-      <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Krea 2 Muse</span>
+    <div class="col-head post-head artist-head"><h2 id="arRoomName" translate="no">Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a canvas with layers and the title written on the cover come in the releases after">Early preview</span>
+      <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Krea 2 Muse or Qwen-Image</span>
       <span class="post-take" id="arTake" translate="no"></span><span class="col-note" id="arTakeNote">pick a take on the right to give it a cover</span></div>
     <!-- HERESY 1271 (Viktor 09.10.2026: «Канвас комнаты Художника можно разделить на три колонки, каждая регулируется по ширине. В левой
          промптинг с параметрами. В средней проявка изображения и активное выбранное как в InvokeAI, и ниже данные по прогону самого
@@ -1446,29 +1463,76 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <div class="ar-cols" id="arCols">
       <div class="ar-left">
     <div class="ar-form">
-      <label class="field"><span class="label">Prompt <em>what to paint, said in sentences (Krea 2 reads them); Ctrl+Enter draws</em></span>
+      <label class="field"><span class="label">Prompt <span class="info" tabindex="-1" role="img" aria-label="About the prompt" data-tip="What to paint, said in sentences: what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph); end with no text when you want no letters in it. Ctrl+Enter draws"></span></span>
         <textarea id="arPrompt" rows="5" spellcheck="false" data-tip="What to paint, said in sentences: what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph); end with no text when you want no letters in it. Ctrl+Enter draws" placeholder="A woman in a white linen dress dancing alone in a birch grove at dusk, warm lanterns in the branches, painted in soft oils, no text."></textarea></label>
+      <!-- HERESY 1305 (Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести»): a picture to paint from -->
+      <div class="ar-ref" id="arRef" tabindex="-1">
+        <div class="ar-ref-empty" id="arRefEmpty"><span class="label">Reference picture <span class="info" tabindex="-1" role="img" aria-label="About the reference picture" data-tip="Paint from it, as image to image: drop a picture here, paste one (Ctrl+V), or take the stage's with «As reference»"></span></span>
+          <button type="button" class="btn ghost small" id="arRefTake" hidden data-tip="The cover of the take picked on the right as the reference: with «Paint around it» it becomes a 16:9 for the video or a 9:16 for a short">The take's cover</button>   <!-- HERESY 1309 -->
+          <label class="btn ghost small ar-ref-pick">Choose…<input type="file" id="arRefFile" accept="image/png,image/jpeg,image/webp" hidden data-tip="A PNG, JPEG or WebP picture of your own to paint from" /></label></div>
+        <div class="ar-ref-on" id="arRefOn" hidden>
+          <span class="ar-ref-pic"><img id="arRefImg" alt="" draggable="false" translate="no" /><canvas id="arRefMask" hidden aria-hidden="true"></canvas></span>
+          <div class="ar-ref-mid">   <!-- HERESY 1307: the strength and «Paint around it» in one column -->
+          <label class="field ar-ref-str"><span class="label">How much it may change <em id="arRefSay">0.60</em></span>
+            <input type="range" id="arRefStr" min="0.2" max="1" step="0.05" value="0.6" data-tip="How far from the picture the painting begins: 0.3 keeps it nearly as it is, 0.6 keeps its composition and changes its matter, 0.9 paints the prompt's scene in its light and colours, 1.0 paints anew" /></label>
+            <!-- HERESY 1307: outpaint, a sibling of the strength --><span class="ar-ref-fit"><label class="check" data-tip="Each shape holds the whole picture in its middle and paints the edges it leaves anew, in the picture's colours and light: a square cover into a 16:9 for a video or a 9:16 for a short. The middle stays as it is"><input type="checkbox" id="arRefFit" /> <span>Paint around it</span></label></span>
+            <span class="ar-cv-say" id="arCanvasSay" hidden><em></em><button type="button" class="pb-btn" id="arCanvasX" aria-label="Off the canvas: each shape as the form paints it" data-tip="Off the canvas: each shape as the form paints it">✕</button></span>   <!-- HERESY 1346 -->
+          </div>
+          <span class="ar-ref-btns"><button type="button" class="btn ghost small" id="arCanvasOpen" data-tip="The canvas, as InvokeAI's: the picture in each shape's frame, moved and scaled by hand; what the frame leaves bare is painted around it; the mask painted over it">Canvas…</button><button type="button" class="btn ghost small" id="arMaskOpen" data-tip="Paint what of the picture to repaint (white repaints, the rest stays as it is): as inpainting">Mask…</button>
+          <button type="button" class="pb-btn ar-ref-x" id="arRefX" aria-label="No reference picture" data-tip="No reference: paint from the noise">✕</button></span>
+          <!-- HERESY 1320: the mask's options -->
+          <div class="ar-mask-opts" id="arMaskOpts" hidden>
+            <label class="field"><span class="label">Grow</span><input type="number" id="arMkGrow" min="-64" max="128" step="4" value="0" data-tip="The mask grown by so many pixels (negative: shrunk), as ComfyUI's GrowMask: room for the new paint to meet the old" /></label>
+            <label class="field"><span class="label">Edge</span><input type="number" id="arMkEdge" min="0" max="96" step="4" value="24" data-tip="How soft the mask's edge is, in pixels: the new paint fades into the old over it" /></label>
+            <label class="check" data-tip="Soft repainting (differential diffusion, A1111's soft inpainting): where the edge is grey the picture changes only in the last steps, a little; no seam"><input type="checkbox" id="arMkSoft" checked /> Soft</label>
+            <label class="field"><span class="label">Grain</span><input type="number" id="arMkGrain" min="0" max="0.6" step="0.05" value="0.1" data-tip="How much of the painting the kept part takes, at each step and at the end: its grain and light sewn to the new paint (0 keeps it exactly)" /></label>
+          </div>
+        </div>
+      </div>
       <div class="ar-knobs">
         <button type="button" class="btn ghost small" id="arFromTake" data-tip="The prompt the take's artwork was drawn from, or one from its title and style, to start from">From the take</button>
         <div class="ar-shapes" id="arShapes" role="group" aria-label="Shapes"></div>
-        <label class="field ar-seed"><span class="label">Seed <em>empty: a new one</em></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
+        <div class="ar-seedcount">   <!-- HERESY 1345 (Viktor: «ВАРИАЦИИ ужми, а СИД лучше растянуть»): one row, the seed stretched -->
+        <label class="field ar-seed"><span class="label">Seed <span class="info" tabindex="-1" role="img" aria-label="About the seed" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)"></span></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
         <label class="field ar-count" data-tip="Each variation is the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Variations</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
-        <label class="field ar-painter"><span class="label">Painter</span><select id="arPainter" translate="no" data-tip="Krea 2 Muse by Stable Yogi: Q4 wants a card with 12.5 GB free, Q8 (finer) 18.5 GB; about 35 s a square picture and 47 s a wide or tall one on an RTX 3090"><option value="krea2-q4">Krea 2 Muse · Q4 (from 12.5 GB)</option><option value="krea2-q8">Krea 2 Muse · Q8 (from 18.5 GB)</option></select></label>
+        </div>
+        <label class="field ar-painter"><span class="label">Painter <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arPainter" translate="no" data-tip="Krea 2 Muse by Stable Yogi: Q4 wants a card with 12.5 GB free, Q8 (finer) 18.5 GB; about 35 s a square picture and 47 s a wide or tall one on an RTX 3090"><option value="krea2-q4">Krea 2 Muse · Q4 (from 12.5 GB)</option><option value="krea2-q8">Krea 2 Muse · Q8 (from 18.5 GB)</option></select></label>
+        <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512, and the painter's note (Qwen-Image 2.1's licence) -->
+        <label class="field ar-model" id="arModelBox" hidden><span class="label">Fine-tune</span><select id="arModel" translate="no" data-tip="The fp8 fine-tunes of Qwen-Image 2512 in artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): a card of 24 GB"></select></label>
+        <!-- HERESY 1319: the sampling: steps, sampler, schedule; 2512's Lightning and guidance -->
+        <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em><span class="info is-warn" id="arSampWarn" tabindex="-1" role="img" aria-label="A warning on the sampling" hidden></span></summary>
+          <div class="ar-samp-row">
+            <label class="field ar-samp-steps"><span class="label">Steps</span><input type="number" id="arSteps" min="4" max="16" step="1" inputmode="numeric" data-tip="How many steps from the noise to the picture: Krea 2 and Qwen-Image 2512 with Lightning 4 to 16 (8 their own), 2512 without it and Qwen-Image 2.1 10 to 60" /></label>
+            <label class="field"><span class="label">Sampler</span><select id="arSampler" data-tip="How each step is taken. Euler: the plain step; Euler SDE: fresh noise each step (soft on Qwen without Lightning). ER-SDE: a stochastic solver of third order, one look a step. RES 2s and 3s: the refined exponential solver, two or three looks a step (ODE: without noise). Heun++: up to three looks a step. Exp Heun 2 x0: the exponential Heun, two looks (SDE: with noise). More looks: finer, and as many times longer"><option value="euler" translate="no">Euler</option><option value="euler-sde" translate="no">Euler SDE</option><option value="er_sde" translate="no">ER-SDE</option><option value="res_2s" translate="no">RES 2s</option><option value="res_2s_ode" translate="no">RES 2s ODE</option><option value="res_3s" translate="no">RES 3s</option><option value="res_3s_ode" translate="no">RES 3s ODE</option><option value="heunpp2" translate="no">Heun++ 2</option><option value="exp_heun_2_x0" translate="no">Exp Heun 2 x0</option><option value="exp_heun_2_x0_sde" translate="no">Exp Heun 2 x0 SDE</option></select></label>
+            <label class="field"><span class="label">Schedule</span><select id="arSchedule" data-tip="How the steps are spread from the noise to the picture: Simple (the painter's own), Karras and Exponential (more steps near the end, for detail; with Lightning they can paint the subject twice), Beta and Beta 57 (more at both ends), KL optimal (Align Your Steps' spacing), SGM uniform (even in time), Bong tangent (two slopes, through the middle)"><option value="simple" translate="no">Simple</option><option value="karras" translate="no">Karras</option><option value="exponential" translate="no">Exponential</option><option value="beta" translate="no">Beta</option><option value="beta57" translate="no">Beta 57</option><option value="kl_optimal" translate="no">KL optimal</option><option value="sgm_uniform" translate="no">SGM uniform</option><option value="bong_tangent" translate="no">Bong tangent</option></select></label>
+            <label class="field ar-samp-num ar-samp-light" id="arLightBox" hidden><span class="label">Lightning</span><span class="ar-light-row"><input type="checkbox" id="arLightOn" aria-label="Lightning" data-tip="Lightning: Qwen-Image 2512 in 4 to 16 steps and one pass a step, for drafts and the takes' covers; off for finished realism: 10 to 60 steps with guidance, about four times as long" /><input type="number" id="arLight" min="0.05" max="1.5" step="0.05" data-tip="Lightning's strength: 1.0 as its makers give it, lower for a fine-tune (0.55 with 12 steps)" /></span></label>
+            <label class="field ar-samp-num" id="arCfgBox" hidden><span class="label">Guidance</span><input type="number" id="arCfg" min="1" max="10" step="0.5" data-tip="Without Lightning: how closely the picture follows the prompt (true CFG, two passes a step); 4 is Qwen-Image's own" /></label>
+            <button type="button" class="btn ghost small" id="arSampReset" data-tip="The painter's own steps, sampler and schedule">Reset</button>
+          </div>
+        </details>
+        <!-- HERESY 1316: the adapters of the painter's family, each at its strength -->
+        <div class="ar-loras" id="arLoras">
+          <div class="ar-loras-head"><span class="label">LoRA <em id="arLoraSay"></em></span>
+            <button type="button" class="btn ghost small" id="arLoraAdd" data-tip="The adapters for this painter in artwork/loras/ (its family's folder, any folders below it): pick up to four">Add…</button></div>
+          <div class="ar-lora-list" id="arLoraList"></div>
+        </div>
         <!-- HERESY 1257 (Viktor 08.10.2026: «живую проявку с латентного шума до готовой картинки… В InvokeAI можно либо выключить, либо включить») -->
         <label class="check ar-live" data-tip="Each step of the painting over its place, from the noise to the picture: an eighth of its size, seen without the decoder, so it costs nothing. Off: the place waits for the picture"><input type="checkbox" id="arLive" checked /> <span>Live preview</span></label>
-        <div class="ar-go"><span class="row-hint" id="arCost"></span><button type="button" class="btn primary" id="arDraw">Draw</button></div>
+        <div class="ar-go"><span class="row-hint" id="arCost"></span><button type="button" class="btn" id="arStop" hidden>Stop</button><button type="button" class="btn primary" id="arDraw">Draw</button></div>
       </div>
     </div>
       </div>
       <div class="ar-resizer" id="arEdgeL" data-edge="l" role="separator" aria-orientation="vertical" tabindex="0"
            aria-label="The prompt's column: drag to widen; ← → from the keyboard; Home or a double click for its own width"></div>
-      <div class="ar-stage" id="arStage" aria-live="polite"></div>
+      <div class="ar-stage" id="arStage" aria-live="polite"><div class="ar-stage-in" id="arStageIn"></div>
+        <!-- HERESY 1332, 1345 (Viktor: «Прогресс бар… по всей ширине центральной прямо поверх проявки изображения, не сдвигая само изображение»): the run under way, over the stage -->
+        <div class="ar-progress" id="arProgress" hidden><span class="ar-progress-bar"><i></i></span><em id="arProgressSay"></em></div></div>
       <div class="ar-resizer" id="arEdgeR" data-edge="r" role="separator" aria-orientation="vertical" tabindex="0"
            aria-label="The library's column: drag to widen; ← → from the keyboard; Home or a double click for its own width"></div>
       <div class="ar-right">
     <!-- HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта?»): the runs, or every picture as one gallery -->
     <div class="ar-bar" id="arBar">
-      <span class="ar-looks" role="group" aria-label="How to show them"><button type="button" class="chip" data-look="runs" data-tip="Each press of Draw with its prompt, seed and pictures, the newest on top">Runs</button><button type="button" class="chip" data-look="gallery" data-tip="Every picture of every run in one grid, the newest first: filter by shape or by star, three sizes">Gallery</button></span>
+      <span class="ar-looks" role="group" aria-label="How to show them"><button type="button" class="chip" data-look="runs" data-tip="Each press of Draw with its prompt, seed and pictures, the newest on top">Runs</button><button type="button" class="chip" data-look="gallery" data-tip="Every picture of every run in one grid, the newest first: filter by shape or by star, three sizes">Gallery</button><button type="button" class="chip" data-look="trash" data-tip="The runs in the trash (the studio's trash/artist/), the newest first: each comes back with Restore">Trash</button></span>
       <span class="ar-filters" id="arFilters" role="group" aria-label="Which pictures" hidden></span>
       <span class="ar-sizes" id="arSizes" role="group" aria-label="Their size" hidden></span>
       <span class="ar-total" id="arTotal"></span>
@@ -1532,13 +1596,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <label class="field tr-wide" data-tip="The run's name: its adapters land in loras/NAME/ as NAME-eNNN, ready in the Creator. A run of the same name goes on from its last checkpoint."><span class="label">Run name</span><input type="text" id="trRunName" placeholder="fosforida-style-v1" /></label>
             <label class="field" data-tip="Ruach Studio: the studio's own trainer, on the full bf16 weights, Direct mode. AI-Toolkit (Ostris): the reference; it can also train with a score and on separated vocals. Both save the same LoRA format."><span class="label">Trainer</span><select id="tr_engine"><option value="ruach">Ruach Studio</option><option value="ai-toolkit">AI-Toolkit (reference)</option></select></label>
             <label class="field" data-tip="The base model's weights while training: bf16, the full ones (a 24 GB card), or int8 for smaller cards, a little less exact."><span class="label">Base weights</span><select id="tr_quant"><option value="bf16">bf16</option><option value="int8">int8</option></select></label>
-            <label class="field" data-tip="How many steps in all, one song a step. A small set is learnt by heart fast: the green epochs in the Telemetry are the ones to hear first, often before the last."><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="20000" step="50" /></label>
+            <label class="field" data-tip="How many steps in all, one song a step. A small set is learnt by heart fast: the green epochs in the Telemetry are the ones to hear first, often before the last."><span class="label">Steps</span><input type="number" id="tr_steps" min="10" max="1000000" step="50" /></label>
             <label class="field" data-tip="An adapter is saved every this many epochs (an epoch: every song once), each to be heard and compared."><span class="label">Save every <em>epochs</em></span><input type="number" id="tr_save_epochs" min="1" max="100" step="1" value="1" /></label>
-            <label class="field"><span class="label">Rank <button type="button" class="tr-howto" id="trRankHow" data-tip="Which rank, how many steps, the other knobs: the guide">How to choose ›</button></span><input type="number" id="tr_rank" min="4" max="128" step="4" data-tip="How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most. The line below gives its share and its size." /><span class="row-hint" id="trRankSay"></span></label>
+            <label class="field"><span class="label">Rank <button type="button" class="tr-howto" id="trRankHow" data-tip="Which rank, how many steps, the other knobs: the guide">How to choose ›</button></span><input type="number" id="tr_rank" min="4" max="128" step="4" data-tip="How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most." /></label>
             <label class="field" data-tip="How big each step is. Keep the kind's own; higher learns faster and forgets more."><span class="label">Learning rate</span><input type="number" id="tr_lr" value="0.0001" step="0.00001" /></label>
-            <label class="field" data-tip="How much the music half learns (the part that writes the song's tokens): 0 teaches the sound only, a timbre; raise it for diction and style, which live in the music half."><span class="label">AR weight <em>0 = sound only</em></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
-            <label class="field" data-tip="Holds the music half near the base model, so it keeps what it was not shown; higher holds tighter."><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
-            <label class="field" data-tip="The music half's learning rate as a share of the one above: 0.5 learns half as fast. It learns a small set by heart quickly."><span class="label">AR speed</span><input type="number" id="tr_ar_lr_multiplier" min="0" max="2" step="0.1" /></label>
+            <label class="field" data-tip="Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size."><span class="label">AR weight <em>0 = sound only</em> <button type="button" class="tr-howto" id="trArHow" data-tip="The music half's three knobs: the guide">How they work ›</button></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
+            <label class="field" data-tip="Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0."><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
+            <label class="field" data-tip="The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly."><span class="label">AR speed</span><input type="number" id="tr_ar_lr_multiplier" min="0" max="2" step="0.1" /></label>
             <label class="field" data-tip="AI-Toolkit only (the studio's own trainer is Direct). Direct: no score, for songs made in Direct mode. Full (score) and Melody: the music half also learns to write a score first, transcribed from every song, for songs made in those modes."><span class="label">Mode</span><select id="tr_cot"><option value="off">Direct</option><option value="full">Full (score)</option><option value="melody">Melody</option></select></label>
             <label class="check" data-tip="AI-Toolkit only. Every song is first split into voice and instrumental; the music half then also learns the voice from the lyrics alone and the music from the tags alone."><input type="checkbox" id="tr_sep" /> <span>Separate vocals and music</span></label>
           </div>
@@ -1745,22 +1809,31 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <!-- HERESY 1094 (Viktor, 02.10.2026): the server log in every room, right above the player: folded to one line
      (the last thing the engine said) until unfolded to ten; the same stream as Engine's log, not a second one -->
 <aside class="log-dock is-folded" id="logDock" aria-label="Server log">
+  <div class="log-dock-grip" id="logDockGrip" role="separator" aria-orientation="vertical" aria-label="The log's width" data-tip="Drag to widen the log, up to 1200 px; a double click gives its own width back"></div>
   <div class="log-dock-head">
+    <!-- HERESY 1301 (Viktor 10.10.2026: «SVG иконка в левой позиции со стрелкой вправо, в правой - влево»): the dock to the other side,
+         kept for the room; on the dock's inner edge (app.css orders it last when the dock is on the left) -->
+    <button type="button" class="icon-btn log-dock-side" id="logDockSide" aria-label="The log to the left side of the page"></button>
     <button type="button" class="log-dock-tab" id="logDockTab" aria-expanded="false" data-tip="The server log, in every room: click to unfold or fold">
       <span class="lamp" id="logDockLamp"></span><b>Server log</b><span class="net-say mono" id="netSay"></span><span class="log-dock-last mono" id="logDockLast">connecting</span></button>
     <span class="log-dock-acts">
+      <span class="log-dock-views" id="logDockViews" role="tablist" aria-label="Which log">
+        <button type="button" role="tab" class="log-view is-on" data-view="server" aria-selected="true" data-tip="The server's log: the engine and the lab">Server</button>
+        <button type="button" role="tab" class="log-view" data-view="artist" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button></span>
       <label class="check small-check"><input type="checkbox" id="logDockFollow" checked data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read." /> <span>Follow</span></label>
       <!-- HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, or back -->
       <button type="button" class="btn ghost small log-dock-tall" id="logDockTall" aria-pressed="false" aria-label="Full height"
         data-tip="The log the window's full height, or back">⤢</button>
       <button type="button" class="btn ghost small" id="logDockCopy">Copy</button>
       <button type="button" class="btn ghost small" id="logDockEngine" data-tip="The whole log, in Engine">Engine</button>
+      <button type="button" class="btn ghost small" id="logDockPop" aria-label="The log in a window of its own" data-tip="The log in a window of its own, the cards beside it: over every window where the browser can (Chrome), else one to carry to another monitor; the log here folds meanwhile and unfolds when it closes">⧉</button>
     </span>
   </div>
   <!-- HERESY 1264 (Viktor 09.10.2026: «btop ересь можно прикрутить и к фрейму лога сервера. Разрешаю сделать его шире на 200-400px, В две
        колонки. В одной живой лог, в другой живая шкала активных GPU, где главная карта особо обрамлена»): the log and the cards, live -->
   <div class="log-dock-main">
     <div class="log-dock-body mono" id="logDockBody" role="log" aria-live="off"></div>
+    <div class="log-dock-body log-dock-artist mono" id="logDockArtist" role="log" aria-live="off" translate="no" hidden></div>
     <div class="log-dock-gpus" id="logDockGpus" aria-label="The cards, live"></div>
   </div>
 </aside>
@@ -1885,6 +1958,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <p>Probes &times; Variations is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
 </template>
 <script src="heresy-dialog.js"></script>
+<script src="heresy-seedmode.js"></script>
 <script src="heresy-updates.js"></script>
 <script src="heresy-places.js"></script>
 <script src="heresy-weights.js"></script>
@@ -1929,6 +2003,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-derived.js"></script>
 <script src="heresy-post.js"></script>
 <script src="heresy-artist.js"></script>
+<script src="heresy-canvas.js"></script>   <!-- HERESY 1346: the Artist's canvas -->
 <script src="heresy-zoom.js"></script>
 <script src="heresy-spectrum.js"></script>
 <script src="themes.js"></script>

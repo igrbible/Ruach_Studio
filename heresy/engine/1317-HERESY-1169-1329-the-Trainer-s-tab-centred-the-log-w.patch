@@ -1,0 +1,150 @@
+From 229945256dfe943d230126f5bc11f012cc3ea428 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 15:54:01 -0600
+Subject: [PATCH 1317/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201329:=20the?=
+ =?UTF-8?q?=20Trainer's=20tab=20centred;=20the=20log=20wider,=20its=20edge?=
+ =?UTF-8?q?=20dragged?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «В баре кнопка TRAINER отцентри между лого и воркспейс селектором. Фрейм серверного лога начал прыгать. Наверное из-за того, что текст в строках GPU графов бегает с одной строки на две. Расширь колонку GPU на 100px, и общую ширину фрейма логгера на 200px, и разреши по крайней стороне фрейма перетягивать его ширины с установленного бейс до макс 1200px».
+
+The Trainer's tab in the middle between the logo's right edge and the workspace button's left one wherever the logo stands centred (a ResizeObserver: a language or a workspace name moves it again). The dock with the cards 920 px (full height 1180), their column 390, their numbers of one width; its outer edge drags its width from its state's own up to 1200 px, kept in this browser, a double click forgets it. Two older checks now ask for the centred tab and the 920 px.
+
+Suite: 598/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css    | 15 +++++++---
+ tools/console/app.js     | 62 ++++++++++++++++++++++++++++++++++++++++
+ tools/console/index.html |  1 +
+ 3 files changed, 74 insertions(+), 4 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 52f3bd4..a4e7913 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -3208,10 +3208,11 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+    log the dock grows 300 px for a column of the cards with a role (none without a card: then it keeps its width); in Engine → GPUs a
+    row under each card. The bars: the load above, the memory below, a second each, two minutes wide. */
+ /* HERESY 1272 (Viktor 09.10.2026: «на полной развёртке фрейм серверного лога очень широкий. ужми ширину на 150-200px»): 180 px narrower */
+-.log-dock.has-gpus:not(.is-folded) { width: min(720px, calc(100vw - 32px)); }
+-.log-dock.has-gpus.is-tall { width: min(980px, calc(100vw - 32px)); }
++/* HERESY 1329 (Viktor 10.10.2026: «Расширь колонку GPU на 100px, и общую ширину фрейма логгера на 200px»): 920 and 1180, the cards 390 */
++.log-dock.has-gpus:not(.is-folded) { width: min(920px, calc(100vw - 32px)); }
++.log-dock.has-gpus.is-tall { width: min(1180px, calc(100vw - 32px)); }
+ .log-dock-main { display: grid; grid-template-columns: minmax(0, 1fr); }
+-.log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr) 290px; }
++.log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr) 390px; }
+ .log-dock.is-folded .log-dock-main, .log-dock-gpus:empty { display: none; }
+ .log-dock:not(.has-gpus) .log-dock-gpus { display: none; }
+ .log-dock-gpus { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; padding: 8px 10px; border-top: 1px solid var(--line-soft, var(--line));
+@@ -3223,7 +3224,7 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+ .log-dock.has-gpus:not(.is-folded):not(.is-tall) .log-dock-gpus { height: var(--gl-h, calc(10 * 1.5 * 11px + 16px)); }
+ .log-dock.has-gpus.is-tall .log-dock-body, .log-dock.has-gpus.is-tall .log-dock-gpus { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 74px); }
+ .gl-card { display: flex; flex-direction: column; gap: 3px; padding: 5px 8px 6px; border: 1px solid var(--line-a, var(--line)); border-radius: var(--r-sm, 4px); }
+-.gl-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 8px; min-width: 0; }
++.gl-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 8px; min-width: 0; font-variant-numeric: tabular-nums; }   /* HERESY 1329: numbers of one width: a line that does not grow and shrink each second */
+ .gl-head .gl-name { flex: none; }
+ .gl-card.is-main { border: 1.5px solid var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 14%, transparent); }
+ .gl-role { min-width: 0; overflow-wrap: anywhere; font: 600 10px/1.3 var(--sans);   /* HERESY 1293: all its roles, on a second line when they need it */ letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+@@ -5060,3 +5061,9 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
+ /* HERESY 1327: the adapters that wrote the score against those on now */
+ .score-guard { color: var(--amber); margin: 4px 0 0; }
+ .score-guard[hidden] { display: none; }
++/* HERESY 1329: the dock's outer edge, dragged from its base width to 1200 px (kept); a double click gives the base back */
++.log-dock-grip { position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; cursor: ew-resize; z-index: 3; touch-action: none; }
++.log-dock-grip::after { content: ""; position: absolute; top: 8px; bottom: 8px; left: 3px; width: 2px; border-radius: 1px; background: transparent; transition: background .12s ease; }
++.log-dock-grip:hover::after, .log-dock-grip.is-on::after { background: var(--amber); }
++.log-dock.is-left .log-dock-grip { left: auto; right: -4px; }
++.log-dock.is-folded .log-dock-grip { display: none; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 9cd1166..d829d36 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -9228,6 +9228,68 @@
+       else d.style.bottom = Math.round(innerHeight - rr.top + 8) + "px";
+     });
+   }
++  // HERESY 1169 · 1329 (Viktor 10.10.2026: «разреши по крайней стороне фрейма перетягивать его ширины с установленного бейс до макс
++  // 1200px»): the dock's outer edge (the left one on the right, the right one on the left) drags its width from the base its state has
++  // (folded, open, with the cards, the full height) up to 1200 px; kept in this browser (yue2.logDockW), a double click forgets it
++  var DOCK_MAX = 1200;
++  function dockBase(d) { var w = d.style.width; d.style.width = ""; var b = d.getBoundingClientRect().width; d.style.width = w; return b; }
++  function dockWidth() {
++    var d = $("logDock");
++    if (!d) return;
++    var want = +recall("yue2.logDockW") || 0;
++    if (d.classList.contains("is-folded") || !want) { d.style.width = ""; return; }
++    var base = dockBase(d), most = Math.min(DOCK_MAX, innerWidth - 32);
++    d.style.width = want > base ? Math.round(Math.min(most, want)) + "px" : "";
++  }
++  if ($("logDockGrip")) (function () {
++    var g = $("logDockGrip"), d = $("logDock"), from = null;
++    g.addEventListener("pointerdown", function (e) {
++      if (e.button !== 0) return;
++      e.preventDefault();
++      g.setPointerCapture(e.pointerId);
++      from = { x: e.clientX, w: d.getBoundingClientRect().width, base: dockBase(d), left: d.classList.contains("is-left") };
++      g.classList.add("is-on");
++    });
++    g.addEventListener("pointermove", function (e) {
++      if (!from) return;
++      var dx = (e.clientX - from.x) * (from.left ? 1 : -1), most = Math.min(DOCK_MAX, innerWidth - 32);
++      var w = Math.max(from.base, Math.min(most, from.w + dx));
++      d.style.width = Math.round(w) + "px";
++    });
++    var end = function () {
++      if (!from) return;
++      var w = d.getBoundingClientRect().width;
++      store("yue2.logDockW", w > from.base + 1 ? String(Math.round(w)) : null);
++      from = null;
++      g.classList.remove("is-on");
++    };
++    g.addEventListener("pointerup", end);
++    g.addEventListener("pointercancel", end);
++    g.addEventListener("dblclick", function () { store("yue2.logDockW", null); d.style.width = ""; });
++    new MutationObserver(function () { if (!from) dockWidth(); }).observe(d, { attributes: true, attributeFilter: ["class"] });
++    window.addEventListener("resize", function () { if (!from) dockWidth(); });
++    dockWidth();
++  })();
++  window.ruachDockWidth = dockWidth;                     // for the checks
++  // HERESY 1169 · 1329 (Viktor 10.10.2026: «В баре кнопка TRAINER отцентри между лого и воркспейс селектором»): the Trainer's tab in the
++  // middle between the logo's right edge and the workspace button's left one, wherever the logo stands centred in the bar
++  function centerTrainer() {
++    var side = $("tabsSide"), logo = document.querySelector(".topbar .brand-logo"), brand = document.querySelector(".topbar .brand"), ws = document.querySelector(".topbar .ws-current");
++    if (!side || !logo || !ws || !brand) return;
++    side.style.marginLeft = "";
++    var lr = logo.getBoundingClientRect(), wr = ws.getBoundingClientRect(), sr = side.getBoundingClientRect();
++    if (!lr.width || !wr.width || getComputedStyle(brand).position !== "absolute" || getComputedStyle(brand).display === "none") return;
++    var want = (lr.right + wr.left) / 2 - sr.width / 2;
++    if (want > sr.left + 1) side.style.marginLeft = Math.round(want - sr.left) + "px";
++  }
++  (function () {
++    var soon = 0, again = function () { cancelAnimationFrame(soon); soon = requestAnimationFrame(centerTrainer); };
++    if (window.ResizeObserver) { var ro = new ResizeObserver(again); ["tabs", "tabsSide"].forEach(function (id) { if ($(id)) ro.observe($(id)); }); var w = document.querySelector(".topbar .ws-current"); if (w) ro.observe(w); }
++    window.addEventListener("resize", again);
++    if (document.fonts && document.fonts.ready) document.fonts.ready.then(again);
++    again();
++  })();
++  window.ruachCenterTrainer = centerTrainer;             // for the checks
+   var logDockTimer = 0;
+   window.addEventListener("resize", function () { if (!document.body.dataset.frame) return; clearTimeout(logDockTimer); logDockTimer = setTimeout(placeLogDock, 120); });
+   placeLogDock();                                    // HERESY 1301: the room's side, and the button's arrow, from the start
+diff --git a/tools/console/index.html b/tools/console/index.html
+index b2d6942..ab7ad56 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1806,6 +1806,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ <!-- HERESY 1094 (Viktor, 02.10.2026): the server log in every room, right above the player: folded to one line
+      (the last thing the engine said) until unfolded to ten; the same stream as Engine's log, not a second one -->
+ <aside class="log-dock is-folded" id="logDock" aria-label="Server log">
++  <div class="log-dock-grip" id="logDockGrip" role="separator" aria-orientation="vertical" aria-label="The log's width" data-tip="Drag to widen the log, up to 1200 px; a double click gives its own width back"></div>
+   <div class="log-dock-head">
+     <!-- HERESY 1301 (Viktor 10.10.2026: «SVG иконка в левой позиции со стрелкой вправо, в правой - влево»): the dock to the other side,
+          kept for the room; on the dock's inner edge (app.css orders it last when the dock is on the left) -->
+-- 
+2.43.0
+

@@ -32,7 +32,8 @@
   // what the user wrote or the machine said, kept as it is whatever its words: take titles and styles, notes, workspace
   // names, the logs, the Writer's documents, the cheat-sheet's style words and probe prompts (they go into a style)
   var KEEP = ".take-title, .take-style, .coll-title-text, .peek-title, .peek-style, .peek-note, .pb-sub, .coll-badge.w, " +
-             "#logBody, #logDockBody, #logDockLast, .wr-item-title, .wr-take-title, .hi-tag, .hi-prompt";
+             "#logBody, #logDockBody, #logDockLast, .wr-item-title, .wr-take-title, .hi-tag, .hi-prompt, " +
+             ".lyr-mirror, .lyr-tagsl, .tc-mirror";   // HERESY 1339: the lyrics' mirrors are the user's text, laid under the box to the letter
   var XHTML = "http://www.w3.org/1999/xhtml";
   var CAT = {}, PAT = {}, lang = "en", observer = null;
   // a number as the page writes it: 24576, 24,576, 24.576, 24 576. HERESY 1166: numbers follow the page's language, and the

@@ -1,0 +1,40 @@
+From 002bf0ff3706ec3fa6bd1458a46a43db30314be5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 14:59:37 -0600
+Subject: [PATCH 1313/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201326:=20the?=
+ =?UTF-8?q?=20fp8=20fine-tune=20sent=20with=20a=20sampling=20of=20the=20us?=
+ =?UTF-8?q?er's=20own?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026, 14:57: «Сейчас хочу перегенерить, и ловлю ошибку. Хотя выбрано всё правильно» (Qwen-Image 2512 · fp8, Real QW2512 v2, 16 steps, Euler SDE, Beta, Lightning 0.55: «The Artist cannot draw: pick the fine-tune»).
+
+1319 put the sampling between 1318's two lines, so the form's fine-tune went out only with the painter's own sampling; with any sampling of the user's own it was never sent and the lab refused. The two lines together again, the sampling after them.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-artist.js | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 7da31b2..07357cd 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -404,9 +404,11 @@
+     var body = again ? { prompt: again.prompt, shapes: again.shapes, count: again.count, seed: null, painter: again.painter }
+       : { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value };
+     if (again && again.model) body.model = again.model;                 // HERESY 1318: the fp8 fine-tune
++    else if (!again && !$("arModelBox").hidden) body.model = $("arModel").value;
++    // HERESY 1326 (Viktor 10.10.2026, 14:57: «ловлю ошибку. Хотя выбрано всё правильно»): 1319 put the sampling between the two
++    // lines above, and the form's fine-tune hung on «no sampling of its own»: with his 16 steps, Euler SDE and Beta it was never sent
+     var smp = again ? again.sampling : samplingBody();                  // HERESY 1319
+     if (smp && Object.keys(smp).length) body.sampling = smp;
+-    else if (!again && !$("arModelBox").hidden) body.model = $("arModel").value;
+     if (again && again.ref) { body.ref = { id: again.id, file: again.ref }; body.strength = again.strength; if (again.fit) body.fit = true; }   // HERESY 1305: its own; 1307
+     else if (!again && state.ref) { body.ref = state.ref.data || { id: state.ref.id, file: state.ref.file }; body.strength = +$("arRefStr").value; }
+     if (again && again.ref && again.mask) body.mask = { id: again.id, file: again.mask };   // HERESY 1306: Again repaints by the run's own
+-- 
+2.43.0
+

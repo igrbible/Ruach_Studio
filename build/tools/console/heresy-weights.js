@@ -27,6 +27,21 @@
     return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + (m % 60) + " min";
   }
   function cap(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
+  // HERESY 1302: a fetch's progress at the row pressed: what the disk took against the size the card said (decimal, as said)
+  function dgb(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(0, Math.round(b / 1e6)) + " MB"; }
+  function going(which) {
+    var j = job();
+    if (!(j && j.status === "running" && j.kind === "fetch" && j.which)) return false;
+    return Object.keys(which).every(function (k) { return j.which[k] === which[k]; });
+  }
+  function progress() {
+    var j = job(), d = S.data || {}, w = j.written || 0, t = d.now && j.started ? dur(d.now - j.started) : "";
+    var pct = j.expect ? Math.min(99, Math.round(100 * w / j.expect)) : null;
+    var say = j.checking ? tr("Checking what came…") : j.expect ? tr("Fetching… " + dgb(w) + " of about " + dgb(j.expect)) : tr("Fetching… " + dgb(w));
+    return '<div class="wt-prog' + (pct === null ? " is-open" : "") + '" role="progressbar"' + (pct === null ? "" : ' aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"') +
+      '><i' + (pct === null ? "" : ' style="width:' + pct + '%"') + "></i></div>" +
+      '<div class="wt-prog-say">' + esc(say) + (t ? " · " + esc(t) : "") + (pct === null ? "" : " · " + pct + " %") + "</div>";
+  }
   function when(t) {
     var d = new Date(t * 1000), now = new Date();
     var hm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -45,7 +60,8 @@
   function job() { return (S.data && S.data.job) || null; }
   function running() { var j = job(); return !!(j && j.status === "running"); }
   function parts() { return (S.data && S.data.last && S.data.last.parts) || []; }
-  function whole(p) { return p.rows.every(function (r) { return r.state === "here" || r.state === "fetched"; }); }
+  // HERESY 1296: «differs» is a copy of one's own, kept (the Forge's voices: the published tensors, their readers' names still in the header)
+  function whole(p) { return p.rows.every(function (r) { return r.state === "here" || r.state === "fetched" || r.state === "differs"; }); }
 
   function load() {
     clearTimeout(S.timer);
@@ -78,27 +94,35 @@
     paintLine(d);
     $("wtParts").innerHTML = parts().map(function (p) {
       var bad = p.rows.filter(function (r) { return r.state !== "here"; }), ok = whole(p);
-      var here = p.rows.length - bad.length;
-      var sum = ok ? tr("all here") : tr("{0} here, {1} not").replace("{0}", here).replace("{1}", bad.filter(function (r) { return r.state !== "fetched"; }).length);
-      return '<div class="wt-part' + (ok ? " is-whole" : "") + '" data-part="' + esc(p.part) + '">' +
+      var here = p.rows.length - bad.length, own = p.rows.filter(function (r) { return r.state === "differs"; }).length;
+      var sum = (ok ? tr("all here") : tr("{0} here, {1} not").replace("{0}", here).replace("{1}", bad.filter(function (r) { return r.state !== "fetched" && r.state !== "differs"; }).length)) +
+        (own ? " · " + tr("own copies kept: " + own) : "");
+      var now = going({ part: p.part });             // HERESY 1302: its fetch under way, here
+      return '<div class="wt-part' + (ok ? " is-whole" : "") + (now ? " is-going" : "") + '" data-part="' + esc(p.part) + '">' +
         '<div class="wt-head"><b>' + esc(tr(p.label)) + '</b><span class="wt-size">' + esc(p.size) + '</span><span class="wt-sum">' + esc(sum) + "</span>" +
-        (ok ? "" : '<button type="button" class="btn ghost small" data-wt-part="' + esc(p.part) + '"' + (busy ? " disabled" : "") + ">" + esc(tr("Fetch")) + "</button>") + "</div>" +
+        (ok && !now ? "" : '<button type="button" class="btn ghost small" data-wt-part="' + esc(p.part) + '"' + (busy ? " disabled" : "") + ">" + esc(tr(now ? "Fetching…" : "Fetch")) + "</button>") + "</div>" +
+        (now ? progress() : "") +
         (bad.length ? '<ul class="wt-rows">' + bad.map(function (r) {
           return '<li class="wt-row"><span class="wt-st is-' + esc(r.state) + '">' + esc(tr(r.state)) + '</span><code translate="no">' + esc(r.text) + "</code></li>";
         }).join("") + "</ul>" : "") + "</div>";
     }).join("");
     var all = $("wtFetch");
-    all.hidden = !d.script || (!!d.last && parts().every(whole));
+    all.hidden = !d.script || (!!d.last && parts().every(whole) && !going({ part: "missing" }));
     all.disabled = busy;
+    all.textContent = tr(going({ part: "missing" }) ? "Fetching…" : "Fetch what is missing");   // HERESY 1302
+    var top = $("wtProg");                           // HERESY 1302: «what is missing» has no one row: under the card's line
+    if (top) { top.hidden = !going({ part: "missing" }); top.innerHTML = top.hidden ? "" : progress(); }
     $("wtCheck").disabled = busy || !d.script;
     $("wtExtras").innerHTML = (d.extras || []).map(function (e) {
-      var pick = S.pick[e.name] || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;
+      var pick = S.pick[e.name] || (going({ extra: e.name }) && job().which.variant) || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;
       var v = e.variants.filter(function (x) { return x.id === pick; })[0] || e.variants[0];
       return '<div class="wt-extra" data-extra="' + esc(e.name) + '"><div class="wt-x-name"><b>' + esc(tr(e.label)) + "</b><span>" + esc(tr(e.what)) + "</span></div>" +
         '<select data-wt-pick="' + esc(e.name) + '" aria-label="' + esc(tr(e.label)) + '">' + e.variants.map(function (x) {
           return '<option value="' + esc(x.id) + '"' + (x.id === v.id ? " selected" : "") + ">" + esc((x.label || x.id) + " · " + x.size + (x.here ? " · " + tr("here") : "")) + "</option>";
         }).join("") + "</select>" +
-        '<button type="button" class="btn ghost small" data-wt-extra="' + esc(e.name) + '"' + (busy || v.here || !d.script ? " disabled" : "") + ">" + esc(tr(v.here ? "Here" : "Fetch")) + "</button></div>";
+        '<button type="button" class="btn ghost small" data-wt-extra="' + esc(e.name) + '"' + (busy || v.here || !d.script ? " disabled" : "") + ">" +
+          esc(tr(going({ extra: e.name, variant: v.id }) ? "Fetching…" : v.here ? "Here" : "Fetch")) + "</button>" +
+        (going({ extra: e.name }) ? progress() : "") + "</div>";      // HERESY 1302
     }).join("");
     paintLog(job());
     var j = job();
@@ -157,6 +181,7 @@
   var AFTER = { backbone: "The engine lists it at its next start; Compute then offers it.",
                 listener: "The Trainer's listener hears a set's songs with it; a GGUF one needs llama.cpp built in vendor/llama.cpp (the fetch says how).",
                 artwork: "The Artist paints with it.",
+                qwen: "The Artist offers it under Painter.",   // HERESY 1323
                 trainer: "The Trainer starts from it." };
   function fetchExtra(name) {
     var e = ((S.data && S.data.extras) || []).filter(function (x) { return x.name === name; })[0];

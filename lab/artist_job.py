@@ -6,11 +6,12 @@ peaks at 16.9 GB so and 22.7 GB at once, in the same 46 s).
 
     CUDA_VISIBLE_DEVICES=N ART_PAINTER=krea2-q4|krea2-q8 .venv-art/bin/python lab/artist_job.py RUN_DIR
 
-RUN_DIR/ask.json: {"prompt", "shapes": ["1:1", "16:9", "9:16"], "seed", "count", "preview"}. On stdout, as each picture is
+RUN_DIR/ask.json: {"prompt", "shapes": ["1:1", "16:9", "9:16"], "seed", "count", "preview"}; HERESY 1305: "ref" (a picture
+beside it to paint from) and "strength" (0.2 to 1.0: how much the painting may change it). On stdout, as each picture is
 drawn, one JSON line ({"n", "shape", "seed", "w", "h", "nsfw", "took", "kept", "file", "thumb"}); with "preview" (HERESY 1257)
 a line at every step too ({"live": n, "step", "of", "file": "preview/NN.jpg"}); the last line the run's ({"done": true,
 "painter", "took"})."""
-import json, sys, time
+import json, os, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -53,20 +54,277 @@ def live(run, n, gw, gh, w, h):
     return step
 
 
+def ref_latents(pipe, ref, gw, gh):
+    """HERESY 1305: the reference as Krea 2's packed latents for a shape: covered and cut from the middle to the drawn size, through
+    the VAE (the Wan 2.1 VAE: a frame of one), normalized as the pipeline decodes (latents · std + mean)."""
+    import torch
+    from PIL import Image
+    s = min(ref.width / gw, ref.height / gh)
+    img = ref.resize((max(gw, round(ref.width / s)), max(gh, round(ref.height / s))), resample=Image.LANCZOS)
+    img = img.crop(((img.width - gw) // 2, (img.height - gh) // 2, (img.width - gw) // 2 + gw, (img.height - gh) // 2 + gh))
+    x = pipe.image_processor.preprocess(img, height=gh, width=gw).to("cuda", pipe.vae.dtype).unsqueeze(2)
+    with torch.no_grad():
+        z = pipe.vae.encode(x).latent_dist.mode()
+    zc = pipe.vae.config.z_dim
+    mean = torch.tensor(pipe.vae.config.latents_mean).view(1, zc, 1, 1, 1).to(z.device, z.dtype)
+    std = torch.tensor(pipe.vae.config.latents_std).view(1, zc, 1, 1, 1).to(z.device, z.dtype)
+    x0 = ((z - mean) / std)[:, :, 0]
+    return pipe._pack_latents(x0, 1, zc, x0.shape[-2], x0.shape[-1]).to(torch.bfloat16)
+
+
+def cover(img, gw, gh, resample=None):
+    """A picture covering the shape, cut from the middle (as the reference and its mask are)."""
+    from PIL import Image
+    s = min(img.width / gw, img.height / gh)
+    img = img.resize((max(gw, round(img.width / s)), max(gh, round(img.height / s))), resample=resample or Image.LANCZOS)
+    return img.crop(((img.width - gw) // 2, (img.height - gh) // 2, (img.width - gw) // 2 + gw, (img.height - gh) // 2 + gh))
+
+
+def contain(img, gw, gh, resample=None):
+    """HERESY 1307: the whole picture in the shape's middle: (the picture scaled to fit, its box (x, y, w, h))."""
+    from PIL import Image
+    s = min(gw / img.width, gh / img.height)
+    w, h = max(1, round(img.width * s)), max(1, round(img.height * s))
+    return img.resize((w, h), resample=resample or Image.LANCZOS), ((gw - w) // 2, (gh - h) // 2, w, h)
+
+
+def fitted(ref, mask, gw, gh):
+    """HERESY 1307: for painting around: the reference contained in the shape over itself stretched and blurred (the VAE sees its
+    colours under the edges), and the mask: white on the edges it leaves, the user's own mask placed as the picture is."""
+    from PIL import Image, ImageFilter
+    inner, (x, y, w, h) = contain(ref, gw, gh)
+    under = cover(ref, gw, gh).filter(ImageFilter.GaussianBlur(48))
+    under.paste(inner, (x, y))
+    # the repainted edges reach a little into the picture, softly (6 % of its side), so the new paint meets the old across a
+    # band and not at a line (tried 10.10.2026: a hard edge left a seam where the walls did not run on)
+    from PIL import ImageChops
+    pad = max(8, round(min(w, h) * 0.06))
+    m = Image.new("L", (gw, gh), 255)
+    m.paste(Image.new("L", (max(1, w - 2 * pad), max(1, h - 2 * pad)), 0), (x + pad, y + pad))
+    m = m.filter(ImageFilter.GaussianBlur(pad / 2))
+    if mask is not None:
+        own = Image.new("L", (gw, gh), 0)
+        own.paste(contain(mask.convert("L"), gw, gh, Image.BILINEAR)[0], (x, y))
+        m = ImageChops.lighter(m, own)
+    return under, m
+
+
+def placed(ref, mask, gw, gh, p):
+    """HERESY 1346: the reference where the canvas put it in this shape's frame (p: x, y its middle in the frame's share, s its width in
+    frame widths): (what the VAE sees, the mask or None, whether the picture covers the frame). Covering it, the picture as placed, the
+    user's mask placed with it; leaving some of the frame bare, the picture over itself stretched and blurred (as fitted), the bare part
+    white in the mask and a soft band into the picture where its edge lies inside the frame, the user's mask added."""
+    from PIL import Image, ImageChops, ImageFilter
+    rw, rh = ref.size
+    w = max(1, round(p["s"] * gw))
+    h = max(1, round(w * rh / rw))
+    left, top = round(p["x"] * gw - w / 2), round(p["y"] * gh - h / 2)
+    covered = left <= 0 and top <= 0 and left + w >= gw and top + h >= gh
+    vis = (max(0, left), max(0, top), min(gw, left + w), min(gh, top + h))   # the part of the picture inside the frame
+    seen = vis[2] > vis[0] and vis[3] > vis[1]
+    box = ((vis[0] - left) * rw / w, (vis[1] - top) * rh / h, (vis[2] - left) * rw / w, (vis[3] - top) * rh / h)   # in the picture's pixels
+    under = cover(ref, gw, gh) if covered else cover(ref, gw, gh).filter(ImageFilter.GaussianBlur(48))
+    if seen:
+        under.paste(ref.resize((vis[2] - vis[0], vis[3] - vis[1]), resample=Image.LANCZOS, box=box), (vis[0], vis[1]))
+    own = None
+    if mask is not None and seen:                     # the user's mask, placed as the picture is
+        mk = mask.convert("L")
+        sx, sy = mk.width / rw, mk.height / rh
+        own = Image.new("L", (gw, gh), 0)
+        own.paste(mk.resize((vis[2] - vis[0], vis[3] - vis[1]), resample=Image.BILINEAR, box=(box[0] * sx, box[1] * sy, box[2] * sx, box[3] * sy)), (vis[0], vis[1]))
+    if covered:
+        return under, own, True
+    m = Image.new("L", (gw, gh), 255)
+    if seen:                                          # a soft band into the picture on the edges that lie inside the frame (as 1307's)
+        pad = max(8, round(min(vis[2] - vis[0], vis[3] - vis[1]) * 0.06))
+        x0 = vis[0] + (pad if left > 0 else 0)
+        y0 = vis[1] + (pad if top > 0 else 0)
+        x1 = vis[2] - (pad if left + w < gw else 0)
+        y1 = vis[3] - (pad if top + h < gh else 0)
+        if x1 > x0 and y1 > y0:
+            m.paste(Image.new("L", (x1 - x0, y1 - y0), 0), (x0, y0))
+        m = m.filter(ImageFilter.GaussianBlur(pad / 2))
+    if own is not None:
+        m = ImageChops.lighter(m, own)
+    return under, m, False
+
+
+def grow_mask(m, px):
+    """HERESY 1320: the mask grown by px (shrunk when px is negative), a pixel at a time in 3 × 3 (64 px: half a second at 2 MP)."""
+    from PIL import ImageFilter
+    f = ImageFilter.MaxFilter(3) if px > 0 else ImageFilter.MinFilter(3)
+    for _ in range(min(128, abs(int(px)))):
+        m = m.filter(f)
+    return m
+
+
+def mask_opts(ask):
+    """HERESY 1320: the mask's options asked: (grow, edge, soft, grain); without them as before 1320 (no grow, a 12 px feather, hard)."""
+    o = ask.get("mask_opts") or {}
+    return int(o.get("grow") or 0), int(o.get("edge", 12)), bool(o.get("soft")), float(o.get("grain") or 0)
+
+
+def mask_tokens(pipe, mask, gw, gh, grow=0, edge=12, soft=False):
+    """HERESY 1306: the mask as the packed latents' tokens (1 repaints, 0 keeps): at the latent's size, softened by one latent
+    pixel, each token the largest over its 2 × 2 patch; (tokens [1, n, 1], the pixel mask feathered for the last composite)."""
+    import torch
+    import torch.nn.functional as F
+    from PIL import Image, ImageFilter
+    m = mask.convert("L") if mask.size == (gw, gh) else cover(mask.convert("L"), gw, gh, Image.BILINEAR)   # 1307: a fitted mask is the shape's
+    if grow:                                         # HERESY 1320: grown or shrunk
+        m = grow_mask(m, grow)
+    feather = m.filter(ImageFilter.GaussianBlur(edge)) if edge > 0 else m   # HERESY 1320: the edge asked (12 px before)
+    p = getattr(pipe, "patch_size", 2)               # HERESY 1320: Qwen-Image packs 2 × 2 as Krea does
+    if soft:                                         # HERESY 1320: the soft edge's values kept, for differential diffusion
+        t = torch.from_numpy(__import__("numpy").asarray(feather, dtype="float32") / 255.0)[None, None]
+        lat = F.adaptive_avg_pool2d(t, (gh // pipe.vae_scale_factor, gw // pipe.vae_scale_factor))
+        tok = F.avg_pool2d(lat, p).clamp(0, 1)
+        return tok.flatten(2).transpose(1, 2).to("cuda", torch.bfloat16), feather
+    t = torch.from_numpy(__import__("numpy").asarray(m, dtype="float32") / 255.0)[None, None]           # 1 × 1 × H × W
+    lat = F.adaptive_max_pool2d(t, (gh // pipe.vae_scale_factor, gw // pipe.vae_scale_factor))
+    lat = F.avg_pool2d(F.pad(lat, (1, 1, 1, 1), mode="replicate"), 3, stride=1).clamp(0, 1)          # softened by a pixel
+    tok = F.max_pool2d(lat, p)                                                                      # 1 × 1 × H/16 × W/16
+    return tok.flatten(2).transpose(1, 2).to("cuda", torch.bfloat16), feather
+
+
+def blender(tok, x0, noise, n, soft=False, grain=0.0, show=None):
+    """HERESY 1306, 1320: the step's callback: the kept part put back noised to the next sigma; with soft (differential diffusion) a
+    token is painted only from the step where the noise has come down to its own value; with grain the kept part takes that share of
+    the painting at each step."""
+    def blend(pipe, i, t, kw):
+        sig = pipe.scheduler.sigmas
+        s_next = float(sig[min(i + 1, len(sig) - 1)])
+        lat = kw["latents"]
+        steps = max(1, len(sig) - 1)                  # HERESY 1333: the scheduler's own count (a method's stages lay more than n)
+        m = (tok > (1 - (i + 1) / steps)).to(lat.dtype) if soft else tok
+        keep = (1 - s_next) * x0 + s_next * noise
+        if grain:
+            keep = (1 - grain) * keep + grain * lat
+        kw["latents"] = m * lat + (1 - m) * keep
+        if show:
+            show(pipe, i, t, kw)
+        return {"latents": kw["latents"]}
+    return blend
+
+
+def composite(img, base, feather, grain=0.0):
+    """HERESY 1306, 1320: outside the mask the reference's own pixels, feathered; with grain that share of the painting kept there too."""
+    from PIL import Image
+    if grain:
+        feather = feather.point(lambda v: round(v + (255 - v) * grain))
+    return Image.composite(img.convert("RGB"), base, feather)
+
+
+def set_schedule(pipe, sampling):
+    """HERESY 1319: the schedule and the sampler asked (diffusers' flow-match Euler: Karras, exponential or beta spacing of the
+    pipeline's own sigmas; stochastic for Euler SDE); nothing when the painter's own are asked."""
+    from diffusers import FlowMatchEulerDiscreteScheduler
+    import artist_samplers                           # HERESY 1333: the studio's own samplers and schedules
+    if artist_samplers.install(pipe, sampling):
+        return
+    sc = (sampling or {}).get("schedule") or "simple"
+    flags = {"use_karras_sigmas": sc == "karras", "use_exponential_sigmas": sc == "exponential", "use_beta_sigmas": sc == "beta",
+             "stochastic_sampling": (sampling or {}).get("sampler") == "euler-sde"}
+    if any(flags.values()):
+        pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config({**pipe.scheduler.config, **flags})
+
+
+def ref_sigmas(pipe, strength, n=None, mu=1.15):
+    """HERESY 1305: the tail of the pipeline's own sigmas (1 … 1/8) whose first, as the scheduler shifts it (mu 1.15: Krea 2
+    Turbo is distilled), is nearest the strength asked, two steps at least: (sigmas, that first sigma shifted)."""
+    import copy
+    import numpy as np
+    n = n or art_job.KREA_STEPS                      # HERESY 1319: the run's own steps
+    s = np.linspace(1.0, 1 / n, n)
+    best = None
+    for k in range(n - 1):
+        sch = copy.deepcopy(pipe.scheduler)
+        sch.set_timesteps(sigmas=[float(v) for v in s[k:]], mu=mu, device="cpu")   # HERESY 1320: a painter's own shift (Krea 1.15)
+        s0 = float(sch.sigmas[0])
+        if best is None or abs(s0 - strength) < abs(best[1] - strength):
+            best = ([float(v) for v in s[k:]], s0)
+    return best
+
+
+def checkpoint_modules(ckpt):
+    """HERESY 1316: the layer names a checkpoint's own tensors carry (a kohya adapter names them with _ for .)."""
+    ckpt = str(ckpt)
+    if ckpt.endswith(".gguf"):
+        import gguf
+        names = [t.name for t in gguf.GGUFReader(ckpt).tensors]
+    else:
+        from safetensors import safe_open
+        with safe_open(ckpt, "pt") as h:
+            names = list(h.keys())
+    out = set()
+    for n in names:
+        n = n.replace("model.diffusion_model.", "", 1)
+        if n.endswith(".weight"):
+            out.add(n[:-len(".weight")])
+    return out
+
+
+def load_loras(pipe, loras, ckpt):
+    """HERESY 1316: the run's adapters onto the painter's transformer, each at its strength; a kohya file renamed by the
+    checkpoint's own layer names first. One that reaches no layer stops the run, said: diffusers takes such a file without a
+    word and paints as if it were not there (two of Viktor's nine Krea 2 adapters, before the renaming)."""
+    from safetensors.torch import load_file
+    import artist_loras
+    modules, names, weights, out = None, [], [], []
+    for i, l in enumerate(loras):
+        p = artist_loras.path_of(art_job.KIT, l["id"])
+        sd, missed = load_file(str(p)), 0
+        if any(k.startswith("lora_unet_") for k in sd):
+            if modules is None:
+                modules = checkpoint_modules(ckpt)
+            sd, missed = artist_loras.kohya_to_comfy(sd, modules)
+        name = "a%d" % i
+        pipe.load_lora_weights(sd, adapter_name=name)
+        reached = sum(1 for _, m in pipe.transformer.named_modules() if name in (getattr(m, "lora_A", None) or {}))
+        if not reached:
+            raise RuntimeError(p.name + " reaches none of this painter's layers: an adapter for another model")
+        names.append(name)
+        weights.append(float(l.get("weight", artist_loras.WEIGHT)))
+        out.append({"id": l["id"], "weight": weights[-1], "layers": reached, "missed": missed})
+    pipe.set_adapters(names, adapter_weights=weights)
+    return out
+
+
 def main():
     run = Path(sys.argv[1])
     ask = json.load(open(run / "ask.json", encoding="utf-8"))
+    asked = (os.environ.get("ART_PAINTER") or "").strip().lower()
+    if asked == "upscale":                           # HERESY 1322: a picture made larger by an upscaler (its ask has no prompt)
+        import artist_upscale
+        return artist_upscale.main(run, ask)
     prompt, seed, count = str(ask["prompt"]), int(ask["seed"]), max(1, min(4, int(ask.get("count") or 1)))
     preview = bool(ask.get("preview"))
     shapes = [s for s in ask.get("shapes") or ["1:1"] if s in SHAPES]
+    if asked.startswith("qwen"):                     # HERESY 1318: Qwen-Image 2512 and 2.1 paint in artist_qwen.py
+        import artist_qwen
+        return artist_qwen.main(run, ask, asked)
     import torch
     t0 = time.time()
     painter = art_job.which_painter()
     krea = art_job.Krea(painter)
+    if ask.get("loras"):                             # HERESY 1316: the adapters asked for, each at its strength
+        print(json.dumps({"loras": load_loras(krea.pipe, ask["loras"], art_job.MUSE[painter])}), flush=True)
     e, m = krea.encode(prompt)                       # the encoder's turn on the card, then the painter's
     krea.to("cuda")
     krea.pipe.vae.enable_tiling()
+    smp = ask.get("sampling") or {}                  # HERESY 1319: the steps, the sampler and the schedule asked
+    set_schedule(krea.pipe, smp)
+    krea_steps = max(4, min(16, int(smp.get("steps") or art_job.KREA_STEPS)))
     (run / "thumbs").mkdir(exist_ok=True)
+    ref, x0s, mask, masks = None, {}, None, {}       # HERESY 1305: a picture to paint from; 1306: what of it to repaint
+    if ask.get("ref"):
+        from PIL import Image
+        ref = Image.open(run / ask["ref"]).convert("RGB")
+        sig, s0 = ref_sigmas(krea.pipe, float(ask.get("strength") or 0.6), krea_steps)
+        if ask.get("mask"):
+            mask = Image.open(run / ask["mask"])
+    fit, fits = bool(ref is not None and ask.get("fit")), {}   # HERESY 1307: the picture contained, the edges painted around it
+    places, full = (ask.get("place") or {}) if ref is not None else {}, None   # HERESY 1346: the canvas's places; the sigmas from the noise
     n = 0
     for k in range(count):                           # a variation is the next seed; its shapes share it
         for shape in shapes:
@@ -74,14 +332,63 @@ def main():
             n += 1
             t1 = time.time()
             g = torch.Generator("cuda").manual_seed(seed + k)
+            if hasattr(krea.pipe.scheduler, "heresy"):   # HERESY 1333: our samplers' noise by the picture's seed
+                krea.pipe.scheduler.heresy = dict(krea.pipe.scheduler.heresy, seed=seed + k)
             more = {"callback_on_step_end": live(run, n, gw, gh, w, h), "callback_on_step_end_tensor_inputs": ["latents"]} if preview else {}
-            img = krea.pipe(prompt_embeds=e.to("cuda"), prompt_embeds_mask=m.to("cuda"), num_inference_steps=art_job.KREA_STEPS,
+            steps = krea_steps                         # HERESY 1319
+            pl = places.get(shape)                   # HERESY 1346: where the canvas put the picture in this shape
+            if pl is not None:
+                if shape not in fits:
+                    fits[shape] = placed(ref, mask, gw, gh, pl)
+                if shape not in x0s:
+                    x0s[shape] = ref_latents(krea.pipe, fits[shape][0], gw, gh)
+                if not fits[shape][2] and full is None:
+                    full = ref_sigmas(krea.pipe, 1.0, krea_steps)
+                psig, ps0 = (sig, s0) if fits[shape][2] else full   # covering: the strength asked; bare edges: from the noise
+                noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
+                more.update(latents=(1 - ps0) * x0s[shape] + ps0 * noise, sigmas=psig)
+                steps = len(psig)
+                if fits[shape][1] is not None:
+                    grow, edge, soft, grain = mask_opts(ask)
+                    if shape not in masks:
+                        masks[shape] = mask_tokens(krea.pipe, fits[shape][1], gw, gh, grow, edge, soft)
+                    more.update(callback_on_step_end=blender(masks[shape][0], x0s[shape], noise, len(psig), soft, grain, more.get("callback_on_step_end")),
+                                callback_on_step_end_tensor_inputs=["latents"])
+            elif ref is not None:                    # HERESY 1305: the picture noised to the strength's sigma, the tail from there
+                if fit and shape not in fits:        # HERESY 1307: what the VAE sees and what is repainted, for this shape
+                    fits[shape] = fitted(ref, mask, gw, gh)
+                if shape not in x0s:
+                    x0s[shape] = ref_latents(krea.pipe, fits[shape][0] if fit else ref, gw, gh)
+                noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
+                more.update(latents=(1 - s0) * x0s[shape] + s0 * noise, sigmas=sig)
+                steps = len(sig)
+                if mask is not None or fit:          # HERESY 1306: the kept part put back at every step, noised to its next sigma
+                    grow, edge, soft, grain = mask_opts(ask)   # HERESY 1320
+                    if shape not in masks:
+                        masks[shape] = mask_tokens(krea.pipe, fits[shape][1] if fit else mask, gw, gh, grow, edge, soft)
+                    more.update(callback_on_step_end=blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, more.get("callback_on_step_end")),
+                                callback_on_step_end_tensor_inputs=["latents"])
+            img = krea.pipe(prompt_embeds=e.to("cuda"), prompt_embeds_mask=m.to("cuda"), num_inference_steps=steps,
                             guidance_scale=0.0, height=gh, width=gw, generator=g, **more).images[0]
+            if pl is not None and fits[shape][1] is not None:   # HERESY 1346: outside the mask the placed picture's own pixels
+                img = composite(img, fits[shape][0], masks[shape][1], mask_opts(ask)[3])
+            elif ref is not None and (mask is not None or fit):   # HERESY 1306: outside the mask the reference's own pixels, feathered
+                img = composite(img, fits[shape][0] if fit else cover(ref, gw, gh), masks[shape][1], mask_opts(ask)[3])   # HERESY 1320: and its grain
             if (gw, gh) != (w, h):
                 x, y = (gw - w) // 2, (gh - h) // 2
                 img = img.crop((x, y, x + w, y + h))
             score = krea.flagged(img)
             row = {"n": n, "shape": shape, "seed": seed + k, "w": w, "h": h, "nsfw": score, "took": round(time.time() - t1, 1)}
+            if pl is not None:                       # HERESY 1346: placed on the canvas: covering it, or painted around
+                row.update(ref=round(ps0, 2), placed="covers" if fits[shape][2] else "around")
+                if mask is not None:
+                    row["masked"] = True
+            elif ref is not None:
+                row["ref"] = round(s0, 2)                # HERESY 1305: how far from the reference it began
+                if mask is not None:
+                    row["masked"] = True                 # HERESY 1306
+                if fit:
+                    row["fit"] = True                    # HERESY 1307
             if score is not None and score >= 0.5:
                 row["kept"] = False
             else:

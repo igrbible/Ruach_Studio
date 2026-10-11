@@ -19,7 +19,10 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   POST /artist/draw {prompt, shapes, seed, count, painter, take}   HERESY 1255: the Artist room (artist.py): a run of pictures
        from a prompt of one's own; GET /artist/runs · GET /artist/file?id=&file= · POST /artist/cover {id, file, name} ·
        POST /artist/trash {id} · POST /artist/restore {id} · GET /artist/prompt?name=TAKE ·
-       POST /artist/star {id, file, star} (1257) · POST /artist/stop {id} (1270)
+       POST /artist/star {id, file, star} (1257) · POST /artist/stop {id} (1270) · HERESY 1316: GET /artist/loras[?family=] ·
+       GET /artist/lora-picture?id= · POST /artist/lora-civitai {id} (the adapters in artwork/loras/, artist_loras.py) ·
+       HERESY 1337: GET /artist/bin (the art's trash: runs, pictures put aside, covers taken off) · GET /artist/bin-file?take=&stamp= ·
+       POST /artist/bin {op: restore | delete | empty, items}
   GET  /fonts/NAME.woff2           HERESY 1274: the page's fonts (lab/fonts/, OFL), cached a year
   POST /jobs/cancel {key}          HERESY 1165: a job waiting for a card off the queue (a running one is refused)
   POST /regen {names, same_seeds}  HERESY 1160: made again, new seeds; same_seeds (1165): its own, at a probe's full length
@@ -49,6 +52,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   POST /export · GET /export?id · GET /exportfile?id    a ZIP of chosen takes, built as a job
   GET /dawproject?name=TAKE      the take as a DAWproject in its derived/ (the engine serves it): mix + stems
   GET /timing?name=&fmt=json|lrc|srt[&force=1]   karaoke timing: lyric lines on Whisper's word times
+  GET /loop?name=&start=&seconds=                 HERESY 1325: a loop cut from the take's WAV, seamless (audio/wav)
   GET /train/datasets · /train/scan?name= · /train/prepare?name= · /train/run?name= · /train/log?name=
   POST /train/prepare {from, name, style, tracks} · /train/run {dataset, name, steps…} · /train/stop {name}
        /train/publish {name, file}: one epoch's checkpoint into loras/ (HERESY 1067)
@@ -113,7 +117,10 @@ import updates  # noqa: E402   HERESY 1169
 import artist  # noqa: E402   HERESY 1255
 import places  # noqa: E402   HERESY 1261: where the user's work lives (outputs, trash, artist, writer)
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
+import machine  # noqa: E402   HERESY 1304: the machine as a new studio's first start reads it
+import artist_loras  # noqa: E402   HERESY 1316: the Artist's adapters
 import weights  # noqa: E402   HERESY 1289: the Engine's Models card over heresy/fetch-heresy.sh
+import takeloop  # noqa: E402   HERESY 1325: a loop from a take
 
 heavy = threading.Lock()
 jobs = {}            # take name -> {"status": "queued" | "running" | "failed", "error": …, "started": …}
@@ -162,7 +169,35 @@ def job_cancel(key):
     return {"cancelled": key}
 
 
-def free_gpu(need=None, role="jobs"):
+ENGINE_URL = "http://127.0.0.1:" + os.environ.get("YUE2CPP_PORT", "41867")
+
+
+def engine_unload(why):
+    """HERESY 1297 (Viktor 10.10.2026: «На единственной видеокарте нужно автоматом выгружать модели, если другие задания требуют
+    загрузку иных весов. Иначе никак»): the studio's engine lets its models go when it is idle and holds some, so a job that needs
+    the card gets it; they load again with the next song. The MiB freed: 0 when there was nothing to free, or the engine renders,
+    or it does not answer (the job then waits as before). The engine shows no queue, only «busy»: it must be idle at two looks
+    three seconds apart, so the page's next take, sent the moment one ends, is not left without its models."""
+    import urllib.request
+    try:
+        for look in (0, 1):
+            if look:
+                time.sleep(3)
+            hw = json.load(urllib.request.urlopen(ENGINE_URL + "/hardware", timeout=5))
+            if hw.get("busy") or (hw.get("loaded_bytes") or 0) < 256 * 2 ** 20:
+                return 0
+        req = urllib.request.Request(ENGINE_URL + "/unload", data=b"{}", method="POST", headers={"Content-Type": "application/json"})
+        r = json.load(urllib.request.urlopen(req, timeout=15))
+        freed = int(r.get("freed_mb") or 0) if r.get("applied") else 0
+    except (OSError, ValueError):
+        return 0
+    if freed:
+        act_say(f"the engine's models left its card for {why} ({freed} MB): they load again with the next song")
+        time.sleep(1.5)                                  # the driver hands the memory back
+    return freed
+
+
+def free_gpu(need=None, role="jobs", why="a lab job"):
     """A card for a job, through the guard (HERESY 1112, 1113): no heavy stranger on it (a service above 2 GiB), and room
     for the job.
     The cards given to `role` first (HERESY 1091: user/gpus.json), the most free first; then, for the lab's jobs, any
@@ -171,6 +206,8 @@ def free_gpu(need=None, role="jobs"):
     try:
         allowed = gpu_roles.load(KIT, training.gpus()).get(role) or []
         card, cards = gpu_guard.pick(allowed, fallback=(role == "jobs"), need_mb=need)
+        if not card and engine_unload(why):             # HERESY 1297: the idle engine's models make room, then the guard again
+            card, cards = gpu_guard.pick(allowed, fallback=(role == "jobs"), need_mb=need)
     except (OSError, subprocess.SubprocessError) as e:
         raise RuntimeError(f"the cards could not be read: {e}")
     if not card:
@@ -188,11 +225,19 @@ def wait_card(job, need, what):
     other jobs go on meanwhile); its verdict is kept in the job (job["waiting"]) and said in the activity once; taken off
     the queue (POST /jobs/cancel) the job ends; after ART_WAIT_S it fails, saying why."""
     t0, said = time.time(), False
+    try:                                               # HERESY 1331: a job no card here could take even empty is refused at once
+        allowed = gpu_roles.load(KIT, training.gpus()).get("jobs") or []
+        biggest = max([c["total_mb"] for c in gpu_guard.snapshot() if c["ok"] and (c["index"] in allowed or not allowed)] or [0])
+    except (OSError, subprocess.SubprocessError, RuntimeError):
+        biggest = 0
+    if biggest and need > biggest - gpu_guard.SPARE_MB:
+        raise RuntimeError(f"no card here can take this (it needs {need} MB; the largest card holds {biggest} MiB, "
+                           f"{gpu_guard.SPARE_MB} of them the CUDA runtime's): fewer adapters, a smaller quant, or a larger card")
     while True:
         if job.get("cancel"):
             raise Cancelled(OFF_QUEUE)
         try:
-            return free_gpu(need)
+            return free_gpu(need, why=what)
         except RuntimeError as e:
             if time.time() - t0 > ART_WAIT_S:
                 raise RuntimeError(f"no card came free in {ART_WAIT_S // 3600} hours: {e}")
@@ -201,6 +246,24 @@ def wait_card(job, need, what):
                 act_say(f"{what} · {e}")
                 said = True
             time.sleep(10)
+
+
+LORA_LOCK = threading.Lock()
+
+
+def lora_cache(save=None):
+    """HERESY 1316: the adapters' hashes and the ones Civitai does not know (CACHE/artist-loras.json); with save, written."""
+    p = CACHE / "artist-loras.json"
+    if save is not None:
+        CACHE.mkdir(exist_ok=True)
+        tmp = Path(str(p) + ".part")
+        tmp.write_text(json.dumps(save), encoding="utf-8")
+        os.replace(tmp, p)
+        return save
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
 
 
 def whisper_env():
@@ -252,6 +315,30 @@ def gpus_state():
     return {"cards": cards, "roles": roles, "saved": gpu_roles.path(KIT).is_file(), "studio_now": now, "guard": guard,
             "training": {str(g): n for g, n in live.items()},
             "studio_training": live.get(studio)}
+
+
+def machine_state():
+    """HERESY 1304 (Viktor 10.10.2026: «при самом старте новой Студии сканирование устройств и выбор оптимальных настроек для YuE2
+    BF16/кванта и для модели генерации обложек»): the cards with their compute capability, limits and BF16 tensor cores, the
+    studio's card, and the painter that fits here: Krea 2 Muse Q4 first (12.6 GB at its peak, lighter than SDXL's 14.2 and
+    better), SDXL where only it is downloaded; none when no card has the room ({"error"} when the cards cannot be read)."""
+    try:
+        cards = machine.cards()
+    except RuntimeError as e:
+        return {"cards": [], "error": str(e)}
+    roles = gpu_roles.load(KIT, [{"index": c["index"], "total_mb": c["total_mb"]} for c in cards])
+    now = gpu_roles.studio_now()
+    lim = {int(k): int(v) for k, v in (roles.get("limits") or {}).items()}
+    for c in cards:
+        c["limit_mb"] = lim.get(c["index"])
+        c["bf16_cores"] = machine.has_bf16_cores(c["compute"])
+    room = max((min(c["total_mb"], c["limit_mb"] or 10 ** 9) for c in cards), default=0)
+    ready = {"krea2-q4": krea_ready("krea2-q4"), "krea2-q8": krea_ready("krea2-q8"),
+             "sdxl": (KIT / "artwork/CyberRealistic-XL-v10/model_index.json").is_file()}
+    fits = [p for p in ("krea2-q4", "sdxl", "krea2-q8") if ART_NEED[p] <= room]
+    best = next((p for p in ("krea2-q4", "sdxl") if p in fits and ready[p]), "") or ("krea2-q4" if "krea2-q4" in fits else "")
+    return {"cards": cards, "studio": now if now is not None else roles.get("studio", 0), "room_mb": room,
+            "painter": {"suggest": best, "ready": ready, "fits": fits, "need_mb": ART_NEED}}
 
 
 def studio_restart():
@@ -1072,6 +1159,9 @@ ART_NEED_MB = 15000
 # выставь Q4»): the painters, each its room on a card at the peak with the prompter before it (RTX 3090, 05.10.2026: Krea 2
 # Muse Q4 11.6 GB, Q8 17.4 GB; SDXL 14.2 GB) and its Python (Krea paints in .venv-art: transformers 5, diffusers 0.40)
 ART_NEED = {"krea2-q4": 15000, "krea2-q8": 21000, "sdxl": ART_NEED_MB}   # with a margin over the peaks
+# HERESY 1297: measured again on GPU2 10.10.2026, the prompter (Qwen3-4B) before the painter, at 1024 px: Krea 2 Muse Q4 12.6 GB
+# (42 s), SDXL 14.2 GB (17 s); Q8 17.4 GB (05.10). A margin of about half a gigabyte: a 16 GB card (15 GB left by a desktop) takes Q4
+ART_NEED = {"krea2-q4": 13500, "krea2-q8": 18500, "sdxl": 15000}
 ART_PY = Path(os.environ.get("LAB_ART_PY", HERE.parent / ".venv-art/bin/python"))
 MUSE_FILES = {"krea2-q4": "museByStableYogi_v35Q4Extended.gguf", "krea2-q8": "museByStableYogi_v35Q8Extended.gguf"}
 
@@ -1082,19 +1172,41 @@ def krea_ready(painter):
             and (KIT / "artwork/Krea-2-Turbo/text_encoder").is_dir() and (KIT / "artwork/Krea-2-Turbo/vae").is_dir())
 
 
+ART_NEED.update({k: v[1] for k, v in artist.QWEN.items()})   # HERESY 1338: the Qwen painters paint a take's artwork too (artist.py's peaks)
+
+
+def art_here(asked):
+    """HERESY 1338: the painter asked for as it can paint here ("" when it cannot): a key of ART_NEED whose files are here, a
+    fine-tune of Qwen-Image 2512 as «qwen2512-fp8:FILE»."""
+    k, _, model = str(asked or "").strip().partition(":")
+    k = k.lower()
+    if k not in ART_NEED:
+        return ""
+    if k.startswith("qwen"):
+        if not artist.qwen_ready(k) or (model not in artist.qwen_models() if k == "qwen2512-fp8" else bool(model)):
+            return ""
+        return k + (":" + model if model else "")
+    return k if not model and (k == "sdxl" or krea_ready(k)) else ""
+
+
 def art_painter(asked=None):
     """HERESY 1167: the painter for an artwork: the one asked for, else the user's setting (yue2.artPainter), else by the
-    cards: Krea 2 Muse at Q4 where one has 16 GB, SDXL below; Krea only where its files and environment are."""
-    p = str(asked or "").strip().lower()
-    if p not in ART_NEED:
+    cards: Krea 2 Muse at Q4 where one has 16 GB, SDXL below; Krea only where its files and environment are. HERESY 1338: a Qwen
+    painter as well (a fine-tune as «qwen2512-fp8:FILE»); one whose files are not here gives way to the cards' choice."""
+    p = art_here(asked)
+    if not p:
         try:
-            p = str(json.load(open(KIT / "user/settings.json", encoding="utf-8")).get("keys", {}).get("yue2.artPainter") or "")
+            p = art_here(json.load(open(KIT / "user/settings.json", encoding="utf-8")).get("keys", {}).get("yue2.artPainter"))
         except (OSError, ValueError, AttributeError):
             p = ""
+    if p:
+        return p
     if p not in ART_NEED:
         cards = training.gpus()
         big = max((c.get("total_mb", 0) for c in cards), default=0) if isinstance(cards, list) else 0
-        p = "krea2-q4" if big >= 16000 else "sdxl"
+        # HERESY 1297: Krea 2 Muse Q4 needs less than SDXL (12.6 GB to 14.2 at their peaks): it is the painter wherever a card has
+        # 16 GB; below, neither fits yet, and art_async says so
+        p = "krea2-q4" if big >= 15000 else "sdxl"
     if p != "sdxl" and not krea_ready(p):
         p = "sdxl"
     return p
@@ -1204,11 +1316,37 @@ def arts():
     return {"arts": out, "unseen": unseen, "running": running, "credits": credits}
 
 
+def art_refusal(painter, table=None, where="choose it in Engine → Artwork"):
+    """HERESY 1297 (Viktor 10.10.2026: «сообщение о том, что модель выбранная не потянет на этом железе, не видно»): why no card
+    here can hold this painter at all (its whole memory, or its VRAM limit from Engine → GPUs), with the numbers and the painter
+    that would fit; "" when one can, or when the cards cannot be read (the guard then says why, as before). table: the painters'
+    rooms in MiB (the take's artwork: ART_NEED, the prompt writer before the painter; the Artist room: its own); where: how the
+    painter that fits is chosen there."""
+    table = table or ART_NEED
+    cards = training.gpus()
+    if not isinstance(cards, list) or not cards or painter not in table:
+        return ""
+    lim = {int(k): int(v) for k, v in (gpu_roles.load(KIT, cards).get("limits") or {}).items()}
+    room = max(min(c.get("total_mb", 0), lim.get(c["index"], 10 ** 9)) for c in cards)
+    need = table[painter]
+    if room >= need:
+        return ""
+    fits = [p for p in ("krea2-q4", "sdxl") if p != painter and p in table and table[p] <= room and (p == "sdxl" or krea_ready(p))]
+    names = {"krea2-q4": "Krea 2 Muse Q4", "krea2-q8": "Krea 2 Muse Q8", "sdxl": "SDXL", "qwen2512-q4": "Qwen-Image 2512 Q4",   # 1338
+             "qwen2512-q6": "Qwen-Image 2512 Q6", "qwen2512-fp8": "Qwen-Image 2512 fp8", "qwen21": "Qwen-Image 2.1"}
+    return (f"{names.get(painter, painter)} needs about {need / 1024:.1f} GB of VRAM (its peak with a margin), and the biggest card here "
+            f"has {room / 1024:.1f} GB" + (" under its limit (Engine → GPUs)" if lim else "") + ": " +
+            (f"{names[fits[0]]} fits: {where}" if fits else
+             "no painter fits on this machine yet: Krea 2 Muse Q4 wants a card of 16 GB"))
+
+
 def art_async(name, again=False, seed=None, painter=None):
     d = take_dir(name)
     key = f"art:{name}"
-    painter = art_painter(painter)                   # HERESY 1167
-    need = ART_NEED[painter]
+    painter = art_painter(painter)                   # HERESY 1167; 1338: a fine-tune of Qwen as «qwen2512-fp8:FILE»
+    need = ART_NEED[painter.partition(":")[0]]
+    live = jobs.get(key)                             # HERESY 1297: refused at once, and only asked for a new job
+    refuse = "" if live and live.get("status") in ("queued", "running") else art_refusal(painter.partition(":")[0])
     with jobs_lock:
         job = jobs.get(key)
         if job and job["status"] in ("queued", "running"):
@@ -1223,6 +1361,9 @@ def art_async(name, again=False, seed=None, painter=None):
             for sib in art_pair(name):
                 if art_copy(sib, d, "the other letter of its A/B pair"):
                     return art_info(name)
+        if refuse:                                   # HERESY 1297: rather than three hours in the queue
+            act_say(f"{ACT_SAY['art']} · {name} · {refuse}")
+            raise ValueError(refuse)
         job = {"status": "queued", "started": time.time(), "kind": "art"}
         jobs[key] = job
 
@@ -1239,7 +1380,8 @@ def art_async(name, again=False, seed=None, painter=None):
                     job["status"] = "running"
                     job.pop("waiting", None)
                     job["gpu"] = gpu
-                    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", ART_PAINTER=painter)
+                    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", ART_PAINTER=painter.partition(":")[0],
+                               ART_MODEL=painter.partition(":")[2])   # HERESY 1338
                     tmp = d / "artwork.part.jpg"
                     py = ART_PY if painter != "sdxl" else LAB_PY
                     p = subprocess.run([str(py), str(HERE / "art_job.py"), str(d), str(tmp), str(seed if seed is not None else "")],
@@ -1581,7 +1723,8 @@ AUDIO_TYPES = {".flac": "audio/flac", ".wav": "audio/wav", ".mp3": "audio/mpeg"}
 
 # HERESY 1255: the Artist rooms runs reach the labs queue, cards, activity and takes through these
 artist.setup(kit=KIT, jobs=jobs, lock=jobs_lock, wait_card=wait_card, turn=turn, free_gpu=free_gpu, say=act_say,
-             take_dir=take_dir, pair=art_pair, copy=art_copy, painter=art_painter, py=ART_PY)
+             take_dir=take_dir, pair=art_pair, copy=art_copy, painter=art_painter, py=ART_PY, refusal=art_refusal,
+             outputs=OUTPUTS, frozen=lambda: collection.frozen_takes(collection.load(config_dir())))   # HERESY 1337: the art's trash
 
 
 def lab_busy():
@@ -1718,8 +1861,30 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/artist/runs":                   # HERESY 1255: the Artist room
                 return self.send(200, artist.runs())
             if url.path == "/artist/file":
-                p, ctype = artist.picture(q.get("id", ""), q.get("file", ""))
+                p, ctype = artist.picture(q.get("id", ""), q.get("file", ""), q.get("trash") == "1")   # HERESY 1310: a trashed run's too
                 return self.send_file(p, ctype)
+            if url.path == "/artist/trashed":                # HERESY 1310: the Artist's trash, seen from the room
+                return self.send(200, artist.trashed())
+            if url.path == "/artist/upscalers":              # HERESY 1322: the upscalers here
+                return self.send(200, artist.upscalers())
+            if url.path == "/artist/asides":                 # HERESY 1321: the pictures put aside
+                return self.send(200, artist.asides())
+            if url.path == "/artist/bin":                    # HERESY 1337: the art's trash: runs, pictures put aside, covers taken off
+                return self.send(200, artist.bin_list())
+            if url.path == "/artist/bin-file":               # HERESY 1337: a cover taken off, seen in the trash
+                return self.send_file(artist.bin_file(q.get("take", ""), q.get("stamp", "")), "image/jpeg", cache="private, max-age=600")
+            if url.path == "/artist/painters":               # HERESY 1318: the painters as this machine has them
+                return self.send(200, artist.painters())
+            if url.path == "/artist/loras":                  # HERESY 1316: the adapters, each family's, its folders the groups
+                return self.send(200, artist_loras.scan(KIT, q.get("family") or None, lora_cache()))
+            if url.path == "/artist/lora-picture":           # HERESY 1316: the picture beside an adapter
+                pic = artist_loras.picture(artist_loras.path_of(KIT, q.get("id", "")))
+                if not pic:
+                    return self.send(404, {"error": "no picture beside this adapter"})
+                w = q.get("w", "")
+                if w.isdigit() and 64 <= int(w) <= 1024:      # small for the grid, kept in the cache
+                    return self.send_file(artist_loras.small(pic, int(w), CACHE / "lora-pictures"), "image/jpeg", cache="private, max-age=600")
+                return self.send_file(pic, artist_loras.TYPES.get(pic.suffix.lower(), "image/jpeg"), cache="private, max-age=600")
             if url.path == "/artist/prompt":
                 return self.send(200, artist.prompt_for(q.get("name", "")))
             if url.path == "/art/draw":
@@ -1744,6 +1909,20 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/remaster":
                 r = remaster_async(q.get("name", ""), q.get("s", ""))
                 return self.send(202, r)
+            if url.path == "/loop":                         # HERESY 1325: a loop cut from a take's own WAV, seamless
+                d = take_dir(q.get("name", ""))
+                src = d / "audio.wav"
+                if not src.is_file():
+                    raise FileNotFoundError("this take has no audio.wav")
+                start, secs = float(q.get("start", "")), float(q.get("seconds", ""))
+                box = CACHE / "loops"
+                box.mkdir(parents=True, exist_ok=True)
+                out = box / f"{d.name}-{start:.4f}-{secs:.4f}.wav"
+                if not out.is_file():
+                    takeloop.cut(src, start, secs, out)
+                    for old in sorted(box.glob("*.wav"), key=lambda f: f.stat().st_mtime)[:-40]:
+                        old.unlink(missing_ok=True)      # what the cache made, never a take's own
+                return self.send_file(out, "audio/wav")
             if url.path == "/timing":                       # HERESY 1056: karaoke timing, as JSON, LRC or SRT
                 r = timing_async(q.get("name", ""), q.get("force") == "1", q.get("cached") == "1")
                 fmt = q.get("fmt", "json")
@@ -1776,6 +1955,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, training.voice_status(KIT, q.get("name", "")))
             if url.path == "/gpus":                          # HERESY 1091: which card does what
                 return self.send(200, gpus_state())
+            if url.path == "/machine":                       # HERESY 1304: the first start's scan
+                return self.send(200, machine_state())
             if url.path.startswith("/guide/"):              # HERESY 1096: docs/GUIDE.md and its pictures, for the page's guide
                 base = (KIT / "docs").resolve()
                 f = (base / urllib.parse.unquote(url.path[len("/guide/"):])).resolve()
@@ -1861,6 +2042,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(202, artist.draw(data))
                 if url.path == "/artist/cover":
                     return self.send(200, artist.cover(data))
+                if url.path == "/artist/upscale":            # HERESY 1322: a picture upscaled, as a run of its own
+                    return self.send(202, artist.upscale(data))
+                if url.path == "/artist/aside":              # HERESY 1321: pictures put aside or brought back, one or many
+                    return self.send(200, artist.aside(data))
                 if url.path == "/artist/star":               # HERESY 1257
                     return self.send(200, artist.star(data))
                 if url.path == "/artist/trash":
@@ -1869,6 +2054,15 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, artist.stop(str(data.get("id") or "")))
                 if url.path == "/artist/restore":
                     return self.send(200, artist.restore(str(data.get("id") or "")))
+                if url.path == "/artist/bin":                # HERESY 1337: given back, or deleted for good, on the user's word
+                    return self.send(200, artist.bin_act(data))
+                if url.path == "/artist/lora-civitai":       # HERESY 1316: an adapter looked up on Civitai by its SHA-256 alone
+                    with LORA_LOCK:
+                        cache = lora_cache()
+                        try:
+                            return self.send(200, artist_loras.civitai(KIT, str(data.get("id") or ""), cache))
+                        finally:
+                            lora_cache(cache)
             if url.path == "/jobs/cancel":                   # HERESY 1165: {key}: a waiting job off the queue
                 return self.send(200, job_cancel(str(json.loads(body.decode("utf-8")).get("key") or "")))
             if url.path == "/regen":                         # HERESY 1160: {names}: made again with new seeds

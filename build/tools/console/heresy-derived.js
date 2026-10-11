@@ -68,7 +68,7 @@
     // HERESY 1138: the take itself is a node of the tree like its branches: it plays, it downloads, and it opens the
     // comparison of every version (the original first)
     var orig = "/library/listen?name=" + encodeURIComponent(take.name);
-    var html = '<div class="dv-node dv-root dv-orig"><span class="dv-name">' + esc(take.label || take.name) + ' <em class="dv-orig-tag">the original</em></span>' +
+    var html = '<div class="dv-node dv-root dv-orig"><span class="dv-name"><span translate="no">' + esc(take.label || take.name) + '</span> <em class="dv-orig-tag">the original</em></span>' +
       '<span class="dv-meta mono">' + (take.seconds ? clock(take.seconds) : "") + "</span>" +
       '<audio controls preload="none" src="' + esc(orig) + '"></audio>' +
       '<button type="button" class="btn small primary dv-compare" data-dv-compare="0" data-tip="Every version of this take in one player: switch between them at the same second (1–9, Space)">Compare all</button>' +
@@ -89,7 +89,7 @@
         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
       (m.files || []).forEach(function (f) {
         var url = fileUrl(take.name, f.path);
-        html += '<div class="dv-node"><span class="dv-name">↳ ' + esc(f.name) + '</span><span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
+        html += '<div class="dv-node"><span class="dv-name" translate="no">↳ ' + esc(f.name) + '</span><span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
           '<audio controls preload="none" src="' + esc(url) + '"></audio>' +
           '<button type="button" class="btn ghost small" data-dv-compare-path="' + esc(f.path) + '" data-tip="Compare it with the original and every other version, at the same second">Compare</button>' +
           '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
@@ -424,6 +424,10 @@
     Array.prototype.forEach.call(document.querySelectorAll("#derivedTree audio"), function (a) { a.pause(); });
     var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems" };
     var versions = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds }];
+    // HERESY 1311: the take's family (the same music in other takes), the disliked left out, after the original
+    (state.hooks.family ? state.hooks.family(take.name) : []).forEach(function (t) {
+      versions.push({ label: t.label || t.name, group: t.group || "The same music", url: t.url, path: "take:" + t.name, seconds: t.seconds });
+    });
     ["debuzz", "remaster", "upscale", "stems"].forEach(function (kind) {
       state.list.filter(function (m) { return m.kind === kind; }).forEach(function (m) {
         (m.files || []).forEach(function (f) {

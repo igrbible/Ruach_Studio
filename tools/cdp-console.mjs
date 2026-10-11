@@ -14,7 +14,7 @@ import { B, C, D, G, R, ROOT, TMP, X, Y, ensurePage, finish, guard, launchChrome
 
 const OUT = TMP + "/shots/console";
 const t0 = Date.now();
-guard(240);
+guard(600);   // HERESY 1296–1299: 550 checks outgrew 240 s; 2.0.0-rc5: 652 checks in 326 s outgrew 330 (a clean clone ran out at 648)
 mkdirSync(OUT, { recursive: true });
 
 // ---------------------------------------------------------------- preflight
@@ -121,7 +121,7 @@ const navigate = async (libraryRows) => {
   // written for a click that opens and a take that stops at its end, so both are off for them (heresy/tools/check-player.mjs
   // checks the studio's own player, on a fresh page)
   // HERESY 1167: and a song made here plays when it is done (Play new takes): off for them too
-  await ev(`localStorage.setItem("yue2.playOn", "off"); localStorage.setItem("yue2.clickPlay", "off"); localStorage.setItem("yue2.playNew", "off"); true`);
+  await ev(`localStorage.setItem("yue2.playOn", "off"); localStorage.setItem("yue2.clickPlay", "off"); localStorage.setItem("yue2.playNew", "off"); localStorage.setItem("yue2.askScore", "off"); true`);
   return ready;
 };
 const boot = () => navigate(3);
@@ -994,8 +994,8 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 960, dev
 await sleep(500);
 check("the bar: Creator, Writer, Refiner, the Artist (its room open since 1255: a click opens it), Librarian; the Trainer a pill of its own",
   barWide.rooms === "Creator|Writer|Refiner|Artist|Librarian" && barWide.side === "Trainer" && barWide.artistOn && !barWide.artistDim && artistStays === "artist", JSON.stringify(barWide));
-check("  with the logo in the bar, the Trainer stands right of it, level with the rooms, clear of the workspace; the bar of one height, the logo with it, when the room scrolls (1266)",
-  barWide.logoShown && barWide.sideLeft > barWide.logoRight && barWide.sideLeft - barWide.logoRight < 40 && Math.abs(barWide.sideMid - barWide.tabsMid) <= 1 &&
+check("  with the logo in the bar, the Trainer stands in the middle between it and the workspace (1329), level with the rooms; the bar of one height, the logo with it, when the room scrolls (1266)",
+  barWide.logoShown && barWide.sideLeft > barWide.logoRight && Math.abs((barWide.sideLeft + barWide.sideRight) / 2 - (barWide.logoRight + barWide.wsLeft) / 2) <= 2 && Math.abs(barWide.sideMid - barWide.tabsMid) <= 1 &&
   barWide.wsLeft - barWide.sideRight >= 18 && barShort.sideLeft === barWide.sideLeft && barShort.logoRight === barWide.logoRight && barShort.barH === 52 && barWide.barH === 52,
   JSON.stringify({ wide: [barWide.logoRight, barWide.sideLeft, barWide.sideRight, barWide.wsLeft], short: [barShort.logoRight, barShort.sideLeft] }));
 check("  without the logo (1440 px), the Trainer follows the rooms", !barNarrow.logoShown && barNarrow.sideLeft > barNarrow.tabsRight &&
@@ -1308,7 +1308,7 @@ await waitFor(`/not measured yet/.test(document.getElementById("trVoice").textCo
 const voiceB = await ev(`(() => { const v = document.getElementById("trVoice"); return { line: v.textContent.replace(/\\s+/g, " "), name: !!v.querySelector("[data-voice-name]") }; })()`);
 await ev(`(() => { window.fetch = window.__voiceFetch; document.querySelector('#tabs [data-tab="create"]').click(); return true; })()`);
 check("a folder's voice by measure: on the folder, beside the set made of it, and in its line with a name for the set (the lyrics' language, no person's name); songs with sections are taken as singing, not measured yet",
-  /♂ baritenor · 117 Hz/.test(voiceA.folder) && /♂ baritenor · 117 Hz/.test(voiceA.set) && /male · baritenor/.test(voiceA.line) && voiceA.speech && voiceA.name === "voice-ru-m-baritenor-117" &&
+  /baritenor · 117 Hz/.test(voiceA.folder) && /baritenor · 117 Hz/.test(voiceA.set) && !/[\u2640\u2642]/.test(voiceA.folder + voiceA.set) && /male · baritenor/.test(voiceA.line) && voiceA.speech && voiceA.name === "voice-ru-m-baritenor-117" &&
   /not measured yet/.test(voiceB.line) && !voiceB.name, JSON.stringify({ voiceA, voiceB }));
 
 // HERESY 1169 (Viktor 08.10.2026: «В редактор лирики можно как в кодовом редакторе отображение номера строки?… по Alt+K
@@ -1816,9 +1816,9 @@ const ar7 = await ev(`(async () => {
     next: places[1] ? places[1].textContent.trim() : "", liveOn: $("arLive").checked, filtersHidden: $("arFilters").hidden };
   $("arLive").checked = false; $("arLive").dispatchEvent(new Event("change", { bubbles: true }));
   $("arPrompt").value = "A boat."; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
-  // HERESY 1270: Draw is Stop while a run draws: the running one done first, then Draw
+  // HERESY 1270, 1340: the running one done first (Stop hides with it), then Draw
   window.__ar7Runs.forEach((r) => { if (r.status === "running") r.status = "done"; });
-  for (let i = 0; i < 60 && $("arDraw").classList.contains("is-stop"); i++) await wait(100);
+  for (let i = 0; i < 60 && !$("arStop").hidden; i++) await wait(100);
   $("arDraw").click(); await wait(300);
   const asked = window.__ar7Asked.filter((a) => a[0] === "draw").map((a) => a[1]);
   out.previewAsked = asked.length ? asked[0].preview : "none"; out.liveKept = localStorage.getItem("yue2.arLive");
@@ -2069,7 +2069,7 @@ const g64 = await ev(`(async () => {
   window.fetch = window.__g64; delete window.__g64;
   return out;
 })()`);
-check("the unfolded log grows wider for a column of the cards (600 → 720 px at 1920, 1272: 180 px under 1264's 900)", g64.gpus && g64.w >= 700 && g64.w <= 740 && g64.w - (g64.w0 > 500 ? g64.w0 : 600) >= 100, JSON.stringify({ w0: g64.w0, w: g64.w, gpus: g64.gpus }));
+check("the unfolded log grows wider for a column of the cards (600 → 920 px at 1920: 1329, Viktor: «общую ширину фрейма логгера на 200px»)", g64.gpus && g64.w >= 900 && g64.w <= 940 && g64.w - (g64.w0 > 500 ? g64.w0 : 600) >= 300, JSON.stringify({ w0: g64.w0, w: g64.w, gpus: g64.gpus }));
 check("  the dock stays inside the window, as tall as its cards (not the whole log)", g64.top >= 0 && g64.h < 1080 * 0.7, JSON.stringify({ top: g64.top, h: g64.h }));
 check("  each card's block says its role, the studio's card framed, its bars drawn and its numbers given",
   g64.cards.length === 3 && /Studio/.test(g64.cards[0].role) && g64.cards[0].main && !g64.cards[1].main && /Training voice-r16 · Lab jobs/.test(g64.cards[1].role) &&
@@ -2188,7 +2188,7 @@ await ev(`(() => { const a = document.getElementById("lyrics"); a.value = window
 check("Ctrl+S keeps everything (the form, the Writer's open document, the settings) instead of the browser's Save page; after it the page counts nothing as edited", cs69.said && cs69.edited === false, JSON.stringify(cs69));
 
 // HERESY 1169 · 1270 (Viktor 09.10.2026: «Запустил два раза генерацию картинки в комнате Художника… Кнопку DRAW нужно заменять на STOP»)
-section("the Artist's Draw is Stop while a run draws");
+section("the Artist’s Draw and Stop while a run draws (1270, 1340)");
 const ar70Was = await ev(`document.body.dataset.tab`);
 await ev(`(() => { const real = window.fetch; window.__ar70Fetch = real; window.__ar70Asked = [];
   const run = { id: "20261009-170000-eeee", prompt: "A boat.", shapes: ["1:1"], seed: 5, count: 1, painter: "krea2-q4", created: 1791580000, status: "running", of: 1, pictures: [], gpu: 1 };
@@ -2205,21 +2205,22 @@ await ev(`(() => { const real = window.fetch; window.__ar70Fetch = real; window.
 await ev(`document.getElementById("tabArtist").click(); true`);
 await waitFor(`document.querySelectorAll('#arRuns .ar-run[data-id="20261009-170000-eeee"]').length === 1`, 4000, 50);
 const ar70 = await ev(`(async () => {
-  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), b = document.getElementById("arDraw");
-  const o = { text: b.textContent, stop: b.classList.contains("is-stop"), enabled: !b.disabled };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), b = document.getElementById("arDraw"), s = document.getElementById("arStop");
   document.getElementById("arPrompt").value = "Another boat."; document.getElementById("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  await wait(100);
+  const o = { text: b.textContent, drawOn: !b.disabled, stopShown: !s.hidden, stopOn: !s.disabled, stopText: s.textContent };
   document.getElementById("arPrompt").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true, cancelable: true }));
-  await wait(200);
-  b.click();
-  for (let i = 0; i < 50 && b.classList.contains("is-stop"); i++) await wait(100);
+  await wait(300);
+  s.click();
+  for (let i = 0; i < 50 && !s.hidden; i++) await wait(100);
   const st = document.querySelector('.ar-run[data-id="20261009-170000-eeee"] .ar-state');
-  o.asked = window.__ar70Asked; o.after = b.textContent; o.stopAfter = b.classList.contains("is-stop"); o.state = st ? st.textContent : "";
+  o.asked = window.__ar70Asked; o.after = b.textContent; o.stopHidden = s.hidden && getComputedStyle(s).display === "none"; o.state = st ? st.textContent : "";   // 1345: as it shows
   window.fetch = window.__ar70Fetch;
   return o; })()`);
 await ev(`document.querySelector('.topbar [data-tab="' + ${JSON.stringify(ar70Was || "create")} + '"]').click(); true`);
 await sleep(300);
-check("the Artist's Draw is Stop while a run draws (Ctrl+Enter draws no second run meanwhile); Stop asks the lab to stop that run, the run says stopped, and the button is Draw again",
-  ar70.text === "Stop" && ar70.stop && ar70.enabled && ar70.asked.length === 1 && ar70.asked[0].id === "20261009-170000-eeee" && ar70.after === "Draw" && !ar70.stopAfter && /^stopped/.test(ar70.state),
+check("the Artist's Draw stays Draw while a run draws and asks a second one (Ctrl+Enter too: two at a time); Stop, a button of its own, asks the lab to stop the drawing run, the run says stopped, and Stop hides",
+  ar70.text === "Draw" && ar70.drawOn && ar70.stopShown && ar70.stopOn && ar70.stopText === "Stop" && ar70.asked.some((a) => a.draw) && ar70.asked.some((a) => a.id === "20261009-170000-eeee") && ar70.stopHidden && /^stopped/.test(ar70.state),
   JSON.stringify(ar70));
 
 // HERESY 1169 · 1271 (Viktor 09.10.2026: «Канвас комнаты Художника можно разделить на три колонки, каждая регулируется по ширине. В левой
@@ -2613,43 +2614,43 @@ check("the gallery in even tiles: every tile the same square box in equal column
 check("  one shape shown: its own tiles (16:9 boxes), all alike",
   ar84.wide.length === 3 && new Set(ar84.wide.map((t) => t[2] + "x" + t[3])).size === 1 && Math.abs(ar84.wide[0][2] / ar84.wide[0][3] - 16 / 9) < 0.05, JSON.stringify(ar84.wide));
 
-// HERESY 1169 · 1286 (Viktor 09.10.2026: «OSEM с девизом сделай на 20% крупнее, дай больше пространства между Лого и OSEM, а также сам прогресс бар опусти в подвал, 160 пикселов от пола»)
-section("the veil: the slogan larger and further from the logo, the line at the foot");
+// HERESY 1169 · 1286 (Viktor 09.10.2026: «OSEM с девизом сделай на 20% крупнее, дай больше пространства между Лого и OSEM, а также сам прогресс бар опусти в подвал, 160 пикселов от пола»; 1295, 10.10.2026: «ты опустил бар, а "ЗАГРУЗКА ЗВУКОВОЙ ЕРЕСИ" забыл. И прикрути также версию движка туда. Мелко, под бар»)
+section("the veil: the slogan larger and further from the logo; the words, the line and the versions at the foot");
 await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
-const bv86 = await ev(`(() => {
+const bv86 = await ev(`(async () => {
   const h = document.documentElement, had = h.classList.contains("booting"), v = document.getElementById("bootVeil");
   h.classList.add("booting"); h.classList.remove("veil-lift", "i18n-wait");
+  if (window.RuachVeilVersions) window.RuachVeilVersions();   // a test browser gets no veil: its versions asked here
+  for (let i = 0; i < 40 && !(document.getElementById("bootVer") || {}).textContent; i++) await new Promise((r) => setTimeout(r, 100));
   const r = (s) => { const e = v.querySelector(s).getBoundingClientRect(); return { top: Math.round(e.top), bottom: Math.round(e.bottom), cx: Math.round(e.left + e.width / 2) }; };
-  const o = { logo: r(".boot-logo"), osem: r(".boot-osem"), words: r(".boot-words"), line: r(".boot-line"), vh: window.innerHeight, vw: window.innerWidth,
-    font: parseFloat(getComputedStyle(v.querySelector(".boot-osem")).fontSize) };
+  const o = { logo: r(".boot-logo"), osem: r(".boot-osem"), words: r(".boot-words"), line: r(".boot-line"), ver: r(".boot-ver"), vh: window.innerHeight, vw: window.innerWidth,
+    font: parseFloat(getComputedStyle(v.querySelector(".boot-osem")).fontSize), verText: v.querySelector(".boot-ver").textContent,
+    verFont: parseFloat(getComputedStyle(v.querySelector(".boot-ver")).fontSize) };
   if (!had) h.classList.remove("booting");
   return o; })()`);
-check("the veil: OSEM a fifth larger (19.2 px at 1920), 50 px or more under the logo; the line 160 px above the floor, in the middle; the words stay under the slogan",
+check("the veil: OSEM a fifth larger (19.2 px at 1920), 50 px or more under the logo; the line 160 px above the floor, in the middle",
   Math.abs(bv86.font - 19.2) < 0.3 && bv86.osem.top - bv86.logo.bottom >= 50 && Math.abs(bv86.vh - bv86.line.bottom - 160) <= 1 &&
-  Math.abs(bv86.line.cx - bv86.vw / 2) <= 2 && bv86.words.top > bv86.osem.bottom && bv86.words.bottom < bv86.line.top, JSON.stringify(bv86));
+  Math.abs(bv86.line.cx - bv86.vw / 2) <= 2, JSON.stringify(bv86));
+check("  «Loading the Sound Heresy» went down with the line, just above it; the engine's version small under it",
+  bv86.words.bottom <= bv86.line.top && bv86.line.top - bv86.words.bottom <= 30 && Math.abs(bv86.words.cx - bv86.vw / 2) <= 2 &&
+  bv86.ver.top >= bv86.line.bottom && bv86.ver.top - bv86.line.bottom <= 30 && bv86.verFont <= 12 && /engine \S+/.test(bv86.verText), JSON.stringify(bv86));
 
-// HERESY 1169 · 1287 (Viktor 09.10.2026: «Ручной пресет памяти не даёт мне выбрать объём VRAM из доступных 16GB VRAM. В реалии я бы на этом железе выбрал бы 14GB, чтобы не было OOM»)
-section("the memory preset: Auto within N GB, under the card's own size");
+// HERESY 1169 · 1287 (Viktor 09.10.2026: «Ручной пресет памяти не даёт мне выбрать объём VRAM из доступных 16GB VRAM. В реалии я бы на этом железе выбрал бы 14GB, чтобы не было OOM»); 1294 (10.10.2026: «в кастомном выборе по GPU я так и не вижу ползунка для выбора лимита VRAM по GPU»): the tiers went for each card's VRAM limit in Engine → GPUs
+section("the memory preset: Auto plans for the studio's card or its VRAM limit; no tiers beside it");
 const mp87 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), sel = document.getElementById("memPreset");
   document.getElementById("engineToggle").click(); await wait(300);
-  const o = { opts: [...sel.options].map((x) => x.value), was: sel.value, ctx: document.getElementById("setMaxSeq").value, vae: document.getElementById("setVaeCore").value };
-  const pick = [...sel.options].map((x) => x.value).filter((v) => /^auto:/.test(v))[0];
-  o.pick = pick;
-  if (pick) { sel.value = pick; sel.dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
-    o.set = { ctx: document.getElementById("setMaxSeq").value, vae: document.getElementById("setVaeCore").value, label: sel.selectedOptions[0].textContent }; }
-  sel.value = o.was; document.getElementById("setMaxSeq").value = o.ctx; document.getElementById("setVaeCore").value = o.vae;
+  const o = { opts: [...sel.options].map((x) => x.value), auto: sel.querySelector('option[value="auto"]').textContent };
   document.getElementById("engineToggle").click(); await wait(300);
   if (document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-no")) { document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-no").click(); await wait(300); }
   return o; })()`);
-check("Auto within N GB offered under the card's own size, down to 8 GB; choosing one sets that budget's knobs (its context and VAE tiles), as Auto does",
-  mp87.opts[0] === "auto" && mp87.opts[mp87.opts.length - 1] === "manual" && (!mp87.pick || (/^Auto within \d+ GB: /.test(mp87.set.label) && mp87.set.ctx !== "" && mp87.set.vae !== "")),
-  JSON.stringify(mp87));
+check("Auto and Manual only (a card's limit is set in Engine → GPUs); Auto says the card it found and the knobs it sets",
+  mp87.opts.join() === "auto,manual" && /^Auto \(\d+\.\d GB found(, its limit [\d.]+ GB in Engine → GPUs)?: (context [\d.,\s ]+|whole context), VAE tiles \d+\)$/.test(mp87.auto), JSON.stringify(mp87));
 
 // HERESY 1169 · 1288 (Viktor's screenshot of 09.10.2026: «The studio's 💎 set c»; «можно будет в Пинокио Ctrl+N использовать»)
 section("the seconds' pattern takes numbers only; Ctrl+N is New song");
 const i88 = await ev(`(() => { const L = window.RuachI18n; const o = {};
-  ["ru", "uk", "be", "el", "es", "it"].forEach((c) => { o[c] = [L.look("The studio's 💎 sets", c), L.look("Open the sets", c), L.look("12s", c), L.look("2.5s", c)]; });
+  ["ru", "uk", "be", "el", "es", "it"].forEach((c) => { o[c] = [L.look("The zebra's 💎 sets", c), L.look("Open the zebra sets", c), L.look("12s", c), L.look("2.5s", c)]; });
   return o; })()`);
 await ev(`(() => { const s = document.getElementById("title"); window.__n88 = s.value; s.value = "Ctrl N test"; s.dispatchEvent(new Event("input", { bubbles: true })); document.querySelector('#tabs [data-tab="write"]') && document.querySelector('#tabs [data-tab="write"]').click(); return true; })()`);
 await sleep(200);
@@ -2750,6 +2751,2507 @@ check("  when it is over, what came; a restart offered only where a backbone, a 
   wt89.done === "The LoRAs: 2 fetched, 0 failed, in 10 s." && !wt89.restart &&
   wt89.done2 === "The backbone BF16: 1 fetched, 0 failed, in 9 s. The engine lists a new backbone, decoder or slider at its next start." && wt89.restart2,
   JSON.stringify({ done: wt89.done, restart: wt89.restart, done2: wt89.done2, restart2: wt89.restart2 }));
+
+// HERESY 1169 · 1293 (Viktor 10.10.2026: «после этого не захотел фрейм сворачиваться в его исходную высоту… с каждым тиком графа GPU
+// фрейм Лога сервера опускается на пиксел или два вниз»): one card doing all three, as on his laptop under Pinokio
+section("the server log's frame beside the cards: back to its height after full height, still from tick to tick");
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+const g93 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), now = () => Date.now() / 1000;
+  const roles = { studio: 0, train: [0], jobs: [0], training: {} };
+  const t0 = now() - 30;
+  const samples = (since) => { const out = []; for (let k = 0; k < 60; k++) { const t = t0 + k; if (t > since && t <= now()) out.push([t, 100, 7680, 16384, 62, 85]); } return out; };
+  const real = window.fetch;
+  window.fetch = (u, o) => {
+    u = String(u);
+    const json = (d) => Promise.resolve(new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } }));
+    if (u.startsWith("/lab/gpus/live")) { const since = +(new URL(u, location.href).searchParams.get("since") || 0); return json({ cards: [{ index: 0, name: "Quadro RTX 5000", samples: samples(since) }], error: "", now: now(), keep: 120, roles }); }
+    return real(u, o);
+  };
+  const dock = document.getElementById("logDock"), folded = dock.classList.contains("is-folded"), wasTall = dock.classList.contains("is-tall");
+  if (folded) document.getElementById("logDockTab").click();
+  if (wasTall) document.getElementById("logDockTall").click();
+  await wait(2600);
+  const h = () => Math.round(dock.getBoundingClientRect().height);
+  const o = { h1: h(), gl1: dock.style.getPropertyValue("--gl-h") };
+  document.getElementById("logDockTall").click(); await wait(2600);
+  o.tall = h();
+  document.getElementById("logDockTall").click(); await wait(2600);
+  o.h2 = h();
+  await wait(4200);
+  o.h3 = h(); o.gl3 = dock.style.getPropertyValue("--gl-h");
+  const role = document.querySelector("#logDockGpus .gl-role");
+  o.role = role ? role.textContent : null;
+  o.cut = role ? role.scrollWidth > role.clientWidth + 1 : null;
+  if (wasTall) document.getElementById("logDockTall").click();
+  if (folded) document.getElementById("logDockTab").click();
+  window.fetch = real;
+  return o;
+})()`);
+check("the log's frame comes back to its height after full height, and does not creep from tick to tick (it lost a pixel a tick)",
+  g93.tall > g93.h1 + 100 && Math.abs(g93.h2 - g93.h1) <= 2 && g93.h3 === g93.h2 && g93.gl3 === g93.gl1, JSON.stringify(g93));
+check("  one card doing all three says all three, not «STUDIO · TRAI…»", g93.role === "Studio · Training · Lab jobs" && g93.cut === false, JSON.stringify({ role: g93.role, cut: g93.cut }));
+
+// HERESY 1169 · 1294 (Viktor 10.10.2026, his laptop's 16 GB card under Pinokio: «в кастомном выборе по GPU я так и не вижу ползунка для выбора лимита VRAM по GPU»)
+section("Engine → GPUs: a VRAM limit for each card; Compute's Auto plans for the studio card's limit; rc4's «auto:N» becomes it");
+const vl94 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, posted = [], settings = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (d) => Promise.resolve(new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } }));
+  let limits = {};
+  const cards = [{ index: 0, name: "Quadro RTX 5000", total_mb: 16384, free_mb: 8700 }, { index: 1, name: "NVIDIA GeForce RTX 3090", total_mb: 24576, free_mb: 24000 }];
+  const state = () => ({ cards, roles: { studio: 0, train: [1], jobs: [0, 1], limits }, saved: true, studio_now: 0,
+    guard: cards.map((c) => ({ index: c.index, total_mb: c.total_mb, free_mb: c.free_mb, ok: true, why: "", foreign: [] })), training: {}, studio_training: null });
+  const keep = localStorage.getItem("yue2.memPreset");
+  localStorage.setItem("yue2.memPreset", "auto:12");
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/gpus/live")) return real(u, o);
+    if (u.startsWith("/lab/gpus")) {
+      if (o && o.method === "POST") { const b = JSON.parse(o.body); posted.push(b.limits); limits = b.limits || {}; }
+      return json(state()); }
+    if (u === "/settings" && o && o.method === "POST") settings.push(JSON.parse(o.body));
+    return real(u, o); };
+  document.getElementById("engineToggle").click();
+  await until(() => posted.length >= 1 && document.querySelector('#gpuRoles input[data-limit="0"]'), 5000);
+  await wait(400);
+  const slider = (i) => document.querySelector('#gpuRoles input[data-limit="' + i + '"]'), label = (i) => document.querySelector('#gpuRoles [data-limit-v="' + i + '"]').textContent;
+  const o = { migrated: posted[0], preset: localStorage.getItem("yue2.memPreset"), s0: slider(0) && [slider(0).min, slider(0).max, slider(0).step, slider(0).value], l0: label(0), l1: label(1),
+    settings: settings.slice(), heads: [...document.querySelectorAll("#gpuRoles .gpu-table th")].map((t) => t.textContent),
+    colspan: document.querySelector("#gpuRoles .gpu-live-row td").getAttribute("colspan") };
+  const s = slider(0); s.value = "14"; s.dispatchEvent(new Event("input", { bubbles: true })); s.dispatchEvent(new Event("change", { bubbles: true }));
+  o.l0b = label(0); o.unsaved = window.HeresyGpus.unsaved();
+  document.getElementById("gpuSave").click();
+  await until(() => posted.length >= 2, 3000); await wait(300);
+  o.saved = posted[1]; o.auto = document.querySelector('#memPreset option[value="auto"]').textContent;
+  o.unsavedAfter = window.HeresyGpus.unsaved();
+  window.fetch = real;
+  if (settings.length) await real("/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ max_seq: 0, vae_core: 512 }) });
+  if (keep === null) localStorage.removeItem("yue2.memPreset"); else localStorage.setItem("yue2.memPreset", keep);
+  document.getElementById("engineToggle").click(); await wait(300);
+  const no = document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-no"); if (no) { no.click(); await wait(300); }
+  return o; })()`);
+check("rc4's «Auto within 12 GB» became GPU0's VRAM limit (12 288 MiB) once, the page's preset Auto again, and the engine got the knobs for 12 GB",
+  vl94.migrated && vl94.migrated["0"] === 12288 && vl94.preset === "auto" && vl94.settings.length === 1 && vl94.settings[0].max_seq === 16384 && vl94.settings[0].vae_core === 512,
+  JSON.stringify({ migrated: vl94.migrated, preset: vl94.preset, settings: vl94.settings }));
+check("  each card a slider in half gigabytes from 4 GB to its size, saying the limit or «no limit»; a column of its own",
+  JSON.stringify(vl94.s0) === JSON.stringify(["4", "16", "0.5", "12"]) && vl94.l0 === "12.0 of 16.0 GB" && vl94.l1 === "no limit · 24.0 GB" &&
+  vl94.heads.indexOf("VRAM limit") === 4 && vl94.colspan === "7", JSON.stringify({ s0: vl94.s0, l0: vl94.l0, l1: vl94.l1, heads: vl94.heads, colspan: vl94.colspan }));
+check("  moved and saved: its label follows, the lab gets 14 336 MiB, Compute's Auto names the limit",
+  vl94.l0b === "14.0 of 16.0 GB" && vl94.unsaved && vl94.saved && vl94.saved["0"] === 14336 && !vl94.saved["1"] && !vl94.unsavedAfter &&
+  /, its limit 14\.0 GB in Engine → GPUs: context 16.384, VAE tiles 512\)$/.test(vl94.auto), JSON.stringify({ l0b: vl94.l0b, saved: vl94.saved, auto: vl94.auto, unsaved: vl94.unsaved, after: vl94.unsavedAfter }));
+
+// HERESY 1169 · 1296 (Viktor 10.10.2026: «По LoRA расхождение в списке и в missing на Големе в Студии»)
+section("Engine → Models and LoRAs: one's own copy of a published LoRA (another header, the same tensors) counts the part whole");
+const wt96 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Math.round(Date.now() / 1000);
+  const last = { mode: "check", at: now - 60, counts: { here: 2, unknown: 0, differs: 1, fetched: 0, missing: 0, failed: 0 }, parts: [
+    { part: "loras", label: "LoRAs: the Kit's library and Ruach Studio's own", size: "2.3 GB",
+      rows: [{ state: "here", text: "loras/ (the Kit's library) (tools/download-loras.sh)" },
+             { state: "here", text: "loras/duduk-yt-r16/duduk-yt-r16-e200.safetensors (goldhub/Ruach_Studio_LoRAs @ 2a4662d), 56 MB" },
+             { state: "differs", text: "loras/voice-ru-m-bass-82/voice-ru-m-bass-82-e029.safetensors (goldhub/Ruach_Studio_LoRAs @ 2a4662d) — kept: the copy here differs from the published file (--replace fetches it)" }] }] };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/weights")) return json({ script: true, last, extras: [], parts: {}, job: null, now });
+    return real(u, o); };
+  document.getElementById("engineToggle").click();
+  await until(() => document.querySelectorAll("#wtParts .wt-part").length === 1);
+  const p = document.querySelector("#wtParts .wt-part");
+  const o = { sum: p.querySelector(".wt-sum").textContent, rows: [...p.querySelectorAll(".wt-row")].map((r) => r.className + ": " + r.textContent), buttons: [...p.querySelectorAll("button")].map((b) => b.textContent),
+    all: !document.getElementById("wtFetch").hidden };
+  window.fetch = real;
+  document.getElementById("engineToggle").click();
+  await until(() => document.getElementById("view-engine").classList.contains("is-hidden"));
+  return o; })()`);
+check("a part whose only odd file is one's own copy («differs», kept) is whole: «all here · own copies kept: 1», its row says why it was kept, no Fetch for it",
+  wt96.sum === "all here · own copies kept: 1" && wt96.rows.length === 1 && /differs/.test(wt96.rows[0]) && /kept: the copy here differs from the published file/.test(wt96.rows[0]) &&
+  wt96.buttons.length === 0, JSON.stringify(wt96));
+const wt96i = await ev(`(() => { const out = {}; for (const lang of ["ru", "uk", "be", "el", "es", "it"]) out[lang] = window.RuachI18n.look("own copies kept: 6", lang);
+  return out; })()`);
+check("  said in all six languages with its number", Object.values(wt96i).every((v) => /: 6$/.test(v) && !/own copies/.test(v)), JSON.stringify(wt96i));
+
+// HERESY 1169 · 1297 (Viktor 10.10.2026, his laptop's 16 GB card: «вечно "ждёт генерации"… реальный лог и сообщение о том, что модель
+// выбранная не потянет на этом железе, не видно»)
+section("Artwork: why it waits said in the toast; a failure said once; a painter no card can hold ends a volley at once");
+const ar97 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, asked = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const toasts = () => [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent);
+  document.getElementById("toasts").innerHTML = "";
+  let mode = "wait";
+  const WHY = "no card can take this now (it needs 13500 MB): GPU0 has 7012 MiB free; this needs 13500. Engine \\u2192 GPUs says which card does what";
+  const NOFIT = "Krea 2 Muse Q4 needs about 13.2 GB of VRAM (its peak with a margin), and the biggest card here has 12.0 GB: no painter fits on this machine yet: Krea 2 Muse Q4 wants a card of 16 GB";
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/art/draw")) { asked.push(u.split("?")[1]);
+      if (mode === "wait") { mode = "fail"; return json({ status: "queued", started: 1, kind: "art", waiting: WHY }, 202); }
+      if (mode === "fail") return json({ status: "failed", error: "no artwork: torch.OutOfMemoryError: CUDA out of memory", name: "zz-art-1297" }, 500);
+      return json({ error: NOFIT }, 400); }
+    return real(u, o); };
+  const o = {};
+  o.d1 = await window.HeresyArt.draw("zz-art-1297", false, false);
+  o.t1 = toasts();
+  document.getElementById("toasts").innerHTML = "";
+  mode = "nofit"; asked.length = 0;
+  const many = window.HeresyArt.many(["zz-art-a", "zz-art-b", "zz-art-c"]);
+  const d = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+  if (d) d.querySelector(".hd-yes").click();
+  await many;
+  await wait(200);
+  o.asked = asked.slice(); o.t2 = toasts();
+  window.fetch = real;
+  return o; })()`);
+check("waiting: the toast gives the guard's reason (the card's memory and the need), then that it starts by itself",
+  ar97.t1.some((t) => t === "Artwork for “zz-art-1297” waits in the queue: no card can take this now (it needs 13500 MB): GPU0 has 7012 MiB free; this needs 13500. Engine → GPUs says which card does what. It starts by itself when a card has room"),
+  JSON.stringify(ar97.t1));
+check("  a failed artwork is said once («No artwork: torch.OutOfMemoryError…», not «No artwork: no artwork:»), not «ready»; drawArt answers failed",
+  ar97.t1.some((t) => t === "No artwork: torch.OutOfMemoryError: CUDA out of memory") && !ar97.t1.some((t) => /is ready|no artwork: no artwork/i.test(t)) &&
+  ar97.d1 && ar97.d1.status === "failed" && !ar97.d1.refused, JSON.stringify({ t1: ar97.t1, d1: ar97.d1 }));
+check("  a painter no card can hold: refused once with the numbers, the volley of three ends there (one ask, «0 of 3»)",
+  ar97.asked.length === 1 && ar97.t2.filter((t) => /^No artwork: Krea 2 Muse Q4 needs about 13\.2 GB/.test(t)).length === 1 && ar97.t2.some((t) => t === "Artwork drawn: 0 of 3"),
+  JSON.stringify({ asked: ar97.asked, t2: ar97.t2 }));
+
+// HERESY 1169 · 1298 (Viktor 10.10.2026: «В Тренере - The LOG перекрывает серверный фрейм. Сделай утяжку, тем более что он не нужен
+// такой длинный для коротких строк лога/телеметрии»)
+section("the Trainer's log: as wide as its lines, beside the server log's dock (never over it), on its baseline, the Trainer's own");
+const lg98 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const lines = Array.from({ length: 30 }, (_, i) => "voice-zhuromskyy-full-r32:   1%| " + (200 + i) + "/24192 [04:28<8:56:50, 1.34s/it, lr: 5.0e-05 loss: 2.893e+00]").join("\\n");
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/train/log")) return Promise.resolve(new Response(lines, { headers: { "Content-Type": "text/plain" } }));
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="train"]').click();
+  const dock = document.getElementById("logDock"), folded = dock.classList.contains("is-folded");
+  if (folded) document.getElementById("logDockTab").click();
+  await wait(300);
+  window.HeresyTrain.log("zz-run-1298");
+  const panel = await until(() => { const p = document.querySelector(".tr-logdock"); return p && !p.hidden && /2\\.893e\\+00/.test(p.textContent) ? p : null; });
+  await wait(200);
+  const r = (el) => { const b = el.getBoundingClientRect(); return { l: Math.round(b.left), r: Math.round(b.right), t: Math.round(b.top), b: Math.round(b.bottom), w: Math.round(b.width) }; };
+  const pre = panel.querySelector(".tr-logdock-body");
+  const o = { vw: document.documentElement.clientWidth, panel: r(panel), dock: r(dock), content: pre.scrollWidth, client: pre.clientWidth };
+  document.getElementById("logDockTall").click(); await wait(400);
+  o.tallPanel = r(panel); o.tallDock = r(dock);
+  document.getElementById("logDockTall").click(); await wait(300);
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(150);
+  o.elsewhere = getComputedStyle(panel).display;
+  document.querySelector('.topbar [data-tab="train"]').click(); await wait(150);
+  o.back = getComputedStyle(panel).display;
+  window.HeresyTrain.unlog();
+  if (folded) document.getElementById("logDockTab").click();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  window.fetch = real;
+  await wait(300);                                    // returned at once after the switch, DevTools said «Promise was collected»
+  return o; })()`);
+check("the log stands left of the dock with a gap, on its baseline, as wide as its lines (no scrolling sideways), far narrower than the window",
+  lg98.panel.r <= lg98.dock.l - 11 && Math.abs(lg98.panel.b - lg98.dock.b) <= 1 && lg98.content <= lg98.client + 1 && lg98.panel.w < lg98.vw * 0.6 && lg98.panel.l === 16,
+  JSON.stringify(lg98));
+check("  the dock at full height (wider): the log narrows to the room left, still beside it; in another room the log is not shown, back in the Trainer it is",
+  lg98.tallPanel.r <= lg98.tallDock.l - 11 && lg98.elsewhere === "none" && lg98.back !== "none", JSON.stringify({ tallPanel: lg98.tallPanel, tallDock: lg98.tallDock, elsewhere: lg98.elsewhere, back: lg98.back }));
+
+// HERESY 1169 · 1299 (Viktor 10.10.2026: «Добавь также возможность выстраивать в одну колонку оба блока живого графа. Сейчас они оба
+// NAR и AR в одной полосе»)
+section("the Trainer's Telemetry: the two curves side by side, or one under the other at the whole width, remembered");
+const st99 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.trRun", "yue2.trPane", "yue2.trStacked"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.trStacked");
+  const curve = (a, b) => Array.from({ length: 20 }, (_, i) => [5 * (i + 1), +(a - (a - b) * i / 19).toFixed(3)]);
+  const run = { name: "zz-run-1299", status: "done", dataset: "zz-set", kind: "voice", engine: "ruach", steps: 100, step: 100, tracks: 10, started: Date.now() / 1000 - 3600,
+    ended: Date.now() / 1000 - 60, checkpoints: [], options: { rank: 16, lr: 0.0001, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5, cot: "off", quant: "bf16" },
+    series: { flow: { curve: curve(1.0, 0.8), first: 1.0, last: 0.8, min: 0.79 }, ar_ce: { curve: curve(5.6, 4.4), first: 5.6, last: 4.4, min: 4.39 }, sec_per_step: 1.3 } };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json({ raw: [], prepared: [], runs: [run], gpus: [], own: {}, aitk_ready: false });
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+  const card = await until(() => document.querySelector('#trRunList [data-open="zz-run-1299"]'), 5000);
+  if (card) card.click();
+  const figs = () => [...document.querySelectorAll("#trRunPane .tr-chart")].map((f) => { const b = f.getBoundingClientRect(); return { l: Math.round(b.left), t: Math.round(b.top), w: Math.round(b.width) }; });
+  await until(() => figs().length === 2, 4000);
+  const o = { side: figs(), pane: Math.round(document.querySelector("#trRunPane .tr-charts").getBoundingClientRect().width) };
+  const btn = () => document.querySelector("#trRunPane [data-stack]");
+  o.tip1 = btn() && btn().dataset.tip; o.face1 = btn() && btn().querySelector(".ui-ico") && btn().querySelector(".ui-ico").getAttribute("class");
+  btn().click(); await wait(150);
+  o.stacked = figs(); o.kept = localStorage.getItem("yue2.trStacked"); o.tip2 = btn().dataset.tip; o.face2 = btn().querySelector(".ui-ico").getAttribute("class");
+  o.pressed = btn().getAttribute("aria-pressed");
+  btn().click(); await wait(150);
+  o.back = figs(); o.kept2 = localStorage.getItem("yue2.trStacked");
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);                                    // returned at once after the switch, DevTools said «Promise was collected»
+  return o; })()`);
+check("side by side at first (one row: the same top, the second to the right); the button says it stacks them, its face two rows",
+  st99.side.length === 2 && st99.side[0].t === st99.side[1].t && st99.side[1].l > st99.side[0].l + st99.side[0].w &&
+  st99.tip1 === "The curves one under the other, each the whole width" && /ui-rows-2/.test(st99.face1 || ""), JSON.stringify(st99));
+check("  clicked: one under the other, each the whole width; remembered; the button now offers side by side (two columns); clicked again: back, forgotten",
+  st99.stacked[0].l === st99.stacked[1].l && st99.stacked[1].t > st99.stacked[0].t && Math.abs(st99.stacked[0].w - st99.pane) <= 1 && st99.kept === "1" &&
+  st99.tip2 === "The curves side by side" && /ui-cols-2/.test(st99.face2) && st99.pressed === "true" &&
+  st99.back[0].t === st99.back[1].t && st99.kept2 === null, JSON.stringify(st99));
+
+// HERESY 1169 · 1300 (Viktor 10.10.2026: «В тренере смотри на RANK - подсказка под полем инлайн. И можно ли на завершённом тренинге
+// продолжить по большему количеству эпох?»; «Я так и не смог полностью сориентироваться по AR WEIGHT и AR ANCHOR»)
+section("the Trainer's form: the rank's share in its tip, the AR knobs' tips and their guide, a finished run goes on to more epochs");
+const tr00 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, posted = [], NL = String.fromCharCode(10);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.trRun", "yue2.trPane", "yue2.guideTab", "yue2.guideSeen"], was = keys.map((k) => localStorage.getItem(k));
+  const opts = { rank: 16, lr: 0.0001, save_epochs: 1, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5, cot: "off", quant: "bf16", steps_per_epoch: 2016, engine: "ruach" };
+  const cks = [1, 2, 3, 4].map((e) => ({ file: "zz-done_" + String(2016 * e).padStart(9, "0") + ".safetensors", step: 2016 * e, epoch: e, bytes: 1, saved: Date.now() / 1000 }));
+  const runs = [
+    { name: "zz-done", status: "done", dataset: "zz-set", kind: "voice", engine: "ruach", steps: 8064, step: 8064, tracks: 2016, started: Date.now() / 1000 - 9000, ended: Date.now() / 1000 - 60, checkpoints: cks, options: opts, note: "his voice" },
+    { name: "zz-aitk", status: "done", dataset: "zz-set", kind: "voice", engine: "ai-toolkit", steps: 100, step: 100, tracks: 10, started: 1, ended: 2, checkpoints: [{ file: "zz-aitk_000000100.safetensors", step: 100, epoch: 10 }], options: Object.assign({}, opts, { engine: "ai-toolkit" }) },
+    { name: "zz-live", status: "running", dataset: "zz-set", kind: "voice", engine: "ruach", steps: 100, step: 50, tracks: 10, started: Date.now() / 1000 - 60, checkpoints: [{ file: "zz-live_000000040.safetensors", step: 40, epoch: 4 }], options: opts }];
+  const md = ["# Ruach Studio · The Guide", "", "Songs.", "", "## Start Here", "", "### What This Is", "", "A studio.", "", "## LoRA Trainer", "", "### 3 Train", "", "Words. ".repeat(900), "",
+    "### The Music Half's Three Knobs", "", "Every step teaches the two halves apart.", "", "Words. ".repeat(900)].join(NL);
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json({ raw: [], prepared: [{ name: "zz-set", tracks: 2016 }], runs, gpus: [], own: {}, aitk_ready: true });
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    if (u.startsWith("/lab/train/run") && o && o.method === "POST") { posted.push(JSON.parse(o.body)); return json({ ok: true }); }
+    if (u.startsWith("/lab/guide/")) return Promise.resolve(new Response(md, { status: 200 }));
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+  await until(() => document.querySelector('#trRunList [data-menu="zz-done"]'), 5000);
+  const o = {};
+  const rk = document.getElementById("tr_rank"); rk.value = "32"; rk.dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
+  o.head32 = rk.dataset.tipHead; o.line = !!document.getElementById("trRankSay"); o.rankTip = rk.dataset.tip;
+  rk.value = "128"; rk.dispatchEvent(new Event("input", { bubbles: true })); await wait(50); o.head128 = rk.dataset.tipHead;
+  rk.value = "16"; rk.dispatchEvent(new Event("input", { bubbles: true }));
+  const tipOf = (id) => document.getElementById(id).closest("label").dataset.tip;
+  o.tips = [tipOf("tr_ar_loss_weight"), tipOf("tr_ar_kl_weight"), tipOf("tr_ar_lr_multiplier")];
+  o.stepsMax = document.getElementById("tr_steps").max;
+  window.dispatchEvent(new Event("ruach-lang"));     // the guide read again: an earlier check left its own short guide in it
+  document.getElementById("trArHow").click();
+  const g = await until(() => { const b = document.querySelector(".hg-back:not([hidden]) .hg-body"); const h = b && b.querySelector("#hg-the-music-half-s-three-knobs"); return h ? { b, h } : null; }, 4000);
+  await wait(150);
+  o.guide = g ? { tab: (document.querySelector(".hg-tabs [aria-selected=true]") || {}).textContent, near: Math.abs(g.h.getBoundingClientRect().top - g.b.getBoundingClientRect().top) < 40, title: g.h.textContent } : null;
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(150);
+  const items = async (name) => { document.querySelector('#trRunList [data-menu="' + name + '"]').click(); await wait(80);
+    const m = document.querySelector(".tr-menu"), out = m ? [...m.querySelectorAll("[data-act]")].map((b) => b.dataset.act) : [];
+    if (m) m.remove(); return out; };
+  o.menuAitk = await items("zz-aitk"); o.menuLive = await items("zz-live");
+  document.querySelector('#trRunList [data-menu="zz-done"]').click(); await wait(80);
+  o.menuDone = [...document.querySelectorAll(".tr-menu [data-act]")].map((b) => b.dataset.act + ":" + b.textContent);
+  document.querySelector('.tr-menu [data-act="goon"]').click();
+  const d = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+  o.ask = d ? ((d.querySelector(".hd-title") || {}).textContent || "") + " / " + ((d.querySelector(".hd-body") || {}).textContent || "") : null;
+  o.asked = d && d.querySelector(".hd-input") && d.querySelector(".hd-input").value;
+  if (d) d.querySelector(".hd-yes").click();
+  await until(() => posted.length, 3000); await wait(200);
+  o.posted = posted.slice();
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the rank's share and size are the first line of its tip («2 % of what it adapts · 59 MB a half»; 128: «for large many-voice sets»), no line under the field",
+  tr00.head32 === "2 % of what it adapts · 59 MB a half" && /for large many-voice sets$/.test(tr00.head128 || "") && !tr00.line && !/line below/.test(tr00.rankTip), JSON.stringify(tr00));
+check("  the AR knobs' tips as measured: whether the music half learns and against the anchor, the anchor a share of the weight, the speed its throttle; Steps takes 24 192 and more",
+  /^Whether the music half learns/.test(tr00.tips[0]) && /anchor's share of it, not its size/.test(tr00.tips[0]) && /a share of the AR weight/.test(tr00.tips[1]) &&
+  /Nothing at AR weight 0/.test(tr00.tips[1]) && /faster or slower/.test(tr00.tips[2]) && +tr00.stepsMax >= 1000000, JSON.stringify({ tips: tr00.tips, max: tr00.stepsMax }));
+check("  «How they work ›» opens the guide on the LoRA Trainer at «The Music Half's Three Knobs»",
+  !!tr00.guide && tr00.guide.tab === "LoRA Trainer" && tr00.guide.near && tr00.guide.title === "The Music Half's Three Knobs", JSON.stringify(tr00.guide));
+check("  a finished run of the studio's trainer offers «Go on to more epochs…» (not AI-Toolkit's, not a live one); asked with 4 more, it sends the same run, set and knobs for 8 epochs",
+  tr00.menuDone.some((x) => x === "goon:Go on to more epochs…") && tr00.menuAitk.indexOf("goon") < 0 && tr00.menuLive.indexOf("goon") < 0 &&
+  /Go on with zz-done to how many epochs in all\?/.test(tr00.ask || "") && /It has 4 now/.test(tr00.ask || "") && tr00.asked === "8" && tr00.posted.length === 1 &&
+  tr00.posted[0].name === "zz-done" && tr00.posted[0].dataset === "zz-set" && tr00.posted[0].steps === 16128 && tr00.posted[0].engine === "ruach" && tr00.posted[0].rank === 16 &&
+  tr00.posted[0].ar_kl_weight === 0.3 && tr00.posted[0].note === "his voice", JSON.stringify({ menu: tr00.menuDone, aitk: tr00.menuAitk, live: tr00.menuLive, ask: tr00.ask, asked: tr00.asked, posted: tr00.posted }));
+
+// HERESY 1169 · 1301 (Viktor 10.10.2026: «фрейм Server Log сделаем более адаптовным. SVG иконка в левой позиции со стрелкой вправо, в
+// правой - влево. Перемещение фрейма в другую сторону страницы, и запоминание позиции для определённой комнаты»)
+section("the server log's dock: an arrow to the other side on its inner edge, the side kept for each room");
+const sd01 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const was = localStorage.getItem("yue2.logDockSide"), tabWas = document.body.dataset.tab;
+  localStorage.removeItem("yue2.logDockSide");
+  const go = async (tab) => { document.querySelector('.topbar [data-tab="' + tab + '"]').click(); await wait(250); };
+  const dock = document.getElementById("logDock"), btn = document.getElementById("logDockSide");
+  const look = () => { const d = dock.getBoundingClientRect(), b = btn.getBoundingClientRect(), t = document.getElementById("logDockTab").getBoundingClientRect();
+    return { left: dock.classList.contains("is-left"), x: Math.round(d.left), r: Math.round(innerWidth - d.right), face: (btn.querySelector(".ui-ico") || {}).getAttribute ? btn.querySelector(".ui-ico").getAttribute("class") : "",
+      tip: btn.dataset.tip, inner: dock.classList.contains("is-left") ? b.left > t.right - 1 : b.right < t.left + 1, shown: getComputedStyle(btn).display !== "none" }; };
+  const o = {};
+  await go("create"); o.create = look();
+  btn.click(); await wait(150); o.createLeft = look(); o.kept = localStorage.getItem("yue2.logDockSide");
+  await go("write"); o.write = look();
+  await go("create"); o.createBack = look();
+  await go("artist"); o.artist = look();
+  btn.click(); await wait(150); o.artistRight = look(); o.kept2 = localStorage.getItem("yue2.logDockSide");
+  await go("create");
+  btn.click(); await wait(150); o.createRight = look();
+  document.body.dataset.frame = "compose"; window.dispatchEvent(new Event("resize")); await wait(250);
+  o.frame = { left: dock.classList.contains("is-left"), shown: getComputedStyle(btn).display !== "none" };
+  delete document.body.dataset.frame; window.dispatchEvent(new Event("resize")); await wait(250);
+  if (was === null) localStorage.removeItem("yue2.logDockSide"); else localStorage.setItem("yue2.logDockSide", was);
+  await go(tabWas || "create");
+  return o; })()`);
+check("on the right by default: an arrow to the left on its inner (left) edge; a click takes it to the left, the arrow now right on its inner (right) edge, kept for the Creator",
+  !sd01.create.left && sd01.create.r === 16 && /ui-to-left/.test(sd01.create.face) && sd01.create.inner && /to the left side/.test(sd01.create.tip) &&
+  sd01.createLeft.left && sd01.createLeft.x === 16 && /ui-to-right/.test(sd01.createLeft.face) && sd01.createLeft.inner && /to the right side/.test(sd01.createLeft.tip) &&
+  sd01.kept === '{"create":"left"}', JSON.stringify({ create: sd01.create, createLeft: sd01.createLeft, kept: sd01.kept }));
+check("  each room its own side: the Writer still right, the Creator left again when back; the Artist left by default, right when asked, both kept",
+  !sd01.write.left && sd01.createBack.left && sd01.artist.left && !sd01.artistRight.left && sd01.kept2 === '{"create":"left","artist":"right"}' && !sd01.createRight.left,
+  JSON.stringify({ write: sd01.write.left, back: sd01.createBack.left, artist: sd01.artist.left, artistRight: sd01.artistRight.left, kept2: sd01.kept2 }));
+check("  a lifted frame still puts the log left (1240), its button hidden meanwhile", sd01.frame.left && !sd01.frame.shown, JSON.stringify(sd01.frame));
+
+// HERESY 1169 · 1302 (Viktor 10.10.2026: «Для FETCH нужен статус/прогресс загрузки… его нужно найти глазами»)
+section("Engine → Models and LoRAs: a fetch's progress at the row pressed");
+const fp02 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const now = Math.round(Date.now() / 1000);
+  const last = { mode: "check", at: now - 60, counts: { here: 1, unknown: 0, differs: 0, fetched: 0, missing: 1, failed: 0 }, parts: [
+    { part: "loras", label: "LoRAs: the Kit's library and Ruach Studio's own", size: "2.3 GB",
+      rows: [{ state: "here", text: "loras/ (the Kit's library)" }, { state: "missing", text: "loras/duduk-yt-r16/duduk-yt-r16-e200.safetensors, 56 MB" }] }] };
+  const extras = [{ name: "backbone", label: "Backbone", what: "M-A-P's YuE2 as GGUF", restart: true, variants: [
+      { id: "BF16", size: "7.2 GB", here: false }, { id: "Q8_0", size: "3.8 GB", here: true }] },
+    { name: "trainer", label: "LoRA trainer's base", what: "Comfy-Org/YuE2", variants: [{ id: "bf16", size: "10.3 GB", here: false }] }];
+  let job = null;
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/weights")) return json({ script: true, last, extras, parts: {}, job, now });
+    return real(u, o); };
+  const base = { kind: "fetch", status: "running", started: now - 30, ended: null, rc: null, counts: null, restart: false, lines: ["fetching…"] };
+  document.getElementById("engineToggle").click();
+  await until(() => document.querySelectorAll("#wtParts .wt-part").length === 1);
+  const o = {};
+  const look = (sel) => { const el = document.querySelector(sel); if (!el) return null; const bar = el.querySelector(".wt-prog"), say = el.querySelector(".wt-prog-say");
+    return { bar: bar ? (bar.classList.contains("is-open") ? "open" : bar.querySelector("i").style.width) : null, say: say ? say.textContent : null,
+      btn: [...el.querySelectorAll("button")].map((b) => b.textContent + (b.disabled ? "(off)" : "")).join("|") }; };
+  job = Object.assign({}, base, { what: "the backbone BF16", which: { extra: "backbone", variant: "BF16" }, expect: 7.2e9, written: 3.6e9 });
+  await window.HeresyWeights.load(); o.extra = look('#wtExtras .wt-extra[data-extra="backbone"]'); o.extraPick = document.querySelector('#wtExtras select[data-wt-pick="backbone"]').value;
+  o.otherRows = document.querySelectorAll("#wtParts .wt-prog").length + document.querySelectorAll('#wtExtras .wt-extra[data-extra="trainer"] .wt-prog').length;
+  job = Object.assign({}, base, { what: "the LoRAs", which: { part: "loras" }, expect: 2.3e9, written: 1.15e9 });
+  await window.HeresyWeights.load(); o.part = look('#wtParts .wt-part[data-part="loras"]'); o.partGoing = document.querySelector('#wtParts .wt-part[data-part="loras"]').classList.contains("is-going");
+  job = Object.assign({}, base, { what: "what is missing", which: { part: "missing" }, expect: null, written: 5e8 });
+  await window.HeresyWeights.load(); o.top = look("#wtProg"); o.topShown = !document.getElementById("wtProg").hidden; o.all = document.getElementById("wtFetch").textContent;
+  job = Object.assign({}, base, { status: "done", ended: now, rc: 0, counts: { here: 3, unknown: 0, differs: 0, fetched: 1, missing: 0, failed: 0 }, what: "what is missing", which: { part: "missing" } });
+  await window.HeresyWeights.load(); o.after = { top: !document.getElementById("wtProg").hidden, bars: document.querySelectorAll("#modelsCard .wt-prog").length, all: document.getElementById("wtFetch").textContent };
+  window.fetch = real;
+  document.getElementById("engineToggle").click();
+  await until(() => document.getElementById("view-engine").classList.contains("is-hidden"));
+  await wait(200);
+  return o; })()`);
+check("an extra being fetched: its button says Fetching…, its variant stays picked, a bar under its row half full with «3.6 GB of about 7.2 GB · 30 s · 50 %»; no other row has one",
+  !!fp02.extra && fp02.extra.btn === "Fetching…(off)" && fp02.extra.bar === "50%" && fp02.extra.say === "Fetching… 3.6 GB of about 7.2 GB · 30 s · 50 %" && fp02.extraPick === "BF16" && fp02.otherRows === 0,
+  JSON.stringify({ extra: fp02.extra, pick: fp02.extraPick, others: fp02.otherRows }));
+check("  a part being fetched: the same at its own row, the row lit; «what is missing» under the card's first line, striped (its size is no one number), its button Fetching…; gone when the run is over",
+  !!fp02.part && fp02.partGoing && fp02.part.bar === "50%" && /^Fetching… 1\.1 GB of about 2\.3 GB · 30 s · 50 %$/.test(fp02.part.say || "") &&
+  fp02.topShown && fp02.top.bar === "open" && /^Fetching… 500 MB · 30 s$/.test(fp02.top.say || "") && fp02.all === "Fetching…" &&
+  !fp02.after.top && fp02.after.bars === 0 && fp02.after.all === "Fetch what is missing", JSON.stringify({ part: fp02.part, top: fp02.top, all: fp02.all, after: fp02.after }));
+
+// HERESY 1169 · 1304 (Viktor 10.10.2026: «Давай допишем при самом старте новой Студии сканирование устройств и выбор оптимальных
+// настроек для YuE2 BF16/кванта и для модели генерации обложек»)
+section("the machine scanned: what suits it offered in one window, set at a word; asked once, never by itself in a test browser");
+const ms04 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, posted = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.machineScan", "yue2.artPainter", "yue2.memPreset"], was = keys.map((k) => localStorage.getItem(k));
+  const o = { atBoot: !!document.querySelector(".hd-back.is-on:not(.is-leaving)"), keptAtBoot: localStorage.getItem("yue2.machineScan") };
+  let machine = null;
+  window.fetch = (u, opts) => { u = String(u);
+    if (u.startsWith("/lab/machine")) return json(machine);
+    if (u === "/settings" && opts && opts.method === "POST") posted.push(JSON.parse(opts.body));
+    return real(u, opts); };
+  const answer = async (yes) => { const d = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+    const text = d ? ((d.querySelector(".hd-title") || {}).textContent || "") + " / " + ((d.querySelector(".hd-body") || {}).textContent || "") : null;
+    const btns = d ? [...d.querySelectorAll(".hd-acts button, .hd-yes, .hd-no")].map((b) => b.textContent) : [];
+    if (d) d.querySelector(yes ? ".hd-yes" : ".hd-no").click(); return { text, btns }; };
+  // a laptop: a 16 GB Quadro RTX 5000 (Turing, compute 7.5: no BF16 tensor cores), Krea 2 Muse Q4 here
+  machine = { cards: [{ index: 0, name: "Quadro RTX 5000", total_mb: 16384, compute: "7.5", limit_mb: null, bf16_cores: false }], studio: 0, room_mb: 16384,
+              painter: { suggest: "krea2-q4", ready: { "krea2-q4": true, "krea2-q8": false, sdxl: false }, fits: ["krea2-q4", "sdxl"] } };
+  let p = window.ruachMachineScan(true); o.laptop = await answer(true); await p; await wait(300);
+  o.laptopPosted = posted.slice(); o.painter = localStorage.getItem("yue2.artPainter"); o.kept = JSON.parse(localStorage.getItem("yue2.machineScan") || "null");
+  o.preset = localStorage.getItem("yue2.memPreset"); o.toasts = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /^Set for this machine/.test(t));
+  // an Ampere card of 12 GB with its BF16: offered, «Not now» sets nothing
+  posted.length = 0;
+  machine = { cards: [{ index: 0, name: "NVIDIA GeForce RTX 3060", total_mb: 12288, compute: "8.6", limit_mb: null, bf16_cores: true }], studio: 0, room_mb: 12288,
+              painter: { suggest: "", ready: {}, fits: [] } };
+  p = window.ruachMachineScan(true); o.ampere = await answer(false); await p; await wait(200);
+  o.amperePosted = posted.slice(); o.kept2 = JSON.parse(localStorage.getItem("yue2.machineScan") || "null");
+  // no card at all
+  machine = { cards: [], error: "nvidia-smi did not answer: [Errno 2] No such file or directory: 'nvidia-smi'" };
+  await window.ruachMachineScan(true); await wait(200);
+  o.none = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /cards could not be read/.test(t)).length;
+  o.scanBtn = !!document.getElementById("scanMachine") && document.getElementById("scanMachine").textContent;
+  window.fetch = real;
+  if (o.laptopPosted.length) await real("/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "BF16" }) });
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await wait(200);
+  return o; })()`);
+check("a test browser is not asked at its start; Engine → Compute has «Scan the machine»",
+  !ms04.atBoot && ms04.keptAtBoot === null && ms04.scanBtn === "Scan the machine", JSON.stringify({ atBoot: ms04.atBoot, kept: ms04.keptAtBoot, btn: ms04.scanBtn }));
+check("  a 16 GB Turing laptop: its card said, Q8_0 offered (no BF16 tensor cores), the whole context with tiles of 512, Krea 2 Muse Q4; «Set them» sets the backbone, Auto and the painter, kept once",
+  /GPU0 · Quadro RTX 5000 · 16\.0 GB \(compute 7\.5\)/.test(ms04.laptop.text || "") && /the backbone Q8_0: compute 7\.5 has no BF16 tensor cores/.test(ms04.laptop.text || "") &&
+  /the whole context, VAE tiles 512 \(Auto for 16\.0 GB\)/.test(ms04.laptop.text || "") && /artwork: Krea 2 Muse Q4 \(12\.6 GB at its peak\)/.test(ms04.laptop.text || "") &&
+  ms04.laptop.btns.indexOf("Set them") >= 0 && ms04.laptop.btns.indexOf("Not now") >= 0 && ms04.laptopPosted.length === 1 && ms04.laptopPosted[0].model === "Q8_0" &&
+  ms04.painter === "krea2-q4" && ms04.preset === "auto" && !!ms04.kept && ms04.kept.set === true && ms04.kept.model === "Q8_0" && ms04.toasts.length === 1,
+  JSON.stringify({ laptop: ms04.laptop, posted: ms04.laptopPosted, painter: ms04.painter, preset: ms04.preset, kept: ms04.kept, toasts: ms04.toasts }));
+check("  a 12 GB Ampere card: BF16 with a context of 16 384 offered, no painter fits said; «Not now» sends nothing and is kept; no cards: said",
+  /the backbone BF16(?![:\w])/.test(ms04.ampere.text || "") && /context 16,384 rows, VAE tiles 512 \(Auto for 12\.0 GB\)/.test(ms04.ampere.text || "") &&
+  /no painter fits on this machine yet/.test(ms04.ampere.text || "") && ms04.amperePosted.length === 0 && !!ms04.kept2 && ms04.kept2.set === false && ms04.none === 1,
+  JSON.stringify({ ampere: ms04.ampere, posted: ms04.amperePosted, kept2: ms04.kept2, none: ms04.none }));
+
+// HERESY 1169 · 1305 (Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести со всем возможным ахуем»)
+section("the Artist: a reference picture to paint from (pasted, chosen, the stage's), its strength kept, sent with Draw and Again");
+const rf05 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.arPrompt", "yue2.arShapes", "yue2.arRefStr"], was = keys.map((k) => localStorage.getItem(k));
+  const now = Date.now() / 1000;
+  const runs = [{ id: "20261010-050000-abcd", prompt: "a stone church", shapes: ["1:1"], seed: 7, count: 1, painter: "krea2-q4", created: now - 60, status: "done", of: 1,
+    ref: "ref.png", strength: 0.76, ref_from: "a picture of one's own", took: 30,
+    pictures: [{ n: 1, shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg", ref: 0.76 }] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b);
+      return json({ id: "20261010-050100-beef", prompt: b.prompt, shapes: b.shapes, seed: 9, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [] }); }   // done at once: the room would show a queued run on its stage, and Draw be Stop
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => document.getElementById("arRef") && !document.getElementById("view-artist").classList.contains("is-hidden"), 4000);
+  await wait(400);
+  const o = { empty: !document.getElementById("arRefEmpty").hidden && document.getElementById("arRefOn").hidden };
+  const prompt = document.getElementById("arPrompt"); o.promptWas = prompt.value; prompt.value = "two puppets by a fire, oils"; prompt.dispatchEvent(new Event("input", { bubbles: true }));
+  // a pasted picture: a 1×1 PNG
+  const png = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0));
+  const dt = new DataTransfer(); dt.items.add(new File([png], "pasted.png", { type: "image/png" }));
+  document.getElementById("arPrompt").dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+  await until(() => window.HeresyArtistRef.get(), 3000);
+  const r1 = window.HeresyArtistRef.get();
+  o.pasted = r1 ? { name: r1.name, data: /^data:image\\/png;base64,/.test(r1.data || "") } : null;
+  o.on = !document.getElementById("arRefOn").hidden && /^data:image\\/png/.test(document.getElementById("arRefImg").src);
+  const s = document.getElementById("arRefStr"); s.value = "0.75"; s.dispatchEvent(new Event("input", { bubbles: true }));
+  o.say = document.getElementById("arRefSay").textContent; o.kept = localStorage.getItem("yue2.arRefStr");
+  document.getElementById("arDraw").click();
+  await until(() => sent.length >= 1, 3000); await wait(300);
+  o.first = sent[0] ? { ref: typeof sent[0].ref === "string" && /^data:image\\/png;base64,/.test(sent[0].ref), strength: sent[0].strength, prompt: sent[0].prompt } : null;
+  // a wrong file is refused aloud
+  window.HeresyArtistRef.fromFile(new File(["x"], "notes.txt", { type: "text/plain" })); await wait(150);
+  o.refused = [...document.querySelectorAll("#toasts .toast")].some((t) => /A reference is a PNG, JPEG or WebP picture/.test(t.textContent));
+  // ✕: from the noise again; Draw sends no reference
+  document.getElementById("arRefX").click(); await wait(100);
+  o.cleared = !window.HeresyArtistRef.get() && !document.getElementById("arRefEmpty").hidden;
+  // the stage's picture «As reference», then Draw sends the run and the picture
+  window.HeresyArtistRef.set({ id: runs[0].id, file: runs[0].pictures[0].file, url: "/lab/artist/file?id=" + runs[0].id + "&file=thumbs/01-1x1-s7.jpg" }, true);
+  const stageBtn = document.querySelector('#arStage [data-stage="ref"]');
+  o.stageBtn = !!stageBtn && stageBtn.textContent;
+  await until(() => !document.getElementById("arDraw").disabled, 3000);
+  document.getElementById("arDraw").click();
+  await until(() => sent.length >= 2, 3000); await wait(300);
+  o.second = sent[1] ? { ref: sent[1].ref, strength: sent[1].strength } : null;
+  // «Again» on a run painted from a reference sends its own
+  window.HeresyArtistRef.set(null, true);
+  const lookWas = (document.querySelector("#arBar [data-look].is-on") || {}).dataset;
+  const runsLook = document.querySelector('#arBar [data-look="runs"]'); if (runsLook) { runsLook.click(); await wait(200); }   // the run cards, not the gallery
+  const again = await until(() => document.querySelector('#arRuns .ar-run[data-id="' + runs[0].id + '"] [data-act="again"]:not([disabled])'), 3000);
+  if (again) again.click();
+  await until(() => sent.length >= 3, 3000); await wait(200);
+  o.third = sent[2] ? { ref: sent[2].ref, strength: sent[2].strength } : null;
+  o.meta = (document.querySelector("#arStage .ar-stage-meta") || {}).textContent || "";
+  if (lookWas && lookWas.look && lookWas.look !== "runs") { const b0 = document.querySelector('#arBar [data-look="' + lookWas.look + '"]'); if (b0) b0.click(); }
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  prompt.value = o.promptWas; prompt.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("a picture pasted in the room becomes the reference (its place shows it); the strength's label follows and is kept; Draw sends the picture and the strength",
+  rf05.empty && !!rf05.pasted && rf05.pasted.name === "pasted.png" && rf05.pasted.data && rf05.on && rf05.say === "0.75" && rf05.kept === "0.75" &&
+  !!rf05.first && rf05.first.ref && rf05.first.strength === 0.75, JSON.stringify(rf05));
+check("  a file that is not a picture is refused aloud; ✕ paints from the noise again",
+  rf05.refused && rf05.cleared, JSON.stringify({ refused: rf05.refused, cleared: rf05.cleared }));
+check("  the stage offers «As reference»; a picture of a run sent as its run and file; «Again» on a run painted from one sends its own and its strength; the stage says «from a reference · 0.76»",
+  rf05.stageBtn === "As reference" && !!rf05.second && rf05.second.ref && rf05.second.ref.id === "20261010-050000-abcd" && rf05.second.ref.file === "01-1x1-s7.png" &&
+  !!rf05.third && rf05.third.ref && rf05.third.ref.file === "ref.png" && rf05.third.strength === 0.76 && /from a reference · 0\.76/.test(rf05.meta),
+  JSON.stringify({ stageBtn: rf05.stageBtn, second: rf05.second, third: rf05.third, meta: rf05.meta }));
+
+// HERESY 1169 · 1306 (Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести со всем возможным ахуем»)
+section("the Artist: a mask on the reference (inpaint): painted over the page, kept, sent with Draw, the run's own with Again");
+const mk06 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.arPrompt", "yue2.arBrush"], was = keys.map((k) => localStorage.getItem(k));
+  const now = Date.now() / 1000;
+  const runs = [{ id: "20261010-051000-cafe", prompt: "a window", shapes: ["1:1"], seed: 3, count: 1, painter: "krea2-q4", created: now - 30, status: "done", of: 1,
+    ref: "ref.png", mask: "mask.png", masked: true, strength: 1.0, took: 40,
+    pictures: [{ n: 1, shape: "1:1", seed: 3, w: 1280, h: 1280, kept: true, file: "01-1x1-s3.png", thumb: "thumbs/01-1x1-s3.jpg", ref: 1.0, masked: true }] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b);
+      return json({ id: "20261010-051100-f00d", prompt: b.prompt, shapes: b.shapes, seed: 5, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [] }); }
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(400);
+  const prompt = document.getElementById("arPrompt"), promptWas = prompt.value; prompt.value = "a stained glass window"; prompt.dispatchEvent(new Event("input", { bubbles: true }));
+  const c = document.createElement("canvas"); c.width = 256; c.height = 256; const x = c.getContext("2d"); x.fillStyle = "#3a6"; x.fillRect(0, 0, 256, 256);
+  window.HeresyArtistRef.set({ data: c.toDataURL("image/png"), name: "green.png" }, true);
+  const o = { btn0: document.getElementById("arMaskOpen").textContent };
+  document.getElementById("arMaskOpen").click();
+  const ed = await until(() => document.querySelector(".ar-mask") && window.HeresyArtistRef.editor(), 3000);
+  const cv = document.querySelector(".ar-mask .ar-mk-paint");
+  o.editor = !!ed && { w: cv.width, h: cv.height, tools: [...document.querySelectorAll(".ar-mask [data-mk]")].map((b) => b.dataset.mk).join() };
+  if (ed) { ed.paint(cv.width / 2, cv.height / 2, 30); document.querySelector('.ar-mask [data-mk="done"]').click(); }
+  await wait(300);
+  const m = window.HeresyArtistRef.mask();
+  o.mask = m ? { png: /^data:image\\/png;base64,/.test(m.data), view: !!m.view } : null;
+  o.btn1 = document.getElementById("arMaskOpen").textContent; o.thumb = !document.getElementById("arRefMask").hidden; o.closed = !document.querySelector(".ar-mask");
+  // the mask at the picture's own size: white in its middle, black at its corner
+  if (m) { const im = new Image(); await new Promise((ok) => { im.onload = ok; im.src = m.data; });
+    const t = document.createElement("canvas"); t.width = im.width; t.height = im.height; const tx = t.getContext("2d"); tx.drawImage(im, 0, 0);
+    o.size = [im.width, im.height]; o.mid = tx.getImageData(128, 128, 1, 1).data[0]; o.corner = tx.getImageData(2, 2, 1, 1).data[0]; }
+  document.getElementById("arDraw").click();
+  await until(() => sent.length >= 1, 3000); await wait(200);
+  o.sent = sent[0] ? { ref: /^data:image\\/png/.test(sent[0].ref || ""), mask: /^data:image\\/png/.test(sent[0].mask || "") } : null;
+  // the editor again: the kept mask is back in red; «No mask» drops it
+  document.getElementById("arMaskOpen").click();
+  await until(() => document.querySelector(".ar-mask"), 3000); await wait(400);
+  const cv2 = document.querySelector(".ar-mask .ar-mk-paint");
+  o.back = cv2 ? cv2.getContext("2d").getImageData(cv2.width / 2, cv2.height / 2, 1, 1).data[3] > 0 : null;
+  document.querySelector('.ar-mask [data-mk="none"]').click(); await wait(200);
+  o.dropped = !window.HeresyArtistRef.mask() && document.getElementById("arMaskOpen").textContent === "Mask…";
+  // a new reference drops a mask: painted again, then another picture
+  document.getElementById("arMaskOpen").click(); const ed2 = await until(() => document.querySelector(".ar-mask") && window.HeresyArtistRef.editor(), 3000);
+  if (ed2) { ed2.paint(40, 40, 20); document.querySelector('.ar-mask [data-mk="done"]').click(); }
+  await wait(200);
+  const had = !!window.HeresyArtistRef.mask();
+  window.HeresyArtistRef.set({ data: c.toDataURL("image/png"), name: "again.png" }, true);
+  o.newRef = had && !window.HeresyArtistRef.mask();
+  // «Again» on a masked run sends the run's own mask
+  window.HeresyArtistRef.set(null, true);
+  const runsLook = document.querySelector('#arBar [data-look="runs"]'); if (runsLook) { runsLook.click(); await wait(200); }
+  const again = await until(() => document.querySelector('#arRuns .ar-run[data-id="' + runs[0].id + '"] [data-act="again"]:not([disabled])'), 3000);
+  if (again) again.click();
+  await until(() => sent.length >= 2, 3000); await wait(200);
+  o.again = sent[1] ? { ref: sent[1].ref, mask: sent[1].mask } : null;
+  o.meta = (document.querySelector("#arStage .ar-stage-meta") || {}).textContent || "";
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  prompt.value = promptWas; prompt.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("«Mask…» opens the picture over the page (Paint, Erase, the brush, Invert, Clear, No mask, Done); a stroke and Done keep a PNG at the picture's own size, white where painted, the button «Mask ✓», the thumbnail red",
+  mk06.btn0 === "Mask…" && !!mk06.editor && /paint,erase,invert,clear,none,done/.test(mk06.editor.tools) && !!mk06.mask && mk06.mask.png && mk06.btn1 === "Mask ✓" && mk06.thumb && mk06.closed &&
+  JSON.stringify(mk06.size) === "[256,256]" && mk06.mid === 255 && mk06.corner === 0, JSON.stringify(mk06));
+check("  Draw sends the picture and its mask; the editor shows the kept mask again, «No mask» drops it; a new reference drops a mask",
+  !!mk06.sent && mk06.sent.ref && mk06.sent.mask && mk06.back === true && mk06.dropped && mk06.newRef, JSON.stringify({ sent: mk06.sent, back: mk06.back, dropped: mk06.dropped, newRef: mk06.newRef }));
+check("  «Again» on a masked run sends the run's own picture and mask; the stage says «masked»",
+  !!mk06.again && mk06.again.ref && mk06.again.ref.file === "ref.png" && mk06.again.mask && mk06.again.mask.file === "mask.png" && mk06.again.mask.id === "20261010-051000-cafe" &&
+  /from a reference · 1\.00 · masked/.test(mk06.meta), JSON.stringify({ again: mk06.again, meta: mk06.meta }));
+
+// HERESY 1169 · 1307 (Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести со всем возможным ахуем»)
+section("the Artist: «Paint around it» (outpaint): the strength gives way, Draw and Again send it, the stage says so");
+const fp07 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000;
+  const runs = [{ id: "20261010-052000-0a0b", prompt: "a cabin", shapes: ["16:9"], seed: 11, count: 1, painter: "krea2-q4", created: now - 30, status: "done", of: 1,
+    ref: "ref.jpg", strength: 1.0, fit: true, took: 48,
+    pictures: [{ n: 1, shape: "16:9", seed: 11, w: 1920, h: 1080, kept: true, file: "01-16x9-s11.png", thumb: "thumbs/01-16x9-s11.jpg", ref: 1.0, fit: true }] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b);
+      return json({ id: "20261010-052100-0c0d", prompt: b.prompt, shapes: b.shapes, seed: 12, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [] }); }
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(400);
+  const prompt = document.getElementById("arPrompt"), promptWas = prompt.value; prompt.value = "a cabin around them"; prompt.dispatchEvent(new Event("input", { bubbles: true }));
+  const c = document.createElement("canvas"); c.width = 64; c.height = 64; c.getContext("2d").fillRect(0, 0, 64, 64);
+  window.HeresyArtistRef.set({ data: c.toDataURL("image/png"), name: "black.png" }, true);
+  const fit = document.getElementById("arRefFit");
+  const o = { say0: document.getElementById("arRefSay").textContent };
+  fit.click(); await wait(100);
+  o.say1 = document.getElementById("arRefSay").textContent; o.cls = document.getElementById("arRef").classList.contains("is-fit");
+  document.getElementById("arDraw").click();
+  await until(() => sent.length >= 1, 3000); await wait(200);
+  o.first = sent[0] ? { fit: sent[0].fit, ref: !!sent[0].ref } : null;
+  fit.click(); await wait(100);
+  o.say2 = document.getElementById("arRefSay").textContent;
+  window.HeresyArtistRef.set(null, true);
+  const runsLook = document.querySelector('#arBar [data-look="runs"]'); if (runsLook) { runsLook.click(); await wait(200); }
+  const again = await until(() => document.querySelector('#arRuns .ar-run[data-id="' + runs[0].id + '"] [data-act="again"]:not([disabled])'), 3000);
+  if (again) again.click();
+  await until(() => sent.length >= 2, 3000); await wait(200);
+  o.again = sent[1] ? { fit: sent[1].fit, ref: sent[1].ref } : null;
+  o.meta = (document.querySelector("#arStage .ar-stage-meta") || {}).textContent || "";
+  window.fetch = real;
+  prompt.value = promptWas; prompt.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("«Paint around it»: the strength's label gives way («the edges painted anew») and comes back; Draw sends it; «Again» on a run painted around sends it again; the stage says «painted around»",
+  /^\d\.\d\d$/.test(fp07.say0) && fp07.say1 === "the edges painted anew" && fp07.cls && !!fp07.first && fp07.first.fit === true && fp07.first.ref && /^\d\.\d\d$/.test(fp07.say2) &&
+  !!fp07.again && fp07.again.fit === true && fp07.again.ref && fp07.again.ref.file === "ref.jpg" && /from a reference · painted around/.test(fp07.meta), JSON.stringify(fp07));
+
+// HERESY 1169 · 1308 (Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести со всем возможным ахуем»)
+section("the Artist: two pictures compared under one divider, or side by side, swapped; Esc while picking gives up");
+const cp08 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000;
+  const pic = (n, seed) => ({ n, shape: "1:1", seed, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + seed + ".png", thumb: "thumbs/0" + n + "-1x1-s" + seed + ".jpg" });
+  const runs = [{ id: "20261010-053000-1111", prompt: "a harbour", shapes: ["1:1"], seed: 21, count: 2, painter: "krea2-q4", created: now - 20, status: "done", of: 2, took: 70,
+    pictures: [pic(1, 21), pic(2, 22)] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
+    return real(u, o); };
+  const key = (k, shift) => document.dispatchEvent(new KeyboardEvent("keydown", { key: k, shiftKey: !!shift, bubbles: true, cancelable: true }));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const runsLook = document.querySelector('#arBar [data-look="runs"]'); if (runsLook) { runsLook.click(); await wait(300); }
+  const thumb = (i) => document.querySelector('#arRuns .ar-run[data-id="' + runs[0].id + '"] .ar-pic[data-i="' + i + '"] .ar-thumb');
+  await until(() => thumb(0), 3000);
+  thumb(0).click(); await wait(200);
+  const o = {};
+  const cmpBtn = await until(() => document.querySelector('#arStage [data-stage="compare"]'), 3000);
+  o.btn = cmpBtn && cmpBtn.textContent;
+  if (cmpBtn) cmpBtn.click(); await wait(100);
+  o.picking = window.HeresyArtistRef.picking() && document.body.classList.contains("ar-cmp-picking");
+  key("Escape"); await wait(100);
+  o.gaveUp = !window.HeresyArtistRef.picking() && !document.body.classList.contains("ar-cmp-picking");
+  document.querySelector('#arStage [data-stage="compare"]').click(); await wait(100);
+  thumb(1).click();
+  const c = await until(() => document.querySelector(".ar-cmp") && window.HeresyArtistRef.compare(), 3000);
+  o.open = !!c;
+  if (c) {
+    o.imgs = [...document.querySelectorAll(".ar-cmp img")].map((i) => decodeURIComponent(i.src).split("file=")[1]);
+    o.labs = [...document.querySelectorAll(".ar-cmp-lab")].map((l) => l.textContent.split(" · ").slice(0, 3).join(" · "));
+    o.x0 = c.x(); o.clip0 = document.querySelector(".ar-cmp-b").style.clipPath;
+    key("ArrowLeft"); o.x1 = +c.x().toFixed(2); key("ArrowRight", true); o.x2 = +c.x().toFixed(2);
+    key("s"); await wait(50); o.side = c.side() && document.querySelector(".ar-cmp").classList.contains("is-side");
+    key("x"); await wait(50); o.swapped = document.querySelector(".ar-cmp-lab.is-a").textContent.indexOf("seed 22") >= 0;
+    key("Escape"); await wait(100);
+    o.closed = !document.querySelector(".ar-cmp");
+  }
+  window.fetch = real;
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the stage's «Compare…» waits for the other picture (Esc gives up); picked, the two lie under a divider at the middle, B clipped, labelled A and B with shape and seed",
+  cp08.btn === "Compare…" && cp08.picking && cp08.gaveUp && cp08.open && JSON.stringify(cp08.imgs) === '["01-1x1-s21.png","02-1x1-s22.png"]' &&
+  cp08.labs[0] === "A · 1:1 · seed 21" && cp08.labs[1] === "B · 1:1 · seed 22" && cp08.x0 === 0.5 && /inset\(0(px)? 0(px)? 0(px)? 50%\)/.test(cp08.clip0), JSON.stringify(cp08));
+check("  ← moves the divider by a fiftieth, Shift+→ by a tenth; S lays them side by side, X swaps them, Esc closes",
+  cp08.x1 === 0.48 && cp08.x2 === 0.58 && cp08.side && cp08.swapped && cp08.closed, JSON.stringify({ x1: cp08.x1, x2: cp08.x2, side: cp08.side, swapped: cp08.swapped, closed: cp08.closed }));
+
+// HERESY 1169 · 1309 (Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести со всем возможным ахуем»)
+section("the Artist: the take's cover as the reference at a click (hidden without one)");
+const tk09 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const c = document.createElement("canvas"); c.width = 32; c.height = 32; c.getContext("2d").fillRect(0, 0, 32, 32);
+  const jpg = await new Promise((ok) => c.toBlob(ok, "image/jpeg"));
+  let arts = {};
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/arts")) return Promise.resolve(new Response(JSON.stringify({ arts, unseen: [], credits: {} }), { headers: { "Content-Type": "application/json" } }));
+    if (u.startsWith("/lab/art?name=zz-take-1309")) return Promise.resolve(new Response(jpg, { headers: { "Content-Type": "image/jpeg" } }));
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  window.HeresyArtistRef.set(null, true);
+  const btn = document.getElementById("arRefTake");
+  window.HeresyArtist.setTake({ name: "zz-take-1309", label: "Zz take" }); await wait(100);
+  const o = { noCover: btn.hidden && getComputedStyle(btn).display === "none" };
+  arts = { "zz-take-1309": 7 }; await window.HeresyArt.refresh(); window.HeresyArtist.setTake({ name: "zz-take-1309", label: "Zz take" }); await wait(100);
+  o.shown = !btn.hidden && getComputedStyle(btn).display !== "none" && btn.textContent;
+  btn.click();
+  await until(() => window.HeresyArtistRef.get(), 3000);
+  const r = window.HeresyArtistRef.get();
+  o.ref = r ? { name: r.name, data: /^data:image\\/jpeg;base64,/.test(r.data || "") } : null;
+  window.HeresyArtistRef.set(null, true);
+  arts = {}; await window.HeresyArt.refresh(); window.HeresyArtist.setTake(null);
+  window.fetch = real;
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("no cover: no button; a take with a cover: «The take's cover», and a click makes it the reference (its name, the picture read)",
+  tk09.noCover && tk09.shown === "The take's cover" && !!tk09.ref && tk09.ref.name === "Zz take.jpg" && tk09.ref.data, JSON.stringify(tk09));
+
+// HERESY 1169 · 1310 (Viktor's list for the Artist, 08.10.2026: «a trash list in the room»)
+section("the Artist's library: a Trash look with each trashed run's pictures and Restore");
+const tr10 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, restored = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000;
+  const gone = { id: "20261009-201000-dead", prompt: "a red violin on snow", shapes: ["1:1"], seed: 5, count: 1, painter: "krea2-q4", created: now - 86400, status: "done", of: 1,
+    pictures: [{ n: 1, shape: "1:1", seed: 5, w: 1280, h: 1280, kept: true, file: "01-1x1-s5.png", thumb: "thumbs/01-1x1-s5.jpg" }] };
+  let runs = [], trash = [gone];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/trashed")) return json({ runs: trash });
+    if (u.startsWith("/lab/artist/restore")) { const b = JSON.parse(o.body); restored.push(b.id); runs = [gone]; trash = []; return json({ restored: b.id }); }
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([255, 216, 255])], { type: "image/jpeg" })));
+    return real(u, o); };
+  const lookWas = localStorage.getItem("yue2.arLook");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.reload(); await wait(200);
+  const tb = document.querySelector('#arBar [data-look="trash"]');
+  const o = { btn: tb && tb.textContent };
+  tb.click();
+  const row = await until(() => document.querySelector('#arRuns .ar-trun[data-tid="' + gone.id + '"]'), 3000);
+  o.row = row ? { text: row.querySelector(".ar-trun-head").textContent, img: (row.querySelector("img") || {}).getAttribute ? row.querySelector("img").getAttribute("src") : "", total: document.getElementById("arTotal").textContent } : null;
+  o.kept = localStorage.getItem("yue2.arLook");
+  row.querySelector("[data-restore]").click();
+  await until(() => restored.length, 3000); await wait(400);
+  o.restored = restored.slice(); o.after = document.getElementById("arRuns").textContent;
+  document.querySelector('#arBar [data-look="runs"]').click(); await wait(200);
+  o.backInRuns = !!document.querySelector('#arRuns .ar-run[data-id="' + gone.id + '"]');
+  window.fetch = real;
+  if (lookWas === null) localStorage.removeItem("yue2.arLook"); else localStorage.setItem("yue2.arLook", lookWas);
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("Trash beside Runs and Gallery lists each trashed run (when, painter, its pictures small from the trash, its prompt); the look is not kept; Restore brings it back among the runs",
+  tr10.btn === "Trash" && !!tr10.row && /1 picture/.test(tr10.row.text) && /a red violin on snow/.test(tr10.row.text) && /&trash=1$/.test(tr10.row.img) && /1 run in the trash/.test(tr10.row.total) &&
+  tr10.kept !== "trash" && JSON.stringify(tr10.restored) === '["20261009-201000-dead"]' && /The trash is empty/.test(tr10.after) && tr10.backInRuns, JSON.stringify(tr10));
+
+// HERESY 1169 · 1311 (TODO's «A/B in one window: the original and each version of a take switched while the music plays on at the same
+// second, the disliked hidden (SUNO's Remaster: Original | #4 | #1)»)
+section("the Refiner's Compare all: the take's family (the same music in other takes) beside its files, the disliked left out");
+const fm11 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = await fn(); if (v) return v; await wait(50); } return null; };
+  const lib = (await (await fetch("/library")).json()).takes || [];
+  const base = lib.filter((t) => !t.parent)[0];
+  const o = { base: base && base.name };
+  if (!base) return o;
+  const post = (body) => fetch("/synth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+  const make = async (title) => { const j = await post({ title, style: "test", lyrics: "[Verse]\\nla", parent: base.name, duration: 6, output_format: "wav16" });
+    const st = await until(async () => { const s = await (await fetch("/job?id=" + j.id)).json(); return s.status === "done" ? s : null; }, 20000);
+    return st && (st.takes || [])[0]; };
+  const kid = await make("zz family 1311"), bad = await make("zz family 1311 disliked");
+  o.made = [kid, bad];
+  await window.ruachRefreshLibrary(); await wait(300);
+  const HC = window.HeresyCollection, rating = HC.rating;
+  HC.rating = (n) => (n === bad ? -1 : rating(n));          // the second disliked, as the Librarian would say it (no rating sent)
+  const fam = window.ruachFamily(base.name);
+  HC.rating = rating;
+  o.family = fam.map((t) => t.name);
+  o.group = (fam[0] || {}).group || "";
+  o.url = (fam[0] || {}).url || "";
+  return o; })()`);
+check("a take's family for Compare all: the take made from it is there with its listening address and «The same music», the disliked one left out",
+  !!fm11.base && fm11.made && fm11.made[0] && fm11.family.indexOf(fm11.made[0]) >= 0 && fm11.family.indexOf(fm11.made[1]) < 0 && fm11.family.indexOf(fm11.base) < 0 &&
+  /^The same music/.test(fm11.group) && /^\/library\/listen\?name=/.test(fm11.url), JSON.stringify(fm11));
+
+// HERESY 1169 · 1312 (Viktor's screenshot 10.10.2026: the buttons under the Artist's picture fell under the player on his 2K)
+section("the Artist's stage: the picture leaves room for its lines and buttons over the player");
+const was12 = await ev(`[innerWidth, innerHeight]`), fit12 = {};
+for (const [w12, h12] of [[2557, 1353], [1920, 1080]]) {
+  await send("Emulation.setDeviceMetricsOverride", { width: w12, height: h12, deviceScaleFactor: 1, mobile: false });
+  fit12[w12 + "x" + h12] = await ev(`(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, now = Date.now() / 1000;
+    const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+    const prompt = "A wooden puppet boy in an old workshop scratches his long sharp wooden nose; a painted hearth with a burning fire hangs on the wall behind him.\\nThe old carver sits by the canvas, his nose has torn the canvas through and the fire shows in the hole, warm light on the planks.\\nA caption painted across the bottom of the picture in big letters, the room lit only by the fire.";
+    const runs = [{ id: "20261010-020200-1312", prompt, shapes: ["1:1"], seed: 163278463, count: 1, painter: "krea2-q8", created: now - 20, status: "done", of: 1, took: 63, gpu: 1,
+      pictures: [{ n: 1, shape: "1:1", seed: 163278463, w: 1280, h: 1280, kept: true, file: "01-1x1-s163278463.png", thumb: "01-1x1-s163278463.png" }] }];
+    window.fetch = (u, o) => { u = String(u);
+      if (u.startsWith("/lab/artist/runs")) return Promise.resolve(new Response(JSON.stringify({ runs }), { headers: { "Content-Type": "application/json" } }));
+      return real(u, o); };
+    const lookWas = localStorage.getItem("yue2.arLook");
+    document.querySelector('.topbar [data-tab="artist"]').click();
+    await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+    await window.HeresyArtist.reload(); await wait(200);
+    const lk = document.querySelector('#arBar [data-look="runs"]'); if (lk) { lk.click(); await wait(200); }
+    const th = await until(() => document.querySelector('#arRuns .ar-pic[data-i="0"] .ar-thumb'), 3000);
+    if (th) th.click();
+    await until(() => document.querySelector("#arStage .ar-stage-acts"), 3000); await wait(300);
+    const box = document.getElementById("arStage"), acts = box.querySelector(".ar-stage-acts"), pic = box.querySelector(".ar-stage-pic"), bar = document.getElementById("playbar");
+    const o = { acts: acts ? Math.round(acts.getBoundingClientRect().bottom) : null, bar: Math.round(bar.getBoundingClientRect().top),
+      pic: pic ? Math.round(pic.getBoundingClientRect().height) : 0, picW: pic ? Math.round(pic.getBoundingClientRect().width) : 0, stageW: Math.round(box.getBoundingClientRect().width) };
+    window.fetch = real;
+    if (lookWas === null) localStorage.removeItem("yue2.arLook"); else localStorage.setItem("yue2.arLook", lookWas);
+    await window.HeresyArtist.reload();
+    document.querySelector('.topbar [data-tab="create"]').click();
+    await wait(300);
+    return o; })()`);
+}
+await send("Emulation.setDeviceMetricsOverride", { width: was12[0], height: was12[1], deviceScaleFactor: 1, mobile: false });
+check("2557×1353 and 1920×1080 with a three-line prompt: the row under the picture (To the form, As reference, Compare…) ends over the player; the picture no wider than the stage",
+  Object.values(fit12).every((m) => m.acts !== null && m.acts <= m.bar && m.pic >= 240 && m.picW <= m.stageW), JSON.stringify(fit12));
+
+// HERESY 1169 · 1314 (Viktor 10.10.2026: «♂ и ♀ сделай как svg — текстовые снова дают проблему со сдвигом»)
+section("the Trainer's male and female drawn (mars, venus), not the text signs; centred in their chips");
+const sx14 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const was = Object.keys(localStorage).filter((k) => /^yue2\\.tr/.test(k)).map((k) => [k, localStorage.getItem(k)]);
+  const voice = { median_hz: 117, voice: "male", register: "baritenor", mode: "speech", p10_hz: 92, p90_hz: 151, mid: "A#2" };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json({ raw: [{ name: "zz-raw-1314", tracks: 12, bytes: 1.2e8, voice }],
+      prepared: [{ name: "zz-set-1314", tracks: 12, seconds: 600, from: "zz-raw-1314", made: "2026-10-10" }], runs: [], gpus: [], own: {}, aitk_ready: false });
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+  const row = await until(() => document.querySelector('#trRaw [data-raw="zz-raw-1314"]'), 5000);
+  const o = { rowIco: !!(row && row.querySelector("svg.ui-mars.tr-sex")), setIco: !!document.querySelector("#trSets svg.ui-mars.tr-sex") };
+  if (row) row.click();
+  const male = await until(() => document.querySelector('#trVoice [data-voice-sex="male"]'), 3000), female = document.querySelector('#trVoice [data-voice-sex="female"]');
+  const mid = (el) => { const b = el.getBoundingClientRect(); return b.top + b.height / 2; };
+  o.chips = male && female ? { male: !!male.querySelector("svg.ui-mars"), female: !!female.querySelector("svg.ui-venus"), label: male.getAttribute("aria-label"),
+    off: Math.round(Math.abs(mid(male.querySelector("svg")) - mid(male)) * 10) / 10 } : null;
+  o.signs = /[\\u2640\\u2642]/.test(document.getElementById("view-train").textContent);
+  window.fetch = real;
+  Object.keys(localStorage).filter((k) => /^yue2\\.tr/.test(k)).forEach((k) => localStorage.removeItem(k));
+  was.forEach(([k, v]) => localStorage.setItem(k, v));
+  window.HeresyTrain.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the folder and the set made from it show the measured voice with mars drawn; the voice's chips are mars and venus drawn (named for the ear), centred; no ♂ ♀ text left in the room",
+  sx14.rowIco && sx14.setIco && !!sx14.chips && sx14.chips.male && sx14.chips.female && sx14.chips.label === "male" && sx14.chips.off <= 1.5 && !sx14.signs, JSON.stringify(sx14));
+
+// HERESY 1169 · 1315 (Viktor 10.10.2026, on Buratino: «секуционка очень скудная на волне»; «в красивом попапе текст данной секции»)
+section("the wave's sections from the lyrics' tags placed by ear, and the card with the section's words under the pointer");
+const ear15 = await ev(`(() => {
+  const lyrics = "[Intro]\\n[Verse 1]\\nFirst line here\\nSecond line here\\n[Instrumental Break]\\n[Chorus]\\nSing it loud\\nSing it again\\n(echo)\\n[Verse 2]\\nA line unheard\\nAnother unheard\\n[Chorus]\\nSing it loud\\nSing it again\\n[Outro]\\nNever sung one\\nNever sung two";
+  const row = (text, start, end, guessed) => ({ text, start, end, guessed: !!guessed, heard: guessed ? 0 : 1 });
+  const rows = [row("First line here", 10, 13), row("Second line here", 13, 16), row("Sing it loud", 24, 26), row("Sing it again", 26, 29),
+    row("A line unheard", 29, 33, true), row("Another unheard", 33, 37, true), row("Sing it loud", 37, 39), row("Sing it again", 39, 42),
+    row("Never sung one", 42, 44, true), row("Never sung two", 44, 46, true)];
+  const s = window.ruachEarSections(lyrics, rows);
+  return { got: s.map((x) => x.name + "@" + x.t + (x.unheard ? "?" : "")).join(","), lines: s[1] && s[1].lines.join("|"), rows: s[1] && s[1].rows.map((r) => r.k).join(""),
+    parts: window.ruachLyricParts(lyrics).length };
+})()`);
+const ear15b = await ev(`(() => {
+  const row = (text, start, end, guessed) => ({ text, start, end, guessed: !!guessed });
+  const s = window.ruachEarSections("[Intro]\\n[Verse 1]\\nOpen guessed\\nHeard one\\nHeard two", [row("Open guessed", 0, 8, true), row("Heard one", 20, 23), row("Heard two", 23, 26)]);
+  return s.map((x) => x.name + "@" + x.t).join(","); })()`);
+check("a section whose first line was only guessed begins at its first line heard less the median heard line for each guessed one before it (not at 0:00 over the intro)",
+  ear15b === "Intro@0,Verse 1@17", ear15b);
+check("the lyrics' own sections, each where its first line is heard; the instrumental between where the verse ends and the chorus begins; a section all guessed in the middle kept and marked; the unsung end (all guessed after the last line heard) left out",
+  ear15.got === "Intro@0,Verse 1@10,Instrumental Break@16,Chorus@24,Verse 2@29?,Chorus@37" && ear15.lines === "First line here|Second line here" && ear15.rows === "01" && ear15.parts === 7, JSON.stringify(ear15));
+await ev(`(() => { const a = document.getElementById("audio"); a.pause(); a.muted = true; document.querySelector('#tabs [data-tab="create"]').click();
+  if (!document.getElementById("playbarTitle").textContent || document.getElementById("playbarTitle").textContent === "Nothing loaded") {
+    const c = [...document.querySelectorAll("#libList .take[data-name]:not(.is-running-row)")].find((x) => !/nachtzug/.test(x.dataset.name)); if (c) c.click(); }
+  return true; })()`);
+await waitFor(`isFinite(document.getElementById("audio").duration) && document.getElementById("audio").duration > 0.2`, 6000, 100);
+const pop15 = await ev(`(() => {
+  const a = document.getElementById("audio"), w = document.getElementById("wave"), d = a.duration;
+  window.ruachWaveSections([{ t: 0, name: "Intro", lines: [], rows: [] },
+    { t: d * 0.4, name: "Chorus", lines: ["Sing it loud", "Sing it again"], rows: [{ k: 0, start: d * 0.4, end: d * 0.55 }, { k: 1, start: d * 0.55, end: d * 0.7 }] }], true);
+  const r = w.getBoundingClientRect();
+  return { x: Math.round(r.left + r.width * 0.5), y: Math.round(r.top + r.height / 2), top: Math.round(r.top) }; })()`);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: pop15.x, y: pop15.y });
+await sleep(150);
+const pop15b = await ev(`(() => { const p = document.querySelector(".wave-pop"); if (!p) return null; const b = p.getBoundingClientRect();
+  return { shown: !p.hidden, head: p.querySelector(".wave-pop-head").textContent, lines: [...p.querySelectorAll(".wave-pop-lines p")].map((x) => x.textContent).join("|"),
+    now: (p.querySelector(".wave-pop-lines p.is-now") || {}).textContent || "", bottom: Math.round(b.bottom), left: Math.round(b.left), right: Math.round(b.right) }; })()`);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: pop15.x, y: pop15.top - 120 });
+await sleep(150);
+const pop15c = await ev(`(() => { const p = document.querySelector(".wave-pop"); const o = { hidden: !p || p.hidden }; window.ruachWaveSections([], true); return o; })()`);
+check("the pointer over the wave in a section: a card above the wave with its name, its time and its lines as written, the line sung under the pointer lit; it goes when the pointer leaves",
+  !!pop15b && pop15b.shown && /^Chorus/.test(pop15b.head) && pop15b.lines === "Sing it loud|Sing it again" && pop15b.now === "Sing it loud" && pop15b.bottom <= pop15.top - 4 &&
+  pop15b.left >= 0 && pop15c.hidden, JSON.stringify({ pop15, pop15b, pop15c }));
+
+// HERESY 1169 · 1317 (Viktor 10.10.2026: «Блок проявления картинки зафиксируй также вертикально»; «оверхол нужен нам только в аудио комнатах»)
+section("the Artist's stage keeps its frame from the queue to the picture; the wave's card only in the rooms of sound");
+const st17 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, now = Date.now() / 1000;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const base = { id: "20261010-130000-1317", prompt: "a long prompt that wraps\\nover two lines in the stage's data, the way a real one does when it is written out", shapes: ["1:1"], seed: 7, count: 1, painter: "krea2-q4", created: now - 30, of: 1 };
+  const states = [dict({ status: "queued", pictures: [] }), dict({ status: "queued", waiting: "a card with room", pictures: [] }), dict({ status: "running", pictures: [] }),
+    dict({ status: "running", pictures: [], live: { live: 1, step: 3, of: 8, file: "preview/01.jpg" } }),
+    dict({ status: "done", pictures: [{ n: 1, shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg" }] })];
+  function dict(x) { return Object.assign({}, base, x); }
+  let runs = [states[0]];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return Promise.resolve(new Response(JSON.stringify({ runs }), { headers: { "Content-Type": "application/json" } }));
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const o = { h: [], w: [] };
+  for (const s of states) {
+    runs = [s]; await window.HeresyArtist.reload(); await wait(250);
+    const pic = document.querySelector("#arStage .ar-stage-pic"), b = pic ? pic.getBoundingClientRect() : null;
+    o.h.push(b ? Math.round(b.height) : 0); o.w.push(b ? Math.round(b.width) : 0);
+  }
+  window.fetch = real;
+  await window.HeresyArtist.reload();
+  const w = document.getElementById("wave"), r = w.getBoundingClientRect();
+  o.wave = { x: Math.round(r.left + r.width * 0.5), y: Math.round(r.top + r.height / 2) };
+  return o; })()`);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: st17.wave.x, y: st17.wave.y });
+await sleep(150);
+const st17b = await ev(`(async () => { const p = document.querySelector(".wave-pop"); const o = { hidden: !p || p.hidden };
+  document.querySelector('.topbar [data-tab="create"]').click(); await new Promise((r) => setTimeout(r, 300)); return o; })()`);
+check("waiting in the queue, waiting for a card, painting before its first step, at a step, and the picture done: the same frame each time (height and width within a pixel)",
+  st17.h.length === 5 && st17.h.every((h) => h > 200 && Math.abs(h - st17.h[0]) <= 1) && st17.w.every((w) => Math.abs(w - st17.w[0]) <= 1), JSON.stringify(st17));
+check("  the pointer over the wave in the Artist shows no section card", st17b.hidden, JSON.stringify(st17b));
+
+// HERESY 1169 · 1316 (Viktor 10.10.2026: «Положил в artwork/loras/<семейство>/»; «скан поддиректорий»; «возле адаптера лежит его картинка»; «сканирование Civitai по хешу»)
+section("the Artist's adapters: the library by folders, picked with their strength, their words into the prompt, carried by Draw, looked up on Civitai");
+const lo16 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [], looked = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const A = { id: "krea2/Kul_v1.safetensors", family: "krea2", name: "Kul_v1", folder: "", mb: 112, picture: true, civitai: "known",
+    info: { title: "Kul Style", version: "v1.0", base: "Krea 2", words: ["Kulstyle", "sfumato washes"], url: "https://civitai.com/models/1" } };
+  const B = { id: "krea2/Styles/plain.safetensors", family: "krea2", name: "plain", folder: "Styles", mb: 218, picture: false, info: {} };
+  let fams = { krea2: [A, B], sdxl: [], "qwen-image-2.1": [], "qwen-image-2512": [] };
+  const pic = await new Promise((ok) => { const c = document.createElement("canvas"); c.width = c.height = 8; c.toBlob(ok, "image/jpeg"); });
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: fams, titles: { krea2: "Krea 2" } });
+    if (u.startsWith("/lab/artist/lora-picture")) return Promise.resolve(new Response(pic, { headers: { "Content-Type": "image/jpeg" } }));
+    if (u.startsWith("/lab/artist/lora-civitai")) { const b = JSON.parse(o.body); looked.push(b.id); return json(Object.assign({}, B, { civitai: "known", info: { title: "Plain Looked", base: "Krea 2", words: ["plainword"] } })); }
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-140000-1316", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arLoras", "yue2.arPrompt", "yue2.arPainter"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.arLoras");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  document.getElementById("arPainter").value = "krea2-q4"; document.getElementById("arPainter").dispatchEvent(new Event("change"));
+  await window.HeresyArtist.loras.reload();
+  const o = { say0: document.getElementById("arLoraSay").textContent };
+  document.getElementById("arLoraAdd").click();
+  await until(() => document.querySelectorAll(".ar-lib-card").length === 2, 3000);
+  o.folders = [...document.querySelectorAll(".ar-lib-f")].map((x) => x.textContent.replace(/\\s+/g, " ").trim());
+  document.querySelector('.ar-lib-card[data-lid="' + A.id + '"]').click(); await wait(100);
+  o.badge = (document.querySelector('.ar-lib-card[data-lid="' + A.id + '"] .ar-lib-n') || {}).textContent || "";
+  window.HeresyArtist.loras.lib().lookUp();
+  await until(() => looked.length && document.querySelector('.ar-lib-card[data-lid="' + B.id + '"] .ar-lib-cv'), 3000);
+  o.looked = looked.slice(); o.lookedName = (document.querySelector('.ar-lib-card[data-lid="' + B.id + '"] .ar-lib-name') || {}).textContent || "";
+  document.querySelector('.ar-lib [data-lib="close"]').click(); await wait(150);
+  o.row = document.querySelector("#arLoraList .ar-lora .ar-lora-name").textContent;
+  o.words = [...document.querySelectorAll("#arLoraList .ar-lora-word")].map((x) => x.textContent).join("|");
+  document.getElementById("arPrompt").value = "A fox in the snow"; document.getElementById("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector("#arLoraList .ar-lora-word").click(); await wait(50);
+  o.prompt = document.getElementById("arPrompt").value;
+  const w = document.querySelector("#arLoraList .ar-lora-w"); w.value = "0.55"; w.dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
+  o.weight = window.HeresyArtist.loras.now()[0].weight;
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; document.getElementById("arShapes").dispatchEvent(new Event("change"));
+  document.getElementById("arDraw").click();
+  await until(() => sent.length, 3000);
+  o.body = sent[0] ? sent[0].loras : null;
+  document.querySelector("#arLoraList .ar-lora-x").click(); await wait(50);
+  o.after = window.HeresyArtist.loras.now().length;
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the library groups the family's adapters by folder; a card picked gets its number; Look up on Civitai asks for the one not yet known and its card takes the name",
+  lo16.folders.join(",") === "All 2,(the family's own folder) 1,Styles 1" && lo16.badge === "1" && JSON.stringify(lo16.looked) === '["krea2/Styles/plain.safetensors"]' &&
+  lo16.lookedName === "Plain Looked", JSON.stringify(lo16));
+check("  under the painter: its name and trigger words; a word goes into the prompt; the strength is kept; Draw carries the adapters with their strength; ✕ takes it off",
+  lo16.row === "Kul Style" && lo16.words === "Kulstyle|sfumato washes" && lo16.prompt === "A fox in the snow, Kulstyle" && lo16.weight === 0.55 &&
+  JSON.stringify(lo16.body) === '[{"id":"krea2/Kul_v1.safetensors","weight":0.55}]' && lo16.after === 0, JSON.stringify(lo16));
+
+// HERESY 1169 · 1318 (Viktor 10.10.2026: «Подключай Qwen Image 2.1»; «мы предупреждаем пользователя»; «Забирай 2512 тоже в Студию»)
+section("the Artist's painters as the lab has them: Qwen-Image 2512 with its fp8 fine-tunes, Qwen-Image 2.1 with its licence said");
+const pn18 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+    { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "krea2", ready: false },
+    { key: "qwen2512-q6", label: "Qwen-Image 2512 · Q6", need_mb: 20000, family: "qwen-image-2512", ready: true, note: "Qwen-Image 2512 (Apache-2.0) from a 6-bit GGUF", lightning: true },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors", "B fine fp8.safetensors"], note: "a fine-tune" },
+    { key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, family: "qwen-image-2.1", ready: true, note: "Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only" }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-150000-1318", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-fp8", model: "B fine fp8.safetensors" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arLoras"], was = keys.map((k) => localStorage.getItem(k));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.painters(); await wait(100);
+  const sel = document.getElementById("arPainter"), o = { opts: [...sel.options].map((x) => x.value + "=" + x.textContent) };
+  sel.value = "qwen2512-fp8"; sel.dispatchEvent(new Event("change")); await wait(100);
+  o.model = { shown: !document.getElementById("arModelBox").hidden, opts: [...document.getElementById("arModel").options].map((x) => x.textContent) };
+  document.getElementById("arModel").value = "B fine fp8.safetensors"; document.getElementById("arModel").dispatchEvent(new Event("change"));
+  o.fam = document.getElementById("arLoraSay").textContent;
+  document.getElementById("arPrompt").value = "A lighthouse at dawn"; document.getElementById("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; document.getElementById("arShapes").dispatchEvent(new Event("change"));
+  o.cost = document.getElementById("arCost").textContent;
+  document.getElementById("arDraw").click();
+  await until(() => sent.length, 3000);
+  o.body = sent[0] ? { painter: sent[0].painter, model: sent[0].model } : null;
+  sel.value = "qwen21"; sel.dispatchEvent(new Event("change")); await wait(100);
+  const note = document.getElementById("arPainterNote");
+  o.note = { shown: !note.hidden, warn: note.classList.contains("is-warn"), text: note.textContent, model: !document.getElementById("arModelBox").hidden };
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters();
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the choice holds the painters this machine has (Krea Q8's files missing here: not offered), each with the card it wants",
+  pn18.opts.join("|") === "krea2-q4=Krea 2 Muse · Q4 (from 12.5 GB)|qwen2512-q6=Qwen-Image 2512 · Q6 (from 20 GB)|qwen2512-fp8=Qwen-Image 2512 · fp8 (from 22.5 GB)|qwen21=Qwen-Image 2.1 · research licence (from 21 GB)", JSON.stringify(pn18));
+check("  fp8: its fine-tunes beside it, Draw carries the one picked; the time as Qwen paints; Qwen-Image 2.1: its licence said in the warning's colour, no fine-tune",
+  pn18.model.shown && pn18.model.opts.join("|") === "A fine fp8|B fine fp8" && JSON.stringify(pn18.body) === '{"painter":"qwen2512-fp8","model":"B fine fp8.safetensors"}' &&
+  /about 5 min/.test(pn18.cost) && pn18.note.shown && pn18.note.warn && /Research Licence/.test(pn18.note.text) && !pn18.note.model, JSON.stringify(pn18));
+
+// HERESY 1169 · 1319 (Viktor 10.10.2026: «селекторы для семплеров и планировщиков, выбор количества шагов с разумным ограничением»)
+section("the Artist's sampling: steps within the painter's range, Euler or Euler SDE, the schedule; 2512's Lightning and guidance; only what differs is sent");
+const sm19 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors"], lightning: true, note: "a fine-tune" }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-160000-1319-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }   // done: Draw stays Draw
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arSampling", "yue2.arLoras"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.arSampling");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.painters(); await wait(100);
+  const sel = document.getElementById("arPainter"), $ = (id) => document.getElementById(id), set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("change")); };
+  sel.value = "krea2-q4"; sel.dispatchEvent(new Event("change")); await wait(50);
+  const o = { k0: { say: $("arSampSay").textContent, lim: $("arSteps").min + "-" + $("arSteps").max, light: !$("arLightBox").hidden } };
+  set("arSteps", "12"); set("arSchedule", "karras"); await wait(50);
+  o.k1 = $("arSampSay").textContent;
+  $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  $("arDraw").click(); await until(() => sent.length === 1, 3000);
+  o.kbody = sent[0] && sent[0].sampling;
+  sel.value = "qwen2512-fp8"; sel.dispatchEvent(new Event("change")); await wait(50);
+  const seen = (id) => !!$(id).offsetParent;            // HERESY 1328: as it shows, not only its [hidden]
+  $("arSampling").open = true;
+  o.q0 = { say: $("arSampSay").textContent, lim: $("arSteps").min + "-" + $("arSteps").max, light: seen("arLightBox"), on: $("arLightOn").checked, cfg: seen("arCfgBox") };
+  $("arLightOn").checked = true; $("arLightOn").dispatchEvent(new Event("change")); await wait(50);
+  o.q1 = { say: $("arSampSay").textContent, lim: $("arSteps").min + "-" + $("arSteps").max, steps: $("arSteps").value, cfg: seen("arCfgBox") };
+  $("arDraw").click(); await until(() => sent.length === 2, 3000);
+  o.qbody = sent[1] && sent[1].sampling;
+  $("arSampReset").click(); await wait(50);
+  o.reset = $("arSampSay").textContent;
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters();
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("Krea 2: 8 steps, Euler, Simple its own, steps 4 to 16, no Lightning; 12 steps and Karras said in the summary and sent alone",
+  sm19.k0.say === "8 steps · Euler · Simple" && sm19.k0.lim === "4-16" && !sm19.k0.light && sm19.k1 === "12 steps · Euler · Karras" &&
+  JSON.stringify(sm19.kbody) === '{"steps":12,"schedule":"karras"}', JSON.stringify(sm19));
+check("  a 2512 fine-tune: without Lightning its own (HERESY 1328: 30 steps of 10 to 60, guidance shown, the switch off); Lightning switched on: 12 steps of 4 to 16 at 0.55, guidance gone, sent; Reset: its own again",
+  sm19.q0.say === "30 steps · Euler · Simple · guidance 4" && sm19.q0.lim === "10-60" && sm19.q0.light && !sm19.q0.on && sm19.q0.cfg &&
+  sm19.q1.lim === "4-16" && sm19.q1.steps === "12" && !sm19.q1.cfg && sm19.q1.say === "12 steps · Euler · Simple · Lightning 0.55" &&
+  JSON.stringify(sm19.qbody) === '{"steps":12,"lightning":0.55}' && sm19.reset === "30 steps · Euler · Simple · guidance 4", JSON.stringify(sm19));
+
+// HERESY 1169 · 1320 (Viktor 10.10.2026: «По маске не хватает добавления латентного зерна поверх непрорисовываемых частей, блюра по краям маски»)
+section("the Artist's mask options: shown with a mask or Paint around it, kept, carried by Draw");
+const mk20 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-170000-1320-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arMaskOpts", "yue2.arPrompt"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.arMaskOpts");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const $ = (id) => document.getElementById(id), R = window.HeresyArtistRef;
+  const c = document.createElement("canvas"); c.width = c.height = 16; c.getContext("2d").fillRect(0, 0, 16, 16);
+  R.set({ data: c.toDataURL("image/png"), name: "ref.png" }, true); await wait(50);
+  const o = { noMask: $("arMaskOpts").hidden };
+  R.setMask({ data: c.toDataURL("image/png") }); await wait(50);
+  o.withMask = !$("arMaskOpts").hidden;
+  o.defaults = { grow: $("arMkGrow").value, edge: $("arMkEdge").value, soft: $("arMkSoft").checked, grain: $("arMkGrain").value };
+  $("arMkGrow").value = "16"; $("arMkGrow").dispatchEvent(new Event("change"));
+  $("arMkGrain").value = "0.2"; $("arMkGrain").dispatchEvent(new Event("change"));
+  o.kept = JSON.parse(localStorage.getItem("yue2.arMaskOpts") || "null");
+  $("arPrompt").value = "A cap"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  $("arDraw").click(); await until(() => sent.length === 1, 3000);
+  o.body = sent[0] && sent[0].mask_opts;
+  R.setMask(null); await wait(50);
+  o.noMaskAgain = $("arMaskOpts").hidden;
+  $("arRefFit").checked = true; $("arRefFit").dispatchEvent(new Event("change")); await wait(50);
+  o.withFit = !$("arMaskOpts").hidden;
+  $("arRefFit").checked = false; $("arRefFit").dispatchEvent(new Event("change"));
+  R.set(null, true);
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("no mask: no options; a mask: Grow 0, Edge 24, Soft, Grain 0.1; changed ones kept and carried by Draw; Paint around it shows them too",
+  mk20.noMask && mk20.withMask && JSON.stringify(mk20.defaults) === '{"grow":"0","edge":"24","soft":true,"grain":"0.1"}' &&
+  JSON.stringify(mk20.kept) === '{"grow":16,"edge":24,"soft":true,"grain":0.2}' && JSON.stringify(mk20.body) === '{"grow":16,"edge":24,"soft":true,"grain":0.2}' &&
+  mk20.noMaskAgain && mk20.withFit, JSON.stringify(mk20));
+
+// HERESY 1169 · 1321 (Viktor 10.10.2026: «SVG КВАДРАТ, горизонтальное и вертикальное расположение прямоугольника»; «звезда наша SVG»; «Удаление картинки или массива выбранных»)
+section("the Artist: the shapes and the star drawn; pictures picked with Ctrl and Shift, put aside, brought back from the Trash look");
+const pk21 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, asideCalls = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000, pic = (n, shape) => ({ n, shape, seed: 7 + n, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + (7 + n) + ".png", thumb: "thumbs/0" + n + "-1x1-s" + (7 + n) + ".jpg" });
+  let runs = [{ id: "20261010-180000-aaaa", prompt: "four foxes", shapes: ["1:1"], seed: 8, count: 4, painter: "krea2-q4", created: now - 60, status: "done", of: 4, pictures: [pic(1), pic(2), pic(3), pic(4)] }];
+  let aside = [];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: runs.map((r) => Object.assign({}, r, { pictures: r.pictures.map((p) => Object.assign({}, p, aside.indexOf(p.file) >= 0 ? { aside: true } : {})) })) });
+    if (u.startsWith("/lab/artist/asides")) return json({ pictures: aside.map((f) => ({ id: runs[0].id, file: f, thumb: "thumbs/" + f.replace(".png", ".jpg"), prompt: "four foxes" })) });
+    if (u.startsWith("/lab/artist/aside")) { const b = JSON.parse(o.body); asideCalls.push(b); b.items.forEach((it) => { if (b.aside) aside.push(it.file); else aside = aside.filter((f) => f !== it.file); }); return json({ aside: b.aside, done: b.items, trashed: [] }); }
+    if (u.startsWith("/lab/artist/trashed")) return json({ runs: [] });
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([255, 216, 255])], { type: "image/jpeg" })));
+    return real(u, o); };
+  const keys = ["yue2.arLook", "yue2.arFilter"], was = keys.map((k) => localStorage.getItem(k));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const sh = [...document.querySelectorAll("#arShapes .ar-shape")];
+  const o = { shapes: sh.map((l) => !!l.querySelector("svg.ar-shape-ico") && !/\\d/.test(l.textContent) && /\\d/.test(l.dataset.tip)) };
+  document.querySelector('#arBar [data-look="gallery"]').click(); await wait(100);
+  const st = document.querySelector('#arFilters [data-filter="star"]');
+  o.star = !!(st && st.querySelector("svg.ar-star-ico") && !/Starred/.test(st.textContent));
+  await window.HeresyArtist.reload(); await wait(200);
+  const tiles = () => [...document.querySelectorAll("#arRuns .ar-gpic .ar-thumb")];
+  await until(() => tiles().length === 4, 3000);
+  const click = (el, mods) => el.dispatchEvent(new MouseEvent("click", Object.assign({ bubbles: true, cancelable: true }, mods)));
+  click(tiles()[0], { ctrlKey: true }); click(tiles()[2], { shiftKey: true }); await wait(50);
+  o.picked = document.querySelectorAll("#arRuns .ar-gpic.is-picked").length;
+  o.bar = (document.getElementById("arPicked").querySelector(".ar-picked-n") || {}).textContent || "";
+  document.querySelector('#arPicked [data-pick="aside"]').click();
+  await until(() => asideCalls.length === 1, 3000); await wait(400);
+  o.sent = asideCalls[0] && asideCalls[0].items.map((x) => x.file).join(",");
+  o.left = tiles().length;
+  o.barGone = document.getElementById("arPicked").hidden;
+  document.querySelector('#arBar [data-look="trash"]').click();
+  await until(() => document.querySelectorAll("#arRuns .ar-aside-pic").length === 3, 3000);
+  o.asideShown = document.querySelectorAll("#arRuns .ar-aside-pic").length;
+  document.querySelector('#arRuns [data-back-all]').click();
+  await until(() => asideCalls.length === 2, 3000); await wait(300);
+  o.back = asideCalls[1] && { aside: asideCalls[1].aside, n: asideCalls[1].items.length };
+  document.querySelector('#arBar [data-look="runs"]').click(); await wait(100);
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the shapes drawn (their sizes in the tips, no text on them), the star filter drawn without its word",
+  pk21.shapes.length === 3 && pk21.shapes.every(Boolean) && pk21.star, JSON.stringify(pk21));
+check("  Ctrl + click, Shift + click: three picked and said; Trash puts the three aside and the gallery keeps one; the Trash look shows them, Restore all brings them back",
+  pk21.picked === 3 && /^3 /.test(pk21.bar) && pk21.sent === "01-1x1-s8.png,02-1x1-s9.png,03-1x1-s10.png" && pk21.left === 1 && pk21.barGone &&
+  pk21.asideShown === 3 && pk21.back && pk21.back.aside === false && pk21.back.n === 3, JSON.stringify(pk21));
+
+// HERESY 1169 · 1322 (Viktor 10.10.2026: «И модели апскейлеров… 637GB золота»)
+section("the Artist: the stage's Upscale… opens its row (the upscalers, Nomos8kDAT first, the one picked kept), 2K makes a run of its own (1332: 2K and 4K by the long side), the stage follows it, Again upscales again");
+const up22 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, calls = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000, src = { id: "20261010-190000-bbbb", file: "01-1x1-s8.png" };
+  const runs = [{ id: src.id, prompt: "a fox in the snow", shapes: ["1:1"], seed: 8, count: 1, painter: "krea2-q4", created: now - 60, status: "done", of: 1,
+    pictures: [{ n: 1, shape: "1:1", seed: 8, w: 1280, h: 1280, kept: true, file: src.file, thumb: "thumbs/01-1x1-s8.jpg" }] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: runs });
+    if (u.startsWith("/lab/artist/upscalers")) return json({ upscalers: [{ name: "1x_SkinContrast.pth", scale: 1, mb: 1.2 }, { name: "4x-UltraSharpV2.safetensors", scale: 4, mb: 77.1 }, { name: "4x_Nomos8kDAT.pth", scale: 4, mb: 140.6 }] });
+    if (u.startsWith("/lab/artist/upscale")) { const b = JSON.parse(o.body); calls.push(b);
+      const side = { "2k": 2560, "4k": 3840 }[b.target] || 1280 * (b.factor || 2);
+      const r = { id: "20261010-190100-cc0" + calls.length, kind: "upscale", prompt: "a fox in the snow", painter: "upscale", model: b.model, factor: side > 2560 ? 4 : 2, target: b.target || "", shapes: ["1:1"], seed: 8, count: 1,
+        created: now + calls.length, status: "done", of: 1, upscaled_from: { id: b.id, file: b.file, painter: "krea2-q4" },
+        pictures: [{ n: 1, shape: "1:1", seed: 8, w: side, h: side, kept: true, file: "01-1x1-s8-up" + (b.target || b.factor + "x") + ".png", thumb: "thumbs/01-1x1-s8-up" + (b.target || b.factor + "x") + ".jpg" }] };
+      runs.unshift(r); return json(r, 202); }
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([255, 216, 255])], { type: "image/jpeg" })));
+    return real(u, o); };
+  const keys = ["yue2.arUpModel", "yue2.arLook", "yue2.arPainter"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.arUpModel");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000);
+  document.querySelector('#arBar [data-look="runs"]').click();
+  await window.HeresyArtist.reload(); await wait(300);
+  const o = {};
+  const btn = await until(() => document.querySelector('#arStage [data-stage="upscale"]'), 3000);
+  o.button = !!btn;
+  if (btn) btn.click();
+  const sel = await until(() => { const s = document.getElementById("arUpModel"); return s && s.options.length === 3 ? s : null; }, 3000);
+  o.first = sel && sel.value;
+  if (sel) sel.value = "4x-UltraSharpV2.safetensors";
+  o.tips = [...document.querySelectorAll("#arStage [data-up]")].map((b) => b.dataset.up + "=" + b.dataset.tip + (b.disabled ? "(off)" : ""));
+  const x2 = document.querySelector('#arStage [data-up="2k"]');
+  if (x2) x2.click();
+  await until(() => calls.length === 1, 3000); await wait(300);
+  o.sent = calls[0] || null;
+  o.kept = localStorage.getItem("yue2.arUpModel");
+  o.rowGone = !document.getElementById("arUpModel");
+  o.stage = ((document.querySelector("#arStage .ar-stage-meta") || {}).textContent || "");
+  const card = document.querySelector('#arRuns .ar-run[data-id="20261010-190100-cc01"]');
+  o.card = card ? card.querySelector(".ar-meta").textContent : "";
+  if (card) card.querySelector('[data-act="again"]').click();
+  await until(() => calls.length === 2, 3000); await wait(200);
+  o.again = calls[1] || null;
+  const card2 = document.querySelector('#arRuns .ar-run[data-id="20261010-190100-cc01"]');
+  if (card2) card2.querySelector('[data-act="form"]').click();
+  await wait(100);
+  o.painter = document.getElementById("arPainter").value;
+  o.prompt = document.getElementById("arPrompt").value;
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  document.getElementById("arPrompt").value = ""; document.getElementById("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the stage's Upscale… opens its row: three upscalers, 4x_Nomos8kDAT picked first when none was kept",
+  up22.button && up22.first === "4x_Nomos8kDAT.pth", JSON.stringify(up22));
+check("  2K sends the picture, the model and the target, keeps the model; the row closes; the stage and the run say Upscale 2K and its size; the tips say the sizes",
+  up22.sent && up22.sent.id === "20261010-190000-bbbb" && up22.sent.file === "01-1x1-s8.png" && up22.sent.model === "4x-UltraSharpV2.safetensors" && up22.sent.target === "2k" &&
+  up22.kept === "4x-UltraSharpV2.safetensors" && up22.rowGone && /Upscale 2K/.test(up22.stage) && /4x-UltraSharpV2/.test(up22.stage) && /2560×2560/.test(up22.stage) && /Upscale 2K/.test(up22.card) &&
+  up22.tips.join("|") === "2k=1280×1280 → 2560×2560|4k=1280×1280 → 3840×3840", JSON.stringify(up22));
+check("  Again on the upscaled run upscales the same picture again; To the form keeps a painter of the form and brings the words",
+  up22.again && up22.again.id === "20261010-190000-bbbb" && up22.again.file === "01-1x1-s8.png" && up22.again.target === "2k" && up22.painter && up22.painter !== "upscale" && up22.prompt === "a fox in the snow", JSON.stringify(up22));
+
+// HERESY 1169 · 1323 (Viktor 10.10.2026: «Забирай 2512 тоже в Студию»; «Касательно Qwen Image 2.1 лицензии: мы предупреждаем пользователя по этому поводу»)
+section("the Qwen painters: their row in Engine → Models (2512 at Q4 or Q6, 2.1 with its licence in the question); the Artist says the painters not here yet and where they come from");
+const qw23 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, asked = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000;
+  const extras = [{ name: "qwen", label: "Qwen painters", what: "the Artist's Qwen-Image painters", variants: [
+      { id: "2512-q4", label: "Qwen-Image 2512 Q4", size: "31 GB", note: "for a card of 16 GB", here: true },
+      { id: "2512-q6", label: "Qwen-Image 2512 Q6", size: "34.5 GB", note: "for a card of 24 GB", here: false },
+      { id: "2.1", label: "Qwen-Image 2.1", size: "33.1 GB", note: "under Qwen's research licence: research and evaluation only, not for commercial use", here: false }] }];
+  const listing = () => ({ script: true, last: null, extras, parts: {}, job: null, now });
+  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 13500, family: "krea2", ready: true },
+    { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: false, note: "Qwen-Image 2512 (Apache-2.0) from a 4-bit GGUF" },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: false, models: [] },
+    { key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, family: "qwen-image-2.1", ready: false, note: "research licence" }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/weights/fetch")) { asked.push(o.body); return json(listing()); }
+    if (u.startsWith("/lab/weights")) return json(listing());
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    return real(u, o); };
+  document.getElementById("engineToggle").click();
+  const row = await until(() => document.querySelector('#wtExtras .wt-extra[data-extra="qwen"]'), 4000);
+  const o = { row: !!row };
+  if (row) {
+    o.pick = row.querySelector("select").value;
+    o.options = [...row.querySelectorAll("option")].map((x) => x.textContent);
+    const s = row.querySelector("select"); s.value = "2.1"; s.dispatchEvent(new Event("change", { bubbles: true })); await wait(80);
+    document.querySelector('#wtExtras [data-wt-extra="qwen"]').click();
+    const d = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+    o.ask = d ? d.querySelector(".hd-title").textContent + " / " + ((d.querySelector(".hd-body") || {}).textContent || "") : null;
+    if (d) d.querySelector(".hd-no").click();
+    await until(() => !document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+  }
+  o.asked = asked.length;
+  document.getElementById("engineToggle").click();
+  await until(() => document.getElementById("view-engine").classList.contains("is-hidden"));
+  const was = localStorage.getItem("yue2.arPainter");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000);
+  await window.HeresyArtist.painters(); await wait(100);
+  const note = document.getElementById("arPainterNote");
+  o.painters = [...document.getElementById("arPainter").options].map((x) => x.value);
+  o.note = note && !note.hidden ? note.textContent : "";
+  window.fetch = real;
+  await window.HeresyArtist.painters();
+  if (was === null) localStorage.removeItem("yue2.arPainter"); else localStorage.setItem("yue2.arPainter", was);
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the Models card's Qwen row: three variants with their sizes, the first not here picked (2512 Q6)",
+  qw23.row && qw23.pick === "2512-q6" && qw23.options.length === 3 && /31 GB · here/.test(qw23.options[0]) && /34\.5 GB$/.test(qw23.options[1]) && /33\.1 GB$/.test(qw23.options[2]), JSON.stringify(qw23));
+check("  Fetch on Qwen-Image 2.1 asks first, its size and its research licence said; No fetches nothing",
+  qw23.ask && /Qwen-Image 2\.1/.test(qw23.ask) && /33\.1 GB/.test(qw23.ask) && /research licence/.test(qw23.ask) && /not for commercial use/.test(qw23.ask) && qw23.asked === 0, JSON.stringify(qw23));
+check("  the Artist offers only the painters here and says the others come from Engine → Models and LoRAs (an fp8 fine-tune is not a fetch)",
+  qw23.painters.join(",") === "krea2-q4" && /Engine → Models and LoRAs/.test(qw23.note) && /Qwen-Image 2512 · Q4/.test(qw23.note) && /Qwen-Image 2\.1/.test(qw23.note) && !/fp8/.test(qw23.note), JSON.stringify(qw23));
+
+// HERESY 1169 · 1326 (Viktor 10.10.2026, 14:57: «Сейчас хочу перегенерить, и ловлю ошибку. Хотя выбрано всё правильно»)
+section("the Artist: a 2512 fine-tune is sent with the painter's own sampling and with the user's own (16 steps, Euler SDE, Beta)");
+const ft26 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors", "B real fp8.safetensors"], lightning: true, note: "a fine-tune" }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-160000-1326-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-fp8" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arSampling", "yue2.arLoras"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.arSampling");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.painters(); await wait(100);
+  const $ = (id) => document.getElementById(id), set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("change")); };
+  set("arPainter", "qwen2512-fp8"); await wait(50);
+  set("arModel", "B real fp8.safetensors"); await wait(50);
+  $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  $("arDraw").click(); await until(() => sent.length === 1, 3000);
+  set("arSteps", "16"); set("arSampler", "euler-sde"); set("arSchedule", "beta"); await wait(50);
+  $("arDraw").click(); await until(() => sent.length === 2, 3000);
+  const o = { own: sent[0] && { model: sent[0].model, sampling: sent[0].sampling || null }, mine: sent[1] && { model: sent[1].model, sampling: sent[1].sampling || null } };
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters();
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the fine-tune picked goes with the painter's own sampling and with the user's own: 16 steps, Euler SDE and Beta sent beside it",
+  ft26.own && ft26.own.model === "B real fp8.safetensors" && !ft26.own.sampling && ft26.mine && ft26.mine.model === "B real fp8.safetensors" &&
+  ft26.mine.sampling && ft26.mine.sampling.steps === 16 && ft26.mine.sampling.sampler === "euler-sde" && ft26.mine.sampling.schedule === "beta", JSON.stringify(ft26));
+
+// HERESY 1169 · 1328 (Viktor 10.10.2026: «нужно отключать Lightning Guidance, если Lightning LoRA не подключен»; «The Artist cannot draw: steps: 4 to 16 for this painter with Lightning» with 16 shown; the plan he took: fp8 fine-tunes without Lightning by default, GGUF with it)
+section("the Artist's Lightning: a switch beside its strength; steps kept within their range; no switch where its file is not here");
+const lt28 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  let lightningHere = true;
+  const painters = () => [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+    { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: true, lightning: lightningHere },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors"], lightning: lightningHere }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters: painters() });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-170000-1328-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-q4" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arSampling", "yue2.arLoras"], was = keys.map((k) => localStorage.getItem(k));
+  // what Viktor's browser kept (16 shown, more than 16 kept and sent)
+  localStorage.setItem("yue2.arSampling", JSON.stringify({ "qwen2512-fp8": { steps: 20, sampler: "euler-sde", schedule: "beta", lightning: 0.55, cfg: 4 } }));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.painters(); await wait(100);
+  const $ = (id) => document.getElementById(id), seen = (id) => !!$(id).offsetParent, set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("change")); };
+  $("arSampling").open = true;
+  $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  set("arPainter", "qwen2512-fp8"); await wait(50);
+  const o = { kept: { steps: $("arSteps").value, on: $("arLightOn").checked, cfg: seen("arCfgBox"), say: $("arSampSay").textContent } };
+  $("arDraw").click(); await until(() => sent.length === 1, 3000);
+  o.keptSent = sent[0] && sent[0].sampling;
+  set("arSteps", "25"); await wait(50);                  // typed past 16 with Lightning on: kept at 16
+  o.typed = { shown: $("arSteps").value, kept: JSON.parse(localStorage.getItem("yue2.arSampling"))["qwen2512-fp8"].steps };
+  $("arLightOn").checked = false; $("arLightOn").dispatchEvent(new Event("change")); await wait(50);
+  o.off = { steps: $("arSteps").value, lim: $("arSteps").min + "-" + $("arSteps").max, cfg: seen("arCfgBox"), strength: $("arLight").value, dim: $("arLight").disabled };
+  $("arDraw").click(); await until(() => sent.length === 2, 3000);
+  o.offSent = sent[1] && sent[1].sampling;
+  set("arPainter", "qwen2512-q4"); await wait(50);
+  o.gguf = { say: $("arSampSay").textContent, on: $("arLightOn").checked, cfg: seen("arCfgBox") };
+  $("arDraw").click(); await until(() => sent.length === 3, 3000);
+  o.ggufSent = sent[2] ? (sent[2].sampling || null) : "none";
+  lightningHere = false;                                  // its file not on this machine
+  await window.HeresyArtist.painters(); await wait(100);
+  set("arPainter", "qwen2512-q4"); await wait(50);
+  o.none = { light: seen("arLightBox"), cfg: seen("arCfgBox"), say: $("arSampSay").textContent, lim: $("arSteps").min + "-" + $("arSteps").max };
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters();
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("Viktor's kept 20 steps with Lightning 0.55 read as Lightning on at 16 (its range's top), guidance hidden as it shows, and 16 sent, not 20",
+  lt28.kept.steps === "16" && lt28.kept.on && !lt28.kept.cfg && lt28.kept.say === "16 steps · Euler SDE · Beta · Lightning 0.55" &&
+  lt28.keptSent && lt28.keptSent.steps === 16 && lt28.keptSent.lightning === 0.55, JSON.stringify(lt28));
+check("  25 typed with Lightning on is kept at 16; switched off: 30 steps of 10 to 60, guidance shown, the strength kept and dimmed, Lightning 0 sent",
+  lt28.typed.shown === "16" && lt28.typed.kept === 16 && lt28.off.steps === "30" && lt28.off.lim === "10-60" && lt28.off.cfg && lt28.off.strength === "0.55" && lt28.off.dim &&
+  lt28.offSent && lt28.offSent.lightning === 0 && !("steps" in lt28.offSent), JSON.stringify(lt28));
+check("  a GGUF painter paints with Lightning by default (8 steps at 1.00) and sends nothing of it; with no Lightning file there is no switch: guidance and 10 to 60 steps",
+  lt28.gguf.say === "8 steps · Euler · Simple · Lightning 1.00" && lt28.gguf.on && !lt28.gguf.cfg && lt28.ggufSent === null &&
+  !lt28.none.light && lt28.none.cfg && lt28.none.say === "30 steps · Euler · Simple · guidance 4" && lt28.none.lim === "10-60", JSON.stringify(lt28));
+
+// HERESY 1169 · 1327 (Viktor 10.10.2026: «Для кнопки Generate song, если есть уже Score в поле, тогда попап с вопросом: Генерим на существующей партитуре, или новая?»; «сторожа для LoRA адаптеров и силы их весов»; «При FULL режиме всегда держим Supply Your Own Score открытым»)
+section("Generate with a score in the form asks: on it, or a new one; the adapters that wrote it against these; Full keeps the score open");
+await ev(`document.querySelector('#tabs [data-tab="create"]').click(); true`);
+await ev(`(() => { const g = (id) => document.getElementById(id).value;
+  window.__sc27 = { abc: g("abc"), style: g("style"), lyrics: g("lyrics"), cot: (document.querySelector('input[name="cot"]:checked') || {}).value || "full", value: YueLoras.value };
+  localStorage.removeItem("yue2.askScore");
+  const full = document.querySelector('input[name="cot"][value="full"]'); full.checked = true; full.dispatchEvent(new Event("change", { bubbles: true }));
+  document.getElementById("style").value = "dark country, baritone"; document.getElementById("lyrics").value = "[Verse]\\nOne line to sing";
+  YueLoras.value = () => [{ id: "mock/voice", ar: 0.5, nar: 0 }];
+  const a = document.getElementById("abc"); a.value = "X:1\\nL:1/8\\nM:4/4\\nK:C\\nQ:1/4=90\\nV:Vocal\\nCDEF GABc|";
+  window.ruachScoreFrom.set([{ id: "mock/voice", ar: 0.8, nar: 0 }], "planned");
+  a.dispatchEvent(new Event("input", { bubbles: true }));
+  return true; })()`);
+const sc27a = await ev(`(async () => { const d = document.getElementById("scoreDrawer"), w = (ms) => new Promise((r) => setTimeout(r, ms));
+  const o = { open: d.open }; d.open = false; await w(120); o.reopened = d.open;
+  const g = document.getElementById("scoreGuard"); o.guard = g && g.offsetParent ? g.textContent : "";
+  return o; })()`);
+await mockClear();
+await click("#generateBtn");
+const sc27ask = await waitFor(`(() => { const b = document.querySelector(".hd-back.is-on:not(.is-leaving)"); return b && b.querySelector(".hd-alt") ? { text: b.textContent.replace(/\\s+/g, " ").slice(0, 700), ok: b.querySelector(".hd-yes").textContent, alt: b.querySelector(".hd-alt").textContent } : null; })()`, 3000, 50);
+await answerDialog(false);
+await sleep(300);
+const sc27stay = await ev(`fetch("/mock/requests").then(r => r.json()).then(a => a.filter(x => x.path === "/synth").length)`);
+await click("#generateBtn");
+await waitFor(`!!document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-alt")`, 3000, 50);
+await click(".hd-back:not(.is-leaving) .hd-alt");
+const sc27new = await waitFor(`fetch("/mock/requests").then(r => r.json()).then(a => a.filter(x => x.path === "/synth").map(x => JSON.parse(x.body))[0] || null)`, 5000);
+const sc27emptied = await ev(`document.getElementById("abc").value`);
+await waitFor(`!document.querySelector("#libList .is-running-row")`, 10000);
+await ev(`(() => { const a = document.getElementById("abc"); a.value = "X:1\\nL:1/8\\nM:4/4\\nK:C\\nQ:1/4=90\\nV:Vocal\\nCDEF GABc|"; a.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+await mockClear();
+await click("#generateBtn");
+await answerDialog(true);
+const sc27on = await waitFor(`fetch("/mock/requests").then(r => r.json()).then(a => a.filter(x => x.path === "/synth").map(x => JSON.parse(x.body))[0] || null)`, 5000);
+await waitFor(`!document.querySelector("#libList .is-running-row")`, 10000);
+await ev(`(() => { const k = window.__sc27, s = (id, v) => { document.getElementById(id).value = v; document.getElementById(id).dispatchEvent(new Event("input", { bubbles: true })); };
+  YueLoras.value = k.value; s("abc", k.abc); s("style", k.style); s("lyrics", k.lyrics);
+  const c = document.querySelector('input[name="cot"][value="' + k.cot + '"]'); if (c) { c.checked = true; c.dispatchEvent(new Event("change", { bubbles: true })); }
+  localStorage.setItem("yue2.askScore", "off"); return true; })()`);
+check("Full with a score: the score stays open (folded, it opens again); under it the adapters that wrote it against these (music 0.8, now 0.5)",
+  sc27a.open && sc27a.reopened && /music 0\.8/.test(sc27a.guard) && /music 0\.5/.test(sc27a.guard), JSON.stringify(sc27a));
+check("  Generate asks: on this score, or a new one, the adapters' difference said; Stay sends nothing",
+  !!sc27ask && /Generate on the score in the form, or write a new one\?/.test(sc27ask.text) && /music 0\.8/.test(sc27ask.text) && /Industrial Rock/.test(sc27ask.text) &&
+  sc27ask.ok === "On this score" && sc27ask.alt === "A new score" && sc27stay === 0, JSON.stringify({ sc27ask, sc27stay }));
+check("  A new score: the field emptied and the song sent without one; On this score: sent with it",
+  !!sc27new && !sc27new.abc && sc27emptied === "" && !!sc27on && /CDEF GABc/.test(sc27on.abc || ""), JSON.stringify({ newAbc: sc27new && sc27new.abc, sc27emptied, onAbc: sc27on && sc27on.abc }));
+
+// HERESY 1169 · 1329 (Viktor 10.10.2026: «В баре кнопка TRAINER отцентри между лого и воркспейс селектором»; «Расширь колонку GPU на 100px, и общую ширину фрейма логгера на 200px, и разреши по крайней стороне фрейма перетягивать его ширины с установленного бейс до макс 1200px»)
+section("the bar's Trainer in the middle between the logo and the workspace; the log 200 px wider with the cards, its edge dragged to 1200 px");
+await ev(`document.querySelector('#tabs [data-tab="create"]').click(); true`);
+const mid29 = `(() => { window.ruachCenterTrainer(); const l = document.querySelector(".topbar .brand-logo").getBoundingClientRect(), w = document.querySelector(".topbar .ws-current").getBoundingClientRect(), s = document.getElementById("tabsSide").getBoundingClientRect();
+  return { off: Math.round((s.left + s.right) / 2 - (l.right + w.left) / 2), logo: Math.round(l.width), vw: innerWidth }; })()`;
+const tc29a = await ev(mid29);
+await send("Emulation.setDeviceMetricsOverride", { width: 2560, height: 1440, deviceScaleFactor: 1, mobile: false });
+await sleep(300);
+const tc29b = await ev(mid29);
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 960, deviceScaleFactor: 1, mobile: false });
+await sleep(300);
+check("the Trainer's tab stands in the middle between the logo and the workspace button, at 1920 and at 2560",
+  tc29a.logo > 0 && Math.abs(tc29a.off) <= 2 && tc29b.logo > 0 && Math.abs(tc29b.off) <= 2, JSON.stringify({ tc29a, tc29b }));
+const dk29 = await ev(`(() => { const d = document.getElementById("logDock"); localStorage.removeItem("yue2.logDockW"); d.style.width = "";
+  if (d.classList.contains("is-folded")) document.getElementById("logDockTab").click();
+  const had = d.classList.contains("has-gpus"); d.classList.add("has-gpus");
+  const o = { gpusW: Math.round(d.getBoundingClientRect().width), col: getComputedStyle(d.querySelector(".log-dock-main")).gridTemplateColumns };
+  if (!had) d.classList.remove("has-gpus");
+  o.base = Math.round(d.getBoundingClientRect().width);
+  const g = document.getElementById("logDockGrip").getBoundingClientRect(); o.grip = { x: Math.round(g.left + g.width / 2), y: Math.round(g.top + g.height / 2) };
+  o.left = d.classList.contains("is-left"); return o; })()`);
+await drag(dk29.grip, dk29.left ? 200 : -200);
+const dk29a = await ev(`({ w: Math.round(document.getElementById("logDock").getBoundingClientRect().width), kept: localStorage.getItem("yue2.logDockW") })`);
+const g2 = await ev(`(() => { const g = document.getElementById("logDockGrip").getBoundingClientRect(); return { x: Math.round(g.left + g.width / 2), y: Math.round(g.top + g.height / 2) }; })()`);
+await drag(g2, dk29.left ? 1500 : -1500);
+const dk29b = await ev(`Math.round(document.getElementById("logDock").getBoundingClientRect().width)`);
+await ev(`document.getElementById("logDockGrip").dispatchEvent(new MouseEvent("dblclick", { bubbles: true })); true`);
+const dk29c = await ev(`({ w: Math.round(document.getElementById("logDock").getBoundingClientRect().width), kept: localStorage.getItem("yue2.logDockW") })`);
+await ev(`(() => { const d = document.getElementById("logDock"); if (!d.classList.contains("is-folded")) document.getElementById("logDockTab").click(); return true; })()`);
+check("  the dock with the cards: 920 px, their column 390; its edge dragged 200 px widens it and is kept; past 1200 it stops there; a double click gives its own width back",
+  dk29.gpusW === 920 && /390px$/.test(dk29.col) && Math.abs(dk29a.w - (dk29.base + 200)) <= 2 && +dk29a.kept === dk29a.w && dk29b === 1200 &&
+  dk29c.w === dk29.base && dk29c.kept === null, JSON.stringify({ dk29, dk29a, dk29b, dk29c }));
+
+// HERESY 1169 · 1330 (Viktor 10.10.2026: «Для SEED сделай рандом -1, рандом fixed, fixed, next, prev»; «можно и в творце»)
+section("the seeds' modes: Random (−1), Random fixed, Fixed, Next, Previous, in the Creator and the Artist");
+await ev(`document.querySelector('#tabs [data-tab="create"]').click(); true`);
+const sd30keep = await ev(`(() => { const g = (id) => document.getElementById(id).value;
+  window.__sd30 = { lm: g("lmSeed"), snd: g("soundSeed"), style: g("style"), lyrics: g("lyrics"), abc: g("abc"), mm: localStorage.getItem("yue2.seedMode.music") };
+  document.getElementById("style").value = "dark country, baritone"; document.getElementById("lyrics").value = "[Verse]\\nOne line to sing"; document.getElementById("abc").value = "";
+  const sel = document.querySelector("#lmSeed ~ .seed-mode, .seedfield .seed-mode");
+  return { modes: [...document.querySelectorAll(".seedfield .seed-mode")].map((s) => [...s.options].map((o) => o.value).join(",")) }; })()`);
+const setMode30 = (m) => ev(`(() => { const s = document.querySelectorAll(".seedfield .seed-mode")[0]; s.value = "${m}"; s.dispatchEvent(new Event("change", { bubbles: true })); return document.getElementById("lmSeed").value; })()`);
+const sent30 = () => waitFor(`fetch("/mock/requests").then(r => r.json()).then(a => a.filter(x => x.path === "/synth").map(x => JSON.parse(x.body.replace(/("(?:lm_seed|seed)"\\s*:\\s*)(\\d+)/g, '$1"$2"')))[0] || null)`, 5000);
+await setMode30("next");
+await ev(`(() => { const i = document.getElementById("lmSeed"); i.value = "100"; i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+await mockClear();
+await click("#generateBtn");
+const sd30n = await sent30();
+const sd30nAfter = await ev(`document.getElementById("lmSeed").value`);
+await waitFor(`!document.querySelector("#libList .is-running-row")`, 10000);
+const sd30r = { field: await setMode30("random") };
+await mockClear();
+await click("#generateBtn");
+const sd30rSent = await sent30();
+sd30r.after = await ev(`document.getElementById("lmSeed").value`);
+await waitFor(`!document.querySelector("#libList .is-running-row")`, 10000);
+const sd30f = { rolled: await setMode30("roll") };
+await ev(`(() => { const k = window.__sd30, s = (id, v) => { document.getElementById(id).value = v; }; s("style", k.style); s("lyrics", k.lyrics); s("abc", k.abc); s("lmSeed", k.lm); s("soundSeed", k.snd);
+  const m = document.querySelectorAll(".seedfield .seed-mode")[0]; m.value = k.mm || "random"; if (k.mm) localStorage.setItem("yue2.seedMode.music", k.mm); else localStorage.removeItem("yue2.seedMode.music"); return true; })()`);
+check("the Creator's two seeds each have the five modes; Next sends 100 and moves the field to 101; Random sends none and keeps it empty; Random fixed puts a seed in",
+  sd30keep.modes.length === 2 && sd30keep.modes.every((m) => m === "random,roll,fixed,next,prev") && sd30n && sd30n.lm_seed === "100" && sd30nAfter === "101" &&
+  sd30r.field === "" && sd30rSent && sd30rSent.lm_seed === undefined && sd30r.after === "" && /^\d+$/.test(sd30f.rolled), JSON.stringify({ sd30keep, n: sd30n && sd30n.lm_seed, sd30nAfter, sd30r, r: sd30rSent && sd30rSent.lm_seed, sd30f }));
+const sd30a = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b); return json({ id: "20261010-180000-1330-" + sent.length, status: "done", of: b.count * b.shapes.length, pictures: [], prompt: "x", shapes: b.shapes, seed: b.seed == null ? 777 : b.seed, count: b.count, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arSeed", "yue2.arSeedMode", "yue2.arCount", "yue2.arPrompt"], was = keys.map((k) => localStorage.getItem(k));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(200);
+  const $ = (id) => document.getElementById(id), mode = document.querySelector(".ar-seed-row .seed-mode");
+  const setM = (m) => { mode.value = m; mode.dispatchEvent(new Event("change", { bubbles: true })); };
+  $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  $("arCount").value = "2"; $("arCount").dispatchEvent(new Event("change"));
+  setM("next"); $("arSeed").value = "500"; $("arSeed").dispatchEvent(new Event("input"));
+  $("arDraw").click(); await until(() => sent.length === 1, 3000); await wait(100);
+  const o = { modes: [...mode.options].map((x) => x.value).join(","), nSent: sent[0] && sent[0].seed, nAfter: $("arSeed").value };
+  setM("prev"); $("arDraw").click(); await until(() => sent.length === 2, 3000); await wait(100);
+  o.pSent = sent[1] && sent[1].seed; o.pAfter = $("arSeed").value;
+  $("arSeedNew").click(); await wait(50);
+  o.reset = { mode: mode.value, field: $("arSeed").value };
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  mode.value = localStorage.getItem("yue2.arSeedMode") || "random"; $("arSeed").value = localStorage.getItem("yue2.arSeed") || ""; $("arCount").value = localStorage.getItem("yue2.arCount") || "1";
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("  the Artist's seed: Next with two variations sends 500 and moves to 502, Previous sends 502 and moves back to 500; ⟲ is Random again, the field empty",
+  sd30a.modes === "random,roll,fixed,next,prev" && sd30a.nSent === 500 && sd30a.nAfter === "502" && sd30a.pSent === 502 && sd30a.pAfter === "500" &&
+  sd30a.reset.mode === "random" && sd30a.reset.field === "", JSON.stringify(sd30a));
+
+// HERESY 1169 · 1332 (Viktor 10.10.2026: «Над кнопкой РИСОВАТЬ/ОСТАНОВИТЬ пустой тултип. Центровку текста нужно внутри кнопки. И сделай капс в ней»; «дропдаун селекторы адаптивными с минимальной длиной по полной длине моделей»; «прогресс бар генерации»; «Artist не переводи как Артист на русский. Только как Художник»)
+section("the Artist: its header as its tab in Russian; Draw's own tip, centred in capitals; the painter's choice the row wide; the progress bar under Draw");
+const ui32 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000;
+  let runs = [];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(200);
+  const $ = (id) => document.getElementById(id), o = {};
+  const lang = document.documentElement.lang;
+  await window.RuachI18n.set("ru"); await wait(300);
+  o.ru = { tab: $("tabArtist").textContent, head: $("arRoomName").textContent };
+  await window.RuachI18n.set(lang || "en"); await wait(300);
+  o.en = $("arRoomName").textContent;
+  const d = $("arDraw"), cs = getComputedStyle(d);
+  o.draw = { tip: d.dataset.tip || "", upper: cs.textTransform, centre: cs.justifyContent };
+  const p = $("arPainter"), lb = p.closest(".field"), row = lb.parentElement.getBoundingClientRect(), pr = p.getBoundingClientRect();
+  o.painterWide = Math.round(pr.width) >= Math.round(row.width) - 2;
+  runs = [{ id: "20261010-200000-1332", prompt: "x", shapes: ["1:1", "16:9"], seed: 1, count: 1, painter: "krea2-q4", created: now, status: "queued", of: 2, pictures: [], waiting: "no card can take this now" }];
+  await window.HeresyArtist.reload(); await wait(150);
+  o.waiting = { shown: !$("arProgress").hidden, striped: $("arProgress").classList.contains("is-waiting"), say: $("arProgressSay").textContent };
+  runs = [Object.assign({}, runs[0], { status: "running", waiting: "", pictures: [{ n: 1, shape: "1:1", seed: 1, w: 1280, h: 1280, kept: true, file: "01-1x1-s1.png" }], live: { live: 2, step: 4, of: 8, file: "preview/02.jpg" } })];
+  await window.HeresyArtist.reload(); await wait(150);
+  o.running = { say: $("arProgressSay").textContent, width: $("arProgress").querySelector("i").style.width };
+  runs = [];
+  await window.HeresyArtist.reload(); await wait(150);
+  o.gone = $("arProgress").hidden;
+  window.fetch = real;
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("the Artist's header is the room's name as its tab says it (Художник in Russian, Artist in English); Draw has a tip of its own, its word centred in capitals; the painter's choice is the row wide",
+  ui32.ru.tab === "Художник" && ui32.ru.head === "Художник" && ui32.en === "Artist" && /Ctrl\+Enter/.test(ui32.draw.tip) && ui32.draw.upper === "uppercase" && ui32.draw.centre === "center" && ui32.painterWide,
+  JSON.stringify(ui32));
+check("  the progress under Draw: waiting, striped and why; painting, picture 2 of 2 at step 4 of 8 (75 %); gone with the run",
+  ui32.waiting.shown && ui32.waiting.striped && /waits for a card/.test(ui32.waiting.say) && /picture 2 of 2 · step 4 \/ 8 · 75%/.test(ui32.running.say) && ui32.running.width === "75%" && ui32.gone,
+  JSON.stringify(ui32));
+
+// HERESY 1169 · 1333 (Viktor 10.10.2026: «По моему набору семплеров хочу попросить, чтобы ты их внедрил… er_sde, res_*s, res_*s_ode, heun(pp2), exp_heun_2_x0(_sde)… bong_tangent, sgm_uniform, exponential, beta, kl_optimal, beta57»)
+section("the Artist's samplers and schedules: his set chosen and sent, the time by their looks, the matrix's two warnings where they belong");
+const sp33 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+    { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: true, lightning: true },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors"], lightning: true }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-210000-1333-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arSampling", "yue2.arLoras"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.arSampling");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.painters(); await wait(100);
+  const $ = (id) => document.getElementById(id), set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("change")); }, seen = (id) => !!$(id).offsetParent;
+  $("arSampling").open = true;
+  $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  set("arPainter", "krea2-q4"); await wait(50);
+  const o = { samplers: [...$("arSampler").options].map((x) => x.value).join(","), schedules: [...$("arSchedule").options].map((x) => x.value).join(",") };
+  const mins = () => +((($("arCost").textContent.match(/(\\d+(?:[.,]\\d+)?)\\s*min/) || [])[1] || "0").replace(",", ".")) || (/s on one card|about \\d+ s/.test($("arCost").textContent) ? 0.5 : 0);
+  o.costEuler = $("arCost").textContent;
+  set("arSampler", "res_2s"); await wait(50);
+  o.costRes = $("arCost").textContent; o.say = $("arSampSay").textContent; o.kreaWarn = seen("arSampWarn");
+  $("arDraw").click(); await until(() => sent.length === 1, 3000);
+  o.body = sent[0] && sent[0].sampling;
+  set("arSampler", "euler"); set("arSchedule", "karras"); await wait(50);
+  o.kreaKarrasWarn = seen("arSampWarn");
+  set("arPainter", "qwen2512-q4"); await wait(50);
+  set("arSchedule", "karras"); await wait(50);
+  o.lightKarras = seen("arSampWarn") ? $("arSampWarn").textContent : "";
+  set("arSchedule", "beta57"); await wait(50);
+  o.lightBeta57 = seen("arSampWarn");
+  set("arPainter", "qwen2512-fp8"); await wait(50);
+  set("arSampler", "euler-sde"); await wait(50);
+  o.fp8Sde = seen("arSampWarn") ? $("arSampWarn").textContent : "";
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters();
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("his samplers (ER-SDE, RES 2s and 3s with their ODE, Heun++ 2, Exp Heun 2 x0 and its SDE) and schedules (Beta 57, KL optimal, SGM uniform, Bong tangent) to choose; RES 2s said and sent",
+  sp33.samplers === "euler,euler-sde,er_sde,res_2s,res_2s_ode,res_3s,res_3s_ode,heunpp2,exp_heun_2_x0,exp_heun_2_x0_sde" &&
+  sp33.schedules === "simple,karras,exponential,beta,beta57,kl_optimal,sgm_uniform,bong_tangent" && sp33.say === "8 steps · RES 2s · Simple" &&
+  JSON.stringify(sp33.body) === '{"sampler":"res_2s"}' && sp33.costRes !== sp33.costEuler, JSON.stringify(sp33));
+check("  the matrix's warnings where they belong: Lightning under Karras (twice the subject), not under Beta 57, not on Krea; Euler SDE on fp8 without Lightning (soft)",
+  /twice/.test(sp33.lightKarras) && !sp33.lightBeta57 && !sp33.kreaWarn && !sp33.kreaKarrasWarn && /soft/.test(sp33.fp8Sde), JSON.stringify(sp33));
+
+// HERESY 1169 · 1334 (Viktor 10.10.2026: «Нужен отдельный логгер для Художника. Можно прикрутить его к фрейму логгера сервера отдельной вкладкой. И по фрейму логгера идея... детачить, переносить на другой монитор, поддерживать поверх окон»)
+section("the Artist's log: a view of the dock, each room its own; a refusal in the lab's words; each run's way to its end; the log's own window");
+const al34 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, realOpen = window.open;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000;
+  let runs = [];
+  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) return json({ error: "steps: 4 to 16 for this painter" }, 400);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    return real(u, o); };
+  const keys = ["yue2.logView.artist", "yue2.logView.create", "yue2.logDock", "yue2.arPrompt"], was = keys.map((k) => localStorage.getItem(k));
+  keys.slice(0, 2).forEach((k) => localStorage.removeItem(k));
+  const $ = (id) => document.getElementById(id), o = {}, before = window.RuachArtistLog.lines().length;
+  if ($("logDock").classList.contains("is-folded")) $("logDockTab").click();
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  o.artistView = { artist: !$("logDockArtist").hidden, server: !$("logDockBody").hidden };
+  await window.HeresyArtist.painters(); await wait(100);
+  await window.HeresyArtist.reload(); await wait(100);                       // the first look takes the runs in, says nothing
+  $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  $("arDraw").click(); await wait(300);
+  const lines = () => window.RuachArtistLog.lines().slice(before).map((e) => e.x);   // only what this check made (the suite drew before)
+  o.refused = lines().filter((x) => /cannot draw: steps: 4 to 16/.test(x)).length;
+  o.asked = lines().filter((x) => /Draw asked: Krea 2 Muse · Q4 · 1:1/.test(x)).length;
+  runs = [{ id: "20261010-220000-1334", prompt: "x", shapes: ["1:1"], seed: 3, count: 1, painter: "krea2-q4", created: now, status: "queued", of: 1, pictures: [], waiting: "no card can take this now" }];
+  await window.HeresyArtist.reload(); await wait(80);
+  runs = [Object.assign({}, runs[0], { status: "running", waiting: "", gpu: 1 })];
+  await window.HeresyArtist.reload(); await wait(80);
+  runs = [Object.assign({}, runs[0], { status: "failed", error: "CUDA out of memory" })];
+  await window.HeresyArtist.reload(); await wait(80);
+  const run = lines().filter((x) => /20261010-220000-1334/.test(x));
+  o.run = run;
+  o.last = $("logDockLast").textContent;
+  o.kept = (JSON.parse(localStorage.getItem("yue2.artistLog") || "[]") || []).filter((e) => /20261010-220000-1334/.test(e.x)).length;
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  o.createView = { artist: !$("logDockArtist").hidden, server: !$("logDockBody").hidden };
+  // the log's own window (no Document Picture-in-Picture in the test browser: a pop-up)
+  let frame = null;                                     // a window of the same origin: the test browser blocks a pop-up a script opens
+  window.open = () => { frame = document.createElement("iframe"); frame.style.cssText = "position:fixed;left:-9999px;width:600px;height:400px"; document.body.appendChild(frame); return frame.contentWindow; };
+  const pip = window.documentPictureInPicture; try { delete window.documentPictureInPicture; } catch (e) {}
+  $("logDockPop").click(); await wait(200);
+  const pop = window.ruachLogPop && window.ruachLogPop();
+  window.RuachArtistLog.add("a line for the window");
+  o.pop = pop ? { artist: pop.artist.childElementCount > 0, mirrored: [...pop.artist.querySelectorAll(".log-line")].some((r) => /a line for the window/.test(r.textContent)), views: pop.win.document.querySelectorAll(".log-view").length } : null;
+  if (frame) frame.remove();
+  window.open = realOpen;
+  if (pip) window.documentPictureInPicture = pip;
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  if ($("logDock").classList.contains("is-folded") !== (localStorage.getItem("yue2.logDock") !== "open")) $("logDockTab").click();
+  await window.HeresyArtist.painters();
+  await window.HeresyArtist.reload();
+  return o; })()`);
+check("the Artist's room opens the dock on the Artist's log, the Creator on the server's; a refusal is kept in the lab's own words with what was asked",
+  al34.artistView.artist && !al34.artistView.server && al34.createView.server && !al34.createView.artist && al34.refused === 1 && al34.asked === 1,
+  JSON.stringify({ artistView: al34.artistView, createView: al34.createView, refused: al34.refused, asked: al34.asked }));
+check("  a run's way to its end: waits and why, paints on its GPU, failed and why; the folded line says the last; kept in this browser",
+  al34.run.length === 3 && /waits: no card can take this now/.test(al34.run[0]) && /paints on GPU 1/.test(al34.run[1]) && /failed: CUDA out of memory/.test(al34.run[2]) &&
+  /failed: CUDA out of memory/.test(al34.last) && al34.kept === 3, JSON.stringify(al34));
+check("  the log's own window mirrors it: both views, the Artist's lines, a new one as it comes",
+  !!al34.pop && al34.pop.artist && al34.pop.mirrored && al34.pop.views === 2, JSON.stringify(al34.pop));
+
+// HERESY 1169 · 1335 (Viktor 10.10.2026: «И по LoRA адаптерам сделай также суммарную силу как у Творца, чтобы не было прежёга из-за наложения адаптеров»)
+section("the Artist's adapters together: from two of them a bar of their strengths' sum, zoned as the Creator's; dragged, all of them in proportion; Draw carries what the rows show");
+const lt35 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const A = { id: "krea2/A.safetensors", family: "krea2", name: "A", folder: "", mb: 100, picture: false, info: {} };
+  const B = { id: "krea2/B.safetensors", family: "krea2", name: "B", folder: "", mb: 100, picture: false, info: {} };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [A, B], sdxl: [], "qwen-image-2.1": [], "qwen-image-2512": [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-230000-1335", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const saved = Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).map((k) => [k, localStorage.getItem(k)]);
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const $ = (id) => document.getElementById(id), o = {};
+  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change"));
+  await window.HeresyArtist.loras.reload();
+  const bar = () => document.querySelector("#arLoraList .ar-lora-total");
+  const look = () => { const b = bar(); return b ? { zone: ["is-green", "is-amber", "is-red"].filter((c) => b.classList.contains(c))[0], sum: b.querySelector("output").textContent,
+    rows: [...document.querySelectorAll("#arLoraList [data-li] .ar-lora-wv")].map((x) => x.textContent).join(",") } : null; };
+  window.HeresyArtist.loras.set([{ id: A.id, weight: 1 }], "krea2"); await wait(50);
+  o.one = look();
+  window.HeresyArtist.loras.set([{ id: A.id, weight: 0.8 }, { id: B.id, weight: 0.7 }], "krea2"); await wait(50);
+  o.two = look();
+  const drag = (v) => { const t = bar().querySelector("input"); t.value = String(v); t.dispatchEvent(new Event("input", { bubbles: true })); };
+  const let_go = () => bar().querySelector("input").dispatchEvent(new Event("change", { bubbles: true }));
+  drag(1.2); drag(1.0);                                         // one drag through two places: each from where it stood when the drag began
+  o.dragged = look(); o.kept = window.HeresyArtist.loras.now().map((l) => l.weight).join(",");
+  let_go(); await wait(30);
+  drag(2.0); o.again = look();
+  let_go(); await wait(30);
+  const w = document.querySelector('#arLoraList [data-li="0"] .ar-lora-w'); w.value = "0.3"; w.dispatchEvent(new Event("input", { bubbles: true })); await wait(30);
+  o.moved = look();
+  $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  $("arDraw").click();
+  await until(() => sent.length, 3000);
+  o.body = sent[0] ? sent[0].loras : null;
+  window.fetch = real;
+  Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).forEach((k) => localStorage.removeItem(k));
+  saved.forEach((kv) => localStorage.setItem(kv[0], kv[1]));
+  await window.HeresyArtist.loras.reload();
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  return o; })()`);
+check("from two adapters a bar of their strengths together, zoned as the Creator's (amber past 1.2); one alone has none",
+  lt35.one === null && !!lt35.two && lt35.two.zone === "is-amber" && lt35.two.sum === "1.50" && lt35.two.rows === "0.80,0.70", JSON.stringify(lt35));
+check("  dragged, all of them move in proportion from where they stood when the drag began, on the 0.05 grid, kept for the next Draw; red past 1.8",
+  !!lt35.dragged && lt35.dragged.sum === "1.00" && lt35.dragged.zone === "is-green" && lt35.dragged.rows === "0.55,0.45" && lt35.kept === "0.55,0.45" &&
+  !!lt35.again && lt35.again.sum === "2.00" && lt35.again.zone === "is-red" && lt35.again.rows === "1.10,0.90", JSON.stringify(lt35));
+check("  one strength moved: the sum follows it; Draw carries the strengths the rows show",
+  !!lt35.moved && lt35.moved.sum === "1.20" && lt35.moved.zone === "is-green" && lt35.moved.rows === "0.30,0.90" &&
+  JSON.stringify(lt35.body) === '[{"id":"krea2/A.safetensors","weight":0.3},{"id":"krea2/B.safetensors","weight":0.9}]', JSON.stringify(lt35));
+
+// HERESY 1169 · 1336 (Viktor 10.10.2026: «По максимуму на картинки контекстное меню»)
+section("a picture's menu: a right click on a run's picture, the gallery's, the stage's or the one over the page; what its items do; the live step has none");
+const pm36 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000, ID = "20261010-230500-1336", LIVE = "20261010-230700-1336";
+  const pics = [{ file: "01-1x1-s501.png", thumb: "01-1x1-s501.thumb.jpg", shape: "1:1", w: 1024, h: 1024, seed: 501, kept: true },
+                { file: "02-1x1-s502.png", thumb: "02-1x1-s502.thumb.jpg", shape: "1:1", w: 1024, h: 1024, seed: 502, kept: true }];
+  const done = { id: ID, prompt: "A lighthouse in the storm", shapes: ["1:1"], seed: 501, count: 2, painter: "krea2-q4", created: now, status: "done", of: 2, pictures: pics,
+                 sampling: { sampler: "res_2s", schedule: "beta" } };
+  let runs = [done];
+  window.fetch = (u, o) => { u = String(u);
+    const body = o && o.body ? JSON.parse(o.body) : null;
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/star")) { sent.push(["star", body]); return json({ ok: true }); }
+    if (u.startsWith("/lab/artist/upscalers")) return json({ upscalers: [{ name: "4x_Nomos8kDAT.pth", scale: 4, mb: 140.6 }] });
+    if (u.startsWith("/lab/artist/upscale")) { sent.push(["upscale", body]); return json({ id: "20261010-230600-1336", kind: "upscale", status: "queued", of: 1, pictures: [], prompt: done.prompt, shapes: ["1:1"], seed: 501, count: 1, painter: "upscale", created: now }, 202); }
+    if (u.startsWith("/lab/artist/aside")) { sent.push(["aside", body]); return json({ done: body.items, trashed: [] }); }
+    return real(u, o); };
+  const saved = Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).map((k) => [k, localStorage.getItem(k)]);
+  const $ = (id) => document.getElementById(id), o = {};
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const lookWas = (document.querySelector("#arBar [data-look].is-on") || { dataset: {} }).dataset.look || "runs";
+  await window.HeresyArtist.reload(); await wait(100);
+  document.querySelector('#arBar [data-look="runs"]').click(); await wait(100);
+  const menu = () => document.querySelector(".hm-menu");
+  const labels = (m) => [...(m || menu() || document.createElement("div")).querySelectorAll(".hm-item .hm-label")].map((x) => x.textContent);
+  const item = (label, m) => [...(m || menu() || document.createElement("div")).querySelectorAll(".hm-item")].find((b) => b.querySelector(".hm-label").textContent.indexOf(label) === 0);
+  const right = (el) => { const r = el.getBoundingClientRect(), e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: Math.round(r.left + 10), clientY: Math.round(r.top + 10) }); el.dispatchEvent(e); return e.defaultPrevented; };
+  const runPic = (i) => document.querySelector('#arRuns .ar-run[data-id="' + ID + '"] .ar-pic[data-i="' + i + '"]');
+  // a run's picture
+  o.prevented = right(runPic(0));
+  o.labels = labels();
+  item("Star it").click(); await until(() => sent.some((s) => s[0] === "star"), 2000);
+  o.star = (sent.filter((s) => s[0] === "star")[0] || [])[1] || null;
+  right(runPic(1)); item("To the form").click(); await wait(50);
+  o.form = { prompt: $("arPrompt").value, seed: $("arSeed").value, shape: [...document.querySelectorAll("#arShapes input:checked")].map((x) => x.value).join(",") };
+  right(runPic(0)); item("All of it to the form").click(); await wait(50);
+  const sn = window.HeresyArtist.sampling.now();
+  o.all = { seed: $("arSeed").value, sampler: sn && sn.sampler, schedule: sn && sn.schedule };
+  right(runPic(0)); item("Upscale").click(); await wait(80);
+  const subs = document.querySelectorAll(".hm-menu");
+  o.upLabels = subs.length > 1 ? labels(subs[subs.length - 1]) : [];
+  if (subs.length > 1) item("2K", subs[subs.length - 1]).click();
+  await until(() => sent.some((s) => s[0] === "upscale"), 3000);
+  o.up = (sent.filter((s) => s[0] === "upscale")[0] || [])[1] || null;
+  const clip = navigator.clipboard; let copied = null;
+  try { Object.defineProperty(clip, "writeText", { value: (x) => { copied = x; return Promise.resolve(); }, configurable: true }); } catch (e) {}
+  right(runPic(0)); item("Copy the seed").click(); await wait(50);
+  o.copied = copied;
+  try { delete clip.writeText; } catch (e) {}
+  right(runPic(0)); item("To the trash").click(); await until(() => sent.some((s) => s[0] === "aside"), 2000);
+  o.aside = (sent.filter((s) => s[0] === "aside")[0] || [])[1] || null;
+  // the gallery's picture: over the page, and its menu there
+  runs = [done]; await window.HeresyArtist.reload(); await wait(80);
+  document.querySelector('#arBar [data-look="gallery"]').click(); await wait(120);
+  const g0 = document.querySelector("#arRuns .ar-gpic[data-g]");
+  o.galleryMenu = g0 ? (right(g0), labels()[0]) : null;
+  if (g0) { item("Over the page").click(); await until(() => document.querySelector(".ar-view .art-img"), 2000); await wait(150); }
+  const vimg = document.querySelector(".ar-view .art-img");
+  o.viewMenu = vimg ? (right(vimg), { first: labels()[0], over: labels().indexOf("Over the page") >= 0, z: +getComputedStyle(menu()).zIndex, vz: +getComputedStyle(document.querySelector(".ar-view")).zIndex }) : null;
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(60);
+  o.escMenu = { menu: !!menu(), view: !!document.querySelector(".ar-view:not(.is-leaving)") };
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(200);
+  o.escView = !!document.querySelector(".ar-view:not(.is-leaving)");
+  // its run, from the gallery
+  const g1 = document.querySelector("#arRuns .ar-gpic[data-g]");
+  if (g1) { right(g1); item("Its run").click(); await wait(150); }
+  const card = document.querySelector('#arRuns .ar-run[data-id="' + ID + '"]');
+  o.itsRun = { look: (document.querySelector("#arBar [data-look].is-on") || { dataset: {} }).dataset.look, flash: !!(card && card.classList.contains("is-flash")) };
+  // the stage: the picture it shows has the menu; a run as it develops has none
+  const sp = document.querySelector("#arStage .ar-stage-pic");
+  o.stagePic = !!sp && !sp.classList.contains("is-live") && window.ruachArtistPicMenu(sp, 20, 20) === true && !!menu();
+  if (window.HeresyMenu) window.HeresyMenu.close();
+  runs = [Object.assign({}, done, { id: LIVE, status: "running", pictures: [], of: 2, gpu: 1 }), done];
+  await window.HeresyArtist.reload(); await wait(100);
+  const lv = document.querySelector("#arStage .ar-stage-pic");
+  o.live = { isLive: !!lv && lv.classList.contains("is-live"), menu: lv ? window.ruachArtistPicMenu(lv, 20, 20) : null };
+  if (window.HeresyMenu) window.HeresyMenu.close();
+  window.fetch = real;
+  runs = [];
+  Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).forEach((k) => localStorage.removeItem(k));
+  saved.forEach((kv) => localStorage.setItem(kv[0], kv[1]));
+  const lb = document.querySelector('#arBar [data-look="' + lookWas + '"]'); if (lb) lb.click();
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  return o; })()`);
+check("a right click on a run's picture opens its menu (the browser's own does not): over the page, the stage, the form, all of it, reference, compare, cover, upscale, star, pick, copy, download, its run, the trash",
+  pm36.prevented && ["Over the page", "To the stage", "To the form", "All of it to the form", "As reference", "Compare…", "Set as cover", "Upscale", "Star it", "Pick it", "Copy the prompt", "Copy the seed · 501", "Download · PNG 1024×1024", "The file in a new tab", "Its run", "To the trash"]
+    .every((x) => pm36.labels.indexOf(x) >= 0), JSON.stringify(pm36.labels));
+check("  Star it stars that picture; To the form: its prompt, seed and shape; All of it: its sampling as well",
+  !!pm36.star && pm36.star.id === "20261010-230500-1336" && pm36.star.file === "01-1x1-s501.png" && pm36.star.star === true &&
+  pm36.form.prompt === "A lighthouse in the storm" && pm36.form.seed === "502" && pm36.form.shape === "1:1" &&
+  pm36.all.seed === "501" && pm36.all.sampler === "res_2s" && pm36.all.schedule === "beta", JSON.stringify({ star: pm36.star, form: pm36.form, all: pm36.all }));
+check("  Upscale opens 2K and 4K with the sizes they make; 2K upscales that picture with the upscaler the stage's row would take; the seed copied; the trash takes it",
+  pm36.upLabels.join("|") === "2K · 2560×2560|4K · 3840×3840" && !!pm36.up && pm36.up.id === "20261010-230500-1336" && pm36.up.file === "01-1x1-s501.png" && pm36.up.target === "2k" && !!pm36.up.model &&
+  pm36.copied === "501" && !!pm36.aside && pm36.aside.aside === true && JSON.stringify(pm36.aside.items) === '[{"id":"20261010-230500-1336","file":"01-1x1-s501.png"}]',
+  JSON.stringify({ upLabels: pm36.upLabels, up: pm36.up, copied: pm36.copied, aside: pm36.aside }));
+check("  the gallery's picture has it; over the page too, without Over the page, standing over the view; Esc closes the menu and leaves the picture, the next Esc the view",
+  pm36.galleryMenu === "Over the page" && !!pm36.viewMenu && pm36.viewMenu.first === "To the stage" && !pm36.viewMenu.over && pm36.viewMenu.z > pm36.viewMenu.vz &&
+  !pm36.escMenu.menu && pm36.escMenu.view && !pm36.escView, JSON.stringify({ galleryMenu: pm36.galleryMenu, viewMenu: pm36.viewMenu, escMenu: pm36.escMenu, escView: pm36.escView }));
+check("  Its run goes to the Runs look and lights its card; the stage's picture has the menu, a run developing there has none",
+  pm36.itsRun.look === "runs" && pm36.itsRun.flash && pm36.stagePic && pm36.live.isLive && pm36.live.menu === false, JSON.stringify({ itsRun: pm36.itsRun, stagePic: pm36.stagePic, live: pm36.live }));
+
+// HERESY 1169 · 1337 (Viktor 10.10.2026: «картинки у нас куда удаляются с обложек треков и остального? Может отдельный Trash сделать в колонке воркспейсов? `Trash (Art)`. Вижу Trash у Артиста, но пока что очистки и удаления нет.»)
+section("the art's trash: Trash (Art) in the library's column (runs, pictures put aside, covers taken off; ticked, given back or deleted for good, asked first; a frozen workspace's cover stays); the Artist's Trash look deletes for good too");
+const ab37 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000, R = "20261010-110000-1337", P = "20261010-120000-1337";
+  const bin = { runs: [{ id: R, prompt: "A trashed run", painter: "krea2-q4", created: now - 7200, trashed_at: now - 3600, pictures: [{ file: "01-1x1-s1.png", thumb: "thumbs/01-1x1-s1.jpg", kept: true, shape: "1:1", seed: 1 }], bytes: 2000000 }],
+    pictures: [{ id: P, file: "02-1x1-s2.png", thumb: "thumbs/02-1x1-s2.jpg", shape: "1:1", seed: 2, prompt: "Put aside", created: now - 600, bytes: 1000000 }],
+    covers: [{ take: "t1337a", title: "Song One", stamp: "20261009-100000", when: now - 86400, bytes: 200000, prompt: "an old cover", frozen: false },
+             { take: "t1337b", title: "Frozen Song", stamp: "20261008-090000", when: now - 172800, bytes: 100000, prompt: "", frozen: true }], bytes: 3300000 };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/bin") && o && o.method === "POST") { const b = JSON.parse(o.body); sent.push(b); return json({ op: b.op, done: b.items || [{}, {}, {}], kept: [] }); }
+    if (u.startsWith("/lab/artist/bin")) return json(bin);
+    if (u.startsWith("/lab/artist/trashed")) return json({ runs: bin.runs });
+    if (u.startsWith("/lab/artist/asides")) return json({ pictures: bin.pictures });
+    return real(u, o); };
+  const yes = async () => { const b = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes"), 2000); const said = b ? b.closest(".hd-back").textContent : ""; if (b) b.click(); await wait(250); return said; };
+  const $ = (id) => document.getElementById(id), o = {};
+  document.querySelector('.topbar [data-tab="collection"]').click(); await wait(300);
+  const place = () => document.querySelector('#collSide [data-place="__trash_art"]');
+  o.placeThere = !!place();
+  place().click(); await until(() => document.querySelector("#collGrid .coll-art"), 3000); await wait(100);
+  o.cards = [...document.querySelectorAll("#collGrid .coll-art")].map((c) => c.dataset.akind + ":" + c.querySelector(".coll-title").textContent);
+  o.count = ((place() || document.body).querySelector(".coll-n") || {}).textContent || "";
+  o.frozenOff = !!document.querySelector("#collGrid .coll-art.is-frozen input[data-asel]:disabled");
+  o.daysHidden = $("collTrashDays").closest("label").style.display === "none";
+  o.empty0 = $("collEmpty").textContent; o.restoreOff = $("collRestore").disabled; o.where = $("collWhere").textContent;
+  document.querySelector('#collGrid input[data-asel="cover:t1337a|20261009-100000"]').click(); await wait(50);
+  o.empty1 = $("collEmpty").textContent;
+  $("collRestore").click(); await until(() => sent.length >= 1, 2000); await wait(200);
+  o.restore = sent[0] || null;
+  $("collTSelAll").click(); await wait(50);
+  o.ticked = document.querySelectorAll("#collGrid input[data-asel]:checked").length;
+  $("collEmpty").click(); o.ask1 = await yes(); await until(() => sent.length >= 2, 2000); await wait(150);
+  o.del = sent[1] || null;
+  $("collTSelNone").click(); await wait(50);
+  $("collEmpty").click(); o.ask2 = await yes(); await until(() => sent.length >= 3, 2000); await wait(150);
+  o.wipe = sent[2] || null;
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "a", ctrlKey: true, bubbles: true })); await wait(50);   // no take ticked here, none sent to the trash
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true })); await wait(300);
+  const asked = document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-no");
+  o.noAsk = !asked; if (asked) { asked.click(); await wait(250); }
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(50);
+  document.querySelector('#collSide [data-place="__trash"]').click(); await wait(400);
+  o.daysBack = $("collTrashDays").closest("label").style.display === "";
+  document.querySelector('#collSide [data-place=""]').click(); await wait(200);
+  // the Artist's Trash look
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const lookWas = (document.querySelector("#arBar [data-look].is-on") || { dataset: {} }).dataset.look || "runs";
+  document.querySelector('#arBar [data-look="trash"]').click();
+  await until(() => document.querySelector("#arRuns .ar-trash-head"), 3000); await wait(100);
+  o.head = !!document.querySelector("#arRuns .ar-trash-head [data-wipe]");
+  document.querySelector('#arRuns [data-purge="' + R + '"]').click(); o.ask3 = await yes(); await until(() => sent.length >= 4, 2000);
+  o.purgeRun = sent[3] || null;
+  await until(() => document.querySelector('#arRuns [data-purge-pic="0"]'), 2000);
+  document.querySelector('#arRuns [data-purge-pic="0"]').click(); o.ask4 = await yes(); await until(() => sent.length >= 5, 2000);
+  o.purgePic = sent[4] || null;
+  await until(() => document.querySelector("#arRuns [data-wipe]"), 2000);
+  document.querySelector("#arRuns [data-wipe]").click(); o.ask5 = await yes(); await until(() => sent.length >= 6, 2000);
+  o.wipeArtist = sent[5] || null;
+  const lb = document.querySelector('#arBar [data-look="' + lookWas + '"]'); if (lb) lb.click();
+  window.fetch = real;
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  return o; })()`);
+check("Trash (Art) stands in the library's column; opened, it lists the Artist's run, the picture put aside and both covers, 4 in the column; a frozen workspace's cover cannot be ticked; Empty by itself is the takes' trash's own",
+  ab37.placeThere && ab37.cards.join("|") === "run:A trashed run|picture:Put aside|cover:Song One|cover:Frozen Song" && ab37.count === "4" && ab37.frozenOff && ab37.daysHidden &&
+  ab37.empty0 === "Wipe out the art's trash" && ab37.restoreOff && /Trash \(Art\)/.test(ab37.where), JSON.stringify(ab37));
+check("  a cover ticked is given back; all ticked (not the frozen) are deleted for good after the question; none ticked, Wipe out asks and sends the whole trash, the frozen said to stay",
+  ab37.empty1 === "Delete 1 for good" && JSON.stringify(ab37.restore) === '{"op":"restore","items":[{"kind":"cover","take":"t1337a","stamp":"20261009-100000"}]}' && ab37.ticked === 3 &&
+  /Delete for good: 1 run, 1 picture, 1 cover/.test(ab37.ask1) && !!ab37.del && ab37.del.op === "delete" && ab37.del.items.length === 3 &&
+  /Wipe out the art's trash: 1 run, 1 picture, 1 cover/.test(ab37.ask2) && /frozen workspace/.test(ab37.ask2) && JSON.stringify(ab37.wipe) === '{"op":"empty"}',
+  JSON.stringify({ restore: ab37.restore, ticked: ab37.ticked, ask1: ab37.ask1, del: ab37.del, ask2: ab37.ask2, wipe: ab37.wipe }));
+check("  there Ctrl+A ticks no take and Delete sends none to the trash; the takes' Trash has its Empty by itself again",
+  ab37.noAsk && ab37.daysBack, JSON.stringify({ noAsk: ab37.noAsk, daysBack: ab37.daysBack }));
+check("  the Artist's Trash look: Delete for good on a run and on a picture put aside, Wipe out for all it shows (never the covers), each asked first",
+  ab37.head && /Delete this run for good, with its 1 picture/.test(ab37.ask3) && JSON.stringify(ab37.purgeRun) === '{"op":"delete","items":[{"kind":"run","id":"20261010-110000-1337"}]}' &&
+  /Delete this picture for good/.test(ab37.ask4) && JSON.stringify(ab37.purgePic) === '{"op":"delete","items":[{"kind":"picture","id":"20261010-120000-1337","file":"02-1x1-s2.png"}]}' &&
+  /covers taken off the takes stay/.test(ab37.ask5) && !!ab37.wipeArtist && ab37.wipeArtist.op === "delete" && ab37.wipeArtist.items.length === 2,
+  JSON.stringify({ head: ab37.head, ask3: ab37.ask3, purgeRun: ab37.purgeRun, ask4: ab37.ask4, purgePic: ab37.purgePic, ask5: ab37.ask5, wipeArtist: ab37.wipeArtist }));
+
+// HERESY 1169 · 1338 (Viktor 10.10.2026: «И в настройках движка, в Engine не забудь прописать выборы всех генеративных art моделей. Там только qwen сейчас.»)
+section("Engine → Artwork: the Qwen painters this machine has beside Krea and SDXL (each fine-tune its own line, Lightning said); one chosen, a take's artwork asks for it");
+const ap38 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, asked = [];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const sel = document.getElementById("artPainter"), before = [...sel.options].map((o) => o.value), was = localStorage.getItem("yue2.artPainter"), o = {};
+  const list = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 13500, ready: true },
+    { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, ready: true, lightning: true },
+    { key: "qwen2512-q6", label: "Qwen-Image 2512 · Q6", need_mb: 20000, ready: false, lightning: true },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, ready: true, lightning: true, models: ["Jib_v6.safetensors", "Real_v2.safetensors"] },
+    { key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, ready: true }];
+  const rows = window.ruachArtPainters(list);
+  o.values = rows.map((r) => r[0]);
+  o.labels = rows.filter((r) => /^qwen/.test(r[0])).map((r) => r[1]);
+  o.again = window.ruachArtPainters(list).length === rows.length;            // asked twice, each line once
+  sel.value = "qwen2512-fp8:Jib_v6.safetensors"; sel.dispatchEvent(new Event("change"));
+  o.kept = localStorage.getItem("yue2.artPainter");
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/art/draw")) { asked.push(u); return json({ status: "done", name: "t1338" }); }
+    if (u.startsWith("/lab/arts")) return json({ arts: {}, unseen: [], credits: {} });
+    return real(u, opt); };
+  await window.HeresyArt.draw("t1338", false, true); await wait(100);
+  o.asked = asked[0] || "";
+  window.fetch = real;
+  if (was === null) localStorage.removeItem("yue2.artPainter"); else localStorage.setItem("yue2.artPainter", was);
+  [...sel.options].forEach((x) => { if (before.indexOf(x.value) < 0) x.remove(); });
+  sel.value = was || "";
+  return o; })()`);
+check("Engine → Artwork lists the Qwen painters here beside Krea and SDXL: 2512 Q4 with Lightning, each fp8 fine-tune its own line, 2.1 with its licence said; one not here is not offered; asked twice, each line once",
+  ["", "krea2-q4", "krea2-q8", "sdxl", "qwen2512-q4", "qwen2512-fp8:Jib_v6.safetensors", "qwen2512-fp8:Real_v2.safetensors", "qwen21"].every((v) => ap38.values.indexOf(v) >= 0) &&
+  ap38.values.indexOf("qwen2512-q6") < 0 && ap38.again &&
+  ap38.labels.indexOf("Qwen-Image 2512 · Q4 · Lightning · about 15 GB · about 30 s a picture") >= 0 &&
+  ap38.labels.indexOf("Qwen-Image 2512 · Jib_v6 · Lightning · about 22 GB · about 40 s a picture") >= 0 &&
+  ap38.labels.some((x) => /^Qwen-Image 2\.1 · research licence · not for a song that is sold/.test(x)), JSON.stringify(ap38));
+check("  a fine-tune chosen is kept, and a take's artwork asks the lab for it by name",
+  ap38.kept === "qwen2512-fp8:Jib_v6.safetensors" && /[?&]painter=qwen2512-fp8%3AJib_v6\.safetensors/.test(ap38.asked), JSON.stringify({ kept: ap38.kept, asked: ap38.asked }));
+
+// HERESY 1169 · 1333c: the second sampling matrix (24 pictures, 10.10.2026): KL optimal under Lightning painted the subject twice too
+section("the Artist's sampling: KL optimal under Lightning warned as Karras and Exponential are; Bong tangent and SGM uniform not; Krea not");
+const kl33 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+    { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: true, lightning: true }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arSampling"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.arSampling");
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.painters(); await wait(100);
+  const $ = (id) => document.getElementById(id), set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("change")); }, seen = (id) => !!$(id).offsetParent;
+  $("arSampling").open = true;
+  set("arPainter", "qwen2512-q4"); await wait(50);
+  const o = {};
+  for (const c of ["kl_optimal", "bong_tangent", "sgm_uniform"]) { set("arSchedule", c); await wait(50); o[c] = seen("arSampWarn") ? $("arSampWarn").textContent : ""; }
+  set("arPainter", "krea2-q4"); await wait(50); set("arSchedule", "kl_optimal"); await wait(50);
+  o.krea = seen("arSampWarn");
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  return o; })()`);
+check("Lightning under KL optimal warned (twice the subject, KL optimal named); under Bong tangent and SGM uniform not; Krea under KL optimal not",
+  /twice/.test(kl33.kl_optimal) && /KL optimal/.test(kl33.kl_optimal) && !kl33.bong_tangent && !kl33.sgm_uniform && !kl33.krea, JSON.stringify(kl33));
+
+// HERESY 1169 · 1339 (Viktor 10.10.2026: «Жги переводы дальше, бро, и доводи всё до всех запланированных языков»): the page in Russian
+// for a moment: the Artist's counts in their forms, a dialog's paragraphs kept, the lyrics' mirror left as typed, the gutter's names
+section("the page in six languages: counts in their forms, a dialog's paragraphs kept, the lyrics' mirror as typed, the gutter translated");
+const tr39 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), L = window.RuachI18n, o = {};
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  o.forms = {};
+  for (const c of ["ru", "uk", "be", "el", "es", "it"]) o.forms[c] = ["1 picture", "3 pictures", "5 pictures", "21 pictures", "2 runs in the trash"].map((s) => L.look(s, c));
+  const was = localStorage.getItem("yue2.lang"), lyr = document.getElementById("lyrics"), lyrWas = lyr.value;
+  L.set("ru"); await wait(300);
+  // a dialog: its title and its paragraphs in Russian, the paragraphs kept apart
+  const body = "It takes: the boxes' undo history, a lifted frame, the music playing, a writer's answer still on its way, an upload under way.\\n\\n" +
+    "It keeps: the song in the form (its words and its knobs), a run under way (it comes back with its clock), the library, the Writer's notebook.\\n\\nCtrl+F5 reloads at once.";
+  const asked = window.HeresyDialog.confirm("Reload the page?\\n\\n" + body, { ok: "Reload", cancel: "Stay" });
+  const box = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-box"), 3000); await wait(150);
+  o.title = box ? box.querySelector(".hd-title").textContent : "";
+  o.body = box ? box.querySelector(".hd-body").textContent : "";
+  o.stay = box ? box.querySelector(".hd-no").textContent : "";
+  if (box) box.querySelector(".hd-no").click();
+  await asked;
+  // the lyrics' mirror keeps the typed word though the catalog knows it; the gutter's section name is translated
+  const known = ["End", "Outro", "Intro", "Stop", "Save"].filter((w) => L.look(w, "ru") !== null)[0] || "End";
+  lyr.value = "[Verse]\\nla la la la\\nla la la\\n" + known + "\\n\\n[Chorus]\\nla la la la"; lyr.dispatchEvent(new Event("input", { bubbles: true }));
+  await wait(400);
+  const mirror = lyr.parentNode.querySelector(".lyr-mirror");
+  o.known = known; o.mirror = mirror ? mirror.textContent.indexOf(known) >= 0 : null;
+  const heads = Array.prototype.map.call(lyr.parentNode.querySelectorAll(".lyr-gutter .lyr-head > span > span"), (s) => s.textContent);
+  o.heads = heads;
+  lyr.value = lyrWas; lyr.dispatchEvent(new Event("input", { bubbles: true }));
+  L.set(was || "en"); if (was === null) localStorage.removeItem("yue2.lang");
+  await wait(300);
+  o.back = document.documentElement.lang;
+  return o; })()`);
+check("a count says itself in each language's forms: 1 картинка, 3 картинки, 5 картинок, 21 картинка; 3 малюнкі, 3 εικόνες, 3 imágenes, 3 immagini",
+  JSON.stringify(tr39.forms.ru.slice(0, 4)) === JSON.stringify(["1 картинка", "3 картинки", "5 картинок", "21 картинка"]) && tr39.forms.be[1] === "3 малюнкі" &&
+  tr39.forms.el[1] === "3 εικόνες" && tr39.forms.es[1] === "3 imágenes" && tr39.forms.it[1] === "3 immagini" && /^2 рана в корзине$/.test(tr39.forms.ru[4]), JSON.stringify(tr39.forms));
+check("  a dialog in Russian: its title, its buttons, and its paragraphs kept apart (pre-line: «\\n\\n» between them)",
+  tr39.title === "Перезагрузить страницу?" && tr39.stay === "Остаться" && /^Она заберёт:/.test(tr39.body) && /\n\nОна сохранит:/.test(tr39.body) && /\n\nCtrl\+F5/.test(tr39.body), JSON.stringify([tr39.title, tr39.stay, tr39.body.slice(0, 80)]));
+check("  the lyrics' mirror keeps the typed word though the catalog knows it («" + tr39.known + "»); the gutter's section names in Russian",
+  tr39.mirror === true && tr39.heads.length >= 1 && tr39.heads.every((h) => /[а-яё]/i.test(h)), JSON.stringify(tr39));
+check("  the page back in its language after", tr39.back === "en", tr39.back);
+// HERESY 1169 · 1339e: the cheat-sheet's second line in the page's language (its own Russian in English and Russian)
+const hi39 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), L = window.RuachI18n, was = localStorage.getItem("yue2.lang"), o = {};
+  const first = () => { const r = document.querySelector("#hiTable .hi-say .hi-ru"); return r ? r.textContent : null; };
+  window.HeresyInstruments.open("duduk", "instruments"); await wait(400);
+  o.en = first();
+  L.set("uk"); await wait(400); o.uk = first();
+  L.set("es"); await wait(400); o.es = first();
+  L.set("ru"); await wait(400); o.ru = first();
+  L.set(was || "en"); if (was === null) localStorage.removeItem("yue2.lang");
+  await wait(300); o.back = first();
+  document.getElementById("hiClose").click(); await wait(150);
+  return o; })()`);
+check("the cheat-sheet's second line follows the language: Ukrainian and Spanish from the catalogs, the sheet's own Russian in Russian and English",
+  /^Абрикосовая/.test(hi39.en || "") && /^Подвійна тростина/.test(hi39.uk || "") && /^Doble lengüeta/.test(hi39.es || "") && /^Абрикосовая/.test(hi39.ru || "") && /^Абрикосовая/.test(hi39.back || ""), JSON.stringify(hi39));
+
+// HERESY 1169 · 1340 (Viktor 10.10.2026: «Левая колонка Художника не прокручивается независимо»; «Среднюю колонку фрейм промпта растянуть до пола»;
+// «по повторному клику на миниатюру убрать её из средней колонки и вернуть текущую картинку в проявке»; «разреши батчинг/очередь до двух батчей»;
+// «Картинки предпросмотра LoRA адаптеров… без обрезки»)
+section("the Artist room by Viktor's evening list: two runs at a time, a thumbnail clicked again, the form's own scroll, the tall prompt, whole LoRA pictures");
+const ar40Was = await ev(`document.body.dataset.tab`);
+const ar40Size = await ev(`[window.innerWidth, window.innerHeight]`);
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+await ev(`(() => { const real = window.fetch; window.__ar40Fetch = real; window.__ar40Asked = [];
+  const long = Array.from({ length: 28 }, (_, i) => "Sentence " + (i + 1) + " of a long prompt about a lighthouse at dusk, its lamp turning over a quiet sea.").join(" ");
+  window.__ar40Runs = [
+    { id: "20261010-181000-bbbb", prompt: "A boat at dawn.", shapes: ["1:1"], seed: 9, count: 1, painter: "krea2-q4", created: 1791590000, status: "running", of: 1, pictures: [], gpu: 1 },
+    { id: "20261010-180000-aaaa", prompt: long, shapes: ["1:1"], seed: 7, count: 1, painter: "krea2-q4", created: 1791580000, status: "done", of: 1, took: 40, ended: 1791580040,
+      pictures: [{ n: 1, shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true, took: 40, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg" }] }];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => {
+    u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: window.__ar40Runs });
+    if (u.startsWith("/lab/artist/stop")) { const b = JSON.parse(o.body); window.__ar40Asked.push(b); return json({ id: b.id, stopping: true }); }
+    if (u.startsWith("/lab/artist/draw")) { window.__ar40Asked.push({ draw: 1 }); return json({ error: "stubbed" }, 500); }
+    return real(u, o);
+  };
+  return true; })()`);
+await ev(`document.getElementById("tabArtist").click(); true`);
+await ev(`window.HeresyArtist.reload(); true`);
+await waitFor(`document.querySelectorAll('#arRuns .ar-run[data-id="20261010-180000-aaaa"] .ar-thumb').length === 1`, 5000, 50);
+const ar40 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  const p = $("arPrompt"); p.value = "A third boat."; p.dispatchEvent(new Event("input", { bubbles: true }));
+  await wait(150);
+  // one run going: Draw draws (a second waits behind it), Stop beside it
+  o.one = { text: $("arDraw").textContent, on: !$("arDraw").disabled, stop: !$("arStop").hidden, tip: $("arDraw").dataset.tip };
+  // two going: Draw waits for one of them, Ctrl+Enter asks nothing
+  window.__ar40Runs.unshift({ id: "20261010-182000-cccc", prompt: "A third.", shapes: ["1:1"], seed: 11, count: 1, painter: "krea2-q4", created: 1791600000, status: "queued", of: 1, pictures: [] });
+  window.HeresyArtist.reload();
+  for (let i = 0; i < 40 && !document.querySelector('#arRuns .ar-run[data-id="20261010-182000-cccc"]'); i++) await wait(100);
+  await wait(150);
+  p.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true, cancelable: true }));
+  await wait(200);
+  o.two = { on: !$("arDraw").disabled, tip: $("arDraw").dataset.tip, asked: window.__ar40Asked.length };
+  window.__ar40Runs.shift();
+  window.HeresyArtist.reload();
+  for (let i = 0; i < 40 && document.querySelector('#arRuns .ar-run[data-id="20261010-182000-cccc"]'); i++) await wait(100);
+  await wait(150);
+  o.again = !$("arDraw").disabled;
+  // a thumbnail clicked again while a run paints: the stage back to the run
+  const th = () => document.querySelector('#arRuns .ar-run[data-id="20261010-180000-aaaa"] .ar-thumb[data-act="view"]');
+  const stage = () => document.querySelector("#arStage .ar-stage-pic.is-live") ? "live" : document.querySelector('#arStage .ar-stage-pic[data-stage="view"]') ? "pic" : "other";
+  o.before = stage();
+  th().click(); await wait(250); o.first = stage();
+  // the picture on the stage: the stage as tall as the window under it, its prompt down to the floor
+  const st = $("arStage"), pr = st.querySelector(".ar-stage-prompt"), avail = parseFloat(getComputedStyle($("arCols")).getPropertyValue("--ar-avail"));
+  o.tall = { cls: st.classList.contains("is-tall"), max: pr ? getComputedStyle(pr).maxHeight : "", h: pr ? pr.clientHeight : 0, avail: avail, stageH: st.offsetHeight,
+             gap: pr ? Math.round(st.getBoundingClientRect().bottom - pr.getBoundingClientRect().bottom) : -1 };
+  th().click(); await wait(250); o.second = stage();
+  th().click(); await wait(250); o.third = stage();
+  // the form scrolls on its own
+  const left = document.querySelector(".ar-cols > .ar-left"), cs = getComputedStyle(left), view = $("view-artist"), vt = view ? view.scrollTop : 0;
+  o.left = { oy: cs.overflowY, max: cs.maxHeight, sh: left.scrollHeight, ch: left.clientHeight, fixed: !!view && view.classList.contains("ar-fixed"), h: cs.height };   // 1344: a tall window fixes the room
+  left.scrollTop = 160; await wait(100);
+  o.left.top = left.scrollTop; o.left.viewSame = !view || view.scrollTop === vt;
+  left.scrollTop = 0;
+  // a LoRA card's picture whole, not cropped
+  const card = document.createElement("div"); card.className = "ar-lib-card"; card.innerHTML = '<img alt="" />'; document.body.appendChild(card);
+  o.fit = getComputedStyle(card.querySelector("img")).objectFit; card.remove();
+  window.fetch = window.__ar40Fetch;
+  return o; })()`);
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 760, deviceScaleFactor: 1, mobile: false });
+await sleep(400);
+const ar40b = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), left = document.querySelector(".ar-cols > .ar-left");
+  window.dispatchEvent(new Event("resize")); await wait(200);
+  const o = { sh: left.scrollHeight, ch: left.clientHeight, max: getComputedStyle(left).maxHeight };
+  left.scrollTop = 200; await wait(100); o.top = left.scrollTop; left.scrollTop = 0;
+  return o; })()`);
+await send("Emulation.setDeviceMetricsOverride", { width: ar40Size[0], height: ar40Size[1], deviceScaleFactor: 1, mobile: false });
+await ev(`window.HeresyArtist.reload(); document.querySelector('.topbar [data-tab="' + ${JSON.stringify(ar40Was || "create")} + '"]').click(); true`);
+await sleep(300);
+check("the Artist with one run going: Draw stays Draw and enabled (a second run waits behind it), its tip says so, Stop shows beside it",
+  ar40.one.text === "Draw" && ar40.one.on && ar40.one.stop && /waits behind/.test(ar40.one.tip || ""), JSON.stringify(ar40.one));
+check("the Artist with two runs going: Draw waits for one of them (its tip says two at a time), Ctrl+Enter asks the lab nothing; one gone, Draw draws again",
+  !ar40.two.on && /Two runs at a time/.test(ar40.two.tip || "") && ar40.two.asked === 0 && ar40.again, JSON.stringify({ two: ar40.two, again: ar40.again }));
+check("a thumbnail clicked while a run paints puts its picture on the stage; clicked again, the stage goes back to the run as it develops; a third time, the picture again",
+  ar40.before === "live" && ar40.first === "pic" && ar40.second === "live" && ar40.third === "pic", JSON.stringify(ar40));
+check("the Artist's stage with a picture is as tall as the window under it; its prompt is whole in the picture's tip (no 9.5em cap: 1345)",
+  ar40.tall.cls && ar40.tall.max === "none" && Math.abs(ar40.tall.stageH - ar40.tall.avail) <= 3 && ar40.tall.h >= 100, JSON.stringify(ar40.tall));
+check("the Artist's form scrolls on its own within the window's height, the room standing still",
+  ar40.left.oy === "auto" && (/px$/.test(ar40.left.max) || (ar40.left.fixed && /px$/.test(ar40.left.h))) && ar40.left.viewSame && ar40b.sh > ar40b.ch && ar40b.top > 0 && /px$/.test(ar40b.max),
+  JSON.stringify({ wide: ar40.left, low: ar40b }));
+check("a LoRA card's picture is fitted whole into its square, not cropped", ar40.fit === "contain", ar40.fit);
+
+// HERESY 1169 · 1341 (Viktor 10.10.2026: «Как у Творца мы можем отключить адаптер, не удаляя его из включенных, сделай так же, чтобы не удалять из списка и не двигать ползунок на ноль»)
+section("the Artist's adapters muted as the Creator's: right-click, kept in the list at their strength, left out of the run");
+const ar41Was = await ev(`document.body.dataset.tab`);
+await ev(`(() => { const real = window.fetch; window.__ar41Fetch = real; window.__ar41Bodies = [];
+  window.__ar41Keep = localStorage.getItem("yue2.arLoras"); window.__ar41Painter = document.getElementById("arPainter").value; window.__ar41PainterKept = localStorage.getItem("yue2.arPainter");
+  const fam = [{ id: "krea2/a.safetensors", name: "a.safetensors", mb: 120 }, { id: "krea2/b.safetensors", name: "b.safetensors", mb: 130 }, { id: "krea2/c.safetensors", name: "c.safetensors", mb: 140 }];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => {
+    u = String(u);
+    if (u.startsWith("/lab/artist/loras")) return json({ families: { krea2: fam }, titles: { krea2: "Krea 2" } });
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    if (u.startsWith("/lab/artist/painters")) return json({ painters: [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true }] });
+    if (u.startsWith("/lab/artist/draw")) { window.__ar41Bodies.push(JSON.parse(o.body)); return json({ error: "stubbed" }, 500); }
+    return real(u, o);
+  };
+  localStorage.setItem("yue2.arLoras", JSON.stringify({ krea2: [{ id: "krea2/a.safetensors", weight: 0.8 }, { id: "krea2/b.safetensors", weight: 0 }, { id: "krea2/c.safetensors", weight: 0.6 }] }));
+  return true; })()`);
+await ev(`document.getElementById("tabArtist").click(); true`);
+await ev(`(async () => { localStorage.removeItem("yue2.arPainter"); await window.HeresyArtist.painters(); const p = document.getElementById("arPainter");
+  if (p.value !== "krea2-q4") { p.value = "krea2-q4"; p.dispatchEvent(new Event("change", { bubbles: true })); } await window.HeresyArtist.loras.reload(); await window.HeresyArtist.reload(); return p.value; })()`);
+await waitFor(`document.querySelectorAll("#arLoraList .ar-lora").length === 3`, 5000, 50);
+await sleep(300);
+await waitFor(`document.querySelectorAll("#arLoraList .ar-lora").length === 3`, 3000, 50);
+const ar41 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  const row = (i) => document.querySelector('#arLoraList .ar-lora[data-li="' + i + '"]');
+  const menu = async (i, re) => {
+    const r = row(i).querySelector(".ar-lora-name"), b = r.getBoundingClientRect();
+    r.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: b.left + 5, clientY: b.top + 5 }));
+    await wait(150);
+    const items = Array.from(document.querySelectorAll(".hm-menu .hm-item"));
+    const it = items.filter((x) => re.test(x.textContent))[0];
+    const labels = items.map((x) => x.textContent);
+    if (it) it.click();
+    await wait(200);
+    return labels;
+  };
+  o.painterBefore = $("arPainter").value;
+  o.menu = await menu(0, /Mute/);
+  const st = () => JSON.parse(localStorage.getItem("yue2.arLoras") || "{}").krea2 || [];
+  o.kept = st().map((l) => [l.id.split("/")[1], l.weight, !!l.muted]);
+  o.rowMuted = row(0).classList.contains("is-muted"); o.tag = !!row(0).querySelector(".lora-muted-tag"); o.rows = document.querySelectorAll("#arLoraList .ar-lora").length;
+  const tot = document.querySelector("#arLoraList .ar-lora-total output"); o.total = tot ? tot.textContent : null;
+  // Draw: the muted one and the one at nought are not sent
+  $("arPrompt").value = "A lighthouse."; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  if (!document.querySelector("#arShapes input:checked")) { const c = document.querySelector("#arShapes input"); c.checked = true; c.dispatchEvent(new Event("change", { bubbles: true })); }
+  await wait(100);
+  $("arDraw").click(); await wait(400);
+  o.sent = (window.__ar41Bodies[0] && window.__ar41Bodies[0].loras) || null;
+  // a refused draw may read the painters again: the adapters' family back to Krea 2's, its rows drawn
+  const p2 = $("arPainter"); o.painterAfter = p2.value;
+  if (p2.value !== "krea2-q4" && p2.querySelector('option[value="krea2-q4"]')) { p2.value = "krea2-q4"; p2.dispatchEvent(new Event("change", { bubbles: true })); }
+  for (let i = 0; i < 40 && document.querySelectorAll("#arLoraList .ar-lora").length !== 3; i++) await wait(100);
+  if (!row(0)) { o.noRows = document.getElementById("arLoraList").innerHTML.slice(0, 200); window.fetch = window.__ar41Fetch; return o; }
+  // the together-bar dragged: the muted one keeps its strength
+  const tw = document.querySelector("#arLoraList .ar-lora-tw");
+  if (tw) { tw.value = "1.2"; tw.dispatchEvent(new Event("input", { bubbles: true })); tw.dispatchEvent(new Event("change", { bubbles: true })); await wait(100); }
+  o.dragged = st().map((l) => [l.id.split("/")[1], l.weight, !!l.muted]);
+  o.menu2 = await menu(0, /Unmute/);
+  o.after = st().map((l) => [l.id.split("/")[1], l.weight, !!l.muted]); o.rowAfter = row(0).classList.contains("is-muted");
+  window.fetch = window.__ar41Fetch;
+  await window.HeresyArtist.loras.reload();
+  if (window.__ar41Keep == null) localStorage.removeItem("yue2.arLoras"); else localStorage.setItem("yue2.arLoras", window.__ar41Keep);
+  if (window.__ar41PainterKept == null) localStorage.removeItem("yue2.arPainter"); else localStorage.setItem("yue2.arPainter", window.__ar41PainterKept);
+  const p = $("arPainter"); if (p.value !== window.__ar41Painter && p.querySelector('option[value="' + window.__ar41Painter + '"]')) { p.value = window.__ar41Painter; p.dispatchEvent(new Event("change", { bubbles: true })); }
+  return o; })()`);
+await ev(`window.HeresyArtist.reload(); document.querySelector('.topbar [data-tab="' + ${JSON.stringify(ar41Was || "create")} + '"]').click(); true`);
+await sleep(300);
+check("an Artist adapter's right-click offers Mute and Take it off; muted, it stays in the list at its strength, dimmed with its tag, out of the together-bar",
+  ar41.menu.some((x) => /Mute: left out of the run/.test(x)) && ar41.menu.some((x) => /Take it off/.test(x)) && ar41.rows === 3 && ar41.rowMuted && ar41.tag &&
+  JSON.stringify(ar41.kept) === JSON.stringify([["a.safetensors", 0.8, true], ["b.safetensors", 0, false], ["c.safetensors", 0.6, false]]) && ar41.total === "0.60", JSON.stringify(ar41));
+check("Draw sends neither a muted adapter nor one at nought; the together-bar's drag leaves the muted one as it was",
+  JSON.stringify(ar41.sent) === JSON.stringify([{ id: "krea2/c.safetensors", weight: 0.6 }]) &&
+  JSON.stringify(ar41.dragged) === JSON.stringify([["a.safetensors", 0.8, true], ["b.safetensors", 0, false], ["c.safetensors", 1.2, false]]), JSON.stringify({ sent: ar41.sent, dragged: ar41.dragged }));
+check("Unmute puts it back in the run, its strength as it was",
+  ar41.menu2.some((x) => /Unmute: back in the run/.test(x)) && !ar41.rowAfter && JSON.stringify(ar41.after[0]) === JSON.stringify(["a.safetensors", 0.8, false]), JSON.stringify({ menu2: ar41.menu2, after: ar41.after }));
+
+// HERESY 1169 · 1343 (Viktor 10.10.2026: «детач лога сервера сделай вместе с GPU колонкой, и при детаче сразу сворачиваем открытый фрейм… при закрытии консоли с логом, если был фрейм в состоянии открытого, обратно открываем его»)
+section("the log's own window carries the cards; the dock folds while it is open and unfolds when it closes, if it was open");
+const lp43 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  const real = window.fetch, realOpen = window.open, keep = localStorage.getItem("yue2.logDock"), now = Date.now() / 1000;
+  window.fetch = (u, opt) => {
+    u = String(u);
+    if (u.startsWith("/lab/gpus/live")) return Promise.resolve(new Response(JSON.stringify({ cards: [
+      { index: 0, name: "NVIDIA GeForce RTX 3090", samples: [[now, 40, 6000, 24576, 50, 120]] },
+      { index: 1, name: "NVIDIA GeForce RTX 3090", samples: [[now, 5, 300, 24576, 40, 30]] }], roles: { studio: 0, jobs: [1], train: [] } }),
+      { status: 200, headers: { "Content-Type": "application/json" } }));
+    return real(u, opt);
+  };
+  let frame = null;                                     // a window of the same origin: the test browser blocks a pop-up a script opens
+  window.open = () => { frame = document.createElement("iframe"); frame.style.cssText = "position:fixed;left:-9999px;top:0;width:1240px;height:560px"; document.body.appendChild(frame); return frame.contentWindow; };
+  const pip = window.documentPictureInPicture; try { delete window.documentPictureInPicture; } catch (e) {}
+  // the dock open: the window comes, the dock folds, the cards beside the log; closed, the dock unfolds
+  if ($("logDock").classList.contains("is-folded")) $("logDockTab").click();
+  await wait(100);
+  $("logDockPop").click();
+  let pop = null;
+  for (let i = 0; i < 30; i++) { await wait(100); pop = window.ruachLogPop && window.ruachLogPop(); if (pop && pop.gpus && pop.gpus.querySelectorAll(".gl-card").length) break; }
+  o.one = { folded: $("logDock").classList.contains("is-folded"), cards: pop && pop.gpus ? pop.gpus.querySelectorAll(".gl-card").length : -1,
+            main: pop && pop.gpus ? !!pop.gpus.querySelector(".gl-card.is-main") : false,
+            cols: pop ? pop.win.getComputedStyle(pop.win.document.querySelector(".log-pop-main")).gridTemplateColumns : "", kept: localStorage.getItem("yue2.logDock") };
+  frame.remove(); await wait(250);
+  o.one.after = { folded: $("logDock").classList.contains("is-folded"), pop: !!(window.ruachLogPop && window.ruachLogPop()) };
+  // the dock folded by hand first: it stays folded when the window closes
+  if (!$("logDock").classList.contains("is-folded")) $("logDockTab").click();
+  await wait(100);
+  o.two = { before: $("logDock").classList.contains("is-folded") };
+  $("logDockPop").click(); await wait(300);
+  frame.remove(); await wait(250);
+  o.two.after = $("logDock").classList.contains("is-folded");
+  window.open = realOpen; if (pip) window.documentPictureInPicture = pip; window.fetch = real;
+  if (keep === null) localStorage.removeItem("yue2.logDock"); else localStorage.setItem("yue2.logDock", keep);
+  if ($("logDock").classList.contains("is-folded") !== (localStorage.getItem("yue2.logDock") !== "open")) $("logDockTab").click();
+  return o; })()`);
+check("the log's own window carries the cards beside the log (the studio's card framed); the dock folds as it opens, its kept choice untouched, and unfolds when it closes",
+  lp43.one.folded && lp43.one.cards === 2 && lp43.one.main && / 390px$/.test(lp43.one.cols) && lp43.one.kept === "open" && !lp43.one.after.folded && !lp43.one.after.pop, JSON.stringify(lp43.one));
+check("  a dock folded before the window stays folded when it closes", lp43.two.before && lp43.two.after, JSON.stringify(lp43.two));
+
+// HERESY 1169 · 1344 (Viktor 10.10.2026: «если в 1080p… зафиксировать прокрутку страницы, если vh имеет как минимум 920px»); 1345: «Уехало и слилось — кнопки, оценочная длительность генерации и прогресс»; «Прогресс бар… по всей ширине центральной прямо поверх проявки»; «ПРОМПТ подсказку вынеси в тултип с нашим SVG i»; «Фолдинг СЕМПЛИНГА запоминаем при F5»; «ВАРИАЦИИ ужми, а СИД лучше растянуть»; «фрейм с промптом убрать в… тултип > вправо от картинки поверх правой колонки — при наведении мышью на картинку»
+section("the Artist room by Viktor's late list: fixed in a tall window, Draw's row whole, the progress over the stage, the hints as i, the picture's tip beside it");
+const ar44Was = await ev(`document.body.dataset.tab`);
+const ar44Size = await ev(`[window.innerWidth, window.innerHeight]`);
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1000, deviceScaleFactor: 1, mobile: false });
+await ev(`(() => { const real = window.fetch; window.__ar44Fetch = real;
+  const long = Array.from({ length: 24 }, (_, i) => "Sentence " + (i + 1) + " of a long prompt about a harbour at night, its lamps over still water.").join(" ");
+  window.__ar44Runs = [
+    { id: "20261011-010000-bbbb", prompt: "A boat at dawn.", shapes: ["1:1"], seed: 9, count: 1, painter: "krea2-q4", created: 1791600000, status: "running", of: 2, pictures: [], gpu: 1,
+      live: { live: 1, step: 3, of: 8, file: "preview/01.jpg", t: 1791600010 } },
+    { id: "20261011-000000-aaaa", prompt: long, shapes: ["1:1"], seed: 7, count: 1, painter: "krea2-q4", created: 1791590000, status: "done", of: 1, took: 40, ended: 1791590040,
+      pictures: [{ n: 1, shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true, took: 40, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg" }] }];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => { u = String(u); if (u.startsWith("/lab/artist/runs")) return json({ runs: window.__ar44Runs }); return real(u, o); };
+  return true; })()`);
+await ev(`document.getElementById("tabArtist").click(); true`);
+await ev(`window.HeresyArtist.reload(); true`);
+await waitFor(`document.querySelectorAll('#arRuns .ar-run[data-id="20261011-000000-aaaa"] .ar-thumb').length === 1`, 5000, 50);
+const ar44 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  window.dispatchEvent(new Event("resize")); await wait(250);
+  const view = $("view-artist"), cols = $("arCols"), left = document.querySelector(".ar-cols > .ar-left"), right = document.querySelector(".ar-cols > .ar-right"), st = $("arStage");
+  const bar = $("playbar"), barH = bar ? bar.getBoundingClientRect().height : 0;
+  o.fixed = { cls: view.classList.contains("ar-fixed"), oy: getComputedStyle(view).overflowY, rightOy: getComputedStyle(right).overflowY, leftOy: getComputedStyle(left).overflowY,
+              colsBottom: Math.round(cols.getBoundingClientRect().bottom), floor: Math.round(innerHeight - barH) };
+  // Draw's row whole in its column: the cost a line of its own, Stop and Draw under it, nothing sideways
+  const draw = $("arDraw"), stop = $("arStop"), cost = $("arCost");
+  o.go = { sideways: left.scrollWidth - left.clientWidth, drawIn: draw.getBoundingClientRect().right <= left.getBoundingClientRect().right + 1,
+           costAbove: cost.getBoundingClientRect().bottom <= Math.min(draw.getBoundingClientRect().top, stop.hidden ? 1e9 : stop.getBoundingClientRect().top) + 2, stop: !stop.hidden && !!stop.offsetParent, stopNone: (() => { const was = stop.hidden; stop.hidden = true; const d = getComputedStyle(stop).display; stop.hidden = was; return d; })(),
+           sticky: getComputedStyle(draw.closest(".ar-go")).position };
+  // the run's progress over the stage's top, its whole width, out of the flow
+  const prog = $("arProgress");
+  o.prog = { inStage: st.contains(prog), pos: getComputedStyle(prog).position, shown: !prog.hidden, w: Math.round(prog.getBoundingClientRect().width), stageW: Math.round(st.getBoundingClientRect().width),
+             top: Math.round(prog.getBoundingClientRect().top - st.getBoundingClientRect().top), say: $("arProgressSay").textContent };
+  // the hints as the studio's i
+  o.hints = { prompt: !!$("arPrompt").closest("label").querySelector(".label .info[data-tip]"), ems: [...document.querySelectorAll(".ar-form .label em")].map((e) => e.id || "?"),
+              refHint: !!document.querySelector("#arRefEmpty .row-hint"), refInfo: !!document.querySelector("#arRefEmpty .label .info[data-tip]"), seed: !!document.querySelector(".ar-seed .label .info[data-tip]"),
+              warn: $("arSampWarn").classList.contains("info") && !!$("arSampWarn").closest("summary"), note: $("arPainterNote").classList.contains("info") && !!$("arPainterNote").closest(".ar-painter") };
+  // Variations narrower than Seed
+  o.widths = { seed: Math.round(document.querySelector(".ar-left .ar-seed").getBoundingClientRect().width), count: Math.round(document.querySelector(".ar-left .ar-count").getBoundingClientRect().width) };
+  // Sampling's fold kept for the next load
+  const sm = $("arSampling"), was = sm.open;
+  sm.open = !was; await wait(80); o.samp = { kept: localStorage.getItem("yue2.arSampOpen"), want: !was ? "1" : "0" }; sm.open = was; await wait(80);
+  // the picture on the stage: its buttons under it, its data and prompt a tip beside it over the library, out of sight until pointed at
+  document.querySelector('#arRuns .ar-run[data-id="20261011-000000-aaaa"] .ar-thumb[data-act="view"]').click(); await wait(350);
+  const tip = st.querySelector(".ar-stage-tip"), pic = st.querySelector(".ar-stage-pic"), acts = st.querySelector(".ar-stage-acts"), r = pic.getBoundingClientRect();
+  o.tip = { pos: getComputedStyle(tip).position, vis: getComputedStyle(tip).visibility, left: Math.round(tip.getBoundingClientRect().left), stageRight: Math.round(st.getBoundingClientRect().right),
+            rightLeft: Math.round(right.getBoundingClientRect().left), meta: (tip.querySelector(".ar-stage-meta") || {}).textContent || "", prompt: ((tip.querySelector(".ar-stage-prompt") || {}).textContent || "").slice(0, 24),
+            actsUnder: !!acts && acts.getBoundingClientRect().top >= r.bottom - 1 };
+  o.fill = { stageH: st.clientHeight, stageW: st.clientWidth, picH: Math.round(r.height), picW: Math.round(r.width), actsH: acts ? acts.offsetHeight : 0 };
+  o.at = { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  return o; })()`);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: ar44.at.x, y: ar44.at.y });
+await sleep(500);
+const ar44h = await ev(`(() => { const t = document.querySelector("#arStage .ar-stage-tip"); return { vis: getComputedStyle(t).visibility, op: +getComputedStyle(t).opacity }; })()`);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 4, y: 4 });
+await sleep(700);
+const ar44g = await ev(`getComputedStyle(document.querySelector("#arStage .ar-stage-tip")).visibility`);
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 880, deviceScaleFactor: 1, mobile: false });
+await sleep(300);
+const ar44s = await ev(`(async () => { window.dispatchEvent(new Event("resize")); await new Promise((r) => setTimeout(r, 250)); const v = document.getElementById("view-artist"); return { cls: v.classList.contains("ar-fixed"), oy: getComputedStyle(v).overflowY }; })()`);
+await send("Emulation.setDeviceMetricsOverride", { width: ar44Size[0], height: ar44Size[1], deviceScaleFactor: 1, mobile: false });
+await ev(`window.fetch = window.__ar44Fetch; window.HeresyArtist.reload(); window.dispatchEvent(new Event("resize")); document.querySelector('.topbar [data-tab="' + ${JSON.stringify(ar44Was || "create")} + '"]').click(); true`);
+await sleep(300);
+check("a window 920 px tall holds the Artist room whole: the page does not scroll, the form and the library scroll on their own, the columns end above the player",
+  ar44.fixed.cls && ar44.fixed.oy === "hidden" && ar44.fixed.rightOy === "auto" && ar44.fixed.leftOy === "auto" && ar44.fixed.colsBottom <= ar44.fixed.floor, JSON.stringify(ar44.fixed));
+check("  under 920 px the room scrolls as before", !ar44s.cls && ar44s.oy !== "hidden", JSON.stringify(ar44s));
+check("Draw's row stays whole in its column: the cost a line of its own, Stop and Draw under it, at the column's foot, nothing sideways",
+  ar44.go.sideways <= 6 && ar44.go.drawIn && ar44.go.costAbove && ar44.go.stop && ar44.go.stopNone === "none" && ar44.go.sticky === "sticky", JSON.stringify(ar44.go));
+check("the run's progress lies over the stage's top, its whole width, out of the flow (the picture does not move for it)",
+  ar44.prog.inStage && ar44.prog.pos === "absolute" && ar44.prog.shown && Math.abs(ar44.prog.w - ar44.prog.stageW) <= 2 && ar44.prog.top <= 1 && /picture 1 of 2/.test(ar44.prog.say), JSON.stringify(ar44.prog));
+check("the form's hints are the studio's i: the prompt's, the reference's, the seed's; the painter's note an i by its name, the sampling's warning a ⚠ in its line; no hint text left in the labels",
+  ar44.hints.prompt && ar44.hints.refInfo && !ar44.hints.refHint && ar44.hints.seed && ar44.hints.warn && ar44.hints.note && ar44.hints.ems.every((x) => /^ar/.test(x)), JSON.stringify(ar44.hints));
+check("Variations narrower than Seed", ar44.widths.count < ar44.widths.seed && ar44.widths.count <= 100, JSON.stringify(ar44.widths));
+check("Sampling's fold is kept for the next load", ar44.samp.kept === ar44.samp.want, JSON.stringify(ar44.samp));
+check("a picture on the stage: its buttons under it, the picture the rest of the stage; its data and prompt a tip beside it over the library, out of sight",
+  ar44.tip.pos === "absolute" && ar44.tip.vis === "hidden" && ar44.tip.left >= ar44.tip.stageRight && ar44.tip.left <= ar44.tip.rightLeft + 4 && /seed 7/.test(ar44.tip.meta) && /^Sentence 1/.test(ar44.tip.prompt) && ar44.tip.actsUnder &&
+  Math.abs(ar44.fill.picH - Math.min(ar44.fill.stageW, ar44.fill.stageH - ar44.fill.actsH - 12)) <= 4, JSON.stringify({ tip: ar44.tip, fill: ar44.fill }));
+check("  the pointer on the picture shows the tip; away from it, the tip goes", ar44h.vis === "visible" && ar44h.op > 0.9 && ar44g === "hidden", JSON.stringify({ on: ar44h, off: ar44g }));
+
+// HERESY 1169 · 1346 (Viktor 10.10.2026: «По аутпеинтингу было бы хорошо определять точное положение (позировать) референсного изображения на холсте проэцируемых соотношений сторон… скейлить референс»; «очень хочу… канваса аутпеинта, инпеинта именно так, как в InvokeAI»)
+section("the Artist's canvas: the reference in each shape's frame, moved, typed and scaled, the mask painted over it, the places sent with Draw");
+const cv46Was = await ev(`document.body.dataset.tab`);
+const cv46a = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  const real = window.fetch; window.__cv46Fetch = real; window.__cv46Bodies = [];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    if (u.startsWith("/lab/artist/draw")) { window.__cv46Bodies.push(JSON.parse(opt.body)); return json({ error: "stubbed" }, 500); }
+    return real(u, opt); };
+  document.querySelector('.topbar [data-tab="artist"]').click(); await wait(400);
+  await window.HeresyArtist.reload();
+  const c = document.createElement("canvas"); c.width = 800; c.height = 400;   // a wide picture of our own: 800 × 400
+  const g = c.getContext("2d"), gr = g.createLinearGradient(0, 0, 800, 0); gr.addColorStop(0, "#2a4"); gr.addColorStop(1, "#24a"); g.fillStyle = gr; g.fillRect(0, 0, 800, 400);
+  const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+  const dt = new DataTransfer(); dt.items.add(new File([blob], "wide.png", { type: "image/png" }));
+  o.promptWas = $("arPrompt").value;
+  $("arPrompt").value = "a field at noon"; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  $("arPrompt").dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+  for (let i = 0; i < 30 && !(window.HeresyArtistRef && window.HeresyArtistRef.get()); i++) await wait(100);
+  o.shapesWas = [...document.querySelectorAll("#arShapes input")].filter((i) => i.checked).map((i) => i.value);
+  document.querySelectorAll("#arShapes input").forEach((i) => { i.checked = true; }); $("arShapes").dispatchEvent(new Event("change", { bubbles: true }));
+  o.fitWas = $("arRefFit").checked;
+  $("arRefFit").checked = true; $("arRefFit").dispatchEvent(new Event("change", { bubbles: true }));
+  o.button = !!$("arCanvasOpen").offsetParent;
+  window.HeresyArtist.canvas.open();
+  for (let i = 0; i < 30 && !document.querySelector(".cv .cv-canvas"); i++) await wait(100);
+  await wait(400);
+  const cv = document.querySelector(".cv");
+  o.open = !!cv;
+  if (!cv) { window.fetch = real; return o; }
+  o.tabs = [...cv.querySelectorAll(".cv-tab")].map((t) => t.dataset.shape + ":" + t.querySelector(".cv-tab-mode").textContent);
+  cv.querySelector('[data-shape="16:9"]').click(); await wait(200);
+  o.nums = [...cv.querySelectorAll("[data-num]")].map((i) => i.value);
+  const r = cv.querySelector(".cv-canvas").getBoundingClientRect();
+  o.at = [Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)];
+  return o; })()`);
+if (cv46a.at) {
+  for (const [type, dx] of [["mousePressed", 0], ["mouseMoved", -60], ["mouseMoved", -120], ["mouseReleased", -120]])
+    await send("Input.dispatchMouseEvent", { type, x: cv46a.at[0] + dx, y: cv46a.at[1], button: "left", buttons: type === "mouseReleased" ? 0 : 1, clickCount: 1 });
+  await sleep(250);
+}
+const cv46b = cv46a.at ? await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), cv = document.querySelector(".cv"), o = {}, nums = () => [...cv.querySelectorAll("[data-num]")].map((i) => i.value);
+  o.moved = nums();
+  const w = cv.querySelector('[data-num="s"]'); w.value = "60"; w.dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
+  o.typed = nums();
+  cv.querySelector('[data-cv="cover"]').click(); await wait(100);
+  o.fill = { s: cv.querySelector('[data-num="s"]').value, mode: cv.querySelector(".cv-mode").textContent, tab: cv.querySelector('[data-shape="16:9"] .cv-tab-mode').textContent };
+  cv.querySelector('[data-cv="undo"]').click(); await wait(80); o.undo = cv.querySelector('[data-num="s"]').value;
+  cv.querySelector('[data-cv="redo"]').click(); await wait(80); o.redo = cv.querySelector('[data-num="s"]').value;
+  cv.querySelector('[data-cv="undo"]').click(); await wait(80);
+  cv.querySelector('[data-cv="same"]').click(); await wait(80);
+  cv.querySelector('[data-shape="9:16"]').click(); await wait(150);
+  o.same = nums();
+  cv.querySelector('[data-shape="16:9"]').click(); await wait(150);
+  cv.querySelector('[data-tool="brush"]').click(); await wait(80);
+  const r = cv.querySelector(".cv-canvas").getBoundingClientRect();
+  o.at = [Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)];
+  return o; })()`) : {};
+if (cv46b.at) {
+  for (const [type, dx] of [["mousePressed", -150], ["mouseMoved", -100], ["mouseMoved", -50], ["mouseReleased", -50]])
+    await send("Input.dispatchMouseEvent", { type, x: cv46b.at[0] + dx, y: cv46b.at[1], button: "left", buttons: type === "mouseReleased" ? 0 : 1, clickCount: 1 });
+  await sleep(250);
+}
+const cv46c = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), cv = document.querySelector(".cv"), o = {};
+  if (cv) {
+    o.masked = cv.querySelector(".cv-mode").textContent;
+    cv.querySelector('[data-cv="done"]').click(); await wait(500);
+  }
+  o.closed = !document.querySelector(".cv");
+  o.place = window.HeresyArtist.canvas.place();
+  o.say = $("arCanvasSay").hidden ? "" : $("arCanvasSay").textContent;
+  o.mask = $("arMaskOpen").textContent;
+  $("arDraw").click(); await wait(500);
+  const b = window.__cv46Bodies[0] || {};
+  o.sent = { place: b.place || null, mask: !!b.mask, opts: !!b.mask_opts };
+  $("arCanvasX").click(); await wait(80);
+  o.off = { place: window.HeresyArtist.canvas.place(), hidden: $("arCanvasSay").hidden };
+  window.fetch = window.__cv46Fetch;
+  $("arRefX").click(); await wait(100);
+  return o; })()`);
+await ev(`(() => { const $ = (id) => document.getElementById(id), a = ${JSON.stringify(cv46a)};
+  $("arPrompt").value = a.promptWas || ""; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelectorAll("#arShapes input").forEach((i) => { i.checked = (a.shapesWas || ["1:1"]).includes(i.value); }); $("arShapes").dispatchEvent(new Event("change", { bubbles: true }));
+  $("arRefFit").checked = !!a.fitWas; $("arRefFit").dispatchEvent(new Event("change", { bubbles: true }));
+  document.querySelector('.topbar [data-tab="' + ${JSON.stringify(cv46Was || "create")} + '"]').click(); return true; })()`);
+await sleep(200);
+check("the Artist's Canvas… opens the canvas on the reference: the three frames as tabs, each saying how it is painted (a wide picture whole in each: around)",
+  cv46a.button && cv46a.open && (cv46a.tabs || []).join() === "1:1:around,16:9:around,9:16:around" && (cv46a.nums || []).join() === "100,50,50", JSON.stringify(cv46a));
+check("  dragged on the board the picture moves; its width typed; Fill covers the frame and the frame is painted from it; undo and redo walk back and forth",
+  +cv46b.moved[1] < 50 && cv46b.moved[0] === "100" && cv46b.moved[2] === "50" && cv46b.typed[0] === "60" && cv46b.typed[1] === cv46b.moved[1] &&
+  cv46b.fill.s === "112.5" && cv46b.fill.mode === "painted from the picture" && cv46b.fill.tab === "from it" && cv46b.undo === "60" && cv46b.redo === "112.5", JSON.stringify(cv46b));
+check("  Same in all: the picture as large in pixels in the other frames, its middle in the same share",
+  cv46b.same && cv46b.same[0] === "106.7" && cv46b.same[1] === cv46b.typed[1] && cv46b.same[2] === "50", JSON.stringify(cv46b.same));
+check("  the brush paints the mask (painted around, and by the mask); Done keeps the places and the mask in the form, said under the strength",
+  cv46c.masked === "painted around, and by the mask" && cv46c.closed && cv46c.place && cv46c.place["16:9"] && cv46c.place["16:9"].s === 0.6 && cv46c.place["9:16"] && cv46c.place["1:1"] &&
+  /16:9 around/.test(cv46c.say) && /✓/.test(cv46c.mask), JSON.stringify(cv46c));
+check("  Draw sends the picked shapes' places with the mask and its options; ✕ takes the form off the canvas",
+  cv46c.sent.place && Object.keys(cv46c.sent.place).sort().join() === "16:9,1:1,9:16" && cv46c.sent.mask && cv46c.sent.opts && cv46c.off.place === null && cv46c.off.hidden, JSON.stringify({ sent: cv46c.sent, off: cv46c.off }));
 // ================================================================== fonts
 section("fonts (Engine page)");
 const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"), kids = [...s.children], hr = kids.findIndex(k => k.tagName === "HR");
@@ -3291,6 +5793,48 @@ await ev(`(() => { const a = document.getElementById("audio"); a.pause(); return
 check("the status dot (playing or paused) clicked while Compose is lifted opens the take and turns the lifted frame to the Musician's",
   !!pillState && pillFrom === "compose" && pillTo === "take", JSON.stringify({ pillState, pillFrom, pillTo }));
 await sleep(200);
+// HERESY 1169 · 1324 (Viktor's screenshots of SUNO v6, 09.10.2026: its Fade in beside our End at…)
+section("Fade in…: the same take whole, its first seconds brought up from silence");
+await ev(`document.querySelector('#tabs [data-tab="create"]').click(); true`);
+await click(`#libList .take[data-name="${cdpTake}"]`);
+await waitFor(`document.getElementById("takeTitle").textContent === "CDP Song"`, 4000);
+await mockClear();
+await ev(`document.getElementById("fadeIn").click(); true`);
+const fiAsk = await waitFor(`(() => { const b = document.querySelector(".hd-back.is-on"), i = b && b.querySelector(".hd-input"); return i ? { text: b.textContent.replace(/\\s+/g, " ").slice(0, 160), ok: b.querySelector(".hd-yes").textContent, value: i.value } : null; })()`, 3000, 50);
+await ev(`(() => { const b = document.querySelector(".hd-back.is-on"); b.querySelector(".hd-input").value = "1,5"; b.querySelector(".hd-yes").click(); return true; })()`);
+const fiBody = await waitFor(`fetch("/mock/requests").then(r => r.json()).then(a => a.filter(x => x.path === "/synth").map(x => x.body)[0] || null)`, 5000);
+const fiRep = fiBody ? JSON.parse(fiBody.replace(/("(?:lm_seed|seed)"\s*:\s*)(\d+)/g, '$1"$2"')) : {};
+const fiCodes = String(fiRep.semantic_tokens || "").split(",").filter((t) => t.trim()).length;
+check("Fade in… asks the seconds (2 offered) and sends the same take whole with fade_in 1.5 (a comma read as a point), from its kept latents, parent set, titled «· fades in 1.5 s»",
+  !!fiAsk && /^Fade the take in/.test(fiAsk.text) && fiAsk.ok === "Fade it in" && fiAsk.value === "2" && fiRep.fade_in === 1.5 && fiCodes >= 120 && !fiRep.end_at &&
+  fiRep.decode_from === cdpTake && fiRep.parent === cdpTake && /· fades in 1\.5 s$/.test(fiRep.title || ""), JSON.stringify({ fiAsk, fade_in: fiRep.fade_in, fiCodes, end_at: fiRep.end_at, decode_from: fiRep.decode_from, title: fiRep.title }));
+// HERESY 1169 · 1325 (from SUNO v6, TODO.md: «A loop from the song: 1, 2, 4 or 8 bars cut on the score's bar lines, seamless, as a WAV»)
+section("Loop…: bars of the take on its score's bar lines, cut by the lab, saved as a WAV named with its bars, tempo and key");
+await ev(`document.querySelector('#tabs [data-tab="create"]').click(); true`);
+await click(`#libList .take[data-name="${cdpTake}"]`);
+await waitFor(`document.getElementById("takeTitle").textContent === "CDP Song"`, 4000);
+await ev(`(() => { window.__loop = { urls: [], saved: [] }; window.__loopReal = window.fetch; window.__loopClick = HTMLAnchorElement.prototype.click;
+  window.fetch = (u, o) => { if (String(u).startsWith("/lab/loop")) { window.__loop.urls.push(String(u)); return Promise.resolve(new Response(new Blob([new Uint8Array(44)], { type: "audio/wav" }))); } return window.__loopReal(u, o); };
+  HTMLAnchorElement.prototype.click = function () { if (this.download) { window.__loop.saved.push(this.download); return; } return window.__loopClick.call(this); };
+  document.getElementById("loopTake").click(); return true; })()`);
+const lpAsk = await waitFor(`(() => { const b = document.querySelector(".hd-back.is-on"), i = b && b.querySelector(".hd-input"); return i ? { text: b.textContent.replace(/\\s+/g, " ").slice(0, 200), ok: b.querySelector(".hd-yes").textContent, value: i.value } : null; })()`, 4000, 50);
+await ev(`(() => { const b = document.querySelector(".hd-back.is-on"); b.querySelector(".hd-input").value = "1"; b.querySelector(".hd-yes").click(); return true; })()`);
+const lpOne = await waitFor(`window.__loop.saved.length ? { url: window.__loop.urls[0], file: window.__loop.saved[0] } : null`, 4000, 50);
+await waitFor(`!document.getElementById("loopTake").disabled && !document.querySelector(".hd-back.is-on")`, 4000, 50);   // the first one over
+await ev(`document.getElementById("loopTake").click(); true`);
+await waitFor(`(() => { const b = document.querySelector(".hd-back.is-on"); return !!(b && b.querySelector(".hd-input")); })()`, 4000, 50);
+await ev(`(() => { const b = document.querySelector(".hd-back.is-on"); if (!b) return false; b.querySelector(".hd-input").value = "8"; b.querySelector(".hd-yes").click(); return true; })()`);
+const lpMany = await waitFor(`(() => { const t = [...document.querySelectorAll("#toasts .toast")].map((x) => x.textContent).filter((x) => /bars from there|ends before/.test(x)); return t.length ? t[t.length - 1] : null; })()`, 4000, 50);
+const lpLeft = await ev(`(() => { const o = { urls: window.__loop.urls.length }; window.fetch = window.__loopReal; HTMLAnchorElement.prototype.click = window.__loopClick;
+  const b = document.querySelector(".hd-back.is-on:not(.is-leaving)"); if (b) { o.left = b.textContent.slice(0, 80); (b.querySelector(".hd-no") || b.querySelector(".hd-yes")).click(); } return o; })()`);
+await waitFor(`!document.getElementById("loopTake").disabled`, 3000, 50);
+const lpQ = lpOne ? Object.fromEntries(new URL(lpOne.url, "http://x").searchParams) : {};
+check("Loop… asks how many bars from the first (the player elsewhere), 4 offered; 1 bar asks the lab for the take from 0 for one bar's seconds and saves «CDP Song · 1 bar from 0-00 · N BPM · key.wav»",
+  !!lpAsk && /^A loop from this take/.test(lpAsk.text) && /\(the first/.test(lpAsk.text) && lpAsk.ok === "Cut the loop" && lpAsk.value === "4" &&
+  lpQ.name === cdpTake && +lpQ.start === 0 && +lpQ.seconds > 0.5 && +lpQ.seconds < 5 && /^CDP Song · 1 bar from 0-00 · \d+ BPM · \S+\.wav$/.test(lpOne.file),
+  JSON.stringify({ lpAsk, lpOne, lpQ }));
+check("  8 bars past the score's end are refused with how many there are, and nothing is asked of the lab",
+  !!lpMany && lpLeft.urls === 1 && !lpLeft.left, JSON.stringify({ lpMany, lpLeft }));
 await shot("take-versions");
 await click(`#libList .take[data-name="${cdpTake}"]`);
 await waitFor(`document.getElementById("takeTitle").textContent === "CDP Song"`, 3000);

@@ -57,12 +57,12 @@ The rooms open the bar in the order of the work: Creator, Writer, Refiner, Artis
 
 ### The Player, the Takes and the Server Log
 
-- **The player** at the bottom: the waveform across, one soft cloud with the part already heard in the accent (a click jumps there); under it the take (its artwork when it has one, its title, the first words of its style, 👍 👎 ★), then **shuffle**, previous, play, next and **repeat** (off · the whole list again · this take again, marked 1), then the time (a click on the total turns it to the time left), *play on click* (a click in a list plays the take at once), *play on* (when a take ends, the next one down the list starts), *play new takes* (a song made here plays when it is done, unless something plays), 🔔 *a sound when a run ends* (two notes up when it is done, once for a queue of runs, two down when one fails; none over a new song that starts playing by itself), the **speed** (0.50× to 2.00×, the pitch kept), the volume and a dot for the state (it beats while a take plays). What you do not need this moment stays faint until the pointer comes; every icon says what it does when the pointer rests on it. The pointer over the waveform shows the time a click would jump to. The keyboard's and a headset's media keys drive the player, and the desktop's media panel shows the take. ⏪ and ⏩ go to the last or the next mark every 15 s from 0:00, ← and → to the marks every 5 s (Shift: 30 s). The status pill at the player's right end (green while a take plays, the accent's colour while one is made) opens the take or the run; with Compose lifted over the room it turns the frame to the take's. A right click on the wave, the picture or the title opens the take's menu, as in a list. The wave of a take with a score shows its sections (a thin line at each start, its name at the foot); a click by a line goes to the section's very start, and the time under the pointer names its section.
+- **The player** at the bottom: the waveform across, one soft cloud with the part already heard in the accent (a click jumps there); under it the take (its artwork when it has one, its title, the first words of its style, 👍 👎 ★), then **shuffle**, previous, play, next and **repeat** (off · the whole list again · this take again, marked 1), then the time (a click on the total turns it to the time left), *play on click* (a click in a list plays the take at once), *play on* (when a take ends, the next one down the list starts), *play new takes* (a song made here plays when it is done, unless something plays), 🔔 *a sound when a run ends* (two notes up when it is done, once for a queue of runs, two down when one fails; none over a new song that starts playing by itself), the **speed** (0.50× to 2.00×, the pitch kept), the volume and a dot for the state (it beats while a take plays). What you do not need this moment stays faint until the pointer comes; every icon says what it does when the pointer rests on it. The pointer over the waveform shows the time a click would jump to. The keyboard's and a headset's media keys drive the player, and the desktop's media panel shows the take. ⏪ and ⏩ go to the last or the next mark every 15 s from 0:00, ← and → to the marks every 5 s (Shift: 30 s). The status pill at the player's right end (green while a take plays, the accent's colour while one is made) opens the take or the run; with Compose lifted over the room it turns the frame to the take's. A right click on the wave, the picture or the title opens the take's menu, as in a list. The wave shows the take's sections: the lyrics' own tags, each where Whisper hears its first line (once a take, about half a minute; by itself on a machine of two cards or more, else the take's menu → *Find the sections by ear*); a take never heard shows the marks of its score. A thin line at each start, its name at the foot; a click by a line goes to the section's very start; the pointer over the wave shows a card with the section, its time and its lines as written, the line sung there lit; a section marked ? was not heard clearly.
 - **Two rows or one**: the player keeps the waveform over its controls where songs are heard and compared (the Creator, the Refiner, the Librarian) and is one row in the Writer, the Artist, the Trainer and the Engine, and in the Creator while a frame is lifted or the lyrics are over everything. After a reload (F5) it comes back with its take and its place. In the Artist the Takes start folded and the server log stands at the left.
 - **The cards live**: in Engine → GPUs each card has a row of its own under it, its load and its memory a bar a second for two minutes, with its temperature and power; the server log, unfolded, shows the cards that have a role beside it, each headed by its role, the studio's card framed.
 - **The line to the studio** shows beside the server log (*Forge · 85 ms*, or *here* on the same machine). When the studio is far, a like, a favourite or a pin shows at once and the studio only confirms it.
 - **Takes** on the right: search with words, `*` and `?`; *Favourites*; fold the column with »; ⋯ for the list's own actions.
-- **The server log** sits right above the player in every room: folded, it shows the last thing the engine said (in red when something failed); unfolded, ten lines, *Follow*, *Copy*, and the way to the whole log in Engine. With a frame lifted over the room it stands at the left, off the frame's buttons.
+- **The server log** sits right above the player in every room: folded, it shows the last thing the engine said (in red when something failed); unfolded, ten lines, *Follow*, *Copy*, and the way to the whole log in Engine. With a frame lifted over the room it stands at the left, off the frame's buttons. The arrow on its inner edge takes it to the other side of the page, and each room keeps its side (the Artist's is the left). Its outer edge drags it wider, up to 1200 px (kept; a double click gives its own width back); with the cards beside it, it is 920 px wide, their column 390. The frame has two views, **Server** and **Artist** (the Artist's own log: what was asked, what the lab answered, each run's way to its end), and each room opens on its own; **⧉** opens the log in a window of its own, over every window in Chrome or to carry to another monitor.
 
 ![The server log, unfolded](guide/log-dock.png)
 
@@ -74,7 +74,7 @@ The rooms open the bar in the order of the work: Creator, Writer, Refiner, Artis
 
 - **Start from an idea**: one line about the song; the chat model of the Writer drafts the title, the style and the lyrics (*Write the brief*).
 - **Title**, **Key**: the key goes into the score (`K:`). With a score in the form, a new key moves it there; without one, the choice waits and moves the score that comes.
-- **Music seed** and **Sound seed**: the dice for the two halves. Empty is random; a number repeats a take. Keep the music seed and change the sound seed to hear the same song rendered differently. They stand first in *Sampling and Denoising*.
+- **Music seed** and **Sound seed**: the dice for the two halves. Empty is random; a number repeats a take. Keep the music seed and change the sound seed to hear the same song rendered differently. They stand first in *Sampling and Denoising*. Beside each, its **mode**: *Random (−1)* a new seed each run (the field empty), *Random, fixed* a random one put in and kept, *Fixed* the one written, *Next* and *Previous* move it after each Generate past the seeds it used (the versions for the music, the variations for the sound). The Artist's seed has the same modes.
 - **Style**: language, genre, voice, instruments, tempo. *Save style…* keeps it under a name. **♂** and **♀** in its head put *male vocals* or *female vocals* into it (in place of the other gender's word, else before the BPM); the lit one takes its tag out.
 
 ### The Instruments Cheat-Sheet ♪
@@ -143,7 +143,7 @@ Every strength sits on a **road**: green is safe, yellow is its limit, red is pa
 ### Covers, Remixes and Your Own Score
 
 - **Cover or remix**: take the tune of a recording (*Transcribe*: its melody only, not the words or the singer), or the melody of one of your takes, and give it a new style.
-- **Supply your own score**: an ABC score, followed in Full plan and Melody only. Transpose it (nearest, up or down), move one voice by steps of the scale, import a MIDI file (one melodic line per voice), export MIDI or markers for a DAW, load an example, make it instrumental.
+- **Supply your own score**: an ABC score, followed in Full plan and Melody only. Transpose it (nearest, up or down), move one voice by steps of the scale, import a MIDI file (one melodic line per voice), export MIDI or markers for a DAW, load an example, make it instrumental. **Generate** with a score here asks first: on this score, or a new one (the field emptied, the song model writes one). The score remembers the adapters and the music strengths it was written with (a plan, a take's own score); when those on now differ, a line under it says so, and the question too: at other strengths the music may part from the score, Industrial Rock and instrumentals most. In Full the score stays open while it holds one.
 - **Recite the lyrics on a score** (*Lay the lyrics on this score…*, under the score once it reads): the narrator of the studio's promo, for your words. Each line goes on the bars of the score, a syllable an eighth (a sixteenth, as rap is said, where eighths would leave lines out) on a tone of its bar's chord, a breath after a comma and a full stop, the line's last syllable a quarter lower; each section starts on a two-bar phrase after a bar's rest, or after a vocalise when you tick it. The instruments, chords, key and tempo stay; the score's sections follow your tags, with an intro and an outro around them. For spoken word, readings and rap over a bed: make the bed, *Write it from the sound*, then this; it asks first, and Ctrl+Z in each box brings the old text back.
 
 ### Sampling and Denoising
@@ -178,8 +178,8 @@ When the music half writes garbage for a score (adapters pushed past their limit
 
 - **The head**: ▶ and the take's buttons on its first row (👍 👎 ☆, the Librarian, rename, delete), and at its end ⇆ and ⤡, which lift a frame over the room; the title under them on one line; how it was made under that.
 - **Download**: WAV, FLAC (the same samples, about three quarters of the size), MP3 at the bitrate you pick.
-- **Make again**: *Retake* (a new take from the same request), *Reuse* (the request back into the form), *Re-render sound* (the same music, new sound), *Regenerate from…* (keep the start, write the rest anew), *Transcribe this take*, *Trim to the text* (cut a tail after the last sung line), *End at…* (the take ending at the moment you choose, its last 2 s faded; from its kept latents, in seconds).
-- **Refiner**: *Spectrum*, *Lyrics check*. **Files**: the request and the score.
+- **Make again**: *Retake* (a new take from the same request), *Reuse* (the request back into the form), *Re-render sound* (the same music, new sound), *Regenerate from…* (keep the start, write the rest anew), *Transcribe this take*, *Trim to the text* (cut a tail after the last sung line), *End at…* (the take ending at the moment you choose, its last 2 s faded; from its kept latents, in seconds), *Fade in…* (its first seconds rising from silence, 2 s unless you say otherwise; the same way).
+- **Refiner**: *Spectrum*, *Lyrics check*. **Files**: the request and the score. *Loop…*: 1, 2, 4 or 8 bars on the score's bar lines from the bar where the player stands, seamless (its end runs into its start), saved as a WAV named with its tempo and key.
 - **Note**: what works, what to fix, where it goes.
 - The card below says how it was made: mode, format, VAE, model, steps, the shape, the sliders, the LoRAs with their strengths, both seeds (copy them to repeat it).
 - **Over the room** (⤡) the take stands in two columns: what to do with it, its Style and its lyrics on the left; how it was made, its VAE and its score on the right. A new take opens with its Style and Lyrics folded; the tools stand in framed groups.
@@ -228,7 +228,7 @@ Pick a take on the right; the tools work on it, or on a stem of it. The column o
 
 Everything made from a take hangs on its **tree** (*Made from this take*), the newest on top: **the original** first, with its player and its FLAC, then every branch, playable and usable as a source for the next step. What runs shows where you look: in the room's head, at the top of the step's own block, and as a beating dot on its tab. Each step's block lists what it made for the take (*Made here*: a click finds it in the tree), and the step open lights its own branches.
 
-**Compare all** (on the original's row, or *Compare* on any branch) opens every version in one player, as SUNO switches versions: the original, the debuzzed, the remasters, the upscales, the stems. A click on another version, or its number (1–9), plays it **from the same second**; Space plays and pauses, ← → move five seconds, Esc closes.
+**Compare all** (on the original's row, or *Compare* on any branch) opens every version in one player, as SUNO switches versions: the original, the debuzzed, the remasters, the upscales, the stems. A click on another version, or its number (1–9), plays it **from the same second**; Space plays and pauses, ← → move five seconds, Esc closes. The same music in other takes stands in it too, after the original: its re-renders under another VAE or sound seed, each named by its VAE, its seed and when it was made; a take you disliked is left out.
 
 ### Import a Track
 
@@ -250,33 +250,121 @@ The **chain** runs several steps in one go: *Debuzz → Upscale → Stems → Re
 
 ## Artist
 
-*An early preview: what is here works, and the rest of the room comes in the releases after.*
+The room that paints: a cover for each take, a 16:9 for its video, a 9:16 for a short, from your words, from a picture of yours, or from both. The form on the left, the stage in the middle, the library on the right.
 
 ### Pictures for Your Songs
 
-Write what you see for the song, in sentences: Krea 2 Muse reads a prompt as a description, not as a list of tags. Put what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph), and end with *no text* when you want no letters in it. **From the take** puts in the prompt the take in hand got its artwork from, or one made of its title and style, to start from.
+Write what you see for the song, in sentences: Krea 2 Muse and Qwen-Image read a prompt as a description, not as a list of tags. Put what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph), and end with *no text* when you want no letters in it. **From the take** puts in the prompt the take in hand got its artwork from, or one made of its title and style, to start from.
 
-**Shapes**: **1:1** (1280 × 1280) for the cover, **16:9** (1920 × 1080) for a video, **9:16** (1080 × 1920) for a short. The shapes of one press share their seed, so they come out as one series: the same scene in the same colours, each composed for its own frame rather than one picture cut three ways. **Variations** draws the next seeds too (the seed, the seed + 1, …), each in every shape. **Seed**: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed, and **To the form** brings it back with the prompt).
+**Shapes**: **1:1** (1280 × 1280) for the cover, **16:9** (1920 × 1080) for a video, **9:16** (1080 × 1920) for a short. The shapes of one press share their seed, so they come out as one series: the same scene in the same colours, each composed for its own frame rather than one picture cut three ways. **Variations** draws the next seeds too (the seed, the seed + 1, …), each in every shape.
 
-**Painter**: Krea 2 Muse by Stable Yogi, **Q4** on a card with 12.5 GB free, **Q8** (finer) with 18.5 GB. A picture takes about 35 s at 1:1 and 47 s at 16:9 or 9:16 on an RTX 3090, and loading the painter about 25 s more a press. A press waits in the lab's queue for a card with room, as the artwork and the stems do; while it waits, **Off the queue** takes it back. Every picture passes the content filter the painter's licence asks for: one it flags is not kept, and the run says so.
+**Seed**, with its mode beside it: **Random** (−1: a new seed each press, the field empty), **Random, fixed** (a random seed put in at once and kept), **Fixed** (the one written), **Next** and **Previous** (after a press, the field moves past the seeds its variations used). A number typed into the field is that seed (Random turns Fixed); an emptied field is a new seed each press (Fixed turns Random); ⟲ is Random again. The seed of a picture you liked draws it again: each run shows its seed, and **To the form** brings it back with the prompt.
 
-**Three columns**: the prompt and its knobs on the left, the stage in the middle (the run being painted develops there; else the picture you picked, its run's data and its actions under it), the library on the right; drag the edges between them to widen a column (← → from the keyboard, a double click for its own width).
+**Three columns**: the prompt and its knobs on the left, the stage in the middle (the run being painted develops there; else the picture you picked, its run's data and its actions under it), the library on the right; drag the edges between them to widen a column (← → from the keyboard, a double click for its own width). The column's choices stretch with it, never narrower than the painters' names.
 
-**Live preview** (on by default): the place of the picture being painted shows each of its steps, from the noise to the picture, an eighth of its size and seen without the decoder, so it costs nothing; off, the place waits for the finished picture.
+**Live preview** (on by default): the place of the picture being painted shows each of its steps, from the noise to the picture, an eighth of its size and seen without the decoder, so it costs nothing; off, the place waits for the finished picture. A bar at the foot of the left column follows the run, picture by picture and step by step.
 
 **Stop**: while a run waits or draws, *Draw* is *Stop*: a waiting run leaves the queue, a drawing one ends at once; the pictures it finished stay.
 
+### The Painters
+
+**Krea 2 Muse** by Stable Yogi, a fine-tune of Krea 2 Turbo (Krea 2 Community License): **Q4** on a card with 12.5 GB free, **Q8** (finer) with 18.5 GB. A Turbo model, it paints in its own few steps without guidance: about 35 s a picture at 1:1 and 47 s at 16:9 or 9:16 on an RTX 3090, and loading it about 25 s more a press.
+
+**Qwen-Image 2512** (Apache-2.0) from a GGUF at **Q4** (a card of 15.5 GB) or **Q6** (20 GB), or an **fp8 fine-tune** of it (22.5 GB: ComfyUI's single files put into `artwork/Qwen-Image-2512/checkpoints/`, picked under the painter); about half a minute a picture with Lightning, after a minute or two of loading. **Qwen-Image 2.1**, under the Qwen Research Licence (research and evaluation only: not for a cover you sell), paints from words and edits a reference picture by the prompt's words; a mask and *Paint around it* want Krea 2 or Qwen-Image 2512.
+
+Each painter shows only when its files are here; the others are named under the painter. **Engine → Models and LoRAs → Qwen painters** fetches Qwen-Image 2512 at Q4 (31 GB) or Q6 (34.5 GB) with Lightning, and Qwen-Image 2.1 (33.1 GB), each asked first with its size (2.1 with its licence too). From a terminal: `heresy/fetch-heresy.sh --qwen 2512-q4`.
+
+**Which card paints**: a press waits in the lab's queue for a card with room, as the takes' artwork and the stems do; while it waits, **Off the queue** takes it back. A card nothing else uses takes a run whose need fits its memory less 512 MiB (the CUDA runtime's own share); a card in use takes it when its free memory holds the need. A painter no card here can hold is refused at once, with the numbers and the painter that would fit, rather than waiting for ever. Qwen-Image reads the prompt with its text encoder (Qwen2.5-VL-7B, 15.5 GB) on the card when the room free there holds it, else on the processor, before the painter comes: the picture is the same either way.
+
+**The content filter**: every picture passes the filter Krea 2's licence asks for, whatever painted it (the studio's rule for every painter): one it flags is not kept, and the run says so.
+
+### Lightning
+
+**What it is**: Lightning (lightx2v, Apache-2.0) is an adapter that teaches Qwen-Image 2512 to paint in a few steps without guidance: the model's own long guided way distilled into 8 steps. Its file lives in `artwork/Qwen-Image-2512/lightning/` (`Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors`, 0.85 GB) and comes with the Qwen painters' fetch.
+
+**How the studio lays it in**: with Lightning on, the painter loads it as one more adapter beneath your own LoRAs, at its strength: **1.0** for the GGUF Q4 and Q6 (the base it was distilled from, at the 8 steps its makers give) and **0.55** for an fp8 fine-tune, at 12 steps (a fine-tune has moved away from the base, and Lightning at full strength would pull it back; Viktor's own setting in ComfyUI). The schedule becomes Lightning's own: a shift of log 3 at every size, as it was trained. Guidance is off (true CFG 1): one pass of the model a step.
+
+**With it off**, the painter takes 2512's own way: 30 steps by default (10 to 60) and **guidance** 4 (true CFG with its empty negative: two passes a step). Sixty passes against eight: the painting itself takes some seven times as long, the loading the same, and gives the detail and the light of finished realism.
+
+**Its defaults**: the GGUF Q4 and Q6 paint with it (drafts, smaller cards); an fp8 fine-tune paints without it unless you switch it on (finished realism); a take's own artwork is painted with it (*Engine → Artwork*). The rule behind them: Lightning for drafts and covers, not for professional realism.
+
+**The switch**: in Sampling, with its strength beside it; with it on the steps go 4 to 16 and Guidance hides; off, Guidance shows. Without its file there is no switch, and 2512 paints its own way. Krea 2 Muse has none: a Turbo model, its few steps are its own. The strength is kept for each painter; your adapters' sum (*Together*, below) does not count Lightning.
+
+**What it costs**: on an RTX 3090 at 1328 × 1328, Qwen-Image 2512 with Lightning paints in about 30 s a picture at Q4 (14.3 GB at the peak) and 32 s at Q6 (17.6 GB); an fp8 fine-tune at 0.55 and 12 steps in 37 s (21.0 GB). A take's cover with Lightning took about a minute and a half with the loading and the prompt.
+
+### Samplers and Schedules
+
+**Sampling** under the painter, folded, its values in its summary: the steps, the sampler and the schedule, kept for each painter; **Reset** gives the painter's own back. The steps: Krea 2, and Qwen-Image 2512 with Lightning, 4 to 16; else 10 to 60; a number past the range is kept at its edge. The form's estimate of the time counts the sampler's passes.
+
+**The samplers**: at each step the model says which way the picture lies; the sampler decides how to walk there.
+
+- **Euler**: one pass a step, the plain step; the reference, and the one Lightning was distilled with.
+- **Euler SDE**: Euler with a little fresh noise each step: more grain, a little less faithful.
+- **ER-SDE**: a stochastic solver of the third order (ER-SDE-Solver-3), one pass a step, the two steps before it kept: finer than Euler for the same time.
+- **RES 2s** and **RES 3s**: the refined exponential solver's single-step methods, two and three passes a step, half the noise put back after each; their **ODE** twins put none back, so one seed paints one picture, the closest to the exact path.
+- **Heun++** (heunpp2): three passes a step where it can, two, then one at the end.
+- **Exponential Heun** (exp_heun_2_x0, and its SDE): a second-order exponential method, two passes a step; the SDE puts the noise back.
+
+A sampler of two or three passes a step costs two or three times Euler's time at the same steps; at Lightning's 8 steps the higher orders change the detail, not the composition. Against the exact path of a toy flow at 8 steps they rank as their orders say: Euler 0.138, Heun++ 0.111, exponential Heun 0.084, RES 2s 0.058, RES 3s 0.046 (the error: lower is closer).
+
+**The schedules** say where the steps are spent, from all noise to none:
+
+- **Simple**: evenly in the painter's own time, its shift kept.
+- **Karras** and **Exponential**: more steps at little noise, for the detail.
+- **Beta** and **Beta 57**: dense at both ends, sparse in the middle (Beta 57 with 0.5 and 0.7).
+- **KL optimal**: the spacing Align Your Steps found optimal.
+- **SGM uniform**: uniform in time, the last step dropped.
+- **Bong tangent**: two arctangent slopes, from all noise to half and from half to none.
+
+**What two matrices showed** (54 pictures through a test lab, one prompt, one seed): every sampler and schedule painted a whole picture on Krea 2 Muse. On Qwen-Image 2512 **with Lightning, Karras, Exponential and KL optimal can paint the subject twice** (two lighthouses where one was asked): with Lightning keep Simple, Beta, Beta 57, SGM uniform or Bong tangent. **Without Lightning, Euler SDE paints Qwen soft and hazy**: Euler, ER-SDE or RES keep the detail. The form says both when they apply.
+
+**Where they come from**: written for the studio from the methods' papers and ComfyUI's formulas (GPL-3.0, which the studio's AGPL may take); RES4LYF's were read for their mathematics only, as its licence bars commercial services: none of its code is here; Heun++ is Carzit's (MIT).
+
+### Adapters
+
+**LoRA** under the painter: the adapters of its family (Krea 2, Qwen-Image 2.1, Qwen-Image 2512, SDXL), up to four, each at its strength (0 to 1.5); a click on one of its trigger words puts it into the prompt. **Add…** opens the library: the folders on the left, the cards with their pictures, a search. The adapters live in the studio's `artwork/loras/<family>/` (`krea2`, `qwen-image-2.1`, `qwen-image-2512`, `sdxl`): any folders inside become groups, and a picture beside a file with its name (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) shows on its card. Get them from Civitai by their base model (Krea 2, Qwen, SDXL 1.0) and put the `.safetensors` there; **Look up on Civitai** sends each file's SHA-256 and nothing else, and keeps the answer beside it (`NAME.civitai.info`: its name, base model and trigger words, and its first picture rated safe when it has none). What ComfyUI's LoRA Manager or Stability Matrix wrote beside a file is read as well. An adapter made for another model, which would reach none of the painter's layers, stops the run and says so.
+
+**Together**: from two adapters, a bar under them gives their strengths' sum on the Creator's road: green to 1.2, amber to 1.8, red past it. Stacked adapters add up, and past about 1.8 a picture burns (its colours and edges overdone) however modest each one is; the zones are a first measure for pictures, to be set by eye. Drag the bar to move them all at once, each in proportion to where it stood.
+
+### A Picture to Paint From
+
+**Reference picture**: a picture to paint from, as image to image: drop one on its place under the prompt, paste one (Ctrl+V), choose a file, or take the stage's picture with **As reference**. **How much it may change** says how far from it the painting begins: 0.3 keeps it nearly as it is, 0.6 keeps its composition and changes its matter, 0.9 paints the prompt's scene in its light and colours, 1.0 paints anew. Each shape is covered by the picture and cut from its middle; **Again** paints from the run's own; ✕ paints from the noise again.
+
+**Mask…** beside it paints over the picture what to repaint (Paint, Erase, the brush, Invert, Clear): the rest stays exactly as it was, as inpainting. **Paint around it** holds the whole picture in each shape's middle and paints the edges anew (a square cover into a 16:9 or a 9:16), as outpainting. **The take's cover** takes the cover of the take picked on the right. With a mask or **Paint around it**, four options under the picture: **Grow** (the mask grown by so many pixels, or shrunk), **Edge** (how soft its edge is), **Soft** (soft repainting, as differential diffusion: where the edge is grey the picture changes only in the last steps, so no seam) and **Grain** (how much of the new paint the kept part takes, its grain and light sewn to the new; 0 keeps it exactly).
+
+### The Stage and the Library
+
+A click on a picture puts it on the stage with its run under it; a click on the stage's picture (or a double click on a picture) opens it over the page in its own shape (← → walk the run, or the gallery when it was opened there; Esc closes), with ★, **To the form**, **Set as cover** and **Download** (PNG, full size).
+
+**Runs or Gallery**: the runs show each press of Draw with its prompt and seed, the newest on top; the gallery shows every picture of every run in one grid, the newest first, by shape (1:1, 16:9, 9:16) or starred (☆ on a picture stars it), in three sizes, in even tiles: equal columns, every tile the same box, each picture whole in it.
+
+**Compare**: the stage's **Compare…**, then the other picture picked in the library: the two lie one over the other under a divider you drag (← → move it), or side by side (S); X swaps them, Esc closes. **Ctrl** (or ⌘) **+ click** picks pictures and **Shift + click** a range: the library's bar then stars them or puts them in the trash at once (Esc lets go).
+
+**A picture's menu**: a right click on any picture (a run's, the gallery's, the stage's, the one over the page): **Over the page**, **To the stage**, **To the form** (its prompt, seed and shape), **All of it to the form** (its painter, fine-tune, sampling and adapters as well: Draw paints that picture again), **As reference**, **Compare…**, **Set as cover**, **Upscale** (2K or 4K, the sizes they give), **Star it**, **Pick it**, **Copy the prompt**, **Copy the seed**, **Download**, **The file in a new tab**, **Its run** (the Runs look, its card lit), **To the trash**. A run developing on the stage has none. Over the page the menu stands over the picture and has the keys while it is open: Esc closes the menu, the next Esc the picture.
+
+### Upscale
+
+**Upscale…** on the stage makes the picture **2K** or **4K**: its long side 2560 or 3840 px (a square cover 2560² or 3840², a 16:9 2560×1440 or 3840×2160), with an upscaler (ESRGAN, DAT, HAT, SPAN and their kin, read by spandrel) picked in the row that opens (kept; 4x_Nomos8kDAT first when it is there); each button's tip says the size it gives, and a picture as large already has the button off. The model runs as often as the size needs (twice at most) and the result is brought to the exact size. The large picture is a run of its own beside its source, under a minute on a 3090; **Again** upscales the same picture again, perhaps with another model. The upscalers live in the studio's `artwork/upscalers/` (`.pth` or `.safetensors`, folders allowed); OpenModelDB lists hundreds: mind each one's licence.
+
 ### A Cover for the Take
 
-A click on a picture puts it on the stage, the middle of the room, with its run under it; a click on the stage's picture (or a double click on a picture) opens it over the page in its own shape (← → walk the run, Esc closes), with **Download** (PNG, full size). A square picture has **Set as cover**: it becomes the cover of the take in hand (pick one on the right), in its card, in the player and in its MP3. The cover it had is kept beside the take (`artwork-removed/`), as a redraw keeps it, and the other letter of an A/B pair gets the new one too when it has none.
+A square picture has **Set as cover**: it becomes the cover of the take in hand (pick one on the right), in its card, in the player and in its MP3. The cover it had is kept beside the take (`artwork-removed/`), as a redraw keeps it, and the other letter of an A/B pair gets the new one too when it has none.
 
-The runs stay in the studio's `artist/` folder, the newest on top. **Again** draws a run once more from a new seed; **Trash** moves it to `trash/artist/`, from where it comes back when you move its folder back into `artist/`.
+**A take's own artwork** (*Draw artwork* in its menu, in the Librarian, for one take or many) is painted by the painter in **Engine → Artwork**: by the cards (Krea 2 Muse Q4 from 16 GB, else SDXL), or the one you choose: Krea 2 Muse Q4 or Q8, SDXL CyberRealistic, and the Qwen painters this machine has: Qwen-Image 2512 Q4 or Q6 and each fp8 fine-tune with Lightning, Qwen-Image 2.1 with its licence said (not for a song that is sold). A fine-tune chosen that is no longer here gives way to the cards' choice, and the artwork says who painted it.
 
-**Runs or Gallery**: the runs show each press of Draw with its prompt and seed; the gallery shows every picture of every run in one grid, the newest first, by shape (1:1, 16:9, 9:16) or starred (☆ on a picture stars it), in three sizes. A picture opened from the gallery walks the whole gallery, with ★, To the form (its prompt, seed and shape), Set as cover and Download. The gallery lays them in even tiles: equal columns, every tile the same box (square, or the shape's own when one shape is shown), each picture whole in it.
+### The Artist's Trash
+
+The runs stay in the studio's `artist/` folder. **Trash** on a run moves it to `trash/artist/`; the stage's **Trash** puts a picture aside. The **Trash** look beside Runs and Gallery shows the pictures put aside first, each with **Restore** and ✕, and **Restore all**; then the runs in the trash, each with **Restore** and **Delete for good**; **Wipe out** at its head deletes all it shows. Each deletion asks first and cannot be undone.
+
+**Trash (Art)** in the Librarian's column, under Out of sight, holds the art put away in one list: the Artist's runs in the trash, the pictures put aside, and the covers taken off the takes (by a redraw, by Remove, by a new cover), each with its picture and what it weighs. Tick them to give them back (a cover goes back to its take, the one it has now kept in its place) or to delete them for good, asked first; with none ticked, **Wipe out the art's trash**. A frozen workspace's covers stay as they are.
+
+### The Artist's Log
+
+The server log's frame has two views, **Server** and **Artist**, and each room opens on its own: the Artist's room on the Artist's. The Artist's log, kept in this browser (its last 400 lines), says what was asked (the painter, the fine-tune, the shapes, the seed, the sampling, the adapters), what the lab answered (a refusal in its own words), each run's way to its end (waits and why, paints on GPU N, done, stopped, failed and why), and the lab's own lines about the Artist. **Copy** takes the view's lines; folded, the frame says the view's last line. **⧉** opens the log in a window of its own, both views mirrored: in Chrome it stays over every window (Document Picture-in-Picture); elsewhere it is a window to carry to another monitor.
 
 ### Coming to the Artist
 
-A reference picture to start from; repainting a part of a picture, and growing it past its edges, on a canvas; several LoRA adapters at once; an upscale; Qwen Image as a second painter; the title and the artist written on the cover.
+The title and the artist's name written on the cover; a canvas with layers, as InvokeAI's; more upscalers (SeedVR).
 
 ## Librarian
 
@@ -295,7 +383,7 @@ A reference picture to start from; repainting a part of a picture, and growing i
 - **Pinned takes**: up to four in each workspace, in a strip of their own tone above the cards (right-click a take → *Pin here*; × unpins). When you check takes, the bar of the checked takes the strip's place, so the cards never move. That bar is a row of framed icons: the choice, the marks, the workspaces, the export, and the trash at its end; each says itself on hover.
 - **Filter** (the button at the end of the search row) opens a window as the workspace chooser does: tick what to look for in three groups (how it was made: generated, imported, regenerated, re-rendered; marked: liked, disliked, favourites, with a note, with artwork; what it has: stems, debuzz, remaster, upscale), each with how many takes of the place, and how the ticked join: all of them (AND), any (OR) or none (NOR). *Show* applies them; the button then says how many are on and how they join.
 - **Select** several, as in a file manager: check one, and from then on a click anywhere on another card checks it too (Shift: the whole range). A drag on the empty space between the cards draws a band that checks what it touches; **Ctrl+drag** draws it from anywhere and keeps what was already checked. The bar of the checked floats above the player: favourite, add to a workspace, move to one, take out of this one, hide, export a ZIP, to the trash.
-- **The trash** gives back, or wipes out after you confirm.
+- **The trash** gives back, or wipes out after you confirm. **Trash (Art)**, beside it in the column, holds the art put away (the Artist's runs in the trash, the pictures put aside, the covers taken off the takes) and gives it back, or deletes it for good after you confirm; a frozen workspace's covers stay.
 
 ### A Take's Menu
 
@@ -303,7 +391,7 @@ A reference picture to start from; repainting a part of a picture, and growing i
 
 **Regenerate with a new seed** (above the Writer in the take's menu): the take made again from everything it was made with, but new seeds; the new one takes the old one's workspaces and note, and the old one waits in the section *Sourced for Regeneration* of its workspace (its workspace does not show it among its own) until you empty it; the new one keeps its note, like, star and picture. A probe comes out its full two minutes. Play, open in the Creator or in the Refiner, the sheet (its score), the datasheet (all it was made with: the style and the lyrics, the score drawn, every knob, the LoRAs and sliders with their strengths; a Direct take has no score, and *Write it from the sound* asks the transcriber for one), like, dislike, favourite, a note, rename, **workspaces** (one take can sit in several), **move to** one workspace (on a checked card: every checked take, out of the workspace open), hide, send to the Writer, copy, download, **export to DAW** (REAPER project or DAWproject, on any take: with its stems once the Refiner has split them), the trash. **On a checked card, with others checked**, the menu acts on all of them, and its head says how many: like, dislike, favourite, artwork, the artwork taken off, workspaces, hide, a ZIP; drawing artwork for several and regenerating several ask first, as they cost a card's minutes.
 
-**Draw artwork**: a small language model (Qwen3-4B) reads the take's style and words and writes one picture prompt; Krea 2 Muse paints it, 1024 px, in about half a minute on a 16 GB card (on a smaller card SDXL, CyberRealistic XL; *Engine → Artwork* picks the painter). It shows in the player, on the card, in the desktop's media panel, and inside the MP3 you download (as its front cover). Once a take has its picture, the menu says *Open the artwork* (over the page, as a click on the card's picture or on the player's square) and *Redraw artwork* (a new prompt and a new picture; the old one is kept beside the take, in `artwork-removed/`). The two models come with `heresy/fetch-heresy.sh --artwork` (14 GB, asked first).
+**Draw artwork**: a small language model (Qwen3-4B) reads the take's style and words and writes one picture prompt; Krea 2 Muse paints it, 1024 px, in about half a minute on a 16 GB card (on a smaller card SDXL, CyberRealistic XL; *Engine → Artwork* picks the painter). It shows in the player, on the card, in the desktop's media panel, and inside the MP3 you download (as its front cover). Once a take has its picture, the menu says *Open the artwork* (over the page, as a click on the card's picture or on the player's square) and *Redraw artwork* (a new prompt and a new picture; the old one is kept beside the take, in `artwork-removed/`). The two models come with `heresy/fetch-heresy.sh --artwork` (14 GB, asked first). *Engine → Artwork* offers the Qwen painters here too: Qwen-Image 2512 and its fp8 fine-tunes with Lightning, and Qwen-Image 2.1 (see Artist › A Cover for the Take).
 
 ### The Instruments under the Style
 
@@ -311,7 +399,7 @@ Under the Style box, the studio names what your prompt asks for: a chip for each
 
 ### Artwork: What Draws It, What It Cannot, Another Painter
 
-**What draws it.** A small language model (Qwen3-4B) reads the take's style and words and writes one picture prompt, its subject first; Krea 2 Muse paints it (1024 px), or SDXL where Krea does not fit (*Engine → Artwork*). When the take is named for an instrument (an instrument's probe), the studio tells both how the instrument looks and where it is at home, and Omni (the listener's model) looks at the picture: when it does not find the instrument, it writes the prompt again from what it saw, and the painter tries once more, three pictures at most. About half a minute a picture on a 16 GB card.
+**What draws it.** A small language model (Qwen3-4B) reads the take's style and words and writes one picture prompt, its subject first; Krea 2 Muse paints it (1024 px), or SDXL where Krea does not fit (*Engine → Artwork*). When the take is named for an instrument (an instrument's probe), the studio tells both how the instrument looks and where it is at home, and Omni (the listener's model) looks at the picture: when it does not find the instrument, it writes the prompt again from what it saw, and the painter tries once more, three pictures at most. About half a minute a picture on a 16 GB card. A Qwen painter chosen there paints with Lightning: at 1328 px, kept at 1024.
 
 **What it cannot** (a disclaimer, said plainly): the painter draws what it knows. An instrument it has never seen by name (the duduk, the morin khuur, the khomus, crystal singing bowls…) comes out as a guess: a wooden pipe, a violin, kitchen bowls. Where Omni found the instrument in none of the three pictures, the picture is marked **≈ a guess**, in the overlay and in the instruments' cheat-sheet. An artwork is the take's mood, not a reference picture of an instrument: to know how an instrument looks, look it up.
 
@@ -356,11 +444,26 @@ The **listener** (Qwen2.5-Omni, on any card with about 8 GB free) hears every tr
 
 ![A kind, the knobs, a card](guide/train-knobs.png)
 
-- **Kind** presets the knobs (rank, steps, how much the music half learns).
-- **Trainer**: **Ruach Studio** (the studio's own, on unquantized bf16 weights; it makes the set's latent cache itself) or **AI-Toolkit** by Ostris (the reference; it can also train with a score). Both save the same LoRA format; on the same set their curves agree epoch by epoch.
-- **Base weights**: bf16 (24 GB cards) or int8 (smaller cards, a little less exact).
-- **Steps**, **Save every** N epochs (every epoch is kept), **Rank**, **Learning rate**, **AR weight** (how much the music half learns; 0 = sound only), **AR anchor** (keeps it near the base model), **AR speed**.
+Pick a set made in step 2, then a **kind**: it sets the knobs for what you teach (the table under the list), and each can be changed before *Train*. The form, field by field:
+
+- **Kind**: style, voice, language or artist.
+- **Run name**: the run's folder (`training/NAME/`) and its adapters' names (`loras/NAME/NAME-eNNN`, among the Creator's LoRAs at once). A name belongs to one run: the page asks for another when it is taken.
+- **Trainer**: **Ruach Studio** (the studio's own, on unquantized bf16 weights; it makes the set's latent cache itself; Direct mode) or **AI-Toolkit** by Ostris (the reference; it can also train with a score and on separated vocals). Both save the same LoRA format; on the same set their curves agree epoch by epoch.
+- **Base weights**: bf16, the whole model (a 24 GB card), or int8 for smaller cards, a little less exact. The base model's file never changes: only the adapter learns.
+- **Steps**: how many in all, one track a step. The sound half hears a 60-second window of the track, cut at random each time; the music half reads the song from its start. The run is rounded up to whole epochs (an epoch: every track once): 2016 tracks for 12 epochs are 24 192 steps.
+- **Save every N epochs**: an adapter at the end of every Nth epoch, each to be heard and compared, all kept, with the optimizer's state beside the newest (a stopped run keeps what it learned).
+- **Rank**: how wide the adapter is; its share of the weights and its size are in the field's tip (what each rank costs and which for what: below).
+- **Learning rate**: how big each step of the sound half is (AdamW, the same for the whole run); the music half's is this times **AR speed**. The kinds keep 0.0001; half of it is gentler, for a long run over a big set; higher learns faster and forgets more.
+- **AR weight**, **AR anchor (KL)**, **AR speed**: the music half's three knobs, below.
+- **Mode** and **Separate vocals and music**, AI-Toolkit only: **Direct** is for songs made in Direct mode; **Full (score)** and **Melody**, for songs made in those modes, also teach the music half to write a score first, transcribed from every song; **separated**, every song is first split into voice and music, and the music half also learns the voice from the lyrics alone and the music from the tags alone.
 - Below the button: the measured VRAM of earlier runs, and which card is free enough now.
+
+| kind | rank | steps | AR weight | AR anchor | AR speed | what for |
+|---|---|---|---|---|---|---|
+| **Style** | 32 | 1500 | 0.5 | 0.2 | 0.5 | a sound: genre, production, a band's |
+| **Voice** | 16 | 1500 | 0.3 | 0.3 | 0.5 | a timbre: the music half held near the base |
+| **Language** | 32 | 3000 | 1.0 | 0.1 | 1.0 | diction: the music half meant to change |
+| **Artist** | 32 | 3000 | 0.7 | 0.2 | 0.7 | all of it |
 
 ### Rank and the Other Knobs
 
@@ -379,20 +482,55 @@ The **listener** (Qwen2.5-Omni, on any card with about 8 GB free) hears every tr
 - **A large set of many voices** (hours of them, a tag for each voice): **64**, and **128 at most**, only when 64 measurably falls short. The trainer stops at 128: 256 would change a sixth of the weights it touches, more than any set here needs.
 - The base model's file never changes. The risk of a big rank is the adapter itself: at full strength it forgets what it was not shown (singing, if it learned from speech).
 - **Steps**: the music half learns a small set by heart fast (its loss falls toward 0): the green epochs in the Telemetry are the ones to hear first, often well before the last.
-- **Learning rate**: keep the kind's own; higher learns faster and forgets more.
-- **AR weight**: 0 teaches only the sound (a timbre); raise it for diction and style, which live in the music half.
 - **The material's sample rate**: the sound half works at 48 kHz, the music half hears at 24 kHz. A 24 kHz recording teaches the music half everything, but the sound half only a dull top: resampling adds nothing above half the original rate. For a timbre, give it 44.1 or 48 kHz.
+
+### The Music Half's Three Knobs
+
+Every step teaches the two halves apart. The sound half always learns the sound: to take the noise off its window of the track (the flow loss). The music half learns only when **AR weight** is above 0, and then two things pull on it at once:
+
+- **its lesson** (ar_ce): to predict the song's own tokens from the song's start, word by word and note by note: diction, phrasing, melodic habits, the shape of a song;
+- **the anchor** (ar_kl): at each of those places the trainer asks the base model, the same music half with the adapter switched off, what it would write there, and fines the adapter for every step away from that.
+
+A step's loss is flow + AR weight × ar_ce + AR anchor × ar_kl. What each knob does:
+
+- **AR weight** decides whether the music half learns at all, and how hard its lesson pulls against the anchor. At 0 the music half stays the base model (its part of the adapter stays empty: all zeros, measured), the adapter is a timbre on the sound half only, and the anchor does nothing.
+- **AR anchor** pulls the music half back toward the base model, so it keeps what the set does not show: singing after a set of readings, other languages, following new words, writing a score. With no anchor it drifts wherever the set leads.
+- **The two pull against each other, and only their ratio counts, not their size.** AdamW scales every step by the size of its own recent gradients, so a loss multiplied by a number teaches what it taught before: 0.5 with an anchor of 0.2 is 1.0 with 0.4. Read the anchor as a share of the weight: a tenth of it lets the music half move (Language), as much as the weight holds it near the base (Voice).
+- **AR speed** is the music half's real throttle: its learning rate is the learning rate times this, the one knob that makes the music half learn faster or slower. The kinds keep it at 0.5 (Language at 1.0): the music half learns a small set by heart long before the sound half has its timbre.
+
+Measured here (10.10.2026: 40 steps on a set of 60 readings, rank 16, one seed; *moved*: how large the adapter's change to the music half's matrices came out):
+
+| AR weight · anchor · speed | moved | apart from the first row | ar_kl, its last ten steps |
+|---|---|---|---|
+| 0.5 · 0.2 · 0.5 (Style's) | 1.32 | the same run again: 1 % | 0.257 |
+| 1.0 · 0.4 · 0.5 (both doubled) | 1.36 | 5 % | 0.262 |
+| 0.5 · 0 · 0.5 (no anchor) | 1.44 | 23 % | — |
+| 0.5 · 0.5 · 0.5 (the anchor as large) | 1.21 | 17 % | 0.132 |
+| 0.5 · 0.2 · 1.0 (speed doubled) | 2.32 | 99 % | 0.443 |
+| 0 · 0 · 0.5 | 0 | nothing learnt | — |
+
+Doubling both changed the adapter by 5 %, against 1 % for the same run twice; the anchor's share moved it by a sixth to a quarter; doubling the speed took it three quarters farther. The sound half shares only the gradient clipping with the music half: between the rows it differed by 4 to 13 %, against 2 % for the same run twice.
+
+What to turn, by what you hear and see:
+
+| when | turn |
+|---|---|
+| you want a timbre only (a voice from readings, an instrument) | AR weight low with the anchor as large (Voice's 0.3 and 0.3), or AR weight 0 |
+| you want a language's diction, a style's phrasing | AR weight 1.0, the anchor a tenth of it, AR speed 1.0 (Language's) |
+| ar_ce falls under 0.3 early: it knows the songs by heart | AR speed down, or the anchor's share up; or hear an earlier epoch |
+| the adapter sings the training songs' tunes over new words, or loses the lyrics | the anchor's share up: as large as the weight, or more |
+| ar_kl stays near 0 and the diction did not come | AR speed up, or the anchor's share down |
 
 ### 4 Telemetry
 
 ![Both halves' curves, explained under each](guide/train-charts.png)
 
-The runs that are training stand on top of the room with their progress, time left and both losses. A run's telemetry shows its progress, speed, time, memory, and two curves:
+The runs that are training stand on top of the room with their progress, time left and both losses. A run's telemetry shows its progress, then tiles: its speed, the time it has run and has left, the last values of flow, ar_ce and **ar_kl** (how far the music half has moved from the base model: 0 while AR weight is 0), the VRAM peak and the card; then two curves:
 
 - **Sound half · flow loss**: how well the sound half predicts the noise it must take away. It jumps from step to step (each step draws a random noise level): read the bold line, the running average.
 - **Music half · ar_ce**: how well the music half predicts the song's own tokens. Close to 0 it knows the songs by heart; an earlier epoch is then the better adapter.
 
-Hover a curve to read the step, its epoch and the value there. **Compare with…** lays another run's curves over these, dashed.
+Hover a curve to read the step, its epoch and the value there. **Compare with…** lays another run's curves over these, dashed. The button beside **The log** puts the two curves one under the other, each the whole width, or side by side again. **The log** opens at the room's foot, as wide as its lines, beside the server log.
 
 ### The Epochs Worth Hearing First
 
@@ -415,7 +553,7 @@ Every run is a card on the right: *Active*, *All*, *Archived*, *Trash*, searchab
 ![Engine](guide/studio-engine.png)
 
 - **Server**: what the engine runs: the model, the decoders, the context, the library.
-- **Compute**: the **model** copy (BF16 7.2 GB, Q8_0 3.8 GB, Q6_K and Q5_K_M smaller), **GPU memory preset** (*Auto* fits the context and the VAE tiles to the card; *Auto within N GB* does it for that much, the rest of the card left to what else runs on it (on a 16 GB laptop, 14); *Manual* leaves them to you), **Keep models loaded**.
+- **Compute**: the **model** copy (BF16 7.2 GB, Q8_0 3.8 GB, Q6_K and Q5_K_M smaller), **GPU memory preset** (*Auto* fits the context and the VAE tiles to the card; *Auto within N GB* does it for that much, the rest of the card left to what else runs on it (on a 16 GB laptop, 14); *Manual* leaves them to you), **Keep models loaded**. **Scan the machine** says what the machine has and what suits it (the backbone, Auto's knobs, the painter), as a new studio does once at its first start.
 - **Hardware**: the card's memory now; **Unload model** frees it at once.
 
 ### GPUs: Which Card Does What
@@ -428,6 +566,7 @@ On a machine with several cards, give each its work: the **studio** (synthesis) 
 
 - **VAEs**, **LoRAs**, **Sliders**: every file the studio found, with its source and what it does.
 - **Models and LoRAs**: what the install brings, part by part (the extra decoders and the sliders, Whisper, the stems' models, UniverSR, the LoRAs), as its last run found it, and **Check again** to look anew. A part not whole lists what is missing and has its **Fetch**; **Fetch what is missing** takes them all; a download cut short goes on where it stopped. **More models**: another backbone (BF16 beside Q8_0), the style listener, the Artist's painter, the trainer's base, each with its variants and sizes, a variant here said so, each asked first with its size. A new backbone, decoder or slider reaches the engine at its next start (**Restart the engine**); new LoRAs at once.
+- **Artwork**: who paints a take's artwork: by the cards (Krea 2 Muse Q4 from 16 GB, else SDXL), or one chosen: Krea 2 Muse Q4 or Q8, SDXL CyberRealistic, and the Qwen painters this machine has (Qwen-Image 2512 Q4 or Q6 and each fp8 fine-tune, with Lightning; Qwen-Image 2.1 with its licence said).
 - **Writer**: the local chat server's address (vLLM, LM Studio, Ollama), *Test connection*.
 - **Appearance**: 22 themes (chosen to work in: clear and quiet), corners, the three fonts (text, headings, numbers).
 - **Server log**: the whole log; **About**: every project the studio stands on, linked.

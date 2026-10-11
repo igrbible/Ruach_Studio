@@ -266,7 +266,7 @@
       <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Models on Hugging Face</a>
       <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Buy me a Coffee Machine</a>
     </div>
-    <span class="rc"><b>2.0.0-rc4</b> · the fourth release candidate · October 2026</span>
+    <span class="rc"><b>2.0.0-rc5</b> · the fifth release candidate · October 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -372,7 +372,7 @@
             <tr><td>into a DAW</td><td>a REAPER project with the score, sections and lyrics (experimental)</td><td>audio stems</td></tr>
             <tr><td>the code</td><td>open, every change documented</td><td>closed</td></tr>
             <tr class="honest"><td>polish out of the box</td><td><b>less</b>: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them)</td><td><b>more</b></td></tr>
-            <tr class="honest"><td>what you need</td><td>an NVIDIA GPU (24 GB for everything at full precision), Linux, about 120 GB of disk for the models, LoRAs and workspaces</td><td>a browser</td></tr>
+            <tr class="honest"><td>what you need</td><td>an NVIDIA GPU (24 GB for everything at full precision), Linux, about 30 GB of disk (about 56 GB with the Artist's models)</td><td>a browser</td></tr>
           </tbody>
         </table>
       </div>
@@ -386,7 +386,7 @@
         <div class="card"><h3>The machine</h3><ul>
           <li><b>An NVIDIA GPU</b>: 24 GB for everything at full precision</li>
           <li><b>Linux</b> (made on Ubuntu 24.04, CUDA 12.8)</li>
-          <li><b>About 120 GB</b> of disk: the models (about 100 GB, fetched, pinned and checked by <code>fetch-models.sh</code>), the LoRAs and the workspaces</li></ul></div>
+          <li><b>About 30 GB</b> of disk, measured on fresh installs: the program and its Python (16 GB), the models (13 to 17 GB by the card, fetched, pinned and checked by <code>fetch-models.sh</code>); the Artist's models 26 GB more, the 💎 sets 5 GB, each only when you ask</li></ul></div>
         <div class="card"><h3>The screen</h3><ul>
           <li>Made for a browser window of <b>1920×1080 at 100 %</b></li>
           <li>The ideal: <b>2K</b> (2560×1440), 22″ or larger, 16:9 or wider</li>
@@ -402,7 +402,7 @@
   <section id="next">
     <div class="wrap">
       <h2>What comes next</h2>
-      <p class="sub">2.0.0-rc4 is the studio we make our own songs in every day. These are the larger pieces on their way, for rc5 and after.</p>
+      <p class="sub">2.0.0-rc5 is the studio we make our own songs in every day. These are the larger pieces on their way, for rc6 and after.</p>
       <ul class="feats">
         <li><b>The Artist room.</b> Covers in three shapes at once from one seed (1:1 for the album, 16:9 for a video, 9:16 for a short), the title and the artist written on them, the versions of each take's picture.</li>
         <li><b>Five more languages.</b> Chinese, French, Portuguese, German and Japanese; the right-to-left ones once the page itself runs right to left.</li>
@@ -490,7 +490,7 @@
 
 <footer>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.0-rc4 · a work of <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span>
+    <span>Ruach Studio · 2.0.0-rc5 · a work of <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span>
     <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
   </div>
 </footer>

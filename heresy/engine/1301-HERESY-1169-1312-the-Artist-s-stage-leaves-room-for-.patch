@@ -1,0 +1,45 @@
+From 99081598679759a74575bf397e47398f18b2da96 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 11:11:30 -0600
+Subject: [PATCH 1301/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201312:=20the?=
+ =?UTF-8?q?=20Artist's=20stage=20leaves=20room=20for=20its=20lines=20and?=
+ =?UTF-8?q?=20buttons=20over=20the=20player?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor's screenshot 10.10.2026, 10:57: the Artist on his 2K window with a three-line prompt, and no «To the form · As reference · Compare… · Set as cover» under the picture.
+
+The stage's picture was sized as the window less 330 px, a guess: with a long prompt its row of buttons fell under the player (2557×1353: the row's bottom at 1290, the player's top at 1283; 1920×1080: 1054 against 1010). Now the picture takes the window's height under the stage's top (its place in the room unscrolled while it sticks, the room's top when the columns stack), over the player, less the stage's own lines and buttons: at 2557×1353 a 1003 px picture and the row ending at 1270, at 1920×1080 712 px and 998.
+
+Suite: 565/0 in the kitchen (the stage at both windows with a three-line prompt).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-artist.js | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 5dc61f1..966aaee 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -604,7 +604,14 @@
+   function fitStage() {
+     var b = document.querySelector("#arStage .ar-stage-pic"), box = $("arStage");
+     if (!b || !box || !box.clientWidth) return;
+-    var w = +b.dataset.w || 1, h = +b.dataset.h || 1, maxH = Math.max(240, window.innerHeight - 330), k = Math.min(box.clientWidth / w, maxH / h);
++    // HERESY 1312 (Viktor's screenshot 10.10.2026: the buttons under the picture fell under the player with his three-line prompt on 2K;
++    // «330» was a guess): the window's height under the stage's top (its place in the room unscrolled while it sticks, the room's top
++    // when the columns stack), over the player, less the stage's own lines and buttons
++    var view = $("view-artist"), cols = $("arCols"), data = box.querySelector(".ar-stage-data"), bar = $("playbar");
++    var top = getComputedStyle(box).position === "sticky" && cols ? cols.getBoundingClientRect().top + (view ? view.scrollTop : 0)
++      : (view ? view.getBoundingClientRect().top : 0) + 8;
++    var under = bar ? bar.getBoundingClientRect().height : 0, below = data ? data.offsetHeight + 10 : 0;
++    var w = +b.dataset.w || 1, h = +b.dataset.h || 1, maxH = Math.max(240, window.innerHeight - top - under - below - 12), k = Math.min(box.clientWidth / w, maxH / h);
+     b.style.width = Math.floor(w * k) + "px";
+     b.style.height = Math.floor(h * k) + "px";
+   }
+-- 
+2.43.0
+

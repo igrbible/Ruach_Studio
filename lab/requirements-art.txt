@@ -15,7 +15,7 @@
 torch==2.11.0+cu128
 torchvision==0.26.0+cu128
 transformers>=5.2,<6          # Krea 2's text encoder and tokenizer (Qwen3-VL), the prompter (Qwen3-4B), the content filter
-diffusers>=0.40               # Krea2Pipeline, the GGUF loader; SDXL as before
+diffusers>=0.41               # Krea2Pipeline, the GGUF loader; SDXL as before; QwenImage21Pipeline (HERESY 1313)
 accelerate
 gguf>=0.10                    # the fine-tune's GGUF
 safetensors
@@ -29,3 +29,6 @@ kernels                       # diffusers imports it; its remote kernels are not
 #   nsfw-filter/    Falconsai/nsfw_image_detection                      the content filter the licence asks for (Apache-2.0)
 #   Qwen3-4B-Instruct-2507/                                             the prompter (Apache-2.0)
 #   CyberRealistic-XL-v10/                                              SDXL, for cards Krea 2 does not fit
+peft                          # HERESY 1316: the Artist's LoRA adapters (diffusers' loaders)
+scipy                         # HERESY 1319: the beta schedule
+spandrel                      # HERESY 1322: the Artist's upscalers (MIT; its loader unpickles only what a model is made of)

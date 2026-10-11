@@ -8,8 +8,12 @@ is said. Its samples (mp3) and pictures stay on Hugging Face.
 
     .venv/bin/python heresy/fetch-ruach-loras.py           fetch what is missing
     .venv/bin/python heresy/fetch-ruach-loras.py --check   say what is here and what is missing, download nothing
+    .venv/bin/python heresy/fetch-ruach-loras.py --replace a file here that differs from the pinned one too (set aside first)
 
-The last line is for heresy/fetch-heresy.sh: «#counts here=N fetched=N missing=N failed=N».
+HERESY 1296: a file here of another size is someone's own copy (the Forge's voices are the published ones with their readers' names
+still in the header): kept and said «differs», never taken for missing or written over without --replace.
+
+The last line is for heresy/fetch-heresy.sh: «#counts here=N fetched=N missing=N failed=N differs=N».
 """
 import os
 import shutil
@@ -19,13 +23,14 @@ import time
 REPO = "goldhub/Ruach_Studio_LoRAs"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHECK = "--check" in sys.argv[1:]
+REPLACE = "--replace" in sys.argv[1:]            # HERESY 1296
 COLOR = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
 G, Y, R, D, X = ("\033[1;32m", "\033[1;33m", "\033[1;31m", "\033[2m", "\033[0m") if COLOR else ("",) * 5
-counts = {"here": 0, "fetched": 0, "missing": 0, "failed": 0}
+counts = {"here": 0, "fetched": 0, "missing": 0, "failed": 0, "differs": 0}
 
 
 def say(kind, what, note=""):
-    colour = {"here": G, "fetched": G, "missing": Y, "failed": R}[kind]
+    colour = {"here": G, "fetched": G, "missing": Y, "failed": R, "differs": Y}[kind]
     print(f"{colour}{kind:<9}{X} {what} {D}{note}{X}".rstrip())
     counts[kind] += 1
 
@@ -65,6 +70,14 @@ def main():
         if os.path.isfile(dest) and os.path.getsize(dest) == s.size:
             say("here", "loras/" + rel, tag)
             continue
+        if os.path.isfile(dest) and (CHECK or not REPLACE):  # HERESY 1296: someone's own copy, kept
+            say("differs", "loras/" + rel, f"{tag} — kept: the copy here differs from the published file (--replace fetches it)")
+            continue
+        if os.path.isfile(dest):                           # --replace: the old copy steps aside whole
+            aside = os.path.join(ROOT, "tmp", "replaced", time.strftime("%Y%m%d-%H%M%S"), "loras", rel)
+            os.makedirs(os.path.dirname(aside), exist_ok=True)
+            shutil.move(dest, aside)
+            print(f"{D}          the old copy → {os.path.relpath(aside, ROOT)}{X}")
         if CHECK:
             say("missing", "loras/" + rel, f"{tag}, {s.size / 2**20:.0f} MB")
             continue

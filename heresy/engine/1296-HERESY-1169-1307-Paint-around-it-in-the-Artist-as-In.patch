@@ -1,0 +1,106 @@
+From a5b3cf9988de2bafcda3a5319d1cb0294beeef23 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 05:27:51 -0600
+Subject: [PATCH 1296/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201307:=20?=
+ =?UTF-8?q?=C2=ABPaint=20around=20it=C2=BB=20in=20the=20Artist,=20as=20Inv?=
+ =?UTF-8?q?okeAI's=20outpaint?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести со всем возможным ахуем».
+
+Under the reference's strength, «Paint around it»: each shape holds the whole picture in its middle and paints the edges it leaves anew (a square cover into a 16:9 for a video or a 9:16 for a short); the strength's label gives way to «the edges painted anew» while it is on. Draw and «Again» send it; the stage says «from a reference · painted around». The strength and the toggle share one column beside the picture. Lab 1307 does the painting.
+
+Suite: 559/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  5 +++++
+ tools/console/heresy-artist.js | 12 +++++++++---
+ tools/console/index.html       |  3 +++
+ 3 files changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 46c040f..8a3d15c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4785,6 +4785,11 @@ body[data-tab="artist"] .col-grip.left { display: none; }
+ .ar-ref-str input { width: 100%; accent-color: var(--amber); }
+ /* HERESY 1306: the mask: its red over the thumbnail, and its editor over the page */
+ .ar-ref-btns { display: flex; align-items: center; gap: 6px; }
++/* HERESY 1307: «Paint around it» under the strength; with it the strength gives way */
++.ar-ref-mid { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
++.ar-ref-fit { display: block; margin: 2px 0 4px; font-size: 12px; }
++.ar-ref-fit .check { gap: 6px; }
++.ar-ref.is-fit .ar-ref-str input[type="range"], .ar-ref.is-fit #arRefSay { opacity: .45; }
+ .ar-ref-pic { position: relative; width: 72px; height: 72px; }
+ .ar-ref-pic canvas { position: absolute; inset: 0; width: 72px; height: 72px; border-radius: var(--r-sm, 6px); pointer-events: none; }
+ #arMaskOpen.is-on { border-color: var(--bad); color: var(--bad); }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index ff61421..7f82c16 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -99,7 +99,11 @@
+     rd.onerror = function () { toast(tr("The picture could not be read"), "bad"); };
+     rd.readAsDataURL(f);
+   }
+-  function paintRefSay() { $("arRefSay").textContent = (+$("arRefStr").value).toFixed(2); }
++  function paintRefSay() {
++    var fit = $("arRefFit") && $("arRefFit").checked;   // HERESY 1307: painting around: the edges from the noise, the middle kept
++    $("arRefSay").textContent = fit ? tr("the edges painted anew") : (+$("arRefStr").value).toFixed(2);
++    $("arRef").classList.toggle("is-fit", !!fit);
++  }
+   // HERESY 1306 (Viktor: «Артиста по модели InvokeAI постарайся на максимум вывести»): a mask on the reference, as InvokeAI's
+   // inpaint: white repaints, the rest stays; state.mask {data} at the reference's own size; its red over the thumbnail
+   function setMask(m) {
+@@ -219,10 +223,11 @@
+   function draw(again) {
+     var body = again ? { prompt: again.prompt, shapes: again.shapes, count: again.count, seed: null, painter: again.painter }
+       : { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value };
+-    if (again && again.ref) { body.ref = { id: again.id, file: again.ref }; body.strength = again.strength; }   // HERESY 1305: its own
++    if (again && again.ref) { body.ref = { id: again.id, file: again.ref }; body.strength = again.strength; if (again.fit) body.fit = true; }   // HERESY 1305: its own; 1307
+     else if (!again && state.ref) { body.ref = state.ref.data || { id: state.ref.id, file: state.ref.file }; body.strength = +$("arRefStr").value; }
+     if (again && again.ref && again.mask) body.mask = { id: again.id, file: again.mask };   // HERESY 1306: Again repaints by the run's own
+     if (!again && state.ref && state.mask) body.mask = state.mask.data;
++    if (!again && state.ref && $("arRefFit").checked) body.fit = true;   // HERESY 1307: painted around
+     body.preview = $("arLive").checked;                 // HERESY 1257: each step's picture while it paints
+     if (state.take) body.take = state.take.name;
+     if (!body.prompt) return toast(tr("Write what to paint first"), "bad");
+@@ -475,7 +480,7 @@
+     else meta.push((r.shapes || []).join(" · ") + (r.count > 1 ? " × " + r.count : ""), tr("seed") + " " + r.seed + (r.count > 1 ? "…" + (r.seed + r.count - 1) : ""));
+     meta.push(PAINTERS[r.painter] || r.painter || "", when(r.created));
+     if (r.took) meta.push(Math.round(r.took) + " s");
+-    if (r.ref) meta.push(tr("from a reference") + " · " + (+r.strength).toFixed(2) + (r.masked ? " · " + tr("masked") : ""));   // HERESY 1305, 1306
++    if (r.ref) meta.push(tr("from a reference") + " · " + (r.fit ? tr("painted around") : (+r.strength).toFixed(2)) + (r.masked ? " · " + tr("masked") : ""));   // HERESY 1305–1307
+     if (r.gpu != null) meta.push("GPU " + r.gpu);
+     if (n) meta.push(tr("drawing") + " " + n + " " + tr("of") + " " + r.of);
+     var acts = "";
+@@ -703,6 +708,7 @@
+     $("arRefFile").addEventListener("change", function () { refFromFile(this.files && this.files[0]); this.value = ""; });
+     $("arRefX").addEventListener("click", function () { setRef(null); });
+     $("arMaskOpen").addEventListener("click", maskEditor);   // HERESY 1306
++    $("arRefFit").addEventListener("change", paintRefSay);    // HERESY 1307
+     var refBox = $("arRef");
+     ["dragenter", "dragover"].forEach(function (k) { refBox.addEventListener(k, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0) { e.preventDefault(); refBox.classList.add("is-over"); } }); });
+     ["dragleave", "drop"].forEach(function (k) { refBox.addEventListener(k, function () { refBox.classList.remove("is-over"); }); });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 9687787..a71dd71 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1469,8 +1469,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <label class="btn ghost small ar-ref-pick">Choose…<input type="file" id="arRefFile" accept="image/png,image/jpeg,image/webp" hidden data-tip="A PNG, JPEG or WebP picture of your own to paint from" /></label></div>
+         <div class="ar-ref-on" id="arRefOn" hidden>
+           <span class="ar-ref-pic"><img id="arRefImg" alt="" draggable="false" /><canvas id="arRefMask" hidden aria-hidden="true"></canvas></span>
++          <div class="ar-ref-mid">   <!-- HERESY 1307: the strength and «Paint around it» in one column -->
+           <label class="field ar-ref-str"><span class="label">How much it may change <em id="arRefSay">0.60</em></span>
+             <input type="range" id="arRefStr" min="0.2" max="1" step="0.05" value="0.6" data-tip="How far from the picture the painting begins: 0.3 keeps it nearly as it is, 0.6 keeps its composition and changes its matter, 0.9 paints the prompt's scene in its light and colours, 1.0 paints anew" /></label>
++            <!-- HERESY 1307: outpaint, a sibling of the strength --><span class="ar-ref-fit"><label class="check" data-tip="Each shape holds the whole picture in its middle and paints the edges it leaves anew, in the picture's colours and light: a square cover into a 16:9 for a video or a 9:16 for a short. The middle stays as it is"><input type="checkbox" id="arRefFit" /> <span>Paint around it</span></label></span>
++          </div>
+           <span class="ar-ref-btns"><button type="button" class="btn ghost small" id="arMaskOpen" data-tip="Paint what of the picture to repaint (white repaints, the rest stays as it is): as inpainting">Mask…</button>
+           <button type="button" class="pb-btn ar-ref-x" id="arRefX" aria-label="No reference picture" data-tip="No reference: paint from the noise">✕</button></span>
+         </div>
+-- 
+2.43.0
+

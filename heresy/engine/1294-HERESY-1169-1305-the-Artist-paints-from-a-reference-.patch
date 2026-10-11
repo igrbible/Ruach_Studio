@@ -1,0 +1,162 @@
+From 64e16f7d6c1389224c2a7f2acece5e8d682182d0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 04:52:45 -0600
+Subject: [PATCH 1294/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201305:=20the?=
+ =?UTF-8?q?=20Artist=20paints=20from=20a=20reference=20picture,=20as=20Inv?=
+ =?UTF-8?q?okeAI's=20image=20to=20image?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести со всем возможным ахуем».
+
+The Artist's form has a reference picture under the prompt: dropped on its place, pasted in the room (Ctrl+V), chosen from a file (PNG, JPEG or WebP, 40 MB at most), or the stage's picture taken with its new «As reference»; with it «How much it may change» (0.2 to 1.0, kept in this browser: 0.3 keeps the picture nearly as it is, 0.6 its composition with its matter changed, 0.9 the prompt's scene in its light and colours), and ✕ to paint from the noise again. Draw sends it (a data URL, or the run and the picture it is); «Again» paints from the run's own; the stage says «from a reference · 0.76». The Artist room stays English in every language until the pass before 2.0.0. Lab 1305 does the painting (Krea 2's VAE, the strength's sigma, the tail of the sigmas).
+
+Suite: 555/0 in the kitchen; pictures of the form by day by tools/claude-ref-probe.mjs (the empty words hid only once their flex gave way to [hidden]).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          | 12 ++++++++++
+ tools/console/heresy-artist.js | 41 ++++++++++++++++++++++++++++++++++
+ tools/console/index.html       | 12 ++++++++++
+ 3 files changed, 65 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 5cf7380..cec38da 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4771,6 +4771,18 @@ body[data-tab="artist"] .col-grip.left { display: none; }
+   font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+ .ar-form { display: flex; flex-direction: column; gap: 12px; margin: 16px 0 6px; }
+ .ar-form textarea { resize: vertical; min-height: 92px; }
++/* HERESY 1305: the reference picture: a place to drop one, or the picture with its strength and ✕ */
++.ar-ref { border: 1px dashed var(--line-strong-a, var(--line)); border-radius: var(--r-md); padding: 8px 10px; }
++.ar-ref.is-over { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 8%, transparent); }
++.ar-ref:has(.ar-ref-on:not([hidden])) { border-style: solid; }
++.ar-ref-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
++.ar-ref-empty .row-hint { margin: 0; flex: 1 1 200px; }
++.ar-ref-empty[hidden] { display: none; }                  /* its flex beat the attribute: the empty words stayed beside the picture */
++.ar-ref-pick { cursor: pointer; }
++.ar-ref-on { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
++.ar-ref-on[hidden] { display: none; }
++.ar-ref-on img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--r-sm, 6px); background: var(--ground); }
++.ar-ref-str input { width: 100%; accent-color: var(--amber); }
+ .ar-knobs { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
+ .ar-shapes { display: flex; gap: 6px; flex-wrap: wrap; }
+ .ar-shape { display: inline-flex; align-items: center; gap: 6px; user-select: none; white-space: nowrap; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index e5aafb6..4215332 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -79,9 +79,31 @@
+     keepForm();
+     paintForm();
+   }
++  // HERESY 1305 (Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести»): a reference picture, as InvokeAI's
++  // image to image: dropped, pasted, chosen from a file, or the stage's «As reference»; state.ref {data, name} or {id, file, url}
++  var REF_MAX = 40 * 1048576;
++  function setRef(ref, quiet) {
++    state.ref = ref || null;
++    $("arRefEmpty").hidden = !!ref;
++    $("arRefOn").hidden = !ref;
++    $("arRefImg").src = ref ? (ref.data || ref.url) : "";
++    $("arRefImg").title = ref ? (ref.name || ref.file || "") : "";
++    if (ref && !quiet) toast(tr("The reference: " + (ref.name || ref.file) + ". Draw paints from it; ✕ paints from the noise again"));
++  }
++  function refFromFile(f) {
++    if (!f || !/^image\/(png|jpeg|webp)$/.test(f.type)) return toast(tr("A reference is a PNG, JPEG or WebP picture"), "bad");
++    if (f.size > REF_MAX) return toast(tr("The reference picture is larger than 40 MB"), "bad");
++    var rd = new FileReader();
++    rd.onload = function () { setRef({ data: String(rd.result), name: f.name || "a pasted picture" }); };
++    rd.onerror = function () { toast(tr("The picture could not be read"), "bad"); };
++    rd.readAsDataURL(f);
++  }
++  function paintRefSay() { $("arRefSay").textContent = (+$("arRefStr").value).toFixed(2); }
+   function draw(again) {
+     var body = again ? { prompt: again.prompt, shapes: again.shapes, count: again.count, seed: null, painter: again.painter }
+       : { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value };
++    if (again && again.ref) { body.ref = { id: again.id, file: again.ref }; body.strength = again.strength; }   // HERESY 1305: its own
++    else if (!again && state.ref) { body.ref = state.ref.data || { id: state.ref.id, file: state.ref.file }; body.strength = +$("arRefStr").value; }
+     body.preview = $("arLive").checked;                 // HERESY 1257: each step's picture while it paints
+     if (state.take) body.take = state.take.name;
+     if (!body.prompt) return toast(tr("Write what to paint first"), "bad");
+@@ -334,6 +356,7 @@
+     else meta.push((r.shapes || []).join(" · ") + (r.count > 1 ? " × " + r.count : ""), tr("seed") + " " + r.seed + (r.count > 1 ? "…" + (r.seed + r.count - 1) : ""));
+     meta.push(PAINTERS[r.painter] || r.painter || "", when(r.created));
+     if (r.took) meta.push(Math.round(r.took) + " s");
++    if (r.ref) meta.push(tr("from a reference") + " · " + (+r.strength).toFixed(2));   // HERESY 1305
+     if (r.gpu != null) meta.push("GPU " + r.gpu);
+     if (n) meta.push(tr("drawing") + " " + n + " " + tr("of") + " " + r.of);
+     var acts = "";
+@@ -341,6 +364,7 @@
+       var take = state.take, square = p.shape === "1:1";
+       acts =
+         '<button type="button" class="btn ghost small" data-stage="form" data-tip="' + esc(tr("Its prompt, seed and shape back in the form")) + '">' + esc(tr("To the form")) + "</button>" +
++        '<button type="button" class="btn ghost small" data-stage="ref" data-tip="' + esc(tr("Paint from this picture: it becomes the form's reference")) + '">' + esc(tr("As reference")) + "</button>" +   // HERESY 1305
+         (square ? '<button type="button" class="btn ghost small ar-cover" data-stage="cover"' + (take ? "" : " disabled") + ' data-tip="' +
+           esc(take ? tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" : tr("Pick a take on the right to give it this cover")) + '">' + esc(tr("Set as cover")) + "</button>" : "") +
+         '<a class="ar-dl" aria-label="' + esc(tr("Download")) + '" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '" href="' + esc(fileUrl(r.id, p.file)) +
+@@ -414,6 +438,7 @@
+     else if (act === "star") star(it.r, it.p, !it.p.star);
+     else if (act === "cover") cover(it.r, it.p);
+     else if (act === "form") { fillForm({ prompt: it.r.prompt, shapes: [it.p.shape], count: 1, seed: it.p.seed, painter: it.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
++    else if (act === "ref") setRef({ id: it.r.id, file: it.p.file, url: fileUrl(it.r.id, it.p.thumb || it.p.file) });   // HERESY 1305
+   }
+   function edges() {                                     // the two edges: dragged, ← →, Home or a double click; the widths kept
+     var cols = $("arCols");
+@@ -555,6 +580,21 @@
+     $("arShapes").addEventListener("change", function () { keepForm(); paintForm(); });
+     $("arSeedNew").addEventListener("click", function () { $("arSeed").value = ""; keepForm(); paintForm(); $("arSeed").focus(); });
+     $("arDraw").addEventListener("click", function () { if (drawingRun()) stopRun(); else draw(); });   // HERESY 1270
++    // HERESY 1305: the reference picture: a file, a drop on its place, a paste in the room; its strength kept
++    $("arRefFile").addEventListener("change", function () { refFromFile(this.files && this.files[0]); this.value = ""; });
++    $("arRefX").addEventListener("click", function () { setRef(null); });
++    var refBox = $("arRef");
++    ["dragenter", "dragover"].forEach(function (k) { refBox.addEventListener(k, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0) { e.preventDefault(); refBox.classList.add("is-over"); } }); });
++    ["dragleave", "drop"].forEach(function (k) { refBox.addEventListener(k, function () { refBox.classList.remove("is-over"); }); });
++    refBox.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) { e.preventDefault(); refFromFile(e.dataTransfer.files[0]); } });
++    $("view-artist").addEventListener("paste", function (e) {
++      var f = e.clipboardData && Array.prototype.filter.call(e.clipboardData.files || [], function (x) { return /^image\//.test(x.type); })[0];
++      if (f) { e.preventDefault(); refFromFile(f); }
++    });
++    var str = parseFloat(recall("yue2.arRefStr"));
++    if (str >= 0.2 && str <= 1) $("arRefStr").value = String(str);
++    paintRefSay();
++    $("arRefStr").addEventListener("input", function () { paintRefSay(); keep("yue2.arRefStr", $("arRefStr").value); });
+     $("arFromTake").addEventListener("click", fromTake);
+     $("arPrompt").addEventListener("keydown", function (e) {
+       if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("arDraw").disabled && !drawingRun()) { e.preventDefault(); draw(); }
+@@ -610,5 +650,6 @@
+     paintForm();
+   }
+   // HERESY 1271: the room entered, the stage follows a painting run again (the picture picked stays picked otherwise)
++  window.HeresyArtistRef = { set: setRef, get: function () { return state.ref; }, fromFile: refFromFile };   // HERESY 1305: for the checks
+   window.HeresyArtist = { init: init, reload: function () { state.pinSel = false; paintHead(); return load(); }, setTake: setTake };
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index dc016cc..e9bd9f1 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1462,6 +1462,18 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     <div class="ar-form">
+       <label class="field"><span class="label">Prompt <em>what to paint, said in sentences (Krea 2 reads them); Ctrl+Enter draws</em></span>
+         <textarea id="arPrompt" rows="5" spellcheck="false" data-tip="What to paint, said in sentences: what is in the picture first, then the light, the colours and the medium (oils, ink, a photograph); end with no text when you want no letters in it. Ctrl+Enter draws" placeholder="A woman in a white linen dress dancing alone in a birch grove at dusk, warm lanterns in the branches, painted in soft oils, no text."></textarea></label>
++      <!-- HERESY 1305 (Viktor 10.10.2026: «Артиста по модели InvokeAI постарайся на максимум вывести»): a picture to paint from -->
++      <div class="ar-ref" id="arRef" tabindex="-1">
++        <div class="ar-ref-empty" id="arRefEmpty"><span class="label">Reference picture <em>paint from it, as image to image</em></span>
++          <span class="row-hint">drop a picture here, paste one (Ctrl+V), or take the stage's with «As reference»</span>
++          <label class="btn ghost small ar-ref-pick">Choose…<input type="file" id="arRefFile" accept="image/png,image/jpeg,image/webp" hidden data-tip="A PNG, JPEG or WebP picture of your own to paint from" /></label></div>
++        <div class="ar-ref-on" id="arRefOn" hidden>
++          <img id="arRefImg" alt="" draggable="false" />
++          <label class="field ar-ref-str"><span class="label">How much it may change <em id="arRefSay">0.60</em></span>
++            <input type="range" id="arRefStr" min="0.2" max="1" step="0.05" value="0.6" data-tip="How far from the picture the painting begins: 0.3 keeps it nearly as it is, 0.6 keeps its composition and changes its matter, 0.9 paints the prompt's scene in its light and colours, 1.0 paints anew" /></label>
++          <button type="button" class="pb-btn ar-ref-x" id="arRefX" aria-label="No reference picture" data-tip="No reference: paint from the noise">✕</button>
++        </div>
++      </div>
+       <div class="ar-knobs">
+         <button type="button" class="btn ghost small" id="arFromTake" data-tip="The prompt the take's artwork was drawn from, or one from its title and style, to start from">From the take</button>
+         <div class="ar-shapes" id="arShapes" role="group" aria-label="Shapes"></div>
+-- 
+2.43.0
+

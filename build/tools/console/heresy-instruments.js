@@ -172,7 +172,7 @@
     return '<tr class="' + (bare ? "is-no" : st.cls) + '">' + picHtml(p) + '<td class="hi-name">' +
       (bare ? '<span class="hi-bare" translate="no">' + esc(i.tag || i.slug) + "</span>" : '<button type="button" class="hi-tag" data-hi-tag="' + esc(i.tag) + '" data-tip="into the Style prompt">' + esc(i.tag || i.slug) + "</button>") +
       '<div class="hi-home">' + esc(i.home) + '</div><div class="hi-st">' + esc(st.text) + "</div></td>" +
-      '<td class="hi-say"><div translate="no">' + esc(i.en) + '</div><div class="hi-ru">' + esc(i.ru) + "</div>" +
+      '<td class="hi-say"><div translate="no">' + esc(i.en) + '</div><div class="hi-ru" translate="no">' + esc(second(i.en, i.ru)) + "</div>" +
       (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") +
       // HERESY 1148 (Viktor): the shofar's probes are kept and listed with the prompt they were made with
       (i.prompt ? '<button type="button" class="hi-prompt" data-hi-tag="' + esc(i.prompt) + '" data-tip="The prompt both probes were made with: into the Style prompt">' + esc(i.prompt) + "</button>" : "") +
@@ -195,13 +195,13 @@
     var p = probes(s.slug), his = hisNote(p), c = styleState(s), st = c.text;
     return '<tr class="' + (c.cls === "is-wait" ? "is-wait" : "is-heard") + '">' + picHtml(p) + '<td class="hi-name">' + (fold(s.name) === fold(s.tag) ? "" : '<div class="hi-sname">' + esc(s.name) + "</div>") +
       '<button type="button" class="hi-tag" data-hi-tag="' + esc(s.tag) + '" data-tip="into the Style prompt">' + esc(s.tag) + '</button><div class="hi-st ' + c.cls + '">' + esc(st) + "</div></td>" +
-      '<td class="hi-say"><div translate="no">' + esc(s.en) + '</div><div class="hi-ru">' + esc(s.ru) + "</div>" + (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") + "</td>" +
+      '<td class="hi-say"><div translate="no">' + esc(s.en) + '</div><div class="hi-ru" translate="no">' + esc(second(s.en, s.ru)) + "</div>" + (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") + "</td>" +
       '<td class="hi-plays">' + playsHtml(p) + "</td></tr>";
   }
   function paintStyles() {
     var f = fold(state.q), groups = DATA.style_groups || {}, html = "";
     Object.keys(groups).forEach(function (g) {
-      var list = (DATA.styles || []).filter(function (s) { return s.group === g && (!f || fold(s.name + " " + s.tag + " " + s.en + " " + s.ru).indexOf(f) >= 0); });
+      var list = (DATA.styles || []).filter(function (s) { return s.group === g && (!f || fold(s.name + " " + s.tag + " " + s.en + " " + s.ru + " " + second(s.en, "")).indexOf(f) >= 0); });
       if (list.length) html += '<tr class="hi-fam"><th colspan="4">' + esc(groups[g]) + " <em>" + list.length + "</em></th></tr>" + list.map(styleRow).join("");
     });
     $("hiTable").innerHTML = html || '<tr><td class="row-hint">Nothing matches.</td></tr>';
@@ -355,6 +355,14 @@
       });
   }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  // HERESY 1339: a description's second line in the page's language: the built-in Russian in English and Russian, the catalog's
+  // own in the others (keyed by the English), the Russian where a catalog has none yet
+  function second(en, ru) {
+    var L = window.RuachI18n, lang = L && L.lang ? L.lang() : "en";
+    if (lang === "en" || lang === "ru" || !en) return ru;
+    var t = L.look(en, lang);
+    return t === null ? ru : t;
+  }
   function paint() { paintTable(); markIn(); }
   function paintTable() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-hi-tab]"), function (b) { b.classList.toggle("is-on", b.dataset.hiTab === state.tab); });
@@ -367,7 +375,7 @@
       var list = DATA.instruments.filter(function (i) {
         if (i.family !== fam) return false;
         if (state.heard && status(i).key !== "heard" && !(status(i).key === "flag" && kept(probes(i.slug)))) return false;
-        return !f || fold(i.tag + " " + i.slug + " " + i.home + " " + i.en + " " + i.ru).indexOf(f) >= 0;
+        return !f || fold(i.tag + " " + i.slug + " " + i.home + " " + i.en + " " + i.ru + " " + second(i.en, "")).indexOf(f) >= 0;
       });
       if (!list.length) return;
       html += '<tr class="hi-fam"><th colspan="4">' + esc(fams[fam]) + " <em>" + list.length + "</em></th></tr>" + list.map(rowHtml).join("");
@@ -530,7 +538,7 @@
       // HERESY 1167 (Viktor: «нужен реальный адаптер чтецкого голоса… subject to close prompt tuning, seed excavation &
       // listener's evaluation»): beside a voice's spoken probes, what a reading needs
       (DATA.voice_note && voiceRows(it).some(function (v) { return v.kind === "spoken"; }) ?
-        '<div class="hc-voice hc-vnote"><span translate="no">' + esc(DATA.voice_note.en) + '</span><span class="hi-ru">' + esc(DATA.voice_note.ru) + "</span></div>" : "") +
+        '<div class="hc-voice hc-vnote"><span translate="no">' + esc(DATA.voice_note.en) + '</span><span class="hi-ru" translate="no">' + esc(second(DATA.voice_note.en, DATA.voice_note.ru)) + "</span></div>" : "") +
       "</div>";
   }
   function keys() {
@@ -599,7 +607,7 @@
     return (art ? '<button type="button" class="hc-pic" data-hi-art="' + esc(art) + '" style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)" aria-label="See it whole">' +
              (guess ? '<i data-tip="A guess: the painter does not know it">\u2248</i>' : "") + "</button>" : "") +
       '<div class="hc-body"><b>' + esc(chipName(f)) + "</b>" + (it.home && it.home !== "everywhere" ? '<span class="hi-home">' + esc(it.home) + "</span>" : "") +
-      '<span class="hc-st ' + c.cls + '">' + esc(c.text) + "</span><span translate=\"no\">" + esc(it.en) + '</span><span class="hi-ru">' + esc(it.ru) + "</span>" +
+      '<span class="hc-st ' + c.cls + '">' + esc(c.text) + "</span><span translate=\"no\">" + esc(it.en) + '</span><span class="hi-ru" translate="no">' + esc(second(it.en, it.ru)) + "</span>" +
       '<div class="hc-plays">' + playsHtml(p) + "</div></div>";
   }
   function showCard(n, anchor) {
@@ -659,6 +667,7 @@
 
   // HERESY 1156: pictures drawn meanwhile reach the open sheet; 1158: and the chips under the style
   function paintArts() { if ($("hiBack") && !$("hiBack").hidden) paint(); paintChips(); }
+  window.addEventListener("ruach-lang", function () { if (DATA && DATA.instruments) paintArts(); });   // HERESY 1339: the second line follows the language
   window.HeresyInstruments = { init: init, open: open, heardTags: heardTags, notHeardTags: notHeardTags, paintArts: paintArts, data: function () { return DATA; },
     styleLines: styleLines, styleProbed: styleProbed, voices: voices, adapters: adapters,   // HERESY 1166: the Writer's charter
     lyricTags: function () { return LYRIC_TAGS; } };   // HERESY 1168: the tags offered under a «[» in the lyrics (heresy-complete.js)

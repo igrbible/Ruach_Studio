@@ -14,9 +14,15 @@ pipeline_tag: text-to-audio
 
 # Ruach Studio · Models
 
-> ⚠️ **Work in progress.** Ruach Studio is not released yet: the files, the folders and this card may still change. Its code repository opens with the release.
+> **Superseded by [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2).** Ruach Studio from 2.0.0-rc4 takes its models from v2: the legacy and blend decoders and the sliders now, the Artist's models with the next update; an install of rc3 or before has fetched what it needs already. This repository stays until 17 October 2026 and is removed after it: take what you need from v2, or from each file's own source credited below.
 
-Every weight Ruach Studio (its code repository opens with the release) uses, in one repository, laid out exactly as the studio's own folders, so one command puts each file where the studio looks for it:
+<p align="center"><img src="https://ruachstudio.igr.bible/assets/ruach-banner.png" alt="Ruach Studio · OSEM: Open Source, Engaged &amp; Musical" width="760"></p>
+
+<p align="center"><a href="https://ruachstudio.igr.bible">Website</a> · <a href="https://github.com/igrbible/Ruach_Studio">GitHub</a> ·
+<a href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.md">The guide</a> ·
+<a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02"><b>☕ Buy me a Coffee Machine</b></a></p>
+
+Every weight [Ruach Studio](https://github.com/igrbible/Ruach_Studio) uses, in one repository, laid out exactly as the studio's own folders, so one command puts each file where the studio looks for it:
 
 ```bash
 cd Ruach_Studio                      # the root of the studio

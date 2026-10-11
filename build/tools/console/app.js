@@ -1394,6 +1394,7 @@
   // The picker is shared with the other console (loras.js); the catalog comes with /props.
   YueLoras.mount($("loraPicker"), {
     cot: function () { return currentCot(); },
+    onChange: function () { paintScoreGuard(); },        // HERESY 1327: the score's adapters against these
     addToStyle: function (word) {
       var style = $("style").value;
       if (new RegExp("(^|[^\\w])" + word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "([^\\w]|$)", "i").test(style)) {
@@ -1507,6 +1508,10 @@
     $(d[1]).addEventListener("mouseover", paintDice);   // seeds the page fills in (Retake, a plan) fire no input
   });
   paintDice();
+  // HERESY 1330: each seed's mode beside its dice (Random −1, Random fixed, Fixed, Next, Previous)
+  var SEEDMODE = window.HeresySeedMode ? { music: HeresySeedMode.attach($("lmSeed"), "yue2.seedMode.music", { after: $("rollLmSeed").parentNode, big: true }),
+                                          sound: HeresySeedMode.attach($("soundSeed"), "yue2.seedMode.sound", { after: $("rollSoundSeed").parentNode, big: true }) } : {};
+  ["lmSeed", "soundSeed"].forEach(function (id) { $(id).addEventListener("input", paintDice); });
 
   // A new song: everything about the song back to its default; the VAE, output and theme choices stay
   // HERESY 1288 (Viktor 09.10.2026, the studio in Pinokio: «можно будет в Пинокио Ctrl+N использовать»): Ctrl+N is New song,
@@ -1785,6 +1790,51 @@
 
   // HERESY 1169 (Viktor 08.10.2026: «Открыл `[` и не закрыл. Целый блок проебал в синтезе... И из-за этого срань пошла в конце
   // трека»): a tag not closed or astray in the lyrics asks before the run: to the line, or as it is
+  // HERESY 1169 · 1327 (Viktor 10.10.2026: «Для кнопки Generate song, если есть уже Score в поле, тогда попап с вопросом… И нужно иметь
+  // сторожа для LoRA адаптеров и силы их весов. При изменении силы партитура может сильно изменяться, особенно с Industrial Rock и
+  // Instrumental… При FULL режиме всегда держим Supply Your Own Score открытым»): a score remembers the adapters' music halves that wrote it
+  // (by its own text, in this browser: a plan, a take's score); Generate with one asks first; Full keeps it open while it holds one
+  var scoreAnswered = false;
+  function scoreKey(abc) { var s = String(abc || "").trim(), h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return s.length + ":" + h; }
+  function arOf(loras) {
+    return (loras || []).filter(function (l) { return +l.ar > 0 && !l.muted; }).map(function (l) { return { id: l.id, ar: Math.round(+l.ar * 100) / 100 }; })
+      .sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+  }
+  function scoreWrittenBy(loras, what) {               // the form's score came from this: its adapters (null: not known)
+    try { localStorage.setItem("yue2.scoreFrom", JSON.stringify({ key: scoreKey($("abc").value), loras: loras === null ? null : arOf(loras), what: what || "" })); } catch (e) { /* private mode */ }
+    paintScoreGuard();
+  }
+  function scoreFrom() {
+    var abc = $("abc").value.trim();
+    if (!abc) return null;
+    try { var f = JSON.parse(localStorage.getItem("yue2.scoreFrom") || "null"); return f && f.key === scoreKey(abc) ? f : null; } catch (e) { return null; }
+  }
+  function scoreLoraDiff() {                            // "" when the adapters are those that wrote it, or that is not known
+    var f = scoreFrom();
+    if (!f || !f.loras || typeof YueLoras === "undefined") return "";
+    var now = arOf(YueLoras.value());
+    if (JSON.stringify(now) === JSON.stringify(f.loras)) return "";
+    var say = function (list) { return list.length ? YueLoras.describe(list) : tr("no adapters"); };
+    return tr("Written with:") + " " + say(f.loras) + ". " + tr("Now:") + " " + say(now) + ".";
+  }
+  function paintScoreGuard() {
+    var g = $("scoreGuard");
+    if (!g) return;
+    var diff = currentCot() !== "off" ? scoreLoraDiff() : "";
+    g.hidden = !diff;
+    g.textContent = diff ? "\u26a0 " + diff + " " + tr("At other strengths the music may part from the score (Industrial Rock and instrumentals most): set them back, or plan it anew.") : "";
+  }
+  function keepScoreOpen() { if (currentCot() === "full" && $("abc").value.trim()) $("scoreDrawer").open = true; }
+  $("abc").addEventListener("input", function () { keepScoreOpen(); paintScoreGuard(); });
+  all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", function () { keepScoreOpen(); paintScoreGuard(); }); });
+  $("scoreDrawer").addEventListener("toggle", function () {
+    if (this.open || currentCot() !== "full" || !$("abc").value.trim()) return;
+    this.open = true;
+    toastOnce("score-open", tr("In Full the score stays open while it holds one: empty it, or choose another mode, to fold it"));
+  });
+  setTimeout(function () { keepScoreOpen(); paintScoreGuard(); }, 400);   // the draft is back by then
+  window.ruachScoreFrom = { set: scoreWrittenBy, get: scoreFrom, diff: scoreLoraDiff };   // for the checks
+  window.ruachScoreGuard = paintScoreGuard;
   var lintAnswered = false;
   $("composeForm").addEventListener("submit", function (event) {
     event.preventDefault();
@@ -1801,10 +1851,27 @@
         return;
       }
     }
+    // HERESY 1327: a score in the form (Full or Melody, no codes loaded): on it, or a new one? The adapters' difference said
+    if (!scoreAnswered && recall("yue2.askScore") !== "off" && currentCot() !== "off" && $("abc").value.trim() && !STATE.codes && window.HeresyDialog) {
+      var diff = scoreLoraDiff();
+      window.HeresyDialog.confirm(tr("Generate on the score in the form, or write a new one?") + "\n\n" +
+        (diff ? tr("The adapters differ from those that wrote this score.") + " " + diff + " " +
+          tr("A score follows the adapters it was written with: at other strengths the music may part from it, Industrial Rock and instrumentals most.") + "\n\n" : "") +
+        tr("On this score: the music follows it bar by bar. A new score: the song model writes one from the style and the lyrics, and this one goes."),
+        { ok: tr("On this score"), alt: tr("A new score"), cancel: tr("Stay") }).then(function (r) {
+          if (r === "alt") { $("abc").value = ""; $("abc").dispatchEvent(new Event("input", { bubbles: true })); }
+          if (r === true || r === "alt") { scoreAnswered = true; $("generateBtn").click(); }
+          else lintAnswered = false;
+        });
+      return;
+    }
+    scoreAnswered = false;
     lintAnswered = false;
+    if (!STATE.codes) { if (SEEDMODE.music) SEEDMODE.music.before(); if (SEEDMODE.sound) SEEDMODE.sound.before(); paintDice(); }   // HERESY 1330
     var body, instrumental = $("instrumental").checked;
     try { body = buildRequest(false, instrumental); } catch (error) { return toast(error.message, "bad"); }
     var versions = Math.max(1, Math.min(10, parseInt($("versions").value, 10) || 1));
+    var seedsGone = { music: body.lm_seed, sound: body.seed, versions: versions, variations: body.synth_batch_size || 1 };   // HERESY 1330
     if (instrumental) {
       if (body.semantic_tokens) return toast("Loaded codes already fix the music; clear them to make an instrumental", "bad");
       if (!body.abc) return planForInstrumental(body, versions);
@@ -1817,6 +1884,11 @@
       }
     }
     queueVersions(body, versions);
+    if (!body.semantic_tokens) {                         // HERESY 1330: Next or Previous moves past the seeds this Generate used
+      if (SEEDMODE.music) SEEDMODE.music.after(seedsGone.versions, seedsGone.music);
+      if (SEEDMODE.sound) SEEDMODE.sound.after(seedsGone.variations, seedsGone.sound);
+      paintDice();
+    }
   });
 
   // HERESY 1169: what a pass of probes needs on the card, by the parts measured on a 24 GB one (07.10.2026, tmp/claude-vram):
@@ -1922,6 +1994,8 @@
     $("lyrics").value = String(req.lyrics || "");
     $("abc").value = String(req.abc || "");
     if (req.abc) $("scoreDrawer").open = true;
+    if (req.abc && !scoreFrom()) scoreWrittenBy(req.loras || [], "its take");   // HERESY 1327: the adapters its own score was written with
+    setTimeout(function () { keepScoreOpen(); paintScoreGuard(); }, 0);
     $("lmSeed").value = seedText(req.lm_seed);
     $("soundSeed").value = seedText(req.seed);
     paintDice();
@@ -2637,6 +2711,7 @@
         toasted["plan" + job.id] = true;
         if (instrumentalAfterPlan(job, abc)) return;
         $("abc").value = abc;
+        scoreWrittenBy(job.request.loras || [], "planned");   // HERESY 1327
         var seed = job.resolved.lm_seed || job.request.lm_seed;
         if (seed && /^\d+$/.test(String(seed))) { $("lmSeed").value = String(seed); paintDice(); }
         $("scoreDrawer").open = true;
@@ -3016,6 +3091,7 @@
   }
 
   function addLogLine(text, client) {
+    if (!client && /\bthe Artist\b/.test(text)) artLogAdd(text.replace(/^\[Lab\]\s*/, "lab · "), logClass(text, client), true);   // HERESY 1334
     LOG.lines.push({ text: text, client: client });
     if (LOG.lines.length > LOG_KEEP) LOG.lines.splice(0, LOG.lines.length - LOG_KEEP);
     LOG.pending.push({ text: text, client: client });
@@ -3062,10 +3138,11 @@
       if (dockFollow) dock.scrollTop = dock.scrollHeight;
       else if (gone) dock.scrollTop = Math.max(0, dock.scrollTop - gone);
       var lastLine = pending[pending.length - 1];
-      if (lastLine) {
+      if (lastLine && logView() === "server") {          // HERESY 1334: the folded line says the view's last
         $("logDockLast").textContent = (lastLine.text || " ").slice(0, 160);
         $("logDockLast").className = "log-dock-last mono " + logClass(lastLine.text, lastLine.client);
       }
+      popMirror("server", fragment.childNodes);          // HERESY 1334: and the log's own window, when it is open
     }
     body.appendChild(fragment);
     var cut = 0, keepBody = follow ? LOG_KEEP : LOG_KEEP * 5;       // HERESY 1166: the same in Engine's log
@@ -3075,6 +3152,116 @@
   }
 
   function scrollLogToEnd() { if ($("logFollow").checked) $("logBody").scrollTop = $("logBody").scrollHeight; }
+
+  // HERESY 1169 · 1334 (Viktor 10.10.2026: «Нужен отдельный логгер для Художника. Можно прикрутить его к фрейму логгера сервера отдельной
+  // вкладкой. И по фрейму логгера идея... детачить, переносить на другой монитор, поддерживать поверх окон»): the Artist's log, kept in this
+  // browser; the dock's two views, each room its own; a window of the log's own, mirroring both
+  var ARTLOG_MAX = 400, artLog = (function () { try { var a = JSON.parse(localStorage.getItem("yue2.artistLog") || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } })();
+  function hhmmss(ms) { var d = new Date(ms); return [d.getHours(), d.getMinutes(), d.getSeconds()].map(function (n) { return (n < 10 ? "0" : "") + n; }).join(":"); }
+  function artLogRow(e, doc) { var row = (doc || document).createElement("div"); row.className = "log-line " + (e.k || ""); row.textContent = (e.lab ? "" : hhmmss(e.t) + "  ") + e.x; return row; }
+  function artLogAdd(text, kind, lab) {
+    if (!Array.isArray(artLog)) return;                 // a line before the page has its log: the lab's history comes again
+    var x = String(text || "");
+    if (lab && artLog.slice(-200).some(function (e) { return e.x === x; })) return;   // the server's history comes again with each page
+    var e = { t: Date.now(), x: x, k: kind || "", lab: !!lab };
+    artLog.push(e);
+    if (artLog.length > ARTLOG_MAX) artLog.splice(0, artLog.length - ARTLOG_MAX);
+    try { localStorage.setItem("yue2.artistLog", JSON.stringify(artLog)); } catch (err) { /* the browser's room is full: the page keeps it */ }
+    var box = $("logDockArtist");
+    if (box) {
+      box.appendChild(artLogRow(e));
+      while (box.childElementCount > ARTLOG_MAX) box.removeChild(box.firstChild);
+      if ($("logDockFollow").checked) box.scrollTop = box.scrollHeight;
+    }
+    if (logView() === "artist") paintDockLast();
+    popMirror("artist", [artLogRow(e)]);
+  }
+  window.RuachArtistLog = { add: function (text, kind) { artLogAdd(text, kind, false); }, lines: function () { return artLog.slice(); } };
+  function logView() {
+    var tab = document.body.dataset.tab || "create", v = recall("yue2.logView." + tab);
+    return v === "artist" || v === "server" ? v : tab === "artist" ? "artist" : "server";
+  }
+  function paintDockLast() {
+    var last = $("logDockLast");
+    if (!last) return;
+    if (logView() === "artist") {
+      var e = artLog[artLog.length - 1];
+      last.textContent = e ? e.x.slice(0, 160) : tr("the Artist's log is empty");
+      last.className = "log-dock-last mono " + (e ? e.k : "");
+    } else {
+      var l = LOG.lines[LOG.lines.length - 1];
+      if (l) { last.textContent = (l.text || " ").slice(0, 160); last.className = "log-dock-last mono " + logClass(l.text, l.client); }
+    }
+  }
+  function paintLogView() {
+    var v = logView();
+    all(".log-view").forEach(function (b) { var on = b.dataset.view === v; b.classList.toggle("is-on", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
+    if ($("logDockBody")) $("logDockBody").hidden = v !== "server";
+    if ($("logDockArtist")) { $("logDockArtist").hidden = v !== "artist"; if (v === "artist" && $("logDockFollow").checked) $("logDockArtist").scrollTop = $("logDockArtist").scrollHeight; }
+    paintDockLast();
+  }
+  window.ruachLogView = paintLogView;
+  (function () {
+    var box = $("logDockArtist");
+    if (box) artLog.forEach(function (e) { box.appendChild(artLogRow(e)); });
+    all(".log-view").forEach(function (b) {
+      b.addEventListener("click", function () { store("yue2.logView." + (document.body.dataset.tab || "create"), b.dataset.view); paintLogView(); });
+    });
+    paintLogView();
+  })();
+  // the log's own window: Document Picture-in-Picture (over every window) where the browser has it, else a pop-up; a mirror of both logs
+  var POP = null;
+  function popMirror(view, rows) {
+    if (!POP || POP.win.closed) return;
+    var box = POP[view];
+    Array.prototype.forEach.call(rows, function (r) { box.appendChild(POP.win.document.importNode(r, true)); });
+    while (box.childElementCount > LOG_KEEP * 2) box.removeChild(box.firstChild);
+    if (POP.follow.checked) box.scrollTop = box.scrollHeight;
+  }
+  function popFill(win) {
+    var d = win.document;
+    Array.prototype.forEach.call(document.querySelectorAll('style, link[rel="stylesheet"]'), function (n) { d.head.appendChild(d.importNode(n, true)); });
+    if (document.documentElement.dataset.theme) d.documentElement.dataset.theme = document.documentElement.dataset.theme;
+    d.title = "Ruach Studio · " + tr("Server log");
+    d.body.className = "log-pop";
+    d.body.innerHTML = '<div class="log-pop-head"><span class="log-dock-views"><button type="button" class="log-view" data-view="server">' + tr("Server") +
+      '</button><button type="button" class="log-view" data-view="artist">' + tr("Artist") + '</button></span><label class="check small-check"><input type="checkbox" checked /> <span>' + tr("Follow") +
+      '</span></label></div><div class="log-pop-main"><div class="log-pop-logs"><div class="log-dock-body mono" data-body="server"></div>' +
+      '<div class="log-dock-body log-dock-artist mono" data-body="artist" hidden></div></div><div class="log-pop-gpus" data-body="gpus" aria-label="' + tr("The cards, live") + '"></div></div>';   // HERESY 1343: the cards beside it
+    POP = { win: win, server: d.querySelector('[data-body="server"]'), artist: d.querySelector('[data-body="artist"]'), follow: d.querySelector("input"), gpus: d.querySelector('[data-body="gpus"]') };
+    Array.prototype.forEach.call(($("logDockBody") || {}).childNodes || [], function (r) { POP.server.appendChild(d.importNode(r, true)); });
+    artLog.forEach(function (e) { POP.artist.appendChild(artLogRow(e, d)); });
+    var view = function (v) {
+      Array.prototype.forEach.call(d.querySelectorAll(".log-view"), function (b) { b.classList.toggle("is-on", b.dataset.view === v); });
+      POP.server.hidden = v !== "server"; POP.artist.hidden = v !== "artist";
+      var box = POP[v]; box.scrollTop = box.scrollHeight;
+    };
+    Array.prototype.forEach.call(d.querySelectorAll(".log-view"), function (b) { b.addEventListener("click", function () { view(b.dataset.view); }); });
+    view(logView());
+    // HERESY 1343: the cards ticked by the window itself (a hidden page's timers are slowed, a window in sight is not); closed, the dock
+    // unfolds again if it was open when the window came
+    if (window.HeresyGpuLive) { win.setInterval(function () { window.HeresyGpuLive.tick(); }, 1000); window.HeresyGpuLive.tick(); }
+    win.addEventListener("pagehide", function () { var p = POP; POP = null; if (p && p.unfold && window.ruachLogDockFold) window.ruachLogDockFold(false); });
+  }
+  // HERESY 1343 (Viktor: «при детаче сразу сворачиваем открытый фрейм… при закрытии консоли с логом, если был фрейм в состоянии открытого,
+  // обратно открываем его»): the window filled, the dock folded if it was open, and that remembered for the window's close
+  function popOpened(win) {
+    var was = !!$("logDock") && !$("logDock").classList.contains("is-folded");
+    popFill(win);
+    if (POP) POP.unfold = was;
+    if (was && window.ruachLogDockFold) window.ruachLogDockFold(true);
+  }
+  if ($("logDockPop")) $("logDockPop").addEventListener("click", function () {
+    if (POP && !POP.win.closed) { try { POP.win.focus(); } catch (e) { /* over the others already */ } return; }
+    if (window.documentPictureInPicture && documentPictureInPicture.requestWindow) {
+      documentPictureInPicture.requestWindow({ width: 1240, height: 560 }).then(popOpened).catch(function (e) { toast(e.message, "bad"); });   // HERESY 1343: room for the cards
+      return;
+    }
+    var w = window.open("", "ruach-log", "popup,width=1280,height=600");   // HERESY 1343: room for the cards
+    if (!w) return toast(tr("The browser kept the log's window from opening: allow pop-ups for the studio"), "bad");
+    popOpened(w);
+  });
+  window.ruachLogPop = function () { return POP; };
 
   $("logCopy").addEventListener("click", function () {
     navigator.clipboard.writeText(LOG.lines.map(function (l) { return l.text; }).join("\n"))
@@ -3086,15 +3273,21 @@
   (function () {
     var dock = $("logDock");
     if (!dock) return;
-    function fold(folded) {
+    function fold(folded, passing) {                     // HERESY 1343: passing, the kept choice is left as it is (the log's window)
       dock.classList.toggle("is-folded", folded);
       $("logDockTab").setAttribute("aria-expanded", folded ? "false" : "true");
-      store("yue2.logDock", folded ? null : "open");
+      if (!passing) store("yue2.logDock", folded ? null : "open");
       if (!folded && $("logDockFollow").checked) $("logDockBody").scrollTop = $("logDockBody").scrollHeight;
     }
     fold(recall("yue2.logDock") !== "open");
+    window.ruachLogDockFold = function (folded) { fold(folded, true); };   // HERESY 1343: for the log's window
     $("logDockTab").addEventListener("click", function () { fold(!dock.classList.contains("is-folded")); });
-    $("logDockCopy").addEventListener("click", function () { $("logCopy").click(); });
+    $("logDockCopy").addEventListener("click", function () {   // HERESY 1334: the view's own lines
+      if (logView() !== "artist") return $("logCopy").click();
+      navigator.clipboard.writeText(artLog.map(function (e) { return (e.lab ? "" : hhmmss(e.t) + "  ") + e.x; }).join("\n"))
+        .then(function () { toast(tr("The Artist's log copied") + " (" + artLog.length + ")"); })
+        .catch(function () { toast("The browser refused clipboard access", "bad"); });
+    });
     $("logDockEngine").addEventListener("click", function () {
       $("engineToggle").click();
       setTimeout(function () { var b = $("logBody"); if (b) b.scrollIntoView({ block: "center" }); }, 120);
@@ -3646,14 +3839,21 @@
   // HERESY 1071 (Viktor 02.10.2026): no size presets, Auto and Manual only. Auto fits the context and the
   // VAE tiles to the GPU the server found; the backbone (the top bar) and "Keep models loaded" stay yours.
   // 1071b: Auto named the backbone too, so a Q8_0 picked in the top bar made it Manual at every F5.
+  // HERESY 1304: the tiers as measured on GPU2 10.10.2026 (the engine's peak by its pid, a song of some two minutes): BF16 the whole
+  // context 9.6 GiB, 16 384 rows 7.9, 12 288 7.0; Q8_0 the whole 7.7, 16 384 6.0, 12 288 5.1, 8 192 4.2; Q6_K 8 192 3.7 (Q5_K_M
+  // 3.6); the VAE's tiles changed nothing measurable. Q8_0 is quicker than the K-quants here (34 s the song against 42 and 36)
   function autoKnobs(gib) {
     if (gib >= 23) return { model: "BF16", max_seq: 0, vae_core: 1024 };
     if (gib >= 15.4) return { model: "BF16", max_seq: 0, vae_core: 512 };
     if (gib >= 11.4) return { model: "BF16", max_seq: 16384, vae_core: 512 };
     if (gib >= 7.4) return { model: "Q8_0", max_seq: 12288, vae_core: 256 };
+    if (gib >= 5.4) return { model: "Q8_0", max_seq: 8192, vae_core: 256 };     // HERESY 1304: a 6 GB card
+    if (gib >= 4.4) return { model: "Q6_K", max_seq: 8192, vae_core: 256 };     // HERESY 1304: smaller still, short songs
     return null;
   }
-  function gpuGib() { var gpu = STATE.hardware && (STATE.hardware.gpus || [])[0]; return gpu ? gpu.total_bytes / GIB : 0; }
+  function cardGib() { var gpu = STATE.hardware && (STATE.hardware.gpus || [])[0]; return gpu ? gpu.total_bytes / GIB : 0; }
+  // HERESY 1294: what Auto plans for: the studio card's size, or its VRAM limit (Engine → GPUs) when one is set
+  function gpuGib() { var t = cardGib(), lim = window.HeresyGpus && window.HeresyGpus.studioLimitGib ? window.HeresyGpus.studioLimitGib() : 0; return lim && t ? Math.min(t, lim) : t; }
   var SETTING_KEYS = ["model", "keep_loaded", "max_seq", "vae_core", "unload_after_min", "unload_at_once"];   // HERESY 1167: the idle unload
   var GIB = 1073741824;
 
@@ -3667,27 +3867,20 @@
   // HERESY 1287 (Viktor 09.10.2026, a 16 GB laptop card: «Ручной пресет памяти не даёт мне выбрать объём VRAM из доступных 16GB VRAM.
   // В реалии я бы на этом железе выбрал бы 14GB, чтобы не было OOM»): Auto within N GB, from a gigabyte under the card down to 8:
   // the knobs for that much, the rest of the card left to what else runs on it. «auto» is the whole card, «auto:14» within 14 GB
-  function budgetOf(v) { return v === "auto" ? gpuGib() : /^auto:\d+$/.test(v || "") ? parseInt(v.slice(5), 10) : 0; }
+  // HERESY 1294: the tiers went for each card's VRAM limit (Engine → GPUs); «auto:N» is read until it becomes the studio card's limit
+  function budgetOf(v) { return v === "auto" ? gpuGib() : /^auto:\d+(\.\d+)?$/.test(v || "") ? parseFloat(v.slice(5)) : 0; }
   function shownPreset(settings) {
     var kept = recall(PRESET_KEY) || "", a = autoKnobs(budgetOf(kept));
-    if (!/^auto(:\d+)?$/.test(kept) || !a) return "manual";
-    return a.max_seq === settings.max_seq && a.vae_core === settings.vae_core ? kept : "manual";
+    if (!/^auto(:\d+(\.\d+)?)?$/.test(kept) || !a) return "manual";
+    return a.max_seq === settings.max_seq && a.vae_core === settings.vae_core ? "auto" : "manual";
   }
   // Auto says what it found and what it sets; each budget under the card, what it sets for that much
   function paintPresetSizes() {
-    var gib = gpuGib(), a = autoKnobs(gib), sel = $("memPreset"), was = sel.value, o = sel.querySelector('option[value="auto"]');
+    var tot = cardGib(), gib = gpuGib(), a = autoKnobs(gib), sel = $("memPreset"), was = sel.value, o = sel.querySelector('option[value="auto"]');
     var knobs = function (k) { return (k.max_seq ? "context " + k.max_seq.toLocaleString(loc()) : "whole context") + ", VAE tiles " + k.vae_core; };
-    if (o) o.textContent = "Auto" + (gib ? " (" + gib.toFixed(1) + " GB found" + (a ? ": " + knobs(a) : ": too small for YuE2") + ")" : " (detect)");
-    Array.prototype.slice.call(sel.querySelectorAll('option[value^="auto:"]')).forEach(function (x) { x.remove(); });
-    var manual = sel.querySelector('option[value="manual"]');
-    for (var n = Math.ceil(gib) - 1; n >= 8; n--) {
-      var k = autoKnobs(n);
-      if (!k) continue;
-      var opt = document.createElement("option");
-      opt.value = "auto:" + n;
-      opt.textContent = "Auto within " + n + " GB: " + knobs(k);
-      sel.insertBefore(opt, manual);
-    }
+    if (o) o.textContent = "Auto" + (tot ? " (" + tot.toFixed(1) + " GB found" + (gib < tot - 0.01 ? ", its limit " + gib.toFixed(1) + " GB in Engine \u2192 GPUs" : "") +
+                                           (a ? ": " + knobs(a) : ": too small for YuE2") + ")" : " (detect)");
+    Array.prototype.slice.call(sel.querySelectorAll('option[value^="auto:"]')).forEach(function (x) { x.remove(); });   // HERESY 1294: the tiers went
     if (was && sel.querySelector('option[value="' + was + '"]')) sel.value = was;
   }
 
@@ -3811,7 +4004,7 @@
     $("setMaxSeq").value = a.max_seq;
     $("setVaeCore").value = a.vae_core;
     paintComputeHint();
-    toast((this.value === "auto" ? "Auto for " + gib.toFixed(1) + " GB: " : "Auto within " + gib + " GB: ") + (a.max_seq ? "context " + a.max_seq.toLocaleString(loc()) : "whole context") +
+    toast("Auto for " + gib.toFixed(1) + " GB: " + (a.max_seq ? "context " + a.max_seq.toLocaleString(loc()) : "whole context") +
           ", VAE tiles " + a.vae_core + "; the backbone and keeping models loaded stay your choice. Press Save to apply.");
   });
 
@@ -3826,7 +4019,7 @@
     try { next = readSettingsForm(); } catch (error) { return toast(error.message, "bad"); }
     var current = STATE.settings || {}, changed = {};
     SETTING_KEYS.forEach(function (key) { if (next[key] !== undefined && next[key] !== current[key]) changed[key] = next[key]; });
-    store(PRESET_KEY, /^auto(:\d+)?$/.test($("memPreset").value) ? $("memPreset").value : "manual");   // HERESY 1071; 1287: «auto:14» too
+    store(PRESET_KEY, $("memPreset").value === "auto" ? "auto" : "manual");   // HERESY 1071; 1294: a card's limit is the budget now
     if (!Object.keys(changed).length) { paintSettings(STATE.settings || {}, true); return toast("Saved: the knobs were already so"); }
     var button = this;
     button.disabled = true;
@@ -3841,6 +4034,63 @@
       .then(function () { button.disabled = false; });
   });
 
+  // HERESY 1304 (Viktor 10.10.2026: «Давай допишем при самом старте новой Студии сканирование устройств и выбор оптимальных
+  // настроек для YuE2 BF16/кванта и для модели генерации обложек»): the machine as the lab reads it (/machine), and what suits
+  // it: the backbone (BF16 only where the card does BF16 in tensor cores and Auto gives it; else Q8_0, or the nearest one that is
+  // here), Auto's context and VAE tiles for the studio card's memory or limit, the painter that fits; one window, once per install
+  var MACHINE_KEY = "yue2.machineScan", BACKBONES = ["BF16", "Q8_0", "Q6_K", "Q5_K_M"];
+  var PAINTERS = { "krea2-q4": "Krea 2 Muse Q4 (12.6 GB at its peak)", "krea2-q8": "Krea 2 Muse Q8 (17.4 GB at its peak)", sdxl: "SDXL CyberRealistic (14.2 GB at its peak)" };
+  function machinePlan(m) {
+    var have = (STATE.settings && STATE.settings.models) || [], list = m.cards || [];
+    var card = list.filter(function (c) { return c.index === m.studio; })[0] || list[0];
+    if (!card) return null;
+    var gib = Math.min(card.total_mb, card.limit_mb || Infinity) / 1024, knobs = autoKnobs(gib), why = [];
+    var want = knobs ? knobs.model : "Q5_K_M";
+    if (want === "BF16" && card.bf16_cores === false) { want = "Q8_0"; why.push(tr("compute {0} has no BF16 tensor cores: BF16 runs slower than Q8_0 here").replace("{0}", card.compute)); }   // HERESY 1339
+    var model = have.indexOf(want) >= 0 ? want : BACKBONES.slice(BACKBONES.indexOf(want)).filter(function (q) { return have.indexOf(q) >= 0; })[0] || "";
+    if (model !== want) why.push(tr("{0} is not on this machine: Engine → Models and LoRAs fetches it").replace("{0}", want));
+    return { card: card, gib: gib, knobs: knobs, model: model, want: want, why: why, painter: (m.painter || {}).suggest || "", ready: (m.painter || {}).ready || {} };
+  }
+  function machineScan(asked) {
+    return fetch("/lab/machine").then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function (m) {
+      var plan = machinePlan(m);
+      if (!plan) { if (asked) toast(m.error ? "The cards could not be read: " + m.error : "No GPU found: the studio needs an NVIDIA card", "bad"); return null; }
+      var cards = (m.cards || []).map(function (c) {
+        return "GPU" + c.index + " · " + c.name + " · " + tr((c.total_mb / 1024).toFixed(1) + " GB") + (c.compute ? " (" + tr("compute {0}").replace("{0}", c.compute) + ")" : "") +   // HERESY 1339
+          (c.limit_mb ? ", " + tr("its limit {0} GB").replace("{0}", (c.limit_mb / 1024).toFixed(1)) : "") + (c.index === m.studio && (m.cards || []).length > 1 ? " · " + tr("the studio's") : "");
+      });
+      var k = plan.knobs, lines = [];
+      lines.push("· " + tr("the backbone {0}").replace("{0}", plan.model || "—") + (plan.why.length ? ": " + plan.why.join("; ") : ""));   // HERESY 1339: a sentence a line
+      lines.push(k ? "· " + (k.max_seq ? tr("context {0} rows").replace("{0}", k.max_seq.toLocaleString(loc())) : tr("the whole context")) + ", " + tr("VAE tiles {0}").replace("{0}", k.vae_core) +
+                     " (" + tr("Auto for {0} GB").replace("{0}", plan.gib.toFixed(1)) + ")"
+                   : "· " + tr("{0} GB is too small for YuE2: the knobs stay as they are").replace("{0}", plan.gib.toFixed(1)));
+      lines.push("· " + (plan.painter ? tr("artwork: {0}").replace("{0}", tr(PAINTERS[plan.painter])) + (plan.ready[plan.painter] ? "" : ", " + tr("once fetched (Engine → Models and LoRAs)"))
+                                    : tr("artwork: no painter fits on this machine yet (Krea 2 Muse Q4 wants a card of 16 GB)")));
+      var text = tr("The machine, as the studio found it") + "\n\n" + cards.join("\n") + "\n\n" + tr("What suits it:") + "\n" + lines.join("\n") +
+        "\n\n" + tr("Engine → Compute and Engine → Artwork keep them yours to change; «Scan the machine» there asks again.");
+      return window.HeresyDialog.confirm(text, { ok: "Set them", cancel: "Not now" }).then(function (yes) {
+        store(MACHINE_KEY, JSON.stringify({ at: Math.round(Date.now() / 1000), card: plan.card.name, gib: +plan.gib.toFixed(1), model: plan.model, painter: plan.painter, set: !!yes }));
+        if (!yes) return plan;
+        var cur = STATE.settings || {}, change = {};
+        if (plan.model && plan.model !== cur.model) change.model = plan.model;
+        if (k && k.max_seq !== cur.max_seq) change.max_seq = k.max_seq;
+        if (k && k.vae_core !== cur.vae_core) change.vae_core = k.vae_core;
+        if (k) store(PRESET_KEY, "auto");
+        if (plan.painter) { store("yue2.artPainter", plan.painter); if ($("artPainter")) $("artPainter").value = plan.painter; }
+        var done = function () {
+          var bits = [tr("the backbone {0}").replace("{0}", plan.model || tr("as it was"))];   // HERESY 1339: each piece a sentence of its own
+          if (k) bits.push(k.max_seq ? tr("context {0}").replace("{0}", k.max_seq.toLocaleString(loc())) : tr("the whole context"), tr("VAE tiles {0}").replace("{0}", k.vae_core));
+          toast(tr("Set for this machine: {0}").replace("{0}", bits.join(", ")) +
+                (plan.painter ? "; " + tr("artwork {0}").replace("{0}", PAINTERS[plan.painter].replace(/ \(.*$/, "")) : ""), "good");
+          return plan;
+        };
+        if (!Object.keys(change).length) { if ($("memPreset") && k) $("memPreset").value = "auto"; return done(); }
+        return post("/settings", change).then(function (data) { paintSettings(data, true); if ($("memPreset") && k) $("memPreset").value = "auto"; return done(); });
+      });
+    }).catch(function (e) { if (asked) toast("The machine could not be read: " + e.message, "bad"); return null; });
+  }
+  window.ruachMachineScan = machineScan;               // for the checks: a test browser is never asked by itself
+  if ($("scanMachine")) $("scanMachine").addEventListener("click", function () { machineScan(true); });
   function refreshHardware() {
     return api("/hardware").then(function (hw) {
       STATE.hardware = hw || {};
@@ -3865,7 +4115,7 @@
       ["Busy", hw.busy ? "running a job" : "idle", hw.busy ? "amber" : ""]
     ];
     $("hwCard").innerHTML = rows.map(function (row) {
-      return "<div><dt>" + row[0] + '</dt><dd class="' + row[2] + '" title="' + escape(row[1]) + '">' + escape(row[1]) + "</dd></div>";
+      return "<div><dt>" + row[0] + '</dt><dd class="' + row[2] + '"' + (row[0] === "GPU" && gpu ? ' translate="no"' : "") + ' title="' + escape(row[1]) + '">' + escape(row[1]) + "</dd></div>";   // HERESY 1339: the card's name
     }).join("");
     $("hwNote").textContent = STATE.noHardware ? "This server does not report its hardware."
       : (loaded && !hw.busy ? "Unload model frees it now; the next song loads it again." : "");
@@ -4248,7 +4498,7 @@
     };
     var item = function (name, url) {
       var u = web(url);
-      return "<li>" + (u ? '<a href="' + escape(u) + '" target="_blank" rel="noopener noreferrer">' + escape(name) + '</a><span class="about-where" translate="no">' +
+      return "<li>" + (u ? '<a href="' + escape(u) + '" target="_blank" rel="noopener noreferrer" translate="no">' + escape(name) + '</a><span class="about-where" translate="no">' +
         escape(where(u)) + "</span>" : '<span class="about-name" translate="no">' + escape(name) + "</span>") + "</li>";   // HERESY 1166: names
     };
     var list = function (title, items) {
@@ -4395,6 +4645,7 @@
     (fromSound ? Promise.resolve({ abc: STATE.abcRendered }) : getRequest(take)).then(function (req) {
       var cot = fromSound ? "full" : take.cot;
       $("abc").value = req.abc || "";
+      if (!fromSound && req.abc && !scoreFrom()) scoreWrittenBy(req.loras || [], "its take");   // HERESY 1327
       $("style").value = take.style;
       $("lyrics").value = take.lyrics;
       $("title").value = displayTitle(take) + " (edit)";
@@ -4552,6 +4803,71 @@
       if (take.latents) change.decode_from = take.name;
       return replayTake(take, change, "Ended at " + clock(at));
     }).then(function () { toast("Ending " + displayTitle(take) + " at " + clock(at) + "\u2026"); })
+      .catch(function (error) { if (error) toast(error.message, "bad"); })
+      .then(function () { button.disabled = false; });
+  });
+
+  // HERESY 1169 · 1325 (from SUNO v6, TODO.md: «A loop from the song: 1, 2, 4 or 8 bars cut on the score's bar lines, seamless, as a
+  // WAV (SUNO's Sounds: loops and one-shots with BPM and key)»): the take's score (its own, else the one written from its sound) gives
+  // its bars in seconds at its tempo; the bar where the player stands (else the first), so many bars on; the lab cuts them from the
+  // take's own WAV, its first 30 ms crossfaded from what follows them in the song, so played round the end runs into the start
+  function barsOf(abc) {
+    var score = window.HeresyAbc.parse(abc), v = score.voices.Vocal, f = function (a) { return a[0] / a[1]; }, k = 60 / score.bpm;
+    return { bpm: score.bpm, key: score.key, keys: v.keys.map(function (x) { return { t: f(x[0]) * k, key: x[1] }; }),
+             bars: v.bars.map(function (b) { return { t: f(b[0]) * k, len: f(b[1]) * k }; }) };
+  }
+  window.ruachBarsOf = barsOf;                                 // for the checks
+  $("loopTake").addEventListener("click", function () {
+    var take = STATE.take, button = this, plan, at = 0;
+    if (!take || take.session) return;
+    var here = STATE.playerTake && STATE.playerTake.name === take.name && audio.currentTime > 0 ? audio.currentTime : null;
+    var got = take.has_score ? getRequest(take).then(function (req) { return (req && req.abc) || ""; })
+      : fetch("/lab/score?name=" + encodeURIComponent(take.name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { return (d && d.abc) || ""; });
+    got.then(function (abc) {
+      if (!abc) throw new Error("This take has no score to find its bars by: Transcribe this take writes one from its sound");
+      plan = barsOf(abc);
+      if (!plan.bars.length) throw new Error("Its score has no bars");
+      if (here !== null) plan.bars.forEach(function (b, k) { if (b.t <= here + 0.05) at = k; });
+      return window.HeresyDialog.prompt("A loop from this take\n\nFrom the bar at " + clock(plan.bars[at].t) + (here !== null ? " (where the player stands)" : " (the first: play the take and pause where the loop should begin)") +
+        ", how many bars: 1, 2, 4 or 8? Seamless, its end running into its start; saved as a WAV.", "4", { ok: "Cut the loop", placeholder: "4" });
+    }).then(function (answer) {
+      if (answer === null) throw null;
+      var n = parseInt(answer, 10), bars = plan.bars;
+      if ([1, 2, 4, 8].indexOf(n) < 0) throw new Error("1, 2, 4 or 8 bars");
+      if (at + n > bars.length) throw new Error("Only " + (bars.length - at) + " bars from there to the end of the score");
+      var start = bars[at].t, last = bars[at + n - 1], secs = last.t + last.len - start;
+      if (take.seconds && start + secs > take.seconds) throw new Error("The take ends before those bars do");
+      var key = plan.key;
+      plan.keys.forEach(function (x) { if (x.t <= start + 0.01) key = x.key; });
+      var file = (displayTitle(take) + " · " + n + " bar" + (n > 1 ? "s" : "") + " from " + clock(start) + " · " + Math.round(plan.bpm) + " BPM · " + key)
+        .replace(/[\\/:*?"<>|]+/g, "-") + ".wav";
+      button.disabled = true;
+      return fetch("/lab/loop?name=" + encodeURIComponent(take.name) + "&start=" + start.toFixed(4) + "&seconds=" + secs.toFixed(4))
+        .then(function (r) { return r.ok ? r.blob() : r.json().then(function (b) { throw new Error(b.error || r.status); }); })
+        .then(function (blob) {
+          downloadText(file, blob, "audio/wav");
+          toast("The loop: " + n + " bar" + (n > 1 ? "s" : "") + ", " + secs.toFixed(2) + " s at " + Math.round(plan.bpm) + " BPM, " + key, "good");
+        });
+    }).catch(function (error) { if (error) toast(error.message, "bad"); })
+      .then(function () { button.disabled = false; });
+  });
+
+  // HERESY 1169 · 1324 (Viktor's screenshots of SUNO v6, 09.10.2026, «Наша студия уже круче, чем СУНО»: its Fade in beside our End at…):
+  // the same take, its first seconds brought up from silence on a half cosine; from its kept latents in seconds (the very sound),
+  // else its music codes rendered again; an ended take stays ended (its request's end_at and fade_out go along)
+  $("fadeIn").addEventListener("click", function () {
+    var take = STATE.take, button = this, secs;
+    if (!take) return;
+    window.HeresyDialog.prompt("Fade the take in\n\n" + displayTitle(take) + " rises from silence over how many seconds? A new take; this one stays.",
+                               "2", { ok: "Fade it in", placeholder: "2" }).then(function (answer) {
+      if (answer === null) throw null;
+      secs = Math.round(parseFloat(String(answer).replace(",", ".")) * 10) / 10;
+      if (!isFinite(secs) || secs < 0.2 || secs > 30 || secs > (take.seconds || 0) / 2) throw new Error("Between 0.2 and 30 seconds, and not more than half the take");
+      button.disabled = true;
+      var change = { fade_in: secs, title: displayTitle(take) + " \u00b7 fades in " + secs + " s" };
+      if (take.latents) change.decode_from = take.name;
+      return replayTake(take, change, "Faded in over " + secs + " s");
+    }).then(function () { toast("Fading " + displayTitle(take) + " in over " + secs + " s\u2026"); })
       .catch(function (error) { if (error) toast(error.message, "bad"); })
       .then(function () { button.disabled = false; });
   });
@@ -5199,6 +5515,31 @@
       store("yue2.artPainter", this.value || null);
       toast(this.value ? "Artwork from now on: " + this.options[this.selectedIndex].textContent : "Artwork: the painter by the cards");
     });
+    // HERESY 1338 (Viktor 10.10.2026: «в Engine не забудь прописать выборы всех генеративных art моделей»): the Qwen painters this
+    // machine has, as the Artist room lists them, a cover painted with Lightning; each fine-tune of 2512 its own line
+    var SPEED = { "qwen2512-q4": "about 30 s a picture", "qwen2512-q6": "about 30 s a picture", "qwen2512-fp8": "about 40 s a picture", "qwen21": "about 2 min a picture" };
+    function qwenRows(list) {
+      var have = {};
+      Array.prototype.forEach.call(sel.options, function (o) { have[o.value] = 1; });
+      (list || []).forEach(function (p) {
+        if (!/^qwen/.test(p.key) || !p.ready) return;
+        var tail = (p.key === "qwen21" ? " · not for a song that is sold" : p.lightning ? " · Lightning" : " · without Lightning (its file is not here): slow") +
+          " · about " + Math.round((+p.need_mb || 0) / 1024) + " GB · " + SPEED[p.key];
+        var rows = p.key === "qwen2512-fp8" ? (p.models || []).map(function (m) { return [p.key + ":" + m, "Qwen-Image 2512 · " + m.replace(/\.safetensors$/, "") + tail]; })
+          : [[p.key, p.label + tail]];
+        rows.forEach(function (r) {
+          if (have[r[0]]) return;
+          var o = document.createElement("option");
+          o.value = r[0];
+          o.textContent = r[1];
+          sel.appendChild(o);
+        });
+      });
+      var want = recall("yue2.artPainter") || "";      // a Qwen painter chosen before: its line is here now
+      if (want && sel.value !== want && Array.prototype.some.call(sel.options, function (o) { return o.value === want; })) sel.value = want;
+    }
+    window.ruachArtPainters = function (list) { qwenRows(list); return Array.prototype.map.call(sel.options, function (o) { return [o.value, o.textContent]; }); };   // for the checks
+    api("/lab/artist/painters").then(function (d) { qwenRows(d && d.painters); }).catch(function () { /* the lab later: Krea and SDXL stand */ });
   })();
   function drawArt(name, again, quiet) {
     var take = findTake(name), title = take ? displayTitle(take) : name;
@@ -5216,7 +5557,8 @@
         if (d && (d.status === "queued" || d.status === "running")) {
           if (d.status === "queued" && d.waiting && ARTING[name] !== "wait") {
             ARTING[name] = "wait";
-            toast("Artwork for “" + title + "” waits in the queue for a card with room; it starts by itself (Engine → GPUs says which card does what)");
+            // HERESY 1297: why it waits, the guard's own words (the cards' memory and what it needs), not only that it does
+            toast("Artwork for “" + title + "” waits in the queue: " + String(d.waiting).replace(/\.\s*$/, "") + ". It starts by itself when a card has room");
           } else if (d.status === "running") {
             ARTING[name] = "draw";
           }
@@ -5227,8 +5569,11 @@
     };
     return ask(true).then(function (d) {
       return refreshArts().then(function () { if (!quiet) toast("Artwork for “" + title + "” is ready"); return d; });
-    }).catch(function (e) { toast("No artwork: " + e.message, "bad"); })
-      .then(function (d) { delete ARTING[name]; return d; });
+    }).catch(function (e) {
+      toast("No artwork: " + String(e.message).replace(/^no artwork:\s*/i, ""), "bad");   // HERESY 1297: the lab's error begins so too
+      // HERESY 1297: a refusal (400: no card here can hold the painter) is said once; artMany stops there
+      return { status: "failed", error: e.message, refused: e.status === 400 };
+    }).then(function (d) { delete ARTING[name]; return d; });
   }
   // HERESY 1169 · 1235 (Viktor 08.10.2026: «Та же генерация обложек. На одну уходит до минуты в Krea 2 Muse. `Человече, ты запрашиваешь генерацию обложек на 00 треков одним залпом? Твоя видеокарта не схудится?`»): artwork for every checked take, asked first, then drawn one after another; a redraw keeps the old picture beside its take
   function artMany(list) {
@@ -5245,7 +5590,10 @@
       var next = function () {
         if (i >= todo.length) { toast("Artwork drawn: " + done + " of " + todo.length, done === todo.length ? "good" : "bad"); return; }
         var n = todo[i++];
-        return drawArt(n, !!artUrl(n), true).then(function (d) { if (d && d.status !== "failed") done++; }).then(next);
+        return drawArt(n, !!artUrl(n), true).then(function (d) {
+          if (d && d.status !== "failed") done++;
+          if (d && d.refused) i = todo.length;           // HERESY 1297: the same refusal would come for every take
+        }).then(next);
       };
       return next();
     });
@@ -5271,7 +5619,7 @@
       return refreshArts().then(function () { toast("The artwork is off “" + title + "”: kept beside the take, in artwork-removed/"); });
     }).catch(function (e) { toast("Not removed: " + e.message, "bad"); });
   }
-  window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts, show: showArt, unseen: artUnseen, remove: removeArt };
+  window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts, show: showArt, unseen: artUnseen, remove: removeArt, many: artMany };
   // HERESY 1136: the studio's version (VERSION, through the API) in Engine → About
   api("/api/v1").then(function (d) { if (d && d.studio && $("studioVersion")) $("studioVersion").textContent = d.studio; }).catch(function () {});
   setTimeout(refreshArts, 1200);
@@ -5527,8 +5875,41 @@
 
   // HERESY 1111: the waveform says the time under the pointer; the total turns to the time left on a click
   STATE.waveHover = null;
-  $("wave").addEventListener("mousemove", function (event) { var r = this.getBoundingClientRect(); STATE.waveHover = (event.clientX - r.left) / r.width; drawWave(); });
-  $("wave").addEventListener("mouseleave", function () { STATE.waveHover = null; drawWave(); });
+  $("wave").addEventListener("mousemove", function (event) { var r = this.getBoundingClientRect(); STATE.waveHover = (event.clientX - r.left) / r.width; drawWave(); wavePop(event); });
+  $("wave").addEventListener("mouseleave", function () { STATE.waveHover = null; drawWave(); wavePop(null); });
+  // HERESY 1315 (Viktor 10.10.2026: «при перетаскивании указателя курсора мыши по волне показывать в красивом попапе текст данной
+  // секции — прямо из оригинального текста лирики»): a card over the wave with the section under the pointer, its time and its
+  // lines as written in the lyrics, the line sung there lit; a section of the score alone says how to find its words
+  var wavePopEl = null;
+  function wavePop(event) {
+    if (!wavePopEl) { wavePopEl = document.createElement("div"); wavePopEl.className = "wave-pop"; wavePopEl.hidden = true; document.body.appendChild(wavePopEl); }
+    var secs = waveSections(), room = document.body.dataset.tab || "create";
+    // HERESY 1317 (Viktor 10.10.2026: «этот оверхол нужен нам только в аудио комнатах — Творец, Огранщик и Библиотекарь»)
+    if (!event || !secs.length || !isFinite(audio.duration) || audio.duration <= 0 || ["create", "post", "collection"].indexOf(room) < 0) { wavePopEl.hidden = true; wavePopEl.dataset.key = ""; return; }
+    var r = $("wave").getBoundingClientRect(), t = Math.max(0, Math.min(1, (event.clientX - r.left) / r.width)) * audio.duration, s = sectionAt(t);
+    if (!s) { wavePopEl.hidden = true; return; }
+    var i = secs.indexOf(s), end = i + 1 < secs.length ? secs[i + 1].t : audio.duration, now = -1;
+    (s.rows || []).forEach(function (row) { if (row.start <= t + 0.05) now = row.k; });
+    var key = (STATE.playerTake ? STATE.playerTake.name : "") + ":" + i + ":" + now;
+    if (wavePopEl.dataset.key !== key) {
+      wavePopEl.dataset.key = key;
+      var html = '<div class="wave-pop-head"><b translate="no">' + escape(s.name) + "</b><span>" + clock(s.t) + "\u2013" + clock(end) + "</span></div>";
+      if (s.lines && s.lines.length) {
+        html += '<div class="wave-pop-lines" translate="no">' + s.lines.slice(0, 12).map(function (l, k) { return "<p" + (k === now ? ' class="is-now"' : "") + ">" + escape(l) + "</p>"; }).join("") +
+          (s.lines.length > 12 ? '<p class="wave-pop-more">\u2026</p>' : "") + "</div>" +
+          (s.unheard ? '<p class="wave-pop-hint">' + escape("placed between its neighbours: Whisper did not hear these lines clearly") + "</p>" : "");
+      } else if (STATE.waveSections.how === "score") {
+        html += '<p class="wave-pop-hint">' + escape("A mark of the score. Each section of the lyrics with its words: the take's menu, Find the sections by ear") + "</p>";
+      } else {
+        html += '<p class="wave-pop-hint">' + escape("no words here") + "</p>";
+      }
+      wavePopEl.innerHTML = html;
+    }
+    wavePopEl.hidden = false;
+    var w = wavePopEl.offsetWidth, h = wavePopEl.offsetHeight;
+    wavePopEl.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, event.clientX - w / 2)) + "px";
+    wavePopEl.style.top = Math.max(8, r.top - h - 10) + "px";
+  }
   $("timeTotal").addEventListener("click", function () { store("yue2.timeLeft", recall("yue2.timeLeft") ? null : "1"); paintTimes(); });
   function paintTimes() {
     if (!isFinite(audio.duration)) return;
@@ -5559,20 +5940,118 @@
     } catch (e) { return []; }
   }
   function waveSections() { var ws = STATE.waveSections; return STATE.playerTake && ws && ws.name === STATE.playerTake.name ? ws.list : []; }
+  // HERESY 1315 (Viktor 10.10.2026, on his Buratino: «секуционка очень скудная на волне… Всего два verse показало. bridges вообще
+  // нет»): a Full take's plan names only the sections its writer marked (4 to 13 in those takes, their lyrics 32 tags), so the
+  // sections are the lyrics' own tags now, each placed by the karaoke timing (Whisper's word times, HERESY 1056): a sung one where
+  // its first line begins, an instrumental one where the one before it ends (a run of them shares the gap up to the next sung one).
+  // The score's marks stay for a take never timed; the timing is asked once and the lab keeps it.
+  var sectionsTimed = {}, sectionsAsked = {};
+  function lyricParts(lyrics) {
+    var out = [], cur = null;
+    String(lyrics || "").split(/\r?\n/).forEach(function (raw) {
+      var s = raw.trim(), tag = s.match(/^\[([^\]]+)\]/);
+      if (tag) { cur = { name: tag[1].trim(), lines: [] }; out.push(cur); return; }
+      if (!s || s.charAt(0) === "(") return;                // what timing.py leaves out as well
+      if (!cur) { cur = { name: "", lines: [] }; out.push(cur); }
+      cur.lines.push(s);
+    });
+    return out;
+  }
+  function taggedParts(lyrics) { return lyricParts(lyrics).filter(function (p) { return p.name; }).length; }
+  function earSections(lyrics, rows) {
+    var parts = lyricParts(lyrics), k = 0, list = [];
+    rows = rows || [];
+    parts.forEach(function (p) {
+      var mine = [];
+      p.lines.forEach(function (line, li) {                  // the timing's rows are the lyric lines in order; a line it left out is passed
+        for (var j = k; j < Math.min(rows.length, k + 4); j++) {
+          if (String(rows[j].text || "").trim() === line && isFinite(rows[j].start)) { mine.push({ k: li, start: +rows[j].start, end: +rows[j].end, guessed: !!rows[j].guessed }); k = j + 1; return; }
+        }
+      });
+      list.push({ name: p.name || "Lyrics", lines: p.lines, rows: mine, t: mine.length ? mine[0].start : null, end: mine.length ? mine[mine.length - 1].end : null });
+    });
+    if (!list.some(function (s) { return s.t != null; })) return [];
+    // a section whose first lines were only guessed: its first line heard, less the median heard line for each guessed one before it
+    // (the timing shares a guessed run from the time before it, so Verse 1 of Buratino v9.3.6.8 began at 0:00 over its long intro)
+    var lens = rows.filter(function (r) { return !r.guessed && r.end > r.start; }).map(function (r) { return r.end - r.start; }).sort(function (a, b) { return a - b; });
+    var lineLen = lens.length ? lens[Math.floor(lens.length / 2)] : 3, before = 0;
+    list.forEach(function (s) {
+      var first = -1;
+      s.rows.forEach(function (r, i) { if (first < 0 && !r.guessed) first = i; });
+      if (first >= 0) s.t = Math.max(before, s.rows[first].start - s.rows[first].k * lineLen);
+      else if (s.t != null) s.t = Math.max(before, s.t);
+      if (s.t != null) before = s.t;
+    });
+    // the lyrics' end the take never sang (a Full take loses its text's end): after the last line heard, the sections all guessed
+    // stay, marked, when the time left could hold their lines (1.5 s a line), else they are left out; an instrumental run after
+    // them keeps the time left
+    var lastHeard = -1;
+    list.forEach(function (s, i) { if (s.rows.some(function (r) { return !r.guessed; })) lastHeard = i; });
+    if (lastHeard < 0) return [];
+    var heardEnd = list[lastHeard].end || list[lastHeard].t, dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : heardEnd;
+    var tailLines = list.slice(lastHeard + 1).reduce(function (n, s) { return n + s.rows.length; }, 0), tailFits = dur - heardEnd >= tailLines * 1.5;
+    list = list.filter(function (s, i) { return i <= lastHeard || (s.rows.length ? tailFits : dur - heardEnd >= 2); });
+    list.forEach(function (s) { s.unheard = s.rows.length > 0 && s.rows.every(function (r) { return r.guessed; }); });
+    var last = 0;
+    for (var i = 0; i < list.length; i++) {                  // an instrumental run shares the gap from the last sung end to the next sung start
+      if (list[i].t != null) { last = Math.max(last, list[i].end || list[i].t); continue; }
+      var j2 = i;
+      while (j2 < list.length && list[j2].t == null) j2++;
+      var next = j2 < list.length ? list[j2].t : (isFinite(audio.duration) ? audio.duration : last + 8 * (j2 - i)), a = i === 0 ? 0 : last, n = j2 - i;
+      for (var q = i; q < j2; q++) list[q].t = a + (Math.max(a, next) - a) * (q - i) / n;
+      i = j2 - 1;
+    }
+    return list.map(function (s) { return { t: Math.max(0, Math.round(s.t * 100) / 100), name: s.name, lines: s.lines, rows: s.rows, unheard: !!s.unheard }; });
+  }
+  function machineCards() {                                  // how many cards the lab sees, once
+    if (STATE.machineCards != null) return Promise.resolve(STATE.machineCards);
+    return fetch("/lab/machine").then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (m) { STATE.machineCards = m && Array.isArray(m.cards) ? m.cards.length : 0; return STATE.machineCards; }).catch(function () { return 0; });
+  }
+  function timeSections(name, force) {                       // the lab's karaoke timing of a take, then its sections from it
+    if (sectionsAsked[name] === "running") return Promise.reject(new Error("already being heard"));
+    sectionsAsked[name] = "running";
+    var poll = function (first) {
+      return fetch("/lab/timing?name=" + encodeURIComponent(name) + (first && force ? "&force=1" : ""))
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, d: d }; }); })
+        .then(function (x) {
+          if (x.code === 202 || (x.d && (x.d.status === "queued" || x.d.status === "running"))) return new Promise(function (ok) { setTimeout(ok, 2500); }).then(function () { return poll(false); });
+          if (x.code >= 400 || !x.d || !x.d.rows) throw new Error((x.d && (x.d.error || x.d.message)) || ("HTTP " + x.code));
+          return x.d;
+        });
+    };
+    return poll(true).then(function (d) {
+      sectionsAsked[name] = "done"; sectionsTimed[name] = d;
+      var t = findTake(name);
+      if (t && STATE.playerTake && STATE.playerTake.name === name) loadWaveSections(t);
+      return d;
+    }, function (e) { sectionsAsked[name] = "failed"; throw e; });
+  }
   function loadWaveSections(take) {
     var name = take.name;
-    STATE.waveSections = { name: name, list: [] };
+    STATE.waveSections = { name: name, list: [], how: "" };
     if (take.session) return;
+    var tagged = taggedParts(take.lyrics) >= 2;
+    var timed = !tagged ? Promise.resolve(null) : sectionsTimed[name] ? Promise.resolve(sectionsTimed[name])
+      : fetch("/lab/timing?cached=1&name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) { if (d && d.rows) { sectionsTimed[name] = d; return d; } return null; }).catch(function () { return null; });
     var got = take.has_score ? getRequest(take).then(function (req) { return (req && req.abc) || ""; })
       : sectionsNone[name] ? Promise.resolve("")
       : fetch("/lab/score?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; })
           .then(function (d) { if (!d || !d.abc) sectionsNone[name] = true; return (d && d.abc) || ""; });
-    got.then(function (abc) {
+    Promise.all([timed, got.catch(function () { return ""; })]).then(function (x) {
       if (!STATE.playerTake || STATE.playerTake.name !== name) return;
-      STATE.waveSections = { name: name, list: sectionsFrom(abc) };
+      var ear = x[0] ? earSections(take.lyrics, x[0].rows) : [];
+      STATE.waveSections = ear.length ? { name: name, list: ear, how: "ear" } : { name: name, list: sectionsFrom(x[1]), how: "score" };
       drawWave();
+      // by itself on a machine of two cards or more, where Whisper takes a card of its own (never on a test page)
+      if (!ear.length && tagged && !sectionsAsked[name] && !navigator.webdriver && !/[?&]scope=/.test(location.search)) {
+        machineCards().then(function (n) { if (n >= 2 && STATE.playerTake && STATE.playerTake.name === name) timeSections(name, false).catch(function () {}); });
+      }
     }).catch(function () {});
   }
+  window.ruachEarSections = earSections;                     // HERESY 1315: for the checks
+  window.ruachLyricParts = lyricParts;
   function sectionAt(t) {
     var at = null;
     waveSections().forEach(function (s) { if (s.t <= t + 0.01) at = s; });
@@ -5776,7 +6255,7 @@
         if (s.t >= audio.duration) return;
         var sx = Math.round(s.t / audio.duration * width) + 0.5;
         if (s.t > 0.05) { ctx.fillStyle = themeRGBA("ink", 0.24); ctx.fillRect(sx - 0.5, 2, 1, height - 4); }
-        var name = s.name.toUpperCase(), lw = ctx.measureText(name).width + 6;
+        var name = s.name.toUpperCase() + (s.unheard ? " ?" : ""), lw = ctx.measureText(name).width + 6;   // HERESY 1315: «?» not heard
         if (sx + 2 < lastEnd + 4 || sx + 2 + lw > width) return;   // no room: the line alone
         ctx.fillStyle = themeRGBA("panel", 0.72); ctx.fillRect(sx + 2, height - 13, lw, 11);
         ctx.fillStyle = themeRGBA("ink", 0.62); ctx.fillText(name, sx + 5, height - 4.5);
@@ -7362,8 +7841,10 @@
       restoreJobs();
       connectLogs();
       startPolls();
-      refreshSettings();
-      refreshHardware();
+      // HERESY 1304: a new studio's first start reads the machine and offers what suits it, once (never a test browser by itself)
+      Promise.all([refreshSettings(), refreshHardware()]).then(function () {
+        if (!recall(MACHINE_KEY) && !navigator.webdriver && !/[?&]scope=/.test(location.search)) setTimeout(function () { machineScan(false); }, 1500);
+      });
       if (chatBase()) refreshChat().catch(function () {});
       else paintChat({ configured: false, available: false, models: [], loaded: null, use: null });
       // a library that cannot be read is its own problem, not a server that is down
@@ -7471,7 +7952,22 @@
   });
 
   if (window.HeresyTrain) window.HeresyTrain.init({ toast: toast });   // HERESY 1063
-  if (window.HeresyGpus) window.HeresyGpus.init({ toast: toast });     // HERESY 1091
+  if (window.HeresyGpus) window.HeresyGpus.init({ toast: toast,     // HERESY 1091
+    // HERESY 1294: a card's VRAM limit saved: Auto's knobs follow the studio card's at once; rc4's «auto:N» becomes its limit, once
+    limits: function () {
+      paintPresetSizes();
+      if (recall(PRESET_KEY) !== "auto" || !STATE.settings || STATE.settingsDirty) return;
+      var gib = gpuGib(), a = autoKnobs(gib);
+      if (!a) return;
+      if (a.max_seq === STATE.settings.max_seq && a.vae_core === STATE.settings.vae_core) { $("memPreset").value = "auto"; return paintComputeHint(); }
+      post("/settings", { max_seq: a.max_seq, vae_core: a.vae_core }).then(function (data) {
+        paintSettings(data, true);
+        toast("Auto for " + gib.toFixed(1) + " GB: " + (a.max_seq ? "context " + a.max_seq.toLocaleString(loc()) : "whole context") + ", VAE tiles " + a.vae_core, "good");
+      }).catch(function (e) { toast(e.message, "bad"); });
+    },
+    legacy: function () { var m = /^auto:(\d+(?:\.\d+)?)$/.exec(recall(PRESET_KEY) || ""); return m ? parseFloat(m[1]) : 0; },
+    migrated: function () { store(PRESET_KEY, "auto"); }
+  });
   // HERESY 1102: the DAW button opens the way out of the studio (heresy-daw.js); openDAW is gone
   // HERESY 1104: a take as a REAPER project: the page writes the score's MIDI (the lab has no ABC reader), the lab packs
   // the rest; the engine hands the ZIP over
@@ -7612,6 +8108,13 @@
       HC && HC.reveal && here !== "collection" ? { icon: "▦", label: "Open in the Librarian", action: function () { setTab("collection"); HC.reveal(name); } } : null,
       HC && HC.openSheet && here === "collection" ? { icon: "▤", label: "Open the sheet", action: function () { HC.openSheet(name); } } : null,
       HC && HC.datasheet ? { icon: "☰", label: "Open the datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
+      // HERESY 1315: the lyrics' sections placed on the wave by Whisper's hearing (once; the lab keeps it)
+      !take.session && !bulk && taggedParts(take.lyrics) >= 2 ? { icon: "\u00a7", label: sectionsTimed[name] ? "Find the sections by ear again" : "Find the sections by ear",
+        hint: sectionsAsked[name] === "running" ? "being heard now" : "Whisper hears the words; about half a minute on a card", disabled: sectionsAsked[name] === "running", action: function () {
+          toast("Hearing the words of " + displayTitle(take) + "\u2026");
+          timeSections(name, !!sectionsTimed[name]).then(function (d) { toast("The sections found by ear (" + Math.round((d.heard || 0) * 100) + " % of the lines heard)"); },
+            function (e) { toast("The sections were not found: " + e.message, "bad"); });
+        } } : null,
       { sep: true },
       HC && bulk && HC.rateMany ? { icon: "👍", label: "Like " + bulk.length, hint: "all liked: taken back", checked: bulkRows.every(function (x) { return x.rating > 0; }), action: function () { HC.rateMany(bulk, 1).then(changed); } }
         : HC ? { icon: "👍", label: "Like", checked: r > 0, action: function () { HC.rate(name, r > 0 ? 0 : 1).then(changed); } } : null,
@@ -7788,7 +8291,7 @@
     playNow: function (t) { STATE.playZone = "collection"; playNow(t); }, updateTake: updateTake, refreshLibrary: refreshLibrary, togglePlay: togglePlay,
     playing: function () { return { name: STATE.playerTake ? STATE.playerTake.name : "", playing: isPlaying() }; }, libraryChanged: function () { paintLibrary(); paintRate(); paintNote(); },
     menu: function (name, x, y) { takeMenu(name, x, y); },
-    rename: renameTake,
+    rename: renameTake, refreshArts: refreshArts,         // HERESY 1337: a cover given back from the art's trash
     // HERESY 1168 (Viktor: «если проигрывается в данный момент, сразу снимай его с проигрыша»): the take playing went to the
     // trash, so the player lets it go now, not when its file is gone from under it
     trashed: function (names) { if (STATE.playerTake && names.indexOf(STATE.playerTake.name) >= 0) clearPlayer(); }
@@ -8052,7 +8555,11 @@
   // HERESY 1169: the Artist's greyed place in the bar by the page's language (the catalogs' "Artist" is the Trainer's
   // performer, «Артист»; the room is Viktor's «Художник», the pictures for the songs)
   var ARTIST_ROOM = { ru: "Художник", uk: "Художник", be: "Мастак", el: "Καλλιτέχνης", es: "Artista", it: "Artista" };
-  function paintArtistTab() { if ($("tabArtist")) $("tabArtist").textContent = ARTIST_ROOM[document.documentElement.lang] || "Artist"; }
+  function paintArtistTab() {   // HERESY 1332 (Viktor: «Artist не переводи как Артист на русский. Только как Художник»): the room's header too
+    var name = ARTIST_ROOM[document.documentElement.lang] || "Artist";
+    if ($("tabArtist")) $("tabArtist").textContent = name;
+    if ($("arRoomName")) $("arRoomName").textContent = name;
+  }
   window.addEventListener("ruach-lang", paintArtistTab);
   paintArtistTab();
 
@@ -8481,8 +8988,21 @@
       $("glossPanel").scrollIntoView({ behavior: "smooth", block: "start" });
       window.HeresyGloss.useSource(path, true);
     },
-    pauseMain: function () { audio.pause(); }
+    pauseMain: function () { audio.pause(); },
+    // HERESY 1311: the take's family for «Compare all»: the same music in other takes, the disliked left out
+    family: function (name) { return compareFamily(name); }
   });
+  function compareFamily(name) {
+    var take = findTake(name), HC = window.HeresyCollection;
+    if (!take) return [];
+    return familyOf(take).filter(function (t) { return t.name !== take.name && !(HC && HC.rating && HC.rating(t.name) < 0); })
+      .map(function (t) {
+        return { name: t.name, label: displayTitle(t), seconds: t.seconds, url: "/library/listen?name=" + encodeURIComponent(t.name),
+                 group: "The same music · " + [t.vae ? t.vae + " decoder" : "", t.seed != null ? "sound seed " + seedText(t.seed) : "", t.created ? String(t.created).slice(11, 16) : ""].filter(Boolean).join(" · ") };
+      });
+  }
+  window.ruachFamily = compareFamily;                  // HERESY 1311: for the checks
+  window.ruachRefreshLibrary = refreshLibrary;
   if (window.HeresySpectrum) {
     window.HeresySpectrum.init({
       others: function (shown) {
@@ -8828,11 +9348,35 @@
     placeLogDock();
   }
   // HERESY 1169 · 1240 (Viktor 08.10.2026: «В попапе фреймов серверный лог поверх кнопки синтеза. В этом режиме смести его влево. Так не будет закрывать ничего»): with a frame lifted the log stands at the left, as wide as the room before the frame's bottom row of controls allows (Generate's row starts at 779 px at 100 %, 401 at 125 % and 156 at 150 % of a 1920 screen); with less than 220 px there it rises above that row
+  // HERESY 1301 (Viktor 10.10.2026: «Перемещение фрейма в другую сторону страницы, и запоминание позиции для определённой комнаты»):
+  // each room its side of the dock, as chosen (yue2.logDockSide); the Artist left by default (1258), the others right
+  function logDockSides() { try { return JSON.parse(recall("yue2.logDockSide") || "{}") || {}; } catch (e) { return {}; } }
+  function logDockLeft() {
+    var tab = document.body.dataset.tab || "create", side = logDockSides()[tab];
+    return side ? side === "left" : tab === "artist";
+  }
+  if ($("logDockSide")) $("logDockSide").addEventListener("click", function () {
+    var sides = logDockSides(), tab = document.body.dataset.tab || "create";
+    sides[tab] = logDockLeft() ? "right" : "left";
+    store("yue2.logDockSide", JSON.stringify(sides));
+    placeLogDock();
+  });
   function placeLogDock() {
     var d = $("logDock");
     if (!d) return;
-    var f = document.body.dataset.frame;
-    d.classList.toggle("is-left", !!f || document.body.dataset.tab === "artist");   // HERESY 1258: «Серверный лог… в левую сторону» in the Artist
+    var f = document.body.dataset.frame, left = !!f || logDockLeft();
+    d.classList.toggle("is-left", left);
+    if (window.ruachLogView) window.ruachLogView();   // HERESY 1334: each room its view of the log   // HERESY 1258: «Серверный лог… в левую сторону» in the Artist; 1301: as each room was left
+    var sb = $("logDockSide");
+    if (sb) {                              // HERESY 1301: its arrow points where a click takes the dock
+      var say = left ? "The log to the right side of the page, kept for this room" : "The log to the left side of the page, kept for this room";
+      if (sb.dataset.side !== (left ? "left" : "right")) {
+        sb.dataset.side = left ? "left" : "right";
+        sb.innerHTML = window.HeresyIcons ? window.HeresyIcons.ui(left ? "to-right" : "to-left") : (left ? "→" : "←");
+      }
+      sb.dataset.tip = say;
+      sb.setAttribute("aria-label", say);
+    }
     d.style.maxWidth = "";
     d.style.bottom = "";
     if (!f) return;
@@ -8846,8 +9390,71 @@
       else d.style.bottom = Math.round(innerHeight - rr.top + 8) + "px";
     });
   }
+  // HERESY 1169 · 1329 (Viktor 10.10.2026: «разреши по крайней стороне фрейма перетягивать его ширины с установленного бейс до макс
+  // 1200px»): the dock's outer edge (the left one on the right, the right one on the left) drags its width from the base its state has
+  // (folded, open, with the cards, the full height) up to 1200 px; kept in this browser (yue2.logDockW), a double click forgets it
+  var DOCK_MAX = 1200;
+  function dockBase(d) { var w = d.style.width; d.style.width = ""; var b = d.getBoundingClientRect().width; d.style.width = w; return b; }
+  function dockWidth() {
+    var d = $("logDock");
+    if (!d) return;
+    var want = +recall("yue2.logDockW") || 0;
+    if (d.classList.contains("is-folded") || !want) { d.style.width = ""; return; }
+    var base = dockBase(d), most = Math.min(DOCK_MAX, innerWidth - 32);
+    d.style.width = want > base ? Math.round(Math.min(most, want)) + "px" : "";
+  }
+  if ($("logDockGrip")) (function () {
+    var g = $("logDockGrip"), d = $("logDock"), from = null;
+    g.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      g.setPointerCapture(e.pointerId);
+      from = { x: e.clientX, w: d.getBoundingClientRect().width, base: dockBase(d), left: d.classList.contains("is-left") };
+      g.classList.add("is-on");
+    });
+    g.addEventListener("pointermove", function (e) {
+      if (!from) return;
+      var dx = (e.clientX - from.x) * (from.left ? 1 : -1), most = Math.min(DOCK_MAX, innerWidth - 32);
+      var w = Math.max(from.base, Math.min(most, from.w + dx));
+      d.style.width = Math.round(w) + "px";
+    });
+    var end = function () {
+      if (!from) return;
+      var w = d.getBoundingClientRect().width;
+      store("yue2.logDockW", w > from.base + 1 ? String(Math.round(w)) : null);
+      from = null;
+      g.classList.remove("is-on");
+    };
+    g.addEventListener("pointerup", end);
+    g.addEventListener("pointercancel", end);
+    g.addEventListener("dblclick", function () { store("yue2.logDockW", null); d.style.width = ""; });
+    new MutationObserver(function () { if (!from) dockWidth(); }).observe(d, { attributes: true, attributeFilter: ["class"] });
+    window.addEventListener("resize", function () { if (!from) dockWidth(); });
+    dockWidth();
+  })();
+  window.ruachDockWidth = dockWidth;                     // for the checks
+  // HERESY 1169 · 1329 (Viktor 10.10.2026: «В баре кнопка TRAINER отцентри между лого и воркспейс селектором»): the Trainer's tab in the
+  // middle between the logo's right edge and the workspace button's left one, wherever the logo stands centred in the bar
+  function centerTrainer() {
+    var side = $("tabsSide"), logo = document.querySelector(".topbar .brand-logo"), brand = document.querySelector(".topbar .brand"), ws = document.querySelector(".topbar .ws-current");
+    if (!side || !logo || !ws || !brand) return;
+    side.style.marginLeft = "";
+    var lr = logo.getBoundingClientRect(), wr = ws.getBoundingClientRect(), sr = side.getBoundingClientRect();
+    if (!lr.width || !wr.width || getComputedStyle(brand).position !== "absolute" || getComputedStyle(brand).display === "none") return;
+    var want = (lr.right + wr.left) / 2 - sr.width / 2;
+    if (want > sr.left + 1) side.style.marginLeft = Math.round(want - sr.left) + "px";
+  }
+  (function () {
+    var soon = 0, again = function () { cancelAnimationFrame(soon); soon = requestAnimationFrame(centerTrainer); };
+    if (window.ResizeObserver) { var ro = new ResizeObserver(again); ["tabs", "tabsSide"].forEach(function (id) { if ($(id)) ro.observe($(id)); }); var w = document.querySelector(".topbar .ws-current"); if (w) ro.observe(w); }
+    window.addEventListener("resize", again);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(again);
+    again();
+  })();
+  window.ruachCenterTrainer = centerTrainer;             // for the checks
   var logDockTimer = 0;
   window.addEventListener("resize", function () { if (!document.body.dataset.frame) return; clearTimeout(logDockTimer); logDockTimer = setTimeout(placeLogDock, 120); });
+  placeLogDock();                                    // HERESY 1301: the room's side, and the button's arrow, from the start
   all(".frame-big").forEach(function (b) {
     b.addEventListener("click", function () { frameOver(document.body.dataset.frame === b.dataset.frame ? null : b.dataset.frame); });
   });

@@ -630,8 +630,8 @@
           // a section its name alone, dimmed (the section's count goes on under it)
           if (o.pause) { html.push('<div class="lyr-row lyr-head lyr-pause" style="top:' + y + 'px;height:' + lh + 'px">' + esc(o.pause) + "</div>"); return; }
           if (!o.section) return;
-          html.push('<div class="lyr-row lyr-head" style="top:' + y + 'px;height:' + lh + 'px">' + esc(o.group) +
-            (ruler !== undefined && o.lines ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + "</div>");
+          html.push('<div class="lyr-row lyr-head" style="top:' + y + 'px;height:' + lh + 'px"><span><span>' + esc(o.group) + "</span>" +   // HERESY 1339: the name a text of its own
+            (ruler !== undefined && o.lines ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + "</span></div>");
           return;
         }
         if (!o.syl && !o.bsyl && (o.fault || o.two)) {   // a line of no syllables with a mark gone astray: the mark alone

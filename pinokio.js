@@ -3,7 +3,7 @@
 module.exports = {
   version: "4.0",
   title: "Ruach Studio",
-  description: "Songs on your own NVIDIA card: YuE2 through yue2.cpp, with a Creator, a Writer, a Refiner, a Librarian, an Artist and a Trainer. Linux, a card of 12 GB or more.",
+  description: "Songs on your own NVIDIA card: YuE2 through yue2.cpp, with a Creator, a Writer, a Refiner, a Librarian, an Artist and a Trainer. Linux, a card of 12 GB or more, about 30 GB of disk.",
   icon: "src/brand/ruach-icon-512.png",
   menu: async (kernel, info) => {
     const running = (script) => info.running("pinokio/" + script)

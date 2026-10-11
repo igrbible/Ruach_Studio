@@ -46,12 +46,13 @@ fi
 # the biggest card here, in MiB (0 without nvidia-smi)
 ruach_vram() { nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | sort -n | tail -1 | tr -d ' ' | grep -E '^[0-9]+$' || echo 0; }
 
-# the backbone a card takes (INSTALL.md): 24 GB BF16 (fetch-models.sh's own), 16 GB Q8_0, 12 GB Q6_K, less Q5_K_M
+# the backbone a card takes (INSTALL.md): 24 GB BF16 (fetch-models.sh's own), from 7 GB Q8_0, from 4.5 GB Q6_K, less Q5_K_M
+# HERESY 1304: as measured 10.10.2026, Q8_0 is quicker than Q6_K and holds 12 288 rows in 5.1 GiB: the 8 and 12 GB cards take it
 ruach_quant() {
     local v; v=$(ruach_vram)
     if   [ "$v" -ge 23000 ]; then echo ""
-    elif [ "$v" -ge 15000 ]; then echo Q8_0
-    elif [ "$v" -ge 11000 ]; then echo Q6_K
+    elif [ "$v" -ge 7000 ]; then echo Q8_0
+    elif [ "$v" -ge 4500 ]; then echo Q6_K
     else echo Q5_K_M; fi
 }
 

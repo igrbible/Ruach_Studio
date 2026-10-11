@@ -249,7 +249,7 @@
     <h1>Canzoni dalle parole e dagli accordi<br>sulla tua macchina</h1>
     <p class="lead">Un intero studio attorno a <b>YuE2</b>, il modello aperto di canzoni. Scrivi lo stile e il testo, e lo studio compone, canta e rende la canzone sulla <b>tua GPU</b>. Le tue canzoni, parole e impostazioni non la lasciano mai.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Prendilo su GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.it.md">Leggi la guida</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Modelli su Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Offrimi una macchina del caffè</a></div>
-    <span class="rc"><b>2.0.0-rc4</b> · la quarta release candidate · ottobre 2026</span>
+    <span class="rc"><b>2.0.0-rc5</b> · la quinta release candidate · ottobre 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -353,7 +353,7 @@
             <tr><td>in una DAW</td><td>un progetto REAPER con la partitura, le sezioni e il testo (sperimentale)</td><td>stem audio</td></tr>
             <tr><td>il codice</td><td>aperto, ogni modifica documentata</td><td>chiuso</td></tr>
             <tr class="honest"><td>rifinitura pronta all'uso</td><td><b>meno</b>: un mix può ronzare (l'antironzio aiuta), il testo può scivolare (la verifica del testo trova dove), alcuni strumenti YuE2 li suona deboli o non li suona affatto (una LoRA li insegna)</td><td><b>più</b></td></tr>
-            <tr class="honest"><td>cosa serve</td><td>una GPU NVIDIA (24 GB per tutto a piena precisione), Linux, circa 120 GB di disco per i modelli, le LoRA e gli spazi</td><td>un browser</td></tr>
+            <tr class="honest"><td>cosa serve</td><td>una GPU NVIDIA (24 GB per tutto a piena precisione), Linux, circa 30 GB di disco (circa 56 GB con i modelli dell'Artista)</td><td>un browser</td></tr>
           </tbody>
         </table>
       </div>
@@ -367,7 +367,7 @@
         <div class="card"><h3>La macchina</h3><ul>
           <li><b>Una GPU NVIDIA</b>: 24 GB per tutto a piena precisione</li>
           <li><b>Linux</b> (fatto su Ubuntu 24.04, CUDA 12.8)</li>
-          <li><b>Circa 120 GB</b> di disco: i modelli (circa 100 GB, scaricati, fissati e controllati da <code>fetch-models.sh</code>), le LoRA e gli spazi</li></ul></div>
+          <li><b>Circa 30 GB</b> di disco, misurati su installazioni nuove: il programma e il suo Python (16 GB), i modelli (da 13 a 17 GB secondo la scheda, scaricati, fissati e controllati da <code>fetch-models.sh</code>); i modelli dell'Artista altri 26 GB, i set 💎 5 GB, ognuno solo quando lo chiedi</li></ul></div>
         <div class="card"><h3>Lo schermo</h3><ul>
           <li>Fatto per una finestra del browser di <b>1920×1080 al 100 %</b></li>
           <li>L'ideale: <b>2K</b> (2560×1440), da 22″ in su, 16:9 o più larga</li>
@@ -383,7 +383,7 @@
   <section id="next">
     <div class="wrap">
       <h2>Cosa verrà</h2>
-      <p class="sub">La 2.0.0-rc4 è lo studio in cui facciamo le nostre canzoni ogni giorno. Questi sono i pezzi più grandi in arrivo, per la rc5 e oltre.</p>
+      <p class="sub">La 2.0.0-rc5 è lo studio in cui facciamo le nostre canzoni ogni giorno. Questi sono i pezzi più grandi in arrivo, per la rc6 e oltre.</p>
       <ul class="feats">
         <li><b>La stanza dell'Artista.</b> Copertine in tre formati insieme da un solo seme (1:1 per l'album, 16:9 per un video, 9:16 per uno short), con il titolo e l'artista scritti sopra, e le versioni dell'immagine di ogni take.</li>
         <li><b>Altre cinque lingue.</b> Cinese, francese, portoghese, tedesco e giapponese; quelle da destra a sinistra quando la pagina stessa saprà andare da destra a sinistra.</li>
@@ -470,7 +470,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc4 · un'opera di <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Modifiche</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Macchina del caffè</a></span></div>
+  <div class="wrap"><span>Ruach Studio · 2.0.0-rc5 · un'opera di <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Modifiche</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Macchina del caffè</a></span></div>
 </footer>
 
 <script>

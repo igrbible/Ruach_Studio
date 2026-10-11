@@ -589,6 +589,15 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
 .wt-size, .wt-sum { font-size: 12.5px; color: var(--muted); }
 .wt-part.is-whole .wt-sum { color: var(--good); }
 .wt-head .btn { margin-left: auto; }
+/* HERESY 1302 (Viktor 10.10.2026: «Для FETCH нужен статус/прогресс загрузки… его нужно найти глазами»): at the row pressed */
+.wt-prog { height: 4px; margin-top: 7px; border-radius: 2px; background: var(--line-soft, var(--line)); overflow: hidden; }
+.wt-prog i { display: block; height: 100%; width: 0; border-radius: 2px; background: var(--amber); transition: width .8s ease; }
+.wt-prog.is-open i { width: 28%; animation: wt-slide 1.6s ease-in-out infinite; }
+@keyframes wt-slide { from { margin-left: -28%; } to { margin-left: 100%; } }
+.wt-prog-say { margin-top: 4px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wt-extra .wt-prog, .wt-extra .wt-prog-say { grid-column: 1 / -1; }
+.wt-part.is-going, .wt-extra:has(.wt-prog) { background: color-mix(in srgb, var(--amber) 6%, transparent); }
+.wt-top-prog { margin: 2px 0 8px; }
 .wt-rows { list-style: none; margin: 5px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 .wt-row { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; }
 .wt-row code { font: 12px var(--mono); overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
@@ -1775,6 +1784,10 @@ fieldset.sound { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; 
    чуть меньше размером, чтобы не казались глазу, мол они - кнопки»): a drawn i, no circle, 12 px high, grey with a third of the theme's
    own colour, that colour itself when pointed at. 1149's rule stands: the letter is drawn, not written (no stray "i" in a copy) */
 .info:hover, .info:focus-visible { background: var(--amber); }
+/* HERESY 1345: an i whose words are its tip (kept as its text for the page's own reading), hidden when it has none; a warning's i is a ⚠ */
+.info { font-size: 0; color: transparent; overflow: hidden; }
+.info[hidden] { display: none; }
+.info.is-warn { width: 14px; height: 13px; vertical-align: -2px; background: #d9a441; -webkit-mask-image: var(--ico-warn); mask-image: var(--ico-warn); }
 .tip {
   position: fixed;
   z-index: 50;
@@ -3085,6 +3098,10 @@ tr.is-no .hi-tag { color: var(--bad); }
 .tr-tile span { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
 .tr-tile b { font: 600 14px var(--mono); }
 .tr-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
+/* HERESY 1299 (Viktor 10.10.2026: «выстраивать в одну колонку оба блока живого графа»): one under the other, each the whole width */
+.tr-charts.is-stacked { grid-template-columns: minmax(0, 1fr); }
+.tr-stack { display: inline-grid; place-items: center; padding: 4px 7px; }
+.tr-stack .ui-ico { width: 16px; height: 16px; }
 .tr-chart { margin: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line-soft, var(--line)); border-radius: var(--r-md); background: var(--ground); }
 .tr-chart figcaption { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 12.5px; }
 .tr-chart figcaption .mono { font-size: 11px; color: var(--muted); }
@@ -3135,6 +3152,10 @@ body[data-tab="train"] .workspace { height: calc(100vh - var(--bar-h) - 8px); }
 .gpu-table td:nth-child(2), .gpu-table td:nth-child(3), .gpu-table td:nth-child(4), .gpu-table th:nth-child(2), .gpu-table th:nth-child(3), .gpu-table th:nth-child(4) { text-align: center; width: 90px; }
 .gpu-table td.mono { font-size: 11.5px; color: var(--muted); }
 .gpu-table input { accent-color: var(--check, var(--amber)); width: 16px; height: 16px; }
+/* HERESY 1294: a card's VRAM limit, a slider and what it says */
+.gpu-table td.gpu-limit { white-space: nowrap; }
+.gpu-table input.gpu-limit-range { width: 130px; height: auto; vertical-align: middle; accent-color: var(--amber); }
+.gpu-limit-v { margin-left: 8px; font-size: 11.5px; color: var(--muted); }
 .gpu-card .btn[hidden] { display: none !important; }
 
 /* HERESY 1092: the ☰ and what it holds, each item with its words */
@@ -3191,10 +3212,11 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
    log the dock grows 300 px for a column of the cards with a role (none without a card: then it keeps its width); in Engine → GPUs a
    row under each card. The bars: the load above, the memory below, a second each, two minutes wide. */
 /* HERESY 1272 (Viktor 09.10.2026: «на полной развёртке фрейм серверного лога очень широкий. ужми ширину на 150-200px»): 180 px narrower */
-.log-dock.has-gpus:not(.is-folded) { width: min(720px, calc(100vw - 32px)); }
-.log-dock.has-gpus.is-tall { width: min(980px, calc(100vw - 32px)); }
+/* HERESY 1329 (Viktor 10.10.2026: «Расширь колонку GPU на 100px, и общую ширину фрейма логгера на 200px»): 920 and 1180, the cards 390 */
+.log-dock.has-gpus:not(.is-folded) { width: min(920px, calc(100vw - 32px)); }
+.log-dock.has-gpus.is-tall { width: min(1180px, calc(100vw - 32px)); }
 .log-dock-main { display: grid; grid-template-columns: minmax(0, 1fr); }
-.log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr) 290px; }
+.log-dock.has-gpus .log-dock-main { grid-template-columns: minmax(0, 1fr) 390px; }
 .log-dock.is-folded .log-dock-main, .log-dock-gpus:empty { display: none; }
 .log-dock:not(.has-gpus) .log-dock-gpus { display: none; }
 .log-dock-gpus { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; padding: 8px 10px; border-top: 1px solid var(--line-soft, var(--line));
@@ -3206,10 +3228,10 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
 .log-dock.has-gpus:not(.is-folded):not(.is-tall) .log-dock-gpus { height: var(--gl-h, calc(10 * 1.5 * 11px + 16px)); }
 .log-dock.has-gpus.is-tall .log-dock-body, .log-dock.has-gpus.is-tall .log-dock-gpus { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 74px); }
 .gl-card { display: flex; flex-direction: column; gap: 3px; padding: 5px 8px 6px; border: 1px solid var(--line-a, var(--line)); border-radius: var(--r-sm, 4px); }
-.gl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.gl-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 8px; min-width: 0; font-variant-numeric: tabular-nums; }   /* HERESY 1329: numbers of one width: a line that does not grow and shrink each second */
 .gl-head .gl-name { flex: none; }
 .gl-card.is-main { border: 1.5px solid var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 14%, transparent); }
-.gl-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 10px/1.3 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.gl-role { min-width: 0; overflow-wrap: anywhere; font: 600 10px/1.3 var(--sans);   /* HERESY 1293: all its roles, on a second line when they need it */ letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .gl-card.is-main .gl-role { color: var(--amber); }
 .gl-name { font-size: 11px; color: var(--ink); }
 .gl-graph { display: block; width: 100%; height: 40px; }
@@ -3275,7 +3297,6 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
 /* HERESY 1101: the trainer's way into the guide on ranks */
 .tr-howto { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--amber); font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; cursor: pointer; }
 .tr-howto:hover { text-decoration: underline; }
-#trRankSay { display: block; margin-top: 3px; font-size: 11px; }
 
 /* HERESY 1103: search, sort and the view in the Librarian's heading line */
 .coll-head { flex-wrap: wrap; row-gap: 8px; }
@@ -4143,6 +4164,13 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
 .tr-logdock-head .spacer { flex: 1; }
 .tr-logdock-name { font-size: 12px; }
 .tr-logdock-body { flex: 1; margin: 0; padding: 8px 14px 10px; overflow: auto; font-size: 12px; line-height: 1.45; white-space: pre; color: var(--muted); }
+/* HERESY 1298 (Viktor 10.10.2026: «The LOG перекрывает серверный фрейм. Сделай утяжку… он не нужен такой длинный для коротких строк»):
+   as wide as its longest line, and no wider than the room beside the server log's dock (--tr-log-room, set by heresy-train.js);
+   on the dock's baseline; the Trainer's own, hidden in the other rooms */
+.tr-logdock { right: auto; width: max-content; max-width: var(--tr-log-room, calc(100vw - 32px)); min-width: min(520px, var(--tr-log-room, calc(100vw - 32px))); }
+.tr-logdock.is-right { left: auto; right: 16px; }
+body[data-tab="train"] .tr-logdock { bottom: 18px; }
+body:not([data-tab="train"]) .tr-logdock { display: none; }
 /* HERESY 1167 (Viktor, the night of 05.10.2026: «Доделываем наш логотип… дым/туман нужно более прозрачным»; the morning of
    06.10: «Ночное лого просто супер. А вот в дневном… Добавь песчинку красного и ещё больше осветли облако, едва заметно
    (7-10% непрозрачности), чтобы был виден силуэт»): the cloud under the Maiden, its colour (--logo-cloud, read by the logo's
@@ -4216,6 +4244,11 @@ select option, select optgroup { background-color: var(--panel); color: var(--in
    foot, 160 px above the window's floor */
 .boot-osem { margin-top: 26px; font-size: clamp(14.4px, 1.14vw, 19.2px); }
 html.booting .boot-veil .boot-line { position: absolute; left: 50%; bottom: 160px; transform: translateX(-50%); }
+/* HERESY 1295 (Viktor: «ты опустил бар, а "ЗАГРУЗКА ЗВУКОВОЙ ЕРЕСИ" забыл»; «версию движка… мелко, под бар»): the words with the line,
+   just above it; the versions small under it */
+html.booting .boot-veil .boot-words { position: absolute; left: 0; right: 0; bottom: 176px; margin: 0; padding-left: .34em; white-space: nowrap; }   /* centred by its box: boot-in animates its transform */
+.boot-ver { margin: 0; font: 400 11px/1.4 var(--mono); letter-spacing: .06em; color: var(--dim); white-space: nowrap; }
+html.booting .boot-veil .boot-ver { position: absolute; left: 0; right: 0; bottom: 128px; text-align: center; }
 /* HERESY 1167 (Viktor: «Карточки у библиотекаря до сих пор слишком красные. Возьми начальный #f2edef и в градиенте дневной темы
    доводи его в правый низ… до нулевой альфы»): by day the card's wash from #f2edef in its top left to nothing at its bottom
    right; a little deeper when hovered, held or checked */
@@ -4559,6 +4592,95 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .tr-voice-opts { display: inline-flex; gap: 4px; }
 .tr-voice .tr-chip { padding: 2px 9px; }
 .tr-voice .tr-chip.is-on { border-color: var(--amber); color: var(--amber); }
+/* HERESY 1322: the upscale's row under the stage's buttons */
+.ar-up-row { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 4px; }
+.ar-up-row select { max-width: 22em; }
+/* HERESY 1320: the mask's options under the reference */
+.ar-mask-opts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; padding-top: 8px; }
+.ar-mask-opts[hidden] { display: none; }
+.ar-mask-opts .field { margin: 0; }
+.ar-mask-opts input[type="number"] { width: 5em; }
+.ar-mask-opts .check { align-self: center; margin-bottom: 4px; }
+/* HERESY 1319: the sampling, folded, its values in the summary */
+.ar-sampling { flex: 1 1 100%; border: 1px solid var(--line-a); border-radius: var(--r-sm); padding: 4px 8px; }
+.ar-sampling > summary { cursor: pointer; display: flex; align-items: baseline; gap: 8px; padding: 2px 0; list-style: none; }
+.ar-sampling > summary::-webkit-details-marker { display: none; }
+.ar-sampling > summary::before { content: "▸"; color: var(--dim); font-size: 11px; }
+.ar-sampling[open] > summary::before { content: "▾"; }
+.ar-sampling > summary em { font-style: normal; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ar-samp-row { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: flex-end; padding: 6px 0 4px; }
+.ar-samp-row .field { margin: 0; }
+.ar-samp-row select { min-width: 7.5em; }
+.ar-samp-steps input, .ar-samp-num input { width: 5.5em; }
+.ar-samp-row .field[hidden] { display: none; }   /* HERESY 1328: .field's own display beat [hidden]: Guidance stood beside Lightning on */
+.ar-light-row { display: flex; align-items: center; gap: 6px; }
+.ar-light-row input[type="checkbox"] { width: auto; margin: 0; }
+.ar-light-row input[type="number"]:disabled { opacity: .45; }
+/* HERESY 1318: the fp8 fine-tune's choice and the painter's note */
+.ar-model { width: 17.5em; flex: none; }
+/* HERESY 1345: the painter's note an i beside its name (a ⚠ for Qwen-Image 2.1's licence) */
+.info.ar-pnote.is-warn { width: 14px; height: 13px; vertical-align: -2px; background: #d9a441; -webkit-mask-image: var(--ico-warn); mask-image: var(--ico-warn); }
+/* HERESY 1316: the Artist's adapters: chosen under the painter, the library to pick them from */
+.ar-loras { flex: 1 1 100%; display: flex; flex-direction: column; gap: 6px; }
+.ar-loras-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ar-loras-head .label em { font-style: normal; color: var(--dim); margin-left: 6px; }
+.ar-lora-list { display: flex; flex-direction: column; gap: 4px; }
+.ar-lora { display: grid; grid-template-columns: 38px minmax(0, 1fr) 24px; grid-template-areas: "pic name x" "pic slide slide" "words words words" "gone gone gone";
+  align-items: center; gap: 2px 8px; padding: 5px 6px; border: 1px solid var(--line-a); border-radius: var(--r-sm); }
+.ar-lora-pic { grid-area: pic; width: 38px; height: 38px; border-radius: 4px; object-fit: cover; background: var(--field); display: block; align-self: start; }
+.ar-lora-name { grid-area: name; font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-lora-x { grid-area: x; }
+.ar-lora-slide { grid-area: slide; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ar-lora-slide .ar-lora-w { flex: 1; min-width: 0; width: auto; }
+.ar-lora-words { grid-area: words; display: flex; gap: 3px; overflow: hidden; }
+.ar-lora-gone { grid-area: gone; }
+.ar-lora.is-muted { opacity: .5; }   /* HERESY 1341: muted as the Creator's rows */
+.ar-lora.is-muted:hover { opacity: .75; }
+.ar-lora-name .lora-muted-tag { vertical-align: 1px; }
+.ar-lora-word { flex: 0 1 auto; min-width: 0; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px/1.4 var(--sans); padding: 0 6px; border: 1px solid var(--line-a); border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; }
+.ar-lora-word:hover { border-color: var(--amber); color: var(--ink); }
+.ar-lora-gone { font-size: 11px; color: var(--bad, #e06c5a); }
+.ar-lora-w { width: 92px; accent-color: var(--amber); }
+.ar-lora-wv { font-size: 11px; color: var(--muted); text-align: right; }
+.ar-lora-x { width: 24px; height: 24px; padding: 0; color: var(--dim); }
+.ar-lib-back { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; padding: 24px; background: color-mix(in srgb, #000 66%, transparent); }
+.ar-lib { width: min(1500px, 100%); height: min(88vh, 1100px); display: flex; flex-direction: column; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); overflow: hidden; }
+.ar-lib-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-bottom: 1px solid var(--line-a); }
+.ar-lib-head .spacer { flex: 1; }
+.ar-lib .ar-lib-head input.ar-lib-q { width: min(320px, 40vw); flex: 0 1 320px; }
+.ar-lib-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+.ar-lib-folders { display: flex; flex-direction: column; gap: 2px; padding: 10px; border-right: 1px solid var(--line-a); overflow: auto; }
+.ar-lib-f { text-align: left; padding: 6px 9px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); font: 13px/1.3 var(--sans); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-lib-f em { font-style: normal; color: var(--dim); margin-left: 4px; }
+.ar-lib-f.is-on, .ar-lib-f:hover { background: color-mix(in srgb, var(--amber) 12%, transparent); color: var(--ink); }
+.ar-lib-grid { overflow: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; align-content: start; }
+.ar-lib-card { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 0 0 8px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--field); color: var(--ink); text-align: left; cursor: pointer; overflow: hidden; }
+.ar-lib-card:hover { border-color: var(--line-strong); }
+.ar-lib-card.is-on { border-color: var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 35%, transparent); }
+.ar-lib-card img, .ar-lib-nopic { width: 100%; aspect-ratio: 1; object-fit: contain; object-position: center; display: block; background: var(--ground); }   /* HERESY 1340: whole, not cropped */
+.ar-lib-nopic { display: grid; place-items: center; padding: 12px; color: var(--dim); font-size: 12px; text-align: center; word-break: break-word; }
+.ar-lib-n { position: absolute; top: 6px; left: 6px; min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px; background: var(--amber); color: #111; font: 600 12px/1 var(--sans); }
+.ar-lib-name { padding: 2px 8px 0; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-lib-meta { display: flex; justify-content: space-between; gap: 6px; padding: 0 8px; font-size: 11px; color: var(--dim); }
+.ar-lib-meta span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-lib-cv { color: var(--amber); font-weight: 600; }
+.ar-lib-words { padding: 0 8px; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-lib-empty { grid-column: 1 / -1; max-width: 70ch; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+/* HERESY 1315: the section under the pointer over the wave, with its lines as written */
+.wave-pop { position: fixed; z-index: 60; max-width: min(440px, calc(100vw - 16px)); padding: 9px 12px 10px; border: 1px solid var(--line-a); border-radius: var(--r-md);
+  background: var(--panel); color: var(--ink); box-shadow: 0 10px 28px rgba(0, 0, 0, .35); pointer-events: none; }
+.wave-pop[hidden] { display: none; }
+.wave-pop-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.wave-pop-head b { color: var(--amber); font-weight: 600; }
+.wave-pop-head span { font-family: "IBM Plex Mono", monospace; letter-spacing: 0; }
+.wave-pop-lines p, .wave-pop-hint { margin: 0; font-size: 13px; line-height: 1.45; }
+.wave-pop-lines p { color: var(--muted); }
+.wave-pop-lines p.is-now { color: var(--ink); }
+.wave-pop-hint { color: var(--dim); font-size: 12px; }
+/* HERESY 1314: male and female drawn, on the line with their words */
+.tr-voice .tr-chip-sex { display: inline-grid; place-items: center; padding: 2px 8px; }
+.tr-voice .tr-chip-sex .ui-ico { width: 15px; height: 15px; }
+.ui-ico.tr-sex { display: inline-block; width: 13px; height: 13px; margin-right: 3px; vertical-align: -2px; }
 /* HERESY 1169 (Viktor 08.10.2026: «как в кодовом редакторе отображение номера строки… по Alt+K маркировать строки, а по Alt+J
    прыгать на них. И подсвечивать тонким альфа слоем все музыкальные теги»): the lines' numbers in the box's left padding, a
    marked line's number amber with a dot and a faint band along the line; the [tags] under a thin amber layer */
@@ -4688,6 +4810,11 @@ body:not([data-frame]) .frame-fs { display: none; }
 
 /* HERESY 1169 · 1240: with a frame lifted the server log stands at the left (its width and height set by placeLogDock) */
 .log-dock.is-left { right: auto; left: 16px; }
+/* HERESY 1301: the button that takes the dock across the page, on its inner edge; hidden while a frame is lifted (the frame decides) */
+.log-dock-side { flex: none; display: inline-grid; place-items: center; padding: 4px 6px; }
+.log-dock-side .ui-ico { width: 16px; height: 16px; }
+.log-dock.is-left .log-dock-side { order: 9; }
+body[data-frame] .log-dock-side { display: none; }
 
 /* HERESY 1169 · 1241 (Viktor 08.10.2026: «Фильтр прикрути как кнопку в ту же строку с поиском и сортировкой - в самый конец справа. Минимальную длину поискового поля… 240 px, макс длина - 320px»): the filters' row gone for a button at the end of the search row; their window as the workspace's chooser */
 #collBar { display: none !important; }
@@ -4738,10 +4865,142 @@ body[data-tab="artist"] .col-grip.left { display: none; }
   font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
 .ar-form { display: flex; flex-direction: column; gap: 12px; margin: 16px 0 6px; }
 .ar-form textarea { resize: vertical; min-height: 92px; }
+/* HERESY 1305: the reference picture: a place to drop one, or the picture with its strength and ✕ */
+.ar-ref { border: 1px dashed var(--line-strong-a, var(--line)); border-radius: var(--r-md); padding: 8px 10px; }
+.ar-ref.is-over { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 8%, transparent); }
+.ar-ref:has(.ar-ref-on:not([hidden])) { border-style: solid; }
+.ar-ref-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.ar-ref-empty .row-hint { margin: 0; flex: 1 1 200px; }
+.ar-ref-empty[hidden] { display: none; }                  /* its flex beat the attribute: the empty words stayed beside the picture */
+.ar-ref-pick { cursor: pointer; }
+#arRefTake[hidden] { display: none; }                    /* HERESY 1309: .btn's display beats the attribute */
+.ar-ref-on { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.ar-ref-on[hidden] { display: none; }
+.ar-ref-on img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--r-sm, 6px); background: var(--ground); }
+.ar-ref-str input { width: 100%; accent-color: var(--amber); }
+/* HERESY 1306: the mask: its red over the thumbnail, and its editor over the page */
+.ar-ref-btns { display: flex; align-items: center; gap: 6px; }
+/* HERESY 1346: the canvas's places under the strength */
+.ar-cv-say { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--amber); }
+.ar-cv-say[hidden] { display: none; }
+.ar-cv-say em { font-style: normal; }
+.ar-ref.is-canvas .ar-ref-on, .ar-ref-on { grid-template-columns: 72px minmax(0, 1fr); }   /* HERESY 1346b: the buttons a row of their own */
+.ar-ref-on > .ar-ref-btns { grid-column: 1 / -1; flex-wrap: wrap; }
+/* HERESY 1346 (Viktor: «в подобной ереси канваса аутпеинта, инпеинта именно так, как в InvokeAI»): the canvas: the board, the tools on its
+   left, the layers and the place on its right, the shapes' frames as tabs on top */
+.cv { position: fixed; inset: 0; z-index: 120; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--ground); color: var(--ink);
+  --cv-bg: color-mix(in srgb, var(--ground) 78%, #000); --cv-dot: color-mix(in srgb, var(--ink) 10%, transparent); --cv-frame: var(--amber); }
+.cv-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 14px; border-bottom: 1px solid var(--line-a); }
+.cv-title { font: 600 12.5px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; margin-right: 6px; }
+.cv-tabs, .cv-group { display: inline-flex; gap: 4px; }
+.cv-tab { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 10px; border: 1px solid var(--line-a); border-radius: var(--r-sm, 4px); background: none; color: var(--ink); cursor: pointer; font: 12px var(--sans); }
+.cv-tab:hover { background: var(--hover); }
+.cv-tab.is-on { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); }
+.cv-tab.is-off { opacity: .55; }
+.cv-tab-mode { font-style: normal; font-size: 10.5px; color: var(--muted); }
+.cv-brush { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.cv-brush[hidden] { display: none; }
+.cv-brush input { width: 140px; }
+.cv-brush output { min-width: 4.5em; font-variant-numeric: tabular-nums; }
+.cv-body { display: grid; grid-template-columns: 50px minmax(0, 1fr) 300px; min-height: 0; }
+.cv-tools { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-right: 1px solid var(--line-a); }
+.cv-tool { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid transparent; border-radius: var(--r-sm, 4px); background: none; color: var(--muted); cursor: pointer; }
+.cv-tool:hover { color: var(--ink); background: var(--hover); }
+.cv-tool.is-on { color: var(--amber); border-color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); }
+.cv-ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.cv-board { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.cv-canvas { position: absolute; inset: 0; display: block; touch-action: none; }
+.cv-side { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-left: 1px solid var(--line-a); overflow-y: auto; font-size: 12.5px; }
+.cv-h { font: 600 10.5px/1.3 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+.cv-layer { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line-a); border-radius: var(--r-sm, 4px); }
+.cv-layer .spacer { flex: 1; }
+.cv-layer input[type=range] { width: 84px; }
+.cv-eye { opacity: .45; }
+.cv-eye.is-on { opacity: 1; }
+.cv-eye .cv-ico { width: 16px; height: 16px; }
+.cv-swatch { width: 14px; height: 14px; flex: none; border-radius: 3px; background: #e02828; opacity: .8; }
+.cv-thumb { width: 28px; height: 28px; flex: none; object-fit: cover; border-radius: 3px; }
+.cv-nums { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.cv-nums label { display: grid; grid-template-columns: 5.5em minmax(0, 1fr) 1.4em; align-items: center; gap: 6px; min-width: 0; }
+.cv-nums span { font-size: 11px; color: var(--muted); }
+.cv-nums input { width: 100%; min-width: 0; }
+.cv-nums em { font-style: normal; color: var(--muted); }
+.cv-say, .cv-mode, .cv-keys { margin: 0; color: var(--muted); line-height: 1.45; }
+.cv-mode { color: var(--ink); }
+.cv-keys { font-size: 11px; margin-top: auto; }
+.cv-foot { display: flex; gap: 18px; padding: 5px 14px; border-top: 1px solid var(--line-a); font-size: 11px; color: var(--muted); }
+.cv .pb-btn:disabled { opacity: .35; }
+@media (max-width: 900px) { .cv-body { grid-template-columns: 44px minmax(0, 1fr); } .cv-side { display: none; } }
+/* HERESY 1307: «Paint around it» under the strength; with it the strength gives way */
+.ar-ref-mid { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ar-ref-fit { display: block; margin: 2px 0 4px; font-size: 12px; }
+.ar-ref-fit .check { gap: 6px; }
+.ar-ref.is-fit .ar-ref-str input[type="range"], .ar-ref.is-fit #arRefSay { opacity: .45; }
+.ar-ref-pic { position: relative; width: 72px; height: 72px; }
+.ar-ref-pic canvas { position: absolute; inset: 0; width: 72px; height: 72px; border-radius: var(--r-sm, 6px); pointer-events: none; }
+#arMaskOpen.is-on { border-color: var(--bad); color: var(--bad); }
+.ar-mask { position: fixed; inset: 0; z-index: 120; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: color-mix(in srgb, #000 72%, transparent); padding: 16px; }
+.ar-mask-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: var(--r-md); background: var(--panel);
+  border: 1px solid var(--line-a); color: var(--ink); max-width: min(96vw, 1100px); }
+.ar-mask-tools .spacer { flex: 1; }
+.ar-mask-tools .chip.is-on { border-color: var(--amber); color: var(--ink); background: color-mix(in srgb, var(--amber) 16%, transparent); }
+.ar-mask-tools input[type="range"] { width: 140px; accent-color: var(--amber); }
+.ar-mask-stage { position: relative; line-height: 0; box-shadow: 0 20px 60px -20px #000; }
+.ar-mask-stage canvas { display: block; }
+.ar-mask-stage canvas + canvas { position: absolute; inset: 0; cursor: none; opacity: .5; }
+/* HERESY 1310: the Artist's trash in the library */
+.ar-trun { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line-soft, var(--line)); }
+.ar-trun:first-child { border-top: 0; }
+.ar-trun-pics { display: flex; gap: 6px; grid-column: 1 / -1; }
+.ar-trun-pics img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; opacity: .8; background: var(--ground); }
+.ar-trun-head { min-width: 0; font-size: 12.5px; color: var(--muted); }
+.ar-trun-head p { margin: 2px 0 0; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* HERESY 1308: two pictures under one divider, or side by side */
+body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic button { cursor: copy; outline: 2px dashed color-mix(in srgb, var(--amber) 60%, transparent); outline-offset: -2px; }
+.ar-cmp { position: fixed; inset: 0; z-index: 120; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px;
+  background: color-mix(in srgb, #000 82%, transparent); }
+.ar-cmp-tools { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--r-md); background: var(--panel); border: 1px solid var(--line-a); color: var(--ink); }
+.ar-cmp-tools .btn.is-on { border-color: var(--amber); }
+.ar-cmp-box { position: relative; user-select: none; touch-action: none; cursor: ew-resize; line-height: 0; }
+.ar-cmp-box img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.ar-cmp-box .ar-cmp-b { position: absolute; inset: 0; }
+.ar-cmp-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px #000a; pointer-events: none; }
+.ar-cmp-line::after { content: "‹ ›"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 4px 8px; border-radius: 999px;
+  background: #fff; color: #111; font: 600 13px/1 var(--sans, sans-serif); white-space: nowrap; }
+.ar-cmp-lab { position: absolute; top: 8px; padding: 3px 8px; border-radius: 6px; background: #000a; color: #fff; font: 12px/1.4 var(--sans, sans-serif); pointer-events: none; }
+.ar-cmp-lab.is-a { left: 8px; } .ar-cmp-lab.is-b { right: 8px; }
+.ar-cmp.is-side .ar-cmp-box { display: flex; gap: 12px; cursor: default; }
+.ar-cmp.is-side .ar-cmp-box .ar-cmp-b { position: static; clip-path: none !important; }
+.ar-cmp.is-side .ar-cmp-line { display: none; }
+.ar-mask-ring { position: absolute; border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #000; pointer-events: none; transform: translate(-50%, -50%); }
 .ar-knobs { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
 .ar-shapes { display: flex; gap: 6px; flex-wrap: wrap; }
 .ar-shape { display: inline-flex; align-items: center; gap: 6px; user-select: none; white-space: nowrap; }
 .ar-shape input { margin: 0; accent-color: var(--amber); }
+/* HERESY 1321: the shapes and the star drawn; the picked pictures; the pictures put aside */
+.ar-shape { position: relative; padding: 4px 8px; }
+.ar-shape input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.ar-shape-ico { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.ar-shape.is-on .ar-shape-ico, .ar-fshape.is-on .ar-shape-ico { fill: color-mix(in srgb, var(--amber) 22%, transparent); }
+.ar-fshape { display: inline-grid; place-items: center; padding: 3px 8px; }
+.ar-star-ico { width: 18px; height: 18px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+.ar-star-ico.is-on { fill: #f2c14e; stroke: #f2c14e; }
+.ar-fshape .ar-star-ico.is-on { fill: currentColor; stroke: currentColor; }
+.ar-pic.is-picked { position: relative; }
+.ar-gpic.is-picked, .ar-pic.is-picked { outline: 3px solid var(--amber); outline-offset: -3px; border-radius: var(--r-md); }
+.ar-gpic.is-picked::after, .ar-pic.is-picked::after { content: "\2713"; position: absolute; top: 6px; left: 6px; width: 22px; height: 22px; display: grid; place-items: center;
+  border-radius: 999px; background: var(--amber); color: #111; font: 700 13px/1 var(--sans); pointer-events: none; }
+.ar-picked { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--line-a); }
+.ar-picked[hidden] { display: none; }
+.ar-picked-n { font-size: 12.5px; color: var(--amber); white-space: nowrap; }
+.ar-aside-box { margin: 0 0 14px; padding: 0 0 12px; border-bottom: 1px solid var(--line-a); }
+.ar-aside-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12.5px; color: var(--muted); }
+.ar-aside-head b { color: var(--ink); }
+.ar-aside-head .btn { margin-left: auto; }
+.ar-aside-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.ar-aside-pic { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.ar-aside-pic img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; opacity: .85; background: var(--ground); }
 .ar-shape.is-on { border-color: var(--amber); color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); }
 .ar-seed { width: 13.5em; flex: none; }
 .ar-seed-row { display: flex; gap: 6px; align-items: center; }
@@ -4827,26 +5086,82 @@ body[data-tab="artist"] .col-grip.left { display: none; }
 .wr-hand-doc .wr-hand-x:hover { color: var(--ink); background: color-mix(in oklab, var(--amber) 14%, transparent); }
 /* HERESY 1270: the Artist's Draw is Stop while a run waits or draws, in the theme's colour for what ends something */
 #arDraw.is-stop { background: var(--bad); border-color: var(--bad); color: #fff; }
+#arStop { margin-left: auto; justify-content: center; text-transform: uppercase; letter-spacing: .06em; background: var(--bad); border-color: var(--bad); color: #fff; }   /* HERESY 1340 */
+#arStop:hover { filter: brightness(1.08); }
+#arStop[hidden] { display: none; }   /* HERESY 1345: a .btn shows through [hidden] (1340 left Stop in sight with no run going) */
 #arDraw.is-stop:hover { filter: brightness(1.08); }
 /* HERESY 1271: the Artist in three columns, the outer two as wide as their edges are dragged (kept), the stage the rest */
 .ar-cols { display: grid; grid-template-columns: var(--ar-l, 380px) 12px minmax(280px, 1fr) 12px var(--ar-r, 560px); column-gap: 4px; align-items: start; margin-top: 14px; }
 .ar-left, .ar-stage, .ar-right { min-width: 0; }
 .ar-left, .ar-stage { position: sticky; top: 8px; }
+/* HERESY 1340 (Viktor 10.10.2026: «Левая колонка Художника не прокручивается независимо»; «Среднюю колонку фрейм промпта растянуть
+   до пола»): the form scrolls on its own within the window's height under it (--ar-avail, kept by heresy-artist.js as the room
+   scrolls), and the stage takes that height, its prompt frame filling what the picture leaves */
+.ar-cols > .ar-left { max-height: var(--ar-avail, none); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: stable; padding-right: 6px; }
+/* HERESY 1344 (Viktor: «зафиксировать прокрутку страницы, если vh имеет как минимум 920px»): the room whole in the window; each column its own scroll */
+#view-artist.ar-fixed { overflow: hidden; }
+.ar-fixed .ar-cols { height: var(--ar-avail); align-items: stretch; }
+.ar-fixed .ar-cols > .ar-left { max-height: none; height: 100%; }
+.ar-fixed .ar-stage { height: 100%; }
+.ar-fixed .ar-right { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding-right: 6px; }
+.ar-fixed .ar-right .ar-bar { position: sticky; top: 0; z-index: 3; background: var(--ground); padding-bottom: 8px; }
+.ar-stage.is-tall { height: var(--ar-avail, auto); }
+.ar-stage.is-tall .ar-stage-data { flex: 1 1 auto; min-height: 0; }
+.ar-stage.is-tall .ar-stage-prompt { flex: 1 1 auto; min-height: 4.4em; max-height: none; }
 .ar-cols .ar-form { margin: 0; }
 .ar-cols .ar-bar { margin: 0; }
 .ar-cols .ar-runs { margin: 12px 0 28px; }
 .ar-left .ar-knobs { gap: 10px 12px; }
 .ar-left .ar-go { margin-left: 0; flex: 1 1 100%; justify-content: space-between; }
 .ar-left .ar-go #arDraw { min-width: 8em; }
+/* HERESY 1345 (Viktor: «Уехало и слилось — кнопки, оценочная длительность генерации и прогресс»): the cost a line of its own, Stop and Draw
+   under it, the row at the column's foot as the form scrolls */
+.ar-left .ar-go { flex-wrap: wrap; gap: 6px 8px; position: sticky; bottom: 0; z-index: 2; background: var(--ground); padding: 8px 0 4px; }
+.ar-left .ar-go #arCost { flex: 1 1 100%; white-space: normal; }
+.ar-left .ar-go #arStop { margin-left: 0; flex: 0 0 auto; }
+.ar-left .ar-go #arDraw { flex: 1 1 auto; }
+/* HERESY 1345 (Viktor: «ВАРИАЦИИ ужми, а СИД лучше растянуть»): one row, the seed taking what Variations leaves; the painter and its
+   fine-tune each a row of their own */
+.ar-seedcount { display: flex; align-items: flex-end; gap: 10px; flex: 1 1 100%; min-width: 0; }
+.ar-seedcount > .ar-seed { flex: 1 1 auto; width: auto; min-width: 0; }
+.ar-seedcount > .ar-count { flex: 0 0 4.8em; width: 4.8em; }
+.ar-seedcount .ar-seed-row input { min-width: 4em; }
+.ar-left .ar-knobs > .ar-painter, .ar-left .ar-knobs > .ar-model { flex: 1 1 100%; }
+/* HERESY 1345b: the folded log on the left (the Artist's side by default) lies over the page's foot: the form ends above it */
+.ar-cols > .ar-left { margin-bottom: var(--ar-foot, 0px); }
+.ar-cols:not(.x) > .ar-left { max-height: calc(var(--ar-avail, 100vh) - var(--ar-foot, 0px)); }
+.ar-fixed .ar-cols > .ar-left { height: calc(100% - var(--ar-foot, 0px)); max-height: none; }
 .ar-resizer { align-self: stretch; min-height: 220px; display: flex; justify-content: center; cursor: col-resize; touch-action: none; outline: none; }
 .ar-resizer::before { content: ""; width: 2px; height: 100%; border-radius: 1px; background: transparent; transition: background .12s; }
 .ar-resizer:hover::before, .ar-resizer.is-drag::before, .ar-resizer:focus-visible::before { background: var(--line-strong-a); }
-.ar-stage { display: flex; flex-direction: column; gap: 10px; }
+.ar-stage { display: flex; flex-direction: column; gap: 10px; z-index: 5; }   /* HERESY 1345: its tip over the library's cards */
+.ar-stage-in { display: contents; }
+/* HERESY 1345 (Viktor: «Прогресс бар… по всей ширине центральной прямо поверх проявки изображения, не сдвигая само изображение») */
+#arStage > .ar-progress { position: absolute; left: 0; right: 0; top: 0; z-index: 4; padding: 7px 12px 8px; pointer-events: none;
+  background: color-mix(in srgb, var(--ground) 78%, transparent); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--line-a); border-radius: var(--r-md) var(--r-md) 0 0; }
+#arStage > .ar-progress[hidden] { display: none; }
+.ar-stage-acts { justify-content: center; }
+/* HERESY 1345 (Viktor: «фрейм с промптом убрать в массивный, но не мешающий тултип > вправо от картинки поверх правой колонки — при наведении
+   мышью на картинку… Инфу по самой генерации тоже в этот же тултип»): beside the picture over the library while the pointer is on it (or
+   on the tip itself, reached across the gap in the moment it waits); on a narrow window it stays under the buttons */
+.ar-stage-tip { order: 2; }
+.ar-stage-tip .ar-stage-meta { justify-content: center; padding: 6px 10px; border: 1px solid var(--line-a); border-radius: var(--r-sm, 4px); background: color-mix(in srgb, var(--ink) 4%, transparent); }
+@media (min-width: 1281px) {
+  .ar-stage-tip { position: absolute; top: 0; left: calc(100% + 20px); width: calc(var(--ar-r, 560px) - 10px); max-height: 100%; overflow: auto; z-index: 30;
+    padding: 14px 16px 16px; gap: 10px; background: var(--panel); border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 12px 36px rgba(0, 0, 0, .35);
+    visibility: hidden; opacity: 0; transform: translateX(-6px); transition: opacity .14s ease, transform .14s ease, visibility 0s linear .32s; }
+  .ar-stage:has(.ar-stage-pic:hover) .ar-stage-tip, .ar-stage:has(.ar-stage-pic:focus-visible) .ar-stage-tip, .ar-stage-tip:hover {
+    visibility: visible; opacity: 1; transform: none; transition: opacity .14s ease .12s, transform .14s ease .12s, visibility 0s linear .12s; }
+  .ar-stage-tip .ar-stage-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 0 0 10px; border: 0; border-bottom: 1px solid var(--line-a); border-radius: 0; background: none; }
+  .ar-stage-tip .ar-stage-prompt { max-height: none; overflow: visible; font-size: 13.5px; line-height: 1.5; }
+}
 .ar-stage-pic { position: relative; display: block; align-self: center; padding: 0; overflow: hidden; border: 1px solid var(--line-a); border-radius: var(--r-md);
   background: var(--field); cursor: zoom-in; }
 .ar-stage-pic img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .ar-stage-pic.is-loading img { filter: blur(1.5px); }
 .ar-stage-pic.is-live { cursor: default; border-color: var(--amber-dim); }
+.ar-stage-pic.is-live > .ar-stage-empty { position: absolute; inset: 0; min-height: 0; border: 0; border-radius: 0; }   /* HERESY 1317: the frame's own size */
 .ar-stage-empty { display: grid; place-items: center; min-height: 240px; padding: 20px; border: 1px dashed var(--line-a); border-radius: var(--r-md);
   color: var(--dim); font-size: 13px; text-align: center; }
 .ar-stage-data { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
@@ -4855,4 +5170,63 @@ body[data-tab="artist"] .col-grip.left { display: none; }
 .ar-stage-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .ar-stage-acts .ar-vstar { font-size: 18px; }
 .ar-thumb.is-sel { border-color: var(--amber); box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 35%, transparent); }
-@media (max-width: 1280px) { .ar-cols { grid-template-columns: minmax(0, 1fr); } .ar-resizer { display: none; } .ar-left, .ar-stage { position: static; } }
+@media (max-width: 1280px) { .ar-cols { grid-template-columns: minmax(0, 1fr); } .ar-resizer { display: none; } .ar-left, .ar-stage { position: static; }
+  .ar-cols > .ar-left { max-height: none; overflow: visible; padding-right: 0; } }
+/* HERESY 1327: the adapters that wrote the score against those on now */
+.score-guard { color: var(--amber); margin: 4px 0 0; }
+.score-guard[hidden] { display: none; }
+/* HERESY 1329: the dock's outer edge, dragged from its base width to 1200 px (kept); a double click gives the base back */
+.log-dock-grip { position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; cursor: ew-resize; z-index: 3; touch-action: none; }
+.log-dock-grip::after { content: ""; position: absolute; top: 8px; bottom: 8px; left: 3px; width: 2px; border-radius: 1px; background: transparent; transition: background .12s ease; }
+.log-dock-grip:hover::after, .log-dock-grip.is-on::after { background: var(--amber); }
+.log-dock.is-left .log-dock-grip { left: auto; right: -4px; }
+.log-dock.is-folded .log-dock-grip { display: none; }
+/* HERESY 1330: a seed's mode beside its field */
+.seed-mode { flex: none; width: auto; min-width: 0; max-width: 9.5em; font-size: 12px; padding-right: 22px; }
+.seedfield .seed-mode { display: block; margin-top: 6px; width: 100%; max-width: none; }
+.ar-seed-row input { flex: 1 1 auto; min-width: 5em; }
+/* HERESY 1332: Draw's word centred in capitals; the painter's and the fine-tune's choices the row wide, never narrower than their names;
+   the column's fields stretch with it; the run's progress under Draw */
+#arDraw { justify-content: center; text-align: center; text-transform: uppercase; letter-spacing: .06em; }
+.ar-left .ar-painter, .ar-left .ar-model { flex: 1 1 100%; }
+.ar-left .ar-painter select, .ar-left .ar-model select { width: 100%; min-width: max-content; }
+.ar-left .ar-knobs > .field { flex: 1 1 auto; }
+.ar-left .ar-samp-row > .field { flex: 1 1 auto; }
+.ar-left .ar-samp-row select { width: 100%; min-width: max-content; }
+.ar-progress { flex: 1 1 100%; display: flex; flex-direction: column; gap: 4px; }
+.ar-progress[hidden] { display: none; }
+.ar-progress-bar { display: block; height: 6px; border-radius: 3px; background: var(--line-a); overflow: hidden; }
+.ar-progress-bar i { display: block; height: 100%; width: 0; background: var(--amber); transition: width .4s ease; }
+.ar-progress.is-waiting .ar-progress-bar i { background: repeating-linear-gradient(-45deg, var(--amber) 0 8px, transparent 8px 16px); background-size: 22px 22px; animation: ar-wait 1s linear infinite; opacity: .55; }
+@keyframes ar-wait { from { background-position: 0 0; } to { background-position: 22px 0; } }
+@media (prefers-reduced-motion: reduce) { .ar-progress.is-waiting .ar-progress-bar i { animation: none; } }
+.ar-progress em { font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* HERESY 1333: the sampling's warnings the matrix earned */
+/* HERESY 1334: the dock's two views; the log's own window */
+.log-dock-views { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line-a); border-radius: var(--r-sm, 4px); }
+.log-view { border: 0; background: none; color: var(--muted); font: inherit; font-size: 11px; padding: 2px 8px; border-radius: 3px; cursor: pointer; }
+.log-view.is-on { background: var(--hover); color: var(--ink); }
+.log-dock-body[hidden] { display: none; }
+body.log-pop { margin: 0; background: var(--panel); color: var(--ink); display: flex; flex-direction: column; height: 100vh; }
+.log-pop-head { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--line-a); }
+body.log-pop .log-dock-body { flex: 1 1 auto; height: auto; overflow: auto; padding: 8px 12px; }
+/* HERESY 1343 (Viktor 10.10.2026: «детач лога сервера сделай вместе с GPU колонкой»): the log's own window, the cards beside the log */
+.log-pop-main { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 390px; }
+.log-pop-main:has(.log-pop-gpus:empty) { grid-template-columns: minmax(0, 1fr); }
+.log-pop-logs { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.log-pop-gpus { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; padding: 8px 10px; border-left: 1px solid var(--line-soft, var(--line)); }
+.log-pop-gpus:empty { display: none; }
+@media (max-width: 700px) { .log-pop-main { grid-template-columns: minmax(0, 1fr); } .log-pop-gpus { display: none; } }
+/* HERESY 1335: the Artist's adapters together, as the Creator's bar */
+.ar-lora-total { margin-top: 6px; }
+/* HERESY 1336: «Its run» from a picture's menu: the card it came from, flashed */
+.ar-run.is-flash { outline: 2px solid var(--amber); outline-offset: 2px; transition: outline-color .6s ease; }
+/* HERESY 1336: a picture's menu over the page's view (110) stands over it */
+body:has(.ar-view) .hm-menu { z-index: 130; }
+body:has(.ar-view) .hm-tip { z-index: 131; }
+/* HERESY 1337: the art's trash: in the library a picture beside each line; in the Artist's Trash look its head and each picture's ✕ */
+.coll-art-pic { width: 52px; height: 52px; flex: 0 0 52px; object-fit: cover; border-radius: var(--r-sm); background: var(--line-a); }
+.coll-card.coll-art.is-frozen { opacity: .62; }
+.ar-trash-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+.ar-aside-pic { position: relative; }
+.ar-aside-pic .ar-aside-x { position: absolute; top: 4px; right: 4px; }

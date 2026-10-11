@@ -108,7 +108,7 @@
       var on = state.doc && state.doc.id === d.id;
       return '<button type="button" class="wr-item' + (on ? " is-on" : "") + '" data-doc="' + esc(d.id) + '">' +
         '<span class="wr-item-title">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in the Creator">✎</span> ' : "") + esc(d.title) + "</span>" +
-        '<span class="wr-item-ex">' + esc(d.excerpt || d.style || "") + "</span>" +
+        '<span class="wr-item-ex" translate="no">' + esc(d.excerpt || d.style || "") + "</span>" +
         '<span class="wr-item-meta"><span>' + esc(when(d.updated)) + "</span>" + (d.takes ? " · <span>" + d.takes + " take" + (d.takes > 1 ? "s" : "") + "</span>" : "") +   // HERESY 1166
         (d.versions ? " · <span>" + d.versions + " v</span>" : "") + "</span></button>";
     }).join("") : '<p class="row-hint wr-empty">' + (state.docs.length ? "Nothing for “" + esc(state.q) + "”." : "No documents yet. ＋ New, or “Save to Writer” in the Creator.") + "</p>";
@@ -246,7 +246,7 @@
     $("wrHandSave").title = d ? "Save the song as it is now into “" + d.title + "” (the version before is kept)" : "Keep the song as it is now (title, style, lyrics and every knob) as a document in the Writer";
     var pick = $("wrHandPick");
     pick.innerHTML = '<option value="">From the Writer…</option>' + state.docs.slice(0, 60).map(function (x) {
-      return '<option value="' + esc(x.id) + '">' + esc(x.title) + "</option>";
+      return '<option value="' + esc(x.id) + '" translate="no">' + esc(x.title) + "</option>";   // HERESY 1339: a document's title
     }).join("");
   }
 

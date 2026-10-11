@@ -16,6 +16,21 @@
     return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
   }
   function toast(t, kind) { if (state.hooks) state.hooks.toast(t, kind); }
+  // HERESY 1294: a card's VRAM limit, a slider in half gigabytes from 4 GB to the card's own size (its size: no limit); kept in
+  // MiB with the roles (user/gpus.json "limits"); the studio card's is the budget Compute's Auto plans for
+  function maxGb(c) { return Math.floor(c.total_mb / 512) / 2; }
+  function limitOf(r, i) { var mb = r && r.limits ? r.limits[String(i)] : 0; return mb ? mb / 1024 : 0; }
+  function limitText(v, top) { return v >= top ? tr("no limit") + " · " + top.toFixed(1) + " GB" : v.toFixed(1) + " " + tr("of") + " " + top.toFixed(1) + " GB"; }
+  function limitCell(c, r) {
+    var top = maxGb(c), v = Math.min(top, limitOf(r, c.index) || top);
+    return '<input type="range" class="gpu-limit-range" data-limit="' + c.index + '" min="4" max="' + top + '" step="0.5" value="' + v + '" aria-label="VRAM limit of GPU' + c.index + '" />' +
+      '<span class="gpu-limit-v mono" data-limit-v="' + c.index + '">' + esc(limitText(v, top)) + "</span>";
+  }
+  function paintLimit(x) {
+    var v = $("gpuRoles").querySelector('[data-limit-v="' + x.dataset.limit + '"]');
+    if (v) v.textContent = limitText(+x.value, +x.max);
+  }
+  function studioLimitGib() { var d = state.data; return d && d.roles ? limitOf(d.roles, d.roles.studio) : 0; }
   // HERESY 1166: the hint's sentences translated each, and again when the language changes
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   window.addEventListener("ruach-lang", function () { if (state.data) hint(); });
@@ -28,7 +43,8 @@
       var r = d.roles, studioNow = d.studio_now;
       if (!Array.isArray(d.cards) || !d.cards.length) { host.innerHTML = '<p class="row-hint">' + esc((d.cards && d.cards.error) || "No card found") + "</p>"; return; }
       host.innerHTML = '<table class="gpu-table"><tr><th>card</th><th data-tip="The card the studio’s synthesis runs on: one">studio</th>' +
-        '<th data-tip="Cards a training run may take">training</th><th data-tip="The listener, Whisper, stems, remaster, upscale">lab jobs</th><th>now</th>' +
+        '<th data-tip="Cards a training run may take">training</th><th data-tip="The listener, Whisper, stems, remaster, upscale">lab jobs</th>' +
+        '<th data-tip="The most of the card\u2019s memory the studio\u2019s work may take, the rest left to what else runs on it (a laptop\u2019s desktop and browser): Compute\u2019s Auto plans the engine\u2019s knobs for the studio card\u2019s limit, and the lab gives a card a job only when it fits under its limit">VRAM limit</th><th>now</th>' +
         '<th data-tip="What the GPU guard says of the card this moment: open to the studio\u2019s work, or closed by another program\u2019s service (more than 2 GiB); the desktop\u2019s small ones do not close it">the guard</th></tr>' +
         d.cards.map(function (c) {
           var i = c.index, now = [];
@@ -38,11 +54,27 @@
             '<td><input type="radio" name="gpuStudio" value="' + i + '"' + (r.studio === i ? " checked" : "") + " /></td>" +
             '<td><input type="checkbox" data-role="train" value="' + i + '"' + (r.train.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
             '<td><input type="checkbox" data-role="jobs" value="' + i + '"' + (r.jobs.indexOf(i) >= 0 ? " checked" : "") + " /></td>" +
+            '<td class="gpu-limit">' + limitCell(c, r) + "</td>" +
             '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td>" + guardCell(d.guard, i) + "</tr>" +
-            '<tr class="gpu-live-row"><td colspan="6"><div class="gpu-live" data-gpu="' + i + '"></div></td></tr>';   // HERESY 1264: the card live
+            '<tr class="gpu-live-row"><td colspan="7"><div class="gpu-live" data-gpu="' + i + '"></div></td></tr>';   // HERESY 1264: the card live
         }).join("") + "</table>";
       hint();
+      migrate(d);
     }).catch(function (e) { host.innerHTML = '<p class="tr-err">The lab does not answer: ' + esc(e.message) + "</p>"; });
+  }
+  // HERESY 1294: rc4's «Auto within N GB» (kept in the page as «auto:N») becomes the studio card's limit, once
+  function migrate(d) {
+    var n = state.hooks && state.hooks.legacy ? state.hooks.legacy() : 0;
+    if (!n) return;
+    if (limitOf(d.roles, d.roles.studio)) { if (state.hooks.migrated) state.hooks.migrated(); return; }
+    var limits = Object.assign({}, d.roles.limits || {});
+    limits[String(d.roles.studio)] = Math.round(n * 1024);
+    lab("/gpus", { studio: d.roles.studio, train: d.roles.train, jobs: d.roles.jobs, limits: limits }).then(function (d2) {
+      state.data = d2;
+      if (state.hooks.migrated) state.hooks.migrated();
+      if (state.hooks.limits) state.hooks.limits();
+      paint();
+    }).catch(function (e) { console.warn("the old memory budget could not become a VRAM limit:", e.message); });
   }
   // HERESY 1140: the guard's verdict: open (with what is free, and the desktop's small programs in the tip), or closed
   // and by whom
@@ -59,8 +91,11 @@
   }
   function chosen() {
     var pick = function (role) { return Array.prototype.map.call(document.querySelectorAll('#gpuRoles input[data-role="' + role + '"]:checked'), function (x) { return +x.value; }); };
-    var s = document.querySelector('#gpuRoles input[name="gpuStudio"]:checked');
-    return { studio: s ? +s.value : 0, train: pick("train"), jobs: pick("jobs") };
+    var s = document.querySelector('#gpuRoles input[name="gpuStudio"]:checked'), limits = {};
+    Array.prototype.forEach.call(document.querySelectorAll("#gpuRoles input[data-limit]"), function (x) {   // HERESY 1294
+      if (+x.value < +x.max) limits[x.dataset.limit] = Math.round(+x.value * 1024);
+    });
+    return { studio: s ? +s.value : 0, train: pick("train"), jobs: pick("jobs"), limits: limits };
   }
   function hint() {
     var d = state.data, c = chosen(), say = [];
@@ -79,6 +114,7 @@
     return lab("/gpus", c).then(function (d) {
       state.data = d; hint();
       toast(d.studio_now != null && d.studio_now !== d.roles.studio ? "Saved: the studio moves to GPU" + d.roles.studio + " when it restarts" : "Saved", "good");
+      if (state.hooks && state.hooks.limits) state.hooks.limits();     // HERESY 1294: Auto follows the studio card's limit
       paint();
       return true;
     }).catch(function (e) { toast(e.message, "bad"); return false; });
@@ -87,6 +123,7 @@
   function reset() {
     var r = state.data && state.data.roles;
     if (r) Array.prototype.forEach.call(document.querySelectorAll("#gpuRoles input"), function (x) {
+      if (x.dataset.limit !== undefined) { x.value = Math.min(+x.max, limitOf(r, +x.dataset.limit) || +x.max); paintLimit(x); return; }   // HERESY 1294
       x.checked = x.name === "gpuStudio" ? +x.value === r.studio : (r[x.dataset.role] || []).indexOf(+x.value) >= 0;
     });
     hint();
@@ -97,7 +134,8 @@
     var d = state.data;
     if (!d || !d.roles || !document.querySelector("#gpuRoles input")) return false;
     var c = chosen(), r = d.roles, same = function (a, b) { return a.slice().sort().join() === (b || []).slice().sort().join(); };
-    return c.studio !== r.studio || !same(c.train, r.train) || !same(c.jobs, r.jobs);
+    var lims = function (o) { return Object.keys(o || {}).sort().map(function (k) { return k + ":" + o[k]; }).join(); };   // HERESY 1294
+    return c.studio !== r.studio || !same(c.train, r.train) || !same(c.jobs, r.jobs) || lims(c.limits) !== lims(r.limits);
   }
   function restart() {
     var to = state.data && state.data.roles.studio;
@@ -138,9 +176,10 @@
     $("gpuSave").addEventListener("click", save);
     $("gpuRestart").addEventListener("click", restart);
     $("gpuRoles").addEventListener("change", hint);
+    $("gpuRoles").addEventListener("input", function (e) { if (e.target.dataset && e.target.dataset.limit !== undefined) paintLimit(e.target); });   // HERESY 1294
     var open = $("engineToggle");
     if (open) open.addEventListener("click", function () { setTimeout(paint, 60); });
     paint();
   }
-  window.HeresyGpus = { init: init, paint: paint, guard: guard, unsaved: unsaved, save: save, reset: reset };
+  window.HeresyGpus = { init: init, paint: paint, guard: guard, unsaved: unsaved, save: save, reset: reset, studioLimitGib: studioLimitGib, state: function () { return state.data; } };
 })();

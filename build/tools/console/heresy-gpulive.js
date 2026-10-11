@@ -14,11 +14,15 @@
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function gb(mb) { return mb == null ? "?" : (mb / 1024).toFixed(1); }
 
-  function where() {                                  // what is in sight: the unfolded log, the Engine room
-    if (document.visibilityState !== "visible") return [];
+  // HERESY 1343 (Viktor 10.10.2026: «детач лога сервера сделай вместе с GPU колонкой»): the log's own window, when it is open
+  function popOpen() { var p = window.ruachLogPop && window.ruachLogPop(); return p && p.gpus && p.win && !p.win.closed ? p : null; }
+  function where() {                                  // what is in sight: the unfolded log, the Engine room, the log's window
+    var pop = popOpen(), seen = document.visibilityState === "visible";
+    if (!seen && !pop) return [];
     var out = [], dock = $("logDock"), eng = $("view-engine");
-    if (dock && !dock.classList.contains("is-folded")) out.push("dock");
-    if (eng && !eng.classList.contains("is-hidden")) out.push("engine");
+    if (seen && dock && !dock.classList.contains("is-folded")) out.push("dock");
+    if (seen && eng && !eng.classList.contains("is-hidden")) out.push("engine");
+    if (pop) out.push("pop");
     return out;
   }
   function roleOf(i) {                                // what the card is given to, as the column's head says it
@@ -36,10 +40,11 @@
     return "rgb(" + mix(1) + "," + mix(3) + "," + mix(5) + ")";
   }
   function draw(canvas, ring, wide) {                 // two lanes: the load above, the memory below; the newest bar at the right
-    var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+    var vw = (canvas.ownerDocument && canvas.ownerDocument.defaultView) || window;   // HERESY 1343: its own window (the log's may be on another screen)
+    var dpr = vw.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
-    var g = canvas.getContext("2d"), cs = getComputedStyle(document.documentElement);
+    var g = canvas.getContext("2d"), cs = vw.getComputedStyle(canvas.ownerDocument.documentElement);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
     var lane = (h - 2) / 2, bw = w / KEEP, n = ring.length, ink = cs.getPropertyValue("--ink").trim() || "#444";
@@ -79,14 +84,14 @@
       draw(box.querySelector("canvas"), ring, true);
     });
   }
-  function paintDock() {
-    var host = $("logDockGpus"), dock = $("logDock");
-    if (!host || !dock) return;
+  function shown() {                                  // the cards with a role, else all of them
     var ids = Object.keys(S.rings).map(Number).sort(function (a, b) { return a - b; });
     var withRole = ids.filter(function (i) { return roleOf(i); });
-    var show = withRole.length ? withRole : ids;
-    dock.classList.toggle("has-gpus", show.length > 0);
-    if (!show.length) { host.innerHTML = S.error ? '<p class="gl-wait">' + esc(S.error) + "</p>" : ""; return; }
+    return withRole.length ? withRole : ids;
+  }
+  // HERESY 1343: the column's cards into a host, the dock's or the log window's; false when there are none to show
+  function cardsInto(host, show) {
+    if (!show.length) { host.innerHTML = S.error ? '<p class="gl-wait">' + esc(S.error) + "</p>" : ""; host.dataset.ids = ""; return false; }
     if (host.dataset.ids !== show.join(",")) {
       host.dataset.ids = show.join(",");
       host.innerHTML = show.map(function (i) {
@@ -103,12 +108,29 @@
       card.querySelector(".gl-nums").innerHTML = nums(ring);
       draw(card.querySelector("canvas"), ring, false);
     });
-    // the dock as tall as its cards need (the log beside them as tall), never more than 60 % of the window: both scroll inside
-    dock.style.setProperty("--gl-h", Math.min(Math.max(host.scrollHeight, 181), Math.round(innerHeight * 0.6)) + "px");
+    return true;
+  }
+  function paintPop() { var p = popOpen(); if (p) cardsInto(p.gpus, shown()); }   // HERESY 1343
+  function paintDock() {
+    var host = $("logDockGpus"), dock = $("logDock");
+    if (!host || !dock) return;
+    var show = shown();
+    dock.classList.toggle("has-gpus", show.length > 0);
+    if (!cardsInto(host, show)) return;
+    // the dock as tall as its cards need (the log beside them as tall), never more than 60 % of the window: both scroll inside.
+    // HERESY 1293: what the cards need is the last one's bottom, not the column's scrollHeight: the column is --gl-h itself, so that
+    // kept a full height's size after folding back, and lost the column's border, a pixel a tick
+    var last = host.lastElementChild, cs = getComputedStyle(host);
+    if (!last) return;
+    var need = Math.ceil(last.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop +
+                         (parseFloat(cs.paddingBottom) || 0) + (parseFloat(cs.borderBottomWidth) || 0));
+    var h = Math.min(Math.max(need, 181), Math.round(innerHeight * 0.6)) + "px";
+    if (dock.style.getPropertyValue("--gl-h") !== h) dock.style.setProperty("--gl-h", h);
   }
   function paint(on) {
     if (on.indexOf("engine") >= 0) paintEngine();
     if (on.indexOf("dock") >= 0) paintDock();
+    if (on.indexOf("pop") >= 0) paintPop();   // HERESY 1343
   }
   function tick() {
     var on = where();

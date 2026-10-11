@@ -40,7 +40,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > | into a DAW | a REAPER project with the score, sections and lyrics (experimental) | audio stems |
 > | the code | open, every change documented | closed |
 > | **polish out of the box** | **less**: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them) | **more** |
-> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux, about 120 GB of disk for the models, LoRAs and workspaces** | a browser |
+> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux, about 30 GB of disk (56 GB with the Artist's models)** | a browser |
 > | **the licence of the songs** | the YuE2 weights are CC BY-NC 4.0, and their licence speaks of the weights, not of the songs made with them: read it before you sell | SUNO's terms per plan |
 >
 > Every week a video says some model *KILLS* SUNO. This is not a model: it is a workstation around one, open to the bone.
@@ -131,7 +131,7 @@ Made and tested on Viktor's setup:
 What it needs:
 
 - Linux, an NVIDIA GPU with CUDA. 24 GB runs everything (synthesis in BF16, training in bf16); smaller cards use smaller model copies (Q8_0 3.8 GB, Q6_K, Q5_K_M) and int8 training.
-- About 100 GB for the models, about 120 GB with the LoRAs and the workspaces; more for your takes.
+- About 30 GB of disk, measured on fresh installs (10.10.2026): the program and its two Pythons 16 GB, the models 13.2 GB for a 16 GB card (Q8_0) or 16.5 GB for 24 GB (BF16), the LoRAs among them; the Artist's models 26.1 GB more (40.7 GB with Krea 2 Muse Q8; 15.0 GB with SDXL on a smaller card), its Qwen painters 31 GB more for Qwen-Image 2512 at Q4 (34.5 GB at Q6; Qwen-Image 2.1 33.1 GB), the 💎 sets 5.3 GB, each only when you take it; more for your takes.
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
@@ -165,6 +165,8 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | yt-dlp | the audio of long recordings for instrument sets |
 | [UniverSR](https://github.com/woongzip1/UniverSR) (cloned at its tested commit) | upscale |
 
+**The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Krea 2's text encoder, the prompt writer, the content filter); diffusers 0.41 (Krea 2, Qwen-Image 2512 and 2.1, SDXL) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT).
+
 **Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras; sizes, sources and licences in the models card, `heresy/docs/hf-models-README.md`; the legacy and blend decoders and the sliders come converted, from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2)):
 
 | | what for | licence |
@@ -178,6 +180,10 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | UniverSR | upscale | CC BY 4.0 |
 | Qwen2.5-Omni-7B (GGUF, through [llama.cpp](https://github.com/ggml-org/llama.cpp), built by you) · extra | the style listener for training sets | Apache-2.0 |
 | CyberRealistic XL v10 (SDXL) and Qwen3-4B-Instruct-2507 · extra | the artwork of a take | CreativeML Open RAIL++-M · Apache-2.0 |
+| Krea 2 Muse by Stable Yogi (GGUF Q4, Q8) with Krea 2 Turbo's text encoder and VAE, and the content filter (Falconsai) · extra | the Artist's painter, a take's artwork | Krea 2 Community License · Apache-2.0 |
+| Qwen-Image 2512 (its parts from Qwen; the transformer as GGUF Q4_K_M or Q6_K, by unsloth) with Lightning's 8 steps (lightx2v) · extra | the Artist's Qwen painter | Apache-2.0 |
+| Qwen-Image 2.1 · extra | the Artist's painter that edits by words | Qwen Research License: not for commercial use |
+| the upscalers you put into `artwork/upscalers/` (ESRGAN, DAT, HAT, SPAN…) | the Artist's upscale | each its own |
 | YuE2-3B for training (bf16 or int8) · extra | the LoRA trainer | CC BY-NC 4.0 |
 
 **In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Noto Sans and Noto Sans Mono by default; IBM Plex Sans and Mono, Bodoni Moda, Michroma, Space Grotesk, Raleway, Roboto and Lato to choose from; SIL OFL) are served by the lab from `lab/fonts/`. The page loads no script, stylesheet or font from the internet.
@@ -236,16 +242,26 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
-### To Do › rc5 and After
+### Done › 2.0.0-rc5 (October 2026)
 
-2.0.0-rc4 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+- **The Artist room, nearly whole**: a reference picture to paint from, its mask, painting around it, and the canvas as InvokeAI's (the picture placed in each shape's frame by hand, the mask painted over it); LoRA adapters, up to four, each muted at a click; Qwen-Image 2512 and 2.1 beside Krea 2 Muse, with Lightning and the samplers we paint with; an upscale to 2K and 4K; two runs at a time; a painter streamed from RAM when it does not fit the card.
+- **The page in all six languages**, wall to wall, and the cheat-sheet's descriptions with it.
+- **The wave's sections are the lyrics' own tags**, each where Whisper hears its first line.
+- **A new studio reads its machine at its first start** and offers what suits it; a VRAM limit for each card; one card for everything (the engine lets its models go for a job).
+- **The server log on either side**, the Artist's own log beside it, and a window of its own with the cards live.
+- **Trash (Art)** in the Librarian; the LoRA Trainer's runs go on to more epochs.
 
-- **The Artist room, the rest of it**: a reference picture to start from, repainting and outpainting on a canvas, several LoRA adapters at once, an upscale, Qwen Image as a second painter, the title and the artist written on the cover, the versions of each take's picture.
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### To Do › rc6 and After
+
+2.0.0-rc5 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+
+- **The Artist room, the rest of it**: its models fetched at a click from the room itself, the title and the artist written on the cover, the versions of each take's picture, regional prompts and a style reference on the canvas.
 - **Five more languages** for the page: Chinese, French, Portuguese, German and Japanese. Right-to-left languages (Arabic, Hebrew, Urdu) come once the page itself runs right to left.
 - **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its services itself (Ctrl+1…6 for the rooms there), packed as an **AppImage**: the studio, its Python and its CUDA libraries in one file, the models fetched at the first start, and the models and the songs kept wherever you choose on your disk.
 - **Pinokio on Windows 11**: the launcher runs on Linux now; on Windows its steps will run inside WSL2, the path of INSTALL_WINDOWS.md (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)).
 - **A score editor as a DAW has one**: a piano roll, a chord lane, the lyrics over the notes, sections copied and moved, a MIDI keyboard to play ideas in; [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System) (Apache-2.0) shows the way.
-- **The interface's new words in all seven languages**: what came since rc1 is in English until the pass before 2.0.0.
 - **Native plugins** for REAPER, Waveform and Bitwig, once the studio has found its people.
 
 Issues and pull requests are welcome: they are read and answered.

@@ -12,6 +12,10 @@
 #                                      painter by the cards: Krea 2 Muse by Stable Yogi at Q4 (--artwork-q8: Q8 too) with
 #                                      Krea 2's text encoder, VAE and the content filter where a card has 16 GB, else SDXL
 #                                      (CyberRealistic XL v10); both from our models repo; the prompt writer (Qwen3-4B)
+#   heresy/fetch-heresy.sh --qwen 2512-q4|2512-q6|2.1[,…] [--yes]
+#                                      HERESY 1323: also the Artist's Qwen painters, each asked first with its size:
+#                                      Qwen-Image-2512 with Lightning (Apache-2.0; Q4_K_M from a 16 GB card, Q6_K from 24)
+#                                      and Qwen-Image-2.1 (Qwen's research licence: not for commercial use, the question says so)
 #   heresy/fetch-heresy.sh --trainer bf16|int8 [--yes]
 #                                      also the base for the studio's own LoRA trainer (lab/trainer), asked first
 #                                      with its size; bf16 trains on unquantized weights, int8 on a smaller card
@@ -33,7 +37,7 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -43,7 +47,8 @@ while [ $# -gt 0 ]; do
     --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
-    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --artwork, --artwork-q8, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    --qwen) QWEN="${2:-}"; shift ;;
+    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -148,6 +153,33 @@ hf_into() {
   hf_ready >/dev/null || { say_fail "$what" "(the pinned downloader would not install: tools/hf-env.sh)"; return; }
   again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$ROOT" --include "$@"
   if hf_complete "$repo" "$rev" "$ROOT" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
+}
+
+# --- files of a repo into a folder that may hold others (a second quant beside the first):  hf_into_at WHAT REPO DIR INCLUDE…
+# HERESY 1323: as hf_into, at DIR: hf_repo would call a folder with a file missing «not the pinned copy» and keep it as it is
+hf_into_at() {
+  local what=$1 repo=$2 dir=$3 rev out rc wrong; shift 3; rev=$(pin "$repo")
+  local tag="($repo @ ${rev:0:7})"; [ "$rev" = main ] && tag="($repo @ main: not pinned)"
+  out=$(hf_complete "$repo" "$rev" "$dir" --include "$@" 2>&1); rc=$?
+  case $rc in
+    0) say_here "$what" "$tag"; return ;;
+    2) say_unknown "$what" "$tag — the pinned file list could not be read (offline?)"; return ;;
+  esac
+  wrong=$(printf '%s\n' "$out" | sed -n 's/^[[:space:]]*\(.*\): [0-9]* bytes, expected [0-9]* (incomplete or wrong)$/\1/p')
+  if [ $MODE = check ]; then say_miss "$what" "$tag: $(printf '%s\n' "$out" | head -1 | sed 's/^[^:]*: //')"; return; fi
+  if [ -n "$wrong" ] && [ $MODE != replace ]; then
+    say_odd "$what" "$tag — kept: $(printf '%s\n' "$wrong" | wc -l | tr -d ' ') here differ from the pin, the first $(printf '%s\n' "$wrong" | head -1) (--replace fetches them)"
+    return
+  fi
+  if [ -n "$wrong" ]; then
+    local aside="$ROOT/tmp/replaced/$(date +%Y%m%d-%H%M%S)" f
+    while IFS= read -r f; do mkdir -p "$aside/$(dirname "$f")" && mv "$dir/$f" "$aside/$f"; done <<< "$wrong"
+    echo "${D}          the old copies → ${aside#"$ROOT"/} (delete them when the new ones work)${X}"
+  fi
+  hf_ready >/dev/null || { say_fail "$what" "(the pinned downloader would not install: tools/hf-env.sh)"; return; }
+  mkdir -p "$dir"
+  again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$dir" --include "$@"
+  if hf_complete "$repo" "$rev" "$dir" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
 }
 
 # --- a repo kept in a Hugging Face cache (as the lab's code loads it):  hf_cached REPO HF_HOME
@@ -263,7 +295,7 @@ if [ -n "$LISTENER" ]; then
   fi
 fi
 
-# HERESY 1120: artwork for takes, only when asked for, and asked again with its size. The painter is CyberRealistic
+# HERESY 1120: artwork for takes, only when asked for, and asked again with its size (HERESY 1291: from our models repo v2, at its pin). The painter is CyberRealistic
 # XL v10 (an SDXL finetune by Cyberdelia, CreativeML Open RAIL++-M), converted to diffusers fp16 and kept in our models
 # repo (its author publishes it on Civitai only); the prompt writer is Qwen3-4B-Instruct-2507 from Qwen itself.
 # HERESY 1167 (Viktor 05.10.2026, after the A/B on twelve instruments: «Muse - отличный файнтюн»; «Для карт ниже 24GB VRAM…
@@ -281,18 +313,18 @@ if [ $ARTWORK = 1 ]; then
                [ -s "$K_TURBO/text_encoder/model.safetensors" ] && [ -s "$K_TURBO/vae/diffusion_pytorch_model.safetensors" ]; }
     go=1
     if [ $MODE != check ] && [ $YES = 0 ] && ! { k_here && [ -s "$ROOT/artwork/Qwen3-4B-Instruct-2507/config.json" ]; }; then
-      printf "%s" "Download $([ $ARTQ8 = 1 ] && echo 41 || echo 26) GB (Krea 2 Muse Q4 8.3$([ $ARTQ8 = 1 ] && echo ", Q8 14.6"), its encoder and VAE 9.4, the filter 0.3, the prompt writer 7.6)? [y/N] "
+      printf "%s" "Download $([ $ARTQ8 = 1 ] && echo 41 || echo 26) GB (Krea 2 Muse Q4 8.3$([ $ARTQ8 = 1 ] && echo ", Q8 14.6"), its encoder and VAE 9.4, the filter 0.3, the prompt writer 8.1)? [y/N] "
       read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
     fi
     if [ $go = 1 ]; then
-      if k_here; then say_here "$K_MUSE" "(goldhub/Ruach_Studio_Models)"
-      elif [ $MODE = check ]; then say_miss "$K_MUSE" "(goldhub/Ruach_Studio_Models)"
+      if k_here; then say_here "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2)"
+      elif [ $MODE = check ]; then say_miss "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2)"
       else
         hf_ready >/dev/null || { say_fail "$K_MUSE" "(the pinned downloader would not install: tools/hf-env.sh)"; }
-        again "$HF" download --quiet goldhub/Ruach_Studio_Models --include "${K_WANT[@]}" "artwork/Krea-2-Muse/NOTICE.txt" \
+        again "$HF" download --quiet goldhub/Ruach_Studio_Models_v2 --revision "$(pin goldhub/Ruach_Studio_Models_v2)" --include "${K_WANT[@]}" "artwork/Krea-2-Muse/NOTICE.txt" \
               "artwork/Krea-2-Muse/LICENSE.pdf" "artwork/Krea-2-Turbo/*" --local-dir "$ROOT"
-        if k_here; then say_got "$K_MUSE" "(goldhub/Ruach_Studio_Models; Krea 2 Community License: LICENSE.pdf, NOTICE.txt)"
-        else say_fail "$K_MUSE" "(goldhub/Ruach_Studio_Models: $(why))"; fi
+        if k_here; then say_got "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2; Krea 2 Community License: LICENSE.pdf, NOTICE.txt)"
+        else say_fail "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2: $(why))"; fi
       fi
       hf_repo Falconsai/nsfw_image_detection "$ROOT/artwork/nsfw-filter" --include "config.json" "model.safetensors" "preprocessor_config.json"
       hf_repo Qwen/Qwen3-4B-Instruct-2507 "$ROOT/artwork/Qwen3-4B-Instruct-2507" "${WORK[@]}" LICENSE
@@ -306,16 +338,16 @@ if [ $ARTWORK = 1 ] && ! [ "${BIG:-0}" -ge 16000 ] 2>/dev/null; then
   a_here() { [ -s "$A_DIR/model_index.json" ] && [ -s "$A_DIR/unet/diffusion_pytorch_model.safetensors" ]; }
   go=1
   if [ $MODE != check ] && [ $YES = 0 ] && ! { a_here && [ -s "$ROOT/artwork/Qwen3-4B-Instruct-2507/config.json" ]; }; then
-    printf "%s" "Download 14 GB (the painter 6.5, the prompt writer 7.6)? It needs a 16 GB card when it draws. [y/N] "
+    printf "%s" "Download 15 GB (the painter 6.9, the prompt writer 8.1)? It needs a 16 GB card when it draws. [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   if [ $go = 1 ]; then
-    if a_here; then say_here "$A_DIR" "(goldhub/Ruach_Studio_Models)"
-    elif [ $MODE = check ]; then say_miss "$A_DIR" "(goldhub/Ruach_Studio_Models)"
+    if a_here; then say_here "$A_DIR" "(goldhub/Ruach_Studio_Models_v2)"
+    elif [ $MODE = check ]; then say_miss "$A_DIR" "(goldhub/Ruach_Studio_Models_v2)"
     else
       hf_ready >/dev/null || { say_fail "$A_DIR" "(the pinned downloader would not install: tools/hf-env.sh)"; }
-      again "$HF" download --quiet goldhub/Ruach_Studio_Models --include "artwork/CyberRealistic-XL-v10/*" --local-dir "$ROOT"
-      if a_here; then say_got "$A_DIR" "(goldhub/Ruach_Studio_Models)"; else say_fail "$A_DIR" "(goldhub/Ruach_Studio_Models: $(why))"; fi
+      again "$HF" download --quiet goldhub/Ruach_Studio_Models_v2 --revision "$(pin goldhub/Ruach_Studio_Models_v2)" --include "artwork/CyberRealistic-XL-v10/*" --local-dir "$ROOT"
+      if a_here; then say_got "$A_DIR" "(goldhub/Ruach_Studio_Models_v2)"; else say_fail "$A_DIR" "(goldhub/Ruach_Studio_Models_v2: $(why))"; fi
     fi
     # HERESY 1156 (Viktor: «на нашу модель дать рядом относительный симлинк SDXL-Artwork-Model, чтобы на этот симлинк
     # можно было бы посадить другие веса SDXL»): the studio paints with whatever SDXL this link points at. Made once,
@@ -332,10 +364,48 @@ if [ $ARTWORK = 1 ] && ! [ "${BIG:-0}" -ge 16000 ] 2>/dev/null; then
   fi
 fi
 
+# HERESY 1323 (Viktor 10.10.2026: «Забирай 2512 тоже в Студию»; «как альтернативу для менее мощных карт бери смело … Q6_K +
+# Lightning… Для 16 ГБ — Q4_K_M»; on Qwen-Image-2.1: «мы предупреждаем пользователя по этому поводу»): the Artist's Qwen painters,
+# only when asked for, each asked again with its size. Qwen-Image-2512 (Apache-2.0): the pipeline's parts from Qwen itself (the
+# configs, the tokenizer, Qwen2.5-VL-7B as its text encoder, the VAE; not its 40.9 GB transformer), the transformer as GGUF from
+# unsloth/Qwen-Image-2512-GGUF and Lightning's 8 steps from lightx2v (Apache-2.0 both). Qwen-Image-2.1 whole, from Qwen: its licence
+# is Qwen's research licence, not for commercial use (a cover for a song that is sold is commercial use), and the question says so.
+if [ -n "$QWEN" ]; then
+  Q_DIR="$ROOT/artwork/Qwen-Image-2512"
+  for q in ${QWEN//,/ }; do
+    case "$q" in
+      2512-q4|2512-q6)
+        if [ "$q" = 2512-q4 ]; then quant=Q4_K_M; qsize=13.2; total=31; else quant=Q6_K; qsize=16.8; total=34.5; fi
+        asked qwen "Artwork: Qwen-Image-2512 at $quant with Lightning (Apache-2.0)"
+        go=1
+        if [ $MODE != check ] && [ $YES = 0 ] && ! [ -s "$Q_DIR/gguf/qwen-image-2512-$quant.gguf" ]; then
+          printf "%s" "Download up to $total GB (the transformer $quant $qsize, its text encoder and VAE 16.8, Lightning 0.85)? It paints on a card of $([ $quant = Q4_K_M ] && echo 16 || echo 24) GB. [y/N] "
+          read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+        fi
+        if [ $go = 1 ]; then
+          hf_into_at "artwork/Qwen-Image-2512 (its parts)" Qwen/Qwen-Image-2512 "$Q_DIR" "model_index.json" "scheduler/*" "tokenizer/*" "processor/*" "text_encoder/*" "vae/*" "transformer/config.json" "LICENSE*"
+          hf_into_at "artwork/Qwen-Image-2512/gguf ($quant)" unsloth/Qwen-Image-2512-GGUF "$Q_DIR/gguf" "qwen-image-2512-$quant.gguf"
+          hf_into_at "artwork/Qwen-Image-2512/lightning" lightx2v/Qwen-Image-2512-Lightning "$Q_DIR/lightning" "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
+          [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: lab/install-venv.sh --art)"
+        fi ;;
+      2.1)
+        asked qwen "Artwork: Qwen-Image-2.1 (Qwen's research licence: not for commercial use)"
+        go=1
+        if [ $MODE != check ] && [ $YES = 0 ] && ! [ -s "$ROOT/artwork/Qwen-Image-2.1/model_index.json" ]; then
+          printf "%s" "Download 33 GB? Qwen-Image-2.1 is under Qwen's research licence: research and evaluation only, not for commercial use (a cover for a song that is sold is commercial use). It paints on a card of 24 GB. [y/N] "
+          read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+        fi
+        [ $go = 1 ] && hf_into_at "artwork/Qwen-Image-2.1" Qwen/Qwen-Image-2.1 "$ROOT/artwork/Qwen-Image-2.1" "model_index.json" "scheduler/*" "tokenizer/*" "processor/*" "text_encoder/*" "vae/*" "transformer/*" "LICENSE*" ;;
+      *) echo "--qwen takes 2512-q4, 2512-q6, 2.1 (several with commas)"; exit 2 ;;
+    esac
+  done
+fi
+
 # HERESY 1086: the studio's own LoRA trainer (lab/trainer), only when asked for, and asked again with its size.
 # Comfy-Org's YuE2 file carries the network, the VAE and the text tokenizer at once; the latent cache needs
-# MERT-v2-FullSong (the Kit's tools/download-checkpoints.sh) and Mothersuperior's realaudio tokenizer head
-# (CC BY-NC 4.0, as MERT: fetched by the user from its authors, never shipped with the studio).
+# MERT-v2-FullSong and Mothersuperior's realaudio tokenizer head (CC BY-NC 4.0 both: fetched by the user from their
+# authors, never shipped with the studio). HERESY 1303: MERT comes with it now, at the Kit's pin (tools/hf-revisions.txt),
+# 2.5 GB: a fresh install fetches no checkpoints since rc4, and the card said «missing → tools/download-checkpoints.sh».
 if [ -n "$TRAINER" ]; then
   asked trainer "The LoRA trainer's base: Comfy-Org/YuE2 ($TRAINER)"
   case "$TRAINER" in
@@ -344,15 +414,18 @@ if [ -n "$TRAINER" ]; then
     *) echo "${R}--trainer takes bf16 or int8${X}"; exit 2 ;;
   esac
   go=1
-  if [ $MODE != check ] && [ $YES = 0 ] && ! hf_complete Comfy-Org/YuE2 "$(pin Comfy-Org/YuE2)" "$ROOT/checkpoints/comfy" --include "$T_FILE" >/dev/null 2>&1; then
-    printf "%s" "Download $SIZE? [y/N] "
+  MERT_DIR="$ROOT/checkpoints/MERT-v2-FullSong"
+  MERT_SAY=""; [ -s "$MERT_DIR/model.safetensors" ] || MERT_SAY=", and MERT-v2-FullSong 2.5 GB"     # HERESY 1303
+  if [ $MODE != check ] && [ $YES = 0 ] && { [ -n "$MERT_SAY" ] || ! hf_complete Comfy-Org/YuE2 "$(pin Comfy-Org/YuE2)" "$ROOT/checkpoints/comfy" --include "$T_FILE" >/dev/null 2>&1; }; then
+    printf "%s" "Download $SIZE$MERT_SAY? [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   [ $go = 1 ] && hf_repo Comfy-Org/YuE2 "$ROOT/checkpoints/comfy" --include "$T_FILE"
   hf_repo Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4 "$ROOT/checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4" \
           --include "tokenizer_head_joint_v4.pt" "README.md"
-  if [ -s "$ROOT/checkpoints/MERT-v2-FullSong/model.safetensors" ]; then say_here "$ROOT/checkpoints/MERT-v2-FullSong" "(the Kit's download)"
-  else say_miss "$ROOT/checkpoints/MERT-v2-FullSong" "→ tools/download-checkpoints.sh"; fi
+  if [ $go = 1 ] || [ $MODE = check ]; then hf_repo m-a-p/MERT-v2-FullSong "$MERT_DIR"      # HERESY 1303: here, fetched, or said
+  elif [ -s "$MERT_DIR/model.safetensors" ]; then say_here "$MERT_DIR" "(m-a-p/MERT-v2-FullSong)"
+  else say_miss "$MERT_DIR" "(2.5 GB: --trainer fetches it with the base)"; fi
 fi
 
 # HERESY 1285 (Viktor 09.10.2026: «BF16 не скачалась, потому что ты честно вычислил backbone для 16GB VRAM, но, на эту видеокарту
@@ -395,7 +468,7 @@ if want loras; then
     else say_fail "loras/ (the Kit's library)" "(tools/download-loras.sh: $(why))"; fi
   fi
   OWN="$ROOT/tmp/fetch-ruach-loras.out"
-  "$HPY" "$ROOT/heresy/fetch-ruach-loras.py" $([ $MODE = check ] && echo --check) >"$OWN" 2>&1
+  "$HPY" "$ROOT/heresy/fetch-ruach-loras.py" $([ $MODE = check ] && echo --check) $([ $MODE = replace ] && echo --replace) >"$OWN" 2>&1
   grep -av "^#counts " "$OWN" | grep -av "^[[:space:]]*$"
   # HERESY 1289: its verdicts into the list too, as the others' (the first word the verdict, the rest what and its words)
   if [ -n "$LIST" ]; then
@@ -403,8 +476,8 @@ if want loras; then
   fi
   c=$(grep -a "^#counts " "$OWN" | tail -1)
   if [ -n "$c" ]; then
-    n() { echo "$c" | grep -o "$1=[0-9]*" | cut -d= -f2; }
-    have=$((have + $(n here))); got=$((got + $(n fetched))); miss=$((miss + $(n missing))); failed=$((failed + $(n failed)))
+    n() { local v; v=$(echo "$c" | grep -o "$1=[0-9]*" | cut -d= -f2); echo "${v:-0}"; }
+    have=$((have + $(n here))); got=$((got + $(n fetched))); miss=$((miss + $(n missing))); failed=$((failed + $(n failed))); odd=$((odd + $(n differs)))   # HERESY 1296
   else
     say_fail "loras/ (the studio's own)" "(heresy/fetch-ruach-loras.py said nothing to count)"
   fi

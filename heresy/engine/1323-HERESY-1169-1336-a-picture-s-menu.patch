@@ -1,0 +1,140 @@
+From 1b8512a606c9606f0993ff4ac9bd8abe61c267c2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 10 Oct 2026 17:21:22 -0600
+Subject: [PATCH 1323/1331] =?UTF-8?q?HERESY=201169=20=C2=B7=201336:=20a=20?=
+ =?UTF-8?q?picture's=20menu?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 10.10.2026: «По максимуму на картинки контекстное меню».
+
+A right click on a picture (a run's, the gallery's, the stage's, the one over the page) opens the studio's menu: Over the page; To the stage; To the form (its prompt, seed and shape, as the stage's button); All of it to the form (its painter, fine-tune, sampling and adapters as well: Draw paints it again); As reference; Compare…; Set as cover (a square one, with a take in hand); Upscale › 2K, 4K (the sizes they make, with the upscaler the stage's row would take); Star it; Pick it; Copy the prompt; Copy the seed; Download (PNG, its size); The file in a new tab; Its run (the Runs look, its card lit); To the trash. A run developing on the stage has none. Over the page the menu stands over the view and has the keys while it is open: Esc closes the menu, the next Esc the view.
+
+Suite: 615/0 in the kitchen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  5 +++
+ tools/console/heresy-artist.js | 77 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 82 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 05c621a..6a29b85 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5100,3 +5100,8 @@ body.log-pop { margin: 0; background: var(--panel); color: var(--ink); display:
+ body.log-pop .log-dock-body { flex: 1 1 auto; height: auto; overflow: auto; padding: 8px 12px; }
+ /* HERESY 1335: the Artist's adapters together, as the Creator's bar */
+ .ar-lora-total { margin-top: 6px; }
++/* HERESY 1336: «Its run» from a picture's menu: the card it came from, flashed */
++.ar-run.is-flash { outline: 2px solid var(--amber); outline-offset: 2px; transition: outline-color .6s ease; }
++/* HERESY 1336: a picture's menu over the page's view (110) stands over it */
++body:has(.ar-view) .hm-menu { z-index: 130; }
++body:has(.ar-view) .hm-tip { z-index: 131; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 081f6b6..9b5d306 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -970,6 +970,81 @@
+       ? (run.kind === "upscale" ? tr("upscaling…") : tr("picture") + " " + Math.min(of, done + 1) + " " + tr("of") + " " + of + (live && live.of ? " · " + tr("step") + " " + live.step + " / " + live.of : "")) + " · " + Math.round(frac * 100) + "%"
+       : tr(run.waiting ? "waits for a card" : "in the queue");
+   }
++  // HERESY 1336 (Viktor: «По максимуму на картинки контекстное меню»): a picture's menu, a right click on it in the room or over the page
++  function picAt(el) {
++    if (!el || !el.closest) return null;
++    var vw = el.closest(".ar-view");                     // over the page: the picture it shows now
++    if (vw) return el.closest(".art-img") && !vw.classList.contains("is-leaving") ? vw.heresyIt || null : null;
++    var g = el.closest("#arRuns .ar-gpic[data-g]");
++    if (g) return items()[+g.dataset.g] || null;
++    var fig = el.closest("#arRuns .ar-pic[data-i]"), run = fig && runOf(fig);
++    if (run) { var p = run.pictures[+fig.dataset.i]; return p && p.kept ? { r: run, p: p } : null; }
++    var sp = el.closest("#arStage .ar-stage-pic");       // the stage: the picture it shows, not a run's step as it develops
++    if (sp) return sp.classList.contains("is-live") ? null : selected();
++    return null;
++  }
++  function copyText(text, said) {                        // over plain http app.js stands ruachCopyText in for navigator.clipboard
++    navigator.clipboard.writeText(String(text)).then(function () { toast(said); }, function () { toast(tr("The browser refused clipboard access"), "bad"); });
++  }
++  function upModel(list) {                               // the upscaler the row under the stage would take: the one picked there last
++    var names = (list || []).map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
++    return names.indexOf(want) >= 0 ? want : names.indexOf("4x_Nomos8kDAT.pth") >= 0 ? "4x_Nomos8kDAT.pth" : names[0];
++  }
++  function picMenu(it, x, y, vw) {
++    if (!it || !it.r || !it.p || !window.HeresyMenu) return false;
++    var r = it.r, p = it.p, take = state.take, square = p.shape === "1:1", long = Math.max(+p.w || 0, +p.h || 0);
++    var room = function (fn) { return function () { if (vw && state.view) state.view.close(); fn(); }; };   // what lands in the room leaves the view over the page
++    var up = function (t) {
++      var sz = upSize(p, t), done = long >= UP_TARGETS[t], m = state.upscalers && upModel(state.upscalers);
++      return { label: t.toUpperCase() + (sz ? " · " + sz[0] + "×" + sz[1] : ""), raw: true, disabled: done,
++        hint: done ? tr("It is as large already") : m ? tr("With") + " " + m.replace(/\.(pth|safetensors)$/, "") + ": " + tr("the upscaler picked under the stage") : tr("With the upscaler picked under the stage"),
++        action: function () {
++          loadUpscalers().then(function (list) {
++            var mm = upModel(list);
++            if (!mm) return toast(tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into artwork/upscalers/"), "bad");
++            upscaleIt({ id: r.id, file: p.file }, mm, t);
++          });
++        } };
++    };
++    var picked = !!state.picked[pickKey(it)], menu = [];
++    if (!vw) menu.push({ label: tr("Over the page"), action: function () { var w = stageList(it); view(w.list, w.at); } });
++    menu.push(
++      { label: tr("To the stage"), action: room(function () { pick(it); }) },
++      { label: tr("To the form"), hint: tr("Its prompt, seed and shape back in the form"), action: room(function () {
++        fillForm({ prompt: r.prompt, shapes: [p.shape], count: 1, seed: p.seed, painter: r.kind === "upscale" ? null : r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }) },
++      { label: tr("All of it to the form"), disabled: r.kind === "upscale", hint: tr("Its painter, fine-tune, sampling and adapters as well, with its seed and shape: Draw paints this picture again"), action: room(function () {
++        fillForm(Object.assign({}, r, { shapes: [p.shape], count: 1, seed: p.seed }), true); $("arPrompt").focus(); toast(tr("In the form: all of it, with its seed and shape")); }) },
++      { label: tr("As reference"), hint: tr("Draw paints from this picture: it becomes the form's reference"), action: room(function () { setRef({ id: r.id, file: p.file, url: fileUrl(r.id, p.thumb || p.file) }); }) },
++      { label: tr("Compare…"), hint: tr("Then pick the other picture in the library"), action: room(function () { comparePick(it); }) },
++      { label: tr("Set as cover"), disabled: !(square && take), hint: !square ? tr("A square picture becomes a cover") : take ? tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" : tr("Pick a take on the right to give it this cover"),
++        action: function () { cover(r, p); } },
++      { label: tr("Upscale"), items: [up("2k"), up("4k")] },
++      { sep: true },
++      { label: p.star ? tr("Unstar") : tr("Star it"), action: function () { var b = vw && vw.querySelector(".ar-vstar"); if (b) b.click(); else star(r, p, !p.star); } },
++      { label: picked ? tr("Let go") : tr("Pick it"), hint: tr("The picked are starred or put in the trash together from the bar over the library"), action: function () { togglePick(it, false, items()); } },
++      { label: tr("Copy the prompt"), disabled: !r.prompt, action: function () { copyText(r.prompt || "", tr("The prompt copied")); } },
++      { label: tr("Copy the seed") + " · " + p.seed, raw: true, action: function () { copyText(p.seed, tr("The seed copied:") + " " + p.seed); } },
++      { label: tr("Download") + " · PNG" + (p.w && p.h ? " " + p.w + "×" + p.h : ""), raw: true, action: function () {
++        var a = document.createElement("a"); a.href = fileUrl(r.id, p.file); a.download = "ruach-artist-" + r.id + "-" + p.file; document.body.appendChild(a); a.click(); a.remove(); } },
++      { label: tr("The file in a new tab"), action: function () { window.open(fileUrl(r.id, p.file), "_blank", "noopener"); } },
++      { label: tr("Its run"), hint: tr("The run it came from, in the Runs look"), action: room(function () {
++        if (state.look !== "runs") { var b = document.querySelector('#arBar [data-look="runs"]'); if (b) b.click(); }
++        setTimeout(function () {
++          var card = document.querySelector('#arRuns .ar-run[data-id="' + r.id + '"]');
++          if (!card) return;
++          card.scrollIntoView({ block: "center" }); card.classList.add("is-flash"); setTimeout(function () { card.classList.remove("is-flash"); }, 1200);
++        }, 80); }) },
++      { sep: true },
++      { label: tr("To the trash"), danger: true, hint: tr("The library's Trash brings it back"), action: room(function () { asidePics([{ id: r.id, file: p.file }]); }) });
++    window.HeresyMenu.open(x, y, menu);
++    return true;
++  }
++  document.addEventListener("contextmenu", function (e) {
++    if (!e.target.closest || !e.target.closest("#view-artist, .ar-view")) return;
++    var it = picAt(e.target);
++    if (it && picMenu(it, e.clientX, e.clientY, e.target.closest(".ar-view"))) e.preventDefault();
++  });
++  window.ruachArtistPicMenu = function (el, x, y) { return picMenu(picAt(el), x, y, el && el.closest ? el.closest(".ar-view") : null); };   // for the checks
+   function markPicked(it) {
+     if (state.look === "gallery") {
+       var list = items();
+@@ -1068,6 +1143,7 @@
+     window.addEventListener("resize", resized);
+     function paint() {
+       var r = list[i].r, p = list[i].p, sh = shapeOf(p.shape), take = state.take, b = back.querySelector(".ar-cover");
++      back.heresyIt = list[i];                           // HERESY 1336: the picture's menu over the page
+       var st = back.querySelector(".ar-vstar");
+       st.textContent = p.star ? "★" : "☆";
+       st.classList.toggle("is-on", !!p.star);
+@@ -1106,6 +1182,7 @@
+     }
+     function step(d) { i = (i + d + list.length) % list.length; paint(); }
+     function key(e) {
++      if (document.querySelector(".hm-menu")) return;    // HERESY 1336: a picture's menu over it has the keys while it is open
+       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
+       else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.ctrlKey && !e.altKey) { e.preventDefault(); e.stopPropagation(); if (list.length > 1) step(e.key === "ArrowRight" ? 1 : -1); }
+     }
+-- 
+2.43.0
+

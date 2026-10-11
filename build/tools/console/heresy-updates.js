@@ -18,6 +18,7 @@
   }
   function keep(p) { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) { /* a private window */ } }
   function toast(t, k) { if (S.hooks.toast) S.hooks.toast(t, k); }
+  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }   // HERESY 1339: a dialog's paragraphs around a list
   function lab(path, body) {
     return fetch("/lab" + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined)
       .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; }); });
@@ -65,9 +66,10 @@
   }
   function offer(st, fromCard) {
     var l = st.latest, p = prefs();
-    var text = "Ruach Studio " + l.version + " is out\n\n" + (l.candidate ? "A release candidate: everything in it works and was checked, the last polish comes in the release.\n\n" : "") +
-      said(l.notes) + "\n\n" + (st.can_run ? "The update fetches it, builds it and restarts the studio when nothing runs; your songs, models and settings stay."
-        : "Here it cannot update by itself: " + st.why + ".");
+    var text = tr("Ruach Studio {0} is out").replace("{0}", l.version) + "\n\n" +   // HERESY 1339: the notes stay as written
+      (l.candidate ? tr("A release candidate: everything in it works and was checked, the last polish comes in the release.") + "\n\n" : "") +
+      said(l.notes) + "\n\n" + (st.can_run ? tr("The update fetches it, builds it and restarts the studio when nothing runs; your songs, models and settings stay.")
+        : tr("Here it cannot update by itself: {0}.").replace("{0}", tr(st.why)));
     return window.HeresyDialog.confirm(text, { ok: st.can_run ? "Update now" : "Open the release page", cancel: "Later", alt: fromCard ? "" : "Skip this version" }).then(function (a) {
       if (a === "alt") { p.skip = l.version; keep(p); toast("Skipped " + l.version + ": the next release will be offered"); return; }
       if (a !== true) return;
@@ -107,9 +109,9 @@
       var missing = (d.sets || []).filter(function (s) { return s.published && !s.here; }), q = prefs();
       q.seen = st.current; keep(q);
       if (!missing.length) return;
-      var list = missing.map(function (s) { return "💎 " + String(s.name).replace(/^💎\s*/, "") + (s.takes ? " · " + s.takes + " takes" : "") + (s.bytes ? " · " + size(s.bytes) : ""); }).join("\n");
-      return window.HeresyDialog.confirm("The studio's 💎 sets\n\nTakes made with this studio and approved by its author, to hear what YuE2 does and make it again: instruments, " +
-        "styles and voices, each with its whole request. You do not have these yet:\n\n" + list + "\n\nEach comes as a workspace of its own; only what you pick is downloaded.",
+      var list = missing.map(function (s) { return "💎 " + String(s.name).replace(/^💎\s*/, "") + (s.takes ? " · " + tr(s.takes === 1 ? "1 take" : s.takes + " takes") : "") + (s.bytes ? " · " + tr(size(s.bytes)) : ""); }).join("\n");
+      return window.HeresyDialog.confirm(tr("The studio's 💎 sets") + "\n\n" + tr("Takes made with this studio and approved by its author, to hear what YuE2 does and make it again: instruments, " +
+        "styles and voices, each with its whole request. You do not have these yet:") + "\n\n" + list + "\n\n" + tr("Each comes as a workspace of its own; only what you pick is downloaded."),
         { ok: "Open the sets", cancel: "Not now", alt: "Don't ask again" }).then(function (a) {
         if (a === "alt") { var r = prefs(); r.gems = "never"; keep(r); }
         else if (a === true && S.hooks.hub) S.hooks.hub();

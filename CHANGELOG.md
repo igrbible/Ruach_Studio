@@ -2,6 +2,98 @@
 
 Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): one machine with an NVIDIA card, your own songs, nothing in a cloud. It grew over [YuE2 Kit](https://github.com/IronWolve/yue2-kit) v12 by IronWolve, which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by ServeurpersoCom. Every change has a number (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each change to the engine and the page as a patch of its own.
 
+## 2.0.0-rc5 · 2026-10-11
+
+The fifth release candidate (HERESY 1169, patches 1291–1346): the Artist room grown nearly whole (a reference picture, its mask, painting around it, the canvas as InvokeAI's, LoRA adapters, the Qwen-Image painters with their samplers, an upscale, a painter streamed from RAM when it does not fit a card), the page in all six languages, the wave's sections from the lyrics' own tags, a new studio reading its machine at its first start, a VRAM limit for each card and one card for everything.
+
+### Install and Pinokio
+
+- **The Artist's models from goldhub/Ruach_Studio_Models_v2 too**, at its pin, byte for byte the files the studio paints with (Krea 2 Muse by Stable Yogi, Krea 2's text encoder and VAE, CyberRealistic XL): nothing reads the first models repository any more, and it goes after 17 October 2026.
+- **Sizes as measured** on fresh installs, everywhere they are said: about 30 GB installed (the program and its two Pythons 16 GB, the models 13 GB for a 16 GB card, 16.5 GB for 24 GB), the Artist's models 26 GB more, the 💎 sets 5 GB; Pinokio's install says what its models step brings and what the disk holds at the end.
+
+### Everywhere
+
+- **The server log's frame keeps its height** beside the cards: it came back from full height no more and sank a pixel at every second; a card doing all three says all three roles.
+- **The loading veil**: «Loading the Sound Heresy» just above its bar, the engine's and the studio's versions small under it.
+- **The server log on either side**: an arrow on its inner edge takes it across the page, and each room keeps its side (the Artist left by default).
+- **The Artist's own log** as a view of the server log's frame (Server and Artist, each room its own): what was asked, what the lab answered (a refusal in its own words), each run's way to its end; **⧉** opens the log in a window of its own, over every window (Chrome's Document Picture-in-Picture) or to carry to another monitor.
+- **The wave's sections are the lyrics' own tags**, each where Whisper hears its first line (once a take, about half a minute; by itself on two cards or more, else the take's menu → Find the sections by ear): a Full take's plan marks only some of them (4 to 13 of 32 in one song). The pointer over the wave shows a card with the section's time and its lines as written, the line sung there lit; a section not heard clearly is marked ?, the lyrics a take never sang are left out.
+- **The page in all six languages, wall to wall**: Russian, Ukrainian, Belarusian, Greek, Spanish and Italian now cover the Artist room, every dialog, toast and menu, Engine (Updates, Models and LoRAs, Folders, the cards live), the Creator's run stages and lyrics tools, the Library, the Writer, the Refiner, the Trainer and the help tips; a count says itself in the language's forms (1 картинка, 3 картинки, 5 картинок), and a dialog's paragraphs stay apart.
+- Fixed: a lyrics line that happened to be a word the catalogs know (End, Outro) was translated in the box's mirror, and the marks after it slid off their letters; the lyrics' gutter named its sections in English in every language.
+- **The cheat-sheet in your language**: the descriptions of the 200 instruments and 275 styles and the lyric tags' notes in Ukrainian, Belarusian, Greek, Spanish and Italian, as the Russian was.
+- **The log's own window carries the cards**: the GPU column beside the log; the dock folds while the window is open and unfolds when it closes, if it was open.
+
+### Engine and the cards
+
+- **A new studio reads its machine at its first start** and offers in one window what suits it: the backbone (BF16 only where the card does BF16 in tensor cores; a Turing card takes Q8_0), Auto's context and VAE tiles, the painter that fits; set at a word, asked once; Engine → Compute's «Scan the machine» asks again.
+- **Auto's tiers as measured**, and two more: from 5.4 GB Q8_0 at 8 192 rows, from 4.4 GB Q6_K; Pinokio's install takes Q8_0 from 7 GB (quicker than Q6_K, 5.1 GB with 12 288 rows).
+- **A VRAM limit for each card** in Engine → GPUs, a slider in half gigabytes from 4 GB to the card's size: the lab's jobs and training take a card only when they fit under it, and Compute's Auto fits the engine's context and VAE tiles to the studio card's limit (rc4's «Auto within N GB» becomes that card's limit once).
+- **One card for everything**: a job that finds no card with room asks the engine to let its models go when it is idle (they load again with the next song), so a single 8, 12 or 16 GB card paints, transcribes and trains between songs.
+- **One's own copy of a published LoRA** (the same tensors, another header) is kept and counted whole in Engine → Models and LoRAs («own copies kept»), never taken for missing; `fetch-ruach-loras.py --replace` sets such a copy aside and fetches the published one.
+- **A fetch's progress at the row pressed** in Engine → Models and LoRAs: its button says Fetching…, a bar fills under the row with how much of about how much.
+- **The trainer's base brings MERT-v2-FullSong** (2.5 GB, from m-a-p at its pin): the set's latent cache needs it, and a fresh install fetches no checkpoints.
+- **Engine → Artwork offers the Qwen painters** beside Krea 2 Muse and SDXL: Qwen-Image 2512 Q4 and Q6 with Lightning, each fp8 fine-tune its own line, 2.1 with its licence said; a take's artwork is painted by the one chosen (2512 Q4 with Lightning about a minute and a half with its loading on a 3090).
+
+### The Refiner
+
+- **Compare all holds the same music in other takes**: after the original, the take's re-renders under another VAE or sound seed (and the take they came from), each switched at the same second as the branches are, named by its VAE, its seed and when it was made; a disliked one is left out.
+
+### The Artist
+
+- **The Artist's canvas, as InvokeAI's**: Canvas… lays the reference in each shape's frame, to move and scale by hand or by numbers; a frame the picture covers is painted from it (image to image), the part it leaves bare is painted around it (outpaint); the inpaint mask is painted over it on the same board; Fit, Fill, Centre, Same in all, undo and redo, the shapes as tabs.
+- **The Artist's fp8 painter streams from RAM what does not fit**: four adapters on a 24 GB card no longer refuse the run. The blocks that fit stay on the card, the rest come from RAM as each is needed: the same picture bit for bit, about a sixth slower with five of sixty blocks streamed, a third with all of them (then 2.3 GB of the card at the peak). The run says so in its data, with its card's peak.
+- **Mute an Artist adapter** as in the Creator: a right click on its row, Mute: it stays in the list at its strength and leaves the run; an adapter at nought is not loaded either, and its card's room is no longer asked for it.
+- **The Artist draws two runs at a time**: Draw stays Draw while a run goes and asks the next one, which waits behind it (Ctrl+Enter too); Stop is a button of its own beside it.
+- **The Artist room fits a tall window**: from 920 px of height the page stands still and the form and the library scroll on their own. The picture fills the stage over its buttons; its data and prompt show beside it, over the library, while the pointer is on it; the run's progress lies across the stage's top; the form's hints are the studio's i; Draw's row stays at the form's foot, above the folded log; Seed is wider and Variations narrower; Sampling stays folded or open as left.
+- **The Artist's form scrolls on its own** beside the stage, and the stage's prompt frame reaches down to the window's floor; a thumbnail clicked again while a run paints gives the stage back to the run; the LoRA library shows its pictures whole, not cropped.
+- Fixed: a slow painter (fp8 without Lightning, three shapes) was stopped in its second picture by a cap on the whole run, and only the square came; now a painter is stopped only when it has said nothing for ten minutes while it loads, five once it paints, and its run says so.
+- Fixed: the Artist's Stop showed with no run going.
+- **A reference picture to paint from**, as InvokeAI's image to image: dropped, pasted (Ctrl+V), chosen from a file, or the stage's picture «As reference»; «How much it may change» from 0.2 (nearly as it is) to 1.0 (anew); «Again» paints from the run's own.
+- **A mask on it** (inpaint): «Mask…» paints over the picture what to repaint (Paint, Erase, the brush, Invert, Clear); the rest of the picture stays exactly as it was.
+- **The mask's options**: Grow, Edge (its softness), Soft (differential diffusion: a grey edge changes only in the last steps, no seam) and Grain (the kept part takes a share of the new paint, its grain sewn to it); Qwen-Image 2512 masks, paints from a reference and paints around through the same steps as Krea 2.
+- **Paint around it** (outpaint): each shape holds the whole picture in its middle and paints the edges anew, without a seam: a square cover into a 16:9 for a video or a 9:16 for a short.
+- **Two pictures compared**: the stage's «Compare…», then the other one picked; one over the other under a divider (the pointer, ← →), or side by side (S), swapped (X).
+- **The take's cover as the reference** at a click: with «Paint around it» a square cover becomes a 16:9 for the take's video or a 9:16 for a short.
+- **The trash in the room**: a Trash look beside Runs and Gallery, each trashed run with its pictures and Restore.
+- **Pictures picked and put aside**: Ctrl (⌘) + click picks, Shift + click a range, a bar stars them or trashes them at once; the stage's Trash for one; the Trash look brings them back, one or all. The shapes and the star drawn, the sizes in the tips.
+- **Upscale**: the stage's Upscale… makes a picture 2 or 4 times as large with an upscaler from `artwork/upscalers/` (ESRGAN, DAT, HAT, SPAN…, read by spandrel, MIT), in tiles, as a run of its own; the model picked is kept, Again upscales again.
+- **The Qwen painters fetched**: Engine → Models and LoRAs has a Qwen painters row: Qwen-Image 2512 at Q4 (31 GB) or Q6 (34.5 GB) with Lightning's 8 steps (Apache-2.0), and Qwen-Image 2.1 (33.1 GB) with its research licence said in the question; `heresy/fetch-heresy.sh --qwen 2512-q4|2512-q6|2.1`; Pinokio's More models takes 2512 by the card; the Artist names the painters not here yet.
+- **Fade in…** beside End at…: the take's first seconds rise from silence (2 s unless asked otherwise), from its kept latents, as a new take; the engine's `fade_in`, End at's fade mirrored.
+- **Loop…**: 1, 2, 4 or 8 bars of a take on its score's bar lines, cut by the lab from the take's own WAV with a 30 ms seam crossfade (played round, the end runs into the start), saved as a WAV named with its bars, start, BPM and key.
+- **Lightning, a switch**: Qwen-Image 2512's Lightning is a switch with its strength beside it; a fine-tune paints without it by default (30 steps, guidance 4: finished realism), the GGUF painters with it (drafts, smaller cards); guidance shows only without it; without its file there is no switch, and the lab refuses it.
+- **The score asked about**: Generate with a score in the form asks first: on it, or a new one; the score remembers the adapters and music strengths that wrote it, and a line under it (and the question) says when those on now differ; in Full the score stays open while it holds one.
+- **The bar and the log**: the Trainer's tab in the middle between the logo and the workspace; the server log with the cards 920 px wide, their column 390 and their numbers of one width (the frame no longer jumps); its outer edge drags it up to 1200 px.
+- **Seed modes**: beside the Creator's music and sound seeds and the Artist's seed: Random (−1), Random fixed, Fixed, Next, Previous; Next and Previous move the seed past those a run used.
+- **The Artist's room, tidier**: its header «Художник» in Russian as its tab says; Draw with a tip of its own, its word centred in capitals; the painter's and the fine-tune's choices the row wide, never narrower than their names; a progress bar under Draw; Upscale by **2K** and **4K** (the long side 2560 or 3840, the size exact), no factors to type.
+- **His samplers and schedules**: ER-SDE, RES 2s and 3s with their ODE twins, Heun++ and the exponential Heun (exp_heun_2_x0, and its SDE) beside Euler and Euler SDE; Beta 57, KL optimal, SGM uniform and Bong tangent beside Simple, Karras, Exponential and Beta: the studio's own, from the methods' papers and ComfyUI's formulas (RES4LYF read for its mathematics only); the form says what each costs and times the run by it; the warning under the sampling says what two matrices showed: with Lightning, Karras, Exponential and KL optimal can paint the subject twice; without it, Euler SDE paints Qwen soft.
+- **The adapters together**: from two adapters, their strengths' sum on the Creator's road (green to 1.2, amber to 1.8, red past it); dragged, it moves them all, each in proportion.
+- **A picture's menu**: a right click on any picture (a run's, the gallery's, the stage's, the one over the page): over the page, to the stage, to the form (or all of it: painter, fine-tune, sampling, adapters), as reference, compare, set as cover, upscale to 2K or 4K, star, pick, copy the prompt or the seed, download, the file in a new tab, its run, the trash.
+- **Delete for good** in the Trash look: each run and each picture put aside, and Wipe out for all of them, asked first; the covers taken off the takes wait in the library's Trash (Art).
+- Fixed: Qwen-Image's text encoder read the prompt on any card of 20 GB or more and, with something else on a 24 GB card, could run out of memory there; it reads it on the card only when the room free holds it, else on the processor.
+- Fixed: an fp8 run with three adapters waited for ever for a card a few MiB short; an empty card takes a job its estimate fits less 512 MiB, and a job no card can take is refused at once.
+- Fixed: steps typed past their range were shown at its edge but kept and sent as typed («steps: 4 to 16 for this painter with Lightning» with 16 on the screen); Guidance stood beside Lightning on (a box's own display beat its hidden).
+- Fixed: a Qwen-Image 2512 fp8 fine-tune was not sent when the sampling was the user's own, and the Artist refused to draw.
+- **The buttons under the picture stay over the player** on any window: the picture gives up the height of its lines and buttons (with a three-line prompt on a 2K window they fell under the player).
+- **The stage keeps its frame** from the queue to the picture: it no longer jumps when a run begins to paint or ends.
+- **LoRA adapters in the Artist**, up to four, each at its strength, picked from a library of the painter's family in `artwork/loras/` (its folders the groups, the pictures beside the files on the cards), their trigger words a click into the prompt; **Look up on Civitai** by each file's SHA-256 alone, the answer kept beside it; what ComfyUI's LoRA Manager or Stability Matrix wrote is read too. A kohya file is renamed by the painter's own layers (diffusers took two of nine such files without a word and reached no layer); an adapter for another model stops the run, said.
+- **Qwen-Image 2512 and 2.1 as painters**: 2512 (Apache-2.0) from a GGUF at Q4 (a 16 GB card) or Q6, or an fp8 fine-tune from ComfyUI's single files (24 GB), with Lightning's 8-step adapter, about half a minute a picture after some two minutes of loading, a reference painted from or a mask repainted; 2.1 under the Qwen Research Licence, said in the room (not for commercial use), edits a reference by the prompt's words. The choice holds the painters whose files are here; the Artist's environment on diffusers 0.41 (Krea checked on it).
+- **Sampling** under the painter: the steps within the painter's range, Euler or Euler SDE, the schedule (Simple, Karras, Exponential, Beta), and for 2512 Lightning's strength (0 turns it off) and the guidance; kept per painter, the time estimated from them.
+- **A painter no card here can hold is refused at once**, with the numbers and the painter that would fit, instead of waiting in the queue for three hours; an artwork that waits says why (the card's memory and what it needs); a volley of artworks ends at the first refusal.
+- **The painters' rooms measured again** with the prompt writer before them: Krea 2 Muse Q4 12.6 GB, SDXL 14.2 GB, Q8 17.4 GB; Krea 2 Muse Q4 is the painter on a 16 GB card (SDXL needs more, not less).
+- **The prompt writer counts as here** only when every shard of it is: a download cut short no longer shows as complete.
+
+### The Librarian
+
+- **Trash (Art)** under Out of sight: the Artist's runs in the trash, the pictures put aside and the covers taken off the takes (by a redraw, by Remove, by a new cover) in one list, each with its picture and what it weighs; ticked, given back (a cover to its take, the one it has kept in its place) or deleted for good, asked first; a frozen workspace's covers stay.
+
+### The LoRA Trainer
+
+- **A run's log** is as wide as its lines and stands beside the server log, never over it; the Trainer's own, not shown in the other rooms.
+- **The two curves one under the other**, each the whole width, by a button beside The log; remembered.
+- **A finished run goes on to more epochs** from its ⋯ menu: the same set and knobs, from its last save and the optimizer's state (the studio's own trainer).
+- **The guide explains every field of the form**, and the music half's three knobs from the trainer's own loss: AR weight decides whether the music half learns, the anchor counts as a share of the weight, AR speed is its throttle; what was measured, and what to turn when. The knobs' tips say the same; the rank's share and size are the first line of its tip.
+- **Male and female drawn** (mars and venus, as in the Creator) in the voice's chips and beside each folder and set: the text signs sat off the line.
+
 ## 2.0.0-rc4 · 2026-10-10
 
 The fourth release candidate, cut as a whole: everything the studio does today, the Artist room as it stands among it, and what reproducing the install under Pinokio on Ubuntu 24.04 showed, made whole. The models the studio used to convert on every machine come converted now, from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2), and the install fetches no checkpoints (HERESY 1169, patches 1268–1290). The Plenio score editor in the Refiner and the Artist's further tools go on toward the next candidate.

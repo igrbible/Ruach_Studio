@@ -22,7 +22,8 @@
   var state = {
     hooks: null, data: null, trash: [], raw: null, rows: [], kind: "style",
     set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "", cmp: "",
-    filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true
+    filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true,
+    stacked: recall("yue2.trStacked") === "1"      // HERESY 1299: the Telemetry's curves one under the other
   };
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
@@ -108,8 +109,10 @@
   // HERESY 1101: what a rank costs, measured on YuE2's shapes (224 matrices, 2048 wide; 1.41 B weights a half);
   // said whenever the pills are, so a kind's preset is said too, not only a typed rank
   function rankSay() {
-    var r = parseFloat($("tr_rank").value) || 0;
-    $("trRankSay").textContent = r ? (r * 1.04 / 16).toFixed(r < 32 ? 1 : 0) + " % of what it adapts · " + Math.round(r * 1.835) + " MB a half" + (r > 64 ? " · for large many-voice sets" : "") : "";
+    // HERESY 1300 (Viktor 10.10.2026: «В тренере смотри на RANK - подсказка под полем инлайн»): the tip's first line, not a line under it
+    var r = parseFloat($("tr_rank").value) || 0, el = $("tr_rank");
+    if (r) el.dataset.tipHead = (r * 1.04 / 16).toFixed(r < 32 ? 1 : 0) + " % of what it adapts · " + Math.round(r * 1.835) + " MB a half" + (r > 64 ? " · for large many-voice sets" : "");
+    else delete el.dataset.tipHead;
   }
   function paintPills() {
     rankSay();
@@ -154,7 +157,7 @@
       var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, ser = r.series || {};
       var loss = ser.flow ? ser.flow.last : r.loss, ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce;
       return '<button type="button" class="tr-liverow' + (r.name === state.sel && state.pane === "run" ? " is-on" : "") + '" data-open="' + esc(r.name) + '" data-tip="Its telemetry">' +
-        '<span class="tr-lname"><i class="tr-pulse"></i><b>' + esc(r.name) + "</b><em>" + esc(r.kind || "") + " · " + (engineOf(r) === "ruach" ? "Ruach" : "AI-Toolkit") + " · GPU" + esc(r.gpu) + "</em></span>" +
+        '<span class="tr-lname"><i class="tr-pulse"></i><b translate="no">' + esc(r.name) + "</b><em>" + esc(r.kind || "") + " · " + (engineOf(r) === "ruach" ? "Ruach" : "AI-Toolkit") + " · GPU" + esc(r.gpu) + "</em></span>" +
         '<span class="tr-lbar"><i style="width:' + pct.toFixed(1) + '%"></i></span>' +
         '<span class="tr-lnums mono">' + pct.toFixed(0) + " % · " + (r.step || 0) + "/" + (r.steps || "?") +
           (r.tracks ? " · e" + ((r.step || 0) / r.tracks).toFixed(1) + "/" + Math.round(epochs(r)) : "") +
@@ -231,6 +234,7 @@
     pop.style.left = Math.max(8, Math.round(box.right - 190)) + "px";
     pop.innerHTML = '<button type="button" role="menuitem" data-act="open">Telemetry</button>' +
       '<button type="button" role="menuitem" data-act="log">The log</button>' +   // HERESY 1167: at the page's foot
+      (canGoOn(r) ? '<button type="button" role="menuitem" data-act="goon">Go on to more epochs…</button>' : "") +   // HERESY 1300
       '<button type="button" role="menuitem" data-act="' + (r.archived ? "unarchive" : "archive") + '">' + (r.archived ? "Out of the archive" : "Archive") + "</button>" +
       (isLive(r) ? '<button type="button" role="menuitem" class="danger" data-act="stop">Stop…</button>'
                  : '<button type="button" role="menuitem" class="danger" data-act="delete">Delete…</button>');
@@ -256,8 +260,14 @@
       document.body.appendChild(logDock);
       logDock.querySelector(".tr-logdock-x").addEventListener("click", hideLog);
       document.addEventListener("keydown", function (e) { if (e.key === "Escape" && logDock && !logDock.hidden) hideLog(); });
+      // HERESY 1298: placed again when the window or the server log's dock changes (folded, unfolded, full height, the other side)
+      window.addEventListener("resize", placeLog);
+      var dock = document.getElementById("logDock");
+      if (dock && window.ResizeObserver) new ResizeObserver(placeLog).observe(dock);
+      if (dock && window.MutationObserver) new MutationObserver(placeLog).observe(dock, { attributes: true, attributeFilter: ["class", "style"] });
     }
     logDock.hidden = false;
+    placeLog();
     logDock.dataset.run = name;
     logDock.querySelector(".tr-logdock-name").textContent = name;
     logDock.querySelector(".tr-logdock-dl").href = "/lab/train/log?name=" + encodeURIComponent(name);
@@ -265,6 +275,22 @@
     pullLog();
   }
   function hideLog() { if (logDock) { logDock.hidden = true; clearTimeout(logDock.timer); } }
+  // HERESY 1298 (Viktor 10.10.2026: «The LOG перекрывает серверный фрейм. Сделай утяжку»): the panel is as wide as its lines
+  // (app.css: max-content) and no wider than the room beside the server log's dock, on the side the dock leaves free; with
+  // less than 360 px there (a narrow window) it takes the width as before
+  function placeLog() {
+    if (!logDock || logDock.hidden) return;
+    var dock = document.getElementById("logDock"), vw = document.documentElement.clientWidth, room = vw - 32, right = false;
+    if (dock && getComputedStyle(dock).display !== "none") {
+      var r = dock.getBoundingClientRect();
+      if (r.width) {
+        var dockLeft = r.left + r.width / 2 < vw / 2, beside = dockLeft ? vw - 16 - (r.right + 12) : r.left - 12 - 16;
+        if (beside >= 360) { room = Math.floor(beside); right = dockLeft; }
+      }
+    }
+    logDock.style.setProperty("--tr-log-room", room + "px");
+    logDock.classList.toggle("is-right", right);
+  }
   function pullLog() {
     if (!logDock || logDock.hidden) return;
     var name = logDock.dataset.run, body = logDock.querySelector(".tr-logdock-body");
@@ -278,7 +304,34 @@
       if (r && isLive(r)) logDock.timer = setTimeout(pullLog, 3000);
     }).catch(function () { logDock.timer = setTimeout(pullLog, 6000); });
   }
+  // HERESY 1300 (Viktor 10.10.2026: «можно ли на завершённом тренинге продолжить по большему количеству эпох?»): a run of the studio's
+  // own trainer that has ended with a save goes on to more epochs: the lab's run of the same name takes its last save and its
+  // optimizer's state (lab/trainer/train.py), the same set and knobs, only the steps more
+  function canGoOn(r) {
+    return !!r && !isLive(r) && engineOf(r) === "ruach" && (r.checkpoints || []).some(function (k) { return k.step; }) && !!(r.tracks || (r.options || {}).steps_per_epoch);
+  }
+  function goOn(name) {
+    var r = runOf(name), o = (r && r.options) || {};
+    if (!canGoOn(r)) return toast("This run has no save to go on from", true);
+    var tracks = r.tracks || o.steps_per_epoch, at = Math.max.apply(null, (r.checkpoints || []).map(function (k) { return k.step || 0; })) / tracks;
+    var now = at % 1 ? at.toFixed(1) : String(at), first = Math.floor(at) + 4;
+    window.HeresyDialog.prompt(tr("Go on with " + name + " to how many epochs in all?") + "\n\n" + tr("It has " + now + " now; it goes on from its last save with the same set and knobs, on a card of its own."),
+      String(first), { ok: "Go on", placeholder: String(first) }).then(function (v) {
+      if (v === null) return;
+      var n = parseInt(v, 10);
+      if (!(n > at && n <= 1000)) return toast(tr("More epochs than " + now + ", please"), true);
+      var spec = { dataset: r.dataset, name: r.name, kind: r.kind || "", engine: "ruach", steps: n * tracks, save_epochs: o.save_epochs || 1, rank: o.rank, lr: o.lr,
+        ar_loss_weight: o.ar_loss_weight, ar_kl_weight: o.ar_kl_weight, ar_lr_multiplier: o.ar_lr_multiplier, cot: "off", quant: o.quant || "bf16",
+        do_separation: false, note: r.note || "" };
+      return api("/train/run", spec).then(function () {
+        toast(tr(name + " goes on to " + n + " epochs"));
+        state.sel = name; keep("yue2.trRun", name);
+        return load().then(function () { showPane("run"); });
+      });
+    }).catch(function (e) { toast(e.message, true); });
+  }
   function act(name, what) {
+    if (what === "goon") return goOn(name);          // HERESY 1300
     if (what === "log") return showLog(name);        // HERESY 1167
     if (what === "open") return openRun(name);
     if (what === "archive" || what === "unarchive")
@@ -405,6 +458,11 @@
             .map(function (x) { return '<option value="' + esc(x.name) + '"' + (x.name === state.cmp ? " selected" : "") + ">" + esc(x.name) + (x.dataset === r.dataset ? " \u00b7 same set" : "") + "</option>"; }).join("") + "</select>" +
           (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
           '<button type="button" class="btn ghost small" data-act="log" data-run="' + esc(r.name) + '">The log</button>' +   // HERESY 1167
+          // HERESY 1299 (Viktor: «выстраивать в одну колонку оба блока живого графа»): the face shows what a click makes
+          '<button type="button" class="btn ghost small tr-stack" data-stack aria-pressed="' + state.stacked + '" data-tip="' +
+            esc(tr(state.stacked ? "The curves side by side" : "The curves one under the other, each the whole width")) + '" aria-label="' +
+            esc(tr(state.stacked ? "The curves side by side" : "The curves one under the other, each the whole width")) + '">' +
+            (window.HeresyIcons ? window.HeresyIcons.ui(state.stacked ? "cols-2" : "rows-2") : "") + "</button>" +
           '<button type="button" class="btn ghost small" data-menu="' + esc(r.name) + '" aria-label="More">⋯</button></div></div>' +
       (r.note ? '<p class="row-hint tr-note" translate="no">' + esc(r.note) + "</p>" : "") +
       '<div class="tr-prog' + (live ? " is-live" : "") + '"><div class="tr-pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
@@ -421,7 +479,7 @@
       "</div>" +
       (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
       (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
-      '<div class="tr-charts">' +
+      '<div class="tr-charts' + (state.stacked ? " is-stacked" : "") + '">' +
         chart(ser.flow ? "flow" : "loss", ser, r, ser.flow ? "Sound half · flow loss (NAR)" : "All together · loss",
           "How well the sound half predicts the noise it has to take away. Lower is better. It jumps from step to step with the random noise level of each step: read the bold line, the running average.") +
         chart("ar_ce", ser, r, "Music half · ar_ce (AR)",
@@ -488,7 +546,7 @@
     $("trRaw").innerHTML = d.raw.length ? d.raw.map(function (r) {
       return '<button type="button" class="tr-pick' + (state.raw === r.name ? " is-on" : "") + '" data-raw="' + esc(r.name) + '"><b translate="no">' + esc(r.name) + "</b><span>" +   // HERESY 1166
         "<span>" + r.tracks + " tracks</span> · <span>" + gb(r.bytes) + "</span>" + (r.captions ? " · <span>" + r.captions + " captions</span>" : "") +
-        (voiceShort(r.voice) ? ' · <span translate="no">' + esc(voiceShort(r.voice)) + "</span>" : "") + "</span></button>";   // HERESY 1169
+        (voiceShort(r.voice) ? ' · <span translate="no">' + sexIcon(r.voice) + esc(voiceShort(r.voice)) + "</span>" : "") + "</span></button>";   // HERESY 1169, 1314
     }).join("") : '<p class="row-hint">Put a folder of songs into <code>datasets/raw/</code>, then press Reload.</p>';
   }
   function pickRaw(name) {
@@ -526,9 +584,15 @@
   // middle pitch in Hz last). On singing: the range sung, the voice left to the ear. Kept beside the songs, shown on the
   // folder and beside the sets made from it. A draft by measure: the ear decides.
   function rawOf(name) { return ((state.data && state.data.raw) || []).filter(function (r) { return r.name === name; })[0] || null; }
-  function voiceShort(v) {
+  // HERESY 1314 (Viktor 10.10.2026: «♂ и ♀ сделай как svg — текстовые снова дают проблему со сдвигом»): male and female drawn
+  // (Lucide's mars and venus, as the Creator's), the text signs sat off the line; in words where only text goes (a toast)
+  function sexIcon(v) {
+    var n = v && v.voice === "male" ? "mars" : v && v.voice === "female" ? "venus" : "";
+    return n && window.HeresyIcons ? window.HeresyIcons.ui(n, "tr-sex") : "";
+  }
+  function voiceShort(v, words) {
     if (!v || v.error || !v.median_hz) return "";
-    var sex = v.voice === "male" ? "♂ " : v.voice === "female" ? "♀ " : "? ";
+    var known = v.voice === "male" || v.voice === "female", sex = known ? (words ? v.voice + " " : "") : "? ";
     if (v.mode === "sung") return sex + "sung " + (v.low || "") + "–" + (v.high || "");
     return sex + (v.register || "?") + " · " + Math.round(v.median_hz) + " Hz";
   }
@@ -562,8 +626,9 @@
       '<span class="tr-voice-opts" role="group" aria-label="What the folder holds">' + [["speech", "speech"], ["sung", "singing"]].map(function (m) {
         return '<button type="button" class="btn ghost small tr-chip' + (mode === m[0] ? " is-on" : "") + '" data-voice-mode="' + m[0] + '" aria-pressed="' + (mode === m[0]) + '">' + m[1] + "</button>";
       }).join("") + "</span>" +
-      '<span class="tr-voice-opts" role="group" aria-label="Male or female">' + [["", "by pitch"], ["male", "♂"], ["female", "♀"]].map(function (s) {
-        return '<button type="button" class="btn ghost small tr-chip' + ((state.voiceSex || "") === s[0] ? " is-on" : "") + '" data-voice-sex="' + s[0] + '" aria-pressed="' + ((state.voiceSex || "") === s[0]) + '">' + s[1] + "</button>";
+      '<span class="tr-voice-opts" role="group" aria-label="Male or female">' + [["", "by pitch"], ["male", sexIcon({ voice: "male" }) || "male"], ["female", sexIcon({ voice: "female" }) || "female"]].map(function (s) {   // HERESY 1314: drawn
+        return '<button type="button" class="btn ghost small tr-chip' + (s[0] ? " tr-chip-sex" : "") + ((state.voiceSex || "") === s[0] ? " is-on" : "") + '" data-voice-sex="' + s[0] + '" aria-pressed="' + ((state.voiceSex || "") === s[0]) + '"' +
+          (s[0] ? ' aria-label="' + s[0] + '" data-tip="' + (s[0] === "male" ? "A male voice: the register named among the male ones" : "A female voice: the register named among the female ones") + '"' : "") + ">" + s[1] + "</button>";
       }).join("") + "</span>" +
       '<button type="button" class="btn ghost small" data-voice-go' + (running ? " disabled" : "") + ' data-tip="The pitch of the voiced moments, measured on this computer (pYIN); about half a minute">' +
       (v && v.median_hz ? "Measure again" : "Measure the voice") + "</button>" +
@@ -581,7 +646,7 @@
         if (r && j.kept) r.voice = j.kept;
         paintRaw(); paintSets();
         if (state.raw === name) paintVoice();
-        if (j.status === "done") toast("The voice of " + name + ": " + voiceShort(j.kept));
+        if (j.status === "done") toast("The voice of " + name + ": " + voiceShort(j.kept, true));   // HERESY 1314: in words
         else toast(j.error || "The measure failed", true);
       });
     }).catch(function (e) { state.voiceJob = { name: name, status: "failed", error: e.message }; paintVoice(); });
@@ -652,7 +717,7 @@
     $("trSets").innerHTML = d.prepared.length ? d.prepared.map(function (p) {
       return '<label class="tr-setpick' + (p.name === state.set ? " is-on" : "") + '"><input type="radio" name="trSet" value="' + esc(p.name) + '"' + (p.name === state.set ? " checked" : "") + ' /><b translate="no">' + esc(p.name) + "</b><span>" +   // HERESY 1166
         "<span>" + p.tracks + " tracks</span> · <span>" + clock(p.seconds) + "</span> · <span>from</span> <span translate=\"no\">" + esc(p.from) + "</span> · <span>" + esc(p.made) + "</span>" +
-        (voiceShort((rawOf(p.from) || {}).voice) ? ' · <span translate="no">' + esc(voiceShort(rawOf(p.from).voice)) + "</span>" : "") + "</span></label>";   // HERESY 1169
+        (voiceShort((rawOf(p.from) || {}).voice) ? ' · <span translate="no">' + sexIcon(rawOf(p.from).voice) + esc(voiceShort(rawOf(p.from).voice)) + "</span>" : "") + "</span></label>";   // HERESY 1169, 1314
     }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
   }
   function setKind(k) {
@@ -760,6 +825,7 @@
       if (t.id === "trListenGo") return listenGo();
       if (t.id === "trLApply") return listenApply();
       if ((b = t.closest("[data-menu]"))) { e.stopPropagation(); return menu(b); }
+      if (t.closest("[data-stack]")) { state.stacked = !state.stacked; keep("yue2.trStacked", state.stacked ? "1" : null); return paintRun(); }   // HERESY 1299
       if ((b = t.closest("[data-act][data-run]"))) return act(b.dataset.run, b.dataset.act);
       if ((b = t.closest("[data-restore]"))) return restore(b.dataset.restore);
       if ((b = t.closest("[data-purge]"))) return purge(b.dataset.purge, b.dataset.name, b.dataset.size);
@@ -806,10 +872,12 @@
     });
     $("tr_rank").addEventListener("input", paintPills);
     $("trRankHow").addEventListener("click", function (e) { e.preventDefault(); if (window.HeresyGuide) window.HeresyGuide.open("lora", "Rank and the other knobs"); });
+    // HERESY 1300: the AR knobs, explained with what was measured
+    $("trArHow").addEventListener("click", function (e) { e.preventDefault(); if (window.HeresyGuide) window.HeresyGuide.open("lora", "The music half's three knobs"); });
     $("trRun").addEventListener("click", startRun);
     setKind("style");
     engineKnobs();
   }
 
-  window.HeresyTrain = { init: init, reload: load };
+  window.HeresyTrain = { init: init, reload: load, log: showLog, unlog: hideLog, goOn: goOn };   // HERESY 1298, 1300: for the suite
 })();
