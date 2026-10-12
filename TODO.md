@@ -8,6 +8,8 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ **2.0.0-rc1** (06.10.2026), **rc2** (07.10), **rc3** (09.10; cut again the same day with the logo the name alone everywhere, the GitHub pre-release with it).
 - ✅ **2.0.0-rc4**, cut as a whole on Viktor's word of 10.10.2026 («собирай RC4 как unified version с багфиксом по факту воспроизведения поведения развёртывания Студии под Pinokio»): the models converted once in goldhub/Ruach_Studio_Models_v2, the install made whole, the Artist as it stands; tried from a clean clone and by a whole fresh install. The community's gate («при росте Issues и PR, и 100+ stars») moves to rc5.
+- ✅ 2.0.0-rc6 cut and published 12.10.2026 (tag v2.0.0-rc6, the pre-release with its tarball, the card on rc6).
+- ☐ RC7: the spectrogram's slice out of the section card's tip, the spectrogram only in the full scope (Viktor 12.10.2026).
 - ☐ **2.0.0, the release.** Before it, in one go: every screenshot of the guide, the README and the site taken again (curated: nothing private in them), the new strings in the six other languages, every approved 💎 probe made again full length on its own seeds, and the promo video with everything in.
 - ☐ **2.1.0**: the Videographer room (below) and what SUNO's interface teaches us (below); the working release once issues and pull requests settle.
 - ❓→2.1.0 (Viktor 12.10.2026: the DAW phase of the Refiner «нужно досконально обсудить и обмозговать», with SeedVR). The closing pass of 2.0.0 together, by RC6. Proposed for his choice: Extend from a position (2.0.0), Replace a section and an instrumental layer on the take's score (2.1.0).
@@ -93,7 +95,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ 1379: **five more languages**: French, Portuguese (Brazil), German, Japanese and Chinese, the page whole (the guide still English in them).
 - ✅ 1381: the guide (GUIDE.fr/pt/de/ja/zh.md) in the five new languages.
 - ✅ 1382: README's little story in the five new languages.
-- ✅ 1383: the site's page (ruachstudio.igr.bible) in the five new languages, on Orpheus since 12.10.2026 (Viktor: «Выкладывай на Орфей»). ☐ With the rc6 push: the five's «Read the guide» from docs/GUIDE.md to docs/GUIDE.<lang>.md (site/i18n/{fr,pt,de,ja,zh}.json; 404 on GitHub until then), and its rc5 lines (the release, «7 languages», «Five more languages» to come) brought to rc6.
+- ✅ 1383: the site's page (ruachstudio.igr.bible) in the five new languages, on Orpheus since 12.10.2026 (Viktor: «Выкладывай на Орфей»). ✅ rc6: the five's «Read the guide» on their own guides, the card's lines on rc6, twelve languages.
 - ✅ 1384: **the Artist's second pass**, as Viktor's ComfyUI workflow: a picture painted over at ×1.5 or ×2 by its own run (Krea 2, Qwen-Image 2512). ✅ 1385: his extra latent noise (InjectLatentNoise+) under a reference and in the second pass (0.6 there, as his).
 - ✅ 1380: The Artist stage's buttons keep the language they were made in when the page's language changes (Spanish left after a switch to Russian; a reload mends it): found by the 1379 probe.
 - ✅ 1274: **the page offline**: abcjs (6.7.1) in the page, the ten font families (Raleway, Roboto and Lato joined at Viktor's word; Latin, Cyrillic, Greek) served by the lab with a year's cache; no CDN left.

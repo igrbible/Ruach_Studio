@@ -151,6 +151,10 @@ def page_for(code, template, units, catalog):
             .replace("{{LANG}}", code.upper()).replace("{{LANGS}}", links).replace("{{ALTERNATES}}", alternates)
             .replace("{{FIRST_VISIT}}", FIRST_VISIT if code == "en" else ""))
     page = page.replace('content="assets/og.jpg"', 'content="%s/assets/og.jpg"' % SITE)
+    # HERESY 1392: the little story is shown in the page's own language by the page itself, not only by its script (a reader
+    # without scripts and a search engine saw the English one on every page)
+    if code != "en" and 'data-lang="%s" hidden>' % code in page:
+        page = page.replace('data-lang="en">', 'data-lang="en" hidden>', 1).replace('data-lang="%s" hidden>' % code, 'data-lang="%s">' % code, 1)
     # Viktor 06.10.2026: «внешние ссылки сделай с таргетом _blank»: a link out of the site opens a new tab
     page = re.sub(r'<a (?![^>]*target=)([^>]*href="https?://)', r'<a target="_blank" rel="noopener" \1', page)
     if deep:
