@@ -1,0 +1,158 @@
+From c0e7ed05ff927d77974189757386c8fb65d7eb03 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 02:24:07 -0600
+Subject: [PATCH 1334/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201350:=20Draw?=
+ =?UTF-8?q?=20from=20the=20canvas,=20beside=20Done=20(and=20Ctrl+Enter),?=
+ =?UTF-8?q?=20as=20InvokeAI's=20Invoke=20by=20its=20canvas:=20the=20places?=
+ =?UTF-8?q?=20and=20the=20mask=20kept,=20the=20canvas=20closed,=20the=20ru?=
+ =?UTF-8?q?n=20asked?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 1 +
+ tools/console/heresy-artist.js  | 3 ++-
+ tools/console/heresy-canvas.js  | 6 +++++-
+ tools/console/heresy-i18n-be.js | 4 ++++
+ tools/console/heresy-i18n-el.js | 4 ++++
+ tools/console/heresy-i18n-es.js | 4 ++++
+ tools/console/heresy-i18n-it.js | 4 ++++
+ tools/console/heresy-i18n-ru.js | 4 ++++
+ tools/console/heresy-i18n-uk.js | 4 ++++
+ 9 files changed, 32 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 1b7552c..539f46f 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4941,6 +4941,7 @@ body[data-tab="artist"] .col-grip.left { display: none; }
+ .cv-keys { font-size: 11px; margin-top: auto; }
+ .cv-foot { display: flex; gap: 18px; padding: 5px 14px; border-top: 1px solid var(--line-a); font-size: 11px; color: var(--muted); }
+ .cv .pb-btn:disabled { opacity: .35; }
++.cv-draw { min-width: 7em; text-transform: uppercase; letter-spacing: .06em; justify-content: center; }   /* HERESY 1350 */
+ @media (max-width: 900px) { .cv-body { grid-template-columns: 44px minmax(0, 1fr); } .cv-side { display: none; } }
+ /* HERESY 1307: «Paint around it» under the strength; with it the strength gives way */
+ .ar-ref-mid { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 4cd9a30..3dad24d 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -368,7 +368,8 @@
+           paintCanvasSay();
+           paintRefSay();
+           toast(tr("The canvas is kept: Draw paints each shape as it lies there"));
+-        } });
++        },
++        onDraw: function () { if (!$("arDraw").disabled) draw(); else toast(tr($("arDraw").dataset.tip || "Draw"), "bad"); } });   // HERESY 1350
+     };
+     pic.onerror = function () { toast(tr("The picture could not be read"), "bad"); };
+     pic.src = ref.data || fileUrl(ref.id, ref.file);
+diff --git a/tools/console/heresy-canvas.js b/tools/console/heresy-canvas.js
+index 82a06a1..cf29579 100644
+--- a/tools/console/heresy-canvas.js
++++ b/tools/console/heresy-canvas.js
+@@ -82,7 +82,9 @@
+         '<button type="button" class="pb-btn" data-cv="undo" aria-label="' + esc(tr("Undo (Ctrl+Z)")) + '" data-tip="' + esc(tr("Undo (Ctrl+Z)")) + '">' + icon("undo") + "</button>" +
+         '<button type="button" class="pb-btn" data-cv="redo" aria-label="' + esc(tr("Redo (Ctrl+Shift+Z)")) + '" data-tip="' + esc(tr("Redo (Ctrl+Shift+Z)")) + '">' + icon("redo") + "</button>" +
+         '<button type="button" class="pb-btn" data-cv="view" aria-label="' + esc(tr("The frame and the picture in sight (F)")) + '" data-tip="' + esc(tr("The frame and the picture in sight (F)")) + '">' + icon("view") + "</button>" +
+-        '<button type="button" class="btn primary small" data-cv="done">' + esc(tr("Done")) + "</button></div>" +
++        '<button type="button" class="btn ghost small" data-cv="done">' + esc(tr("Done")) + "</button>" +
++        (opts.onDraw ? '<button type="button" class="btn primary small cv-draw" data-cv="draw" data-tip="' + esc(tr("Keep the canvas and draw the shapes picked in the form (Ctrl+Enter)")) + '">' + esc(tr("Draw")) + "</button>" : "") +   // HERESY 1350
++        "</div>" +
+       '<div class="cv-body"><div class="cv-tools" role="toolbar" aria-label="' + esc(tr("Tools")) + '">' +
+         [["move", "Move and scale the picture: drag it, or a corner (V); arrows nudge it"], ["brush", "Paint the mask: what it covers is repainted (B)"],
+          ["erase", "Erase the mask (E)"], ["hand", "Move the board (H, or hold Space)"]].map(function (t) {
+@@ -336,6 +338,7 @@
+         var tg = tmp.getContext("2d"); tg.fillStyle = "#e02828"; tg.fillRect(0, 0, mw, mh); tg.globalCompositeOperation = "destination-out"; tg.drawImage(mask, 0, 0);
+         mg.clearRect(0, 0, mw, mh); mg.drawImage(tmp, 0, 0); maskSeen = hasMask(); st.maskTouched = true; paintSide(); draw();
+       } else if (k === "done") done();
++      else if (k === "draw") { done(); if (opts.onDraw) opts.onDraw(); }   // HERESY 1350: as InvokeAI's Invoke by its canvas
+     });
+     back.querySelector("[data-cv-alpha]").addEventListener("input", function () { st.refAlpha = +this.value; draw(); });
+     size.addEventListener("input", function () { st.brush = +size.value; keep("yue2.cvBrush", size.value); paintSide(); draw(); });
+@@ -356,6 +359,7 @@
+       if (k === " ") { if (!st.space) { st.space = true; cv.style.cursor = "grab"; draw(); } e.preventDefault(); return; }
+       if ((e.ctrlKey || e.metaKey) && (k === "z" || k === "Z")) { e.preventDefault(); step(e.shiftKey ? redo : undo, e.shiftKey ? undo : redo); return; }
+       if ((e.ctrlKey || e.metaKey) && (k === "y" || k === "Y")) { e.preventDefault(); step(redo, undo); return; }
++      if ((e.ctrlKey || e.metaKey) && k === "Enter" && opts.onDraw) { e.preventDefault(); e.stopPropagation(); done(); opts.onDraw(); return; }   // HERESY 1350
+       if (e.ctrlKey || e.metaKey || e.altKey) return;
+       if (k === "Escape" || k === "Enter") { e.preventDefault(); e.stopPropagation(); done(); return; }
+       var nudge = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index eee0960..f909e20 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -4574,3 +4574,7 @@ RuachI18n.add("be", {
+ "the qwen fine-tunes {0}": "файнтюны Qwen {0}",
+ "the artist's adapters {0}": "адаптары Мастака {0}"
+ });
++// HERESY 1169 · 1350: the canvas's Draw
++RuachI18n.add("be", {
++"Keep the canvas and draw the shapes picked in the form (Ctrl+Enter)": "Захаваць палатно і намаляваць формы, абраныя ў форме (Ctrl+Enter)"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index b640444..c1b9f6d 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -4573,3 +4573,7 @@ RuachI18n.add("el", {
+ "the qwen fine-tunes {0}": "τα fine-tunes του Qwen {0}",
+ "the artist's adapters {0}": "οι προσαρμογείς του Καλλιτέχνη {0}"
+ });
++// HERESY 1169 · 1350: the canvas's Draw
++RuachI18n.add("el", {
++"Keep the canvas and draw the shapes picked in the form (Ctrl+Enter)": "Κράτα τον καμβά και ζωγράφισε τα σχήματα που επιλέχθηκαν στη φόρμα (Ctrl+Enter)"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 406caec..499710a 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -4573,3 +4573,7 @@ RuachI18n.add("es", {
+ "the qwen fine-tunes {0}": "los fine-tunes de Qwen {0}",
+ "the artist's adapters {0}": "los adaptadores del Artista {0}"
+ });
++// HERESY 1169 · 1350: the canvas's Draw
++RuachI18n.add("es", {
++"Keep the canvas and draw the shapes picked in the form (Ctrl+Enter)": "Guardar el lienzo y dibujar las formas elegidas en el formulario (Ctrl+Enter)"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 7df59dd..34bac14 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -4573,3 +4573,7 @@ RuachI18n.add("it", {
+ "the qwen fine-tunes {0}": "i fine-tune di Qwen {0}",
+ "the artist's adapters {0}": "gli adattatori dell'Artista {0}"
+ });
++// HERESY 1169 · 1350: the canvas's Draw
++RuachI18n.add("it", {
++"Keep the canvas and draw the shapes picked in the form (Ctrl+Enter)": "Tieni la tela e disegna le forme scelte nel modulo (Ctrl+Enter)"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index f99c1e5..3e23ecb 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -4579,3 +4579,7 @@ RuachI18n.add("ru", {
+ "the qwen fine-tunes {0}": "файнтюны Qwen {0}",
+ "the artist's adapters {0}": "адаптеры Художника {0}"
+ });
++// HERESY 1169 · 1350: the canvas's Draw
++RuachI18n.add("ru", {
++"Keep the canvas and draw the shapes picked in the form (Ctrl+Enter)": "Сохранить холст и нарисовать формы, выбранные в форме (Ctrl+Enter)"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 6a027fd..e4c3918 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -4574,3 +4574,7 @@ RuachI18n.add("uk", {
+ "the qwen fine-tunes {0}": "файнтюни Qwen {0}",
+ "the artist's adapters {0}": "адаптери Художника {0}"
+ });
++// HERESY 1169 · 1350: the canvas's Draw
++RuachI18n.add("uk", {
++"Keep the canvas and draw the shapes picked in the form (Ctrl+Enter)": "Зберегти полотно й намалювати форми, вибрані у формі (Ctrl+Enter)"
++});
+-- 
+2.43.0
+

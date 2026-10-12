@@ -39,6 +39,7 @@ import json, os, random, re, subprocess, sys, time
 from pathlib import Path
 
 KIT = Path(__file__).resolve().parent.parent
+KEPT = {}                  # HERESY 1370: what a serving Artist process keeps between runs (artist_job.serve), one dict for its modules
 PROMPTER = KIT / "artwork" / "Qwen3-4B-Instruct-2507"
 LINK = KIT / "artwork" / "SDXL-Artwork-Model"
 OURS = KIT / "artwork" / "CyberRealistic-XL-v10"

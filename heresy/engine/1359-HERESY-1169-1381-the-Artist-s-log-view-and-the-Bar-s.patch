@@ -1,0 +1,113 @@
+From 5c4368dc0713b5f076a2260840b9df127f7f7bf4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 23:31:23 -0600
+Subject: [PATCH 1359/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201381:=20the?=
+ =?UTF-8?q?=20Artist's=20log=20view=20and=20the=20Bar's=20kept-painter=20r?=
+ =?UTF-8?q?ow=20named=20by=20the=20room;=20Portuguese=20Processamento?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The page's walker gave the log dock's Artist view and the Bar card's kept-painter row the catalogs' "Artist", the Trainer's performer («Артист»), against Viktor's word of 1332: «Artist не переводи как Артист на русский. Только как Художник». Both now carry the room's name as the bar's tab (artistRoom(), translate="no"), the log's own window too. Portuguese: Processamento for Engine → Compute in the four lines that still said Computação.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            | 9 +++++++--
+ tools/console/heresy-i18n-pt.js | 8 ++++----
+ tools/console/index.html        | 2 +-
+ 3 files changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 25bfd2b..7e71b35 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3225,7 +3225,7 @@
+     d.title = "Ruach Studio · " + tr("Server log");
+     d.body.className = "log-pop";
+     d.body.innerHTML = '<div class="log-pop-head"><span class="log-dock-views"><button type="button" class="log-view" data-view="server">' + tr("Server") +
+-      '</button><button type="button" class="log-view" data-view="artist">' + tr("Artist") + '</button></span><label class="check small-check"><input type="checkbox" checked /> <span>' + tr("Follow") +
++      '</button><button type="button" class="log-view" data-view="artist" translate="no">' + artistRoom() + '</button></span><label class="check small-check"><input type="checkbox" checked /> <span>' + tr("Follow") +
+       '</span></label></div><div class="log-pop-main"><div class="log-pop-logs"><div class="log-dock-body mono" data-body="server"></div>' +
+       '<div class="log-dock-body log-dock-artist mono" data-body="artist" hidden></div></div><div class="log-pop-gpus" data-body="gpus" aria-label="' + tr("The cards, live") + '"></div></div>';   // HERESY 1343: the cards beside it
+     POP = { win: win, server: d.querySelector('[data-body="server"]'), artist: d.querySelector('[data-body="artist"]'), follow: d.querySelector("input"), gpus: d.querySelector('[data-body="gpus"]') };
+@@ -4121,6 +4121,7 @@
+     var held = keptPainters(), heldOn = held.map(function (p) { return p.gpu; }).join(", ");
+     if (held.length) rows.push(["Artist", "a painter kept between runs · GPU " + heldOn, "amber"]);
+     $("hwCard").innerHTML = rows.map(function (row) {
++      if (row[0] === "Artist") return '<div><dt translate="no">' + escape(artistRoom()) + '</dt><dd class="' + row[2] + '" title="' + escape(row[1]) + '">' + escape(row[1]) + "</dd></div>";   // HERESY 1381: the room, not the performer
+       return "<div><dt>" + row[0] + '</dt><dd class="' + row[2] + '"' + (row[0] === "GPU" && gpu ? ' translate="no"' : "") + ' title="' + escape(row[1]) + '">' + escape(row[1]) + "</dd></div>";   // HERESY 1339: the card's name
+     }).join("");
+     $("hwNote").textContent = STATE.noHardware ? "This server does not report its hardware."
+@@ -8834,10 +8835,14 @@
+   // performer, «Артист»; the room is Viktor's «Художник», the pictures for the songs)
+   var ARTIST_ROOM = { ru: "Художник", uk: "Художник", be: "Мастак", el: "Καλλιτέχνης", es: "Artista", it: "Artista",
+                       fr: "Peintre", "pt-BR": "Pintor", de: "Maler", ja: "絵師", "zh-CN": "画室" };   // HERESY 1379: by <html lang>
++  function artistRoom() {       // HERESY 1381: hoisted, for the log's view and the Bar's row painted before this line runs
++    return (ARTIST_ROOM || {})[document.documentElement.lang] || "Artist";
++  }
+   function paintArtistTab() {   // HERESY 1332 (Viktor: «Artist не переводи как Артист на русский. Только как Художник»): the room's header too
+-    var name = ARTIST_ROOM[document.documentElement.lang] || "Artist";
++    var name = artistRoom();
+     if ($("tabArtist")) $("tabArtist").textContent = name;
+     if ($("arRoomName")) $("arRoomName").textContent = name;
++    if ($("logViewArtist")) $("logViewArtist").textContent = name;   // HERESY 1381: the log's view of the room
+   }
+   window.addEventListener("ruach-lang", paintArtistTab);
+   paintArtistTab();
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index a1911e6..2368bb6 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -3333,7 +3333,7 @@ RuachI18n.add("pt", {
+ "the smallest: with it the music half hallucinates, and breaks the score (ABC) and the music tokens.": "o menor: com ele a metade música alucina e quebra a partitura (ABC) e os tokens musicais.",
+ "The machine, as the studio found it": "A máquina, como o estúdio a encontrou",
+ "What suits it:": "O que combina com ela:",
+-"Engine → Compute and Engine → Artwork keep them yours to change; «Scan the machine» there asks again.": "Motor → Computação e Motor → Arte os deixam para você mudar; «Escanear a máquina» lá pergunta de novo.",
++"Engine → Compute and Engine → Artwork keep them yours to change; «Scan the machine» there asks again.": "Motor → Processamento e Motor → Arte os deixam para você mudar; «Escanear a máquina» lá pergunta de novo.",
+ "compute {0}": "computação {0}",
+ "its limit {0} GB": "o limite dela {0} GB",
+ "the studio's": "a do estúdio",
+@@ -3462,7 +3462,7 @@ RuachI18n.add("pt", {
+ "Checkpoints for the extra decoders and the sliders, made into GGUF here": "Checkpoints dos decodificadores extras e dos sliders, transformados em GGUF aqui",
+ "Whisper large-v3 (CTranslate2, float16): lyrics check, karaoke timing, trim to the text": "Whisper large-v3 (CTranslate2, float16): conferência da letra, sincronia de karaokê, corte ao texto",
+ "LoRAs: the Kit's library and Ruach Studio's own": "LoRAs: a biblioteca do Kit e a do próprio Ruach Studio",
+-"M-A-P's YuE2 as GGUF (Serveurperso/YuE2-GGUF): Compute chooses between those here": "YuE2 da M-A-P em GGUF (Serveurperso/YuE2-GGUF): Computação escolhe entre os que estão aqui",
++"M-A-P's YuE2 as GGUF (Serveurperso/YuE2-GGUF): Compute chooses between those here": "YuE2 da M-A-P em GGUF (Serveurperso/YuE2-GGUF): Processamento escolhe entre os que estão aqui",
+ "M-A-P's YuE2 as GGUF": "YuE2 da M-A-P em GGUF",
+ "the whole model; on a card older than Ampere (an RTX 20xx, a Quadro RTX) it runs without its tensor cores, slower than Q8_0": "o modelo inteiro; numa placa mais antiga que Ampere (uma RTX 20xx, uma Quadro RTX) ele roda sem os núcleos tensoriais, mais devagar que Q8_0",
+ "The whole model; on a card older than Ampere (an RTX 20xx, a Quadro RTX) it runs without its tensor cores, slower than Q8_0": "O modelo inteiro; numa placa mais antiga que Ampere (uma RTX 20xx, uma Quadro RTX) ele roda sem os núcleos tensoriais, mais devagar que Q8_0",
+@@ -3491,7 +3491,7 @@ RuachI18n.add("pt", {
+ "The Artist paints with it.": "O Pintor pinta com ele.",
+ "The Artist offers it under Painter.": "O Pintor o oferece em Pintor.",
+ "The Trainer starts from it.": "O Treinador parte dele.",
+-"The engine lists it at its next start; Compute then offers it.": "O motor o lista no próximo início; Computação então o oferece.",
++"The engine lists it at its next start; Compute then offers it.": "O motor o lista no próximo início; Processamento então o oferece.",
+ "The Trainer's listener hears a set's songs with it; a GGUF one needs llama.cpp built in vendor/llama.cpp (the fetch says how).": "O ouvinte do Treinador ouve com ele as canções de um conjunto; um GGUF precisa do llama.cpp compilado em vendor/llama.cpp (o download diz como).",
+ "The whole model": "O modelo inteiro",
+ "Under Qwen's research licence: research and evaluation only, not for commercial use": "Sob a licença de pesquisa da Qwen: só pesquisa e avaliação, não para uso comercial",
+@@ -3740,7 +3740,7 @@ RuachI18n.add("pt", {
+ "Auto ({#0} GB found, its limit {#1} GB in Engine → GPUs: context {#2}, VAE tiles {#3})": "Auto ({#0} GB encontrados, o limite dela {#1} GB em Motor → GPUs: contexto {#2}, blocos do VAE {#3})",
+ "Auto ({#0} GB found, its limit {#1} GB in Engine → GPUs: whole context, VAE tiles {#2})": "Auto ({#0} GB encontrados, o limite dela {#1} GB em Motor → GPUs: contexto inteiro, blocos do VAE {#2})",
+ "Auto ({#0} GB found, its limit {#1} GB in Engine → GPUs: too small for YuE2)": "Auto ({#0} GB encontrados, o limite dela {#1} GB em Motor → GPUs: pouco demais para o YuE2)",
+-"The most of the card’s memory the studio’s work may take, the rest left to what else runs on it (a laptop’s desktop and browser): Compute’s Auto plans the engine’s knobs for the studio card’s limit, and the lab gives a card a job only when it fits under its limit": "O máximo da memória da placa que o trabalho do estúdio pode usar, o resto deixado para o que mais roda nela (a área de trabalho e o navegador de um notebook): o Auto de Computação ajusta os botões do motor ao limite da placa do estúdio, e o laboratório só dá uma tarefa a uma placa quando ela cabe sob o limite",
++"The most of the card’s memory the studio’s work may take, the rest left to what else runs on it (a laptop’s desktop and browser): Compute’s Auto plans the engine’s knobs for the studio card’s limit, and the lab gives a card a job only when it fits under its limit": "O máximo da memória da placa que o trabalho do estúdio pode usar, o resto deixado para o que mais roda nela (a área de trabalho e o navegador de um notebook): o Auto de Processamento ajusta os botões do motor ao limite da placa do estúdio, e o laboratório só dá uma tarefa a uma placa quando ela cabe sob o limite",
+ "Look for a new release": "Procurar uma nova versão",
+ "When one is out": "Quando sair uma",
+ "release candidates too": "versões candidatas também",
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 31177f4..b7f307b 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1835,7 +1835,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     <span class="log-dock-acts">
+       <span class="log-dock-views" id="logDockViews" role="tablist" aria-label="Which log">
+         <button type="button" role="tab" class="log-view is-on" data-view="server" aria-selected="true" data-tip="The server's log: the engine and the lab">Server</button>
+-        <button type="button" role="tab" class="log-view" data-view="artist" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button></span>
++        <button type="button" role="tab" class="log-view" data-view="artist" id="logViewArtist" translate="no" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button></span>
+       <label class="check small-check"><input type="checkbox" id="logDockFollow" checked data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read." /> <span>Follow</span></label>
+       <!-- HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, or back -->
+       <button type="button" class="btn ghost small log-dock-tall" id="logDockTall" aria-pressed="false" aria-label="Full height"
+-- 
+2.43.0
+

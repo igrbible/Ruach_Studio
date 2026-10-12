@@ -1,0 +1,119 @@
+From 72a675c6d0e3348f5886d166e34a1c9a52742f5b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 17:58:59 -0600
+Subject: [PATCH 1351/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201369:=20the?=
+ =?UTF-8?q?=20Artist's=20library=20by=20the=20arrow=20keys=20(=E2=86=90=20?=
+ =?UTF-8?q?=E2=86=92=20the=20picture=20before=20and=20after,=20=E2=86=91?=
+ =?UTF-8?q?=20=E2=86=93=20a=20row=20of=20the=20gallery,=20in=20the=20runs?=
+ =?UTF-8?q?=20the=20run=20before=20and=20after),=20the=20stage=20following?=
+ =?UTF-8?q?;=20the=20sampling's=20Lightning,=20Guidance=20and=20Reset=20on?=
+ =?UTF-8?q?=20a=20row=20of=20their=20own?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 11.10.2026: «в галерее картинок сделай навигацию стрелочными кнопками клавиатуры. Lightning и Ведение с кнопкой сброса на следующую полосу перенеси». The keys are the library's in the Artist's room while it has a picture, at its ends too (the player's seek everywhere else); never while typing, over a window, a menu, the column's edge or the picture over the page (its own ← →). Suite (suite-1369.part).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css          |  2 ++
+ tools/console/heresy-artist.js | 54 ++++++++++++++++++++++++++++++++++
+ tools/console/index.html       |  3 ++
+ 3 files changed, 59 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index b68da45..74dcc1f 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4636,6 +4636,8 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ .ar-samp-row select { min-width: 7.5em; }
+ .ar-samp-steps input, .ar-samp-num input { width: 5.5em; }
+ .ar-samp-row .field[hidden] { display: none; }   /* HERESY 1328: .field's own display beat [hidden]: Guidance stood beside Lightning on */
++.ar-samp-row2 { padding-top: 0; }                         /* HERESY 1369: Lightning, Guidance and Reset under the steps */
++.ar-samp-row2 #arSampReset { margin-left: auto; }
+ .ar-light-row { display: flex; align-items: center; gap: 6px; }
+ .ar-light-row input[type="checkbox"] { width: auto; margin: 0; }
+ .ar-light-row input[type="number"]:disabled { opacity: .45; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 7def370..99bc63f 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -1189,6 +1189,60 @@
+     state.pinSel = true;
+     paintStage();
+   }
++  // HERESY 1369 (Viktor 11.10.2026: «в галерее картинок сделай навигацию стрелочными кнопками клавиатуры»): the library walked by the
++  // arrows: ← → the picture before and after (the gallery as shown, or the runs' pictures in their order), ↑ ↓ a row of the gallery up
++  // and down, in the runs the run before and after; the stage follows and the thumbnail comes into sight. Not while typing, nor with a
++  // window, a menu or the picture over the page open (it has its own ← →); the player's ← → (seek) everywhere else
++  function navStep(key, cur) {
++    if (state.look === "gallery") {
++      var list = items(), at = -1;
++      list.forEach(function (x, k) { if (x.r.id === cur.r.id && x.p.file === cur.p.file) at = k; });
++      if (at < 0) return list[0] || null;
++      var figs = document.querySelectorAll("#arRuns .ar-gpic[data-g]"), cols = 0;
++      for (var c = 0; c < figs.length && figs[c].offsetTop === figs[0].offsetTop; c++) cols++;
++      var d = key === "ArrowLeft" ? -1 : key === "ArrowRight" ? 1 : (key === "ArrowUp" ? -1 : 1) * Math.max(1, cols);
++      return list[at + d] || null;
++    }
++    var runs = state.runs.filter(function (r) { return keptList(r).length; }), ri = -1, pi = 0;
++    runs.forEach(function (r, k) { if (r.id === cur.r.id) { ri = k; pi = keptList(r).map(function (x) { return x.p; }).indexOf(cur.p); } });
++    if (ri < 0) return null;
++    if (key === "ArrowUp" || key === "ArrowDown") {
++      var to = runs[ri + (key === "ArrowUp" ? -1 : 1)];
++      if (!to) return null;
++      var kl = keptList(to);
++      return kl[Math.min(Math.max(pi, 0), kl.length - 1)];
++    }
++    var flat = [];
++    runs.forEach(function (r) { keptList(r).forEach(function (x) { flat.push(x); }); });
++    var fi = -1;
++    flat.forEach(function (x, k) { if (x.r.id === cur.r.id && x.p.file === cur.p.file) fi = k; });
++    return flat[fi + (key === "ArrowLeft" ? -1 : 1)] || null;
++  }
++  function thumbOf(it) {
++    if (state.look === "gallery") {
++      var at = -1;
++      items().forEach(function (x, k) { if (x.r.id === it.r.id && x.p.file === it.p.file) at = k; });
++      return at < 0 ? null : document.querySelector('#arRuns .ar-gpic[data-g="' + at + '"]');
++    }
++    return document.querySelector('#arRuns .ar-run[data-id="' + it.r.id + '"] .ar-pic[data-i="' + it.r.pictures.indexOf(it.p) + '"]');
++  }
++  document.addEventListener("keydown", function (e) {
++    var k = e.key;
++    if (k !== "ArrowLeft" && k !== "ArrowRight" && k !== "ArrowUp" && k !== "ArrowDown") return;
++    if (document.body.dataset.tab !== "artist" || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
++    if (state.look !== "gallery" && state.look !== "runs") return;
++    var t = e.target;
++    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || (t.closest && t.closest("#arEdgeL, #arEdgeR, [role=slider], [role=separator], .hm-menu")))) return;
++    if (state.view || state.compare || document.querySelector(".hd-back, .hm-menu, .ar-lib-back, .ar-mask, .ar-cmp")) return;
++    var cur = selected();
++    if (!cur) return;                                    // no picture: the keys stay the player's (its seek)
++    e.preventDefault();                                  // the library's keys, at its ends too
++    var next = navStep(k, cur);
++    if (!next) return;
++    pick(next, false);
++    var th = thumbOf(next);
++    if (th && th.scrollIntoView) th.scrollIntoView({ block: "nearest", inline: "nearest" });
++  }, true);
+   function stageList(it) {                               // what ‹ › walk over the page: the gallery as shown, else the picture's run
+     var list = state.look === "gallery" ? items() : keptList(it.r), at = -1;
+     list.forEach(function (x, k) { if (x.r.id === it.r.id && x.p.file === it.p.file) at = k; });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 4191822..2da4c2b 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1514,6 +1514,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <label class="field ar-samp-steps"><span class="label">Steps</span><input type="number" id="arSteps" min="4" max="16" step="1" inputmode="numeric" data-tip="How many steps from the noise to the picture: Krea 2 and Qwen-Image 2512 with Lightning 4 to 16 (8 their own), 2512 without it and Qwen-Image 2.1 10 to 60" /></label>
+             <label class="field"><span class="label">Sampler</span><select id="arSampler" data-tip="How each step is taken. Euler: the plain step; Euler SDE: fresh noise each step (soft on Qwen without Lightning). ER-SDE: a stochastic solver of third order, one look a step. RES 2s and 3s: the refined exponential solver, two or three looks a step (ODE: without noise). Heun++: up to three looks a step. Exp Heun 2 x0: the exponential Heun, two looks (SDE: with noise). More looks: finer, and as many times longer"><option value="euler" translate="no">Euler</option><option value="euler-sde" translate="no">Euler SDE</option><option value="er_sde" translate="no">ER-SDE</option><option value="res_2s" translate="no">RES 2s</option><option value="res_2s_ode" translate="no">RES 2s ODE</option><option value="res_3s" translate="no">RES 3s</option><option value="res_3s_ode" translate="no">RES 3s ODE</option><option value="heunpp2" translate="no">Heun++ 2</option><option value="exp_heun_2_x0" translate="no">Exp Heun 2 x0</option><option value="exp_heun_2_x0_sde" translate="no">Exp Heun 2 x0 SDE</option></select></label>
+             <label class="field"><span class="label">Schedule</span><select id="arSchedule" data-tip="How the steps are spread from the noise to the picture: Simple (the painter's own), Karras and Exponential (more steps near the end, for detail; with Lightning they can paint the subject twice), Beta and Beta 57 (more at both ends), KL optimal (Align Your Steps' spacing), SGM uniform (even in time), Bong tangent (two slopes, through the middle)"><option value="simple" translate="no">Simple</option><option value="karras" translate="no">Karras</option><option value="exponential" translate="no">Exponential</option><option value="beta" translate="no">Beta</option><option value="beta57" translate="no">Beta 57</option><option value="kl_optimal" translate="no">KL optimal</option><option value="sgm_uniform" translate="no">SGM uniform</option><option value="bong_tangent" translate="no">Bong tangent</option></select></label>
++          </div>
++          <!-- HERESY 1369 (Viktor: «Lightning и Ведение с кнопкой сброса на следующую полосу перенеси») -->
++          <div class="ar-samp-row ar-samp-row2">
+             <label class="field ar-samp-num ar-samp-light" id="arLightBox" hidden><span class="label">Lightning</span><span class="ar-light-row"><input type="checkbox" id="arLightOn" aria-label="Lightning" data-tip="Lightning: Qwen-Image 2512 in 4 to 16 steps and one pass a step, for drafts and the takes' covers; off for finished realism: 10 to 60 steps with guidance, about four times as long" /><input type="number" id="arLight" min="0.05" max="1.5" step="0.05" data-tip="Lightning's strength: 1.0 as its makers give it, lower for a fine-tune (0.55 with 12 steps)" /></span></label>
+             <label class="field ar-samp-num" id="arCfgBox" hidden><span class="label">Guidance</span><input type="number" id="arCfg" min="1" max="10" step="0.5" data-tip="Without Lightning: how closely the picture follows the prompt (true CFG, two passes a step); 4 is Qwen-Image's own" /></label>
+             <button type="button" class="btn ghost small" id="arSampReset" data-tip="The painter's own steps, sampler and schedule">Reset</button>
+-- 
+2.43.0
+

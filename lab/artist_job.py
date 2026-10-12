@@ -10,12 +10,16 @@ RUN_DIR/ask.json: {"prompt", "shapes": ["1:1", "16:9", "9:16"], "seed", "count",
 beside it to paint from) and "strength" (0.2 to 1.0: how much the painting may change it). On stdout, as each picture is
 drawn, one JSON line ({"n", "shape", "seed", "w", "h", "nsfw", "took", "kept", "file", "thumb"}); with "preview" (HERESY 1257)
 a line at every step too ({"live": n, "step", "of", "file": "preview/NN.jpg"}); the last line the run's ({"done": true,
-"painter", "took"})."""
-import json, os, sys, time
+"painter", "took"}). HERESY 1370: ART_SERVE=1 without RUN_DIR serves runs one by one from stdin (serve()), the painter kept
+between them."""
+import copy, json, os, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+ONLY = {int(x) for x in os.environ.get("ART_ONLY", "").split(",") if x.strip().isdigit()}   # HERESY 1354: this card's pictures of the run
 import art_job  # noqa: E402
+SERVE = os.environ.get("ART_SERVE") == "1"           # HERESY 1370: a painter kept between runs (serve())
+KEPT = art_job.KEPT                                  # HERESY 1370: what this process keeps, one dict with artist_qwen's
 
 # a shape: (drawn at, kept at); Krea 2 takes multiples of 16
 SHAPES = {"1:1": ((1280, 1280), (1280, 1280)), "16:9": ((1920, 1088), (1920, 1080)), "9:16": ((1088, 1920), (1080, 1920))}
@@ -54,13 +58,30 @@ def live(run, n, gw, gh, w, h):
     return step
 
 
-def ref_latents(pipe, ref, gw, gh):
+def sized(shapes, shape, ask):
+    """HERESY 1384: a shape's (drawn, kept) sizes, both times the run's scale (a second pass: 1.5 or 2), the drawn at multiples of 16."""
+    (gw, gh), (w, h) = shapes[shape]
+    s = float(ask.get("scale") or 1)
+    if s == 1:
+        return (gw, gh), (w, h)
+    return (int(round(gw * s / 16)) * 16, int(round(gh * s / 16)) * 16), (round(w * s), round(h * s))
+
+
+def ref_rs(ask):
+    """HERESY 1384: how the reference is brought to the drawn size: nearest for a second pass (as Viktor's workflow: nearest-exact),
+    else None (Lanczos)."""
+    from PIL import Image
+    return Image.NEAREST if ask.get("ref_resample") == "nearest" else None
+
+
+def ref_latents(pipe, ref, gw, gh, resample=None):
     """HERESY 1305: the reference as Krea 2's packed latents for a shape: covered and cut from the middle to the drawn size, through
-    the VAE (the Wan 2.1 VAE: a frame of one), normalized as the pipeline decodes (latents · std + mean)."""
+    the VAE (the Wan 2.1 VAE: a frame of one), normalized as the pipeline decodes (latents · std + mean). HERESY 1384: resample,
+    how it is brought there (Lanczos by default)."""
     import torch
     from PIL import Image
     s = min(ref.width / gw, ref.height / gh)
-    img = ref.resize((max(gw, round(ref.width / s)), max(gh, round(ref.height / s))), resample=Image.LANCZOS)
+    img = ref.resize((max(gw, round(ref.width / s)), max(gh, round(ref.height / s))), resample=resample or Image.LANCZOS)
     img = img.crop(((img.width - gw) // 2, (img.height - gh) // 2, (img.width - gw) // 2 + gw, (img.height - gh) // 2 + gh))
     x = pipe.image_processor.preprocess(img, height=gh, width=gw).to("cuda", pipe.vae.dtype).unsqueeze(2)
     with torch.no_grad():
@@ -70,6 +91,75 @@ def ref_latents(pipe, ref, gw, gh):
     std = torch.tensor(pipe.vae.config.latents_std).view(1, zc, 1, 1, 1).to(z.device, z.dtype)
     x0 = ((z - mean) / std)[:, :, 0]
     return pipe._pack_latents(x0, 1, zc, x0.shape[-2], x0.shape[-1]).to(torch.bfloat16)
+
+
+def jolt(pipe, x0, ask, seed):
+    """HERESY 1385: his ComfyUI workflow's InjectLatentNoise+ (comfyui_essentials, MIT: samples + randn · strength) on a picture's
+    packed latents: the noise added in the VAE's own space, as ComfyUI's latents are, so that ask's "inject" means what it means
+    there (a packed channel of VAE channel c gets inject / std[c]); its own seed beside the picture's. The clean latents stay for
+    what the mask keeps."""
+    import torch
+    k = float(ask.get("inject") or 0)
+    if not k:
+        return x0
+    std = torch.tensor(pipe.vae.config.latents_std, device=x0.device, dtype=torch.float32)
+    per = x0.shape[-1] // std.numel()
+    std = std.repeat_interleave(per) if per * std.numel() == x0.shape[-1] else std.mean()
+    g = torch.Generator(x0.device).manual_seed(int(seed) + 1385)
+    n = torch.randn(x0.shape, generator=g, device=x0.device, dtype=torch.float32)
+    return (x0.float() + k * n / std).to(x0.dtype)
+
+
+def region_prompts(prompt, ask):
+    """HERESY 1387: each region's own prompt: the main prompt and the region's words, so its part stays in the picture's scene."""
+    return [prompt.rstrip(" .,;") + ". " + r["prompt"] for r in ask.get("regions") or []]
+
+
+def region_tokens(pipe, ask, gw, gh):
+    """HERESY 1387: each region's box as the packed latents' tokens, soft-edged (a twenty-fifth of the shorter side), [1, n, 1] each."""
+    from PIL import Image, ImageDraw
+    out = []
+    for r in ask.get("regions") or []:
+        x, y, w, h = r["box"]
+        m = Image.new("L", (gw, gh), 0)
+        ImageDraw.Draw(m).rectangle([round(x * gw), round(y * gh), round((x + w) * gw) - 1, round((y + h) * gh) - 1], fill=255)
+        out.append(mask_tokens(pipe, m, gw, gh, 0, max(4, min(gw, gh) // 25), True)[0])
+    return out
+
+
+def regions_set(tr, base=None, regions=None, key="encoder_attention_mask"):
+    """HERESY 1387: the transformer's forward wrapped once, a pass-through until a picture sets its regions here (base: the guided prompt's
+    embeds; regions: [(embeds, mask, tokens)]); each picture sets them, or None, before it paints. A guided pass (its prompt is the
+    base) is asked once more for each region, and the answers blend: a region's token weight its box's (shared where boxes overlap),
+    the rest the main prompt's. The unguided pass and every pass without regions go through untouched."""
+    import torch
+    if not getattr(tr, "_heresy_regions_on", False):
+        orig = tr.forward
+
+        def forward(*a, **kw):
+            spec = getattr(tr, "_heresy_regions", None)
+            out = orig(*a, **kw)
+            if not spec:
+                return out
+            head, regs, mk = spec
+            enc = kw.get("encoder_hidden_states")
+            if enc is None or enc.shape[0] != 1 or enc.shape[1] < head.shape[1] or not torch.equal(enc[:, :head.shape[1]].float(), head):
+                return out
+            v = out[0] if isinstance(out, tuple) else out.sample
+            total = sum(t.float() for _, _, t in regs)
+            scale = total.clamp(min=1.0)
+            acc = v.float() * (1 - total.clamp(max=1.0))
+            for e, m, t in regs:
+                kw2 = dict(kw, encoder_hidden_states=e)
+                kw2[mk] = m
+                vi = orig(*a, **kw2)
+                vi = vi[0] if isinstance(vi, tuple) else vi.sample
+                acc = acc + vi.float() * (t.float() / scale)
+            res = acc.to(v.dtype)
+            return (res,) + tuple(out[1:]) if isinstance(out, tuple) else type(out)(sample=res)
+        tr.forward = forward
+        tr._heresy_regions_on = True
+    tr._heresy_regions = (base[:, :16].float(), regions, key) if base is not None and regions else None
 
 
 def cover(img, gw, gh, resample=None):
@@ -273,7 +363,7 @@ def load_loras(pipe, loras, ckpt):
     modules, names, weights, out = None, [], [], []
     for i, l in enumerate(loras):
         p = artist_loras.path_of(art_job.KIT, l["id"])
-        sd, missed = load_file(str(p)), 0
+        sd, missed = artist_loras.plain_named(load_file(str(p)), "krea2"), 0   # HERESY 1353: a PEFT file without its prefix too
         if any(k.startswith("lora_unet_") for k in sd):
             if modules is None:
                 modules = checkpoint_modules(ckpt)
@@ -285,13 +375,109 @@ def load_loras(pipe, loras, ckpt):
             raise RuntimeError(p.name + " reaches none of this painter's layers: an adapter for another model")
         names.append(name)
         weights.append(float(l.get("weight", artist_loras.WEIGHT)))
-        out.append({"id": l["id"], "weight": weights[-1], "layers": reached, "missed": missed})
+        out.append({"id": l["id"], "weight": weights[-1], "layers": reached, "missed": missed, **({"keys": l["keys"]} if l.get("keys") else {})})
     pipe.set_adapters(names, adapter_weights=weights)
     return out
 
 
-def main():
-    run = Path(sys.argv[1])
+def lora_sched(loras):
+    """HERESY 1365: the adapters loaded as a0, a1… with their strengths and keyframes, when one of them has keyframes; else None."""
+    if not any(l.get("keys") for l in loras or []):
+        return None
+    return [("a%d" % i, float(l.get("weight", 0.8)), l.get("keys")) for i, l in enumerate(loras)]
+
+
+def lora_steps(pipe, sched, n, inner=None):
+    """HERESY 1365: an adapter's strength set before each step by its keyframes (step 0's set before the run: lora_start); the callback
+    after the others (the live picture, the mask), whose answer it passes on."""
+    import artist_loras
+
+    def step(p, i, t, kw):
+        r = inner(p, i, t, kw) if inner else {}
+        if i + 1 < n:
+            ws = artist_loras.step_weights(sched, i + 1, n)
+            pipe.set_adapters([a for a, _ in ws], adapter_weights=[w for _, w in ws])
+        return r
+    return step
+
+
+def lora_start(pipe, sched, n):
+    """HERESY 1365: the strengths of step 0, set before the run."""
+    import artist_loras
+    ws = artist_loras.step_weights(sched, 0, n)
+    pipe.set_adapters([a for a, _ in ws], adapter_weights=[w for _, w in ws])
+
+
+def restrength(pipe, loras, said):
+    """HERESY 1370: a kept painter's adapters (the same files in the same order) at this run's strengths; what is said of them as when they
+    loaded, with this run's strengths and keyframes."""
+    import artist_loras
+    weights = [float(l.get("weight", artist_loras.WEIGHT)) for l in loras]
+    pipe.set_adapters(["a%d" % i for i in range(len(loras))], adapter_weights=weights)
+    out = []
+    for s, w, l in zip(said, weights, loras):
+        x = {k: v for k, v in s.items() if k != "keys"}
+        x["weight"] = w
+        if l.get("keys"):
+            x["keys"] = l["keys"]
+        out.append(x)
+    return out
+
+
+def drop():
+    """HERESY 1370: the painter a serving process keeps, let go before another loads (its RAM and its card's memory back)."""
+    if not KEPT:
+        return
+    KEPT.clear()
+    import gc
+    import torch
+    gc.collect()
+    torch.cuda.empty_cache()
+
+
+def rest():
+    """HERESY 1370: a served run done: the kept painter's weights back in RAM, its card free for whatever comes next. False when nothing
+    is kept to paint the next one (its blocks streamed, or a painter not kept): the process then ends, as a run's own did."""
+    import gc
+    import torch
+    if not KEPT.get("key") or KEPT.get("streamed"):
+        return False
+    if KEPT.get("krea") is not None:
+        KEPT["krea"].to("cpu")
+    elif KEPT.get("pipe") is not None:
+        KEPT["pipe"].transformer.to("cpu")
+        KEPT["pipe"].vae.to("cpu")
+    gc.collect()
+    torch.cuda.empty_cache()
+    return True
+
+
+def serve():
+    """HERESY 1370 (Viktor 11.10.2026: «Да, отпускай модели Художника через 10 минут. Это правильно»): runs one by one from stdin, a JSON
+    line each ({"run", "painter", "only", "stream"}), each answered as a process of its own answers it (its rows, then {"done"}); the
+    painter kept between them, its weights in RAM and the card free (rest()), and painting the next at once when it is the same painter
+    with the same adapters (said: {"kept": true}), else let go and loaded anew. After each run {"idle": true}, or {"idle": false} and the
+    end when nothing could be kept. An error ends the process as it ended a run's own (the lab starts another for the next run)."""
+    import artist_qwen
+    for line in sys.stdin:
+        if not line.strip():
+            continue
+        job = json.loads(line)
+        os.environ["ART_PAINTER"] = str(job.get("painter") or "")
+        os.environ["ART_STREAM"] = "1" if job.get("stream") else ""
+        for only in (ONLY, artist_qwen.ONLY):        # HERESY 1354: this card's pictures of the run
+            only.clear()
+            only.update(int(n) for n in job.get("only") or [])
+        KEPT.pop("streamed", None)
+        main(job["run"])
+        ok = rest()
+        print(json.dumps({"idle": ok}), flush=True)
+        if not ok:
+            return
+
+
+def main(run=None):
+    run = Path(run or sys.argv[1])
     ask = json.load(open(run / "ask.json", encoding="utf-8"))
     asked = (os.environ.get("ART_PAINTER") or "").strip().lower()
     if asked == "upscale":                           # HERESY 1322: a picture made larger by an upscaler (its ask has no prompt)
@@ -306,11 +492,33 @@ def main():
     import torch
     t0 = time.time()
     painter = art_job.which_painter()
-    krea = art_job.Krea(painter)
-    if ask.get("loras"):                             # HERESY 1316: the adapters asked for, each at its strength
-        print(json.dumps({"loras": load_loras(krea.pipe, ask["loras"], art_job.MUSE[painter])}), flush=True)
+    key = ("krea", painter, tuple(l["id"] for l in ask.get("loras") or []))   # HERESY 1370: what a kept painter must be for this run
+    krea = KEPT.get("krea") if KEPT.get("key") == key else None
+    if krea is not None:                             # HERESY 1370: kept from the run before: its own scheduler again, this run's strengths
+        krea.pipe.scheduler = copy.deepcopy(KEPT["own"])
+        if ask.get("loras"):
+            print(json.dumps({"loras": restrength(krea.pipe, ask["loras"], KEPT.get("said") or [])}), flush=True)
+        print(json.dumps({"kept": True}), flush=True)
+    else:
+        drop()                                       # HERESY 1370: another painter kept: let go before this one loads
+        krea = art_job.Krea(painter)
+        said = []
+        if ask.get("loras"):                             # HERESY 1316: the adapters asked for, each at its strength
+            said = load_loras(krea.pipe, ask["loras"], art_job.MUSE[painter])
+            print(json.dumps({"loras": said}), flush=True)
+        if SERVE:
+            KEPT.update(key=key, krea=krea, own=copy.deepcopy(krea.pipe.scheduler), said=said)
+    sched = lora_sched(ask.get("loras"))             # HERESY 1365: their strengths by their keyframes, step by step
     e, m = krea.encode(prompt)                       # the encoder's turn on the card, then the painter's
-    krea.to("cuda")
+    regs = [krea.encode(p) for p in region_prompts(prompt, ask)]   # HERESY 1387: each region's own prompt, in the same turn
+    import artist_qwen                               # HERESY 1351: whole on the card, or its blocks streamed from RAM, as the Qwen painters
+    streamed = artist_qwen.place(krea.pipe, painter)
+    if streamed:
+        print(json.dumps(streamed), flush=True)
+        KEPT["streamed"] = True                      # HERESY 1370: its blocks hooked to stream: not kept after this run
+    krea.pipe.vae.to("cuda")
+    krea.where = "cuda"
+    torch.cuda.reset_peak_memory_stats()
     krea.pipe.vae.enable_tiling()
     smp = ask.get("sampling") or {}                  # HERESY 1319: the steps, the sampler and the schedule asked
     set_schedule(krea.pipe, smp)
@@ -328,8 +536,10 @@ def main():
     n = 0
     for k in range(count):                           # a variation is the next seed; its shapes share it
         for shape in shapes:
-            (gw, gh), (w, h) = SHAPES[shape]
+            (gw, gh), (w, h) = sized(SHAPES, shape, ask)   # HERESY 1384: times the scale of a second pass
             n += 1
+            if ONLY and n not in ONLY:                   # HERESY 1354: another card paints this one (the lab spread the run)
+                continue
             t1 = time.time()
             g = torch.Generator("cuda").manual_seed(seed + k)
             if hasattr(krea.pipe.scheduler, "heresy"):   # HERESY 1333: our samplers' noise by the picture's seed
@@ -341,12 +551,12 @@ def main():
                 if shape not in fits:
                     fits[shape] = placed(ref, mask, gw, gh, pl)
                 if shape not in x0s:
-                    x0s[shape] = ref_latents(krea.pipe, fits[shape][0], gw, gh)
+                    x0s[shape] = ref_latents(krea.pipe, fits[shape][0], gw, gh, ref_rs(ask))
                 if not fits[shape][2] and full is None:
                     full = ref_sigmas(krea.pipe, 1.0, krea_steps)
                 psig, ps0 = (sig, s0) if fits[shape][2] else full   # covering: the strength asked; bare edges: from the noise
                 noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
-                more.update(latents=(1 - ps0) * x0s[shape] + ps0 * noise, sigmas=psig)
+                more.update(latents=(1 - ps0) * jolt(krea.pipe, x0s[shape], ask, seed + k) + ps0 * noise, sigmas=psig)   # HERESY 1385
                 steps = len(psig)
                 if fits[shape][1] is not None:
                     grow, edge, soft, grain = mask_opts(ask)
@@ -358,9 +568,9 @@ def main():
                 if fit and shape not in fits:        # HERESY 1307: what the VAE sees and what is repainted, for this shape
                     fits[shape] = fitted(ref, mask, gw, gh)
                 if shape not in x0s:
-                    x0s[shape] = ref_latents(krea.pipe, fits[shape][0] if fit else ref, gw, gh)
+                    x0s[shape] = ref_latents(krea.pipe, fits[shape][0] if fit else ref, gw, gh, ref_rs(ask))
                 noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
-                more.update(latents=(1 - s0) * x0s[shape] + s0 * noise, sigmas=sig)
+                more.update(latents=(1 - s0) * jolt(krea.pipe, x0s[shape], ask, seed + k) + s0 * noise, sigmas=sig)   # HERESY 1385
                 steps = len(sig)
                 if mask is not None or fit:          # HERESY 1306: the kept part put back at every step, noised to its next sigma
                     grow, edge, soft, grain = mask_opts(ask)   # HERESY 1320
@@ -368,7 +578,13 @@ def main():
                         masks[shape] = mask_tokens(krea.pipe, fits[shape][1] if fit else mask, gw, gh, grow, edge, soft)
                     more.update(callback_on_step_end=blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, more.get("callback_on_step_end")),
                                 callback_on_step_end_tensor_inputs=["latents"])
-            img = krea.pipe(prompt_embeds=e.to("cuda"), prompt_embeds_mask=m.to("cuda"), num_inference_steps=steps,
+            if sched:                                # HERESY 1365: step 0's strengths now, each next one before its step
+                lora_start(krea.pipe, sched, steps)
+                more.update(callback_on_step_end=lora_steps(krea.pipe, sched, steps, more.get("callback_on_step_end")),
+                            callback_on_step_end_tensor_inputs=more.get("callback_on_step_end_tensor_inputs") or ["latents"])
+            ec = e.to("cuda")
+            regions_set(krea.pipe.transformer, ec, [(pe.to("cuda"), pm.to("cuda"), t) for (pe, pm), t in zip(regs, region_tokens(krea.pipe, ask, gw, gh))])   # HERESY 1387
+            img = krea.pipe(prompt_embeds=ec, prompt_embeds_mask=m.to("cuda"), num_inference_steps=steps,
                             guidance_scale=0.0, height=gh, width=gw, generator=g, **more).images[0]
             if pl is not None and fits[shape][1] is not None:   # HERESY 1346: outside the mask the placed picture's own pixels
                 img = composite(img, fits[shape][0], masks[shape][1], mask_opts(ask)[3])
@@ -400,8 +616,12 @@ def main():
                 small.save(run / "thumbs" / (name + ".jpg"), "JPEG", quality=85, optimize=True)
                 row.update(kept=True, file=name + ".png", thumb="thumbs/" + name + ".jpg")
             print(json.dumps(row), flush=True)
-    print(json.dumps({"done": True, "painter": painter, "took": round(time.time() - t0, 1)}), flush=True)
+    print(json.dumps({"done": True, "painter": painter, "took": round(time.time() - t0, 1),
+                      "peak_gb": round(torch.cuda.max_memory_reserved() / 2 ** 30, 1)}), flush=True)   # HERESY 1351: the card's peak, as the Qwen painters say it
 
 
 if __name__ == "__main__":
-    main()
+    if SERVE and len(sys.argv) < 2:                  # HERESY 1370
+        serve()
+    else:
+        main()

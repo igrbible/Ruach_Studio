@@ -56,7 +56,9 @@ heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 
 
 **Start** runs the lab and the studio, each in a terminal of its own, and **Open the studio** opens the page (from another machine of your network: the address `start.sh` prints in that terminal). **More models** offers the Artist's painter, the style listener, the trainer's base and, where the install took Q8_0 for a smaller card, the BF16 backbone, each asked first with its size. The install itself brings the LoRAs the studio's 💎 sets were made with; a download that fails says why, and **Install** again goes on from where it stopped. The studio's **Engine → Models and LoRAs** says the same from inside: what is here, what is missing, and a **Fetch** for each part and for every extra, each asked first with its size. **Update** takes the newest release; **Reset** takes away the Python environments and the engine's build, never your songs, models or settings.
 
-The work is done by the bash scripts in `pinokio/`, which run the same from a terminal (`bash pinokio/install.sh`). Under Pinokio there are no systemd units: stop, start and update the studio from Pinokio's menu. On Windows 11 the studio runs through WSL2, by hand for now ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)).
+The work is done by the bash scripts in `launcher/`, which run the same from a terminal (`bash launcher/install.sh`). Under Pinokio there are no systemd units: stop, start and update the studio from Pinokio's menu. On Windows 11 the studio runs through WSL2, by hand for now ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)).
+
+Until 2.0.0-rc5 these scripts lived in `pinokio/`, a folder where Pinokio then kept its own environment out of its environment page's reach. The first **Update** of such an install stops halfway, its old script finding its folder gone; the menu then moves what Pinokio wrote there out of its way (its `ENVIRONMENT` beside `pinokio.js`, the rest under `tmp/`) and offers **Finish the update**, which sets the new version up.
 
 ## After an update
 

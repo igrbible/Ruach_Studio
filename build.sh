@@ -28,7 +28,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the studio's one environment
 export TMPDIR="$ROOT/tmp"
 mkdir -p "$TMPDIR"
-export CUDA_HOME="${RUACH_CUDA_HOME:-/usr/local/cuda-12.8}"   # HERESY 1259: the toolkit pinokio/env.sh found (Pinokio's own where the machine has none)
+export CUDA_HOME="${RUACH_CUDA_HOME:-/usr/local/cuda-12.8}"   # HERESY 1259: the toolkit launcher/env.sh found (Pinokio's own where the machine has none)
 export PATH="$CUDA_HOME/bin:$PATH"
 PORT="${YUE2CPP_PORT:-41867}"
 G="\e[1;32m"; R="\e[1;31m"; Y="\e[1;33m"; D="\e[2m"; X="\e[0m"
@@ -63,11 +63,11 @@ for f in index.html app.css themes.css instrumental.js help.js loras.js vaes.js 
     [ -f "$SRC/$f" ] || { echo -e "${R}missing ${SRC#"$ROOT"/}/$f${X}"; exit 1; }
 done
 T0=$(date +%s%N)
-stats=$("$HPY" - "$SRC" "$EXAMPLES" "$PAGE.part" "$(basename "$ROOT")" <<'PY'
+stats=$("$HPY" - "$SRC" "$EXAMPLES" "$PAGE.part" "$ROOT" <<'PY'
 import json, pathlib, re, sys
 
 src, examples, page = (pathlib.Path(a) for a in sys.argv[1:4])
-folder = sys.argv[4]
+root = sys.argv[4]                # HERESY 1362: the install's root (a bare name from an older caller still works)
 html = (src / "index.html").read_text(encoding="utf-8")
 css = (src / "app.css").read_text(encoding="utf-8")
 
@@ -154,17 +154,24 @@ for index, marker, replacement in found:
 out.append(html[at:])
 result = "".join(out)
 
-# The folder name is data: the page must not carry it, nor an absolute home path. External links whose
-# name happens to match (upstream's own repo, which the CPP badge opens, and the collection's own repo, which
-# the status note opens) are not paths, so they are left out.
+# The install's own path is data: the page must not carry it, nor any home path. External links whose name happens to match
+# (upstream's own repo, which the CPP badge opens, and the collection's own repo, which the status note opens) are not paths, so they
+# are left out. HERESY 1362 (1259's audit): its path, not its folder's name: a clone into «studio» or «music» built nothing, the page
+# saying «studio» 940 times and «music» 1951 as words; what would be baked in is the root as given or resolved, a home path, or the
+# folder's name heading one of the tree's own folders (/NAME/build/, /NAME/outputs/ …), and none of those is in the page
+import os
 EXTERNAL = ("https://github.com/ServeurpersoCom/yue2.cpp", "https://github.com/IronWolve/yue2-kit")
 checked = re.sub(r"<!-- credits:.*?<!-- /credits -->", "", result, flags=re.S)   # the About card's upstream names
 for url in EXTERNAL:   # the whole link (its text names the project too), then any bare mention of the URL
     checked = re.sub(r'<a\b[^>]*href="' + re.escape(url) + r'"[^>]*>.*?</a>', "", checked, flags=re.S)
     checked = checked.replace(url, "")
-for bad in (folder, "/home/"):
+folder = os.path.basename(root.rstrip("/")) or root
+for bad in ([root, os.path.realpath(root)] if root.startswith("/") else []) + ["/home/"]:
     if bad and bad in checked:
-        sys.exit(f"the page contains {bad!r}; paths and the folder name must not be baked in")
+        sys.exit(f"the page contains {bad!r}; paths must not be baked in")
+inside = re.search("/" + re.escape(folder) + r"/(?:build|tools|outputs|heresy|lab|user|artwork|models|checkpoints|tmp)/", checked)
+if inside:
+    sys.exit(f"the page contains {inside.group(0)!r}; the install's own paths must not be baked in")
 
 page.write_text(result, encoding="utf-8")
 # the stats groups: every stylesheet and every script that was inlined

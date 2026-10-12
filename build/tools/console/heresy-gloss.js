@@ -144,7 +144,7 @@
   function ktPeek() {
     if (!state.take) return;
     var name = state.take.name;
-    fetch("/lab/timing?name=" + encodeURIComponent(name) + "&cached=1").then(function (r) { return r.ok ? r.json() : null; })
+    fetch("/lab/timing?name=" + encodeURIComponent(name) + "&cached=1", { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (r) { if (state.take && state.take.name === name) ktPaint(r && r.rows ? r : null); }).catch(function () {});
   }
   function ktRun(force) {
@@ -190,7 +190,7 @@
   function peek() {
     if (!state.take) return;
     var token = state.token, name = state.take.name;
-    fetch(lab() + "/gloss?name=" + encodeURIComponent(name) + src() + "&cached=1").then(function (r) { return r.ok ? r.json() : null; })
+    fetch(lab() + "/gloss?name=" + encodeURIComponent(name) + src() + "&cached=1", { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (r) { if (r && !r.error && token === state.token && state.take && state.take.name === name) { paint(r); $("glossRun").textContent = "Listen again"; } })
       .catch(function () { /* nothing measured yet, or no lab: the button says the rest */ });
   }

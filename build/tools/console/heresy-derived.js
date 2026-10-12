@@ -198,7 +198,7 @@
   function refresh() {
     if (!state.take) { paint(); return Promise.resolve(); }
     var token = state.token, name = state.take.name;
-    return fetch("/lab/derived?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; })
+    return fetch("/lab/derived?name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (token !== state.token || !d) return;
         state.list = d.derived || [];

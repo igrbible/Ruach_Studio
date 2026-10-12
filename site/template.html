@@ -242,7 +242,7 @@
       <a class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models">Models on Hugging Face</a>
       <a class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Buy me a Coffee Machine</a>
     </div>
-    <span class="rc"><b>2.0.0-rc5</b> · the fifth release candidate · October 2026</span>
+    <span class="rc"><b>2.0.0-rc6</b> · the sixth release candidate · October 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -256,7 +256,7 @@
       <div><b>126 s</b><span>a 6:12 song on one RTX 3090</span></div>
       <div><b>6 rooms</b><span>to make, write, refine, paint, keep and teach</span></div>
       <div><b>200</b><span>instruments probed by ear</span></div>
-      <div><b>7</b><span>languages of the page</span></div>
+      <div><b>12</b><span>languages of the page</span></div>
     </div>
   </div>
 
@@ -300,7 +300,7 @@
         <li><b>A writer that knows the engine.</b> The style as short tags, the most important first: the way YuE2 follows best.</li>
         <li><b>Several GPUs, several jobs.</b> Synthesis on one card, training on the others; with one card the page tells you what waits.</li>
         <li><b>For scripts and agents.</b> An API (OpenAPI 3.1) and an MCP server on your machine and your network.</li>
-        <li><b>Your language.</b> The page whole in English, Russian, Ukrainian, Belarusian, Greek, Spanish and Italian.</li>
+        <li><b>Your language.</b> The page whole, and its guide, in English, Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, French, Portuguese, German, Japanese and Chinese.</li>
       </ul>
 
       <div class="pair">
@@ -345,6 +345,7 @@
             <tr><td>repeat a take</td><td>exactly: two seeds you keep</td><td>no</td></tr>
             <tr><td>your own sound</td><td>train a LoRA on your songs, in the studio</td><td>no training</td></tr>
             <tr><td>after the render</td><td>stems, debuzz, remaster, upscale, lyrics check, all local</td><td>stems, in the cloud</td></tr>
+            <tr><td>seeing the sound</td><td>the take's whole spectrogram over the player, in time with its wave: the sections, the brightness and loudness, the spectrum and note under the pointer</td><td>a waveform</td></tr>
             <tr><td>into a DAW</td><td>a REAPER project with the score, sections and lyrics (experimental)</td><td>audio stems</td></tr>
             <tr><td>the code</td><td>open, every change documented</td><td>closed</td></tr>
             <tr class="honest"><td>polish out of the box</td><td><b>less</b>: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them)</td><td><b>more</b></td></tr>
@@ -378,12 +379,12 @@
   <section id="next">
     <div class="wrap">
       <h2>What comes next</h2>
-      <p class="sub">2.0.0-rc5 is the studio we make our own songs in every day. These are the larger pieces on their way, for rc6 and after.</p>
+      <p class="sub">2.0.0-rc6 is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.0.0 and after.</p>
       <ul class="feats">
-        <li><b>The Artist room.</b> Covers in three shapes at once from one seed (1:1 for the album, 16:9 for a video, 9:16 for a short), the title and the artist written on them, the versions of each take's picture.</li>
-        <li><b>Five more languages.</b> Chinese, French, Portuguese, German and Japanese; the right-to-left ones once the page itself runs right to left.</li>
+        <li><b>Songs edited as the model writes them.</b> A take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens; an instrumental layer on the take's own score.</li>
+        <li><b>A DAW in the Refiner.</b> Plenio's score editor in an early preview: a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in.</li>
         <li><b>A desktop app.</b> An installable page (PWA) first, then an Electron app that starts and stops its services itself.</li>
-        <li><b>A score editor as a DAW has one.</b> A piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in.</li>
+        <li><b>The Videographer.</b> A music video for the song, its scenes prompted by a helper and its key frames painted by the Artist, in 2.1.0.</li>
         <li><b>Native plugins</b> for REAPER, Waveform and Bitwig, once the studio has found its people.</li>
       </ul>
     </div>
@@ -460,14 +461,43 @@
         <p>Non ha messo insieme lo studio alla buona, giusto perché funzionasse. Lo ha fatto a modo suo, perché anche il suo lavoro è suo: le sue traduzioni, i suoi testi interlineari e molto altro. Ha cercato di farci stare il massimo, di rifinire l'interfaccia fino all'ultimo dettaglio e di rendere il lavoro con lo studio non un cliccare a vuoto tra stampelle e buche, ma qualcosa di davvero produttivo.</p>
         <p class="story-end">Questa è tutta la storia. Ora lo studio è anche tuo.</p>
       </div>
+      <div class="story" translate="no" lang="fr" data-lang="fr" hidden>
+        <h2>Une petite histoire</h2>
+        <p>Viktor Zhuromskyy, l'auteur de Ruach Studio, ne le publie pas pour faire parler de lui. Il l'a fait pour lui-même. Après plus de six mois à se débattre avec Suno sur des formules payantes, et à chercher un modèle qui en vaille la peine (ACE-Step, MiniMax et d'autres), il s'est mis à construire son propre studio audio, sur sa propre machine. Son choix s'est arrêté sur YuE2 : de tous les modèles ouverts, c'est le plus rentable et le plus raffiné.</p>
+        <p>Il n'a pas bricolé le studio à la va-vite, juste pour avoir quelque chose qui tourne. Il l'a fait à sa manière, parce que son travail est le sien : ses traductions, ses textes interlinéaires et bien plus encore. Il y a fait entrer tout ce qu'il a pu, a poli l'interface aussi loin qu'il a pu, et a fait du travail avec le studio non pas un tâtonnement de clics entre béquilles et nids-de-poule, mais quelque chose de vraiment productif.</p>
+        <p class="story-end">Voilà toute l'histoire. Maintenant, le studio est aussi à toi.</p>
+      </div>
+      <div class="story" translate="no" lang="pt" data-lang="pt" hidden>
+        <h2>Uma pequena história</h2>
+        <p>Viktor Zhuromskyy, o autor do Ruach Studio, não o publica pelo hype. Ele o fez para si mesmo. Depois de mais de meio ano sofrendo com o Suno em planos pagos, e procurando um modelo que valesse a pena (ACE-Step, MiniMax e outros), ele decidiu construir o seu próprio estúdio de áudio, na sua própria máquina. A escolha caiu no YuE2: de todos os modelos abertos, é o de melhor custo-benefício e o mais refinado.</p>
+        <p>Ele não montou o estúdio de qualquer jeito, só para ter algo que rodasse. Fez do seu jeito, porque o trabalho dele é dele: as suas traduções, os seus textos interlineares e muito mais. Colocou nele o máximo que pôde, poliu a interface até onde pôde e fez do trabalho com o estúdio não um cutucar e clicar entre muletas e buracos, mas algo de fato produtivo.</p>
+        <p class="story-end">Essa é a história toda. Agora o estúdio também é seu.</p>
+      </div>
+      <div class="story" translate="no" lang="de" data-lang="de" hidden>
+        <h2>Eine kleine Geschichte</h2>
+        <p>Viktor Zhuromskyy, der Autor von Ruach Studio, veröffentlicht es nicht für den Hype. Er hat es für sich selbst gemacht. Nach mehr als einem halben Jahr Mühe mit Suno in bezahlten Tarifen und der Suche nach einem Modell, mit dem sich arbeiten lässt (ACE-Step, MiniMax und andere), machte er sich daran, ein eigenes Audiostudio zu bauen, auf seiner eigenen Maschine. Die Wahl fiel auf YuE2: von allen offenen Modellen das lohnendste und das ausgefeilteste.</p>
+        <p>Er hat das Studio nicht zusammengeschustert, nur damit irgendetwas läuft. Er hat es auf seine Art gebaut, denn seine Arbeit ist seine eigene: seine Übersetzungen, seine Interlinearübersetzungen und vieles mehr. Er hat so viel hineingepackt, wie er konnte, die Oberfläche poliert, so weit er konnte, und die Arbeit damit nicht zu einem Stochern und Klicken zwischen Krücken und Schlaglöchern gemacht, sondern zu etwas wirklich Produktivem.</p>
+        <p class="story-end">Das ist die ganze Geschichte. Jetzt ist das Studio auch deins.</p>
+      </div>
+      <div class="story" translate="no" lang="ja" data-lang="ja" hidden>
+        <h2>ちょっとした話</h2>
+        <p>Ruach Studio の作者 Viktor Zhuromskyy は、話題づくりのためにこれを公開しているのではありません。自分のために作ったのです。有料プランで Suno と半年以上格闘し、取り組むに値するモデルを探し回った末に（ACE-Step、MiniMax ほか）、彼は自分のマシンの上に自分だけのオーディオスタジオを作ろうと決めました。選んだのは YuE2 でした。オープンなモデルの中で、最も割に合い、最も洗練されているからです。</p>
+        <p>彼は、とりあえず動けばいいという作り方はしませんでした。自分の流儀で作りました。彼の仕事は彼自身のものだからです：自身の翻訳、行間対訳のテキスト、そのほか多くのもの。詰め込めるだけ詰め込み、磨けるだけインターフェースを磨き、スタジオでの作業を、松葉杖と穴ぼこの間を手探りでクリックすることではなく、本当に生産的なものにしました。</p>
+        <p class="story-end">話はこれで全部です。これからは、このスタジオはあなたのものでもあります。</p>
+      </div>
+      <div class="story" translate="no" lang="zh" data-lang="zh" hidden>
+        <h2>一个小故事</h2>
+        <p>Ruach Studio 的作者 Viktor Zhuromskyy 发布它并不是为了炒作。他是为自己做的。在付费套餐上和 Suno 折腾了半年多，又四处寻找值得投入的模型（ACE-Step、MiniMax 等）之后，他决定在自己的机器上搭建一个属于自己的音频工作室。他选定了 YuE2：在所有开放模型中，它最划算，也最精致。</p>
+        <p>他没有随便拼凑一个能跑就行的工作室，而是按自己的方式来做，因为他的工作也是他自己的：他的译本、他的逐行对照文本，还有许多别的。他尽可能多地装进其中，把界面打磨到力所能及的极致，让用这个工作室工作不再是在拐杖和坑洼之间胡乱点击，而是真正高效的事。</p>
+        <p class="story-end">故事就是这样。现在，这个工作室也是你的了。</p>
+      </div>
     </div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.0-rc5 · a work of <a href="https://igr.bible">igr.bible</a></span>
-    <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
+    <span>Ruach Studio · 2.0.0-rc6 · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
   </div>
 </footer>
 

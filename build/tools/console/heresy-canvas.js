@@ -82,7 +82,9 @@
         '<button type="button" class="pb-btn" data-cv="undo" aria-label="' + esc(tr("Undo (Ctrl+Z)")) + '" data-tip="' + esc(tr("Undo (Ctrl+Z)")) + '">' + icon("undo") + "</button>" +
         '<button type="button" class="pb-btn" data-cv="redo" aria-label="' + esc(tr("Redo (Ctrl+Shift+Z)")) + '" data-tip="' + esc(tr("Redo (Ctrl+Shift+Z)")) + '">' + icon("redo") + "</button>" +
         '<button type="button" class="pb-btn" data-cv="view" aria-label="' + esc(tr("The frame and the picture in sight (F)")) + '" data-tip="' + esc(tr("The frame and the picture in sight (F)")) + '">' + icon("view") + "</button>" +
-        '<button type="button" class="btn primary small" data-cv="done">' + esc(tr("Done")) + "</button></div>" +
+        '<button type="button" class="btn ghost small" data-cv="done">' + esc(tr("Done")) + "</button>" +
+        (opts.onDraw ? '<button type="button" class="btn primary small cv-draw" data-cv="draw" data-tip="' + esc(tr("Keep the canvas and draw the shapes picked in the form (Ctrl+Enter)")) + '">' + esc(tr("Draw")) + "</button>" : "") +   // HERESY 1350
+        "</div>" +
       '<div class="cv-body"><div class="cv-tools" role="toolbar" aria-label="' + esc(tr("Tools")) + '">' +
         [["move", "Move and scale the picture: drag it, or a corner (V); arrows nudge it"], ["brush", "Paint the mask: what it covers is repainted (B)"],
          ["erase", "Erase the mask (E)"], ["hand", "Move the board (H, or hold Space)"]].map(function (t) {
@@ -336,6 +338,7 @@
         var tg = tmp.getContext("2d"); tg.fillStyle = "#e02828"; tg.fillRect(0, 0, mw, mh); tg.globalCompositeOperation = "destination-out"; tg.drawImage(mask, 0, 0);
         mg.clearRect(0, 0, mw, mh); mg.drawImage(tmp, 0, 0); maskSeen = hasMask(); st.maskTouched = true; paintSide(); draw();
       } else if (k === "done") done();
+      else if (k === "draw") { done(); if (opts.onDraw) opts.onDraw(); }   // HERESY 1350: as InvokeAI's Invoke by its canvas
     });
     back.querySelector("[data-cv-alpha]").addEventListener("input", function () { st.refAlpha = +this.value; draw(); });
     size.addEventListener("input", function () { st.brush = +size.value; keep("yue2.cvBrush", size.value); paintSide(); draw(); });
@@ -356,6 +359,7 @@
       if (k === " ") { if (!st.space) { st.space = true; cv.style.cursor = "grab"; draw(); } e.preventDefault(); return; }
       if ((e.ctrlKey || e.metaKey) && (k === "z" || k === "Z")) { e.preventDefault(); step(e.shiftKey ? redo : undo, e.shiftKey ? undo : redo); return; }
       if ((e.ctrlKey || e.metaKey) && (k === "y" || k === "Y")) { e.preventDefault(); step(redo, undo); return; }
+      if ((e.ctrlKey || e.metaKey) && k === "Enter" && opts.onDraw) { e.preventDefault(); e.stopPropagation(); done(); opts.onDraw(); return; }   // HERESY 1350
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (k === "Escape" || k === "Enter") { e.preventDefault(); e.stopPropagation(); done(); return; }
       var nudge = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];

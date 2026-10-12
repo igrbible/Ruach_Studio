@@ -12,7 +12,7 @@ runs. Anywhere else (a development tree, a copy without git) the answer says why
     POST /update {"check": true, "rc": true}      ask GitHub now (rc: release candidates count too)
     POST /update {"run": "2.0.0-rc3"}  update to that release (409 while a job runs or where it cannot run)
     GET  /update/log                   the running update's words"""
-import json, re, subprocess, time, urllib.request
+import json, os, re, shutil, subprocess, time, urllib.request
 from pathlib import Path
 
 REPO = "igrbible/Ruach_Studio"
@@ -60,6 +60,12 @@ def _git(root, *args):
 def can_run(root):
     """(True, "") where an update can run; else (False, why), said as it is."""
     root = Path(root)
+    # HERESY 1362: Pinokio keeps the clone on main and pulls it (its Update, launcher/update.sh): a tag checked out here would leave its
+    # pull on a detached head, and the studio there is Pinokio's to start (launcher/lab.sh says it runs there)
+    if os.environ.get("RUACH_LAUNCHER") == "pinokio":
+        return False, "this studio runs under Pinokio: update it there, by Update in Pinokio's menu"
+    if not shutil.which("systemd-run"):
+        return False, "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)"
     if not (root / ".git").exists():
         return False, "this studio is not a git clone: update it by hand (download the new release, keep models/, outputs/ and user/)"
     code, origin, _ = _git(root, "remote", "get-url", "origin")

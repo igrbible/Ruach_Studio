@@ -17,7 +17,8 @@ from pathlib import Path
 here = Path(__file__).resolve().parent
 SITE = "https://ruachstudio.igr.bible"
 LANGS = [("en", "English"), ("ru", "Русский"), ("uk", "Українська"), ("be", "Беларуская"), ("el", "Ελληνικά"),
-         ("es", "Español"), ("it", "Italiano")]
+         ("es", "Español"), ("it", "Italiano"), ("fr", "Français"), ("pt", "Português"), ("de", "Deutsch"), ("ja", "日本語"),
+         ("zh", "中文")]   # HERESY 1383: the five the page speaks since 1379
 INLINE = {"b", "i", "em", "strong", "code", "a", "span", "br", "small", "sup", "sub", "kbd", "img"}
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 RAW = {"script", "style", "svg"}
@@ -154,6 +155,10 @@ def page_for(code, template, units, catalog):
     page = re.sub(r'<a (?![^>]*target=)([^>]*href="https?://)', r'<a target="_blank" rel="noopener" \1', page)
     if deep:
         page = re.sub(r'((?:src|href)=")assets/', r"\1../assets/", page)
+    cjk = {"ja": "Noto Sans JP", "zh": "Noto Sans SC"}.get(code)   # HERESY 1383: a CJK face of the same family, after Noto Sans
+    if cjk:
+        page = page.replace("&family=Noto+Sans+Mono:", "&family=" + cjk.replace(" ", "+") + ":wght@400;500;700&family=Noto+Sans+Mono:", 1)
+        page = page.replace("</head>", '<style>body, .langs summary { font-family: "Noto Sans", "%s", system-ui, sans-serif; }</style>\n</head>' % cjk, 1)
     return page, missing
 
 
@@ -161,7 +166,7 @@ def page_for(code, template, units, catalog):
 FIRST_VISIT = """<script>
   // the browser's own language at the first visit; a language picked in the menu is kept (ruach.lang)
   (function () { try {
-    var have = ["en", "ru", "uk", "be", "el", "es", "it"], kept = localStorage.getItem("ruach.lang");
+    var have = ["en", "ru", "uk", "be", "el", "es", "it", "fr", "pt", "de", "ja", "zh"], kept = localStorage.getItem("ruach.lang");
     var want = have.indexOf(kept) >= 0 ? kept : (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"])
       .map(function (l) { return String(l).toLowerCase().split("-")[0]; }).filter(function (l) { return have.indexOf(l) >= 0; })[0];
     if (want && want !== "en") location.replace("/" + want + "/" + location.search + location.hash);
@@ -192,6 +197,8 @@ def typeset(page, code):
         t = re.sub(r"[ \t\r\n]+(?=[—–](?:\s|$))", NB, t)
         t = re.sub(r"(\d[\d.,:+%×]*)[ \t\r\n]+(?=\S)", lambda m: m.group(1) + NB, t)
         t = re.sub(r"(\b[A-ZА-ЯЁ][\w.+-]*)[ \t\r\n]+(?=\d)", lambda m: m.group(1) + NB, t)
+        if code == "fr":                                # HERESY 1383: French keeps its space before : ; ! ? » and after «
+            t = re.sub(r"[ \t\r\n]+(?=[:;!?»])", NB, re.sub(r"«[ \t\r\n]+", "«" + NB, t))
         parts[i] = t
     return "".join(parts)
 

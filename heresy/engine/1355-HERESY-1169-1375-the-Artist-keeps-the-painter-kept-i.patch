@@ -1,0 +1,247 @@
+From 275567629bfbc027bf72f0cb4a7cbec6c11561e2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 20:20:58 -0600
+Subject: [PATCH 1355/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201375:=20the?=
+ =?UTF-8?q?=20Artist=20keeps=20the=20painter=20kept=20in=20the=20browser?=
+ =?UTF-8?q?=20until=20the=20lab's=20list=20of=20painters=20has=20come;=20?=
+ =?UTF-8?q?=C2=ABFrom=20the=20take=C2=BB=20and=20the=20watchdog's=20word?=
+ =?UTF-8?q?=20in=20the=20six=20languages?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 11.10.2026: «Не сохраняется выбор моделей у Художника после F5. Ничего не сохранилось кроме PROMPT поля». The lab's list had answered [] (lab 1375); before it came the choice held Krea alone, and a word typed in the prompt wrote Krea Q4 over the painter kept. Now keepForm leaves the painter and its fine-tune alone until the list has come or the user picks one (HeresyArtist.forget for the checks). The catalogs' «{0} take» and «{0} takes» taken out of the six: they read «From the take» as «Семплов: From the». Suite: suite-1375.part.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-artist.js  | 6 ++++++
+ tools/console/heresy-i18n-be.js | 8 ++++++--
+ tools/console/heresy-i18n-el.js | 8 ++++++--
+ tools/console/heresy-i18n-es.js | 8 ++++++--
+ tools/console/heresy-i18n-it.js | 8 ++++++--
+ tools/console/heresy-i18n-ru.js | 8 ++++++--
+ tools/console/heresy-i18n-uk.js | 8 ++++++--
+ 7 files changed, 42 insertions(+), 12 deletions(-)
+
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index e2baef8..0b92a97 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -189,6 +189,7 @@
+         return '<option value="' + esc(p.key) + '">' + esc(p.label + " (" + tr("from " + (p.need_mb / 1000).toFixed(1).replace(".0", "") + " GB") + ")") + "</option>";
+       }).join("");
+       sel.value = PAINTER_INFO[was] ? was : list[0].key;
++      state.painted = true;                              // HERESY 1375: the choice is the lab's list now: kept from here on
+       paintPainter();
+     }).catch(function () { paintPainter(); });
+   }
+@@ -219,6 +220,9 @@
+     keep(KEY.shapes, shapesPicked().join(","));
+     keep(KEY.count, $("arCount").value === "1" ? null : $("arCount").value);
+     keep(KEY.seed, $("arSeed").value.trim());
++    // HERESY 1375 (Viktor 11.10.2026: «Не сохраняется выбор моделей у Художника после F5»): the painter and its fine-tune kept once the
++    // lab's list has come, or once the user picks one: before it the choice holds Krea alone, and a word typed meanwhile wrote it over
++    if (!state.painted) return;
+     keep(KEY.painter, $("arPainter").value === "krea2-q4" ? null : $("arPainter").value);
+     if (!$("arModelBox").hidden) keep("yue2.arModel", $("arModel").value);   // HERESY 1318
+   }
+@@ -2213,6 +2217,7 @@
+     // HERESY 1316: the adapters: the library, a strength, a word into the prompt, one taken off; the family follows the painter
+     $("arLoraAdd").addEventListener("click", openLoraLib);
+     $("arPainter").addEventListener("change", paintPainter);   // HERESY 1318: the fine-tune, the note, the adapters' family
++    $("arPainter").addEventListener("change", function () { state.painted = true; keepForm(); }, true);   // HERESY 1375: picked by the user: kept
+     $("arModel").addEventListener("change", keepForm);
+     ["arSteps", "arSampler", "arSchedule", "arLightOn", "arLight", "arCfg"].forEach(function (id) { $(id).addEventListener("change", keepSampling); });   // HERESY 1319, 1328
+     // HERESY 1345 (Viktor: «Фолдинг СЕМПЛИНГА запоминаем при F5 также»)
+@@ -2428,6 +2433,7 @@
+     loras: { reload: loadLoras, now: lorasNow, set: setLoras, open: openLoraLib, lib: function () { return state.loraLibOpen; },   // HERESY 1316: for the checks
+              toggle: loraToggle, mute: loraMute, off: loraOff, info: openLoraInfo, menu: loraMenu, max: function () { return [LORA_MAX, LORA_ON]; } },   // HERESY 1353
+     painters: loadPainters, sampling: { now: sampNow, body: samplingBody, paint: paintSampling },   // HERESY 1318, 1319
++    forget: function () { state.painted = false; },     // HERESY 1375: for the checks: a page whose list of painters has not come yet
+     canvas: { open: openCanvas, place: function () { return state.place; } },   // HERESY 1346: for the checks
+     get: openGet };                                      // HERESY 1347
+ })();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index de9df90..81125c6 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1059,7 +1059,6 @@ RuachI18n.add("be", {
+ "Out of “{0}”. Ctrl+Z gives it back.": "З «{0}». Ctrl+Z верне як было.",
+ "Out of every other workspace they are in. Ctrl+Z gives it back.": "З усіх іншых прастор, дзе яны ёсць. Ctrl+Z верне як было.",
+ "They stay where they are as well. Ctrl+Z gives it back.": "Там, дзе яны ёсць, яны таксама застануцца. Ctrl+Z верне як было.",
+-"{0} takes": "Сэмплаў: {0}",
+ "≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.": "≈ Здагадка: мастак не ведае гэтага інструмента, і крытык не знайшоў яго ні на адным з намаляваных малюнкаў.",
+ "⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "⚠ Імя ў стылі — просьба, а не абяцанне. Што граюць ▶ A і ▶ B, тое YuE2 і дае на гэтае імя, прыкладна ў дзевяці выпадках з дзесяці. Бываюць цудоўныя пробы, A і B згодныя, але інструмент не той, што прасілі: вер вуху, а не імені.",
+ "Night": "Ноч",
+@@ -2469,7 +2468,6 @@ RuachI18n.add("be", {
+ "side by side in one pass; more wait as further passes, so a larger number only takes longer.": "побач за адзін праход; астатнія чакаюць наступнымі праходамі, так што большы лік толькі даўжэй.",
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Колькі разоў гук кожнай песні рэндэрыцца з яе адной музыкі, кожны раз са сваім гукавым сідам (seed, seed + 1…, аднолькава для кожнай песні). Гукі песні робяцца разам, побач: менавіта гэта займае памяць карты, таму столь залежыць ад карты, копіі мадэлі і даўжыні песні.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Песні × Гукі — столькі сэмплаў выйдзе: 2 × 4 = 8, музыка m і m + 1, у кожнай гукі ад s да s + 3.",
+-"{0} take": "Сэмплаў: {0}",
+ "Probes": "Пробы",
+ "Variations": "Варыяцыі",
+ "About probes": "Пра пробы",
+@@ -4945,3 +4943,9 @@ RuachI18n.add("be", {
+ "{0} Hz": "{0} Гц",
+ "no spectrum in this page": "на гэтай старонцы няма спектра"
+ });
++// HERESY 1169 · 1375: the Artist's From the take; a run its painter left silent
++RuachI18n.add("be", {
++"From the take": "З сэмпла",
++"its painter said nothing for {#0} minutes: stopped": { "one": "мастак маўчаў {#0} хвіліну: спынены", "few": "мастак маўчаў {#0} хвіліны: спынены", "many": "мастак маўчаў {#0} хвілін: спынены", "other": "мастак маўчаў {#0} хвіліны: спынены" },
++"its painter said nothing for {#0} s: stopped": "мастак маўчаў {#0} с: спынены"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 9a6890c..c0117dc 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1058,7 +1058,6 @@ RuachI18n.add("el", {
+ "Out of “{0}”. Ctrl+Z gives it back.": "Έξω από το «{0}». Το Ctrl+Z το επαναφέρει.",
+ "Out of every other workspace they are in. Ctrl+Z gives it back.": "Έξω από κάθε άλλο χώρο όπου βρίσκονται. Το Ctrl+Z το επαναφέρει.",
+ "They stay where they are as well. Ctrl+Z gives it back.": "Μένουν και εκεί όπου είναι. Το Ctrl+Z το επαναφέρει.",
+-"{0} takes": "Λήψεις: {0}",
+ "≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.": "≈ Εικασία: ο ζωγράφος δεν ξέρει αυτό το όργανο, και ο κριτικός δεν το βρήκε σε καμία από τις εικόνες που ζωγράφισε.",
+ "⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "⚠ Ένα όνομα στο ύφος είναι αίτημα, όχι υπόσχεση. Ό,τι παίζουν τα ▶ A και ▶ B είναι ό,τι δίνει το YuE2 γι' αυτό, περίπου εννιά φορές στις δέκα. Μερικές δοκιμές είναι εξαιρετικές, και τα A και B συμφωνούν, όμως το όργανο δεν είναι αυτό που ζητήθηκε: εμπιστέψου το αυτί, όχι το όνομα.",
+ "Night": "Νύχτα",
+@@ -2468,7 +2467,6 @@ RuachI18n.add("el", {
+ "side by side in one pass; more wait as further passes, so a larger number only takes longer.": "δίπλα δίπλα σε ένα πέρασμα· τα υπόλοιπα περιμένουν σε επόμενα περάσματα, οπότε ένας μεγαλύτερος αριθμός απλώς κρατά περισσότερο.",
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Πόσες φορές αποδίδεται ο ήχος κάθε τραγουδιού από τη μία μουσική του, κάθε φορά με το δικό του seed ήχου (seed, seed + 1…, το ίδιο για κάθε τραγούδι). Οι ήχοι ενός τραγουδιού φτιάχνονται όλοι μαζί, δίπλα δίπλα: αυτό γεμίζει τη μνήμη της κάρτας, γι' αυτό το ανώτατο όριο ακολουθεί την κάρτα, το αντίγραφο του μοντέλου και τη διάρκεια του τραγουδιού.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Τραγούδια × Ήχοι είναι όσες λήψεις βγαίνουν: 2 × 4 = 8, μουσική m και m + 1, η καθεμία με ήχους s έως s + 3.",
+-"{0} take": "Λήψεις: {0}",
+ "Probes": "Δοκιμές",
+ "Variations": "Παραλλαγές",
+ "About probes": "Σχετικά με τις δοκιμές",
+@@ -4944,3 +4942,9 @@ RuachI18n.add("el", {
+ "{0} Hz": "{0} Hz",
+ "no spectrum in this page": "δεν υπάρχει φάσμα σε αυτή τη σελίδα"
+ });
++// HERESY 1169 · 1375: the Artist's From the take; a run its painter left silent
++RuachI18n.add("el", {
++"From the take": "Από τη λήψη",
++"its painter said nothing for {#0} minutes: stopped": { "one": "ο ζωγράφος δεν είπε τίποτα για {#0} λεπτό: σταμάτησε", "other": "ο ζωγράφος δεν είπε τίποτα για {#0} λεπτά: σταμάτησε" },
++"its painter said nothing for {#0} s: stopped": "ο ζωγράφος δεν είπε τίποτα για {#0} δ: σταμάτησε"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 37cfbdb..5a056a4 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1058,7 +1058,6 @@ RuachI18n.add("es", {
+ "Out of “{0}”. Ctrl+Z gives it back.": "Fuera de «{0}». Ctrl+Z lo devuelve.",
+ "Out of every other workspace they are in. Ctrl+Z gives it back.": "Fuera de todos los demás espacios en que están. Ctrl+Z lo devuelve.",
+ "They stay where they are as well. Ctrl+Z gives it back.": "También se quedan donde están. Ctrl+Z lo devuelve.",
+-"{0} takes": "Tomas: {0}",
+ "≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.": "≈ Una suposición: el pintor no conoce este instrumento, y el crítico no lo encontró en ninguna de las imágenes que dibujó.",
+ "⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "⚠ Un nombre en el estilo es una petición, no una promesa. Lo que suenan ▶ A y ▶ B es lo que YuE2 da para él, más o menos nueve veces de cada diez. Algunas pruebas son magníficas, y A y B coinciden, pero el instrumento no es el pedido: fíate del oído, no del nombre.",
+ "Night": "Noche",
+@@ -2468,7 +2467,6 @@ RuachI18n.add("es", {
+ "side by side in one pass; more wait as further passes, so a larger number only takes longer.": "en paralelo en una pasada; las demás esperan en pasadas siguientes, así que un número mayor solo tarda más.",
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Cuántas veces se renderiza el sonido de cada canción a partir de su única música, cada vez con su propia semilla de sonido (seed, seed + 1…, la misma para cada canción). Los sonidos de una canción se hacen todos a la vez, en paralelo: eso es lo que llena la memoria de la tarjeta, así que el tope sigue a la tarjeta, la copia del modelo y la duración de la canción.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Canciones × Sonidos es cuántas tomas salen: 2 × 4 = 8, música m y m + 1, cada una con sonidos de s a s + 3.",
+-"{0} take": "Tomas: {0}",
+ "Probes": "Pruebas",
+ "Variations": "Variaciones",
+ "About probes": "Sobre las pruebas",
+@@ -4944,3 +4942,9 @@ RuachI18n.add("es", {
+ "{0} Hz": "{0} Hz",
+ "no spectrum in this page": "no hay espectro en esta página"
+ });
++// HERESY 1169 · 1375: the Artist's From the take; a run its painter left silent
++RuachI18n.add("es", {
++"From the take": "De la toma",
++"its painter said nothing for {#0} minutes: stopped": { "one": "su pintor no dijo nada durante {#0} minuto: detenido", "other": "su pintor no dijo nada durante {#0} minutos: detenido" },
++"its painter said nothing for {#0} s: stopped": "su pintor no dijo nada durante {#0} s: detenido"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index d8eda6f..bf9ffc5 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1058,7 +1058,6 @@ RuachI18n.add("it", {
+ "Out of “{0}”. Ctrl+Z gives it back.": "Fuori da «{0}». Ctrl+Z lo riporta indietro.",
+ "Out of every other workspace they are in. Ctrl+Z gives it back.": "Fuori da tutti gli altri spazi in cui si trovano. Ctrl+Z lo riporta indietro.",
+ "They stay where they are as well. Ctrl+Z gives it back.": "Restano anche dove sono. Ctrl+Z lo riporta indietro.",
+-"{0} takes": "Take: {0}",
+ "≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.": "≈ Un'ipotesi: il pittore non conosce questo strumento, e il critico non l'ha trovato in nessuna delle immagini che ha disegnato.",
+ "⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "⚠ Un nome nello stile è una richiesta, non una promessa. Ciò che suonano ▶ A e ▶ B è ciò che YuE2 dà per quel nome, circa nove volte su dieci. Alcune prove sono splendide, e A e B concordano, eppure lo strumento non è quello richiesto: fidati dell'orecchio, non del nome.",
+ "Night": "Notte",
+@@ -2468,7 +2467,6 @@ RuachI18n.add("it", {
+ "side by side in one pass; more wait as further passes, so a larger number only takes longer.": "affiancate in un passaggio; le altre aspettano nei passaggi successivi, quindi un numero più alto richiede solo più tempo.",
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Quante volte il suono di ogni canzone viene reso dalla sua unica musica, ogni volta con il proprio seed sonoro (seed, seed + 1…, lo stesso per ogni canzone). I suoni di una canzone si fanno tutti insieme, affiancati: è questo che riempie la memoria della scheda, quindi il tetto segue la scheda, la copia del modello e la durata della canzone.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Canzoni × Suoni è quanti take escono: 2 × 4 = 8, musica m e m + 1, ognuna con suoni da s a s + 3.",
+-"{0} take": "Take: {0}",
+ "Probes": "Prove",
+ "Variations": "Variazioni",
+ "About probes": "Sulle prove",
+@@ -4944,3 +4942,9 @@ RuachI18n.add("it", {
+ "{0} Hz": "{0} Hz",
+ "no spectrum in this page": "nessuno spettro in questa pagina"
+ });
++// HERESY 1169 · 1375: the Artist's From the take; a run its painter left silent
++RuachI18n.add("it", {
++"From the take": "Dal take",
++"its painter said nothing for {#0} minutes: stopped": { "one": "il suo pittore non ha detto nulla per {#0} minuto: fermato", "other": "il suo pittore non ha detto nulla per {#0} minuti: fermato" },
++"its painter said nothing for {#0} s: stopped": "il suo pittore non ha detto nulla per {#0} s: fermato"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 9c244a3..c6b7c97 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1059,7 +1059,6 @@ RuachI18n.add("ru", {
+ "Out of “{0}”. Ctrl+Z gives it back.": "Из «{0}». Ctrl+Z вернёт как было.",
+ "Out of every other workspace they are in. Ctrl+Z gives it back.": "Из всех прочих пространств, где они есть. Ctrl+Z вернёт как было.",
+ "They stay where they are as well. Ctrl+Z gives it back.": "Там, где они есть, они тоже останутся. Ctrl+Z вернёт как было.",
+-"{0} takes": "Семплов: {0}",
+ "≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.": "≈ Догадка: художник не знает этот инструмент, и критик не нашёл его ни на одной из нарисованных картинок.",
+ "⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "⚠ Имя в стиле — просьба, а не обещание. Что играют ▶ A и ▶ B, то YuE2 и даёт на это имя, примерно в девяти случаях из десяти. Бывают великолепные пробы, A и B согласны, но инструмент не тот, что просили: верь уху, а не имени."
+ });
+@@ -2476,7 +2475,6 @@ RuachI18n.add("ru", {
+ "side by side in one pass; more wait as further passes, so a larger number only takes longer.": "бок о бок за один проход; остальные ждут следующими проходами, так что большее число лишь дольше.",
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Сколько раз звук каждой песни рендерится из её одной музыки, каждый раз со своим звуковым сидом (seed, seed + 1…, одинаково для каждой песни). Звуки песни делаются разом, бок о бок: именно это занимает память карты, поэтому потолок зависит от карты, копии модели и длины песни.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Песни × Звуки — столько семплов выйдет: 2 × 4 = 8, музыка m и m + 1, у каждой звуки от s до s + 3.",
+-"{0} take": "Семплов: {0}",
+ "Probes": "Пробы",
+ "Variations": "Вариации",
+ "About probes": "О пробах",
+@@ -4950,3 +4948,9 @@ RuachI18n.add("ru", {
+ "{0} Hz": "{0} Гц",
+ "no spectrum in this page": "на этой странице нет спектра"
+ });
++// HERESY 1169 · 1375: the Artist's From the take; a run its painter left silent
++RuachI18n.add("ru", {
++"From the take": "Из семпла",
++"its painter said nothing for {#0} minutes: stopped": { "one": "художник молчал {#0} минуту: остановлен", "few": "художник молчал {#0} минуты: остановлен", "many": "художник молчал {#0} минут: остановлен", "other": "художник молчал {#0} минуты: остановлен" },
++"its painter said nothing for {#0} s: stopped": "художник молчал {#0} с: остановлен"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index e1dbe15..2f16356 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1059,7 +1059,6 @@ RuachI18n.add("uk", {
+ "Out of “{0}”. Ctrl+Z gives it back.": "З «{0}». Ctrl+Z поверне як було.",
+ "Out of every other workspace they are in. Ctrl+Z gives it back.": "З усіх інших просторів, де вони є. Ctrl+Z поверне як було.",
+ "They stay where they are as well. Ctrl+Z gives it back.": "Там, де вони є, вони теж лишаться. Ctrl+Z поверне як було.",
+-"{0} takes": "Семплів: {0}",
+ "≈ A guess: the painter does not know this instrument, and the critic did not find it in any of the pictures it drew.": "≈ Здогад: художник не знає цього інструмента, і критик не знайшов його на жодній із намальованих картинок.",
+ "⚠ A name in the style is a request, not a promise. What ▶ A and ▶ B play is what YuE2 gives for it, about nine times in ten. Some probes are superb, and A and B agree, yet the instrument is not the one asked for: trust the ear, not the name.": "⚠ Ім'я в стилі — прохання, а не обіцянка. Що грають ▶ A і ▶ B, те YuE2 і дає на це ім'я, приблизно в дев'яти випадках із десяти. Бувають чудові проби, A і B згодні, але інструмент не той, що просили: вір вуху, а не імені.",
+ "Night": "Ніч",
+@@ -2469,7 +2468,6 @@ RuachI18n.add("uk", {
+ "side by side in one pass; more wait as further passes, so a larger number only takes longer.": "пліч-о-пліч за один прохід; решта чекають наступними проходами, тож більше число лише довше.",
+ "How many times each song's sound is rendered from its one music, each with its own sound seed (seed, seed + 1…, the same for every song). A song's sounds are made all at once, side by side: this is what fills the card's memory, so the ceiling follows the card, the model copy and the song's length.": "Скільки разів звук кожної пісні рендериться з її однієї музики, щоразу зі своїм звуковим сідом (seed, seed + 1…, однаково для кожної пісні). Звуки пісні робляться разом, пліч-о-пліч: саме це займає пам'ять карти, тож стеля залежить від карти, копії моделі й довжини пісні.",
+ "Songs × Sounds is how many takes come out: 2 × 4 = 8, music m and m + 1, each with sounds s to s + 3.": "Пісні × Звуки — стільки семплів вийде: 2 × 4 = 8, музика m і m + 1, у кожної звуки від s до s + 3.",
+-"{0} take": "Семплів: {0}",
+ "Probes": "Проби",
+ "Variations": "Варіації",
+ "About probes": "Про проби",
+@@ -4945,3 +4943,9 @@ RuachI18n.add("uk", {
+ "{0} Hz": "{0} Гц",
+ "no spectrum in this page": "на цій сторінці немає спектра"
+ });
++// HERESY 1169 · 1375: the Artist's From the take; a run its painter left silent
++RuachI18n.add("uk", {
++"From the take": "Із семпла",
++"its painter said nothing for {#0} minutes: stopped": { "one": "художник мовчав {#0} хвилину: зупинено", "few": "художник мовчав {#0} хвилини: зупинено", "many": "художник мовчав {#0} хвилин: зупинено", "other": "художник мовчав {#0} хвилини: зупинено" },
++"its painter said nothing for {#0} s: stopped": "художник мовчав {#0} с: зупинено"
++});
+-- 
+2.43.0
+

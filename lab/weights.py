@@ -39,6 +39,12 @@ Q2512_PARTS = [Q2512 + "model_index.json", Q2512 + "transformer/config.json", Q2
                Q2512 + "vae/diffusion_pytorch_model.safetensors", Q2512 + "lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"]
 QWEN21 = ["artwork/Qwen-Image-2.1/model_index.json", "artwork/Qwen-Image-2.1/transformer/diffusion_pytorch_model.safetensors.index.json",
           "artwork/Qwen-Image-2.1/text_encoder/model.safetensors.index.json", "artwork/Qwen-Image-2.1/vae/diffusion_pytorch_model.safetensors"]
+# HERESY 1347: the fp8 fine-tunes of 2512 and the Artist's adapters in our models repo, shared there by their authors' leave
+QFINE = Q2512 + "checkpoints/"
+ART_LORAS = ["artwork/loras/krea2/cinematic_movie_still_krea2.safetensors", "artwork/loras/krea2/dramatic_dark_lighting_krea2.safetensors",
+             "artwork/loras/krea2/lenovo_krea2.safetensors", "artwork/loras/qwen-image-2.1/lenovo_qwen21.safetensors",
+             "artwork/loras/qwen-image-2.1/frank_frazetta_qwen_21.safetensors", "artwork/loras/qwen-image-2512/Styles/Film Photography v1.safetensors",
+             "artwork/loras/qwen-image-2512/Styles/PHOTOSTYLE BY SEAN ARCHER - SFW v2.safetensors"]
 # the extras, each only when asked for, with fetch-heresy.sh's own sizes and notes; a variant is here when all its files are
 EXTRAS = [
     {"name": "backbone", "label": "Backbone", "restart": True,
@@ -69,6 +75,21 @@ EXTRAS = [
          {"id": "2.1", "label": "Qwen-Image 2.1", "size": "33.1 GB",
           "note": "under Qwen's research licence: research and evaluation only, not for commercial use (a cover for a song that is sold is commercial use); a card of 24 GB, about two minutes a picture",
           "files": QWEN21}]},
+    # HERESY 1347 (Viktor: «Залей в него все модели диффузные… и LoRA адаптеры, и настрой выборочное скачивание прямо в студии Художника»)
+    {"name": "qwen-fine", "label": "Qwen fine-tunes",
+     "what": "the fp8 fine-tunes of Qwen-Image 2512 for finished realism (a card of 24 GB), from goldhub/Ruach_Studio_Models_v2, shared there by their authors' leave (Civitai: share and sell)",
+     "variants": [
+         {"id": "jibmix-v6", "label": "Jib Mix Qwen v6 by J1B", "size": "20.4 GB", "note": "and Qwen-Image 2512's parts (17.7 GB) when they are not here",
+          "files": [QFINE + "JibMix QW2512 v6 fp8.safetensors"] + Q2512_PARTS},
+         {"id": "intorealism-v1", "label": "IntoRealism Qwen v1 by enzino", "size": "20.4 GB", "note": "and Qwen-Image 2512's parts (17.7 GB) when they are not here",
+          "files": [QFINE + "IntoRealism QW2512 v1 fp8.safetensors"] + Q2512_PARTS},
+         {"id": "real-v2", "label": "Real-Qwen-Image v2 by wikeeyang", "size": "20.4 GB", "note": "and Qwen-Image 2512's parts (17.7 GB) when they are not here",
+          "files": [QFINE + "Real QW2512 v2 fp8.safetensors"] + Q2512_PARTS},
+         {"id": "base-fp8", "label": "Qwen-Image 2512 itself in fp8", "size": "20.4 GB", "note": "and Qwen-Image 2512's parts (17.7 GB) when they are not here",
+          "files": [QFINE + "BASE QW2512 fp8_e4m3fn.safetensors"] + Q2512_PARTS}]},
+    {"name": "art-loras", "label": "Artist's adapters",
+     "what": "adapters for the Artist's painters, from goldhub/Ruach_Studio_Models_v2, shared there by their authors' leave (Civitai: share and sell): Cinematic Movie Still, Cinematic Dark Lighting and Lenovo UltraReal for Krea 2; Lenovo UltraReal and Frank Frazetta for Qwen-Image 2.1; Film Photography and Photostyle by Sean Archer for 2512",
+     "variants": [{"id": "all", "label": "seven adapters", "size": "3.1 GB", "files": ART_LORAS}]},
     # HERESY 1303: MERT-v2-FullSong comes with the base (m-a-p's own repository, 2.5 GB): the set's latent cache needs it
     {"name": "trainer", "label": "LoRA trainer's base",
      "what": "Comfy-Org/YuE2 for the Trainer, with Mothersuperior's tokenizer head and m-a-p's MERT-v2-FullSong (the set's latent cache hears with it)",
@@ -224,7 +245,7 @@ def _args(body):
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(PARTS) + ") or an extra (backbone, listener, artwork, qwen, trainer)")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(PARTS) + ") or an extra (backbone, listener, artwork, qwen, qwen-fine, art-loras, trainer)")
 
 
 def _bytes(size):

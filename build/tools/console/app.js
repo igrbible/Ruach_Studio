@@ -3225,7 +3225,7 @@
     d.title = "Ruach Studio · " + tr("Server log");
     d.body.className = "log-pop";
     d.body.innerHTML = '<div class="log-pop-head"><span class="log-dock-views"><button type="button" class="log-view" data-view="server">' + tr("Server") +
-      '</button><button type="button" class="log-view" data-view="artist">' + tr("Artist") + '</button></span><label class="check small-check"><input type="checkbox" checked /> <span>' + tr("Follow") +
+      '</button><button type="button" class="log-view" data-view="artist" translate="no">' + artistRoom() + '</button></span><label class="check small-check"><input type="checkbox" checked /> <span>' + tr("Follow") +
       '</span></label></div><div class="log-pop-main"><div class="log-pop-logs"><div class="log-dock-body mono" data-body="server"></div>' +
       '<div class="log-dock-body log-dock-artist mono" data-body="artist" hidden></div></div><div class="log-pop-gpus" data-body="gpus" aria-label="' + tr("The cards, live") + '"></div></div>';   // HERESY 1343: the cards beside it
     POP = { win: win, server: d.querySelector('[data-body="server"]'), artist: d.querySelector('[data-body="artist"]'), follow: d.querySelector("input"), gpus: d.querySelector('[data-body="gpus"]') };
@@ -3609,6 +3609,9 @@
       if (d && d.seq < ACT.since) ACT.since = 0;                 // the lab restarted: its count began again
       ACT.running = (d && d.running) || [];
       ACT.queue = (d && d.queue) || [];                           // HERESY 1165: the regenerations the engine has not begun
+      var held = function (a) { return (a || []).map(function (p) { return p.gpu + ":" + p.painter + ":" + !!p.busy; }).join("|"); }, was = held(ACT.painters);
+      ACT.painters = (d && d.painters) || [];                     // HERESY 1370: the Artist's painters kept between runs
+      if (held(ACT.painters) !== was) paintHardware();
       markRegen((d && d.regenerating) || []);                     // HERESY 1167
       if (filed && !first) librarianSoon();
       paintEngine();
@@ -4114,17 +4117,24 @@
       ["Loaded", loaded ? gib(hw.loaded_bytes || 0) + " GB · " + loaded + (loaded === 1 ? " module" : " modules") : "nothing", loaded ? "amber" : ""],
       ["Busy", hw.busy ? "running a job" : "idle", hw.busy ? "amber" : ""]
     ];
+    // HERESY 1370: the Artist's painters kept between runs (the lab's activity says which): the Bar's Unload lets them go too
+    var held = keptPainters(), heldOn = held.map(function (p) { return p.gpu; }).join(", ");
+    if (held.length) rows.push(["Artist", "a painter kept between runs · GPU " + heldOn, "amber"]);
     $("hwCard").innerHTML = rows.map(function (row) {
+      if (row[0] === "Artist") return '<div><dt translate="no">' + escape(artistRoom()) + '</dt><dd class="' + row[2] + '" title="' + escape(row[1]) + '">' + escape(row[1]) + "</dd></div>";   // HERESY 1381: the room, not the performer
       return "<div><dt>" + row[0] + '</dt><dd class="' + row[2] + '"' + (row[0] === "GPU" && gpu ? ' translate="no"' : "") + ' title="' + escape(row[1]) + '">' + escape(row[1]) + "</dd></div>";   // HERESY 1339: the card's name
     }).join("");
     $("hwNote").textContent = STATE.noHardware ? "This server does not report its hardware."
       : (loaded && !hw.busy ? "Unload model frees it now; the next song loads it again." : "");
     // Unload only makes sense with a model loaded and nothing running on it.
-    var canUnload = !STATE.noHardware && loaded > 0 && !hw.busy;
+    var canUnload = (!STATE.noHardware && loaded > 0 && !hw.busy) || held.some(function (p) { return !p.busy; });   // HERESY 1370: or a painter idle
     $("unloadModel").disabled = !canUnload;
     $("unloadNow").disabled = !canUnload;
-    $("unloadModel").classList.toggle("is-loaded", loaded > 0);   // HERESY 1113: a loaded model, seen in the bar
-    $("unloadModel").dataset.tip = loaded > 0 ? "Unload model: " + gib(hw.loaded_bytes || 0) + " GB in the card\u2019s memory now" + (hw.busy ? " (busy: it waits)" : "; drop it now")
+    $("unloadModel").classList.toggle("is-loaded", loaded > 0 || held.length > 0);   // HERESY 1113: a loaded model, seen in the bar
+    $("unloadModel").dataset.tip = held.length
+      ? (loaded > 0 ? "Unload model: " + gib(hw.loaded_bytes || 0) + " GB in the card\u2019s memory now" + (hw.busy ? " (busy: it waits)" : "") + ", and the Artist\u2019s painter kept between runs on GPU " + heldOn
+                    : "Unload: the Artist\u2019s painter kept between runs on GPU " + heldOn + ": let it go now")
+      : loaded > 0 ? "Unload model: " + gib(hw.loaded_bytes || 0) + " GB in the card\u2019s memory now" + (hw.busy ? " (busy: it waits)" : "; drop it now")
       : "Unload model: nothing is loaded";
     paintStrip();
     paintEngine();
@@ -4153,11 +4163,27 @@
     }).join("");
   }
 
+  // HERESY 1370: the Artist's painters kept between runs, as the lab's activity last said them
+  function keptPainters() { return (typeof ACT !== "undefined" && ACT && ACT.painters) || []; }
   function unloadModels() {
-    var gpu = gpuOf(), before = gpu ? gib(gpu.total_bytes - gpu.free_bytes) : null;
+    var gpu = gpuOf(), before = gpu ? gib(gpu.total_bytes - gpu.free_bytes) : null, hw = STATE.hardware || {};
+    var engine = !STATE.noHardware && (hw.loaded_modules || 0) > 0;
     $("unloadModel").disabled = true;
     $("unloadNow").disabled = true;
-    post("/unload").then(function (data) {
+    // HERESY 1370 (Viktor 11.10.2026: «на кнопку ВЫГРУЗИТЬ в Баре тоже подключи выгруз не только YuE2 моделей, но абсолютно всего»): the
+    // Artist's kept painters with the engine's models
+    var art = keptPainters().length ? post("/lab/artist/unload").catch(function () { return null; }) : Promise.resolve(null);
+    var eng = engine ? post("/unload") : Promise.resolve(null);
+    var painted = function (a) {
+      var gone = a && a.released || [], busy = a && a.busy || [];
+      if (gone.length) toast((gone.length === 1 ? "The Artist\u2019s painter let go (GPU " : "The Artist\u2019s painters let go (GPU ") + gone.map(function (p) { return p.gpu; }).join(", ") + ")", "good");
+      if (busy.length) toast("The Artist paints on GPU " + busy.map(function (p) { return p.gpu; }).join(", ") + ": Unload again when its run ends");
+      if (a) pollActivity();
+    };
+    Promise.all([eng, art]).then(function (r) {
+      var data = r[0];
+      painted(r[1]);
+      if (!engine) return refreshHardware();
       if (!data || !data.applied) {
         toast("The server is busy; it unloads when the running song is done");
         return refreshHardware();
@@ -4370,6 +4396,7 @@
     // HERESY 1169 (Viktor 07.10.2026: «У Музыканта есть звезда фаворита, не хватает лайка/дизлайка до полного счастья»): the
     // take's own 👍 and 👎, the same mark as the player's and the cards' (HeresyCollection), in the player's order
     var HCh = window.HeresyCollection, rated = HCh && !take.session ? HCh.rating(take.name) : 0, IC = window.HeresyIcons;
+    var shielded = !!(HCh && HCh.isProtected && !take.session && HCh.isProtected(take.name));   // HERESY 1368
     $("takeActions").innerHTML = (HCh && !take.session
       ? '<button type="button" class="btn ghost small icon-act" id="likeTake" data-rate="1" aria-pressed="' + (rated > 0) + '" aria-label="Like" data-tip="Like">' +
         (IC ? IC.ui("like") : "👍") + "</button>" +
@@ -4378,6 +4405,9 @@
       '<button type="button" class="btn ghost small icon-act' + (take.favorite ? " is-on" : "") + '" id="favTake" aria-pressed="' +
       (take.favorite ? "true" : "false") + '" aria-label="Favourite">' +
       (window.HeresyIcons ? window.HeresyIcons.ui("star") : take.favorite ? "★" : "☆") + "</button>" +   // HERESY 1169: drawn, as Compose's
+      // HERESY 1368: the shield beside the star; lit, Delete waits for it to come off
+      (HCh && HCh.protect && !take.session ? '<button type="button" class="btn ghost small icon-act" id="protTake" aria-pressed="' + shielded + '" aria-label="' + (shielded ? "Take its protection off" : "Protect it") +
+        '" data-tip="' + HCh.protTip(shielded) + '">' + (IC ? IC.ui("shield") : "🛡") + "</button>" : "") +
       // HERESY 1167 (Viktor: «Жму на мигалку, открывает в Творце "медицинскую карту". А как обратно из неё перейти в
       // Библиотеку на этот же трек?»): the Librarian with this take in sight, flashed
       (window.HeresyCollection && window.HeresyCollection.reveal && !take.session
@@ -4385,7 +4415,8 @@
           '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
           '<path d="M4 4h3.2v16H4zM9.2 6.5h3.2V20H9.2zM14.4 7.4l3-.8 3.5 13-3 .8zM2.5 20.5h19"/></svg></button>' : "") +
       '<button type="button" class="btn ghost small icon-act" id="renameTake" aria-label="Rename" data-tip="Rename this take">' + (window.HeresyIcons ? window.HeresyIcons.ui("pencil") : "✎") + "</button>" +
-      '<button type="button" class="btn ghost small icon-act danger" id="deleteTake" aria-label="Delete take" data-tip="Delete this take (asks first)">' +
+      '<button type="button" class="btn ghost small icon-act danger' + (shielded ? " is-off" : "") + '" id="deleteTake" aria-label="Delete take" aria-disabled="' + shielded +
+        '" data-tip="' + (shielded ? "This take is protected: take its protection off first" : "Delete this take (asks first)") + '">' +
       '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
       '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5"/></svg></button>';
     paintPlayHere();
@@ -4852,6 +4883,126 @@
       .then(function () { button.disabled = false; });
   });
 
+  // HERESY 1169 · 1356 (from SUNO v6; Viktor 11.10.2026: «Идеи из SUNO внедряй для релиза 2.0.0, чтобы не возвращаться к этому больше»): Crop,
+  // Remove a section and Speed. The take's score (its own, else the one written from its sound) gives its sections in seconds and its
+  // own lines; the lab cuts the take's sound on their starts (bar lines), each join healed by a short crossfade, or stretches it with
+  // its pitch kept; the page cuts the score along (the sections' own lines) or writes its tempo anew. A new take each time
+  function editScore(take) {
+    return take.has_score ? getRequest(take).then(function (req) { return (req && req.abc) || ""; })
+      : fetch("/lab/score?name=" + encodeURIComponent(take.name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { return (d && d.abc) || ""; });
+  }
+  function scoreParts(abc, seconds) {                 // {head, parts: [{name, t, end, lines}]}: a part from each run of «% name» lines
+    var score = window.HeresyAbc.parse(abc), k = 60 / score.bpm, f = function (a) { return a[0] / a[1]; };
+    var lines = String(abc).replace(/\r/g, "").split("\n");
+    while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+    var parts = [], cur = null, s = 0, total = f(score.voices.Vocal.time) * k;
+    for (var i = 8; i < lines.length; i++) {
+      var l = lines[i], mark = l.indexOf("% ") === 0;
+      if (mark && (!cur || cur.music)) {
+        cur = { name: [], t: score.sections[s] ? f(score.sections[s][0]) * k : 0, lines: [], music: false };
+        parts.push(cur);
+      } else if (!cur) {
+        cur = { name: [], t: 0, lines: [], music: false };
+        parts.push(cur);
+      }
+      if (mark) { cur.name.push(l.slice(2).trim()); s++; } else cur.music = true;
+      cur.lines.push(l);
+    }
+    parts.forEach(function (p, j) {
+      p.name = p.name.join(" · ") || "Start";
+      p.end = j < parts.length - 1 ? parts[j + 1].t : Math.max(total, +seconds || 0);   // the last runs to the take's end (its tail)
+    });
+    return { head: lines.slice(0, 8), parts: parts, bpm: score.bpm };
+  }
+  function scoreKeep(sp, keep) {                      // the score of the parts kept, or "" when it would not parse
+    var abc = sp.head.concat([].concat.apply([], sp.parts.filter(function (p, j) { return keep[j]; }).map(function (p) { return p.lines; }))).join("\n") + "\n";
+    try { window.HeresyAbc.parse(abc); return abc; } catch (e) { return ""; }
+  }
+  function editTake(take, body, said) {
+    return post("/lab/take/edit", Object.assign({ name: take.name }, body)).then(function (r) {
+      toast(said + ": " + r.title + " · " + clock(r.seconds), "good");
+      return refreshLibrary().then(function () { openTake(r.name); });
+    });
+  }
+  function editPick(take, what) {                     // the take's parts, picked in the studio's pick window
+    return editScore(take).then(function (abc) {
+      if (!abc) throw new Error("This take has no score to find its sections by: Transcribe this take writes one from its sound");
+      var sp = scoreParts(abc, take.seconds);
+      if (sp.parts.length < 2) throw new Error("Its score has one section only: nothing to " + (what === "crop" ? "crop" : "take out") + " by sections");
+      var groups = [{ label: what === "crop" ? "The sections to keep (from the first ticked to the last)" : "The sections to take out",
+        items: sp.parts.map(function (p, j) { return { value: String(j), label: p.name, note: clock(p.t) + "–" + clock(p.end) }; }) }];
+      var left = function (vals) {
+        var on = vals.map(Number), secs = 0;
+        if (what === "crop") { if (!on.length) return ""; var a = Math.min.apply(null, on), b = Math.max.apply(null, on); secs = sp.parts[b].end - sp.parts[a].t; }
+        else secs = sp.parts.reduce(function (s, p, j) { return s + (on.indexOf(j) >= 0 ? 0 : p.end - p.t); }, 0);
+        return "\u2192 " + clock(secs);
+      };
+      return window.HeresyDialog.pick((what === "crop" ? "Crop the take" : "Remove a section") + "\n\n" + displayTitle(take) +
+        (what === "crop" ? ": the stretch from the first section ticked to the last stays, cut on the score's bar lines." : ": the sections ticked go, each join healed by a short crossfade on the bar line.") +
+        " A new take; this one stays.", groups, { ok: what === "crop" ? "Crop" : "Take out", count: left }).then(function (picked) {
+        if (!picked || !picked.values.length) throw null;
+        var on = picked.values.map(Number).sort(function (a, b) { return a - b; }), keep = sp.parts.map(function () { return what !== "crop"; }), names = [];
+        if (what === "crop") { for (var j = on[0]; j <= on[on.length - 1]; j++) keep[j] = true; }
+        else on.forEach(function (j) { keep[j] = false; });
+        if (keep.every(Boolean)) throw new Error("Nothing taken out");
+        if (!keep.some(Boolean)) throw new Error("Nothing would be left of the take");
+        var spans = [];                                   // crop: the stretch kept; remove: each run of parts taken out
+        sp.parts.forEach(function (p, j) {
+          var want = what === "crop" ? keep[j] : !keep[j];
+          if (!want) return;
+          var last = spans[spans.length - 1];
+          if (last && Math.abs(last[1] - p.t) < 1e-6) last[1] = p.end; else spans.push([p.t, p.end]);
+          names.push(p.name);
+        });
+        var abc2 = scoreKeep(sp, keep);
+        var title = displayTitle(take) + " \u00b7 " + (what === "crop" ? (names.length > 1 ? names[0] + " to " + names[names.length - 1] : names[0]) : "without " + names.join(", "));
+        return { spans: spans, abc: abc2, title: title };
+      });
+    });
+  }
+  ["cropTake", "cutSection"].forEach(function (id) {
+    $(id).addEventListener("click", function () {
+      var take = STATE.take, button = this, what = id === "cropTake" ? "crop" : "remove";
+      if (!take || take.session) return;
+      editPick(take, what).then(function (e) {
+        button.disabled = true;
+        return editTake(take, { op: what, spans: e.spans, abc: e.abc, title: e.title }, what === "crop" ? "Cropped" : "Taken out")
+          .then(function () { if (!e.abc) toast("The new take has no score: its score could not be cut on those sections", "bad"); });
+      }).catch(function (error) { if (error) toast(error.message, "bad"); })
+        .then(function () { button.disabled = false; });
+    });
+  });
+  function speedOf(answer, bpm) {                       // «99» (BPM, with a score), «×1.1», «1.1x», «90%», «1.1»: {f, nb}
+    var s = String(answer).trim().replace(",", "."), f, nb = 0, m;
+    if ((m = /^([0-9.]+)\s*%$/.exec(s))) f = +m[1] / 100;
+    else if ((m = /^[x\u00d7]\s*([0-9.]+)$|^([0-9.]+)\s*[x\u00d7]$/i.exec(s))) f = +(m[1] || m[2]);
+    else if (bpm && /^[0-9]+$/.test(s) && +s >= 20) { nb = +s; f = nb / bpm; }
+    else f = +s;
+    if (!isFinite(f) || f < 0.5 || f > 2) throw new Error("From ×0.5 to ×2" + (bpm ? " (" + Math.ceil(bpm * 0.5) + " to " + Math.floor(bpm * 2) + " BPM)" : ""));
+    if (bpm && !nb) { nb = Math.round(bpm * f); f = nb / bpm; }   // the score's tempo a whole number: the factor follows it
+    if (Math.abs(f - 1) < 0.005) throw new Error("That is its own speed");
+    return { f: f, nb: nb };
+  }
+  $("speedTake").addEventListener("click", function () {
+    var take = STATE.take, button = this, bpm = 0, abc = "";
+    if (!take || take.session) return;
+    editScore(take).then(function (a) {
+      abc = a || "";
+      try { bpm = abc ? window.HeresyAbc.parse(abc).bpm : 0; } catch (e) { bpm = 0; abc = ""; }
+      return window.HeresyDialog.prompt("Speed\n\n" + displayTitle(take) + (bpm ? " is at " + bpm + " BPM: the new tempo in BPM, or a factor (×1.1, 90%)?" : ": a factor (×1.1, 90%)? Its pitch stays.") +
+        " From ×0.5 to ×2. A new take; this one stays.", bpm ? String(bpm) : "×1.1", { ok: "Change the speed", placeholder: bpm ? String(Math.round(bpm * 1.1)) : "×1.1" });
+    }).then(function (answer) {
+      if (answer === null) throw null;
+      var sp = speedOf(answer, bpm), f = sp.f, nb = sp.nb;
+      var abc2 = bpm ? abc.replace(/^Q:1\/4=\d+$/m, "Q:1/4=" + nb) : null;
+      button.disabled = true;
+      toast("Changing the speed of " + displayTitle(take) + " (×" + f.toFixed(3) + ")\u2026");
+      return editTake(take, { op: "speed", factor: +f.toFixed(5), abc: abc2, title: displayTitle(take) + " \u00b7 " + (nb ? nb + " BPM" : "\u00d7" + f.toFixed(2)) }, "Its speed changed");
+    }).catch(function (error) { if (error) toast(error.message, "bad"); })
+      .then(function () { button.disabled = false; });
+  });
+  window.ruachTakeEdit = { parts: scoreParts, keep: scoreKeep, pick: editPick, speed: speedOf };   // for the checks
+
   // HERESY 1169 · 1324 (Viktor's screenshots of SUNO v6, 09.10.2026, «Наша студия уже круче, чем СУНО»: its Fade in beside our End at…):
   // the same take, its first seconds brought up from silence on a half cosine; from its kept latents in seconds (the very sound),
   // else its music codes rendered again; an ended take stays ended (its request's end_at and fade_out go along)
@@ -4882,6 +5033,7 @@
       paintRate();
       sent.then(function () { paintRate(); paintLibrary(); }, function (e) { paintRate(); toast(e.message, "bad"); });
     }
+    if (event.target.closest("#protTake") && window.HeresyCollection && !take.session) window.HeresyCollection.protect([take.name], !window.HeresyCollection.isProtected(take.name));   // HERESY 1368
     if (event.target.closest("#renameTake")) startRename();
     if (event.target.closest("#libTake") && window.HeresyCollection) { setTab("collection"); window.HeresyCollection.reveal(take.name); }   // HERESY 1167
     if (event.target.closest("#deleteTake")) deleteTake(take);
@@ -5156,6 +5308,10 @@
       toast("\u201c" + displayTitle(take) + "\u201d is in a workspace that locks its takes: unlock it first (right-click on the workspace)", "bad");
       return Promise.resolve(false);
     }
+    if (window.HeresyCollection && window.HeresyCollection.isProtected && window.HeresyCollection.isProtected(take.name)) {   // HERESY 1368
+      toast("\u201c" + displayTitle(take) + "\u201d is protected: take its protection off first (its shield, or right-click)", "bad");
+      return Promise.resolve(false);
+    }
     var asked = confirmed ? Promise.resolve(true)
       : window.HeresyDialog.confirm("Delete \u201c" + displayTitle(take) + "\u201d and its files?\n\nThis is for good. To keep a way back, move it to the trash from its menu (right-click).", { danger: true });
     return asked.then(function (ok) {
@@ -5183,12 +5339,16 @@
 
   $("deleteNonFav").addEventListener("click", function () {
     closeMenus();
-    var doomed = STATE.takes.filter(function (t) { return !t.favorite; });
-    var kept = STATE.takes.length - doomed.length;
-    if (!doomed.length) return toast(STATE.takes.length ? "Every take is a favourite; nothing to delete" : "The library is empty");
+    // HERESY 1368: the protected pass by, said
+    var HCd = window.HeresyCollection, shielded = function (t) { return !!(HCd && HCd.isProtected && HCd.isProtected(t.name)); };
+    var spared = STATE.takes.filter(function (t) { return !t.favorite && shielded(t); }).length;
+    var doomed = STATE.takes.filter(function (t) { return !t.favorite && !shielded(t); });
+    var kept = STATE.takes.length - doomed.length - spared;
+    if (!doomed.length) return toast(!STATE.takes.length ? "The library is empty" : spared ? "Every take is a favourite or protected; nothing to delete" : "Every take is a favourite; nothing to delete");
     var chain, count = 0;
     window.HeresyDialog.confirm("Delete " + doomed.length + (doomed.length === 1 ? " take that is" : " takes that are") +
-                        " not a favourite, with their files?\n\n" + kept + (kept === 1 ? " favourite stays." : " favourites stay.") + " This is for good.", { danger: true }).then(function (ok) {
+                        " not a favourite, with their files?\n\n" + kept + (kept === 1 ? " favourite stays." : " favourites stay.") + " This is for good." +
+                        (spared ? "\n\n" + (spared === 1 ? "1 protected take stays too." : spared + " protected takes stay too.") : ""), { danger: true }).then(function (ok) {
       if (!ok) return;
       chain = Promise.resolve();
       doomed.forEach(function (take) {
@@ -5198,6 +5358,7 @@
       paintLibrary();
       paintCoverTakes();
       toast("Deleted " + count + (count === 1 ? " take; " : " takes; ") + kept + (kept === 1 ? " favourite kept" : " favourites kept"), "good");
+      if (spared) toast(spared === 1 ? "1 protected take kept" : spared + " protected takes kept");
       });
     });
   });
@@ -5251,6 +5412,7 @@
     var url = takeAudioUrl(take);
     STATE.playerTake = take;
     if (audio.getAttribute("src") !== url) {
+      if (!keepTime) playWanted = false;                // HERESY 1361: another take, not yet asked to play (A/B keeps the play state)
       audio.src = url;
       if (pendingSeek) { audio.removeEventListener("loadedmetadata", pendingSeek); pendingSeek = null; }
       if (keepTime) {
@@ -5406,7 +5568,7 @@
       if (window.HeresyInstruments && window.HeresyInstruments.paintArts) window.HeresyInstruments.paintArts();
     }).catch(function () { /* the lab is away: no artwork shown, nothing else changes */ });
   }
-  setInterval(function () { if (document.visibilityState === "visible") refreshArts(); }, 20000);
+  setInterval(function () { if (document.visibilityState === "visible" && !STATE.running) refreshArts(); }, 20000);   // HERESY 1363: not while a song renders
 
   // HERESY 1155 (Viktor, 03.10.2026: «Клик открывает в новой вкладке. Сделай оверлеем. Не уходим из студии в другие окна
   // и вкладки, если не нужно»): the artwork over the page, the player left free below it. ‹ › and the arrow keys walk
@@ -5703,6 +5865,34 @@
   });
   audio.addEventListener("loadedmetadata", function () { paintSession(); paintTimes(); });   // HERESY 1111
   audio.addEventListener("pause", function () { paintPlayButton(false); markPlaying(); paintSession(); paintPlayHere(); });   // HERESY 1168
+  // HERESY 1361 (TODO.md: «A take that does not play on late in the long page test (buffered at readyState 1)»): a take asked to play whose
+  // sound is all here yet that stays short of playing (readyState under 3, its time standing) for 4 s is loaded again in its place and
+  // asked once more; a second time it is paused and said. Seen only late in the long page test (the media pipeline holding a take it
+  // had whole, not understood); a slow line is not this (its sound is not all here yet) and waits as it did
+  var stall = { timer: 0, tried: "" };
+  var playWanted = false;                              // asked to play: the play event says it, a pause event or another take ends it
+  audio.addEventListener("play", function () { playWanted = true; });
+  audio.addEventListener("pause", function () { playWanted = false; });
+  function watchStart() {
+    clearTimeout(stall.timer);
+    var name = STATE.playerTake ? STATE.playerTake.name : "", t0 = audio.currentTime;
+    stall.timer = setTimeout(function () {
+      if (audio.paused || audio.readyState >= 3 || Math.abs(audio.currentTime - t0) > 0.05 || !STATE.playerTake || STATE.playerTake.name !== name) return;
+      var b = audio.buffered, d = audio.duration;
+      if (!(b.length && isFinite(d) && b.end(b.length - 1) >= d - 0.5)) return;   // still coming: a slow line waits
+      if (stall.tried === name) { audio.pause(); toast("The take would not start: press \u25b6 again", "bad"); return; }
+      stall.tried = name;
+      console.warn("[player] " + name + ": its sound all here, readyState " + audio.readyState + ", not playing: loaded again");
+      var at = audio.currentTime;
+      audio.load();
+      try { audio.currentTime = at; } catch (e) { /* not seekable yet */ }
+      audio.play().catch(playRefused);
+      watchStart();
+    }, 4000);
+  }
+  audio.addEventListener("play", watchStart);
+  ["playing", "pause", "emptied"].forEach(function (ev) { audio.addEventListener(ev, function () { clearTimeout(stall.timer); }); });
+  window.ruachPlayerChecks = { stall: stall, listenOff: function (v) { if (v !== undefined) STATE.listenOff = !!v; return !!STATE.listenOff; } };   // for the checks
   audio.addEventListener("ended", function () {
     paintPlayButton(false); markPlaying();
     if (repeatMode() === "one") { audio.currentTime = 0; audio.play().catch(function () {}); return; }   // HERESY 1106
@@ -5734,7 +5924,7 @@
     if (!take) { if (dir > 0 && from >= 0) toast("The end of the list"); return; }
     var follow = STATE.take && STATE.playerTake && STATE.take.name === STATE.playerTake.name;
     loadPlayer(take, false);
-    audio.play().catch(function () {});
+    audio.play().catch(playRefused);                   // HERESY 1361: a refusal on the way to the next take is said, not swallowed
     if (follow) openTake(take.name);
   }
   function playOn() { return recall("yue2.playOn") !== "off"; }
@@ -5827,9 +6017,12 @@
     var src = audio.getAttribute("src") || "";
     if (src.indexOf("/library/listen?") !== 0 || !STATE.playerTake) return;
     STATE.listenOff = true;
-    var at = audio.currentTime, take = STATE.playerTake;
+    // HERESY 1361: a take asked to play goes on; asked as the events say it (playWanted): Chrome has paused the element silently by the
+    // time its error is heard (measured: a capture listener still saw it playing, this handler paused, no pause event between)
+    var at = audio.currentTime, take = STATE.playerTake, asked = playWanted;
     audio.src = wavUrl(take);
     try { audio.currentTime = at; } catch (e) { /* not seekable yet */ }
+    if (asked) audio.play().catch(playRefused);
     toast("No FLAC route on this server: the player plays the WAVs this session", "bad");
   });
 
@@ -5875,8 +6068,16 @@
 
   // HERESY 1111: the waveform says the time under the pointer; the total turns to the time left on a click
   STATE.waveHover = null;
-  $("wave").addEventListener("mousemove", function (event) { var r = this.getBoundingClientRect(); STATE.waveHover = (event.clientX - r.left) / r.width; drawWave(); wavePop(event); });
-  $("wave").addEventListener("mouseleave", function () { STATE.waveHover = null; drawWave(); wavePop(null); });
+  $("wave").addEventListener("mousemove", function (event) {
+    var r = this.getBoundingClientRect(); STATE.waveHover = (event.clientX - r.left) / r.width; drawWave(); wavePop(event);
+    if (window.HeresyWaveScope) window.HeresyWaveScope.hover(event);      // HERESY 1374: the wave's scope comes up after a moment
+  });
+  $("wave").addEventListener("mouseleave", function (event) {
+    var up = window.HeresyWaveScope && window.HeresyWaveScope.keeps(event);   // HERESY 1374: up into the scope: its line and card stay
+    if (window.HeresyWaveScope) window.HeresyWaveScope.leave(event);
+    if (up) return;
+    STATE.waveHover = null; drawWave(); wavePop(null);
+  });
   // HERESY 1315 (Viktor 10.10.2026: «при перетаскивании указателя курсора мыши по волне показывать в красивом попапе текст данной
   // секции — прямо из оригинального текста лирики»): a card over the wave with the section under the pointer, its time and its
   // lines as written in the lyrics, the line sung there lit; a section of the score alone says how to find its words
@@ -5890,10 +6091,15 @@
     if (!s) { wavePopEl.hidden = true; return; }
     var i = secs.indexOf(s), end = i + 1 < secs.length ? secs[i + 1].t : audio.duration, now = -1;
     (s.rows || []).forEach(function (row) { if (row.start <= t + 0.05) now = row.k; });
-    var key = (STATE.playerTake ? STATE.playerTake.name : "") + ":" + i + ":" + now;
+    var scope = !!(window.HeresyWaveScope && window.HeresyWaveScope.wanted());   // HERESY 1374: the whole spectrogram over the player
+    var key = (STATE.playerTake ? STATE.playerTake.name : "") + ":" + i + ":" + now + (scope ? ":scope" : "");
     if (wavePopEl.dataset.key !== key) {
       wavePopEl.dataset.key = key;
       var html = '<div class="wave-pop-head"><b translate="no">' + escape(s.name) + "</b><span>" + clock(s.t) + "\u2013" + clock(end) + "</span></div>";
+      // HERESY 1358: a slice of the take's spectrogram over the section (the lab draws it once and keeps it)
+      if (!scope && STATE.playerTake && !STATE.playerTake.session && end - s.t >= 1 && end - s.t <= 600) {
+        html += '<img class="wave-pop-spec" alt="" draggable="false" src="/lab/spectrogram?name=' + encodeURIComponent(STATE.playerTake.name) + "&t0=" + s.t.toFixed(2) + "&t1=" + end.toFixed(2) + '&w=300&h=56" />';
+      }
       if (s.lines && s.lines.length) {
         html += '<div class="wave-pop-lines" translate="no">' + s.lines.slice(0, 12).map(function (l, k) { return "<p" + (k === now ? ' class="is-now"' : "") + ">" + escape(l) + "</p>"; }).join("") +
           (s.lines.length > 12 ? '<p class="wave-pop-more">\u2026</p>' : "") + "</div>" +
@@ -5908,7 +6114,8 @@
     wavePopEl.hidden = false;
     var w = wavePopEl.offsetWidth, h = wavePopEl.offsetHeight;
     wavePopEl.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, event.clientX - w / 2)) + "px";
-    wavePopEl.style.top = Math.max(8, r.top - h - 10) + "px";
+    var over = window.HeresyWaveScope ? window.HeresyWaveScope.top() : null;   // HERESY 1374: over the scope while it is up
+    wavePopEl.style.top = Math.max(8, (over !== null ? over : r.top) - h - 10) + "px";
   }
   $("timeTotal").addEventListener("click", function () { store("yue2.timeLeft", recall("yue2.timeLeft") ? null : "1"); paintTimes(); });
   function paintTimes() {
@@ -5916,16 +6123,19 @@
     $("timeTotal").textContent = recall("yue2.timeLeft") ? "\u2212" + clock(Math.max(0, audio.duration - audio.currentTime)) : clock(audio.duration);
   }
   audio.addEventListener("timeupdate", function () { if (recall("yue2.timeLeft")) paintTimes(); });
-  $("wave").addEventListener("click", function (event) {
-    var rect = this.getBoundingClientRect();
-    var ratio = (event.clientX - rect.left) / rect.width;
+  $("wave").addEventListener("click", function (event) { waveSeek(event.clientX); });
+  // HERESY 1374: a click before the wave's scope came only goes there (the scope waits for the pointer to move on)
+  $("wave").addEventListener("mousedown", function (event) { if (window.HeresyWaveScope) window.HeresyWaveScope.press(event); });
+  function waveSeek(clientX) {                                 // HERESY 1374: the wave's and its scope's
+    var rect = $("wave").getBoundingClientRect();
+    var ratio = (clientX - rect.left) / rect.width;
     if (!isFinite(audio.duration)) return;
     var t = ratio * audio.duration, near = null;              // HERESY 1282: a click by a section's line goes to its very start
     waveSections().forEach(function (s) {
       if (Math.abs((s.t - t) / audio.duration * rect.width) <= 6 && (!near || Math.abs(s.t - t) < Math.abs(near.t - t))) near = s;
     });
     audio.currentTime = near ? near.t : t;
-  });
+  }
   // HERESY 1282 (from SUNO v6, TODO.md: «Sections on the wave: the take's sections from its score… as labelled blocks over the
   // player's waveform; a click on one goes there»): the take's score (its own, from its request; else the one written from its
   // sound) gives each section's start in seconds at the score's tempo (HeresyAbc.markers); the wave draws a thin line at each
@@ -6003,6 +6213,42 @@
     }
     return list.map(function (s) { return { t: Math.max(0, Math.round(s.t * 100) / 100), name: s.name, lines: s.lines, rows: s.rows, unheard: !!s.unheard }; });
   }
+  // HERESY 1169 · 1358 (from SUNO v6, TODO.md: «The boundaries snapped to the music's own changes (spectral novelty) and the instrumental
+  // breaks found by the voice's absence; a slice of the spectrogram in the card (Viktor 10.10)»): the lab hears where the take's music
+  // changes (lab/takechanges.py: Foote's novelty over its timbre and harmony); each section's start moves to the strongest change within
+  // SNAP seconds of it (never past its neighbours); where no voice sings for BREAK seconds inside a section, a Break is laid there and
+  // the section goes on after it; a long start or end without a section of its own becomes Intro or Outro
+  var SNAP = 1.5, BREAK = 7, waveChanges = {};
+  function snapSections(list, changes) {
+    if (!list.length || !changes || !changes.length) return list;
+    return list.map(function (s, i) {
+      if (i === 0 && s.t < 0.5) return s;
+      var lo = i > 0 ? list[i - 1].t + 1 : 0, hi = i + 1 < list.length ? list[i + 1].t - 1 : Infinity, best = null;
+      changes.forEach(function (c) {
+        if (Math.abs(c.t - s.t) <= SNAP && c.t > lo && c.t < hi && (!best || c.strength > best.strength)) best = c;
+      });
+      return best ? Object.assign({}, s, { t: best.t, snapped: true }) : s;
+    });
+  }
+  function breakSections(list, rows, dur) {
+    var heard = (rows || []).filter(function (r) { return !r.guessed && isFinite(r.start) && isFinite(r.end); }).sort(function (a, b) { return a.start - b.start; });
+    if (!list.length || heard.length < 2) return list;
+    var out = list.slice(), has = function (a, b) { return out.some(function (s) { return s.t > a + 0.5 && s.t < b - 0.5; }); };
+    for (var i = 0; i + 1 < heard.length; i++) {
+      var a = heard[i].end, b = heard[i + 1].start;
+      if (b - a < BREAK || has(a, b)) continue;          // a gap a section of the lyrics already fills (a tagged solo) stays as it is
+      var inside = null, next = null;                    // the section the gap falls in (the latest begun by then), the one after it
+      out.forEach(function (s) { if (s.t <= a && (!inside || s.t > inside.t)) inside = s; if (s.t > a + 0.5 && (!next || s.t < next.t)) next = s; });
+      if (!inside) continue;
+      out.push({ t: Math.round((a + 0.3) * 100) / 100, name: "Break", lines: [], rows: [], heard: "no voice" });
+      if (!next || Math.abs(next.t - b) > 1.5) out.push(Object.assign({}, inside, { t: Math.round((b - 0.2) * 100) / 100, resumed: true }));   // inside it: it goes on after
+    }
+    var first = heard[0].start, last = heard[heard.length - 1].end;
+    if (first >= BREAK && !out.some(function (s) { return s.t < first - 1 && !s.lines.length; }) && out[0] && out[0].t > 1) out.push({ t: 0, name: "Intro", lines: [], rows: [], heard: "no voice" });
+    if (isFinite(dur) && dur - last >= BREAK + 1 && !has(last, dur + 1)) out.push({ t: Math.round((last + 0.3) * 100) / 100, name: "Outro", lines: [], rows: [], heard: "no voice" });
+    return out.sort(function (x, y) { return x.t - y.t; });
+  }
+  window.ruachWaveSnap = { snap: snapSections, breaks: breakSections };   // for the checks
   function machineCards() {                                  // how many cards the lab sees, once
     if (STATE.machineCards != null) return Promise.resolve(STATE.machineCards);
     return fetch("/lab/machine").then(function (r) { return r.ok ? r.json() : null; })
@@ -6033,16 +6279,20 @@
     if (take.session) return;
     var tagged = taggedParts(take.lyrics) >= 2;
     var timed = !tagged ? Promise.resolve(null) : sectionsTimed[name] ? Promise.resolve(sectionsTimed[name])
-      : fetch("/lab/timing?cached=1&name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; })
+      : fetch("/lab/timing?cached=1&name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
           .then(function (d) { if (d && d.rows) { sectionsTimed[name] = d; return d; } return null; }).catch(function () { return null; });
     var got = take.has_score ? getRequest(take).then(function (req) { return (req && req.abc) || ""; })
       : sectionsNone[name] ? Promise.resolve("")
       : fetch("/lab/score?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; })
           .then(function (d) { if (!d || !d.abc) sectionsNone[name] = true; return (d && d.abc) || ""; });
-    Promise.all([timed, got.catch(function () { return ""; })]).then(function (x) {
+    var heardChanges = waveChanges[name] ? Promise.resolve(waveChanges[name])   // HERESY 1358: the music's own changes, asked once a take
+      : fetch("/lab/changes?name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) { var c = (d && d.changes) || []; waveChanges[name] = c; return c; }).catch(function () { return []; });
+    Promise.all([timed, got.catch(function () { return ""; }), heardChanges]).then(function (x) {
       if (!STATE.playerTake || STATE.playerTake.name !== name) return;
       var ear = x[0] ? earSections(take.lyrics, x[0].rows) : [];
-      STATE.waveSections = ear.length ? { name: name, list: ear, how: "ear" } : { name: name, list: sectionsFrom(x[1]), how: "score" };
+      if (ear.length) ear = breakSections(ear, x[0].rows, isFinite(audio.duration) ? audio.duration : take.seconds);   // HERESY 1358
+      STATE.waveSections = ear.length ? { name: name, list: snapSections(ear, x[2]), how: "ear" } : { name: name, list: snapSections(sectionsFrom(x[1]), x[2]), how: "score" };
       drawWave();
       // by itself on a machine of two cards or more, where Whisper takes a card of its own (never on a test page)
       if (!ear.length && tagged && !sectionsAsked[name] && !navigator.webdriver && !/[?&]scope=/.test(location.search)) {
@@ -6474,7 +6724,8 @@
         (window.HeresyRegen && window.HeresyRegen.has(take.name) ? " is-regenerating" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
         (extras ? "" : '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
         '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>") +
-        '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>' +
+        (HC && HC.isProtected && HC.isProtected(take.name) ? "" :   // HERESY 1368: a protected take has no ✕
+        '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>') +
         (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '">Refine</button>') +
         '<a class="take-dl" data-dl="1" href="' + escape(downloadUrl(take)) + '" download="' + escape(audioFileName(take)) +
         '" title="Download ' + formatExt(take.format).toUpperCase() + '" aria-label="Download">⤓</a>' +
@@ -6509,6 +6760,13 @@
       event.stopPropagation();
       var lfavTake = findTake(lfav.dataset.name);
       if (lfavTake) toggleFavorite(lfavTake);
+      return;
+    }
+    var lprot = event.target.closest("[data-lprot]");   // HERESY 1368: the shield beside the star
+    if (lprot) {
+      event.stopPropagation();
+      var HCp = window.HeresyCollection;
+      if (HCp && HCp.protect) HCp.protect([lprot.dataset.name], !HCp.isProtected(lprot.dataset.name));
       return;
     }
     var fav = event.target.closest("[data-fav]"), del = event.target.closest("[data-del]"), toPost = event.target.closest("[data-post]");
@@ -7643,9 +7901,13 @@
   function startPolls() {
     if (pollsStarted) return;
     pollsStarted = true;
-    setInterval(function () { if (!document.hidden) pollProps(); }, 10000);
+    // HERESY 1363 (TODO.md: «Fewer requests from the page while a song renders (the browser's six connections a host)»): while a song
+    // renders, the server's props wait (they do not change then) and the memory readout comes every 15 s, not 5: the log stream, the
+    // audio and the run's own poll keep their connections
+    var hwTick = 0;
+    setInterval(function () { if (!document.hidden && !STATE.running) pollProps(); }, 10000);
     // Keep the memory readout honest while runs come and go.
-    setInterval(function () { if (!document.hidden) refreshHardware(); }, 5000);
+    setInterval(function () { if (document.hidden || (STATE.running && ++hwTick % 3)) return; refreshHardware(); }, 5000);
   }
 
   /* ------------------------------------------------ HERESY 1002: draft */
@@ -7902,6 +8164,17 @@
     var take = STATE.playerTake ? findTake(STATE.playerTake.name) || STATE.playerTake : null, HC = window.HeresyCollection;
     var held = STATE.take && HC && $("likeTake") ? HC.rating(STATE.take.name) : 0;     // HERESY 1169: the take's head follows too
     if ($("likeTake")) { $("likeTake").setAttribute("aria-pressed", held > 0 ? "true" : "false"); $("dislikeTake").setAttribute("aria-pressed", held < 0 ? "true" : "false"); }
+    if (STATE.take && $("protTake") && HC && HC.isProtected) {   // HERESY 1368: the take's shield and its Delete follow
+      var guarded = HC.isProtected(STATE.take.name), dl = $("deleteTake");
+      $("protTake").setAttribute("aria-pressed", guarded ? "true" : "false");
+      $("protTake").setAttribute("aria-label", guarded ? "Take its protection off" : "Protect it");
+      $("protTake").dataset.tip = HC.protTip(guarded);
+      if (dl) {
+        dl.classList.toggle("is-off", guarded);
+        dl.setAttribute("aria-disabled", guarded ? "true" : "false");
+        dl.dataset.tip = guarded ? "This take is protected: take its protection off first" : "Delete this take (asks first)";
+      }
+    }
     $("pbRate").hidden = !take || take.session;
     if (!take) return;
     var r = HC ? HC.rating(take.name) : 0;
@@ -8122,6 +8395,11 @@
         : HC ? { icon: "👎", label: "Dislike", checked: r < 0, action: function () { HC.rate(name, r < 0 ? 0 : -1).then(changed); } } : null,
       HC && bulk && HC.favMany ? { icon: "☆", label: "Favourite " + bulk.length, hint: "all favourites: taken back", checked: bulk.every(function (n) { var t = findTake(n); return !!(t && t.favorite); }), action: function () { HC.favMany(bulk).then(function () { changed(); HC.reload(); }); } }
         : { icon: "☆", label: "Favourite", checked: !!take.favorite, action: function () { toggleFavorite(take).then(function () { changed(); if (HC) HC.reload(); }); } },
+      // HERESY 1368 (Viktor 11.10.2026: «И на аудио треки в студии тоже защиту добавь в опцию»): never to the trash, never deleted for good
+      HC && HC.protect && !take.session ? (bulk
+        ? { icon: "🛡", label: "Protect " + bulk.length, hint: "all protected: the protection comes off", checked: bulkRows.length > 0 && bulkRows.every(function (x) { return x.protected; }), action: function () { HC.protectMany(bulk); } }
+        : { icon: "🛡", label: HC.isProtected(name) ? "Take its protection off" : "Protect it", hint: HC.isProtected(name) ? "" : "never to the trash, never deleted", checked: HC.isProtected(name),
+            action: function () { HC.protect([name], !HC.isProtected(name)); } }) : null,
       HC ? { icon: "✍", label: "Note…", action: function () {
         window.HeresyDialog.prompt("A note on “" + displayTitle(take) + "”\n\nEmpty removes it.", HC.note(name), { ok: "Keep the note", max: 4000 })
           .then(function (t) { if (t !== null) HC.setNote(name, t).then(paintNote); });
@@ -8254,7 +8532,8 @@
         window.HeresyDialog.confirm((list.length > 1 ? "Move the " + list.length + " checked takes to the trash?" : "Move “" + displayTitle(take) + "” to the trash?") +
           "\n\nNothing is deleted: the trash in the Librarian gives it back until it is emptied.", { ok: "To the trash", danger: true })
           .then(function (ok) { if (ok) return HC.trash(list).then(function (d) {     // HERESY 1135: with its undo
-            if (HC.undoable && d && d.moved && d.moved.length) HC.undoable("Moved to the trash", HC.untrash(d.moved)); else toast("Moved to the trash");
+            if (HC.undoable && d && d.moved && d.moved.length) HC.undoable("Moved to the trash", HC.untrash(d.moved));
+            else if (!d || !d.protected || !d.protected.length) toast("Moved to the trash");   // HERESY 1368: none went: HC.trash said why
             return refreshLibrary();
           }); })
           .catch(function (e) { toast(e.message, "bad"); });
@@ -8554,11 +8833,16 @@
   all(".topbar [data-tab]").forEach(function (b) { b.addEventListener("click", function () { leaveEngine().then(function (ok) { if (ok) setTab(b.dataset.tab); }); }); });
   // HERESY 1169: the Artist's greyed place in the bar by the page's language (the catalogs' "Artist" is the Trainer's
   // performer, «Артист»; the room is Viktor's «Художник», the pictures for the songs)
-  var ARTIST_ROOM = { ru: "Художник", uk: "Художник", be: "Мастак", el: "Καλλιτέχνης", es: "Artista", it: "Artista" };
+  var ARTIST_ROOM = { ru: "Художник", uk: "Художник", be: "Мастак", el: "Καλλιτέχνης", es: "Artista", it: "Artista",
+                      fr: "Peintre", "pt-BR": "Pintor", de: "Maler", ja: "絵師", "zh-CN": "画室" };   // HERESY 1379: by <html lang>
+  function artistRoom() {       // HERESY 1381: hoisted, for the log's view and the Bar's row painted before this line runs
+    return (ARTIST_ROOM || {})[document.documentElement.lang] || "Artist";
+  }
   function paintArtistTab() {   // HERESY 1332 (Viktor: «Artist не переводи как Артист на русский. Только как Художник»): the room's header too
-    var name = ARTIST_ROOM[document.documentElement.lang] || "Artist";
+    var name = artistRoom();
     if ($("tabArtist")) $("tabArtist").textContent = name;
     if ($("arRoomName")) $("arRoomName").textContent = name;
+    if ($("logViewArtist")) $("logViewArtist").textContent = name;   // HERESY 1381: the log's view of the room
   }
   window.addEventListener("ruach-lang", paintArtistTab);
   paintArtistTab();
@@ -8631,7 +8915,7 @@
     $("assistTask").value = saved.task || "song";
     $("assistStructure").value = saved.structure || "";
     if (saved.temp !== undefined) $("assistTemp").value = saved.temp;
-    if (saved.max) $("assistMax").value = saved.max;
+    if (saved.max && +saved.max !== 8192) $("assistMax").value = saved.max;   // HERESY 1390: the old default (8192) gives way to 32K
     var saveAssist = function () {
       store(ASSIST_KEY, JSON.stringify({ brief: $("assistBrief").value, prefs: $("assistPrefs").value, task: $("assistTask").value,
                                          temp: $("assistTemp").value, max: $("assistMax").value,
@@ -8732,6 +9016,34 @@
       });
     }
 
+    // HERESY 1357: the Writer's model for a task of the page's own (Tighten, the style's suggestions): the room's choice, OpenRouter
+    // or the chat server, its request and answer in the log as the room's are; a model that spent its answer thinking asked once again
+    window.HeresyWriterAsk = function (messages, max, temperature, what) {
+      var started = Date.now(), model = null, or = $("assistProvider").value === "openrouter";
+      var via = or ? ($("orModel").value.trim() || "OpenRouter") + " on OpenRouter" : "the chat server";
+      addLogLine("[Writer] \u2192 " + via + ": " + (what || "a task") + ", up to " + max + " tokens", false);
+      var send = function (m) {
+        return or ? (model = $("orModel").value.trim() || "OpenRouter", openRouterComplete(messages, m, temperature))
+          : refreshChat().then(function (status) {
+            if (!status.configured) throw new Error("Set the chat server address under Engine first");
+            if (!status.available) throw new Error(status.error || "The chat server is not answering at " + status.base);
+            if (!status.use) throw new Error("No model is loaded in the chat server");
+            model = status.use;
+            return chatComplete(messages, model, m, null, temperature);
+          });
+      };
+      return send(max).then(function (r) {
+        var ch = (r.choices || [])[0] || {};
+        if (ch.finish_reason === "length" && !stripThinking(((ch.message || {}).content) || "").trim() && max < 16384) return send(Math.min(16384, max * 2));
+        return r;
+      }).then(function (r) {
+        var ch = (r.choices || [])[0] || {}, text = stripThinking(((ch.message || {}).content) || "").trim();
+        addLogLine("[Writer] \u2190 " + model + " \u00b7 " + Math.round((Date.now() - started) / 100) / 10 + " s \u00b7 " + (what || "a task"), false);
+        if (!text) throw new Error("The Writer's model gave no answer");
+        return { text: text, model: model, cut: ch.finish_reason === "length" };
+      });
+    };
+
     $("assistBtn").addEventListener("click", function () {
       var brief = $("assistBrief").value.trim(), button = this, started = Date.now(), model = null;
       if (!brief) { $("assistBrief").focus(); return toast("Describe the song or the changes you want", "bad"); }
@@ -8749,7 +9061,7 @@
         return;
       }
       var task = $("assistTask").value, temp = $("assistTemp").value.trim();
-      var max = Math.max(256, parseInt($("assistMax").value, 10) || 8192);
+      var max = Math.max(256, parseInt($("assistMax").value, 10) || 32768);   // HERESY 1390
       button.disabled = true;
       $("assistLabel").textContent = "Writing…";
       // HERESY 1167 (Viktor: «OpenRouter активность не отображается в системном логе»): the page asks the writer itself, so
@@ -8806,13 +9118,21 @@
           $("assistDraft").classList.add("is-hidden");
           $("assistRaw").open = true;
         }
-        $("assistStatus").textContent = cut ? "The answer reached the output limit: review it carefully, or raise Max output tokens."
+        $("assistStatus").textContent = cut ? "The answer reached the output limit: review it carefully, or raise Max tokens."
           : draft ? "Your draft is ready. Review and edit it, then apply what you like."
           : "The model did not return a complete draft; its raw answer is below.";
+        if (!text.trim()) {                              // HERESY 1390b: nothing came back: said over the page, not only in the log
+          $("assistStatus").textContent = "";
+          window.HeresyDialog.alert("The model gave an empty answer: nothing came back from " + model + ".\n\n" +
+            "It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.");
+        } else {                                         // HERESY 1390b: the answer brought to the window's top
+          var shown = draft ? $("assistDraft") : $("assistRaw");
+          requestAnimationFrame(function () { shown.scrollIntoView({ block: "start", behavior: "smooth" }); });
+        }
       }).catch(function (error) {
         $("assistStatus").textContent = "";
         addLogLine("[Writer] " + (model || "the writer") + " failed: " + (error.message || String(error)), false);
-        toast(error.message || String(error), "bad");
+        window.HeresyDialog.alert("The writer failed: " + (error.message || String(error)));   // HERESY 1390b: over the page
       }).then(function () { clearInterval(ticker); button.disabled = false; $("assistLabel").textContent = "Send the request to LLM"; });   // HERESY 1167
     });
 
@@ -9021,6 +9341,26 @@
         return STATE.playerTake && STATE.playerTake.name === shown.name && audio.getAttribute("src") ? audio.currentTime : null;
       },
       seek: seekTake
+    });
+  }
+  // HERESY 1169 · 1374 (Viktor 11.10.2026: «Максимум анализа по волне»): the wave's scope (heresy-wavescope.js): the take in the
+  // player, the rooms of songs, the sections, the wave's own way to go somewhere, its card over the scope, its line on the wave
+  if (window.HeresyWaveScope) {
+    window.HeresyWaveScope.init({
+      wave: $("wave"),
+      audio: audio,
+      take: function () {
+        var t = STATE.playerTake;
+        if (!t) return null;
+        var s = spectrumTake(t);
+        if (t.session) s.name = "";                  // a take of this tab alone: measured in the page, the lab does not have it
+        return s;
+      },
+      room: function () { return ["create", "post", "collection"].indexOf(document.body.dataset.tab || "create") >= 0; },
+      sections: waveSections,
+      seek: waveSeek,
+      pop: wavePop,
+      mark: function (ratio) { STATE.waveHover = ratio; drawWave(); }
     });
   }
 
@@ -9264,6 +9604,125 @@
       });
     }).catch(function (e) { toast("Could not read " + file.name + ": " + e.message, "bad"); });
   }
+  // HERESY 1169 · 1357 (from SUNO v6, TODO.md: «Tighten these lyrics in the lyrics box, by the Writer's model; style suggestions as chips
+  // under the Style, made anew on demand (SUNO's ✦ and ↻ under its Styles)»; Viktor 11.10.2026: «Идеи из SUNO внедряй для релиза 2.0.0»)
+  var TIGHTEN = "You edit song lyrics. Tighten the lyrics you are given: cut filler words and weak or repeated lines, keep the meaning, the language, " +
+    "the voice and the rhymes, keep every section tag line (such as [Verse 1] or [Chorus]) exactly as it is, where it is and in its order, keep each line " +
+    "singable and about as long as its melody needs, add no new section, write no explanation. Answer with the lyrics only.";
+  var SUGGEST = "You suggest style tags for songs made by the music model YuE: short tags of one to four words each (genre, instruments, voice, mood, " +
+    "production, era), in English, the most telling first. Suggest tags the song's style has not got yet and that fit it, its title and its lyrics. " +
+    "One tag a line, no numbering, no explanation.";
+  function writerAsk(messages, max, what) {
+    if (!window.HeresyWriterAsk) return Promise.reject(new Error("The Writer's model is not set up yet"));
+    return window.HeresyWriterAsk(messages, max, null, what).catch(function (e) { throw new Error(tr("The Writer's model: " + (e.message || String(e)))); });
+  }
+  function lyricTags(text) { return String(text || "").split("\n").filter(function (l) { return /^\s*\[[^\]]+\]\s*$/.test(l); }).map(function (l) { return l.trim(); }); }
+  function cleanAnswer(text) { return String(text || "").replace(/^```[a-z]*\n?|```$/gm, "").replace(/\s+$/, ""); }
+  function tightenWindow(now, then) {                  // both side by side; the right one editable; Apply, Ask again or Cancel
+    return new Promise(function (resolve) {
+      var back = document.createElement("div"), lost = lyricTags(now).filter(function (t) { return lyricTags(then).indexOf(t) < 0; });
+      var words = function (s) { return (String(s).match(/\S+/g) || []).length; };
+      back.className = "ar-lib-back tg-back";
+      back.setAttribute("role", "dialog");
+      back.setAttribute("aria-label", tr("Tighten these lyrics"));
+      back.innerHTML = '<div class="ar-lib ar-get tg-win"><div class="ar-lib-head"><b>' + escape(tr("Tighten these lyrics")) + "</b>" +
+        '<span class="row-hint">' + escape(tr("Now " + words(now) + " words · tightened " + words(then) + " words")) + "</span>" +
+        (lost.length ? '<span class="row-hint tg-lost">' + escape(tr("Section tags the model left out: " + lost.join(" "))) + "</span>" : "") + "</div>" +
+        '<div class="tg-cols"><label><span class="label">' + escape(tr("Now")) + '</span><textarea readonly spellcheck="false" class="tg-now"></textarea></label>' +
+        '<label><span class="label">' + escape(tr("Tightened (yours to edit)")) + '</span><textarea spellcheck="true" class="tg-then"></textarea></label></div>' +
+        '<div class="ar-li-acts"><button type="button" class="btn small primary" data-tg="apply">' + escape(tr("Apply")) + "</button>" +
+        '<button type="button" class="btn ghost small" data-tg="again">' + escape(tr("Ask again")) + '</button><span class="spacer"></span>' +
+        '<button type="button" class="btn ghost small" data-tg="close">' + escape(tr("Cancel")) + "</button></div></div>";
+      back.querySelector(".tg-now").value = now;
+      back.querySelector(".tg-then").value = then;
+      document.body.appendChild(back);
+      function done(v) { document.removeEventListener("keydown", key, true); back.remove(); resolve(v); }
+      function key(e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(null); } }
+      document.addEventListener("keydown", key, true);
+      back.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-tg]");
+        if (e.target === back || (b && b.dataset.tg === "close")) return done(null);
+        if (b && b.dataset.tg === "apply") return done({ text: back.querySelector(".tg-then").value });
+        if (b && b.dataset.tg === "again") return done({ again: true });
+      });
+      back.querySelector(".tg-then").focus();
+    });
+  }
+  function tighten() {
+    var area = $("lyrics"), now = area.value.replace(/\s+$/, ""), button = $("lyricsTighten");
+    if (!now.trim()) return toast("The lyrics are empty: nothing to tighten", "bad");
+    button.disabled = true;
+    var label = button.textContent;
+    button.textContent = tr("✦ Tightening…");
+    var ask = function () {
+      return writerAsk([{ role: "system", content: TIGHTEN }, { role: "user", content: now }], Math.max(1024, Math.min(16384, now.length * 2)), "tighten the lyrics")
+        .then(function (r) { return tightenWindow(now, cleanAnswer(r.text)); })
+        .then(function (v) { return v && v.again ? ask() : v; });
+    };
+    return ask().then(function (v) {
+      if (!v || !v.text.trim()) return;
+      var text = v.text.replace(/\r\n?/g, "\n").replace(/\s+$/, ""), max = parseInt(area.getAttribute("maxlength"), 10) || 10000;
+      if (text.length > max) return toast("The tightened lyrics hold " + text.length + " characters; the box takes up to " + max, "bad");
+      area.focus({ preventScroll: true });
+      area.setSelectionRange(0, area.value.length);
+      var ok = false;
+      try { ok = document.execCommand("insertText", false, text); } catch (e) { ok = false; }
+      if (!ok) { area.value = text; area.dispatchEvent(new Event("input", { bubbles: true })); }
+      area.setSelectionRange(0, 0);
+      area.scrollTop = 0;
+      toast("The lyrics tightened: Ctrl+Z in the box brings the old ones back", "good");
+    }).catch(function (e) { toast(e.message || String(e), "bad"); })
+      .then(function () { button.disabled = false; button.textContent = label; });
+  }
+  $("lyricsTighten").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); tighten(); });
+  var styleSugShown = [];
+  function styleHas(style, tag) { return String(style).toLowerCase().indexOf(String(tag).toLowerCase()) >= 0; }
+  function sugTags(text, style) {                      // the answer's lines as tags: bullets and numbers off, short, new to the style, once each
+    var seen = {};
+    return String(text || "").split(/\n|,/).map(function (l) { return l.replace(/^\s*(?:[-*\u2022]|\d+[.)])\s*/, "").replace(/^["'\u201c]|["'\u201d]$/g, "").trim(); })
+      .filter(function (t) { var k = t.toLowerCase(); if (!t || t.length > 40 || t.split(/\s+/).length > 5 || seen[k] || styleHas(style, t)) return false; seen[k] = 1; return true; })
+      .slice(0, 8);
+  }
+  function styleInsert(style, tag) {                    // the tag before a BPM at the style's end, else at its end
+    var s = String(style).replace(/[\s,]+$/, ""), m = /,\s*(\d{2,3}\s*bpm)$/i.exec(s);
+    if (!s) return tag;
+    return m ? s.slice(0, m.index) + ", " + tag + ", " + m[1] : s + ", " + tag;
+  }
+  function paintStyleSug() {
+    $("styleSugChips").innerHTML = styleSugShown.map(function (t, i) {
+      return '<button type="button" class="chip style-sug-chip" data-sug="' + i + '" translate="no">' + escape(t) + "</button>";
+    }).join("");
+    $("styleSugMore").hidden = !styleSugShown.length;
+  }
+  function styleSuggest(more) {
+    var style = $("style").value.trim(), lyr = $("lyrics").value.split("\n").filter(function (l) { return l.trim(); }).slice(0, 12).join("\n"), button = $("styleSugGo");
+    if (!style && !lyr.trim()) return toast("Write a style or some lyrics first: the suggestions read them", "bad");
+    button.disabled = true; $("styleSugMore").disabled = true;
+    var user = "Style: " + (style || "(none yet)") + "\nTitle: " + ($("title").value.trim() || "(none)") + "\nThe lyrics' first lines:\n" + (lyr || "(none)") +
+      (more && styleSugShown.length ? "\nNot these again: " + styleSugShown.join(", ") : "") + "\nSuggest 8 tags.";
+    return writerAsk([{ role: "system", content: SUGGEST }, { role: "user", content: user }], 1024, "style suggestions").then(function (r) {
+      var tags = sugTags(cleanAnswer(r.text), $("style").value);
+      if (!tags.length) throw new Error(tr("The Writer's model offered nothing new for this style"));
+      styleSugShown = tags;
+      paintStyleSug();
+    }).catch(function (e) { toast(e.message || String(e), "bad"); })
+      .then(function () { button.disabled = false; $("styleSugMore").disabled = false; });
+  }
+  $("styleSugGo").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); styleSuggest(false); });
+  $("styleSugMore").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); styleSuggest(true); });
+  $("styleSugChips").addEventListener("click", function (e) {
+    var c = e.target.closest("[data-sug]");
+    if (!c) return;
+    e.preventDefault(); e.stopPropagation();
+    var tag = styleSugShown[+c.dataset.sug], area = $("style");
+    if (!tag) return;
+    area.value = styleInsert(area.value, tag);
+    area.dispatchEvent(new Event("input", { bubbles: true }));
+    styleSugShown.splice(+c.dataset.sug, 1);
+    paintStyleSug();
+  });
+  window.ruachSunoText = { tags: sugTags, insert: styleInsert, lyricTags: lyricTags, clean: cleanAnswer };   // for the checks
+
   // HERESY 1269 (Viktor 09.10.2026: «Шорткат на попап/fullscreen редактора Лирики — Alt+E (перебиваем шорткат браузера)»; «Если лирика
   // поверх всего, и применил Shift+Tab — схлопывание этого попапа и переносимся в сам фрейм попап»): Alt+E lifts the lyrics and puts them
   // back, in the Creator; Shift+Tab over the lifted lyrics puts them back into the form and lifts its frame, the cursor in the lyrics

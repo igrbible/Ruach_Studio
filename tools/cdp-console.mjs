@@ -1387,7 +1387,7 @@ await sleep(400);
 const mcCompact = await ev(`(() => { const g = [...document.querySelectorAll("#takeTools > .tool-group")], cs = (e) => getComputedStyle(e);
   const again = document.querySelector("#takeTools > .tg-again"), first = document.querySelector("#takeTools > .tg-dl");
   const f = (w) => document.querySelector('[data-card-fold="' + w + '"]').classList.contains("is-folded");
-  return { framed: g.length === 4 && g.every(x => cs(x).borderTopStyle === "solid" && parseFloat(cs(x).borderTopWidth) >= 1),
+  return { framed: g.length === 5 && g.every(x => cs(x).borderTopStyle === "solid" && parseFloat(cs(x).borderTopWidth) >= 1),   // HERESY 1356: and Edit
     againRow: again.getBoundingClientRect().top >= first.getBoundingClientRect().bottom - 1, style: document.querySelector('[data-card-fold="prompt"] h3').textContent.trim(),
     folded: f("prompt") && f("lyrics"), seeds: !!document.getElementById("lmSeed").closest("#advDrawer") && !!document.getElementById("soundSeed").closest("#advDrawer .seed-sub"),
     instr: !!document.getElementById("instrumental").closest(".plan-head") && !/no vocals/.test(document.querySelector(".plan-head").textContent),
@@ -2277,8 +2277,8 @@ check("  a run painting develops on the stage, its step counted, its run's data 
 check("  with none painting, the newest picture; a click in the library picks one for the stage (no window over the page), its shape kept, its run's data under it, the thumb marked; the stage's picture opens it over the page",
   ar71.newest === "1920" && ar71.picked.w === "1280" && /01-1x1-s40/.test(ar71.picked.src) && /seed 40/.test(ar71.picked.meta) && /1:1 · 1280×1280/.test(ar71.picked.meta) && /harbour/.test(ar71.picked.prompt) &&
   ar71.picked.sel === 1 && !ar71.picked.view && !!ar71.picked.size && Math.abs(ar71.picked.size[0] - ar71.picked.size[1]) <= 1 && /1:1/.test(ar71.over), JSON.stringify(ar71.picked) + " " + ar71.newest + " " + ar71.over);
-check("  the prompt's edge widens its column (→ 16 px, kept), a double click gives it its 380 px back", ar71.edge.w1 === ar71.edge.w0 + 16 && ar71.edge.kept === String(ar71.edge.w1) &&
-  ar71.edge.back === 380 && ar71.edge.gone === null, JSON.stringify(ar71.edge));
+check("  the prompt's edge widens its column (→ 16 px, kept), a double click gives it its own width back (HERESY 1366: 25 % of the window, 480 px at 1920)", ar71.edge.w1 === ar71.edge.w0 + 16 && ar71.edge.kept === String(ar71.edge.w1) &&
+  ar71.edge.back === 480 && ar71.edge.gone === null, JSON.stringify(ar71.edge));
 
 // HERESY 1169 · 1275 (Viktor 28.09.2026: «звуковое оповещение при окончании генерации»)
 section("a sound when a run ends");
@@ -2918,7 +2918,7 @@ section("the Trainer's log: as wide as its lines, beside the server log's dock (
 const lg98 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
-  const lines = Array.from({ length: 30 }, (_, i) => "voice-zhuromskyy-full-r32:   1%| " + (200 + i) + "/24192 [04:28<8:56:50, 1.34s/it, lr: 5.0e-05 loss: 2.893e+00]").join("\\n");
+  const lines = Array.from({ length: 30 }, (_, i) => "voice-run-full-r32:   1%| " + (200 + i) + "/24192 [04:28<8:56:50, 1.34s/it, lr: 5.0e-05 loss: 2.893e+00]").join("\\n");
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/train/log")) return Promise.resolve(new Response(lines, { headers: { "Content-Type": "text/plain" } }));
     return real(u, o); };
@@ -5123,11 +5123,21 @@ const ar44 = await ev(`(async () => {
   o.at = { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
   return o; })()`);
 await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: ar44.at.x, y: ar44.at.y });
-await sleep(500);
+await sleep(250);
+const ar44e = await ev(`getComputedStyle(document.querySelector("#arStage .ar-stage-tip")).visibility`);   // HERESY 1353: not yet, it waits 0.6 s
+await sleep(850);
 const ar44h = await ev(`(() => { const t = document.querySelector("#arStage .ar-stage-tip"); return { vis: getComputedStyle(t).visibility, op: +getComputedStyle(t).opacity }; })()`);
 await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 4, y: 4 });
+await sleep(200);
+const ar44k = await ev(`getComputedStyle(document.querySelector("#arStage .ar-stage-tip")).visibility`);   // HERESY 1353: still there a moment
 await sleep(700);
 const ar44g = await ev(`getComputedStyle(document.querySelector("#arStage .ar-stage-tip")).visibility`);
+// HERESY 1353 (Viktor: «По кнопке Upscale дропдаун отцентрирован ниже влево. Выставь эту строку в центральную позицию»)
+const ar44u = await ev(`(async () => { const b = document.querySelector('#arStage [data-stage="upscale"]'); if (!b) return null; b.click(); await new Promise((r) => setTimeout(r, 250));
+  const row = document.querySelector("#arStage .ar-up-row"), st = document.getElementById("arStage"); if (!row) return { row: false };
+  const kids = [...row.children].map((k) => k.getBoundingClientRect()), l = Math.min(...kids.map((k) => k.left)), r = Math.max(...kids.map((k) => k.right)), s = st.getBoundingClientRect();
+  const o = { jc: getComputedStyle(row).justifyContent, mid: Math.round((l + r) / 2), stageMid: Math.round((s.left + s.right) / 2) };
+  document.querySelector('#arStage [data-stage="upscale"]').click(); return o; })()`);
 await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 880, deviceScaleFactor: 1, mobile: false });
 await sleep(300);
 const ar44s = await ev(`(async () => { window.dispatchEvent(new Event("resize")); await new Promise((r) => setTimeout(r, 250)); const v = document.getElementById("view-artist"); return { cls: v.classList.contains("ar-fixed"), oy: getComputedStyle(v).overflowY }; })()`);
@@ -5148,7 +5158,8 @@ check("Sampling's fold is kept for the next load", ar44.samp.kept === ar44.samp.
 check("a picture on the stage: its buttons under it, the picture the rest of the stage; its data and prompt a tip beside it over the library, out of sight",
   ar44.tip.pos === "absolute" && ar44.tip.vis === "hidden" && ar44.tip.left >= ar44.tip.stageRight && ar44.tip.left <= ar44.tip.rightLeft + 4 && /seed 7/.test(ar44.tip.meta) && /^Sentence 1/.test(ar44.tip.prompt) && ar44.tip.actsUnder &&
   Math.abs(ar44.fill.picH - Math.min(ar44.fill.stageW, ar44.fill.stageH - ar44.fill.actsH - 12)) <= 4, JSON.stringify({ tip: ar44.tip, fill: ar44.fill }));
-check("  the pointer on the picture shows the tip; away from it, the tip goes", ar44h.vis === "visible" && ar44h.op > 0.9 && ar44g === "hidden", JSON.stringify({ on: ar44h, off: ar44g }));
+check("  the pointer resting on the picture shows the tip after a moment; away from it, the tip stays a moment and goes", ar44e === "hidden" && ar44h.vis === "visible" && ar44h.op > 0.9 && ar44k === "visible" && ar44g === "hidden", JSON.stringify({ early: ar44e, on: ar44h, leaving: ar44k, off: ar44g }));   // HERESY 1353
+check("  Upscale…'s row stands centred under the picture's buttons", ar44u && ar44u.jc === "center" && Math.abs(ar44u.mid - ar44u.stageMid) <= 8, JSON.stringify(ar44u));
 
 // HERESY 1169 · 1346 (Viktor 10.10.2026: «По аутпеинтингу было бы хорошо определять точное положение (позировать) референсного изображения на холсте проэцируемых соотношений сторон… скейлить референс»; «очень хочу… канваса аутпеинта, инпеинта именно так, как в InvokeAI»)
 section("the Artist's canvas: the reference in each shape's frame, moved, typed and scaled, the mask painted over it, the places sent with Draw");
@@ -5252,6 +5263,1655 @@ check("  the brush paints the mask (painted around, and by the mask); Done keeps
   /16:9 around/.test(cv46c.say) && /✓/.test(cv46c.mask), JSON.stringify(cv46c));
 check("  Draw sends the picked shapes' places with the mask and its options; ✕ takes the form off the canvas",
   cv46c.sent.place && Object.keys(cv46c.sent.place).sort().join() === "16:9,1:1,9:16" && cv46c.sent.mask && cv46c.sent.opts && cv46c.off.place === null && cv46c.off.hidden, JSON.stringify({ sent: cv46c.sent, off: cv46c.off }));
+
+// HERESY 1169 · 1347 (Viktor 10.10.2026: «Залей в него все модели диффузные… и LoRA адаптеры, и настрой выборочное скачивание прямо в студии Художника, чтобы было всё под рукой»)
+section("the Artist's list of what can be fetched: its painters, the Qwen fine-tunes and the adapters, each with its size, here or Fetch through Engine's own fetch");
+const gt47Was = await ev(`document.body.dataset.tab`);
+const gt47 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  const real = window.fetch; window.__gt47Fetch = real; window.__gt47Asked = [];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const data = { script: true, last: null, job: null, now: 0, extras: [
+    { name: "backbone", label: "Backbone", what: "M-A-P's YuE2 as GGUF", variants: [{ id: "BF16", size: "7.2 GB", here: false }] },
+    { name: "artwork", label: "Artwork", what: "the Artist's painter: Krea 2 Muse by Stable Yogi", variants: [{ id: "q4", label: "Krea 2 Muse Q4", size: "26 GB", here: true }] },
+    { name: "qwen-fine", label: "Qwen fine-tunes", what: "the fp8 fine-tunes of Qwen-Image 2512 for finished realism (a card of 24 GB), from goldhub/Ruach_Studio_Models_v2, shared there by their authors' leave (Civitai: share and sell)",
+      variants: [{ id: "jibmix-v6", label: "Jib Mix Qwen v6 by J1B", size: "20.4 GB", note: "and Qwen-Image 2512's parts (17.7 GB) when they are not here", here: false },
+                 { id: "real-v2", label: "Real-Qwen-Image v2 by wikeeyang", size: "20.4 GB", note: "and Qwen-Image 2512's parts (17.7 GB) when they are not here", here: true }] },
+    { name: "art-loras", label: "Artist's adapters", what: "adapters for the Artist's painters", variants: [{ id: "all", label: "seven adapters", size: "3.1 GB", here: false }] }] };
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/weights/fetch")) { window.__gt47Asked.push(JSON.parse(opt.body)); return json(data); }
+    if (u.startsWith("/lab/weights")) return json(data);
+    return real(u, opt); };
+  document.querySelector('.topbar [data-tab="artist"]').click(); await wait(300);
+  o.button = !!$("arGet") && !!$("arGet").offsetParent;
+  window.HeresyArtist.get();
+  for (let i = 0; i < 40 && !document.querySelector('.ar-get-x[data-extra="qwen-fine"]'); i++) await wait(100);   // the lab asked again: its answer, not the last one kept
+  const dlg = document.querySelector(".ar-get-back");
+  o.open = !!dlg;
+  if (!dlg) { window.fetch = real; return o; }
+  o.sections = [...dlg.querySelectorAll(".ar-get-x")].map((s) => s.dataset.extra);
+  o.rows = [...dlg.querySelectorAll(".ar-get-v")].map((r) => r.querySelector("b").textContent + "|" + (r.querySelector(".ar-get-here") ? "here" : (r.querySelector("button") || {}).textContent));
+  const b = dlg.querySelector('[data-get-x="qwen-fine"][data-get-v="jibmix-v6"]');
+  b.click();
+  for (let i = 0; i < 20 && !document.querySelector(".hd-back .hd-body"); i++) await wait(100);
+  const ask = document.querySelector(".hd-back");
+  o.asked = ask ? (ask.textContent || "").replace(/\\s+/g, " ").slice(0, 400) : "";
+  const no = ask && ask.querySelector(".hd-no"); if (no) no.click();
+  await wait(300);
+  o.sent = window.__gt47Asked.length;
+  dlg.querySelector('[data-get="close"]').click(); await wait(150);
+  o.closed = !document.querySelector(".ar-get-back");
+  window.fetch = real;
+  return o; })()`);
+await ev(`document.querySelector('.topbar [data-tab="' + ${JSON.stringify(gt47Was || "create")} + '"]').click(); true`);
+await sleep(200);
+check("Get painters and adapters… under the painter lists what the studio can fetch for the Artist (its painter, the Qwen fine-tunes, the adapters; not the backbone), each variant here or Fetch",
+  gt47.button && gt47.open && (gt47.sections || []).join() === "artwork,qwen-fine,art-loras" &&
+  (gt47.rows || []).join() === "Krea 2 Muse Q4|here,Jib Mix Qwen v6 by J1B|Fetch,Real-Qwen-Image v2 by wikeeyang|here,seven adapters|Fetch", JSON.stringify(gt47));
+check("  its Fetch asks first with the size and where the painter shows (Engine's own question); cancelled, nothing is fetched; Done closes",
+  /20\.4 GB/.test(gt47.asked) && /Fine-tune/.test(gt47.asked) && gt47.sent === 0 && gt47.closed, JSON.stringify({ asked: gt47.asked, sent: gt47.sent, closed: gt47.closed }));
+
+// HERESY 1169 · 1350: Draw from the canvas, as InvokeAI's Invoke by its canvas
+section("the canvas draws: its Draw keeps the places, closes it and asks the lab for the run");
+const cv50Was = await ev(`document.body.dataset.tab`);
+const cv50 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  const real = window.fetch; window.__cv50Bodies = [];
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    if (u.startsWith("/lab/artist/draw")) { window.__cv50Bodies.push(JSON.parse(opt.body)); return json({ error: "stubbed" }, 500); }
+    return real(u, opt); };
+  document.querySelector('.topbar [data-tab="artist"]').click(); await wait(300);
+  await window.HeresyArtist.reload();
+  const c = document.createElement("canvas"); c.width = 640; c.height = 640;
+  const g = c.getContext("2d"); g.fillStyle = "#468"; g.fillRect(0, 0, 640, 640);
+  const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+  const dt = new DataTransfer(); dt.items.add(new File([blob], "square.png", { type: "image/png" }));
+  o.promptWas = $("arPrompt").value;
+  $("arPrompt").value = "a quiet bay"; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  $("arPrompt").dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+  for (let i = 0; i < 30 && !(window.HeresyArtistRef && window.HeresyArtistRef.get()); i++) await wait(100);
+  window.HeresyArtist.canvas.open();
+  for (let i = 0; i < 30 && !document.querySelector(".cv .cv-canvas"); i++) await wait(100);
+  await wait(300);
+  const b = document.querySelector('.cv [data-cv="draw"]');
+  o.button = b ? b.textContent : null;
+  if (b) b.click();
+  await wait(600);
+  o.closed = !document.querySelector(".cv");
+  const sent = window.__cv50Bodies[0] || null;
+  o.sent = sent ? { place: !!sent.place, shapes: sent.shapes, ref: !!sent.ref } : null;
+  o.place = !!window.HeresyArtist.canvas.place();
+  window.fetch = real;
+  $("arRefX").click(); await wait(100);
+  $("arPrompt").value = o.promptWas || ""; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true }));
+  return o; })()`);
+await ev(`document.querySelector('.topbar [data-tab="' + ${JSON.stringify(cv50Was || "create")} + '"]').click(); true`);
+await sleep(200);
+check("the canvas's Draw (beside Done) keeps the places, closes the canvas and asks the lab for the run with them",
+  cv50.button === "Draw" && cv50.closed && cv50.place && cv50.sent && cv50.sent.place && cv50.sent.ref, JSON.stringify(cv50));
+
+// HERESY 1169 · 1353 (Viktor 11.10.2026: «В LoRA менеджере заведи контекстное окно... инфо, триггер, удалить, etc.»; «Разреши добавление до 8, но... активными только макс 4. Автодобавление триггерных слов в промпт»; «Оба адаптера от медведя — мертвецы»)
+section("the Artist's adapters: eight in the list and four in the run, their trigger words into the prompt and out, the library's own menu and Info window, one made for another model, the art's trash");
+const lo53 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, trashed = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const mk = (n, extra) => Object.assign({ id: "krea2/L" + n + ".safetensors", family: "krea2", name: "L" + n, folder: "", mb: 100, picture: false, info: {}, made_for: "krea2", fits: true }, extra || {});
+  const A = mk(1, { mb: 112, civitai: "known", info: { title: "Kul Style", words: ["Kulstyle", "sfumato washes"], url: "https://civitai.com/models/1" } });
+  const rest = [2, 3, 4, 5, 6, 7, 8, 9].map((n) => mk(n)), X = mk(10, { name: "Flux thing", made_for: "flux", fits: false });
+  const fams = { krea2: [A].concat(rest, [X]), sdxl: [], "qwen-image-2.1": [], "qwen-image-2512": [] };
+  const infoA = Object.assign({}, A, { arch: "krea2", arch_title: "Krea 2", how: { format: "kohya", layers: 264, rank: 16 }, meta: { ss_network_dim: "16", ss_base_model_version: "krea2" },
+    beside: ["L1.civitai.info"], sha256: "ab".repeat(32), path: "artwork/loras/krea2/L1.safetensors", modified: 1760000000 });
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: fams, titles: { krea2: "Krea 2" }, arch: { krea2: "Krea 2", flux: "FLUX" } });
+    if (u.startsWith("/lab/artist/lora-info")) return json(infoA);
+    if (u.startsWith("/lab/artist/lora-trash")) { trashed.push(JSON.parse(o.body)); fams.krea2 = fams.krea2.filter((r) => r.id !== A.id); return json({ id: A.id, stamp: "20261011-120000" }); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arLoras", "yue2.arPrompt", "yue2.arPainter", "yue2.arLoraWords", "yue2.arLoraAuto"], was = keys.map((k) => localStorage.getItem(k));
+  keys.forEach((k) => localStorage.removeItem(k));
+  const $ = (id) => document.getElementById(id), L = window.HeresyArtist.loras, o = {};
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change"));
+  await L.reload();
+  $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
+  o.max = L.max();
+  L.toggle(A.id); await wait(30);
+  o.p1 = $("arPrompt").value;
+  rest.slice(0, 3).forEach((r) => L.toggle(r.id)); await wait(30);
+  L.toggle(rest[3].id); await wait(30);
+  o.fifth = (L.now()[4] || {}).muted === true;
+  rest.slice(4, 7).forEach((r) => L.toggle(r.id)); await wait(30);
+  o.n8 = L.now().length;
+  L.toggle(rest[7].id); await wait(30);
+  o.n9 = L.now().length;
+  o.say = $("arLoraSay").textContent;
+  L.mute(0); await wait(30);
+  o.p2 = $("arPrompt").value;
+  L.mute(4); await wait(30);
+  o.on = L.now().filter((l) => !l.muted).length;
+  L.mute(0); await wait(30);
+  o.aStill = L.now()[0].muted === true;
+  L.toggle(X.id); await wait(30);
+  o.alienOut = !L.now().some((l) => l.id === X.id);
+  $("arLoraAdd").click(); await until(() => document.querySelectorAll(".ar-lib-card").length >= 10, 3000);
+  const xc = document.querySelector('.ar-lib-card[data-lid="' + X.id + '"]');
+  o.alien = { cls: !!xc && xc.classList.contains("is-alien"), badge: xc ? (xc.querySelector(".ar-lib-alien") || {}).textContent || "" : "" };
+  const ac = document.querySelector('.ar-lib-card[data-lid="' + A.id + '"]'), r = ac.getBoundingClientRect();
+  ac.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: r.left + 20, clientY: r.top + 20 })); await wait(150);
+  o.menu = [...document.querySelectorAll(".hm-menu .hm-label")].map((s) => s.textContent);
+  const infoItem = [...document.querySelectorAll(".hm-menu .hm-item")].find((b) => /^Info/.test(b.textContent.trim().replace(/^\\S+\\s*/, "")) || /Info/.test(b.textContent));
+  if (infoItem) infoItem.click();
+  await until(() => document.querySelector(".ar-li-back .ar-li-rows"), 3000); await wait(50);
+  const li = document.querySelector(".ar-li-back");
+  o.info = li ? { title: li.querySelector(".ar-li-title").textContent, rows: [...li.querySelectorAll(".ar-li-rows > b")].map((b) => b.textContent), made: (li.querySelector(".ar-li-ok") || {}).textContent || "",
+    words: [...li.querySelectorAll(".ar-li-rows .ar-lora-word")].map((w) => w.textContent), meta: li.querySelectorAll(".ar-li-meta b").length } : null;
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(150);
+  o.escInfo = !document.querySelector(".ar-li-back") && !!document.querySelector(".ar-lib-back");
+  L.info(A.id); await until(() => document.querySelector('.ar-li-back [data-li="trash"]'), 3000);
+  document.querySelector('.ar-li-back [data-li="trash"]').click();
+  const yes = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes"), 2000);
+  o.asked = yes ? yes.closest(".hd-back").textContent.replace(/\\s+/g, " ").slice(0, 200) : "";
+  if (yes) yes.click();
+  await until(() => trashed.length, 2000); await wait(400);
+  o.trashed = trashed[0] || null;
+  o.gone = !L.now().some((l) => l.id === A.id) && !document.querySelector('.ar-lib-card[data-lid="' + A.id + '"]') && !document.querySelector(".ar-li-back");
+  const close = document.querySelector('.ar-lib [data-lib="close"]'); if (close) close.click(); await wait(100);
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await L.reload(); await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  return o; })()`);
+check("eight adapters in the list, four of them in the run: a fifth comes muted, a ninth is refused, a muted one waits while four are on",
+  JSON.stringify(lo53.max) === "[8,4]" && lo53.fifth && lo53.n8 === 8 && lo53.n9 === 8 && lo53.on === 4 && lo53.aStill && lo53.say === "4 on · 8 / 8", JSON.stringify(lo53));
+check("  an adapter's trigger words go into the prompt when it comes into the run, and out when it leaves it",
+  lo53.p1 === "A fox, Kulstyle, sfumato washes" && lo53.p2 === "A fox", JSON.stringify({ p1: lo53.p1, p2: lo53.p2 }));
+check("  one made for another model is not added; its card in the library is dimmed and names the model",
+  lo53.alienOut && lo53.alien.cls && lo53.alien.badge === "✗ FLUX", JSON.stringify(lo53.alien));
+check("the library's own menu on an adapter: the list, Info, its trigger words, Civitai, its file's name, the art's trash",
+  ["Take it off the list", "Info…", "Its trigger words into the prompt", "Copy its trigger words", "Trigger words go into the prompt by themselves", "Look it up on Civitai", "Its page on Civitai", "Copy its file's name", "To the art's trash…"].every((x) => (lo53.menu || []).includes(x)), JSON.stringify(lo53.menu));
+check("  Info: what it is made for (this painter's), its file, its trigger words, its trainer's notes; Escape closes it first, the library stays",
+  lo53.info && lo53.info.made === "✓ this painter's" && lo53.info.rows.includes("Made for") && lo53.info.rows.includes("SHA-256") && lo53.info.words.join("|") === "Kulstyle|sfumato washes" && lo53.info.meta === 2 && lo53.escInfo, JSON.stringify(lo53.info) + " esc " + lo53.escInfo);
+check("  to the art's trash, asked first: the lab moves it, it leaves the list and the library",
+  lo53.trashed && lo53.trashed.id === "krea2/L1.safetensors" && /art's trash/.test(lo53.asked) && lo53.gone, JSON.stringify({ trashed: lo53.trashed, asked: lo53.asked, gone: lo53.gone }));
+const tb53 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const bin = { runs: [], pictures: [], covers: [], loras: [{ stamp: "20261011-120000", id: "krea2/L1.safetensors", name: "L1", title: "Kul Style", bytes: 117440512, at: Date.now() / 1000 - 60 }], bytes: 117440512 };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/bin") && o && o.method === "POST") { const b = JSON.parse(o.body); sent.push(b); return json({ op: b.op, done: b.items || [], kept: [] }); }
+    if (u.startsWith("/lab/artist/bin")) return json(bin);
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], sdxl: [], "qwen-image-2.1": [], "qwen-image-2512": [] }, titles: {} });
+    return real(u, o); };
+  const $ = (id) => document.getElementById(id), o = {};
+  document.querySelector('.topbar [data-tab="collection"]').click(); await wait(300);
+  document.querySelector('#collSide [data-place="__trash_art"]').click(); await until(() => document.querySelector("#collGrid .coll-art"), 3000); await wait(100);
+  o.cards = [...document.querySelectorAll("#collGrid .coll-art")].map((c) => c.dataset.akind + ":" + c.querySelector(".coll-title").textContent + ":" + c.querySelector(".coll-meta").textContent);
+  const box = document.querySelector('#collGrid input[data-asel="lora:20261011-120000"]'); if (box) box.click(); await wait(50);
+  $("collRestore").click(); await until(() => sent.length, 2000); await wait(200);
+  o.restore = sent[0] || null;
+  window.fetch = real;
+  document.querySelector('#collSide [data-place=""]').click(); await wait(200);
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  return o; })()`);
+check("the Librarian's Trash (Art) holds an adapter of the LoRA library, given back by its stamp",
+  (tb53.cards || []).length === 1 && /^lora:Kul Style:An adapter of the LoRA library · krea2 · in the trash since/.test(tb53.cards[0]) && tb53.restore && JSON.stringify(tb53.restore) === '{"op":"restore","items":[{"kind":"lora","stamp":"20261011-120000"}]}', JSON.stringify(tb53));
+
+// HERESY 1169 · 1354 (Viktor 11.10.2026: «Художник говорит "Около 8.5 минут на одной карте". А карт-то у меня две выделены для Lab Works. Так почему бы автоматом не гнать при разных форматах картинки параллельную генерацию на картах Лаба?»)
+section("a run's pictures on the lab's cards at once: the time said for them, the progress of every card, the stage's step whichever card paints it");
+const ar54Was = await ev(`document.body.dataset.tab`);
+const ar54 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, $ = (id) => document.getElementById(id), o = {};
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  let cards = 2;
+  const painters = () => [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true, cards: cards },
+                          { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "krea2", ready: true, cards: cards }];
+  let runs = [{ id: "20261011-120000-5401", prompt: "A lighthouse at dawn.", shapes: ["1:1", "16:9", "9:16"], seed: 9, count: 1, painter: "krea2-q4", created: 1791600000, status: "running", of: 3, pictures: [],
+    gpu: 1, gpus: [1, 2], live: { live: 1, step: 3, of: 8, file: "preview/01.jpg", t: 1791600010 }, lives: [{ live: 1, step: 3, of: 8 }, { live: 2, step: 5, of: 8 }] }];
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters: painters() });
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: runs });
+    return real(u, opt); };
+  const keys = ["yue2.arShapes", "yue2.arCount", "yue2.arPainter"], was = keys.map((k) => localStorage.getItem(k));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.reload(); await window.HeresyArtist.painters(); await wait(300);
+  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change"));
+  ["1:1", "16:9", "9:16"].forEach((s) => { const c = document.querySelector('#arShapes input[value="' + s + '"]'); if (c) c.checked = true; });
+  $("arCount").value = "1"; $("arShapes").dispatchEvent(new Event("change")); await wait(100);
+  o.cost2 = $("arCost").textContent;
+  o.say = $("arProgressSay").textContent;
+  o.bar = $("arProgress").querySelector("i").style.width;
+  o.step = (document.querySelector("#arStage .ar-stepno") || {}).textContent || "";
+  // the second card finished its picture first: the stage still shows the first picture's step
+  runs = [Object.assign({}, runs[0], { pictures: [{ n: 2, shape: "16:9", seed: 9, w: 1664, h: 928, kept: true, took: 46, file: "02-16x9-s9.png", thumb: "thumbs/02-16x9-s9.jpg" }],
+    live: { live: 1, step: 6, of: 8, file: "preview/01.jpg", t: 1791600020 }, lives: [{ live: 1, step: 6, of: 8 }, { live: 3, step: 1, of: 8 }] })];
+  await window.HeresyArtist.reload(); await wait(300);
+  o.step2 = (document.querySelector("#arStage .ar-stepno") || {}).textContent || "";
+  o.say2 = $("arProgressSay").textContent;
+  cards = 1;                                           // one card: the time said as before
+  runs = [];
+  await window.HeresyArtist.reload(); await window.HeresyArtist.painters(); await wait(300);
+  $("arShapes").dispatchEvent(new Event("change")); await wait(100);
+  o.cost1 = $("arCost").textContent;
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.reload(); await window.HeresyArtist.painters();
+  return o; })()`);
+await ev(`document.querySelector('.topbar [data-tab="' + ${JSON.stringify(ar54Was || "create")} + '"]').click(); true`);
+await sleep(200);
+const mins = (s) => { const m = /about (a minute|([\d½]+) min)/.exec(s || ""); return !m ? NaN : m[1] === "a minute" ? 1 : parseFloat(m[2].replace("½", ".5")); };
+check("three shapes on a lab with two cards: their time said on two cards, shorter than on one",
+  /^3 pictures · about .+ on 2 cards$/.test(ar54.cost2) && /on one card$/.test(ar54.cost1) && mins(ar54.cost2) < mins(ar54.cost1), JSON.stringify({ two: ar54.cost2, one: ar54.cost1 }));
+check("  the progress counts every card's step and says the cards (3/8 and 5/8 of three pictures: 33%)",
+  ar54.say === "picture 1 of 3 · step 3 / 8 · 33% · on 2 cards" && ar54.bar === "33%", JSON.stringify({ say: ar54.say, bar: ar54.bar }));
+check("  the stage shows the lowest picture's step, even when another card finished its picture first",
+  ar54.step === "3 / 8" && ar54.step2 === "6 / 8" && /^picture 1 of 3 · step 6 \/ 8/.test(ar54.say2), JSON.stringify({ step: ar54.step, step2: ar54.step2, say2: ar54.say2 }));
+
+// HERESY 1169 · 1355 (Viktor 11.10.2026: «Пройдись по репо всех моих апскейлеров и собери инфу по каждому, и оформи это в попап подсказки, чтобы человек видел, на что какой годится. И можно ли двух-трёх проходный апскейл делать наподобие того, как у меня в ComfyUI workflow?»)
+section("the upscalers: each one's notes in an i beside the choice and a window of them all; an upscale in passes as Viktor's ComfyUI stack");
+const up55Was = await ev(`document.body.dataset.tab`);
+const up55 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, $ = (id) => document.getElementById(id), o = {}, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const info = (title, arch, s, group, lic, what) => ({ title, author: "A", license: lic, group, source: "https://openmodeldb.info/models/x", for: what, arch, scale: 4, s_1024: s, peak_gb: 2.1, precision: "float16" });
+  const ups = [{ name: "4x_Nomos8kDAT.pth", scale: 4, mb: 295, info: info("Nomos8kDAT", "DAT", 14.1, "photo", "CC-BY-4.0", "Photos, also JPEG-compressed or a little blurred: detailed and natural. The studio's default; slow.") },
+               { name: "4x_Nomos8k_span_otf_strong.pth", scale: 4, mb: 8.6, info: info("Nomos8k span otf strong", "SPAN", 0.9, "photo", "CC-BY-4.0", "Photos, quick: mends strongly (smoother). The first pass of Viktor's ComfyUI chain.") },
+               { name: "4x_foolhardy_Remacri.pth", scale: 4, mb: 64, info: info("Remacri", "ESRGAN", 2.7, "photo", "CC-BY-NC-SA-4.0", "General pictures with more detail and less smoothing: skin and fine texture do not turn mushy. Quick. Non-commercial. The third pass of Viktor's chain.") },
+               { name: "4x_UltraMix_Balanced.pth", scale: 4, mb: 64, info: info("UltraMix Balanced", "ESRGAN", 2.6, "photo", "CC-BY-NC-SA-4.0", "Natural pictures with sharpness and detail in balance. Quick. Non-commercial. The last pass of Viktor's chain.") },
+               { name: "4x_FaceUpDAT.pth", scale: 4, mb: 147, info: info("FaceUp DAT", "DAT", 16, "faces", "CC-BY-4.0", "Faces in good-quality photos. Slow.") },
+               { name: "my_own_4x.pth", scale: 4, mb: 12 }];
+  let runs = [{ id: "20261011-130000-5501", prompt: "A lighthouse.", shapes: ["16:9"], seed: 5, count: 1, painter: "krea2-q4", created: 1791600000, status: "done", of: 1, took: 40, ended: 1791600040,
+    pictures: [{ n: 1, shape: "16:9", seed: 5, w: 1920, h: 1080, kept: true, took: 40, file: "01-16x9-s5.png", thumb: "thumbs/01-16x9-s5.jpg" }] }];
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/artist/upscalers")) return json({ upscalers: ups, measured: "RTX 3090" });
+    if (u.startsWith("/lab/artist/upscale")) { const b = JSON.parse(opt.body); sent.push(b); return json({ id: "20261011-130100-5502", kind: "upscale", status: "queued", of: 1, pictures: [], passes: b.passes, prompt: "A lighthouse.", shapes: ["16:9"], seed: 5, count: 1, painter: "upscale", created: 1791600100 }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: runs });
+    return real(u, opt); };
+  const keys = ["yue2.arUpModel", "yue2.arUpChain"], was = keys.map((k) => localStorage.getItem(k));
+  keys.forEach((k) => localStorage.removeItem(k));
+  try {
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const look = document.querySelector('#arBar [data-look="runs"]'); if (look && !look.classList.contains("is-on")) { look.click(); await wait(200); }
+  await window.HeresyArtist.reload();
+  const th = await until(() => document.querySelector('#arRuns .ar-run[data-id="20261011-130000-5501"] .ar-thumb[data-act="view"]'), 5000);
+  if (!th) { window.fetch = real; o.err = "no thumb: " + ($("arRuns").innerHTML || "").slice(0, 400); return o; }
+  th.click(); await wait(350);
+  const ub = await until(() => document.querySelector('#arStage [data-stage="upscale"]'), 3000);
+  if (!ub) { window.fetch = real; o.err = "no Upscale button: " + ($("arStage").innerHTML || "").slice(0, 600); return o; }
+  ub.click();
+  await until(() => document.querySelector("#arStage .ar-up-info"), 3000); await wait(100);
+  const i = document.querySelector("#arStage .ar-up-info");
+  o.tip = i ? i.dataset.tip : "";
+  i.click(); await until(() => document.querySelector(".ar-ug-back"), 2000); await wait(100);
+  const ug = document.querySelector(".ar-ug-back");
+  o.groups = [...ug.querySelectorAll(".ar-get-x h4")].map((h) => h.textContent);
+  o.rows = [...ug.querySelectorAll(".ar-ug-v")].map((r) => r.dataset.ugPick);
+  o.nc = [...ug.querySelectorAll(".ar-ug-lic.is-nc")].length;
+  ug.querySelector('[data-ug-pick="4x_FaceUpDAT.pth"]').click(); await wait(300);
+  o.picked = { closed: !document.querySelector(".ar-ug-back"), value: ($("arUpModel") || {}).value, kept: localStorage.getItem("yue2.arUpModel"), tip: (document.querySelector("#arStage .ar-up-info") || { dataset: {} }).dataset.tip || "" };
+  // the passes: Viktor's chain by default where its four models are here
+  document.querySelector("#arStage [data-up-chain]").click(); await until(() => document.querySelector("#arStage [data-up-chain-panel]"), 2000); await wait(100);
+  const rows = () => [...document.querySelectorAll("#arStage [data-uc-k]")].map((r) => r.querySelector("[data-uc-model]").value + " x" + r.querySelector("[data-uc-factor]").value);
+  o.chain = rows();
+  o.say = (document.querySelector("#arStage [data-uc-say]") || {}).textContent || "";
+  o.opts = { lands: document.querySelector("#arStage [data-uc-resample]").value, long: document.querySelector("#arStage [data-uc-long]").value, match: document.querySelector("#arStage [data-uc-match]").checked };
+  const f = document.querySelector('#arStage [data-uc-k="2"] [data-uc-factor]'); f.value = "2"; f.dispatchEvent(new Event("change", { bubbles: true })); await wait(150);
+  o.kept = JSON.parse(localStorage.getItem("yue2.arUpChain") || "null");
+  document.querySelector('#arStage [data-uc-k="3"] [data-uc-x]').click(); await wait(150);
+  o.three = rows().length;
+  document.querySelector('#arStage [data-uc="viktor"]').click(); await wait(150);
+  o.back = rows();
+  document.querySelector('#arStage [data-uc="go"]').click(); await until(() => sent.length, 2000); await wait(200);
+  o.sent = sent[0] || null;
+  // its progress: the pass it is on
+  runs = [{ id: "20261011-130100-5502", kind: "upscale", status: "running", of: 1, pictures: [], passes: o.sent ? o.sent.passes : [], chain_at: { k: 2, of: 4 }, prompt: "A lighthouse.", shapes: ["16:9"], seed: 5, count: 1, painter: "upscale", created: 1791600100, gpu: 2 }].concat(runs);
+  await window.HeresyArtist.reload(); await wait(300);
+  o.progress = { say: $("arProgressSay").textContent, bar: $("arProgress").querySelector("i").style.width };
+  o.label = ((document.querySelector('#arRuns .ar-run[data-id="20261011-130100-5502"]') || {}).textContent || "").replace(/\\s+/g, " ").slice(0, 200);
+  } catch (e) { o.err = String((e && e.stack) || e).slice(0, 600); }
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.reload();
+  return o; })()`);
+await ev(`document.querySelector('.topbar [data-tab="' + ${JSON.stringify(up55Was || "create")} + '"]').click(); true`);
+await sleep(200);
+check("the upscaler's i says what the chosen one is for, its time measured and its licence",
+  !up55.err && /^Nomos8kDAT · DAT ×4 · Photos, also JPEG-compressed.* · about 14\.1 s for a 1024² picture · CC-BY-4.0$/.test(up55.tip), up55.err || up55.tip);
+check("  a click on it opens the window of them all by what they are for (those without notes apart), the non-commercial marked; a row picked is the choice",
+  JSON.stringify(up55.groups) === '["Photos and realism","Faces and skin","Without notes"]' && up55.rows.length === 6 && up55.rows[0] === "4x_Nomos8k_span_otf_strong.pth" && up55.nc === 2 &&
+  up55.picked.closed && up55.picked.value === "4x_FaceUpDAT.pth" && up55.picked.kept === "4x_FaceUpDAT.pth" && /^FaceUp DAT/.test(up55.picked.tip), JSON.stringify({ groups: up55.groups, rows: up55.rows, nc: up55.nc, picked: up55.picked }));
+check("Passes…: Viktor's ComfyUI chain where its four models are here (span strong ×2, Nomos8kDAT ×4, Remacri ×1.5, UltraMix Balanced ×2; bilinear, 7680 on the long side, the colours matched), its size and time said",
+  up55.chain.join("|") === "4x_Nomos8k_span_otf_strong.pth x2|4x_Nomos8kDAT.pth x4|4x_foolhardy_Remacri.pth x1.5|4x_UltraMix_Balanced.pth x2" &&
+  up55.opts.lands === "bilinear" && up55.opts.long === "7680" && up55.opts.match && /^1920×1080 → 7680×4320 · about .+ on a card$/.test(up55.say), JSON.stringify({ chain: up55.chain, opts: up55.opts, say: up55.say }));
+check("  a pass changed is kept, one taken off, the chain brought back; Upscale in passes sends them all",
+  up55.kept && up55.kept.passes[2].factor === 2 && up55.three === 3 && up55.back.length === 4 && up55.sent && up55.sent.passes.length === 4 && up55.sent.passes[2].factor === 1.5 &&
+  up55.sent.resample === "bilinear" && up55.sent.long === 7680 && up55.sent.match === true && up55.sent.id === "20261011-130000-5501", JSON.stringify({ kept: up55.kept, three: up55.three, sent: up55.sent }));
+check("  its progress says the pass it is on; its run is labelled with its passes",
+  up55.progress.say === "upscaling · pass 3 of 4" && up55.progress.bar === "50%" && /Upscale · 4 passes/.test(up55.label), JSON.stringify({ progress: up55.progress, label: up55.label }));
+
+// HERESY 1169 · 1356 (from SUNO v6; Viktor 11.10.2026: «Идеи из SUNO внедряй для релиза 2.0.0, чтобы не возвращаться к этому больше. Это базовые быстрые функции»)
+section("Crop, Remove a section and Speed: the take's sections from its score, picked; the stretches cut on their lines, the score cut along; the tempo read and written anew");
+const ed56 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {}, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const abc = ["X:1", "T:", "M:3/4", "L:1/16", "Q:1/4=90", 'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"', 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "K:Em",
+    "% intro", "V: Vocal", "E4G4A4|B4B6A2|G4E4F4|G4A8|", "V: Ins", "E12-|E4C8-|C8D4-|D12|",
+    "% verse", "V: Vocal", "B12|d8c4|B4A4G4-|G4F8|", "V: Ins", "B,12-|B,4E8-|E8C4-|C12|",
+    "% outro", "V: Vocal", "E12-|E4E8-|E8z4|", "V: Ins", "B,12-|B,4E8-|E8z4|"].join("\\n") + "\\n";
+  const E = window.ruachTakeEdit;
+  if (!E) return { err: "no ruachTakeEdit" };
+  const sp = E.parts(abc, 23.5);
+  o.parts = sp.parts.map((p) => p.name + " " + p.t.toFixed(2) + "-" + p.end.toFixed(2));
+  o.keepVerse = E.keep(sp, [false, true, false]);
+  o.keepParses = (() => { try { const s = window.HeresyAbc.parse(o.keepVerse); return s.voices.Vocal.bars.length; } catch (e) { return String(e); } })();
+  window.fetch = (u, opt) => { u = String(u); if (u.startsWith("/lab/score")) return Promise.resolve(new Response(JSON.stringify({ abc: abc }), { headers: { "Content-Type": "application/json" } })); return real(u, opt); };
+  const take = { name: "20261011-120000-01-cdp-edit", title: "Waltz", seconds: 23.5, has_score: false };
+  const tick = async (labels, ok) => {
+    const b = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-pick"), 3000);
+    if (!b) return null;
+    const box = b.closest(".hd-back");
+    const said = { title: box.querySelector(".hd-title").textContent, rows: [...box.querySelectorAll(".hd-check")].map((r) => r.querySelector(".hd-item-label").textContent + " " + r.querySelector(".hd-item-note").textContent) };
+    [...box.querySelectorAll(".hd-check")].forEach((r) => { if (labels.includes(r.querySelector(".hd-item-label").textContent)) { const i = r.querySelector("input"); i.checked = true; i.dispatchEvent(new Event("change", { bubbles: true })); } });
+    await wait(50);
+    said.ok = box.querySelector(".hd-yes").textContent;
+    box.querySelector(".hd-yes").click();
+    return said;
+  };
+  let p = E.pick(take, "remove"); o.remove = { dialog: await tick(["verse"]) }; o.remove.got = await p.catch((e) => ({ err: String(e && e.message) }));
+  p = E.pick(take, "crop"); o.crop = { dialog: await tick(["verse", "outro"]) }; o.crop.got = await p.catch((e) => ({ err: String(e && e.message) }));
+  p = E.pick(take, "crop"); await tick(["intro", "outro"]); o.cropAll = await p.then(() => "no refusal", (e) => String(e && e.message));
+  window.fetch = real;
+  const sv = (a, b) => { try { const r = E.speed(a, b); return r.f.toFixed(4) + "/" + r.nb; } catch (e) { return "refused: " + e.message; } };
+  o.speed = { bpm: sv("99", 90), times: sv("×1.1", 90), pct: sv("90%", 90), plain: sv("1.25", 0), tooFast: sv("×3", 90), same: sv("90", 90) };
+  return o; })()`);
+check("the score's sections as parts, each its time from the score's tempo, the last to the take's end (its tail)",
+  JSON.stringify(ed56.parts) === '["intro 0.00-8.00","verse 8.00-16.00","outro 16.00-23.50"]' && ed56.keepParses === 4, JSON.stringify({ parts: ed56.parts, keepParses: ed56.keepParses, err: ed56.err }));
+check("Remove a section: the parts with their times in the studio's pick window; verse taken out: its stretch 8–16 s asked, the score without its lines, titled «· without verse»",
+  ed56.remove && ed56.remove.dialog && /^Remove a section/.test(ed56.remove.dialog.title) && ed56.remove.dialog.rows.join("|") === "intro 0:00–0:08|verse 0:08–0:16|outro 0:16–0:23" &&
+  /^Take out → 0:15$/.test(ed56.remove.dialog.ok) && JSON.stringify(ed56.remove.got.spans) === "[[8,16]]" && !/% verse/.test(ed56.remove.got.abc) && /% intro/.test(ed56.remove.got.abc) && /% outro/.test(ed56.remove.got.abc) &&
+  / · without verse$/.test(ed56.remove.got.title), JSON.stringify(ed56.remove));
+check("  Crop: verse and outro ticked keep 8 s to the end, titled «· verse to outro»; all of it ticked is refused (nothing taken out)",
+  ed56.crop && JSON.stringify(ed56.crop.got.spans) === "[[8,23.5]]" && / · verse to outro$/.test(ed56.crop.got.title) && /^Crop → 0:15$/.test(ed56.crop.dialog.ok) && ed56.cropAll === "Nothing taken out",
+  JSON.stringify({ crop: ed56.crop, all: ed56.cropAll }));
+check("Speed reads «99» as the BPM (×1.1), «×1.1» and «90%» as factors rounded to a whole BPM, «1.25» without a score; ×3 and its own speed refused",
+  ed56.speed.bpm === "1.1000/99" && ed56.speed.times === "1.1000/99" && ed56.speed.pct === "0.9000/81" && ed56.speed.plain === "1.2500/0" && /^refused: From ×0.5 to ×2/.test(ed56.speed.tooFast) && ed56.speed.same === "refused: That is its own speed",
+  JSON.stringify(ed56.speed));
+const edBtns = await ev(`["cropTake", "cutSection", "speedTake"].map((id) => { const b = document.getElementById(id); return b ? b.closest(".tool-group").querySelector(".tool-cap").textContent + ":" + b.textContent : id + " missing"; })`);
+check("  the take's Edit row: Crop…, Remove a section…, Speed…", edBtns.join("|") === "Edit:Crop…|Edit:Remove a section…|Edit:Speed…", JSON.stringify(edBtns));
+
+// HERESY 1169 · 1357 (from SUNO v6, TODO.md: «Tighten these lyrics in the lyrics box, by the Writer's model; style suggestions as chips under the Style, made anew on demand»)
+section("Tighten these lyrics and the style's suggestions, by the Writer's model: both texts side by side before anything changes; tags new to the style, put in before its BPM");
+const sn57 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {}, asked = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const realAsk = window.HeresyWriterAsk;
+  const answers = { "tighten the lyrics": ["[Verse]\\nThe road is long\\n[Chorus]\\nWe sing along", "The road is long\\nWe sing"],
+                    "style suggestions": ["- warm tape saturation\\n2. fingerpicked guitar\\n- Female alto\\n- country", "dusty pedal steel\\nslow waltz"] };
+  window.HeresyWriterAsk = (messages, max, t, what) => { asked.push({ what, max, system: messages[0].content.slice(0, 40), user: messages[1].content }); const a = answers[what].shift(); return Promise.resolve({ text: a, model: "stub" }); };
+  const was = { lyrics: $("lyrics").value, style: $("style").value, title: $("title").value };
+  document.querySelector('#tabs [data-tab="create"]').click(); await wait(200);
+  const setv = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("input", { bubbles: true })); };
+  setv("lyrics", "[Verse]\\nThe road is long and the road is so very long\\n[Chorus]\\nWe sing along, oh we sing along");
+  setv("style", "country, fiddle, 86 BPM"); setv("title", "Road");
+  // Tighten: the window, Ask again (the second answer drops the tags: said), Apply
+  $("lyricsTighten").click();
+  await until(() => document.querySelector(".tg-back .tg-then"), 3000); await wait(50);
+  const w1 = document.querySelector(".tg-back");
+  o.first = { now: w1.querySelector(".tg-now").value.split("\\n").length, then: w1.querySelector(".tg-then").value, lost: !!w1.querySelector(".tg-lost"), head: w1.querySelector(".ar-lib-head .row-hint").textContent };
+  w1.querySelector('[data-tg="again"]').click();
+  await until(() => { const b = document.querySelector(".tg-back"); return b && b !== w1 && b.querySelector(".tg-then"); }, 3000); await wait(50);
+  const w2 = document.querySelector(".tg-back");
+  o.second = { then: w2.querySelector(".tg-then").value, lost: (w2.querySelector(".tg-lost") || {}).textContent || "" };
+  w2.querySelector(".tg-then").value = "[Verse]\\nThe road is long\\n[Chorus]\\nWe sing";   // edited by hand
+  w2.querySelector('[data-tg="apply"]').click(); await wait(200);
+  o.applied = $("lyrics").value;
+  o.tightenAsk = asked.filter((a) => a.what === "tighten the lyrics").map((a) => a.system + "|" + a.max);
+  // the style's suggestions: the answer's lines, numbers and bullets off, what the style has left out; a click puts one before the BPM
+  $("styleSugGo").click();
+  await until(() => document.querySelectorAll("#styleSugChips .style-sug-chip").length, 3000); await wait(50);
+  o.chips = [...document.querySelectorAll("#styleSugChips .style-sug-chip")].map((c) => c.textContent);
+  o.moreShown = !$("styleSugMore").hidden;
+  [...document.querySelectorAll("#styleSugChips .style-sug-chip")].find((c) => c.textContent === "fingerpicked guitar").click(); await wait(50);
+  o.style = $("style").value;
+  o.chipsLeft = [...document.querySelectorAll("#styleSugChips .style-sug-chip")].map((c) => c.textContent);
+  $("styleSugMore").click();
+  await until(() => [...document.querySelectorAll("#styleSugChips .style-sug-chip")].some((c) => c.textContent === "slow waltz"), 3000);
+  o.again = [...document.querySelectorAll("#styleSugChips .style-sug-chip")].map((c) => c.textContent);
+  o.notThese = (asked.filter((a) => a.what === "style suggestions")[1] || {}).user || "";
+  o.unit = { insertNoBpm: window.ruachSunoText.insert("rock, drums", "fuzz bass"), insertEmpty: window.ruachSunoText.insert("", "folk"), insertBpm: window.ruachSunoText.insert("rock, drums, 120 bpm", "fuzz") };
+  window.HeresyWriterAsk = realAsk;
+  setv("lyrics", was.lyrics); setv("style", was.style); setv("title", was.title);
+  return o; })()`);
+check("✦ Tighten shows both texts side by side, the words counted; Ask again asks once more, and the section tags the answer left out are said",
+  sn57.first.now === 4 && sn57.first.then === "[Verse]\nThe road is long\n[Chorus]\nWe sing along" && !sn57.first.lost && /^Now 20 words · tightened 9 words$/.test(sn57.first.head) &&
+  sn57.second.then === "The road is long\nWe sing" && /\[Verse\] \[Chorus\]$/.test(sn57.second.lost), JSON.stringify({ first: sn57.first, second: sn57.second }));
+check("  Apply puts the edited text in the box; the Writer's model was asked to keep every section tag",
+  sn57.applied === "[Verse]\nThe road is long\n[Chorus]\nWe sing" && sn57.tightenAsk.length === 2 && /^You edit song lyrics/.test(sn57.tightenAsk[0]), JSON.stringify({ applied: sn57.applied, asks: sn57.tightenAsk }));
+check("✦ Suggest: the answer's lines as chips (numbers and bullets off, what the style has already left out); a chip goes in before the style's BPM and leaves the row",
+  JSON.stringify(sn57.chips) === '["warm tape saturation","fingerpicked guitar","Female alto"]' && sn57.moreShown && sn57.style === "country, fiddle, fingerpicked guitar, 86 BPM" &&
+  JSON.stringify(sn57.chipsLeft) === '["warm tape saturation","Female alto"]', JSON.stringify({ chips: sn57.chips, style: sn57.style, left: sn57.chipsLeft }));
+check("  ↻ asks for others, naming those shown so they do not come again; a style without a BPM takes the tag at its end",
+  JSON.stringify(sn57.again) === '["dusty pedal steel","slow waltz"]' && /Not these again: warm tape saturation, Female alto/.test(sn57.notThese) &&
+  sn57.unit.insertNoBpm === "rock, drums, fuzz bass" && sn57.unit.insertEmpty === "folk" && sn57.unit.insertBpm === "rock, drums, fuzz, 120 bpm", JSON.stringify({ again: sn57.again, unit: sn57.unit }));
+
+// HERESY 1169 · 1358 (from SUNO v6, TODO.md: «The boundaries snapped to the music's own changes (spectral novelty) and the instrumental breaks found by the voice's absence; a slice of the spectrogram in the card (Viktor 10.10)»)
+section("the wave's sections on the music's own changes, a Break where no voice sings, Intro and Outro where the song has none, a slice of the spectrogram in the card");
+const ws58 = await ev(`(() => {
+  const W = window.ruachWaveSnap, o = {};
+  if (!W) return { err: "no ruachWaveSnap" };
+  const list = [{ t: 0, name: "Intro", lines: [] }, { t: 12.4, name: "Verse 1", lines: ["a"] }, { t: 31.0, name: "Chorus", lines: ["b"] }, { t: 50.2, name: "Verse 2", lines: ["c"] }];
+  const changes = [{ t: 11.5, strength: 0.4 }, { t: 12.9, strength: 0.9 }, { t: 30.0, strength: 0.2 }, { t: 33.0, strength: 1.0 }, { t: 49.0, strength: 0.7 }];
+  o.snapped = W.snap(list, changes).map((s) => s.name + "@" + s.t + (s.snapped ? "*" : ""));
+  const rows = [{ start: 12.5, end: 16 }, { start: 16.2, end: 20 }, { start: 31, end: 35 }, { start: 46, end: 49.5 }, { start: 50.3, end: 54 }];
+  o.breaks = W.breaks([{ t: 12.4, name: "Verse 1", lines: ["a"], rows: [] }, { t: 31, name: "Chorus", lines: ["b"], rows: [] }, { t: 50.2, name: "Verse 2", lines: ["c"], rows: [] }], rows, 70)
+    .map((s) => s.name + "@" + s.t + (s.resumed ? "+" : "") + (s.heard ? "~" : ""));
+  o.none = W.snap(list, []).map((s) => s.t).join(",");
+  return o; })()`);
+check("a section's start moves to the strongest change within 1.5 s of it (Verse 1 12.4 → 12.9, Chorus 31 → 30.0 the only one near, Verse 2 50.2 → 49.0); the first at 0 stays; no changes, no moves",
+  JSON.stringify(ws58.snapped) === '["Intro@0","Verse 1@12.9*","Chorus@30*","Verse 2@49*"]' && ws58.none === "0,12.4,31,50.2", JSON.stringify(ws58));
+check("  where no voice sings for 7 s, a Break: before the next section (Verse 1 to Chorus), or inside one, the section going on after it; a long start without a section, Intro; a long end, Outro",
+  JSON.stringify(ws58.breaks) === '["Intro@0~","Verse 1@12.4","Break@20.3~","Chorus@31","Break@35.3~","Chorus@45.8+","Verse 2@50.2","Outro@54.3~"]', JSON.stringify(ws58.breaks));
+
+// HERESY 1169 · 1359: a text whose line breaks are its own keeps its lines in every language (the machine's scan, 1304, had read as one
+// paragraph in the six other languages: a one-line pattern ran across the dialog's lines)
+section("a dialog's lines kept in another language: the machine's scan in Russian line by line; a key of its own lines whole; a soft line break still read across");
+const ln59 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, L = window.RuachI18n;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.machineScan", "yue2.artPainter", "yue2.memPreset"], was = keys.map((k) => localStorage.getItem(k));
+  const o = {};
+  L.set("ru"); await wait(400);
+  window.fetch = (u, opts) => { u = String(u);
+    if (u.startsWith("/lab/machine")) return json({ cards: [{ index: 0, name: "Quadro RTX 5000", total_mb: 16384, compute: "7.5", limit_mb: null, bf16_cores: false }], studio: 0,
+      room_mb: 16384, painter: { suggest: "krea2-q4", ready: { "krea2-q4": false }, fits: ["krea2-q4", "sdxl"] } });
+    return real(u, opts); };
+  const p = window.ruachMachineScan(true);
+  const d = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes") && document.querySelector(".hd-back.is-on:not(.is-leaving)"));
+  await wait(300);
+  o.title = d ? d.querySelector(".hd-title").innerText : null;
+  o.lines = d ? d.querySelector(".hd-body").innerText.split("\\n").filter((l) => l.trim()) : [];
+  o.btns = d ? [...d.querySelectorAll(".hd-no, .hd-yes")].map((b) => b.textContent) : [];
+  if (d) d.querySelector(".hd-no").click();
+  await p; await wait(200);
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  // the four ways: a key of its own lines whole; a soft line break (white-space: normal) read across by its pattern; lines each a key;
+  // lines written already in the language, with «: » in them, left as they are and on their lines
+  const keyed = "One adult female lead with clear melodic phrasing\\nAdd-on slider (see Engine \\u203a Sliders) \\u00b7 female";
+  const box = document.createElement("div"); box.id = "ln59"; box.style.cssText = "position:fixed;left:-9999px;top:0;width:600px";
+  box.innerHTML = '<div class="a" style="white-space:pre-line"></div><div class="b"></div><div class="c" style="white-space:pre-line"></div><div class="d" style="white-space:pre-wrap"></div>';
+  document.body.appendChild(box);
+  box.querySelector(".a").textContent = keyed;
+  box.querySelector(".b").textContent = "Set for this machine:\\n      the backbone Q8_0";
+  box.querySelector(".c").textContent = "Not now\\nSet them";
+  box.querySelector(".d").textContent = "основа Q8_0: у compute 7.5 нет тензорных ядер BF16\\n· весь контекст, тайлы VAE 512";
+  await wait(300);
+  o.a = box.querySelector(".a").textContent; o.aWant = L.look(keyed, "ru");
+  o.b = box.querySelector(".b").textContent; o.bWant = L.look("Set for this machine: the backbone Q8_0", "ru");
+  o.c = box.querySelector(".c").textContent; o.d = box.querySelector(".d").textContent;
+  box.remove();
+  L.set("en"); await wait(300);
+  o.back = document.documentElement.lang;
+  return o; })()`);
+check("the machine's scan in Russian: its lines kept (the card; what suits it; the backbone; the context; the artwork; where to change them), each in Russian",
+  ln59.title === "Машина, какой её нашла студия" && ln59.lines.length === 6 && /^GPU0 · Quadro RTX 5000 · 16\.0 ГБ/.test(ln59.lines[0]) && ln59.lines[1] === "Что ей подходит:" &&
+  /^· основа Q8_0: /.test(ln59.lines[2]) && /^· весь контекст, тайлы VAE 512/.test(ln59.lines[3]) && /^· обложки: Krea 2 Muse Q4/.test(ln59.lines[4]) && /«Сканировать машину»/.test(ln59.lines[5]) &&
+  ln59.btns.join("|") === "Не сейчас|Выставить",
+  JSON.stringify({ title: ln59.title, lines: ln59.lines, btns: ln59.btns }));
+check("  a key of its own lines translated whole; a soft line break read across by its pattern; lines each a key, each translated; lines in the language already left on their lines",
+  !!ln59.aWant && ln59.a === ln59.aWant && ln59.a.indexOf("\n") > 0 && !!ln59.bWant && ln59.b.trim() === ln59.bWant && ln59.c === "Не сейчас\nВыставить" &&
+  ln59.d === "основа Q8_0: у compute 7.5 нет тензорных ядер BF16\n· весь контекст, тайлы VAE 512" && ln59.back === "en",
+  JSON.stringify({ a: ln59.a, aWant: ln59.aWant, b: ln59.b, bWant: ln59.bWant, c: ln59.c, d: ln59.d, back: ln59.back }));
+
+// HERESY 1169 · 1360 (Viktor 11.10.2026: «ПО CivitAI согласен»): «From Civitai…» in the LoRA library: an adapter by its link, looked at,
+// fetched by the lab with the user's own key into its family's folder; the key never in the settings file
+section("an adapter from Civitai: its link looked at, fetched into its family's folder with the user's key, the progress said; the key kept local");
+const cv60 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, posted = [], settings = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, code) => Promise.resolve(new Response(JSON.stringify(b), { status: code || 200, headers: { "Content-Type": "application/json" } }));
+  const KEY = "cv-test-key-7Q2", was = localStorage.getItem("yue2.civitaiKey"), painterWas = document.getElementById("arPainter").value;
+  const o = {};
+  let looks = { "https://civitai.com/models/11/tiny": { model: 11, version: 111, title: "Tiny Style", name: "v1.0", type: "LORA", adapter: true, base: "Krea 2", family: "krea2",
+                 words: ["tinystyle", "tiny look"], file: "tiny style.safetensors", bytes: 37748736, sha256: "a".repeat(64), nsfw: false, url: "https://civitai.com/models/11?modelVersionId=111", here: [] },
+               "https://civitai.com/models/22/qwen": { model: 22, version: 222, title: "Oil Paint", name: "2512", type: "LORA", adapter: true, base: "Qwen", family: "qwen-image-2512",
+                 words: [], file: "oil paint.safetensors", bytes: 300000000, sha256: "b".repeat(64), nsfw: false, url: "https://civitai.com/models/22?modelVersionId=222", here: [] },
+               "https://civitai.com/models/33/ckpt": { model: 33, version: 333, title: "A Checkpoint", name: "v2", type: "Checkpoint", adapter: false, base: "SDXL 1.0", family: "sdxl",
+                 words: [], file: "ckpt.safetensors", bytes: 6000000000, sha256: "", nsfw: false, url: "https://civitai.com/models/33?modelVersionId=333", here: [] } };
+  let polls = 0, fetching = false;
+  window.fetch = (u, opts) => { u = String(u);
+    const body = opts && opts.body ? String(opts.body) : "";
+    if (u.startsWith("/lab/settings") && opts && opts.method === "POST") { settings.push(body); return json({ ok: true }); }
+    if (u === "/lab/artist/civitai-look") { posted.push(["look", JSON.parse(body)]); const v = looks[JSON.parse(body).ref]; return v ? json(v) : json({ error: "Civitai does not know this version" }, 500); }
+    if (u === "/lab/artist/civitai-fetch" && opts && opts.method === "POST") { posted.push(["fetch", JSON.parse(body)]); polls = 0; fetching = true; return json({ status: "running", file: "tiny style.safetensors", got: 0, size: 37748736, pct: 0 }, 202); }
+    if (u === "/lab/artist/civitai-fetch") { if (!fetching) return json({ status: "idle" }); polls++; if (polls >= 2) fetching = false;
+      return json(polls < 2 ? { status: "running", file: "tiny style.safetensors", got: 18874368, size: 37748736, pct: 50 } : { status: "done", file: "tiny style.safetensors", id: "krea2/tiny style.safetensors", got: 37748736, size: 37748736 }); }
+    return real(u, opts); };
+  localStorage.removeItem("yue2.civitaiKey");
+  document.getElementById("arPainter").value = "krea2-q4";
+  const win = window.HeresyArtistCivitai.open();
+  const box = await until(() => document.querySelector(".ar-cv-back"));
+  const q = (s) => box.querySelector(s), btn = (n) => box.querySelector('[data-cv="' + n + '"]');
+  o.opened = !!box && !!q(".ar-cv-ref") && q(".ar-cv-key").type === "password" && btn("fetch").disabled;
+  // a Krea 2 adapter for the Krea 2 library: looked at, its words and its size, Fetch with its size
+  q(".ar-cv-ref").value = "https://civitai.com/models/11/tiny"; q(".ar-cv-key").value = KEY;
+  btn("look").click(); await until(() => q(".ar-cv-what .ar-li-rows")); await wait(100);
+  o.what = q(".ar-cv-what").innerText; o.fetchOn = !btn("fetch").disabled; o.fetchText = btn("fetch").textContent;
+  // the key stays out of the settings file, and out of this browser until Remember
+  window.HeresySettings.flush(); await wait(300);
+  o.keptBefore = localStorage.getItem("yue2.civitaiKey");
+  q(".ar-cv-keep").click(); await wait(50);
+  o.keptAfter = localStorage.getItem("yue2.civitaiKey");
+  window.HeresySettings.flush(); await wait(300);
+  // fetched: its progress said, then done; Add it to the list offered (it is this painter's family)
+  btn("fetch").click();
+  o.progress = await until(() => /50 %/.test(q(".ar-cv-say").textContent) && q(".ar-cv-say").textContent, 4000);
+  o.stopShown = !btn("stop").hidden;
+  o.done = await until(() => /krea2\\/tiny style\\.safetensors/.test(q(".ar-cv-say").textContent) && q(".ar-cv-say").textContent, 5000);
+  o.addShown = !btn("add").hidden; o.stopAfter = btn("stop").hidden;
+  o.toast = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /Fetched from Civitai/.test(t)).length;
+  // a Qwen adapter from the Krea 2 library: said where it goes, and it goes there
+  q(".ar-cv-ref").value = "https://civitai.com/models/22/qwen"; btn("look").click();
+  await until(() => /Oil Paint/.test(q(".ar-cv-what").innerText)); await wait(100);
+  o.qwenNote = q(".ar-cv-what").innerText;
+  btn("fetch").click(); await until(() => posted.filter((p) => p[0] === "fetch").length === 2, 3000); await wait(1500);
+  // a checkpoint: not an adapter, Fetch off
+  q(".ar-cv-ref").value = "https://civitai.com/models/33/ckpt"; btn("look").click();
+  await until(() => /A Checkpoint/.test(q(".ar-cv-what").innerText)); await wait(100);
+  o.ckptNote = q(".ar-cv-what").innerText; o.ckptFetchOff = btn("fetch").disabled;
+  // the lab's error said
+  q(".ar-cv-ref").value = "https://civitai.com/models/99/none"; btn("look").click();
+  o.err = await until(() => /does not know/.test(q(".ar-cv-say").textContent) && q(".ar-cv-say").textContent, 3000);
+  o.posted = posted; o.settingsHasKey = settings.some((s) => s.indexOf(KEY) >= 0); o.settingsSent = settings.length;
+  btn("close").click(); await wait(100);
+  o.closed = !document.querySelector(".ar-cv-back");
+  window.fetch = real;
+  if (was === null) localStorage.removeItem("yue2.civitaiKey"); else localStorage.setItem("yue2.civitaiKey", was);
+  document.getElementById("arPainter").value = painterWas;
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  return o; })()`);
+check("the window: a link and a key (hidden as it is typed); Look says the adapter, its base model, its words, its file and size; Fetch says the size",
+  cv60.opened && /Tiny Style · v1\.0/.test(cv60.what) && /Krea 2/.test(cv60.what) && /tinystyle · tiny look/.test(cv60.what) && /tiny style\.safetensors · 36 MB/.test(cv60.what) &&
+  cv60.fetchOn && /Fetch · 36 MB/.test(cv60.fetchText) && cv60.posted[0][0] === "look" && cv60.posted[0][1].key === "cv-test-key-7Q2",
+  JSON.stringify({ opened: cv60.opened, what: cv60.what, fetchOn: cv60.fetchOn, fetchText: cv60.fetchText, posted: cv60.posted[0] }));
+check("  the key in this browser only with Remember, and never in the settings file the network can read",
+  cv60.keptBefore === null && cv60.keptAfter === "cv-test-key-7Q2" && !cv60.settingsHasKey,
+  JSON.stringify({ before: cv60.keptBefore, after: cv60.keptAfter, inSettings: cv60.settingsHasKey, sent: cv60.settingsSent }));
+check("  Fetch: the version, the key and the family sent; its progress, Stop while it runs; done said, a toast, «Add it to the list» for this painter's family",
+  cv60.posted[1] && cv60.posted[1][0] === "fetch" && cv60.posted[1][1].ref === "111" && cv60.posted[1][1].family === "krea2" && cv60.posted[1][1].key === "cv-test-key-7Q2" &&
+  /18 MB of 36 MB · 50 %/.test(cv60.progress || "") && cv60.stopShown && /^Fetched: krea2\/tiny style\.safetensors$/.test(cv60.done || "") && cv60.addShown && cv60.stopAfter && cv60.toast === 1,
+  JSON.stringify({ fetch: cv60.posted[1], progress: cv60.progress, stop: cv60.stopShown, done: cv60.done, add: cv60.addShown, toast: cv60.toast }));
+check("  a Qwen adapter from the Krea 2 library goes into Qwen-Image 2512's folder, said; a checkpoint is no adapter, Fetch off; the lab's error said",
+  /Made for Qwen: it goes into the folder of Qwen-Image 2512\./.test(cv60.qwenNote) && cv60.posted[3] && cv60.posted[3][1].family === "qwen-image-2512" &&
+  /This is a Checkpoint on Civitai, not an adapter/.test(cv60.ckptNote) && cv60.ckptFetchOff && /Civitai does not know this version/.test(cv60.err || "") && cv60.closed,
+  JSON.stringify({ qwen: cv60.qwenNote, posted: cv60.posted.slice(2), ckpt: cv60.ckptNote, off: cv60.ckptFetchOff, err: cv60.err, closed: cv60.closed }));
+
+// HERESY 1169 · 1361 (TODO.md: «A take that does not play on late in the long page test (buffered at readyState 1), and the WAV fallback that
+// does not resume a take asked to play»)
+section("the player: the WAV fallback goes on with a take asked to play; a take whose sound is all here and that does not start is loaded again, then said");
+const evg61 = async (expr) => { const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true, userGesture: true });
+  return r.result && r.result.result ? r.result.result.value : r; };
+const pl61 = await evg61(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), a = document.getElementById("audio"), P = window.ruachPlayerChecks;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const o = { had: a.getAttribute("src") }, offWas = P.listenOff();
+  P.listenOff(false);
+  // the FLAC route of the take in the player failing while it is asked to play (a click's play): the WAV, playing on
+  a.src = "/library/listen?name=__no_such_take__";
+  a.play().catch(() => {});
+  o.wav = await until(() => /^\\/library\\/audio\\?/.test(a.getAttribute("src") || "") && !a.paused && a.currentTime > 0.05 && a.getAttribute("src"), 6000);
+  o.fellToast = [...document.querySelectorAll("#toasts .toast")].some((t) => /No FLAC route/.test(t.textContent));
+  a.pause(); await wait(200);                         // the pause heard (a src set at once would drop its event, as the page's loadPlayer knows)
+  // a take not asked to play: its failing FLAC route gives the WAV and nothing plays
+  a.src = "/library/listen?name=__no_such_take_either__";
+  await until(() => /^\\/library\\/audio\\?/.test(a.getAttribute("src") || ""), 4000); await wait(600);
+  o.quietStays = a.paused;
+  P.listenOff(offWas);
+  return o; })()`);
+check("the take's FLAC route failing while it is asked to play: the WAV, and it plays on (said); a take not asked to play stays paused",
+  !!pl61.wav && pl61.fellToast && pl61.quietStays, JSON.stringify(pl61));
+const st61 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), a = document.getElementById("audio"), P = window.ruachPlayerChecks;
+  const o = {};
+  let loads = 0, plays = 0, paused = false, partial = false;
+  HTMLMediaElement.prototype.pause.call(a); await wait(200);   // the real element still: no ending of its own to stand the watch down
+  // a take in the player «asked to play» whose sound is all here and that does not start (readyState 1, its time standing): the long
+  // test's case, made by hand; a real play would fire playing and stand the watch down, so play and pause are the test's own
+  Object.defineProperty(a, "paused", { get: () => paused, configurable: true });
+  Object.defineProperty(a, "readyState", { get: () => 1, configurable: true });
+  Object.defineProperty(a, "currentTime", { get: () => 0.5, set: () => {}, configurable: true });
+  Object.defineProperty(a, "duration", { get: () => 4, configurable: true });
+  Object.defineProperty(a, "buffered", { get: () => ({ length: 1, start: () => 0, end: () => (partial ? 0.2 : 4) }), configurable: true });
+  a.load = () => { loads++; }; a.play = () => { plays++; return Promise.resolve(); }; a.pause = () => { paused = true; };
+  P.stall.tried = "";
+  a.dispatchEvent(new Event("play"));
+  await wait(4500);
+  o.loads1 = loads; o.plays1 = plays; o.on1 = !paused;
+  await wait(4200);
+  o.loads2 = loads; o.pausedAfter = paused;
+  o.toast = [...document.querySelectorAll("#toasts .toast")].some((t) => /would not start/.test(t.textContent));
+  // a slow line: its sound not all here yet: it waits, nothing loaded again
+  P.stall.tried = ""; loads = 0; paused = false; partial = true;
+  a.dispatchEvent(new Event("play"));
+  await wait(4500);
+  o.slowLoads = loads; o.slowOn = !paused;
+  a.dispatchEvent(new Event("pause"));
+  ["paused", "readyState", "currentTime", "duration", "buffered", "load", "play", "pause"].forEach((k) => { delete a[k]; });
+  P.stall.tried = "";
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  return o; })()`);
+check("  its sound all here and not playing for 4 s: loaded again in place and asked once more; still not: paused, and said; a slow line waits, nothing loaded again",
+  st61.loads1 === 1 && st61.plays1 === 1 && st61.on1 && st61.loads2 === 1 && st61.pausedAfter && st61.toast && st61.slowLoads === 0 && st61.slowOn,
+  JSON.stringify(st61));
+
+// HERESY 1169 · 1364 (TODO.md, from Upscayl: «TTA (eight flips averaged, steadier, eight times slower) and a folder upscaled at once»)
+section("the pictures picked upscaled in one run: «Upscale…» on their bar, 2K, 4K or the passes kept; TTA beside the upscaler, kept and sent");
+const up64 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, posted = [], U = window.HeresyArtistUp;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, code) => Promise.resolve(new Response(JSON.stringify(b), { status: code || 200, headers: { "Content-Type": "application/json" } }));
+  const was = { tta: localStorage.getItem("yue2.arUpTta"), model: localStorage.getItem("yue2.arUpModel") };
+  window.fetch = (u, opts) => { u = String(u);
+    if (u === "/lab/artist/upscalers") return json({ upscalers: [{ name: "4x_Nomos8kDAT.pth", scale: 4, mb: 1 }, { name: "4x_foolhardy_Remacri.pth", scale: 4, mb: 1 }] });
+    if (u === "/lab/artist/upscale" && opts && opts.method === "POST") { const b = JSON.parse(opts.body); posted.push(b);
+      return json({ id: "20261011-160000-abcd", kind: "upscale", painter: "upscale", status: "queued", of: b.items.length, count: b.items.length, pictures: [], shapes: ["1:1"], created: Date.now() / 1000 }, 202); }
+    return real(u, opts); };
+  const o = {};
+  localStorage.setItem("yue2.arUpTta", "1");
+  U.pick([{ id: "20261011-150000-aaaa", file: "01-1x1-s1.png" }, { id: "20261011-150100-bbbb", file: "02-1x1-s2.png" }]);
+  await wait(100);
+  const bar = document.getElementById("arPicked"), btn = bar && bar.querySelector('[data-pick="up"]');
+  o.bar = bar && !bar.hidden && bar.innerText.replace(/\\s+/g, " ").trim();
+  o.btn = !!btn;
+  U.menu(btn);
+  const menu = await until(() => document.querySelector(".hm-menu"));
+  o.items = menu ? [...menu.querySelectorAll(".hm-item")].map((b) => b.innerText.replace(/\\s+/g, " ").trim()) : [];
+  o.ttaChecked = menu ? !!menu.querySelector(".hm-item:last-child .hm-check, .hm-item:last-child[aria-checked=true], .hm-item.is-checked:last-child") || /✓|✔/.test(o.items[o.items.length - 1] || "") : false;
+  if (menu) menu.querySelector(".hm-item").click();
+  await until(() => posted.length, 3000); await wait(200);
+  o.posted = posted[0] || null;
+  o.cleared = !document.getElementById("arPicked") || document.getElementById("arPicked").hidden;
+  o.toast = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /Upscaling 2 pictures in one run/.test(t));
+  window.fetch = real;
+  ["tta", "model"].forEach((k) => { const key = k === "tta" ? "yue2.arUpTta" : "yue2.arUpModel"; if (was[k] === null) localStorage.removeItem(key); else localStorage.setItem(key, was[k]); });
+  document.querySelectorAll(".hm-menu").forEach((m) => m.remove());
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  return o; })()`);
+check("two pictures picked: «Upscale…» on their bar; its menu has 2K and 4K by the chosen upscaler, the passes kept, TTA (on)",
+  /2 picked/.test(up64.bar || "") && up64.btn && up64.items.length === 4 && /^2K · /.test(up64.items[0]) && /^4K · /.test(up64.items[1]) && /^In passes: /.test(up64.items[2]) && /TTA/.test(up64.items[3]),
+  JSON.stringify({ bar: up64.bar, items: up64.items }));
+check("  2K: both pictures sent in one request with the upscaler, the target and TTA; the picks let go; said",
+  !!up64.posted && up64.posted.items.length === 2 && up64.posted.items[0].id === "20261011-150000-aaaa" && up64.posted.target === "2k" && up64.posted.tta === true &&
+  /\.pth$/.test(up64.posted.model || "") && up64.cleared && up64.toast.length === 1,
+  JSON.stringify({ posted: up64.posted, cleared: up64.cleared, toast: up64.toast }));
+
+// HERESY 1169 · 1365 (TODO.md: «Their strength by steps (keyframes, as Viktor's ComfyUI hooks)»)
+section("an adapter's strength over the steps: ⏱ opens its keyframes, read as typed (a wrong one said), kept, sent with Draw");
+const ky65 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [], K = window.HeresyArtistKeys, AR = window.HeresyArtist;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.arPrompt", "yue2.arLoras", "yue2.arPainter"], was = keys.map((k) => localStorage.getItem(k));
+  const now = Date.now() / 1000, lid = "krea2/cinematic_movie_still_krea2.safetensors";
+  const o = {}, tabWas = document.body.dataset.tab || "create", painterWas = document.getElementById("arPainter").value;
+  o.parse = [K.parse("0%:1, 50%:1, 60%:0"), K.parse("0:1, 100:1"), K.parse(" "), K.parse("50%:3") instanceof Error, K.parse("half:1") instanceof Error, K.text([[0, 1], [0.5, 1], [0.6, 0]])];
+  window.fetch = (u, opts) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", titles: { krea2: "Krea 2" }, arch: {}, families: { krea2: [{ id: lid, family: "krea2", name: "cinematic_movie_still_krea2", folder: "", mb: 300, picture: false, info: {}, fits: true }] } });
+    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(opts.body); sent.push(b);
+      return json({ id: "20261011-170000-beef", prompt: b.prompt, shapes: b.shapes, seed: 9, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [] }); }
+    return real(u, opts); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000);
+  const painter = document.getElementById("arPainter"); painter.value = "krea2-q4"; painter.dispatchEvent(new Event("change", { bubbles: true }));
+  await AR.loras.reload(); AR.loras.set([{ id: lid, weight: 0.8 }], "krea2"); await wait(150);
+  const row = () => document.querySelector('#arLoraList [data-li="0"]');
+  o.kbBefore = !!row().querySelector("[data-lk]") && !row().querySelector(".ar-lora-k");
+  row().querySelector("[data-lk]").click(); await wait(100);
+  const f = row().querySelector(".ar-lora-k");
+  o.opened = !!f && document.activeElement === f;
+  f.value = "half:1"; f.dispatchEvent(new Event("input", { bubbles: true }));
+  o.bad = f.classList.contains("is-bad") && /Not a keyframe/.test(f.dataset.tip || "") && !AR.loras.now()[0].keys;
+  f.value = "0%:1, 50%:1, 60%:0"; f.dispatchEvent(new Event("input", { bubbles: true }));
+  o.kept = JSON.stringify(AR.loras.now()[0].keys); o.on = row().querySelector("[data-lk]").classList.contains("is-on") && !f.classList.contains("is-bad");
+  const prompt = document.getElementById("arPrompt"); prompt.value = "a lighthouse at dawn"; prompt.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(() => !document.getElementById("arDraw").disabled, 3000);
+  document.getElementById("arDraw").click();
+  await until(() => sent.length, 3000); await wait(200);
+  o.sent = sent[0] ? sent[0].loras : null;
+  // ⏱ again with the field filled: closed, the keyframes let go
+  row().querySelector("[data-lk]").click(); await wait(100);
+  o.closed = !row().querySelector(".ar-lora-k") && !AR.loras.now()[0].keys;
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  const pw = document.getElementById("arPainter"); pw.value = painterWas; pw.dispatchEvent(new Event("change", { bubbles: true }));   // the room as it was
+  document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
+  return o; })()`);
+check("keyframes read: «0%:1, 50%:1, 60%:0» as shares and multipliers, all at 1 or nothing as none, past 2 or a word refused, written back as typed",
+  JSON.stringify(ky65.parse) === JSON.stringify([[[0, 1], [0.5, 1], [0.6, 0]], null, null, true, true, "0%:1, 50%:1, 60%:0"]), JSON.stringify(ky65.parse));
+check("  ⏱ beside an adapter opens its field (focused); a wrong keyframe said, nothing kept; a right one kept, ⏱ lit; Draw sends them with the strength; ⏱ again closes and lets them go",
+  ky65.kbBefore && ky65.opened && ky65.bad && ky65.kept === "[[0,1],[0.5,1],[0.6,0]]" && ky65.on && JSON.stringify(ky65.sent) === JSON.stringify([{ id: "krea2/cinematic_movie_still_krea2.safetensors", weight: 0.8, keys: [[0, 1], [0.5, 1], [0.6, 0]] }]) && ky65.closed,
+  JSON.stringify(ky65));
+
+// HERESY 1169 · 1366 (Viktor 11.10.2026: «Выровняй высоты полей ввода в пар с дропдаун селекторами. При сжатии колонки РАСПИСАНИЕ остаётся на той
+// же строке и врубает скроллинг горизонтальный. Поставь минимум 25% ширины экрана, максимум 30%. На правую колонку минимум 20%, максимум 35%»)
+section("the Artist's columns: the prompt's 25–30 % of the window, the library's 20–35 %; every field one height with the selects; nothing wider than its column");
+const lay66 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const tabWas = document.body.dataset.tab || "create", was = { l: localStorage.getItem("yue2.arL"), r: localStorage.getItem("yue2.arR") };
+  document.querySelector('.topbar [data-tab="artist"]').click(); await wait(500);
+  const s = document.getElementById("arSampling"); const open = s.open; s.open = true; await wait(100);
+  const cols = document.getElementById("arCols"), left = cols.querySelector(".ar-left"), right = cols.querySelector(".ar-right"), W = innerWidth;
+  const share = (el) => Math.round(el.getBoundingClientRect().width / W * 1000) / 10;
+  const o = { W, at: [share(left), share(right)] };
+  // dragged past its bounds from the keyboard: it stops at them
+  const edgeL = document.getElementById("arEdgeL"), edgeR = document.getElementById("arEdgeR");
+  for (let i = 0; i < 40; i++) edgeL.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  for (let i = 0; i < 40; i++) edgeR.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  await wait(150); o.wide = [share(left), share(right)];
+  for (let i = 0; i < 80; i++) edgeL.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  for (let i = 0; i < 80; i++) edgeR.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  await wait(150); o.narrow = [share(left), share(right)];
+  // at its narrowest: one height for the fields and the selects, nothing past the column's edge, the painter and its fine-tune a row each
+  const fields = [...left.querySelectorAll("input:not([type=checkbox]):not([type=range]):not([type=file]):not(.ar-lora-k), select")].filter((e) => e.offsetParent);
+  o.heights = [...new Set(fields.map((e) => Math.round(e.getBoundingClientRect().height)))];
+  const edge = left.getBoundingClientRect().left + left.clientWidth + 0.5;   // what shows: nothing past the column's visible edge
+  o.past = [...left.querySelectorAll("*")].filter((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.right > edge; }).map((e) => e.id || e.tagName).slice(0, 5);
+  const p = document.getElementById("arPainter").closest(".field"), m = document.getElementById("arModel").closest(".field");
+  o.rows = Math.round(m.getBoundingClientRect().top - p.getBoundingClientRect().top);
+  s.open = open;
+  edgeL.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })); edgeR.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+  ["l", "r"].forEach((k) => { const key = k === "l" ? "yue2.arL" : "yue2.arR"; if (was[k] === null) localStorage.removeItem(key); else localStorage.setItem(key, was[k]); });
+  window.dispatchEvent(new Event("resize"));            // the kept widths read again
+  document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
+  return o; })()`);
+check("the prompt's column 25–30 % of the window, the library's 20–35 % (dragged past them from the keys, they stop there)",
+  lay66.at[0] >= 24.9 && lay66.at[0] <= 30.1 && lay66.at[1] >= 19.9 && lay66.at[1] <= 35.1 && Math.abs(lay66.wide[0] - 30) < 0.3 && Math.abs(lay66.wide[1] - 35) < 0.3 &&
+  Math.abs(lay66.narrow[0] - 25) < 0.3 && Math.abs(lay66.narrow[1] - 20) < 0.3, JSON.stringify(lay66));
+check("  at the narrowest every field and select one height (36 px), nothing wider than the column, the painter and its fine-tune a row each",
+  lay66.heights.length === 1 && lay66.heights[0] === 36 && lay66.past.length === 0 && lay66.rows > 30, JSON.stringify(lay66));
+
+// HERESY 1169 · 1367 (Viktor 11.10.2026: «добавь Protect опцию для картинок. Такое нельзя ни в коем случае упустить в корзину, а потом
+// ненароком в бездну»)
+section("a picture protected: the shield on the stage, in the gallery and on the picked bar; Trash leaves it in the room and says so; the gallery's filter of the protected");
+const pr67 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const tabWas = document.body.dataset.tab || "create", keys = ["yue2.arLook", "yue2.arFilter"], was = keys.map((k) => localStorage.getItem(k));
+  const now = Date.now() / 1000;
+  const pic = (n, extra) => Object.assign({ n, shape: "1:1", seed: 40 + n, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + (40 + n) + ".png", thumb: "thumbs/0" + n + "-1x1-s" + (40 + n) + ".jpg" }, extra || {});
+  let runs = [{ id: "20261011-180000-aaaa", prompt: "a stone church at dusk", shapes: ["1:1"], seed: 41, count: 2, painter: "krea2-q4", created: now - 60, status: "done", of: 2, took: 30,
+    pictures: [pic(1, { protected: true }), pic(2)] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/protect")) { const b = JSON.parse(o.body); sent.push(["protect", b]);
+      b.items.forEach((x) => runs.forEach((r) => r.pictures.forEach((p) => { if (r.id === x.id && p.file === x.file) { if (b.protect) p.protected = true; else delete p.protected; } })));
+      return json({ protect: b.protect, done: b.items }); }
+    if (u.startsWith("/lab/artist/aside")) { const b = JSON.parse(o.body); sent.push(["aside", b]);
+      const kept = [], done = [];
+      b.items.forEach((x) => runs.forEach((r) => r.pictures.forEach((p) => { if (r.id === x.id && p.file === x.file) { if (p.protected) kept.push(Object.assign({ why: "protected" }, x)); else { p.aside = true; done.push(x); } } })));
+      return json({ aside: true, done, trashed: [], kept }); }
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(600);
+  const o = {}, lookWas = (document.querySelector("#arBar [data-look].is-on") || {}).dataset ? document.querySelector("#arBar [data-look].is-on").dataset.look : "runs";
+  // the gallery: the first picture's shield lit, the filter of the protected shows it alone
+  const gal = document.querySelector('#arBar [data-look="gallery"]'); if (gal) gal.click(); await wait(400);
+  const g = () => [...document.querySelectorAll("#arRuns .ar-gpic")];
+  o.shields = g().map((f) => f.querySelector(".ar-prot") && f.querySelector(".ar-prot").classList.contains("is-on"));
+  document.querySelector('#arFilters [data-filter="protected"]').click(); await wait(300);
+  o.filtered = g().length;
+  document.querySelector('#arFilters [data-filter="all"]').click(); await wait(300);
+  // the second picture's shield in the gallery: protected
+  g()[1].querySelector(".ar-prot").click(); await until(() => sent.length >= 1, 2000); await wait(400);
+  o.gprot = sent[0] ? sent[0][1] : null;
+  // the stage: the picked picture's shield and its Trash
+  g()[0].querySelector(".ar-thumb").click(); await wait(400);
+  const stg = document.getElementById("arStage");
+  o.stage = { shield: !!stg.querySelector('[data-stage="protect"].is-on'), trashOff: !!(stg.querySelector('[data-stage="aside"]') || {}).disabled };
+  stg.querySelector('[data-stage="protect"]').click(); await until(() => sent.length >= 2, 2000); await wait(400);
+  o.unprot = sent[1] ? sent[1][1] : null;
+  // Trash with both picked: the protected stays and is said
+  window.HeresyArtistUp.pick([{ id: runs[0].id, file: runs[0].pictures[0].file }, { id: runs[0].id, file: runs[0].pictures[1].file }]); await wait(150);
+  o.pickedShield = !!document.querySelector('#arPicked [data-pick="protect"]');
+  document.querySelector('#arPicked [data-pick="aside"]').click(); await until(() => sent.some((x) => x[0] === "aside"), 2000); await wait(500);
+  o.toasts = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /stayed in the room/.test(t));
+  window.fetch = real;
+  const lb = document.querySelector('#arBar [data-look="' + lookWas + '"]'); if (lb) lb.click(); await wait(200);   // the room's look as it was
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
+  return o; })()`);
+check("the gallery: a protected picture's shield lit, the filter of the protected shows it alone; the other's shield protects it",
+  JSON.stringify(pr67.shields) === "[true,false]" && pr67.filtered === 1 && !!pr67.gprot && pr67.gprot.protect === true && pr67.gprot.items.length === 1 && /02-1x1/.test(pr67.gprot.items[0].file),
+  JSON.stringify({ shields: pr67.shields, filtered: pr67.filtered, gprot: pr67.gprot }));
+check("  the stage: its shield lit and Trash off for a protected picture; the shield takes the protection off; Trash with two picked leaves the protected in the room, said",
+  pr67.stage.shield && pr67.stage.trashOff && !!pr67.unprot && pr67.unprot.protect === false && pr67.pickedShield && pr67.toasts.length === 1,
+  JSON.stringify({ stage: pr67.stage, unprot: pr67.unprot, picked: pr67.pickedShield, toasts: pr67.toasts }));
+
+// HERESY 1169 · 1368 (Viktor 11.10.2026: «И на аудио треки в студии тоже защиту добавь в опцию и в фильтр в Библиотеке не забудь эту опцию»)
+section("a take protected: the shield on its card, in the Creator's column and its head; the menu's item; the Librarian's filter and count; the trash and Delete pass it by, said");
+const pt68 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [], HC = window.HeresyCollection, $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const tabWas = document.body.dataset.tab || "create", kept = {};
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^yue2[.]coll/.test(k)) kept[k] = localStorage.getItem(k); }
+  const names = [...document.querySelectorAll("#libList .take[data-name]:not(.is-fav):not([data-run])")].map((c) => c.dataset.name);
+  if (names.length < 2) return { err: "fewer than two takes in the Creator's column: " + names.length };
+  const A = names[0], B = names[1], P = (document.querySelector("#libList .take.is-active") || { dataset: {} }).dataset.name || "";
+  const row = (n, extra) => Object.assign({ name: n, title: "take " + n.slice(-6), created: Math.floor(Date.now() / 1000) - 600, seconds: 60, favorite: false, kind: "generated", cot: "off",
+    derived: [], hidden: false, workspaces: [], rating: 0, note: "", seeds: null, fresh: false, regen_of: "", frozen: false, protected: false }, extra || {});
+  let rows = [row(A, { protected: true }), row(B)].concat(P && P !== A && P !== B ? [row(P)] : []);
+  const cat = () => ({ takes: rows, workspaces: [], trash_days: 0, locks: {}, pins: {}, frozen: [] });
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/catalog")) return new Promise(() => {});      // the Librarian's own load waits: the rows come from the answers below, «loaded» as it was
+    if (u.startsWith("/lab/collection") && !u.startsWith("/lab/collection/diamonds")) { const b = JSON.parse(opt.body);
+      if (b.op === "protect") { sent.push(["protect", b]); rows.forEach((r) => { if (b.names.includes(r.name)) r.protected = !!b.on; }); }
+      return json(cat()); }
+    if (u.startsWith("/lab/trash")) { if (opt && opt.method === "POST") { const b = JSON.parse(opt.body); sent.push(["trash", b]);
+        return json({ moved: [], locked: [], protected: b.names.filter((n) => rows.some((r) => r.name === n && r.protected)) }); }
+      return json({ items: [] }); }
+    if (u.startsWith("/library/delete")) { sent.push(["delete", u]); return json({ deleted: "" }); }
+    return real(u, opt); };
+  const o = {}, card = (n) => document.querySelector('#collGrid .coll-card[data-name="' + n + '"]');
+  const menuOf = async (n) => { const c = card(n); if (!c) return []; const r = c.getBoundingClientRect();
+    c.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: r.left + 20, clientY: r.top + 10 })); await wait(150);
+    return [...document.querySelectorAll(".hm-menu .hm-item")]; };
+  const said = (re) => [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => re.test(t)).length;
+  try {
+    document.querySelector('.topbar [data-tab="collection"]').click();
+    await until(() => !$("view-collection").classList.contains("is-hidden"), 3000); await wait(300);
+    const all = document.querySelector('#collSide [data-place=""]'); if (all) all.click(); await wait(150);
+    await HC.act({ op: "hide", names: [] }, null, true); await wait(200);   // the rows in hand
+    o.shields = [A, B].map((n) => { const b = card(n) && card(n).querySelector(".coll-act.prot"); return b ? b.getAttribute("aria-pressed") : "none"; });
+    o.head = ($("collNote") || {}).textContent || "";
+    // the filter: «protected» counts one; ticked, only it shows; unticked again
+    const pick = (want) => { const b = document.querySelector(".hd-back.is-on:not(.is-leaving)"); if (!b) return null;
+      const r = [...b.querySelectorAll(".hd-check")].find((x) => x.querySelector(".hd-item-label").textContent === "protected"); if (!r) return null;
+      const note = r.querySelector(".hd-item-note").textContent, i = r.querySelector("input"); i.checked = want; i.dispatchEvent(new Event("change", { bubbles: true })); return note; };
+    $("collFilterBtn").click(); await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-pick"), 3000);
+    o.filterNote = pick(true); await wait(50);
+    document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes").click(); await wait(400);
+    o.filtered = [...document.querySelectorAll("#collGrid .coll-card[data-name]")].map((c) => c.dataset.name === A ? "A" : c.dataset.name === B ? "B" : "other").join(",");
+    $("collFilterBtn").click(); await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-pick"), 3000); pick(false); await wait(50);
+    document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes").click(); await wait(400);
+    // B's shield protects it
+    card(B).querySelector(".coll-act.prot").click(); await until(() => sent.length >= 1, 2000); await wait(300);
+    o.cardProt = sent[0] ? sent[0][1] : null; o.cardLit = card(B).querySelector(".coll-act.prot").getAttribute("aria-pressed");
+    // both checked, the bar's shield: all protected already, so the protection comes off both
+    [A, B].forEach((n) => card(n).querySelector("input[data-sel]").click()); await wait(200);
+    $("collProtect").click(); await until(() => sent.length >= 2, 2000); await wait(300);
+    o.barProt = sent[1] ? sent[1][1] : null;
+    $("collSelNone").click(); await wait(100);
+    await HC.protect([A], true); await HC.protect([B], false); await wait(200);   // A protected again, B not
+    // the menu: B's item protects it, A's takes it off (ticked); «Open in the Creator» opens A
+    let items = await menuOf(B);
+    o.menuB = items.filter((b) => /protect/i.test(b.textContent)).map((b) => b.querySelector(".hm-label").textContent + ":" + b.getAttribute("aria-checked"));
+    window.HeresyMenu.close();
+    items = await menuOf(A);
+    o.menuA = items.filter((b) => /protect/i.test(b.textContent)).map((b) => b.querySelector(".hm-label").textContent + ":" + b.getAttribute("aria-checked"));
+    const go = items.find((b) => b.querySelector(".hm-label").textContent === "Open in the Creator");
+    if (go) go.click(); else window.HeresyMenu.close();
+    await until(() => document.body.dataset.tab === "create", 3000); await wait(400);
+    // the Creator: A's head shield lit, its Delete off and refusing, said; its card in the column with no ✕, its shield lit
+    o.headShield = $("protTake") ? $("protTake").getAttribute("aria-pressed") : "none";
+    o.delOff = !!$("deleteTake") && $("deleteTake").classList.contains("is-off");
+    const lc = document.querySelector('#libList .take[data-name="' + A + '"]');
+    o.colA = lc ? { x: !!lc.querySelector(".take-del"), shield: lc.querySelector(".coll-act.prot") ? lc.querySelector(".coll-act.prot").getAttribute("aria-pressed") : "none" } : null;
+    $("deleteTake").click(); await wait(300);
+    o.delSaid = said(/is protected: take its protection off first/); o.deleted = sent.filter((x) => x[0] === "delete").length;
+    // the head's shield takes the protection off: Delete answers again
+    $("protTake").click(); await until(() => sent.filter((x) => x[0] === "protect").length >= 5, 2000); await wait(300);
+    o.headOff = { shield: $("protTake").getAttribute("aria-pressed"), off: $("deleteTake").classList.contains("is-off") };
+    await HC.protect([A], true); await wait(200);
+    // «Delete non-favourites…»: the protected pass by, said
+    const DC = window.HeresyDialog.confirm; let asked = "";
+    window.HeresyDialog.confirm = (t) => { asked = String(t); return Promise.resolve(false); };
+    $("deleteNonFav").click(); await wait(200);
+    window.HeresyDialog.confirm = DC;
+    o.nonFav = asked.includes("1 protected take stays too.");
+    // the trash from the Librarian: A stays, said
+    document.querySelector('.topbar [data-tab="collection"]').click(); await wait(400);
+    card(A).querySelector("input[data-sel]").click(); await wait(100);
+    $("collTrash").click();
+    const yes = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes"), 3000); if (yes) yes.click();
+    await until(() => sent.some((x) => x[0] === "trash"), 3000); await wait(400);
+    o.trashSaid = said(/protected take stayed in the library/);
+  } catch (e) { o.err = String(e && e.stack || e); }
+  // the room as it was: the take that was open, its rows none again («loaded» untouched), the places and filters remembered, the room
+  try {
+    window.HeresyMenu.close();
+    if ($("collSelNone")) $("collSelNone").click();
+    if (P && P !== A) { document.querySelector('.topbar [data-tab="collection"]').click(); await wait(300);
+      const back = (await menuOf(P)).find((b) => b.querySelector(".hm-label").textContent === "Open in the Creator"); if (back) back.click(); else window.HeresyMenu.close(); await wait(400); }
+    rows = []; await HC.act({ op: "hide", names: [] }, null, true);
+  } catch (e) { o.restoreErr = String(e); }
+  window.fetch = real;
+  for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (/^yue2[.]coll/.test(k) && !(k in kept)) localStorage.removeItem(k); }
+  Object.keys(kept).forEach((k) => localStorage.setItem(k, kept[k]));
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  if ($("collUndo")) $("collUndo").hidden = true;
+  document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
+  return o; })()`);
+check("the Librarian: a protected take's shield lit, the other's not; «1 protected» in the head; the filter's «protected» counts one and shows it alone",
+  !pt68.err && JSON.stringify(pt68.shields) === '["true","false"]' && /1 protected/.test(pt68.head) && pt68.filterNote === "1" && pt68.filtered === "A",
+  JSON.stringify({ err: pt68.err, shields: pt68.shields, head: pt68.head, note: pt68.filterNote, filtered: pt68.filtered }));
+check("  a card's shield protects it (lit at once); the bar's with all protected takes it off them all",
+  !!pt68.cardProt && pt68.cardProt.on === true && pt68.cardProt.names.length === 1 && pt68.cardLit === "true" && !!pt68.barProt && pt68.barProt.on === false && pt68.barProt.names.length === 2,
+  JSON.stringify({ card: pt68.cardProt, lit: pt68.cardLit, bar: pt68.barProt }));
+check("  the menu: «Protect it» on a take, «Take its protection off» ticked on a protected one",
+  JSON.stringify(pt68.menuB) === '["Protect it:false"]' && JSON.stringify(pt68.menuA) === '["Take its protection off:true"]', JSON.stringify({ B: pt68.menuB, A: pt68.menuA }));
+check("  the Creator: the head's shield lit and Delete off, refusing aloud (nothing sent); the column's card without ✕, its shield lit; the head's shield takes it off and Delete answers again",
+  pt68.headShield === "true" && pt68.delOff && pt68.colA && !pt68.colA.x && pt68.colA.shield === "true" && pt68.delSaid === 1 && pt68.deleted === 0 &&
+  pt68.headOff && pt68.headOff.shield === "false" && !pt68.headOff.off, JSON.stringify({ head: pt68.headShield, off: pt68.delOff, col: pt68.colA, said: pt68.delSaid, deleted: pt68.deleted, after: pt68.headOff }));
+check("  «Delete non-favourites…» says the protected stay; the trash leaves a protected take in the library, said",
+  pt68.nonFav && pt68.trashSaid === 1 && !pt68.restoreErr, JSON.stringify({ nonFav: pt68.nonFav, trash: pt68.trashSaid, restoreErr: pt68.restoreErr }));
+
+// HERESY 1169 · 1369 (Viktor 11.10.2026: «в галерее картинок сделай навигацию стрелочными кнопками клавиатуры. Lightning и Ведение с кнопкой сброса на следующую полосу перенеси»)
+section("the Artist's library by the arrow keys: the gallery's ← → and ↑ ↓ by its rows, the runs' ↑ ↓ by run; not while typing; Lightning, Guidance and Reset on a row of their own");
+const nv69 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const tabWas = document.body.dataset.tab || "create", keys = ["yue2.arLook", "yue2.arFilter"], was = keys.map((k) => localStorage.getItem(k));
+  const now = Date.now() / 1000;
+  const pic = (n) => ({ n, shape: "1:1", seed: 70 + n, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + (70 + n) + ".png", thumb: "thumbs/0" + n + "-1x1-s" + (70 + n) + ".jpg" });
+  const runs = [{ id: "20261011-190000-bbbb", prompt: "a lighthouse", shapes: ["1:1"], seed: 71, count: 4, painter: "krea2-q4", created: now - 60, status: "done", of: 4, took: 30, pictures: [1, 2, 3, 4].map(pic) },
+                { id: "20261011-180000-cccc", prompt: "a stone church", shapes: ["1:1"], seed: 75, count: 4, painter: "krea2-q4", created: now - 600, status: "done", of: 4, took: 30, pictures: [5, 6, 7, 8].map(pic) }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
+    return real(u, o); };
+  const o = {}, key = (k, el) => { const ev = new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true }); (el || document.body).dispatchEvent(ev); return ev.defaultPrevented; };
+  try {
+    document.querySelector('.topbar [data-tab="artist"]').click();
+    await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(600);
+    const lookWas = (document.querySelector("#arBar [data-look].is-on") || { dataset: { look: "runs" } }).dataset.look;
+    // the sampling: its second row
+    const sp = $("arSampling"), opened = sp.open; sp.open = true; await wait(50);
+    o.rows = { first: !!$("arSteps").closest(".ar-samp-row:not(.ar-samp-row2)") && !!$("arSchedule").closest(".ar-samp-row:not(.ar-samp-row2)"),
+      second: ["arLightBox", "arCfgBox", "arSampReset"].every((id) => !!$(id).closest(".ar-samp-row2")) };
+    sp.open = opened;
+    // the gallery
+    document.querySelector('#arBar [data-look="gallery"]').click(); await wait(400);
+    const at = () => { const s = document.querySelector("#arRuns .ar-gpic .ar-thumb.is-sel"); return s ? +s.closest(".ar-gpic").dataset.g : -1; };
+    const figs = [...document.querySelectorAll("#arRuns .ar-gpic[data-g]")], cols = figs.filter((f) => f.offsetTop === figs[0].offsetTop).length;
+    figs[0].querySelector(".ar-thumb").click(); await wait(200);
+    o.cols = cols; o.walk = [at()];
+    for (const k of ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"]) { key(k); await wait(120); o.walk.push(at()); }
+    // the last picture: → kept by the library (not the player's seek), the picture stays
+    figs[figs.length - 1].querySelector(".ar-thumb").click(); await wait(200);
+    o.endTaken = key("ArrowRight"); await wait(120); o.endAt = at();
+    // typing in the prompt: the arrows are the text's
+    figs[0].querySelector(".ar-thumb").click(); await wait(200);
+    o.typing = !key("ArrowRight", $("arPrompt")); await wait(120); o.typingAt = at();
+    // the runs: → the next picture, ↓ the next run at the same place
+    document.querySelector('#arBar [data-look="runs"]').click(); await wait(400);
+    const sel = () => { const s = document.querySelector("#arRuns .ar-run .ar-pic .ar-thumb.is-sel"); if (!s) return ""; const f = s.closest(".ar-pic"); return f.closest(".ar-run").dataset.id.slice(-4) + "#" + f.dataset.i; };
+    document.querySelector('#arRuns .ar-run[data-id="' + runs[0].id + '"] .ar-pic[data-i="1"] .ar-thumb').click(); await wait(200);
+    o.runs = [sel()];
+    for (const k of ["ArrowRight", "ArrowDown", "ArrowUp"]) { key(k); await wait(120); o.runs.push(sel()); }
+    const lb = document.querySelector('#arBar [data-look="' + lookWas + '"]'); if (lb) lb.click(); await wait(200);
+  } catch (e) { o.err = String(e && e.stack || e); }
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
+  return o; })()`);
+check("the sampling: Steps, Sampler and Schedule on their row, Lightning, Guidance and Reset on the next", !nv69.err && nv69.rows && nv69.rows.first && nv69.rows.second, JSON.stringify({ err: nv69.err, rows: nv69.rows }));
+check("  the gallery: → the next picture, ↓ a row down (its columns as laid out), ← back, ↑ up again; at the last → stays, the key taken (no seek); in the prompt the arrows are the text's",
+  nv69.cols >= 1 && JSON.stringify(nv69.walk) === JSON.stringify(((c) => { const d = 1 + c <= 7 ? 1 + c : 1, l = d - 1; return [0, 1, d, l, l - c >= 0 ? l - c : l]; })(nv69.cols)) && nv69.endTaken && nv69.endAt === 7 && nv69.typing && nv69.typingAt === 0,
+  JSON.stringify({ cols: nv69.cols, walk: nv69.walk, endTaken: nv69.endTaken, endAt: nv69.endAt, typing: nv69.typing, typingAt: nv69.typingAt }));
+check("  the runs: → the next picture of the run, ↓ the next run at the same place, ↑ back", JSON.stringify(nv69.runs) === '["bbbb#1","bbbb#2","cccc#2","bbbb#2"]', JSON.stringify(nv69.runs));
+
+// HERESY 1169 · 1370 (Viktor 11.10.2026: «на кнопку ВЫГРУЗИТЬ в Баре тоже подключи выгруз не только YuE2 моделей, но абсолютно всего, что у нас в VRAM студийного»)
+section("the Bar's Unload with the Artist's painter kept between runs: lit and said in its tip and on the Engine's card; a click lets the painter go with the engine's models, said");
+const un70 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [], $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  let painters = [{ gpu: 2, painter: "krea2-q4", busy: false, idle_s: 30 }];
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/activity")) return json({ seq: 0, lines: [], running: [], queue: [], regenerating: [], painters });
+    if (u.startsWith("/lab/artist/unload")) { sent.push("lab"); const r = { released: painters.filter((p) => !p.busy), busy: [] }; painters = []; return json(r); }
+    if (u === "/unload") sent.push("engine");
+    return real(u, opt); };
+  const o = {};
+  try {
+    o.seen = !!(await until(() => /kept between runs on GPU 2/.test($("unloadModel").dataset.tip || ""), 8000));
+    o.lit = $("unloadModel").classList.contains("is-loaded"); o.on = !$("unloadModel").disabled;
+    o.tip = $("unloadModel").dataset.tip;
+    o.card = /a painter kept between runs · GPU 2/.test(($("hwCard") || {}).textContent || "");
+    $("unloadModel").click();
+    await until(() => sent.includes("lab"), 4000); await wait(600);
+    o.sent = sent.slice();
+    o.said = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /painter let go \\(GPU 2\\)/.test(t)).length;
+    o.gone = !!(await until(() => !/kept between runs/.test($("unloadModel").dataset.tip || ""), 8000));
+  } catch (e) { o.err = String(e && e.stack || e); }
+  painters = [];
+  await wait(3500);                                    // a poll with none kept, so the page holds none when the lab is real again
+  window.fetch = real;
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  return o; })()`);
+check("a painter kept on GPU 2 (the lab's activity): Unload lit and enabled, its tip says it, the Engine's card has a row for it",
+  !un70.err && un70.seen && un70.lit && un70.on && /^Unload/.test(un70.tip || "") && un70.card, JSON.stringify({ err: un70.err, seen: un70.seen, lit: un70.lit, on: un70.on, tip: un70.tip, card: un70.card }));
+check("  a click asks the lab to let it go (the engine too when it holds models), says it, and the tip forgets it",
+  (un70.sent || []).includes("lab") && un70.said === 1 && un70.gone, JSON.stringify({ sent: un70.sent, said: un70.said, gone: un70.gone }));
+
+// HERESY 1169 · 1372 (Viktor 11.10.2026: «Если стоит обложкой на треке то, что у Художника, при удалении изображения из галлереи спрашивать, или снимать, или оставить»)
+section("a picture that is a take's cover, to the trash: asked whether its cover comes off the take too, is left, or nothing happens; a run's trash asks the same; no cover, no question");
+const cv72 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [], $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const tabWas = document.body.dataset.tab || "create", keys = ["yue2.arLook", "yue2.arFilter"], was = keys.map((k) => localStorage.getItem(k));
+  const now = Date.now() / 1000, R = "20261011-190500-cafe";
+  const pic = (n) => ({ n, shape: "1:1", seed: 90 + n, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + (90 + n) + ".png", thumb: "thumbs/0" + n + "-1x1-s" + (90 + n) + ".jpg" });
+  let runs = [{ id: R, prompt: "a lantern in the snow", shapes: ["1:1"], seed: 91, count: 2, painter: "krea2-q4", created: now - 60, status: "done", of: 2, took: 20, pictures: [pic(1), pic(2)] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/covers")) { const b = JSON.parse(o.body); sent.push(["covers", b]);
+      const its = b.items || (b.id ? runs[0].pictures.map((p) => ({ id: b.id, file: p.file })) : []);
+      return json({ covers: its.filter((x) => x.file === pic(1).file).map((x) => ({ id: x.id, file: x.file, takes: [{ name: "20261011-170000-01-song", title: "Lantern Song" }] })) }); }
+    if (u.startsWith("/lab/artist/aside")) { const b = JSON.parse(o.body); sent.push(["aside", b]);
+      return json({ aside: true, done: b.items, trashed: [], kept: [], covers_off: b.covers === "off" ? ["Lantern Song"] : [] }); }
+    if (u.startsWith("/lab/artist/trash")) { const b = JSON.parse(o.body); sent.push(["trash", b]); return json({ trashed: b.id, covers_off: b.covers === "off" ? ["Lantern Song"] : [] }); }
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
+    return real(u, o); };
+  const o = {};
+  const box = () => document.querySelector(".hd-back.is-on:not(.is-leaving)");
+  const answer = async (which) => { const b = await until(() => box() && box().querySelector(".hd-yes"), 3000); if (!b) return null;
+    const said = { text: box().textContent, yes: box().querySelector(".hd-yes").textContent,
+      alt: (box().querySelector(".hd-alt") || {}).textContent || "", no: (box().querySelector(".hd-no") || {}).textContent || "" };
+    box().querySelector(which).click(); await wait(300); return said; };
+  try {
+    document.querySelector('.topbar [data-tab="artist"]').click();
+    await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(500);
+    const lookWas = (document.querySelector("#arBar [data-look].is-on") || { dataset: { look: "runs" } }).dataset.look;
+    document.querySelector('#arBar [data-look="gallery"]').click(); await wait(400);
+    const thumb = (n) => [...document.querySelectorAll("#arRuns .ar-gpic")].find((f) => f.querySelector("img") && f.querySelector("img").src.indexOf("0" + n + "-1x1") >= 0);
+    // a cover: asked; Leave it sends «keep»
+    thumb(1).querySelector(".ar-thumb").click(); await wait(300);
+    document.querySelector('#arStage [data-stage="aside"]').click();
+    o.ask1 = await answer(".hd-alt"); await until(() => sent.some((x) => x[0] === "aside"), 2000);
+    o.keep = (sent.filter((x) => x[0] === "aside")[0] || [])[1];
+    // asked again: Take it off too sends «off», said
+    document.querySelector('#arStage [data-stage="aside"]').click();
+    o.ask2 = await answer(".hd-yes"); await until(() => sent.filter((x) => x[0] === "aside").length >= 2, 2000); await wait(300);
+    o.off = (sent.filter((x) => x[0] === "aside")[1] || [])[1];
+    o.said = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /The cover taken off/.test(t)).length;
+    // Cancel: nothing sent
+    document.querySelector('#arStage [data-stage="aside"]').click();
+    await answer(".hd-no"); await wait(200);
+    o.cancelSent = sent.filter((x) => x[0] === "aside").length;
+    // no cover: no question, sent at once
+    thumb(2).querySelector(".ar-thumb").click(); await wait(300);
+    document.querySelector('#arStage [data-stage="aside"]').click(); await wait(400);
+    o.noAsk = !box() && sent.filter((x) => x[0] === "aside").length === 3 && (sent.filter((x) => x[0] === "aside")[2] || [])[1].covers === "keep";
+    // the run's trash: the run's question with the cover's, «off» sent
+    document.querySelector('#arBar [data-look="runs"]').click(); await wait(400);
+    const tr = document.querySelector('#arRuns .ar-run[data-id="' + R + '"] [data-act="trash"]');
+    if (tr) { tr.click(); o.runAsk = await answer(".hd-yes"); await until(() => sent.some((x) => x[0] === "trash"), 2000); o.runSent = (sent.filter((x) => x[0] === "trash")[0] || [])[1]; }
+    else o.runAsk = "no trash button";
+    const lb = document.querySelector('#arBar [data-look="' + lookWas + '"]'); if (lb) lb.click(); await wait(200);
+  } catch (e) { o.err = String(e && e.stack || e); }
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
+  return o; })()`);
+check("a cover to the trash: the question names its take, «Take it off too», «Leave it», «Cancel»; Leave it sends «keep», Take it off too «off» (said), Cancel nothing",
+  !cv72.err && cv72.ask1 && /Lantern Song/.test(cv72.ask1.text) && cv72.ask1.yes === "Take it off too" && cv72.ask1.alt === "Leave it" && cv72.ask1.no === "Cancel" &&
+  cv72.keep && cv72.keep.covers === "keep" && cv72.off && cv72.off.covers === "off" && cv72.said === 1 && cv72.cancelSent === 2,
+  JSON.stringify({ err: cv72.err, ask1: cv72.ask1, keep: cv72.keep, off: cv72.off, said: cv72.said, cancelSent: cv72.cancelSent }));
+check("  a picture no take has as its cover: no question; a run whose picture is a cover: its question asks about the cover too, «off» sent with it",
+  cv72.noAsk && cv72.runAsk && /to the trash\\?/.test(cv72.runAsk.text) && /Lantern Song/.test(cv72.runAsk.text) && cv72.runSent && cv72.runSent.covers === "off",
+  JSON.stringify({ noAsk: cv72.noAsk, runAsk: cv72.runAsk, runSent: cv72.runSent }));
+
+// HERESY 1169 · 1374 (Viktor 11.10.2026: «когда я навожу мышку на волну трека в полноформатном трейлере, выводить спектральный граф
+// полной длиной на весь трек, а тултип с отрезком текста выше… Максимум анализа по волне»)
+section("the wave's scope: the whole take's spectrogram over the full player after a moment on the wave, the card above it, the moment under the pointer read; a quick click only goes there; Esc, the switch, the Artist");
+await ev(`(() => { const a = document.getElementById("audio"); a.pause(); a.muted = true; document.querySelector('#tabs [data-tab="create"]').click();
+  if (!document.getElementById("playbarTitle").textContent || document.getElementById("playbarTitle").textContent === "Nothing loaded") {
+    const c = [...document.querySelectorAll("#libList .take[data-name]:not(.is-running-row)")].find((x) => !/nachtzug/.test(x.dataset.name)); if (c) c.click(); }
+  return true; })()`);
+await waitFor(`isFinite(document.getElementById("audio").duration) && document.getElementById("audio").duration > 2`, 6000, 100);
+// a spectrum of its own for the take in the player (the lab's layout, HSP1): a tone at 1008 Hz in the first half, at 4008 Hz in the second
+const sc74 = await ev(`(() => {
+  const a = document.getElementById("audio"), d = a.duration, sr = 48000, hop = 2048, B = 1025, F = Math.floor(d * sr / hop) + 2;
+  const hb = new TextEncoder().encode(JSON.stringify({ sr, frames: F, bins: B, hop, seconds: d, peak: 0.5, db0: -120, dbStep: 0.5, welchBins: 2049, welchN: 4096 }));
+  const buf = new ArrayBuffer(8 + hb.length + F * B + 4 * 2049 + 24), dv = new DataView(buf);
+  [72, 83, 80, 49].forEach((c, i) => dv.setUint8(i, c)); dv.setUint32(4, hb.length, true); new Uint8Array(buf, 8, hb.length).set(hb);
+  const q = new Uint8Array(buf, 8 + hb.length, F * B); q.fill(40);
+  for (let f = 0; f < F; f++) { const k = f < F / 2 ? 43 : 171; q[f * B + k] = 200; q[f * B + k - 1] = 180; q[f * B + k + 1] = 180; }
+  for (let i = 0; i < 2049; i++) dv.setFloat32(8 + hb.length + F * B + 4 * i, -60, true);
+  [-40, -30, -20, -25, -35, -50].forEach((v, i) => dv.setFloat32(8 + hb.length + F * B + 4 * 2049 + 4 * i, v, true));
+  const url = a.getAttribute("src"), real = window.fetch, asked = [];
+  window.HeresySpectrum.drop(url);
+  window.__fetch74 = real;
+  window.fetch = (u, o) => { if (String(u).startsWith("/lab/spectrum")) { asked.push(String(u)); return Promise.resolve(new Response(buf.slice(0), { status: 200, headers: { "Content-Length": String(buf.byteLength) } })); } return real(u, o); };
+  window.__asked74 = asked;
+  window.__was74 = ["yue2.waveScope", "yue2.waveScopeScale"].map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.waveScope"); localStorage.removeItem("yue2.waveScopeScale");
+  window.ruachWaveSections([{ t: 0, name: "Intro", lines: [], rows: [] },
+    { t: d * 0.4, name: "Chorus", lines: ["Sing it loud", "Sing it again"], rows: [{ k: 0, start: d * 0.4, end: d * 0.55 }, { k: 1, start: d * 0.55, end: d * 0.7 }] }], true);
+  const w = document.getElementById("wave"), r = w.getBoundingClientRect();
+  return { d, url, x25: Math.round(r.left + r.width * 0.25), x50: Math.round(r.left + r.width * 0.5), x75: Math.round(r.left + r.width * 0.75), y: Math.round(r.top + r.height / 2),
+    top: Math.round(r.top), left: r.left + w.clientLeft, width: w.clientWidth };
+})()`);
+const scopeNow = `(() => { const s = document.getElementById("waveScope"); if (!s || s.hidden) return { shown: false };
+  const b = s.getBoundingClientRect(), bar = document.getElementById("playbar").getBoundingClientRect(), r = s.querySelector(".ws-read"), p = document.querySelector(".wave-pop");
+  return { shown: true, left: b.left, width: b.width, top: b.top, bottom: b.bottom, h: b.height, bar: bar.top, ih: window.innerHeight,
+    stats: s.querySelector(".ws-stats").textContent, say: s.querySelector(".ws-say").textContent, read: r && !r.hidden ? r.innerText.replace(/\\s+/g, " ") : "",
+    card: p && !p.hidden ? { bottom: p.getBoundingClientRect().bottom, head: p.querySelector(".wave-pop-head").textContent, slice: !!p.querySelector(".wave-pop-spec") } : null,
+    asked: window.__asked74.length }; })()`;
+// on the wave a moment: the scope comes up
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x25, y: sc74.y });
+await sleep(120);
+const sc74early = await ev(scopeNow);
+await waitFor(`(() => { const s = document.getElementById("waveScope"); return !!s && !s.hidden && !!s.querySelector(".ws-stats").textContent; })()`, 4000, 50);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x25 + 1, y: sc74.y });
+await sleep(150);
+const sc74a = await ev(scopeNow);
+check("a moment on the full player's wave brings the scope up (not at once): on the player's top edge, as wide as the wave's drawing, about a third of the window high, the take measured once (its lab spectrum)",
+  !sc74early.shown && sc74a.shown && Math.abs(sc74a.bottom - sc74a.bar) <= 1 && Math.abs(sc74a.left - sc74.left) <= 1 && Math.abs(sc74a.width - sc74.width) <= 1 &&
+  Math.abs(sc74a.h - Math.min(Math.max(220, sc74a.ih * 0.36), sc74a.bar - 12)) <= 1 && sc74a.asked === 1 && !sc74a.say && /peak −6\.0 dBFS/.test(sc74a.stats) && /RMS −18\.0 dBFS/.test(sc74a.stats),
+  JSON.stringify({ early: sc74early.shown, sc74a, want: sc74 }));
+check("  under the pointer on the wave: its time, the moment's RMS and centroid, its loudest frequency and note (the tone of the first half, 1008 Hz: B5)",
+  /^\d+:\d\d\.\d/.test(sc74a.read) && /RMS −\d+\.\d dBFS/.test(sc74a.read) && /centroid /.test(sc74a.read) && /loudest 1\.01 kHz B5 \+35¢/.test(sc74a.read), sc74a.read);
+// up into the picture, at the tone's height: the frequency there, its note, its level
+const sc74y = await ev(`(() => { const s = document.getElementById("waveScope").getBoundingClientRect(), h = s.height, lane = Math.round(Math.min(90, Math.max(36, h * 0.16))), spec = h - lane;
+  return Math.round(s.top + spec * (1 - Math.log(1007.8 / 20) / Math.log(24000 / 20))); })()`);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x25, y: sc74.top - 4 });
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x25, y: sc74y });
+await sleep(150);
+const sc74b = await ev(scopeNow);
+const here74 = (/here (\d+(?:\.\d+)?) (k?Hz) (\S+) [+−]?\d*¢? ?(−?\d+\.\d) dB/.exec(sc74b.read) || []);
+const hz74 = here74[2] === "kHz" ? parseFloat(here74[1]) * 1000 : parseFloat(here74[1]);
+check("  up into the picture (through the strip between): still up, the card over it; at the tone's height the frequency there within a pixel's step of 1008 Hz, its level near the tone's",
+  sc74b.shown && hz74 > 960 && hz74 < 1060 && parseFloat(String(here74[4] || "-99").replace("−", "-")) > -36 && !!sc74b.card && sc74b.card.bottom <= sc74b.top + 1 && !sc74b.card.slice,
+  JSON.stringify({ read: sc74b.read, here74, card: sc74b.card, top: sc74b.top }));
+// the second half: the other tone; a click in the picture goes there as on the wave
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x75, y: sc74y });
+await sleep(120);
+const sc74c = await ev(scopeNow);
+await send("Input.dispatchMouseEvent", { type: "mousePressed", x: sc74.x75, y: sc74y, button: "left", clickCount: 1 });
+await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: sc74.x75, y: sc74y, button: "left", clickCount: 1 });
+await sleep(150);
+const sc74t = await ev(`document.getElementById("audio").currentTime`);
+check("  three quarters in: the second tone loudest (4008 Hz, B7); a click in the picture goes there as a click on the wave would",
+  /loudest 4\.01 kHz B7/.test(sc74c.read) && Math.abs(sc74t - sc74.d * 0.75) < sc74.d * 0.02, JSON.stringify({ read: sc74c.read, t: sc74t, d: sc74.d }));
+// the scale: linear, kept; back to log
+const sc74s = await ev(`(async () => { const s = document.getElementById("waveScope"), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  s.querySelector('[data-scale="lin"]').click(); await wait(150);
+  const o = { kept: localStorage.getItem("yue2.waveScopeScale"), on: s.querySelector('[data-scale="lin"]').classList.contains("is-on"), shown: !s.hidden };
+  s.querySelector('[data-scale="log"]').click(); await wait(100);
+  o.back = localStorage.getItem("yue2.waveScopeScale"); return o; })()`);
+// out: it goes, and the card with it
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 6, y: 6 });
+await sleep(150);
+const sc74d = await ev(scopeNow);
+check("  Linear and Log in its head (kept in this browser); the pointer out of the wave and the scope: both the scope and the card go",
+  sc74s.kept === "lin" && sc74s.on && sc74s.shown && sc74s.back === null && !sc74d.shown && !sc74d.card, JSON.stringify({ sc74s, out: sc74d }));
+// a quick click on the wave only goes there; moving on brings the scope; Esc takes it down until the pointer leaves the wave
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x50, y: sc74.y });
+await send("Input.dispatchMouseEvent", { type: "mousePressed", x: sc74.x50, y: sc74.y, button: "left", clickCount: 1 });
+await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: sc74.x50, y: sc74.y, button: "left", clickCount: 1 });
+await sleep(450);
+const sc74e = await ev(scopeNow);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x50 + 12, y: sc74.y });
+await sleep(450);
+const sc74f = await ev(scopeNow);
+await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+await sleep(100);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x50 + 24, y: sc74.y });
+await sleep(450);
+const sc74g = await ev(scopeNow);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 6, y: 6 });
+await sleep(60);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x50, y: sc74.y });
+await sleep(450);
+const sc74h = await ev(scopeNow);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 6, y: 6 });
+await sleep(100);
+check("  a click on the wave before the scope came only goes there (no scope); the pointer moving on brings it; Esc takes it down until the pointer leaves the wave; back on the wave, it comes again",
+  !sc74e.shown && sc74f.shown && !sc74g.shown && sc74h.shown, JSON.stringify({ e: sc74e.shown, f: sc74f.shown, g: sc74g.shown, h: sc74h.shown }));
+// the player's switch; the Artist (its player one row) never shows it
+const sc74i = await ev(`(() => { const b = document.getElementById("waveScopeBtn"); b.click(); return { pressed: b.getAttribute("aria-pressed"), kept: localStorage.getItem("yue2.waveScope") }; })()`);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74.x50, y: sc74.y });
+await sleep(450);
+const sc74j = await ev(scopeNow);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 6, y: 6 });
+const sc74k = await ev(`(async () => { const b = document.getElementById("waveScopeBtn"); b.click(); const o = { pressed: b.getAttribute("aria-pressed"), kept: localStorage.getItem("yue2.waveScope") };
+  document.querySelector('.topbar [data-tab="artist"]').click(); await new Promise((r) => setTimeout(r, 500));
+  const r = document.getElementById("wave").getBoundingClientRect(); o.x = Math.round(r.left + r.width / 2); o.y = Math.round(r.top + r.height / 2); return o; })()`);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: sc74k.x, y: sc74k.y });
+await sleep(450);
+const sc74l = await ev(scopeNow);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 6, y: 6 });
+await ev(`(async () => { document.querySelector('.topbar [data-tab="create"]').click(); await new Promise((r) => setTimeout(r, 300));
+  window.fetch = window.__fetch74; window.HeresySpectrum.drop(${JSON.stringify(sc74.url)}); window.ruachWaveSections([], true);
+  ["yue2.waveScope", "yue2.waveScopeScale"].forEach((k, i) => { const v = window.__was74[i]; if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); });
+  const a = document.getElementById("audio"); a.pause(); a.currentTime = 0; return true; })()`);
+check("  the player's switch turns it off (kept in this browser; the wave alone then) and on again; in the Artist, its player one row, the wave brings none",
+  sc74i.pressed === "false" && sc74i.kept === "off" && !sc74j.shown && sc74k.pressed === "true" && sc74k.kept === null && !sc74l.shown, JSON.stringify({ sc74i, j: sc74j.shown, sc74k, l: sc74l.shown }));
+
+// HERESY 1169 · 1375 (Viktor 11.10.2026: «Не сохраняется выбор моделей у Художника после F5. Ничего не сохранилось кроме PROMPT поля»)
+section("the Artist's painter kept over a reload: a word typed before the lab's list of painters came leaves the painter kept alone; the list restores it; a pick by the user is kept; «From the take» and the takes' counts in Russian");
+const ak75 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, A = window.HeresyArtist, $ = (id) => document.getElementById(id);
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt"], was = keys.map((k) => localStorage.getItem(k)), tabWas = document.body.dataset.tab || "create";
+  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+    { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "krea2", ready: true },
+    { key: "qwen2512-q6", label: "Qwen-Image 2512 · Q6", need_mb: 20000, family: "qwen-image-2512", ready: true, lightning: true }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const o = {};
+  // the page as a reload leaves it: the painter kept in the browser, the list not come yet (the choice holds Krea alone)
+  localStorage.setItem("yue2.arPainter", "qwen2512-q6");
+  A.forget();
+  $("arPainter").innerHTML = '<option value="krea2-q4">Krea 2 Muse · Q4</option><option value="krea2-q8">Krea 2 Muse · Q8</option>';
+  $("arPainter").value = "krea2-q4";
+  $("arPrompt").value = "A lighthouse at dawn"; $("arPrompt").dispatchEvent(new Event("input"));
+  o.typed = localStorage.getItem("yue2.arPainter");
+  await A.painters(); await wait(150);
+  o.restored = $("arPainter").value;
+  $("arPainter").value = "krea2-q8"; $("arPainter").dispatchEvent(new Event("change")); await wait(100);
+  o.picked = localStorage.getItem("yue2.arPainter");
+  // Russian: the button and the takes' counts
+  const L = window.RuachI18n, langWas = localStorage.getItem("yue2.lang");
+  L.set("ru"); await wait(500);
+  o.btn = $("arFromTake").textContent.trim();
+  o.counts = [L.t("12 takes"), L.t("1 take"), L.t("From the take")];
+  L.set(langWas || "en"); if (langWas === null) localStorage.removeItem("yue2.lang");
+  await wait(300);
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await A.painters().catch(() => {}); 
+  document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
+  return o; })()`);
+check("a word typed in the prompt before the lab's list of painters came leaves the painter kept in the browser (Qwen Q6) alone; the list restores it; the user's own pick is kept",
+  ak75.typed === "qwen2512-q6" && ak75.restored === "qwen2512-q6" && ak75.picked === "krea2-q8", JSON.stringify(ak75));
+check("  in Russian «From the take» is «Из семпла» (it was «Семплов: From the»); 12 takes «12 семплов», 1 take «1 семпл»",
+  ak75.btn === "Из семпла" && ak75.counts[0] === "12 семплов" && ak75.counts[1] === "1 семпл" && ak75.counts[2] === "Из семпла", JSON.stringify({ btn: ak75.btn, counts: ak75.counts }));
+
+// HERESY 1169 · 1377 (Viktor 11.10.2026: «У нас уже миллион пространств в Студии. В контекстном меню нужна прокрутка»)
+section("a menu of a hundred rows: no taller than the window, scrolled inside, its ticked row in sight; scrolling it closes its submenu, not the menu");
+const mn77 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), M = window.HeresyMenu;
+  const many = Array.from({ length: 100 }, (_, i) => ({ label: "Workspace " + i, checked: i === 70, action: () => {} }));
+  M.open(200, 200, [{ label: "Workspaces", items: many }, { label: "Other", action: () => {} }]);
+  await wait(100);
+  const first = document.querySelector(".hm-menu .hm-item"); first.dispatchEvent(new MouseEvent("mouseover", { bubbles: true })); await wait(400);
+  const menus = [...document.querySelectorAll(".hm-menu")], sub = menus[1], o = { menus: menus.length };
+  if (sub) {
+    const b = sub.getBoundingClientRect(), tick = sub.querySelector('[aria-checked="true"]').getBoundingClientRect();
+    o.fits = b.top >= 0 && b.bottom <= innerHeight; o.scrolls = sub.scrollHeight > sub.clientHeight; o.tickSeen = tick.top >= b.top && tick.bottom <= b.bottom;
+    sub.scrollTop = sub.scrollHeight; await wait(150);
+    o.subAfterScroll = document.querySelectorAll(".hm-menu").length;
+  }
+  M.close(); return o; })()`);
+check("a submenu of a hundred workspaces stays inside the window and scrolls inside itself, its ticked one in sight; scrolling it keeps the menu open",
+  mn77.menus === 2 && mn77.fits && mn77.scrolls && mn77.tickSeen && mn77.subAfterScroll === 2, JSON.stringify(mn77));
+
+// HERESY 1169 · 1379 (Chinese back on 11.10.2026, and French, Portuguese, German and Japanese for 2.0.0)
+section("the five new languages: offered in the menu, each with its own <html lang>, its rooms and the Artist's room by name; a choice of words translated, a name left alone");
+const ln79 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), L = window.RuachI18n, o = {};
+  o.langs = L.langs.map((l) => l.code).join(" ");
+  const room = () => [...document.querySelectorAll(".topbar [data-tab]")].map((b) => b.textContent.trim()).join("|");
+  for (const c of ["fr", "pt", "de", "ja", "zh"]) { L.set(c); await wait(250); o[c] = document.documentElement.lang + " " + room(); }
+  L.set("fr"); await wait(200);
+  const p = window.HeresyDialog.choose("Test 1379", [{ label: "Every week", value: "w", words: true }, { label: "Every week", value: "n" }], { cancel: "Ask me later" });
+  await wait(300);
+  const labels = [...document.querySelectorAll(".hd-back.is-on .hd-item-label")].map((e) => e.textContent);
+  o.words = labels[0]; o.name = labels[1];
+  const no = document.querySelector(".hd-back.is-on .hd-no"); if (no) no.click(); await p;
+  L.set("en"); await wait(200);
+  return o; })()`);
+check("twelve languages, the new five last: fr pt de ja zh", ln79.langs === "en ru uk be el es it fr pt de ja zh", ln79.langs);
+check("  each its <html lang> (pt-BR, zh-CN for numbers, plurals and the CJK font) and its rooms, the Artist's by its own name",
+  ln79.fr === "fr Créateur|Écrivain|Affineur|Peintre|Bibliothécaire|Entraîneur" && ln79.pt === "pt-BR Criador|Escritor|Lapidador|Pintor|Bibliotecário|Treinador" &&
+  ln79.de === "de Schöpfer|Schreiber|Veredler|Maler|Bibliothekar|Trainer" && ln79.ja === "ja クリエイター|ライター|仕上げ師|絵師|司書|トレーナー" &&
+  ln79.zh === "zh-CN 创作室|写作室|精修室|画室|资料馆|训练室", JSON.stringify(ln79));
+check("  a choice of words (the updates question's) in the page's language, a name left as it is (1379b)", ln79.words === "Chaque semaine" && ln79.name === "Every week",
+  JSON.stringify({ words: ln79.words, name: ln79.name }));
+
+// HERESY 1169 · 1380: the Artist's stage and its sampling line follow the page's language (found by the 1379 probe)
+section("the Artist's stage and its steps line in the page's language after a change, and back to English whole");
+const ar80 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), L = window.RuachI18n, o = {};
+  document.querySelector('.topbar [data-tab="artist"]').click(); await wait(700);
+  const read = () => (((document.getElementById("arStageIn") || document.getElementById("arStage") || {}).innerText || "") + " | " +
+    ((document.getElementById("arSampSay") || {}).textContent || "")).replace(/\\s+/g, " ").trim();
+  L.set("en"); await wait(300); o.en = read();
+  L.set("fr"); await wait(300); o.fr = read();
+  L.set("de"); await wait(300); o.de = read();
+  L.set("en"); await wait(300); o.back = read();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  return o; })()`);
+check("the stage and the steps line change with the language and come back to English whole", ar80.en.length > 3 && ar80.fr !== ar80.en && ar80.de !== ar80.fr &&
+  ar80.de !== ar80.en && ar80.back === ar80.en, JSON.stringify(ar80).slice(0, 600));
+
+// HERESY 1169 · 1381: the log's Artist view named by the room, as the bar's tab (the walker gave it the Trainer's performer, «Артист»)
+section("the log's Artist view carries the room's name in the page's language, as the bar's tab");
+const lv81 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), L = window.RuachI18n, o = {};
+  const read = () => document.getElementById("tabArtist").textContent.trim() + " = " + document.getElementById("logViewArtist").textContent.trim();
+  for (const l of ["ru", "be", "fr", "ja", "en"]) { L.set(l); await wait(300); o[l] = read(); }
+  return o; })()`);
+check("Художник, Мастак, Peintre, 絵師 and Artist on both", lv81.ru === "Художник = Художник" && lv81.be === "Мастак = Мастак" &&
+  lv81.fr === "Peintre = Peintre" && lv81.ja === "絵師 = 絵師" && lv81.en === "Artist = Artist", JSON.stringify(lv81));
+
+// HERESY 1169 · 1384: the Artist's second pass (Viktor's ComfyUI workflow: «1st Pass + 2x Upscale», then the second KSampler)
+section("the second pass: on a painted picture (not an upscale, not Qwen-Image 2.1), ×1.5 and ×2 with how much it may change; the draw it asks; the run's line");
+const sp84 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000, ID = "20261012-010000-1384", UP = "20261012-010100-1384", Q21 = "20261012-010200-1384";
+  const pic = (s) => ({ file: "01-16x9-s" + s + ".png", thumb: "thumbs/01-16x9-s" + s + ".jpg", shape: "16:9", w: 1920, h: 1080, seed: s, kept: true });
+  const done = { id: ID, prompt: "A lighthouse at dusk", shapes: ["16:9"], seed: 841, count: 1, painter: "qwen2512-fp8", model: "BASE QW2512 fp8_e4m3fn.safetensors", created: now, status: "done", of: 1,
+                 pictures: [pic(841)], sampling: { steps: 40, sampler: "res_2s", schedule: "beta", lightning: 0 }, loras: [{ id: "qwen/A.safetensors", weight: 0.4, mb: 300 }] };
+  const up = { id: UP, kind: "upscale", prompt: "A lighthouse at dusk", shapes: ["16:9"], seed: 841, count: 1, painter: "upscale", created: now - 5, status: "done", of: 1, pictures: [pic(842)] };
+  const q21 = { id: Q21, prompt: "A lighthouse at dusk", shapes: ["16:9"], seed: 843, count: 1, painter: "qwen21", created: now - 9, status: "done", of: 1, pictures: [pic(843)] };
+  let runs = [done, up, q21];
+  window.fetch = (u, o) => { u = String(u);
+    const body = o && o.body ? JSON.parse(o.body) : null;
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(body); return json(Object.assign({}, body, { id: "20261012-010300-1384", status: "queued", of: 1, pictures: [], created: now, ref: "ref.png", ref_resample: "nearest" }), 202); }
+    return real(u, o); };
+  const saved = Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).map((k) => [k, localStorage.getItem(k)]);
+  const o = {};
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const lookWas = (document.querySelector("#arBar [data-look].is-on") || { dataset: {} }).dataset.look || "runs";
+  await window.HeresyArtist.reload(); await wait(100);
+  document.querySelector('#arBar [data-look="runs"]').click(); await wait(100);
+  const pick = async (id) => { document.querySelector('.ar-run[data-id="' + id + '"] .ar-thumb').click(); await wait(150); };
+  await pick(UP); o.upHas = !!document.querySelector('#arStage [data-stage="second"]');
+  await pick(Q21); o.q21Has = !!document.querySelector('#arStage [data-stage="second"]');
+  await pick(ID); o.has = !!document.querySelector('#arStage [data-stage="second"]');
+  document.querySelector('#arStage [data-stage="second"]').click(); await wait(120);
+  o.row = [...document.querySelectorAll("#arStage [data-sp]")].map((b) => b.textContent + " " + b.dataset.tip);
+  const r = document.getElementById("arSpStr");
+  o.str0 = r && r.value;
+  if (r) { r.value = "0.35"; r.dispatchEvent(new Event("input", { bubbles: true })); }
+  o.out = (document.getElementById("arSpStrOut") || {}).textContent; o.kept = localStorage.getItem("yue2.arSpStr");
+  document.querySelector('#arStage [data-sp="2"]').click();
+  await until(() => sent.length, 3000);
+  o.body = sent[0] || null;
+  // the new run's line says it
+  runs = [Object.assign({}, done, { id: "20261012-010400-1384", scale: 2, ref: "ref.png", strength: 0.35, pictures: [Object.assign(pic(841), { w: 3840, h: 2160 })] }), done, up, q21];
+  await window.HeresyArtist.reload(); await wait(120);
+  await pick("20261012-010400-1384");
+  o.meta = (document.querySelector("#arStage .ar-stage-meta") || {}).textContent || "";
+  window.fetch = real;
+  saved.forEach((kv) => localStorage.setItem(kv[0], kv[1]));
+  if (!saved.some((kv) => kv[0] === "yue2.arSpStr")) localStorage.removeItem("yue2.arSpStr");
+  await window.HeresyArtist.reload(); await wait(60);
+  const lk = document.querySelector('#arBar [data-look="' + lookWas + '"]'); if (lk) lk.click();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  return o; })()`);
+check("Second pass… on a painted picture, none on an upscale or on Qwen-Image 2.1's", sp84.has === true && sp84.upHas === false && sp84.q21Has === false, JSON.stringify(sp84).slice(0, 300));
+check("  its row: ×1.5 and ×2 with the sizes they make, how much it may change at 0.50 first, kept when moved", sp84.row.length === 2 && /1920×1080 → 2880×1620/.test(sp84.row[0]) &&
+  /1920×1080 → 3840×2160/.test(sp84.row[1]) && sp84.str0 === "0.5" && sp84.out === "0.35" && sp84.kept === "0.35", JSON.stringify([sp84.row, sp84.str0, sp84.out, sp84.kept]));
+const b84 = sp84.body || {};
+check("  ×2 asks a draw of the run's own painter, fine-tune, adapters, prompt and seed, from that picture at 2 times, at the strength asked", b84.scale === 2 && b84.strength === 0.35 &&
+  b84.painter === "qwen2512-fp8" && b84.model === "BASE QW2512 fp8_e4m3fn.safetensors" && b84.seed === 841 && JSON.stringify(b84.shapes) === '["16:9"]' && b84.count === 1 &&
+  JSON.stringify(b84.ref) === '{"id":"20261012-010000-1384","file":"01-16x9-s841.png"}' && JSON.stringify(b84.loras) === '[{"id":"qwen/A.safetensors","weight":0.4}]' && b84.prompt === "A lighthouse at dusk",
+  JSON.stringify(b84));
+check("  the run's line says «second pass ×2»", /second pass ×2/.test(sp84.meta), sp84.meta.slice(0, 300));
+
+// HERESY 1169 · 1385 (Viktor 12.10.2026: «InjectLatentNoise можно именно в reference изображения на силу перерисовки»)
+section("the extra noise: 0.6 first in the second pass and as moved; under the reference 0 first, sent when moved; a run's line says it");
+const xn85 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000, ID = "20261012-120000-1385";
+  const pic = { file: "01-1x1-s851.png", thumb: "thumbs/01-1x1-s851.jpg", shape: "1:1", w: 1280, h: 1280, seed: 851, kept: true };
+  const done = { id: ID, prompt: "A lighthouse at dusk", shapes: ["1:1"], seed: 851, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [pic] };
+  let runs = [done];
+  window.fetch = (u, o) => { u = String(u);
+    const body = o && o.body ? JSON.parse(o.body) : null;
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(body); return json(Object.assign({}, body, { id: "20261012-12010" + sent.length + "-1385", status: "queued", of: 1, pictures: [], created: now }), 202); }
+    return real(u, o); };
+  const saved = Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).map((k) => [k, localStorage.getItem(k)]);
+  ["yue2.arSpNoise", "yue2.arRefNoise"].forEach((k) => localStorage.removeItem(k));
+  const $ = (id) => document.getElementById(id), o = {};
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  const lookWas = (document.querySelector("#arBar [data-look].is-on") || { dataset: {} }).dataset.look || "runs";
+  await window.HeresyArtist.reload(); await wait(100);
+  document.querySelector('#arBar [data-look="runs"]').click(); await wait(100);
+  document.querySelector('.ar-run[data-id="' + ID + '"] .ar-thumb').click(); await wait(150);
+  if (!document.querySelector("#arStage .ar-sp-row")) document.querySelector('#arStage [data-stage="second"]').click(); await wait(120);
+  o.sp0 = $("arSpNoise") && $("arSpNoise").value;
+  document.querySelector('#arStage [data-sp="2"]').click(); await until(() => sent.length >= 1, 3000);
+  o.b1 = sent[0] ? sent[0].inject : "none";
+  await window.HeresyArtist.reload(); await wait(150);
+  await until(() => document.querySelector('.ar-run[data-id="' + ID + '"] .ar-thumb'), 3000);
+  document.querySelector('.ar-run[data-id="' + ID + '"] .ar-thumb').click(); await wait(150);
+  if (!document.querySelector("#arStage .ar-sp-row")) document.querySelector('#arStage [data-stage="second"]').click(); await wait(120);
+  $("arSpNoise").value = "0.3"; $("arSpNoise").dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
+  o.spOut = ($("arSpNoiseOut") || {}).textContent;
+  document.querySelector('#arStage [data-sp="1.5"]').click(); await until(() => sent.length >= 2, 3000);
+  o.b2 = sent[1] ? sent[1].inject : "none";
+  await window.HeresyArtist.reload(); await wait(150);
+  await until(() => document.querySelector('.ar-run[data-id="' + ID + '"] .ar-thumb'), 3000);
+  document.querySelector('.ar-run[data-id="' + ID + '"] .ar-thumb').click(); await wait(150);
+  // the reference in the form: 0 first and not sent; moved, sent
+  document.querySelector('#arStage [data-stage="ref"]').click(); await wait(150);
+  o.ref0 = $("arRefNoise").value + " " + $("arRefNoiseSay").textContent;
+  $("arPrompt").value = "A lighthouse at dusk"; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true })); await wait(80);
+  $("arDraw").click(); await until(() => sent.length >= 3, 3000);
+  o.b3 = sent[2] ? ("inject" in sent[2] ? sent[2].inject : "absent") + " " + JSON.stringify(sent[2].ref) : "none";
+  $("arRefNoise").value = "0.45"; $("arRefNoise").dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
+  o.refSay = $("arRefNoiseSay").textContent; o.refKept = localStorage.getItem("yue2.arRefNoise");
+  await wait(400); $("arDraw").click(); await until(() => sent.length >= 4, 3000);
+  o.b4 = sent[3] ? sent[3].inject : "none";
+  runs = [Object.assign({}, done, { id: "20261012-120500-1385", ref: "ref.png", strength: 0.5, inject: 0.45 }), done];
+  await window.HeresyArtist.reload(); await wait(120);
+  document.querySelector('.ar-run[data-id="20261012-120500-1385"] .ar-thumb').click(); await wait(150);
+  o.meta = (document.querySelector("#arStage .ar-stage-meta") || {}).textContent || "";
+  if ($("arRefX")) $("arRefX").click();
+  window.fetch = real;
+  ["yue2.arSpNoise", "yue2.arRefNoise"].forEach((k) => localStorage.removeItem(k));
+  saved.forEach((kv) => localStorage.setItem(kv[0], kv[1]));
+  await window.HeresyArtist.reload(); await wait(60);
+  const lk = document.querySelector('#arBar [data-look="' + lookWas + '"]'); if (lk) lk.click();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  return o; })()`);
+check("the second pass sends 0.6 of extra noise first, 0.3 when moved there", xn85.sp0 === "0.6" && xn85.b1 === 0.6 && xn85.spOut === "0.30" && xn85.b2 === 0.3, JSON.stringify(xn85).slice(0, 400));
+check("  under the reference: 0 first and not sent; 0.45 when moved, kept and sent", xn85.ref0 === "0 0.00" && /^absent /.test(xn85.b3) && xn85.refSay === "0.45" && xn85.refKept === "0.45" && xn85.b4 === 0.45,
+  JSON.stringify([xn85.ref0, xn85.b3, xn85.refSay, xn85.refKept, xn85.b4]));
+check("  the run's line says its extra noise, 0.45", /0\.45/.test(xn85.meta.replace(/0\.50/, "")), xn85.meta.slice(0, 300));
+
+// HERESY 1169 · 1387: regional prompts in the Artist's form
+section("Regions: up to three, a place and words each, kept; sent with the draw (a region without words is not), not for Qwen-Image 2.1; Again sends the run's own; its line says how many");
+const rg87 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000, ID = "20261012-140000-1387";
+  const REG = [{ prompt: "a red fox", box: [0, 0, 0.5, 1] }];
+  const done = { id: ID, prompt: "Two animals in the snow", shapes: ["16:9"], seed: 871, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, regions: REG,
+                 pictures: [{ file: "01-16x9-s871.png", thumb: "thumbs/01-16x9-s871.jpg", shape: "16:9", w: 1920, h: 1080, seed: 871, kept: true }] };
+  let runs = [done];
+  window.fetch = (u, o) => { u = String(u);
+    const body = o && o.body ? JSON.parse(o.body) : null;
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(body); return json(Object.assign({}, body, { id: "20261012-14010" + sent.length + "-1387", status: "queued", of: 1, pictures: [], created: now }), 202); }
+    return real(u, o); };
+  const saved = Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).map((k) => [k, localStorage.getItem(k)]);
+  localStorage.removeItem("yue2.arRegions");
+  const $ = (id) => document.getElementById(id), o = {};
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.reload(); await wait(100);
+  const painterWas = $("arPainter").value;
+  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
+  $("arRegions").open = true;
+  for (let i = 0; i < 4; i++) { $("arRegAdd").click(); await wait(40); }
+  o.rows = document.querySelectorAll("#arRegList [data-ri]").length; o.addOff = $("arRegAdd").disabled;
+  const rows = () => [...document.querySelectorAll("#arRegList [data-ri]")];
+  const set = (el, v, ev) => { el.value = v; el.dispatchEvent(new Event(ev, { bubbles: true })); };
+  set(rows()[0].querySelector("[data-rw]"), "a red fox", "input");
+  set(rows()[1].querySelector("[data-rp]"), "tr", "change"); await wait(30);
+  o.map = rows()[1].querySelector(".ar-reg-map i").getAttribute("style");
+  set(rows()[1].querySelector("[data-rw]"), "a white owl", "input");
+  rows()[2].querySelector("[data-rx]").click(); await wait(40);
+  o.after = rows().length; o.say = $("arRegSay").textContent;
+  o.kept = JSON.parse(localStorage.getItem("yue2.arRegions") || "[]");
+  $("arPrompt").value = "Two animals in the snow"; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true })); await wait(80);
+  $("arDraw").click(); await until(() => sent.length >= 1, 3000);
+  o.b1 = sent[0] ? sent[0].regions : "none";
+  // Qwen-Image 2.1: the note, nothing sent
+  let opt = [...$("arPainter").options].find((x) => x.value === "qwen21"), made = false;
+  if (!opt) { opt = new Option("Qwen-Image 2.1", "qwen21"); $("arPainter").add(opt); made = true; }   // the mock's list has none
+  if (opt) { opt.disabled = false; $("arPainter").value = "qwen21"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
+    o.note = !$("arRegNote").hidden; await wait(500); $("arDraw").click(); await until(() => sent.length >= 2, 3000); o.b2 = sent[1] ? ("regions" in sent[1] ? "sent" : "absent") : "none"; }
+  // Again: the run's own
+  await window.HeresyArtist.reload(); await wait(120);
+  document.querySelector('.ar-run[data-id="' + ID + '"] .ar-thumb').click(); await wait(150);
+  o.meta = (document.querySelector("#arStage .ar-stage-meta") || {}).textContent || "";
+  const ag = document.querySelector('.ar-run[data-id="' + ID + '"] [data-act="again"]');
+  if (ag) { ag.click(); await until(() => sent.length >= 3, 3000); o.b3 = sent[sent.length - 1] ? sent[sent.length - 1].regions : "none"; }
+  window.fetch = real;
+  if (made) opt.remove();
+  localStorage.removeItem("yue2.arRegions");
+  saved.forEach((kv) => localStorage.setItem(kv[0], kv[1]));
+  $("arPainter").value = painterWas; $("arPainter").dispatchEvent(new Event("change", { bubbles: true }));
+  await window.HeresyArtist.reload(); await wait(60);
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  return o; })()`);
+check("three regions at most, the fourth not added; a place moves its map; one removed; the count said; kept", rg87.rows === 3 && rg87.addOff === true && /left:50%;top:0%;width:50%;height:50%/.test(rg87.map) &&
+  rg87.after === 2 && rg87.say === "2" && rg87.kept.length === 2 && rg87.kept[1].place === "tr", JSON.stringify(rg87).slice(0, 400));
+check("  the draw sends the two with words, their boxes from their places", JSON.stringify(rg87.b1) === '[{"prompt":"a red fox","box":[0,0,0.5,1]},{"prompt":"a white owl","box":[0.5,0,0.5,0.5]}]', JSON.stringify(rg87.b1));
+check("  Qwen-Image 2.1: the note shown and no regions sent", rg87.note === true && rg87.b2 === "absent", JSON.stringify([rg87.note, rg87.b2]));
+check("  the run's line says its regions; Again sends the run's own", /1/.test(rg87.meta) && JSON.stringify(rg87.b3) === '[{"prompt":"a red fox","box":[0,0,0.5,1]}]', JSON.stringify([rg87.meta.slice(0, 200), rg87.b3]));
+
+// HERESY 1169 · 1388: a reference edited by words, or for its style alone (Qwen-Image 2.1)
+section("Use it: to paint from (as before), to edit by words or for its style (Qwen-Image 2.1, off without it); the draw it asks; the run's line; Again");
+const ra88 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const now = Date.now() / 1000, ID = "20261012-150000-1388", ST = "20261012-150100-1388";
+  const pic = (f, s) => ({ file: f, thumb: "thumbs/" + f.replace(".png", ".jpg"), shape: "1:1", w: 1280, h: 1280, seed: s, kept: true });
+  const done = { id: ID, prompt: "A lighthouse", shapes: ["1:1"], seed: 881, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [pic("01-1x1-s881.png", 881)] };
+  const styled = { id: ST, prompt: "A fox at night", shapes: ["1:1"], seed: 882, count: 1, painter: "qwen21", created: now, status: "done", of: 1, ref: "ref.png", ref_as: "style", strength: 0.6, pictures: [pic("01-1x1-s882.png", 882)] };
+  let runs = [done, styled];
+  window.fetch = (u, o) => { u = String(u);
+    const body = o && o.body ? JSON.parse(o.body) : null;
+    if (u.startsWith("/lab/artist/runs")) return json({ runs });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(body); return json(Object.assign({}, body, { id: "20261012-15020" + sent.length + "-1388", status: "queued", of: 1, pictures: [], created: now }), 202); }
+    return real(u, o); };
+  const saved = Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).map((k) => [k, localStorage.getItem(k)]);
+  ["yue2.arRefAs", "yue2.arRegions"].forEach((k) => localStorage.removeItem(k));
+  const $ = (id) => document.getElementById(id), o = {};
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.reload(); await wait(100);
+  const painterWas = $("arPainter").value;
+  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
+  let opt = [...$("arPainter").options].find((x) => x.value === "qwen21"), made = false, wasOff = opt ? opt.disabled : null;
+  if (opt) opt.disabled = true;                          // without it first, whichever list the page has
+  $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(80);
+  o.offWithout = [...$("arRefAs").options].filter((x) => x.value).map((x) => x.disabled).join();
+  if (!opt) { opt = new Option("Qwen-Image 2.1", "qwen21"); $("arPainter").add(opt); made = true; }
+  opt.disabled = false;
+  $("arPainter").value = "qwen21"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(80);
+  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(80);
+  o.onWith = [...$("arRefAs").options].filter((x) => x.value).map((x) => x.disabled).join();
+  document.querySelector('#arBar [data-look="runs"]').click(); await wait(100);
+  document.querySelector('.ar-run[data-id="' + ID + '"] .ar-thumb').click(); await wait(150);
+  document.querySelector('#arStage [data-stage="ref"]').click(); await wait(150);
+  $("arRefAs").value = "style"; $("arRefAs").dispatchEvent(new Event("change", { bubbles: true })); await wait(60);
+  o.dim = $("arRef").classList.contains("is-q21"); o.kept = localStorage.getItem("yue2.arRefAs");
+  $("arPrompt").value = "A fox at night"; $("arPrompt").dispatchEvent(new Event("input", { bubbles: true })); await wait(400);
+  $("arDraw").click(); await until(() => sent.length >= 1, 3000);
+  const b = sent[0] || {};
+  o.b1 = { painter: b.painter, ref_as: b.ref_as, ref: b.ref, model: "model" in b, sampling: "sampling" in b, loras: "loras" in b, mask: "mask" in b };
+  await window.HeresyArtist.reload(); await wait(120);
+  document.querySelector('.ar-run[data-id="' + ST + '"] .ar-thumb').click(); await wait(150);
+  o.meta = (document.querySelector("#arStage .ar-stage-meta") || {}).textContent || "";
+  const ag = document.querySelector('.ar-run[data-id="' + ST + '"] [data-act="again"]');
+  if (ag) { ag.click(); await until(() => sent.length >= 2, 3000); const c = sent[sent.length - 1] || {}; o.b2 = { painter: c.painter, ref_as: c.ref_as, ref: c.ref }; }
+  if ($("arRefX")) $("arRefX").click();
+  window.fetch = real;
+  if (made) opt.remove(); else opt.disabled = wasOff;
+  ["yue2.arRefAs", "yue2.arRegions"].forEach((k) => localStorage.removeItem(k));
+  saved.forEach((kv) => localStorage.setItem(kv[0], kv[1]));
+  $("arRefAs").value = ""; $("arRefAs").dispatchEvent(new Event("change", { bubbles: true }));
+  $("arPainter").value = painterWas; $("arPainter").dispatchEvent(new Event("change", { bubbles: true }));
+  await window.HeresyArtist.reload(); await wait(60);
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  return o; })()`);
+check("without Qwen-Image 2.1 its two uses are off, with it on", ra88.offWithout === "true,true" && ra88.onWith === "false,false", JSON.stringify(ra88).slice(0, 400));
+check("  its style: the strength dimmed, kept; the draw goes to Qwen-Image 2.1 with the picture, without the form's model, sampling, adapters or mask",
+  ra88.dim === true && ra88.kept === "style" && ra88.b1.painter === "qwen21" && ra88.b1.ref_as === "style" && JSON.stringify(ra88.b1.ref) === '{"id":"20261012-150000-1388","file":"01-1x1-s881.png"}' &&
+  !ra88.b1.model && !ra88.b1.sampling && !ra88.b1.loras && !ra88.b1.mask, JSON.stringify(ra88.b1));
+check("  the run's line says «in the picture's style»; Again asks the same", /in the picture's style/.test(ra88.meta) && ra88.b2 && ra88.b2.ref_as === "style" && ra88.b2.painter === "qwen21" &&
+  JSON.stringify(ra88.b2.ref) === '{"id":"20261012-150100-1388","file":"ref.png"}', JSON.stringify([ra88.meta.slice(0, 200), ra88.b2]));
+
+// HERESY 1169 · 1390: the Writer's Max tokens (32K), an empty answer and a failure said over the page, the answer brought to the top
+section("the Writer: «Max tokens» at 32K; an empty answer and a failure said in the studio's dialog; an answer scrolled to the window's top");
+await ev(`(() => { const u = document.getElementById("chatUrl"); u.value = location.origin + "/fakechat-loaded/v1"; u.dispatchEvent(new Event("change")); return true; })()`);
+await waitFor(`document.getElementById("chatState").textContent === "ready"`, 5000);
+const wr90 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, $ = (id) => document.getElementById(id), o = {};
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const W = window.HeresyWriter, was = W.openDoc; W.openDoc = () => null;
+  const p = $("assistProvider"); p.value = "engine"; p.dispatchEvent(new Event("change"));
+  o.label = $("assistMax").closest("label").querySelector(".label").textContent; o.dflt = $("assistMax").getAttribute("value");
+  let mode = "empty";
+  window.fetch = (u, opt) => { u = String(u);
+    if (/fakechat-loaded\\/v1\\/chat\\/completions/.test(u) && mode === "empty")
+      return Promise.resolve(new Response(JSON.stringify({ choices: [{ message: { content: "" }, finish_reason: "stop" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    if (/fakechat-loaded\\/v1\\/chat\\/completions/.test(u) && mode === "fail")
+      return Promise.resolve(new Response("upstream down", { status: 500 }));
+    return real(u, opt); };
+  const dialog = () => { const d = document.querySelector(".hd-back.is-on:not(.is-leaving)"); return d ? d.textContent : null; };
+  const close = async () => { const b = document.querySelector(".hd-back.is-on .hd-yes"); if (b) b.click(); await wait(300); };
+  $("assistBrief").value = "a road song"; $("assistBtn").click();
+  o.empty = await until(dialog, 6000); await close();
+  mode = "fail"; await until(() => !$("assistBtn").disabled, 6000);
+  $("assistBtn").click();
+  o.fail = await until(dialog, 9000); await close();
+  mode = "real"; await until(() => !$("assistBtn").disabled, 6000);
+  window.scrollTo(0, 0); document.querySelectorAll(".drawer, .view").forEach((x) => { x.scrollTop = 0; });
+  $("assistBtn").click();
+  await until(() => !$("assistDraft").classList.contains("is-hidden"), 8000); await wait(900);
+  const r = $("assistDraft").getBoundingClientRect(); o.top = Math.round(r.top); o.dialogAfter = dialog();
+  window.fetch = real; W.openDoc = was;
+  return o; })()`);
+check("«Max tokens» at 32 768 by default", wr90.label === "Max tokens" && wr90.dflt === "32768", JSON.stringify(wr90).slice(0, 300));
+check("  an empty answer is said over the page", !!wr90.empty && /empty answer: nothing came back/.test(wr90.empty), String(wr90.empty).slice(0, 200));
+check("  a failure is said over the page", !!wr90.fail && /The writer failed/.test(wr90.fail), String(wr90.fail).slice(0, 200));
+check("  an answer that came is brought to the window's top, no dialog", wr90.top >= -10 && wr90.top <= 140 && !wr90.dialogAfter, JSON.stringify({ top: wr90.top, d: wr90.dialogAfter }));
+await ev(`localStorage.removeItem("yue2.chatUrl"); true`);
 // ================================================================== fonts
 section("fonts (Engine page)");
 const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"), kids = [...s.children], hr = kids.findIndex(k => k.tagName === "HR");
@@ -5311,6 +6971,10 @@ const pickFont = (id, value) => ev(`(() => { const s = document.getElementById("
 const fontsNow = `(() => ({ body: getComputedStyle(document.body).fontFamily, head: getComputedStyle(document.querySelector(".col-head h2")).fontFamily,
   saved: localStorage.getItem("yue2.fonts") }))()`;
 const sysFont = fontMenu.system[0];
+// 2.0.0-rc5 night: the Default fonts dialog answered just before, its reset can repaint the menus after the pick (a live run picked a
+// font the menu no longer had: "", sans-serif): wait until the menu holds the font, then pick, then read
+await waitFor(`[...document.getElementById("fontSans").options].some((o) => o.value === ${JSON.stringify(sysFont)}) && !document.querySelector(".hd-back")`, 4000, 50);
+await sleep(300);
 await pickFont("fontSans", sysFont);
 const f1 = await ev(fontsNow);
 check("  picking a system font for the text changes the text and the headings follow it; this browser keeps it", f1.body.includes(sysFont) && f1.head.includes(sysFont) &&
@@ -5565,7 +7229,7 @@ const layout = await ev(`(() => { const h = document.getElementById("takeActions
     copies: document.querySelectorAll("#metaGrid .seed-copy").length, oldDelete: document.querySelectorAll("#deleteTake").length }; })()`);
 check("header: Favourite, Rename and Delete (red) as icons on the title line", layout.icons === "true,true,true" && layout.danger && layout.oldDelete === 1, JSON.stringify(layout));
 check("  the line under the title says age, length and render time, no seed", /long/.test(layout.eyebrow) && /made in/.test(layout.eyebrow) && !/seed/i.test(layout.eyebrow), layout.eyebrow);
-check("  the buttons sit in Download, Make again, Refiner and Files", layout.groups === "Download,Make again,Refiner,Files", layout.groups);   // the Refiner room's door
+check("  the buttons sit in Download, Make again, Edit, Refiner and Files", layout.groups === "Download,Make again,Edit,Refiner,Files", layout.groups);   // HERESY 1356: Edit   // the Refiner room's door
 check("  the details are one compact card: Song | Sound | Shape, Sliders | LoRAs, then the seeds with copy buttons", layout.sections === "Song,Sound,Shape,Sliders,LoRAs" && layout.copies === 2, layout.sections);
 check("song info: model from the library entry, no precision row on a new song", meta?.Model === "BF16" && !("Precision" in meta) && !("Score" in meta));
 const shapesMeta = await waitFor(`(() => { const m = Object.fromEntries([...document.querySelectorAll("#metaGrid [data-field]")].map(d => [d.dataset.field, d.dataset.value]));
@@ -5743,8 +7407,8 @@ const fre = await waitFor(`(() => { const b = document.querySelector(".hd-back.i
 await ev(`(() => { const b = document.querySelector(".hd-back.is-on .hd-pick"); b.querySelector(".hd-clear").click(); b.querySelector('[data-logic="and"]').click(); b.querySelector(".hd-yes").click(); return true; })()`);
 await sleep(300);
 const foff = await ev(`({ hidden: document.getElementById("collFilterN").hidden, on: document.getElementById("collFilterBtn").classList.contains("is-on"), kept: localStorage.getItem("yue2.collLogic") })`);
-check("the Librarian's filter is a button at the end of the search row (the search 240–320 px wide, the old row gone): its window holds three groups (made · marked · has), thirteen ticks each with an icon and a count of the place, the logic AND · OR · NOR and Show; two ticked with OR show «2 · OR» on the button and come back ticked; Clear and Show take them off",
-  fsearch.min === "240px" && fsearch.max === "320px" && fsearch.last && fsearch.barGone && fsearch.icon && !!fpop && fpop.groups === "Made|Marked|Has" && fpop.items === 13 && fpop.icons && fpop.counts &&
+check("the Librarian's filter is a button at the end of the search row (the search 240–320 px wide, the old row gone): its window holds three groups (made · marked · has), fourteen ticks each with an icon (1368: the protected) and a count of the place, the logic AND · OR · NOR and Show; two ticked with OR show «2 · OR» on the button and come back ticked; Clear and Show take them off",
+  fsearch.min === "240px" && fsearch.max === "320px" && fsearch.last && fsearch.barGone && fsearch.icon && !!fpop && fpop.groups === "Made|Marked|Has" && fpop.items === 14 && fpop.icons && fpop.counts &&
   fpop.logics === "and*,or,nor" && /^Show \d+$/.test(fpop.yes) && fon.badge === "2 · OR" && fon.on && !!fre && fre.gen && fre.liked && fre.logic === "or" && foff.hidden && !foff.on && foff.kept === null,
   JSON.stringify({ fre, foff, fon, fpop, fsearch }));
 // the mock keeps no collection: two real takes of the Creator's column stand in for the Librarian's checked ones, the menu opened as the Librarian opens it

@@ -1,0 +1,428 @@
+From 6353622ddb56e38a372ad735034c21a66c96fd61 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 17:20:20 -0600
+Subject: [PATCH 1349/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201367:=20a=20?=
+ =?UTF-8?q?picture=20protected:=20the=20shield=20on=20the=20stage,=20in=20?=
+ =?UTF-8?q?the=20gallery,=20over=20the=20page,=20in=20its=20menu=20and=20o?=
+ =?UTF-8?q?n=20the=20picked=20bar;=20Trash=20leaves=20it=20in=20the=20room?=
+ =?UTF-8?q?=20and=20says=20so;=20the=20gallery's=20filter=20of=20the=20pro?=
+ =?UTF-8?q?tected?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 11.10.2026: «добавь Protect опцию для картинок. Такое нельзя ни в коем случае упустить в корзину, а потом ненароком в бездну». The stage's Trash is off for a protected picture; a picked bar's shield protects them all (when all are, it takes the protection off); the runs' pictures marked; the words in the six languages (21 rows, the lab's among them). Suite (suite-1367.part).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 12 +++++++
+ tools/console/heresy-artist.js  | 61 +++++++++++++++++++++++++++++----
+ tools/console/heresy-i18n-be.js | 24 +++++++++++++
+ tools/console/heresy-i18n-el.js | 24 +++++++++++++
+ tools/console/heresy-i18n-es.js | 24 +++++++++++++
+ tools/console/heresy-i18n-it.js | 24 +++++++++++++
+ tools/console/heresy-i18n-ru.js | 24 +++++++++++++
+ tools/console/heresy-i18n-uk.js | 24 +++++++++++++
+ 8 files changed, 210 insertions(+), 7 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index cf37740..7ad129b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5327,3 +5327,15 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
+ .ar-left .ar-sampling > summary { min-width: 0; }
+ .ar-left .ar-knobs > .ar-painter, .ar-left .ar-knobs > .ar-model { flex: 1 1 100%; min-width: 0; }   /* 1345: each a row of its own */
+ .ar-left .ar-painter select, .ar-left .ar-model select { min-width: 0; width: 100%; }
++/* HERESY 1367: the shield of a protected picture */
++.ar-prot-ico { width: 17px; height: 17px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
++.ar-prot-ico.is-on { fill: #6fb38a; stroke: #6fb38a; }
++.ar-fshape .ar-prot-ico.is-on { fill: currentColor; stroke: currentColor; }
++.ar-prot { position: absolute; top: 6px; right: 36px; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%;
++  background: color-mix(in srgb, #000 45%, transparent); color: #fff; cursor: pointer; opacity: 0; transition: opacity .12s; }
++.ar-gpic:hover .ar-prot, .ar-prot:focus-visible, .ar-prot.is-on { opacity: 1; }
++.ar-prot.is-on, .ar-vprot.is-on { color: #6fb38a; }
++.ar-pic.is-protected { position: relative; }
++.ar-pic.is-protected::after { content: ""; position: absolute; top: 6px; left: 6px; width: 18px; height: 18px; pointer-events: none;
++  background: #6fb38a; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l7.8 2.9v6.1c0 4.9-3.3 8.6-7.8 9.8-4.5-1.2-7.8-4.9-7.8-9.8V5.5z'/%3E%3C/svg%3E") center / contain no-repeat;
++  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l7.8 2.9v6.1c0 4.9-3.3 8.6-7.8 9.8-4.5-1.2-7.8-4.9-7.8-9.8V5.5z'/%3E%3C/svg%3E") center / contain no-repeat; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 4c624e6..7def370 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -25,12 +25,16 @@
+     live: "yue2.arLive", look: "yue2.arLook", filter: "yue2.arFilter", size: "yue2.arSize" };
+   // HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта? Изучи интерфейс и функционал InvokeAI»):
+   // the pictures as runs or as one gallery (InvokeAI's grid: every picture, the newest first, filtered, starred, three sizes)
+-  var FILTERS = [["all", "All"], ["1:1", "1:1"], ["16:9", "16:9"], ["9:16", "9:16"], ["star", "Starred"]];
++  var FILTERS = [["all", "All"], ["1:1", "1:1"], ["16:9", "16:9"], ["9:16", "9:16"], ["star", "Starred"], ["protected", "Protected"]];   // HERESY 1367
+   // HERESY 1321 (Viktor 10.10.2026: «aspect ratios… SVG КВАДРАТ, горизонтальное и вертикальное расположение прямоугольника»; «звезда наша SVG»)
+   function shapeIcon(id) {
+     var r = { "1:1": [4, 4, 12, 12], "16:9": [1.5, 5.5, 17, 9], "9:16": [5.5, 1.5, 9, 17] }[id] || [4, 4, 12, 12];
+     return '<svg class="ar-shape-ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '" rx="1.6"/></svg>';
+   }
++  // HERESY 1367: a shield, filled when the picture is protected
++  function shieldIcon(on) {
++    return '<svg class="ar-prot-ico' + (on ? " is-on" : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l7.8 2.9v6.1c0 4.9-3.3 8.6-7.8 9.8-4.5-1.2-7.8-4.9-7.8-9.8V5.5z"/></svg>';
++  }
+   function starIcon(on) {
+     return '<svg class="ar-star-ico' + (on ? " is-on" : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.9l2.75 5.95 6.5.75-4.85 4.45 1.3 6.45L12 17.3l-5.7 3.2 1.3-6.45L2.75 9.6l6.5-.75z"/></svg>';
+   }
+@@ -729,7 +733,7 @@
+     state.runs.forEach(function (r) {
+       (r.pictures || []).forEach(function (p) {
+         if (!p.kept) return;
+-        if (state.filter === "star" ? !p.star : state.filter !== "all" && p.shape !== state.filter) return;
++        if (state.filter === "star" ? !p.star : state.filter === "protected" ? !p.protected : state.filter !== "all" && p.shape !== state.filter) return;   // HERESY 1367
+         out.push({ r: r, p: p });
+       });
+     });
+@@ -748,14 +752,17 @@
+   function paintGallery() {
+     var list = items(), h = (SIZES.filter(function (z) { return z[0] === state.size; })[0] || SIZES[1])[2];
+     // HERESY 1284 (Viktor: «всё свалено в кучу. Сделай честный тайлинг»): even tiles, square for every shape, the shape's own for one
+-    var one = state.filter !== "all" && state.filter !== "star" ? shapeOf(state.filter) : null, cell = one ? one.w + " / " + one.h : "1 / 1";
+-    $("arRuns").innerHTML = !list.length ? '<p class="ar-empty">' + esc(tr(state.filter === "star" ? "No starred picture yet: ☆ on a picture stars it." : "No picture of this shape yet.")) + "</p>"
++    var one = state.filter !== "all" && state.filter !== "star" && state.filter !== "protected" ? shapeOf(state.filter) : null, cell = one ? one.w + " / " + one.h : "1 / 1";
++    $("arRuns").innerHTML = !list.length ? '<p class="ar-empty">' + esc(tr(state.filter === "star" ? "No starred picture yet: ☆ on a picture stars it." :
++      state.filter === "protected" ? "No protected picture yet: the shield on a picture protects it." : "No picture of this shape yet.")) + "</p>"
+       : '<div class="ar-gallery" style="--g-h:' + h + "px;--cell:" + cell + '">' + list.map(function (it, i) {
+         var sh = shapeOf(it.p.shape);
+         return '<figure class="ar-gpic" style="--ar:' + sh.w + "/" + sh.h + '" data-g="' + i + '">' +
+           '<button type="button" class="ar-thumb" data-act="gview" aria-label="' + esc(tr("Look at it")) + '" data-tip="' + esc(it.p.shape + " · " + tr("seed") + " " + it.p.seed + " · " + when(it.r.created)) + '">' +
+           '<img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(it.r.id, it.p.thumb || it.p.file)) + '" /></button>' +
+-          '<button type="button" class="ar-star' + (it.p.star ? " is-on" : "") + '" data-act="gstar" aria-pressed="' + (it.p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(it.p.star) + "</button></figure>";   // HERESY 1321
++          '<button type="button" class="ar-star' + (it.p.star ? " is-on" : "") + '" data-act="gstar" aria-pressed="' + (it.p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(it.p.star) + "</button>" +   // HERESY 1321
++          '<button type="button" class="ar-prot' + (it.p.protected ? " is-on" : "") + '" data-act="gprot" aria-pressed="' + (it.p.protected ? "true" : "false") + '" aria-label="' + esc(tr(it.p.protected ? "Take its protection off" : "Protect it")) +
++          '" data-tip="' + esc(tr(it.p.protected ? PROT_ON : PROT_OFF)) + '">' + shieldIcon(it.p.protected) + "</button></figure>";   // HERESY 1367
+       }).join("") + "</div>";
+   }
+   function paintRuns() { paintRunsList(); paintStage(); paintPicked(); }   // HERESY 1271: the library, then the stage; 1321: the picked
+@@ -1059,19 +1066,43 @@
+     Array.prototype.forEach.call(document.querySelectorAll("#arRuns .ar-pic[data-i]"), function (f) {
+       var run = runOf(f), p = run && run.pictures[+f.dataset.i];
+       f.classList.toggle("is-picked", !!(p && state.picked[run.id + "|" + p.file]));
++      f.classList.toggle("is-protected", !!(p && p.protected));   // HERESY 1367
+     });
+     var bar = $("arPicked"), n = Object.keys(state.picked).length;
+     if (!bar) return;
+     bar.hidden = !n;
+     bar.innerHTML = n ? '<span class="ar-picked-n">' + n + " " + esc(tr(n === 1 ? "picked" : "picked")) + "</span>" +
+       '<button type="button" class="chip ar-fshape" data-pick="star" aria-label="' + esc(tr("Star them")) + '" data-tip="' + esc(tr("Star them all")) + '">' + starIcon(true) + "</button>" +
++      '<button type="button" class="chip ar-fshape" data-pick="protect" aria-label="' + esc(tr("Protect them")) + '" data-tip="' + esc(tr("Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)")) + '">' + shieldIcon(true) + "</button>" +   // HERESY 1367
+       '<button type="button" class="chip" data-pick="up" data-tip="' + esc(tr("Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept")) + '">' + esc(tr("Upscale\u2026")) + "</button>" +   // HERESY 1364
+       '<button type="button" class="chip" data-pick="aside" data-tip="' + esc(tr("Put them in the trash: the library's Trash brings them back")) + '">' + esc(tr("Trash")) + "</button>" +
+       '<button type="button" class="pb-btn" data-pick="clear" aria-label="' + esc(tr("Let them go (Esc)")) + '">\u2715</button>' : "";
+   }
++  // HERESY 1367 (Viktor 11.10.2026: «добавь Protect опцию для картинок. Такое нельзя ни в коем случае упустить в корзину, а потом ненароком в
++  // бездну»): a picture protected never goes to the trash and is never deleted for good (the lab refuses both); one in the trash comes back
++  var PROT_ON = "Protected: it never goes to the trash and is never deleted; the shield takes the protection off";
++  var PROT_OFF = "Protect it: never to the trash, never deleted for good";
++  function protectPics(list, on) {
++    return api("/artist/protect", { items: list, protect: on }).then(function (d) {
++      var n = (d.done || []).length;
++      toast(on ? tr(countOf(n, "picture", "pictures") + " protected: never to the trash, never deleted") : tr("Protection taken off: " + countOf(n, "picture", "pictures")), on ? "good" : "");
++      state.stageKey = "";
++      return load().then(function () { if (state.look === "trash") paintTrash(); });
++    }).catch(function (e) { toast(tr("Not protected: " + e.message), "bad"); });
++  }
++  function protectPicked() {
++    var list = pickedList(), all = list.length && list.every(function (x) { var p = picOf(x); return p && p.protected; });
++    return protectPics(list, !all).then(clearPicked);
++  }
++  function picOf(x) {
++    var r = state.runs.filter(function (q) { return q.id === x.id; })[0];
++    return r ? (r.pictures || []).filter(function (p) { return p.file === x.file; })[0] : null;
++  }
+   function asidePics(items, back) {
+     return api("/artist/aside", { items: items, aside: !back }).then(function (d) {
+-      var n = (d.done || []).length;
++      var n = (d.done || []).length, kept = (d.kept || []).length;   // HERESY 1367: the protected stay
++      if (!back && kept) toast(tr(countOf(kept, "protected picture", "protected pictures") + " stayed in the room: take the protection off first"), n ? "" : "bad");
++      if (!back && !n && kept) { clearPicked(); return; }
+       toast(back ? tr("Back in the room: " + countOf(n, "picture", "pictures"))   // HERESY 1339: one sentence
+         : tr(countOf(n, "picture", "pictures") + " in the trash: the library's Trash brings them back" + ((d.trashed || []).length ? " · a run with nothing left went with them" : "")));
+       clearPicked();
+@@ -1111,6 +1142,7 @@
+   window.HeresyArtistUp = { picked: upPicked, menu: upPickedMenu, tta: ttaOn,   // for the checks
+     pick: function (list) { state.picked = {}; (list || []).forEach(function (x) { state.picked[x.id + "|" + x.file] = true; }); paintPicked(); } };
+   window.HeresyArtistKeys = { parse: keysParse, text: keysText };   // HERESY 1365: for the checks
++  window.HeresyArtistProtect = { pics: protectPics, picked: protectPicked };   // HERESY 1367: for the checks
+   function starPicked() {
+     var all = pickedList(), go = function (i) {
+       if (i >= all.length) { clearPicked(); return load(); }
+@@ -1199,7 +1231,9 @@
+         '" download="' + esc("ruach-artist-" + r.id + "-" + p.file) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
+         '<button type="button" class="btn ghost small" data-stage="view" data-tip="' + esc(tr("Over the whole page: ← → walk the pictures, Esc closes")) + '">' + esc(tr("Over the page")) + "</button>" +
+         '<button type="button" class="pb-btn ar-vstar' + (p.star ? " is-on" : "") + '" data-stage="star" aria-pressed="' + (p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(p.star) + "</button>" +
+-        '<button type="button" class="btn ghost small ar-aside" data-stage="aside" data-tip="' + esc(tr("This picture to the trash: the library's Trash brings it back")) + '">' + esc(tr("Trash")) + "</button>" +   // HERESY 1321
++        '<button type="button" class="pb-btn ar-vprot' + (p.protected ? " is-on" : "") + '" data-stage="protect" aria-pressed="' + (p.protected ? "true" : "false") + '" aria-label="' + esc(tr(p.protected ? "Take its protection off" : "Protect it")) +   // HERESY 1367
++          '" data-tip="' + esc(tr(p.protected ? PROT_ON : PROT_OFF)) + '">' + shieldIcon(p.protected) + "</button>" +
++        '<button type="button" class="btn ghost small ar-aside" data-stage="aside"' + (p.protected ? " disabled" : "") + ' data-tip="' + esc(tr(p.protected ? "Protected: it never goes to the trash" : "This picture to the trash: the library's Trash brings it back")) + '">' + esc(tr("Trash")) + "</button>" +   // HERESY 1321; 1367
+         '<button type="button" class="btn ghost small' + (state.upOpen ? " is-on" : "") + '" data-stage="upscale" data-tip="' + esc(tr("Make it 2K or 4K (its long side 2560 or 3840) with an upscaler from artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN…): a run of its own")) + '">' + esc(tr("Upscale…")) + "</button>" +
+         (state.upOpen ? upRow(p) : "");   // HERESY 1322; 1332: by the picture's size
+     }
+@@ -1362,6 +1396,8 @@
+       { label: tr("Upscale"), items: [up("2k"), up("4k")] },
+       { sep: true },
+       { label: p.star ? tr("Unstar") : tr("Star it"), action: function () { var b = vw && vw.querySelector(".ar-vstar"); if (b) b.click(); else star(r, p, !p.star); } },
++      { label: p.protected ? tr("Take its protection off") : tr("Protect it"), hint: tr(p.protected ? PROT_ON : PROT_OFF),   // HERESY 1367
++        action: function () { var b = vw && vw.querySelector(".ar-vprot"); if (b) b.click(); else protectPics([{ id: r.id, file: p.file }], !p.protected); } },
+       { label: picked ? tr("Let go") : tr("Pick it"), hint: tr("The picked are starred or put in the trash together from the bar over the library"), action: function () { togglePick(it, false, items()); } },
+       { label: tr("Copy the prompt"), disabled: !r.prompt, action: function () { copyText(r.prompt || "", tr("The prompt copied")); } },
+       { label: tr("Copy the seed") + " · " + p.seed, raw: true, action: function () { copyText(p.seed, tr("The seed copied: " + p.seed)); } },
+@@ -1403,6 +1439,7 @@
+     var act = b.dataset.stage;
+     if (act === "view") { var w = stageList(it); view(w.list, w.at); }
+     else if (act === "star") star(it.r, it.p, !it.p.star);
++    else if (act === "protect") protectPics([{ id: it.r.id, file: it.p.file }], !it.p.protected);   // HERESY 1367
+     else if (act === "cover") cover(it.r, it.p);
+     else if (act === "form") { fillForm({ prompt: it.r.prompt, shapes: [it.p.shape], count: 1, seed: it.p.seed, painter: it.r.kind === "upscale" ? null : it.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
+     else if (act === "ref") setRef({ id: it.r.id, file: it.p.file, url: fileUrl(it.r.id, it.p.thumb || it.p.file) });   // HERESY 1305
+@@ -1494,6 +1531,7 @@
+       '<img class="art-img" alt="" draggable="false" />' +
+       '<figcaption class="art-cap"><span class="art-title" translate="no"></span><span class="art-count"></span>' +
+       '<button type="button" class="pb-btn ar-vstar" aria-label="' + esc(tr("Star it")) + '"></button>' +
++      '<button type="button" class="pb-btn ar-vprot" aria-label="' + esc(tr("Protect it")) + '"></button>' +   // HERESY 1367
+       '<button type="button" class="btn small ghost ar-vform" data-tip="' + esc(tr("Its prompt, seed and shape back in the form")) + '">' + esc(tr("To the form")) + "</button>" +
+       '<button type="button" class="btn small ar-cover" data-act="cover"></button>' +
+       '<a class="pb-btn art-dl" aria-label="' + esc(tr("Download the picture")) + '" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '">' +
+@@ -1524,6 +1562,11 @@
+       st.textContent = p.star ? "★" : "☆";
+       st.classList.toggle("is-on", !!p.star);
+       st.dataset.tip = p.star ? tr("Starred: ☆ takes the star off") : tr("Star it: the gallery's ★ shows the starred");
++      var pt = back.querySelector(".ar-vprot");               // HERESY 1367
++      pt.innerHTML = shieldIcon(p.protected);
++      pt.classList.toggle("is-on", !!p.protected);
++      pt.setAttribute("aria-label", tr(p.protected ? "Take its protection off" : "Protect it"));
++      pt.dataset.tip = tr(p.protected ? PROT_ON : PROT_OFF);
+       var img = back.querySelector(".art-img"), full = fileUrl(r.id, p.file), small = p.thumb ? fileUrl(r.id, p.thumb) : "";
+       if (coming) { coming.onload = coming.onerror = null; coming.src = ""; }   // the step before's full picture: let go
+       var tok = ++loads, pre = coming = new Image();
+@@ -1569,6 +1612,7 @@
+       if (e.target.closest(".art-next")) return step(1);
+       if (e.target.closest(".ar-cover")) { var it = list[i]; close(); cover(it.r, it.p); }
+       if (e.target.closest(".ar-vstar")) { var s0 = list[i]; star(s0.r, s0.p, !s0.p.star).then(paint); }
++      if (e.target.closest(".ar-vprot")) { var v0 = list[i]; protectPics([{ id: v0.r.id, file: v0.p.file }], !v0.p.protected).then(paint); }   // HERESY 1367
+       if (e.target.closest(".ar-vform")) { var f0 = list[i]; close(); fillForm({ prompt: f0.r.prompt, shapes: [f0.p.shape], count: 1, seed: f0.p.seed, painter: f0.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
+     });
+     state.view = { close: close };
+@@ -2198,6 +2242,7 @@
+         if (g.dataset.act === "gview" && state.cmpA) compare(state.cmpA, list[at]);   // HERESY 1308: the other of two compared
+         else if (g.dataset.act === "gview") pick(list[at], true);    // HERESY 1271: to the stage; 1340: again, back to the run
+         else if (g.dataset.act === "gstar") star(list[at].r, list[at].p, !list[at].p.star);
++        else if (g.dataset.act === "gprot") protectPics([{ id: list[at].r.id, file: list[at].p.file }], !list[at].p.protected);   // HERESY 1367
+         return;
+       }
+       var b = e.target.closest("[data-act]"), r = b && runOf(b);
+@@ -2227,6 +2272,7 @@
+       var sh = SHAPES.filter(function (s) { return s.id === f[0]; })[0];
+       if (sh) return '<button type="button" class="chip ar-fshape" data-filter="' + f[0] + '" aria-label="' + esc(sh.label) + '" data-tip="' + esc(sh.label) + '">' + shapeIcon(f[0]) + "</button>";
+       if (f[0] === "star") return '<button type="button" class="chip ar-fshape" data-filter="star" aria-label="' + esc(tr("Starred")) + '" data-tip="' + esc(tr("The starred pictures")) + '">' + starIcon(true) + "</button>";
++      if (f[0] === "protected") return '<button type="button" class="chip ar-fshape" data-filter="protected" aria-label="' + esc(tr("Protected")) + '" data-tip="' + esc(tr("The protected pictures")) + '">' + shieldIcon(true) + "</button>";   // HERESY 1367
+       return '<button type="button" class="chip" data-filter="' + f[0] + '">' + esc(tr(f[1])) + "</button>";
+     }).join("");
+     $("arSizes").innerHTML = SIZES.map(function (z) { return '<button type="button" class="chip" data-size="' + z[0] + '" aria-label="' + esc(tr("Size") + " " + z[1]) + '">' + z[1] + "</button>"; }).join("");
+@@ -2241,6 +2287,7 @@
+         else if (b.dataset.pick === "aside") asidePics(pickedList());
+         else if (b.dataset.pick === "up") upPickedMenu(b);   // HERESY 1364
+         else if (b.dataset.pick === "star") starPicked();
++        else if (b.dataset.pick === "protect") protectPicked();   // HERESY 1367
+       });
+       document.addEventListener("keydown", function (e) {
+         if (e.key === "Escape" && Object.keys(state.picked).length && !$("view-artist").classList.contains("is-hidden")) { clearPicked(); }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index e215595..5c91434 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -4858,3 +4858,27 @@ RuachI18n.add("be", {
+ "an adapter's keyframe: a share of the steps (0 to 1) and a multiplier (0 to 2)": "ключавы кадр адаптара: доля крокаў (ад 0 да 1) і множнік (ад 0 да 2)",
+ "an adapter's keyframe: a share of the steps from 0 to 1, a multiplier from 0 to 2": "ключавы кадр адаптара: доля крокаў ад 0 да 1, множнік ад 0 да 2"
+ });
++// HERESY 1169 · 1367: a picture protected: never to the trash, never deleted
++RuachI18n.add("be", {
++"Protected": "Абароненыя",
++"The protected pictures": "Абароненыя малюнкі",
++"No protected picture yet: the shield on a picture protects it.": "Абароненых малюнкаў пакуль няма: шчыт на малюнку яго абараняе.",
++"Take its protection off": "Зняць абарону",
++"Protect it": "Абараніць",
++"Protected: it never goes to the trash and is never deleted; the shield takes the protection off": "Абаронены: ніколі не трапляе ў кошык і ніколі не выдаляецца; шчыт здымае абарону",
++"Protect it: never to the trash, never deleted for good": "Абараніць: ніколі ў кошык, ніколі не выдаліць назаўсёды",
++"Protected: it never goes to the trash": "Абаронены: у кошык не трапляе",
++"{0} protected: never to the trash, never deleted": "Пад абаронай ({0}): ніколі ў кошык, ніколі не выдаліць",
++"Protection taken off: {0}": "Абарона знятая: {0}",
++"Not protected: {0}": "Абарона не пастаўлена: {0}",
++"{0} stayed in the room: take the protection off first": "Засталіся ў пакоі ({0}): спачатку здымі абарону",
++"1 protected picture": "1 абаронены малюнак",
++"{#0} protected pictures": { "one": "{#0} абаронены малюнак", "few": "{#0} абароненыя малюнкі", "many": "{#0} абароненых малюнкаў", "other": "{#0} абароненага малюнка" },
++"Protect them": "Абараніць іх",
++"Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)": "Абараніць усе: ніколі ў кошык, ніколі не выдаліць назаўсёды (калі ўсе ўжо абароненыя, абарона здымаецца)",
++"a run is drawing: protect its pictures when it ends": "ран яшчэ малюе: абарані яго малюнкі, калі ён скончыцца",
++"it holds a protected picture: take its protection off first": "у ім абаронены малюнак: спачатку здымі з яго абарону",
++"it is protected: never deleted": "ён абаронены: не выдаляецца ніколі",
++"it holds a protected picture: never deleted": "у ім абаронены малюнак: не выдаляецца ніколі",
++"the pictures: one to five hundred": "малюнкі: ад аднаго да пяцісот"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 2aabd9e..4921216 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -4857,3 +4857,27 @@ RuachI18n.add("el", {
+ "an adapter's keyframe: a share of the steps (0 to 1) and a multiplier (0 to 2)": "σημείο-κλειδί προσαρμογέα: μερίδιο των βημάτων (0 έως 1) και πολλαπλασιαστής (0 έως 2)",
+ "an adapter's keyframe: a share of the steps from 0 to 1, a multiplier from 0 to 2": "σημείο-κλειδί προσαρμογέα: μερίδιο των βημάτων από 0 έως 1, πολλαπλασιαστής από 0 έως 2"
+ });
++// HERESY 1169 · 1367: a picture protected: never to the trash, never deleted
++RuachI18n.add("el", {
++"Protected": "Προστατευμένες",
++"The protected pictures": "Οι προστατευμένες εικόνες",
++"No protected picture yet: the shield on a picture protects it.": "Δεν υπάρχει ακόμη προστατευμένη εικόνα: η ασπίδα πάνω σε μια εικόνα την προστατεύει.",
++"Take its protection off": "Αφαίρεση της προστασίας",
++"Protect it": "Προστασία",
++"Protected: it never goes to the trash and is never deleted; the shield takes the protection off": "Προστατευμένη: δεν πηγαίνει ποτέ στον κάδο και δεν διαγράφεται ποτέ· η ασπίδα αφαιρεί την προστασία",
++"Protect it: never to the trash, never deleted for good": "Προστασία: ποτέ στον κάδο, ποτέ οριστική διαγραφή",
++"Protected: it never goes to the trash": "Προστατευμένη: δεν πηγαίνει ποτέ στον κάδο",
++"{0} protected: never to the trash, never deleted": "Προστατεύονται ({0}): ποτέ στον κάδο, ποτέ διαγραφή",
++"Protection taken off: {0}": "Η προστασία αφαιρέθηκε: {0}",
++"Not protected: {0}": "Δεν προστατεύτηκε: {0}",
++"{0} stayed in the room: take the protection off first": "Έμειναν στο δωμάτιο ({0}): αφαίρεσε πρώτα την προστασία",
++"1 protected picture": "1 προστατευμένη εικόνα",
++"{#0} protected pictures": { "one": "{#0} προστατευμένη εικόνα", "other": "{#0} προστατευμένες εικόνες" },
++"Protect them": "Προστασία τους",
++"Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)": "Προστασία όλων: ποτέ στον κάδο, ποτέ οριστική διαγραφή (όταν όλες είναι ήδη προστατευμένες, η προστασία αφαιρείται)",
++"a run is drawing: protect its pictures when it ends": "μια εκτέλεση ζωγραφίζει ακόμη: προστάτευσε τις εικόνες της όταν τελειώσει",
++"it holds a protected picture: take its protection off first": "περιέχει προστατευμένη εικόνα: αφαίρεσε πρώτα την προστασία της",
++"it is protected: never deleted": "είναι προστατευμένη: δεν διαγράφεται ποτέ",
++"it holds a protected picture: never deleted": "περιέχει προστατευμένη εικόνα: δεν διαγράφεται ποτέ",
++"the pictures: one to five hundred": "οι εικόνες: από μία έως πεντακόσιες"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index fe0bd19..fbd8732 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -4857,3 +4857,27 @@ RuachI18n.add("es", {
+ "an adapter's keyframe: a share of the steps (0 to 1) and a multiplier (0 to 2)": "fotograma clave de un adaptador: una parte de los pasos (de 0 a 1) y un multiplicador (de 0 a 2)",
+ "an adapter's keyframe: a share of the steps from 0 to 1, a multiplier from 0 to 2": "fotograma clave de un adaptador: una parte de los pasos de 0 a 1, un multiplicador de 0 a 2"
+ });
++// HERESY 1169 · 1367: a picture protected: never to the trash, never deleted
++RuachI18n.add("es", {
++"Protected": "Protegidas",
++"The protected pictures": "Las imágenes protegidas",
++"No protected picture yet: the shield on a picture protects it.": "Aún no hay imágenes protegidas: el escudo de una imagen la protege.",
++"Take its protection off": "Quitarle la protección",
++"Protect it": "Protegerla",
++"Protected: it never goes to the trash and is never deleted; the shield takes the protection off": "Protegida: nunca va a la papelera y nunca se borra; el escudo le quita la protección",
++"Protect it: never to the trash, never deleted for good": "Protegerla: nunca a la papelera, nunca borrada para siempre",
++"Protected: it never goes to the trash": "Protegida: nunca va a la papelera",
++"{0} protected: never to the trash, never deleted": "Protegidas ({0}): nunca a la papelera, nunca borradas",
++"Protection taken off: {0}": "Protección quitada: {0}",
++"Not protected: {0}": "No se protegió: {0}",
++"{0} stayed in the room: take the protection off first": "Se quedaron en la sala ({0}): quita antes la protección",
++"1 protected picture": "1 imagen protegida",
++"{#0} protected pictures": { "one": "{#0} imagen protegida", "other": "{#0} imágenes protegidas" },
++"Protect them": "Protegerlas",
++"Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)": "Protegerlas todas: nunca a la papelera, nunca borradas para siempre (si ya están todas protegidas, se quita la protección)",
++"a run is drawing: protect its pictures when it ends": "una ejecución aún pinta: protege sus imágenes cuando termine",
++"it holds a protected picture: take its protection off first": "contiene una imagen protegida: quítale antes la protección",
++"it is protected: never deleted": "está protegida: nunca se borra",
++"it holds a protected picture: never deleted": "contiene una imagen protegida: nunca se borra",
++"the pictures: one to five hundred": "las imágenes: de una a quinientas"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 9dcaaeb..6df14a3 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -4857,3 +4857,27 @@ RuachI18n.add("it", {
+ "an adapter's keyframe: a share of the steps (0 to 1) and a multiplier (0 to 2)": "keyframe di un adattatore: una quota dei passi (da 0 a 1) e un moltiplicatore (da 0 a 2)",
+ "an adapter's keyframe: a share of the steps from 0 to 1, a multiplier from 0 to 2": "keyframe di un adattatore: una quota dei passi da 0 a 1, un moltiplicatore da 0 a 2"
+ });
++// HERESY 1169 · 1367: a picture protected: never to the trash, never deleted
++RuachI18n.add("it", {
++"Protected": "Protette",
++"The protected pictures": "Le immagini protette",
++"No protected picture yet: the shield on a picture protects it.": "Ancora nessuna immagine protetta: lo scudo su un'immagine la protegge.",
++"Take its protection off": "Togli la protezione",
++"Protect it": "Proteggila",
++"Protected: it never goes to the trash and is never deleted; the shield takes the protection off": "Protetta: non va mai nel cestino e non viene mai eliminata; lo scudo toglie la protezione",
++"Protect it: never to the trash, never deleted for good": "Proteggila: mai nel cestino, mai eliminata per sempre",
++"Protected: it never goes to the trash": "Protetta: non va mai nel cestino",
++"{0} protected: never to the trash, never deleted": "Protette ({0}): mai nel cestino, mai eliminate",
++"Protection taken off: {0}": "Protezione tolta: {0}",
++"Not protected: {0}": "Protezione non messa: {0}",
++"{0} stayed in the room: take the protection off first": "Rimaste nella stanza ({0}): togli prima la protezione",
++"1 protected picture": "1 immagine protetta",
++"{#0} protected pictures": { "one": "{#0} immagine protetta", "other": "{#0} immagini protette" },
++"Protect them": "Proteggile",
++"Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)": "Proteggile tutte: mai nel cestino, mai eliminate per sempre (se sono già tutte protette, la protezione si toglie)",
++"a run is drawing: protect its pictures when it ends": "un'esecuzione sta ancora dipingendo: proteggi le sue immagini quando finisce",
++"it holds a protected picture: take its protection off first": "contiene un'immagine protetta: togli prima la sua protezione",
++"it is protected: never deleted": "è protetta: non si elimina mai",
++"it holds a protected picture: never deleted": "contiene un'immagine protetta: non si elimina mai",
++"the pictures: one to five hundred": "le immagini: da una a cinquecento"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index eb2773a..52b1ee1 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -4863,3 +4863,27 @@ RuachI18n.add("ru", {
+ "an adapter's keyframe: a share of the steps (0 to 1) and a multiplier (0 to 2)": "ключевой кадр адаптера: доля шагов (от 0 до 1) и множитель (от 0 до 2)",
+ "an adapter's keyframe: a share of the steps from 0 to 1, a multiplier from 0 to 2": "ключевой кадр адаптера: доля шагов от 0 до 1, множитель от 0 до 2"
+ });
++// HERESY 1169 · 1367: a picture protected: never to the trash, never deleted
++RuachI18n.add("ru", {
++"Protected": "Защищённые",
++"The protected pictures": "Защищённые картинки",
++"No protected picture yet: the shield on a picture protects it.": "Защищённых картинок пока нет: щит на картинке её защищает.",
++"Take its protection off": "Снять защиту",
++"Protect it": "Защитить",
++"Protected: it never goes to the trash and is never deleted; the shield takes the protection off": "Защищена: никогда не уходит в корзину и никогда не удаляется; щит снимает защиту",
++"Protect it: never to the trash, never deleted for good": "Защитить: никогда в корзину, никогда не удалить навсегда",
++"Protected: it never goes to the trash": "Защищена: в корзину не уходит",
++"{0} protected: never to the trash, never deleted": "Под защитой ({0}): никогда в корзину, никогда не удалить",
++"Protection taken off: {0}": "Защита снята: {0}",
++"Not protected: {0}": "Защита не поставлена: {0}",
++"{0} stayed in the room: take the protection off first": "Остались в комнате ({0}): сначала сними защиту",
++"1 protected picture": "1 защищённая картинка",
++"{#0} protected pictures": { "one": "{#0} защищённая картинка", "few": "{#0} защищённые картинки", "many": "{#0} защищённых картинок", "other": "{#0} защищённой картинки" },
++"Protect them": "Защитить их",
++"Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)": "Защитить все: никогда в корзину, никогда не удалить навсегда (если все уже защищены, защита снимается)",
++"a run is drawing: protect its pictures when it ends": "ран ещё рисует: защити его картинки, когда он закончится",
++"it holds a protected picture: take its protection off first": "в нём защищённая картинка: сначала сними с неё защиту",
++"it is protected: never deleted": "она защищена: не удаляется никогда",
++"it holds a protected picture: never deleted": "в нём защищённая картинка: не удаляется никогда",
++"the pictures: one to five hundred": "картинки: от одной до пятисот"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index d7efa23..eebe9d5 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -4858,3 +4858,27 @@ RuachI18n.add("uk", {
+ "an adapter's keyframe: a share of the steps (0 to 1) and a multiplier (0 to 2)": "ключовий кадр адаптера: частка кроків (від 0 до 1) і множник (від 0 до 2)",
+ "an adapter's keyframe: a share of the steps from 0 to 1, a multiplier from 0 to 2": "ключовий кадр адаптера: частка кроків від 0 до 1, множник від 0 до 2"
+ });
++// HERESY 1169 · 1367: a picture protected: never to the trash, never deleted
++RuachI18n.add("uk", {
++"Protected": "Захищені",
++"The protected pictures": "Захищені картинки",
++"No protected picture yet: the shield on a picture protects it.": "Захищених картинок поки немає: щит на картинці її захищає.",
++"Take its protection off": "Зняти захист",
++"Protect it": "Захистити",
++"Protected: it never goes to the trash and is never deleted; the shield takes the protection off": "Захищена: ніколи не йде в кошик і ніколи не видаляється; щит знімає захист",
++"Protect it: never to the trash, never deleted for good": "Захистити: ніколи в кошик, ніколи не видалити назавжди",
++"Protected: it never goes to the trash": "Захищена: у кошик не йде",
++"{0} protected: never to the trash, never deleted": "Під захистом ({0}): ніколи в кошик, ніколи не видалити",
++"Protection taken off: {0}": "Захист знято: {0}",
++"Not protected: {0}": "Захист не встановлено: {0}",
++"{0} stayed in the room: take the protection off first": "Лишилися в кімнаті ({0}): спершу зніми захист",
++"1 protected picture": "1 захищена картинка",
++"{#0} protected pictures": { "one": "{#0} захищена картинка", "few": "{#0} захищені картинки", "many": "{#0} захищених картинок", "other": "{#0} захищеної картинки" },
++"Protect them": "Захистити їх",
++"Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)": "Захистити всі: ніколи в кошик, ніколи не видалити назавжди (якщо всі вже захищені, захист знімається)",
++"a run is drawing: protect its pictures when it ends": "ран ще малює: захисти його картинки, коли він закінчиться",
++"it holds a protected picture: take its protection off first": "у ньому захищена картинка: спершу зніми з неї захист",
++"it is protected: never deleted": "вона захищена: не видаляється ніколи",
++"it holds a protected picture: never deleted": "у ньому захищена картинка: не видаляється ніколи",
++"the pictures: one to five hundred": "картинки: від однієї до п'ятисот"
++});
+-- 
+2.43.0
+

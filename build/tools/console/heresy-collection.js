@@ -125,7 +125,7 @@
   // HERESY 1169 · 1241 (Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): what can be ticked, and how a take answers each
   var FILTERS = [
     { label: "Made", items: [["generated", "generated", "sparkles"], ["imported", "imported", "import"], ["regenerated", "regenerated", "refresh"], ["rerendered", "re-rendered", "waveform"]] },
-    { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"]] },
+    { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"], ["__protected", "protected", "shield"]] },
     { label: "Has", items: [["stems", "stems", "layers"], ["debuzz", "debuzz", "eraser"], ["remaster", "remaster", "sliders"], ["upscale", "upscale", "chevrons-up"]] }
   ];
   var DERIVED = { stems: 1, debuzz: 1, remaster: 1, upscale: 1 }, LOGIC_KEY = "yue2.collLogic";
@@ -135,6 +135,7 @@
     if (v === "__disliked") return function (r) { return r.rating < 0; };
     if (v === "__starred") return function (r) { return !!r.favorite; };
     if (v === "__note") return function (r) { return !!r.note; };
+    if (v === "__protected") return function (r) { return !!r.protected; };   // HERESY 1368
     if (v === "__art") return function (r) { return !!(window.HeresyArt && window.HeresyArt.url(r.name)); };
     return function (r) { return r.kind === v; };
   }
@@ -234,6 +235,14 @@
   function cotWord(c) { return { off: "direct", full: "full plan", melody: "melody only" }[c] || c; }
   function badge(text, cls) { return '<span class="coll-badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
 
+  // HERESY 1368 (Viktor 11.10.2026: «И на аудио треки в студии тоже защиту добавь в опцию и в фильтр в Библиотеке не забудь эту
+  // опцию»): the shield beside the star; lit, the take never goes to the trash nor is deleted for good
+  var PROT_ON = "This take is protected: never to the trash, never deleted; the shield takes the protection off";
+  var PROT_OFF = "Protect this take: never to the trash, never deleted for good";
+  function protBtn(r, data) {
+    return '<button type="button" class="coll-act prot" ' + data + ' aria-pressed="' + !!r.protected + '" aria-label="' + (r.protected ? "Take its protection off" : "Protect it") +
+      '" data-tip="' + (r.protected ? PROT_ON : PROT_OFF) + '">' + ico("shield") + "</button>";
+  }
   // HERESY 1082: the Librarian's marks for a take in the Creator's column: derived, workspaces, like, dislike, note
   function cardExtras(name) {
     var r = rowOf(name);
@@ -244,6 +253,7 @@
       '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + "</button>" +
       // HERESY 1167 (Viktor: «У Творца во фрейме Takes… И нет звёздочки»): the favourite beside them, as on the Librarian's cards
       '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" aria-label="Favourite">' + ico("star") + "</button>" +
+      protBtn(r, 'data-lprot="1" data-name="' + esc(name) + '"') +
       (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
   }
   function favOf(name, r) { var t = state.hooks && state.hooks.findTake ? state.hooks.findTake(name) : null; return t ? !!t.favorite : !!r.favorite; }
@@ -343,6 +353,7 @@
         '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + '</button>' +
         '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + '</button>' +
         '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" aria-label="Favourite">' + ico("star") + "</button>" +
+        protBtn(r, 'data-cprot="1"') +
         '<button type="button" class="coll-act post" data-cgo="post">Refine</button>' +
         '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' +
         // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height
@@ -411,6 +422,7 @@
     var kindsSaid = Object.keys(kinds).sort(function (a, b) { return kinds[b] - kinds[a]; }).map(function (k) { return kinds[k] + " " + (KINDS[k] || k); });
     var liked = count(function (r) { return r.rating > 0; }), disliked = count(function (r) { return r.rating < 0; }), fav = count(function (r) { return r.favorite; }), notes = count(function (r) { return r.note; });
     if (liked) parts.push(liked + " liked"); if (disliked) parts.push(disliked + " disliked"); if (fav) parts.push(fav + " \u2605"); if (notes) parts.push(notes + " with a note");
+    var prot = count(function (r) { return r.protected; }); if (prot) parts.push(prot + " protected");   // HERESY 1368
     parts.push(kindsSaid);
     parts.push(state.rows.length + " in the library");
     paintFilterBtn();   // HERESY 1169 · 1241
@@ -536,9 +548,10 @@
     var b = state.artBin || {};
     return (b.runs || []).map(function (r) { return { kind: "run", id: r.id, r: r, bytes: +r.bytes || 0 }; })
       .concat((b.pictures || []).map(function (p) { return { kind: "picture", id: p.id, file: p.file, p: p, bytes: +p.bytes || 0 }; }))
-      .concat((b.covers || []).map(function (c) { return { kind: "cover", take: c.take, stamp: c.stamp, c: c, frozen: !!c.frozen, bytes: +c.bytes || 0 }; }));
+      .concat((b.covers || []).map(function (c) { return { kind: "cover", take: c.take, stamp: c.stamp, c: c, frozen: !!c.frozen, bytes: +c.bytes || 0 }; }))
+      .concat((b.loras || []).map(function (l) { return { kind: "lora", stamp: l.stamp, l: l, bytes: +l.bytes || 0 }; }));   // HERESY 1353: the LoRA library's adapters
   }
-  function artKey(it) { return it.kind === "run" ? "run:" + it.id : it.kind === "picture" ? "pic:" + it.id + "|" + it.file : "cover:" + it.take + "|" + it.stamp; }
+  function artKey(it) { return it.kind === "run" ? "run:" + it.id : it.kind === "picture" ? "pic:" + it.id + "|" + it.file : it.kind === "lora" ? "lora:" + it.stamp : "cover:" + it.take + "|" + it.stamp; }
   function artCount() { return state.artBin ? artItems().length : 0; }
   function artDay(t) {
     var d = new Date((+t || 0) * 1000), z = function (n) { return (n < 10 ? "0" : "") + n; };
@@ -572,6 +585,9 @@
         src = "/lab/artist/file?id=" + encodeURIComponent(it.id) + "&file=" + encodeURIComponent(it.p.thumb || it.p.file);
         title = it.p.prompt || it.file;
         meta = ["A picture put aside", it.p.shape + " · seed " + it.p.seed, artDay(it.p.created)];
+      } else if (it.kind === "lora") {                   // HERESY 1353
+        title = it.l.title || it.l.name;
+        meta = ["An adapter of the LoRA library", String(it.l.id).split("/")[0], "in the trash since " + artDay(it.l.at)];
       } else {
         src = "/lab/artist/bin-file?take=" + encodeURIComponent(it.take) + "&stamp=" + encodeURIComponent(it.stamp);
         title = it.c.title || it.take;
@@ -592,9 +608,9 @@
     var go = all ? list.filter(function (it) { return !it.frozen; }) : picked;
     if (!go.length) return;
     var many = function (k, one, more) { var n = go.filter(function (it) { return it.kind === k; }).length; return n ? tr(n === 1 ? "1 " + one : n + " " + more) : ""; };   // HERESY 1339
-    var what = [many("run", "run", "runs"), many("picture", "picture", "pictures"), many("cover", "cover", "covers")].filter(Boolean).join(", ");
+    var what = [many("run", "run", "runs"), many("picture", "picture", "pictures"), many("cover", "cover", "covers"), many("lora", "adapter", "adapters")].filter(Boolean).join(", ");
     var mb = go.reduce(function (s, it) { return s + it.bytes; }, 0) / 1e6, body = { op: all ? "empty" : op };
-    if (!all) body.items = go.map(function (it) { return it.kind === "run" ? { kind: "run", id: it.id } : it.kind === "picture" ? { kind: "picture", id: it.id, file: it.file } : { kind: "cover", take: it.take, stamp: it.stamp }; });
+    if (!all) body.items = go.map(function (it) { return it.kind === "run" ? { kind: "run", id: it.id } : it.kind === "picture" ? { kind: "picture", id: it.id, file: it.file } : it.kind === "lora" ? { kind: "lora", stamp: it.stamp } : { kind: "cover", take: it.take, stamp: it.stamp }; });
     var run = function () {
       return api("/artist/bin", body).then(function (d) {
         var n = (d.done || []).length, kept = d.kept || [];
@@ -602,6 +618,7 @@
         state.asel = {};
         if (state.hooks && state.hooks.refreshArts) state.hooks.refreshArts();          // a cover given back shows on its take
         if (window.HeresyArtist && window.HeresyArtist.reload) window.HeresyArtist.reload();   // the Artist room's runs and pictures
+        if (window.HeresyArtist && window.HeresyArtist.loras) window.HeresyArtist.loras.reload();   // HERESY 1353: an adapter given back
         return loadArtBin();
       }).catch(function (e) { toast(e.message, true); });
     };
@@ -1086,6 +1103,7 @@
       var many = cname && state.sel[cname] && names().length > 1;   // HERESY 1108: a checked card speaks for all checked
       if (crate && many) { rateMany(names(), +crate.dataset.crate); return; }
       if (e.target.closest("[data-cfav]") && many) { favMany(names()); return; }
+      if (e.target.closest("[data-cprot]")) { if (many) protectMany(names()); else protect([cname], !isProtected(cname)); return; }   // HERESY 1368
       if (crate) { var v = +crate.dataset.crate; rate(cname, rating(cname) === v ? 0 : v).then(function () { if (hooks.libraryChanged) hooks.libraryChanged(); }); return; }
       if (e.target.closest("[data-cfav]")) {          // HERESY 1105: the card and the player follow at once
         var ft = hooks.findTake(cname);
@@ -1242,6 +1260,7 @@
     $("collLike").addEventListener("click", function () { rateMany(names(), 1); });        // HERESY 1108
     $("collDislike").addEventListener("click", function () { rateMany(names(), -1); });
     $("collFav").addEventListener("click", function () { favMany(names()); });
+    if ($("collProtect")) $("collProtect").addEventListener("click", function () { protectMany(names()); });   // HERESY 1368
     $("collWsPick").addEventListener("change", function () {
       var w = this.value; this.value = "";
       if (!w) return;
@@ -1269,6 +1288,7 @@
         if (!d) return;
         var said = d.moved.length + " moved to the trash" + (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: their workspace locks its takes" : "");
         if (d.moved.length) undoable(said, untrash(d.moved)); else toast(said, true);
+        saidProtected(d);                                  // HERESY 1368
         state.sel = {};
         if (hooks.refreshLibrary) hooks.refreshLibrary();
         return load();
@@ -1293,7 +1313,7 @@
       var n = all ? state.trash.length : items.length;
       if (!n) return;
       ask((all ? "Wipe out the whole trash: " : "Delete for good: ") + n + " take" + (n > 1 ? "s" : "") + ", with everything made from them.\n\nThis cannot be undone.", { ok: all ? "Wipe out" : "Delete for good", danger: true }).then(function (ok) {
-        if (ok) return api("/trash", { op: "empty", items: all ? null : items }).then(function (d) { toast(d.emptied.length + " deleted for good"); state.tsel = {}; return loadTrash(); });
+        if (ok) return api("/trash", { op: "empty", items: all ? null : items }).then(function (d) { toast(d.emptied.length + " deleted for good"); saidProtected(d, true); state.tsel = {}; return loadTrash(); });
       }).catch(function (e) { toast(e.message, true); });
     });
     $("collTrashDays").addEventListener("change", function () {
@@ -1341,6 +1361,28 @@
     return Promise.all(takes.map(function (t) { return hk().updateTake(t, { favorite: on }); }))
       .then(function () { toast((on ? "Favourites: " : "Not favourites: ") + takes.length); if (state.hooks.libraryChanged) state.hooks.libraryChanged(); })
       .catch(function (e) { toast(e.message, true); return load(); });
+  }
+  // HERESY 1368: a take protected never goes to the trash nor is deleted for good; many at once: all protected already, the protection
+  // comes off. Undone as it was: only the takes this changed
+  function isProtected(name) { var r = rowOf(name); return !!(r && r.protected); }
+  function protect(list, on) {
+    var changed = list.filter(function (n) { return isProtected(n) !== !!on; });
+    return act({ op: "protect", names: list, on: !!on }, null).then(function (ok) {
+      if (!ok) return false;
+      var said = on ? list.length + " protected: never to the trash, never deleted" : "Protection taken off: " + list.length;
+      if (changed.length) undoable(said, function () { return act({ op: "protect", names: changed, on: !on }, null, true); }); else toast(said);
+      return true;
+    });
+  }
+  function protectMany(list) {
+    var rows = list.map(rowOf).filter(Boolean);
+    return protect(list, !(rows.length && rows.every(function (r) { return r.protected; })));
+  }
+  function saidProtected(d, bin) {                        // what stayed because it is protected, said apart
+    var n = d && d.protected ? d.protected.length : 0;
+    if (!n) return;
+    toast(bin ? (n === 1 ? "1 protected take stayed in the trash: it is never deleted" : n + " protected takes stayed in the trash: they are never deleted")
+              : (n === 1 ? "1 protected take stayed in the library: take its protection off first" : n + " protected takes stayed in the library: take their protection off first"));
   }
   function hk() { return state.hooks; }
   function rate(name, value) {
@@ -1576,6 +1618,7 @@
         var spare = $("wsDelSpare") && $("wsDelSpare").checked;
         var gone = takes.filter(function (r) { return !(spare && r.workspaces.length > 1); }).map(function (r) { return r.name; });
         done = api("/trash", { op: "move", names: gone }).then(function (d) {
+          saidProtected(d);                                // HERESY 1368: they stay in the library, in no workspace
           return act({ op: "ws-delete", workspace: w }, d.moved.length + " take" + (d.moved.length === 1 ? "" : "s") + " to the trash; \u201c" + w + "\u201d deleted" +
             (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: another workspace locks them" : ""));
         }).then(function (ok) { if (ok) followRename(w, ""); if (state.hooks.refreshLibrary) state.hooks.refreshLibrary(); return load(); });
@@ -1788,8 +1831,9 @@
                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
                               pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166
+                              isProtected: isProtected, protect: protect, protectMany: protectMany, protTip: function (on) { return on ? PROT_ON : PROT_OFF; },   // HERESY 1368
                               undoable: undoable, untrash: untrash,
-                              trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { ((d && d.moved) || names).forEach(function (n) { delete state.sel[n]; }); return load().then(function () { return d; }); }); },
+                              trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { saidProtected(d); ((d && d.moved) || names).forEach(function (n) { delete state.sel[n]; }); return load().then(function () { return d; }); }); },
                               // HERESY 1169 · 1239 (Viktor 08.10.2026: «Я переместил в корзину три трека, а блок так и остался раскрытым, и не исчез обратно в "тень"»): what the menu sends away leaves the choice, as with the bar's own buttons
                               unselect: function (names) { (names || []).forEach(function (n) { delete state.sel[n]; }); paint(); } };
 })();

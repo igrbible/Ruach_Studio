@@ -1,0 +1,523 @@
+From 62e8ad6fe02e4d4c1b4d480be2b7ba0f0174f6c3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 12 Oct 2026 13:49:30 -0600
+Subject: [PATCH 1362/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201387:=20Regi?=
+ =?UTF-8?q?ons=20in=20the=20Artist's=20form?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Under Sampling, folded: up to three rows of a place (halves, thirds, quarters, the middle; a small map) and words; kept in this browser; not sent for Qwen-Image 2.1 (said); Again sends the run's own; the time said grows by a pass a region; the run's line says how many. Twenty-one strings in the eleven catalogs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  6 +++
+ tools/console/heresy-artist.js  | 66 +++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-be.js | 23 +++++++++++-
+ tools/console/heresy-i18n-de.js | 23 +++++++++++-
+ tools/console/heresy-i18n-el.js | 23 +++++++++++-
+ tools/console/heresy-i18n-es.js | 23 +++++++++++-
+ tools/console/heresy-i18n-fr.js | 23 +++++++++++-
+ tools/console/heresy-i18n-it.js | 23 +++++++++++-
+ tools/console/heresy-i18n-ja.js | 23 +++++++++++-
+ tools/console/heresy-i18n-pt.js | 23 +++++++++++-
+ tools/console/heresy-i18n-ru.js | 23 +++++++++++-
+ tools/console/heresy-i18n-uk.js | 23 +++++++++++-
+ tools/console/heresy-i18n-zh.js | 23 +++++++++++-
+ tools/console/index.html        |  5 +++
+ 14 files changed, 319 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a641b9a..50e8a30 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4599,6 +4599,12 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ /* HERESY 1322: the upscale's row under the stage's buttons */
+ .ar-up-row { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; padding-top: 4px; }   /* HERESY 1353: «Выставь эту строку в центральную позицию» */
+ .ar-up-row select { max-width: 22em; }
++.ar-reg-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }   /* HERESY 1387: the regions */
++.ar-reg { display: grid; grid-template-columns: 44px minmax(7em, auto) 1fr auto; align-items: center; gap: 6px; }
++.ar-reg-map { position: relative; width: 44px; height: 25px; border: 1px solid var(--line-a); border-radius: 3px; background: var(--wash); }
++.ar-reg-map i { position: absolute; background: var(--amber); opacity: .55; border-radius: 2px; }
++.ar-reg input[type="text"] { min-width: 0; }
++.ar-reg-foot { display: flex; align-items: center; gap: 8px; padding-bottom: 4px; }
+ .ar-sp-str { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; margin-left: 6px; }   /* HERESY 1384: the second pass's strength */
+ .ar-sp-str input { width: 140px; }
+ .ar-sp-str output { min-width: 2.6em; font-variant-numeric: tabular-nums; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 82da9e2..5189a5d 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -80,6 +80,7 @@
+     var pk = $("arPainter").value, ps = sampNow(pk);   // HERESY 1319: the time follows the steps
+     if (/^krea2/.test(pk)) secs = 25 + (secs - 25) * (+ps.steps || 8) / 8 * sampLooks(ps);   // HERESY 1333: and its looks a step
+     if (/^qwen/.test(pk)) secs = 90 + n * (pk === "qwen21" ? 3 * (+ps.steps || 30) : 3.5 * (+ps.steps || 8) * (sampFast(pk, ps) ? 1 : 2) * sampLooks(ps));   // HERESY 1318: its parts; 1328: the switch; 1333: its looks first, then each picture
++    if (pk !== "qwen21") secs = 25 + (secs - 25) * (1 + regionsBody().length);   // HERESY 1387: a whole pass more a step for each region
+     // HERESY 1354 (Viktor 11.10.2026: «Художник говорит "Около 8.5 минут на одной карте". А карт-то у меня две выделены для Lab Works»):
+     // the lab paints a run's pictures on its cards at once, each card loading the painter and painting its share
+     var cards = Math.max(1, Math.min(n, +((PAINTER_INFO[pk] || {}).cards) || 1)), load = /^qwen/.test(pk) ? 90 : 25;
+@@ -570,6 +571,8 @@
+     if (state.take) body.take = state.take.name;
+     // HERESY 1316: the adapters on (Again: the run's own, its painter's family being the same)
+     var ls = again ? (again.loras || []) : lorasNow().filter(function (l) { return !state.loraLib || loraFind(l.id); });
++    var rg = again ? (again.regions || []) : regionsBody();            // HERESY 1387: the regions' own words, the run's own for Again
++    if (rg.length && body.painter !== "qwen21") body.regions = rg;
+     ls = ls.filter(function (l) { return !l.muted && +l.weight > 0; });   // HERESY 1341: a muted one or one at nought paints nothing, and its room was asked
+     if (ls.length) body.loras = ls.map(function (l) { return l.keys ? { id: l.id, weight: +l.weight, keys: l.keys } : { id: l.id, weight: +l.weight }; });   // HERESY 1365
+     if (!body.prompt) return toast(tr("Write what to paint first"), "bad");
+@@ -1043,6 +1046,40 @@
+   // step 20 of 60, the same sampler as the first): the picture brought up 1.5 or 2 times by nearest and painted over by its own run's
+   // painter, fine-tune, adapters, prompt and seed; the steps, sampler, schedule and Lightning the form's when the form paints with that
+   // painter (his recipe wants more steps and no Lightning for it), else the run's own
++  // HERESY 1387: the regions: a place of the frame each ([x, y, w, h] in its shares) and words of their own, kept in this browser
++  var REGION_PLACES = [["left", "Left half", [0, 0, 0.5, 1]], ["right", "Right half", [0.5, 0, 0.5, 1]], ["top", "Top half", [0, 0, 1, 0.5]],
++    ["bottom", "Bottom half", [0, 0.5, 1, 0.5]], ["left3", "Left third", [0, 0, 0.3333, 1]], ["mid3", "Middle third", [0.3333, 0, 0.3334, 1]],
++    ["right3", "Right third", [0.6667, 0, 0.3333, 1]], ["middle", "The middle", [0.25, 0.2, 0.5, 0.6]], ["tl", "Top left", [0, 0, 0.5, 0.5]],
++    ["tr", "Top right", [0.5, 0, 0.5, 0.5]], ["bl", "Bottom left", [0, 0.5, 0.5, 0.5]], ["br", "Bottom right", [0.5, 0.5, 0.5, 0.5]]];
++  function regionBox(id) { var p = REGION_PLACES.filter(function (x) { return x[0] === id; })[0]; return (p || REGION_PLACES[0])[2]; }
++  function regionsNow() {
++    try { var v = JSON.parse(recall("yue2.arRegions") || "[]"); return Array.isArray(v) ? v.slice(0, 3) : []; } catch (e) { return []; }
++  }
++  function regionsKeep(list) { keep("yue2.arRegions", list.length ? JSON.stringify(list) : null); }
++  function regionsBody() {
++    return regionsNow().filter(function (r) { return String(r.prompt || "").trim(); }).map(function (r) { return { prompt: String(r.prompt).trim(), box: regionBox(r.place) }; });
++  }
++  function regionMap(id) {
++    var b = regionBox(id);
++    return '<span class="ar-reg-map" aria-hidden="true"><i style="left:' + b[0] * 100 + "%;top:" + b[1] * 100 + "%;width:" + b[2] * 100 + "%;height:" + b[3] * 100 + '%"></i></span>';
++  }
++  function paintRegions() {
++    var list = regionsNow(), box = $("arRegList");
++    if (!box) return;
++    box.innerHTML = list.map(function (r, i) {
++      return '<div class="ar-reg" data-ri="' + i + '">' + regionMap(r.place) + '<select data-rp aria-label="' + esc(tr("Where in the frame")) + '">' +
++        REGION_PLACES.map(function (p) { return '<option value="' + p[0] + '"' + (p[0] === r.place ? " selected" : "") + ">" + esc(tr(p[1])) + "</option>"; }).join("") +
++        '</select><input type="text" data-rw maxlength="600" spellcheck="false" placeholder="' + esc(tr("What is there")) + '" value="' + esc(r.prompt || "") + '" />' +
++        '<button type="button" class="pb-btn" data-rx aria-label="' + esc(tr("Remove the region")) + '">\u2715</button></div>';
++    }).join("");
++    $("arRegAdd").disabled = list.length >= 3;
++    paintRegionSay();
++  }
++  function paintRegionSay() {
++    var n = regionsBody().length, q21 = $("arPainter").value === "qwen21";
++    if ($("arRegSay")) $("arRegSay").textContent = n ? String(n) : "";
++    if ($("arRegNote")) $("arRegNote").hidden = !(q21 && regionsNow().length);
++  }
+   function spOk(r) { return !!(r && r.kind !== "upscale" && r.prompt && r.painter !== "qwen21"); }
+   function spStr() { var v = parseFloat(recall("yue2.arSpStr")); return v >= 0.2 && v <= 0.9 ? v : 0.5; }
+   function spNoise() { var v = parseFloat(recall("yue2.arSpNoise")); return v >= 0 && v <= 1.5 ? v : 0.6; }   // HERESY 1385: as his workflow, 0.6
+@@ -1354,6 +1391,7 @@
+     if (r.ref) meta.push(tr("from a reference · " + (r.fit ? "painted around" : (+r.strength).toFixed(2)) + (r.masked ? " · masked" : "")));   // HERESY 1305–1307
+     if (r.ref && r.place) meta.push(tr("placed on the canvas"));     // HERESY 1346
+     if (r.scale) meta.push(tr("second pass \u00d7" + r.scale));      // HERESY 1384
++    if (r.regions && r.regions.length) meta.push(tr("regions " + r.regions.length));   // HERESY 1387
+     if (r.inject) meta.push(tr("extra noise " + (+r.inject).toFixed(2)));   // HERESY 1385
+     if (r.gpus && r.gpus.length > 1) meta.push("GPU " + r.gpus.join(", "));   // HERESY 1354: on the lab's cards at once
+     else if (r.gpu != null) meta.push("GPU " + r.gpu);
+@@ -2396,6 +2434,34 @@
+     if (noise >= 0 && noise <= 1.5) $("arRefNoise").value = String(noise);
+     paintRefSay();
+     $("arRefNoise").addEventListener("input", function () { paintRefSay(); keep("yue2.arRefNoise", $("arRefNoise").value); });
++    // HERESY 1387: the regions: added, placed, written, removed; kept as they change
++    paintRegions();
++    if (regionsNow().length) $("arRegions").open = true;
++    $("arRegAdd").addEventListener("click", function () {
++      var l = regionsNow(), used = l.map(function (r) { return r.place; });
++      if (l.length >= 3) return;
++      l.push({ place: ["left", "right", "middle"].filter(function (p) { return used.indexOf(p) < 0; })[0] || "middle", prompt: "" });
++      regionsKeep(l); paintRegions(); paintForm();
++      var f = document.querySelector('#arRegList [data-ri="' + (l.length - 1) + '"] [data-rw]'); if (f) f.focus();
++    });
++    $("arRegList").addEventListener("input", function (e) {
++      var row = e.target.closest("[data-ri]"), l = regionsNow();
++      if (!row || !l[+row.dataset.ri]) return;
++      if (e.target.hasAttribute("data-rw")) { l[+row.dataset.ri].prompt = e.target.value; regionsKeep(l); paintRegionSay(); paintForm(); }
++    });
++    $("arRegList").addEventListener("change", function (e) {
++      var row = e.target.closest("[data-ri]"), l = regionsNow();
++      if (!row || !l[+row.dataset.ri] || !e.target.hasAttribute("data-rp")) return;
++      l[+row.dataset.ri].place = e.target.value; regionsKeep(l);
++      row.querySelector(".ar-reg-map").outerHTML = regionMap(e.target.value);
++    });
++    $("arRegList").addEventListener("click", function (e) {
++      var x = e.target.closest("[data-rx]"), row = x && x.closest("[data-ri]"), l = regionsNow();
++      if (!row) return;
++      l.splice(+row.dataset.ri, 1); regionsKeep(l); paintRegions(); paintForm();
++    });
++    $("arPainter").addEventListener("change", paintRegionSay);
++    window.addEventListener("ruach-lang", paintRegions);
+     $("arFromTake").addEventListener("click", fromTake);
+     $("arPrompt").addEventListener("keydown", function (e) {
+       if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("arDraw").disabled) { e.preventDefault(); draw(); }   // HERESY 1340: a second run too
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index e202ae8..280798e 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -4957,5 +4957,26 @@ RuachI18n.add("be", {
+ "second pass ×{0}": "другі праход ×{0}",
+ "Extra noise": "Дадатковы шум",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Свежы шум паверх малюнка перад тым, як з яго маляваць, як у ComfyUI-воркфлоў Віктара (InjectLatentNoise): 0 — без шуму, 0.3 — новае зерне і дэталі, 0.6 — яго другі праход, вышэй за 1 формы малюнка пачынаюць рассыпацца",
+-"extra noise {0}": "дадатковы шум {0}"
++"extra noise {0}": "дадатковы шум {0}",
++"Regions": "Рэгіёны",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "Да трох частак кадра, у кожнай свае словы: на кожным кроку мастака пытаюць яшчэ раз для кожнага рэгіёна, з промптам і словамі рэгіёна, і адказы змешваюцца па рамках з мяккім краем (як у Latent Couple). Кожны рэгіён каштуе цэлага прахода на крок. Krea 2 і Qwen-Image 2512",
++"Add a region": "Дадаць рэгіён",
++"Not with Qwen-Image 2.1: it edits by words": "Не для Qwen-Image 2.1: яна правіць словамі",
++"Where in the frame": "Дзе ў кадры",
++"What is there": "Што там",
++"Remove the region": "Прыбраць рэгіён",
++"Left half": "Левая палова",
++"Right half": "Правая палова",
++"Top half": "Верхняя палова",
++"Bottom half": "Ніжняя палова",
++"Left third": "Левая трэць",
++"Middle third": "Сярэдняя трэць",
++"Right third": "Правая трэць",
++"The middle": "Сярэдзіна",
++"Top left": "Злева ўверсе",
++"Top right": "Справа ўверсе",
++"Bottom left": "Злева ўнізе",
++"Bottom right": "Справа ўнізе",
++"regions {0}": "рэгіёнаў: {0}",
++"About the regions": "Пра рэгіёны"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 2206ebb..361b83b 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -4840,5 +4840,26 @@ RuachI18n.add("de", {
+ "second pass ×{0}": "zweiter Durchgang ×{0}",
+ "Extra noise": "Zusätzliches Rauschen",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Frisches Rauschen auf dem Bild, bevor von ihm aus gemalt wird, wie Viktors ComfyUI-Workflow es tut (InjectLatentNoise): 0 keines, 0.3 neues Korn und Details, 0.6 sein zweiter Durchgang, über 1 beginnen die Formen des Bildes zu zerfallen",
+-"extra noise {0}": "zusätzliches Rauschen {0}"
++"extra noise {0}": "zusätzliches Rauschen {0}",
++"Regions": "Regionen",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "Bis zu drei Teile des Bildausschnitts, jeder mit eigenen Wörtern: bei jedem Schritt wird der Maler für jede Region noch einmal gefragt, mit dem Prompt und den Wörtern der Region, und die Antworten werden über Rahmen mit weichem Rand gemischt (wie bei Latent Couple). Jede Region kostet einen ganzen Durchgang mehr pro Schritt. Krea 2 und Qwen-Image 2512",
++"Add a region": "Region hinzufügen",
++"Not with Qwen-Image 2.1: it edits by words": "Nicht mit Qwen-Image 2.1: es bearbeitet mit Worten",
++"Where in the frame": "Wo im Bild",
++"What is there": "Was dort ist",
++"Remove the region": "Region entfernen",
++"Left half": "Linke Hälfte",
++"Right half": "Rechte Hälfte",
++"Top half": "Obere Hälfte",
++"Bottom half": "Untere Hälfte",
++"Left third": "Linkes Drittel",
++"Middle third": "Mittleres Drittel",
++"Right third": "Rechtes Drittel",
++"The middle": "Die Mitte",
++"Top left": "Oben links",
++"Top right": "Oben rechts",
++"Bottom left": "Unten links",
++"Bottom right": "Unten rechts",
++"regions {0}": "Regionen: {0}",
++"About the regions": "Über die Regionen"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index e4732b9..2b392c8 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -4956,5 +4956,26 @@ RuachI18n.add("el", {
+ "second pass ×{0}": "δεύτερο πέρασμα ×{0}",
+ "Extra noise": "Επιπλέον θόρυβος",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Φρέσκος θόρυβος πάνω στην εικόνα πριν ζωγραφιστεί από αυτήν, όπως κάνει το ComfyUI workflow του Viktor (InjectLatentNoise): 0 καθόλου, 0.3 νέος κόκκος και λεπτομέρεια, 0.6 το δεύτερο πέρασμά του, πάνω από 1 οι μορφές της εικόνας αρχίζουν να σπάνε",
+-"extra noise {0}": "επιπλέον θόρυβος {0}"
++"extra noise {0}": "επιπλέον θόρυβος {0}",
++"Regions": "Περιοχές",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "Έως τρία μέρη του κάδρου, το καθένα με δικές του λέξεις: σε κάθε βήμα ο ζωγράφος ερωτάται ακόμη μία φορά για κάθε περιοχή, με το prompt και τις λέξεις της περιοχής, και οι απαντήσεις αναμειγνύονται με πλαίσια μαλακών άκρων (όπως στο Latent Couple). Κάθε περιοχή κοστίζει ένα ολόκληρο πέρασμα ακόμη ανά βήμα. Krea 2 και Qwen-Image 2512",
++"Add a region": "Προσθήκη περιοχής",
++"Not with Qwen-Image 2.1: it edits by words": "Όχι με το Qwen-Image 2.1: διορθώνει με λέξεις",
++"Where in the frame": "Πού στο κάδρο",
++"What is there": "Τι υπάρχει εκεί",
++"Remove the region": "Αφαίρεση της περιοχής",
++"Left half": "Αριστερό μισό",
++"Right half": "Δεξί μισό",
++"Top half": "Πάνω μισό",
++"Bottom half": "Κάτω μισό",
++"Left third": "Αριστερό τρίτο",
++"Middle third": "Μεσαίο τρίτο",
++"Right third": "Δεξί τρίτο",
++"The middle": "Η μέση",
++"Top left": "Πάνω αριστερά",
++"Top right": "Πάνω δεξιά",
++"Bottom left": "Κάτω αριστερά",
++"Bottom right": "Κάτω δεξιά",
++"regions {0}": "περιοχές: {0}",
++"About the regions": "Σχετικά με τις περιοχές"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index ada512f..06e4400 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -4956,5 +4956,26 @@ RuachI18n.add("es", {
+ "second pass ×{0}": "segunda pasada ×{0}",
+ "Extra noise": "Ruido añadido",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Ruido fresco añadido a la imagen antes de pintar desde ella, como hace el flujo de ComfyUI de Viktor (InjectLatentNoise): 0 nada, 0.3 grano y detalle nuevos, 0.6 su segunda pasada, por encima de 1 las formas de la imagen empiezan a romperse",
+-"extra noise {0}": "ruido añadido {0}"
++"extra noise {0}": "ruido añadido {0}",
++"Regions": "Regiones",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "Hasta tres partes del encuadre, cada una con sus propias palabras: en cada paso se le pregunta al pintor una vez más por cada región, con el prompt y las palabras de la región, y las respuestas se mezclan por cajas de borde suave (a la manera de Latent Couple). Cada región cuesta una pasada entera más por paso. Krea 2 y Qwen-Image 2512",
++"Add a region": "Añadir una región",
++"Not with Qwen-Image 2.1: it edits by words": "No con Qwen-Image 2.1: edita con palabras",
++"Where in the frame": "Dónde en el encuadre",
++"What is there": "Qué hay ahí",
++"Remove the region": "Quitar la región",
++"Left half": "Mitad izquierda",
++"Right half": "Mitad derecha",
++"Top half": "Mitad superior",
++"Bottom half": "Mitad inferior",
++"Left third": "Tercio izquierdo",
++"Middle third": "Tercio central",
++"Right third": "Tercio derecho",
++"The middle": "El centro",
++"Top left": "Arriba a la izquierda",
++"Top right": "Arriba a la derecha",
++"Bottom left": "Abajo a la izquierda",
++"Bottom right": "Abajo a la derecha",
++"regions {0}": "regiones: {0}",
++"About the regions": "Sobre las regiones"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 35c651d..5e51920 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -4840,5 +4840,26 @@ RuachI18n.add("fr", {
+ "second pass ×{0}": "seconde passe ×{0}",
+ "Extra noise": "Bruit ajouté",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Du bruit frais ajouté à l'image avant de peindre à partir d'elle, comme le fait le workflow ComfyUI de Viktor (InjectLatentNoise) : 0 aucun, 0.3 du grain et du détail nouveaux, 0.6 sa seconde passe, au-delà de 1 les formes de l'image commencent à se défaire",
+-"extra noise {0}": "bruit ajouté {0}"
++"extra noise {0}": "bruit ajouté {0}",
++"Regions": "Régions",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "Jusqu'à trois parties du cadre, chacune avec ses propres mots : à chaque pas, le peintre est interrogé une fois de plus pour chaque région, avec le prompt et les mots de la région, et les réponses se mêlent par des cadres aux bords doux (à la manière de Latent Couple). Chaque région coûte une passe entière de plus par pas. Krea 2 et Qwen-Image 2512",
++"Add a region": "Ajouter une région",
++"Not with Qwen-Image 2.1: it edits by words": "Pas avec Qwen-Image 2.1 : elle modifie par les mots",
++"Where in the frame": "Où dans le cadre",
++"What is there": "Ce qui s'y trouve",
++"Remove the region": "Retirer la région",
++"Left half": "Moitié gauche",
++"Right half": "Moitié droite",
++"Top half": "Moitié haute",
++"Bottom half": "Moitié basse",
++"Left third": "Tiers gauche",
++"Middle third": "Tiers central",
++"Right third": "Tiers droit",
++"The middle": "Le milieu",
++"Top left": "En haut à gauche",
++"Top right": "En haut à droite",
++"Bottom left": "En bas à gauche",
++"Bottom right": "En bas à droite",
++"regions {0}": "régions : {0}",
++"About the regions": "À propos des régions"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 9b95809..9eae0b5 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -4956,5 +4956,26 @@ RuachI18n.add("it", {
+ "second pass ×{0}": "secondo passaggio ×{0}",
+ "Extra noise": "Rumore aggiunto",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Rumore fresco aggiunto all'immagine prima di dipingere da essa, come fa il workflow ComfyUI di Viktor (InjectLatentNoise): 0 nessuno, 0.3 grana e dettaglio nuovi, 0.6 il suo secondo passaggio, oltre 1 le forme dell'immagine cominciano a rompersi",
+-"extra noise {0}": "rumore aggiunto {0}"
++"extra noise {0}": "rumore aggiunto {0}",
++"Regions": "Regioni",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "Fino a tre parti dell'inquadratura, ognuna con parole sue: a ogni passo al pittore si chiede ancora una volta per ogni regione, con il prompt e le parole della regione, e le risposte si fondono per riquadri dal bordo morbido (alla maniera di Latent Couple). Ogni regione costa un passaggio intero in più a passo. Krea 2 e Qwen-Image 2512",
++"Add a region": "Aggiungi una regione",
++"Not with Qwen-Image 2.1: it edits by words": "Non con Qwen-Image 2.1: modifica con le parole",
++"Where in the frame": "Dove nell'inquadratura",
++"What is there": "Cosa c'è lì",
++"Remove the region": "Togli la regione",
++"Left half": "Metà sinistra",
++"Right half": "Metà destra",
++"Top half": "Metà superiore",
++"Bottom half": "Metà inferiore",
++"Left third": "Terzo sinistro",
++"Middle third": "Terzo centrale",
++"Right third": "Terzo destro",
++"The middle": "Il centro",
++"Top left": "In alto a sinistra",
++"Top right": "In alto a destra",
++"Bottom left": "In basso a sinistra",
++"Bottom right": "In basso a destra",
++"regions {0}": "regioni: {0}",
++"About the regions": "Sulle regioni"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 3ee8a99..90d547c 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -4840,5 +4840,26 @@ RuachI18n.add("ja", {
+ "second pass ×{0}": "2 回目のパス ×{0}",
+ "Extra noise": "追加ノイズ",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "絵から描き始める前に新しいノイズを絵に加えます。Viktor の ComfyUI ワークフロー（InjectLatentNoise）と同じです：0 はなし、0.3 は新しい粒子と細部、0.6 は彼の 2 回目のパス、1 を超えると絵の形が崩れ始めます",
+-"extra noise {0}": "追加ノイズ {0}"
++"extra noise {0}": "追加ノイズ {0}",
++"Regions": "領域",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "画面の最大 3 つの部分に、それぞれ専用の言葉を：各ステップで画家に領域ごとにもう一度、プロンプトとその領域の言葉で問い合わせ、答えを縁のやわらかい枠で混ぜ合わせます（Latent Couple のやり方）。領域 1 つにつき、1 ステップあたり丸 1 回分のパスが増えます。Krea 2 と Qwen-Image 2512",
++"Add a region": "領域を追加",
++"Not with Qwen-Image 2.1: it edits by words": "Qwen-Image 2.1 では使えません：言葉で編集するモデルです",
++"Where in the frame": "画面のどこか",
++"What is there": "そこに何があるか",
++"Remove the region": "領域を削除",
++"Left half": "左半分",
++"Right half": "右半分",
++"Top half": "上半分",
++"Bottom half": "下半分",
++"Left third": "左の 3 分の 1",
++"Middle third": "中央の 3 分の 1",
++"Right third": "右の 3 分の 1",
++"The middle": "中央",
++"Top left": "左上",
++"Top right": "右上",
++"Bottom left": "左下",
++"Bottom right": "右下",
++"regions {0}": "領域：{0}",
++"About the regions": "領域について"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 2684de8..b91a84d 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -4840,5 +4840,26 @@ RuachI18n.add("pt", {
+ "second pass ×{0}": "segunda passada ×{0}",
+ "Extra noise": "Ruído extra",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Ruído novo somado à imagem antes de pintar a partir dela, como faz o workflow do ComfyUI do Viktor (InjectLatentNoise): 0 nenhum, 0.3 grão e detalhe novos, 0.6 a segunda passada dele, acima de 1 as formas da imagem começam a se desfazer",
+-"extra noise {0}": "ruído extra {0}"
++"extra noise {0}": "ruído extra {0}",
++"Regions": "Regiões",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "Até três partes do quadro, cada uma com suas próprias palavras: a cada passo o pintor é consultado mais uma vez para cada região, com o prompt e as palavras da região, e as respostas se misturam por caixas de borda suave (ao modo do Latent Couple). Cada região custa uma passada inteira a mais por passo. Krea 2 e Qwen-Image 2512",
++"Add a region": "Adicionar uma região",
++"Not with Qwen-Image 2.1: it edits by words": "Não com o Qwen-Image 2.1: ele edita por palavras",
++"Where in the frame": "Onde no quadro",
++"What is there": "O que há ali",
++"Remove the region": "Remover a região",
++"Left half": "Metade esquerda",
++"Right half": "Metade direita",
++"Top half": "Metade de cima",
++"Bottom half": "Metade de baixo",
++"Left third": "Terço esquerdo",
++"Middle third": "Terço do meio",
++"Right third": "Terço direito",
++"The middle": "O meio",
++"Top left": "Em cima à esquerda",
++"Top right": "Em cima à direita",
++"Bottom left": "Embaixo à esquerda",
++"Bottom right": "Embaixo à direita",
++"regions {0}": "regiões: {0}",
++"About the regions": "Sobre as regiões"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 96e5b20..759d0b2 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -4962,5 +4962,26 @@ RuachI18n.add("ru", {
+ "second pass ×{0}": "второй проход ×{0}",
+ "Extra noise": "Добавочный шум",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Свежий шум поверх картинки перед тем, как с неё рисовать, как в ComfyUI-воркфлоу Виктора (InjectLatentNoise): 0 — без шума, 0.3 — новое зерно и детали, 0.6 — его второй проход, выше 1 формы картинки начинают рассыпаться",
+-"extra noise {0}": "добавочный шум {0}"
++"extra noise {0}": "добавочный шум {0}",
++"Regions": "Регионы",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "До трёх частей кадра, у каждой свои слова: на каждом шаге художника спрашивают ещё раз для каждого региона, с промптом и словами региона, и ответы смешиваются по рамкам с мягким краем (как в Latent Couple). Каждый регион стоит целого прохода на шаг. Krea 2 и Qwen-Image 2512",
++"Add a region": "Добавить регион",
++"Not with Qwen-Image 2.1: it edits by words": "Не для Qwen-Image 2.1: она правит словами",
++"Where in the frame": "Где в кадре",
++"What is there": "Что там",
++"Remove the region": "Убрать регион",
++"Left half": "Левая половина",
++"Right half": "Правая половина",
++"Top half": "Верхняя половина",
++"Bottom half": "Нижняя половина",
++"Left third": "Левая треть",
++"Middle third": "Средняя треть",
++"Right third": "Правая треть",
++"The middle": "Середина",
++"Top left": "Слева вверху",
++"Top right": "Справа вверху",
++"Bottom left": "Слева внизу",
++"Bottom right": "Справа внизу",
++"regions {0}": "регионов: {0}",
++"About the regions": "О регионах"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index c190933..5cb1724 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -4957,5 +4957,26 @@ RuachI18n.add("uk", {
+ "second pass ×{0}": "другий прохід ×{0}",
+ "Extra noise": "Додатковий шум",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "Свіжий шум поверх картинки перед тим, як із неї малювати, як у ComfyUI-воркфлоу Віктора (InjectLatentNoise): 0 — без шуму, 0.3 — нове зерно й деталі, 0.6 — його другий прохід, вище 1 форми картинки починають розсипатися",
+-"extra noise {0}": "додатковий шум {0}"
++"extra noise {0}": "додатковий шум {0}",
++"Regions": "Регіони",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "До трьох частин кадру, у кожної свої слова: на кожному кроці художника питають ще раз для кожного регіону, з промптом і словами регіону, і відповіді змішуються за рамками з м'яким краєм (як у Latent Couple). Кожен регіон коштує цілого проходу на крок. Krea 2 і Qwen-Image 2512",
++"Add a region": "Додати регіон",
++"Not with Qwen-Image 2.1: it edits by words": "Не для Qwen-Image 2.1: вона править словами",
++"Where in the frame": "Де в кадрі",
++"What is there": "Що там",
++"Remove the region": "Прибрати регіон",
++"Left half": "Ліва половина",
++"Right half": "Права половина",
++"Top half": "Верхня половина",
++"Bottom half": "Нижня половина",
++"Left third": "Ліва третина",
++"Middle third": "Середня третина",
++"Right third": "Права третина",
++"The middle": "Середина",
++"Top left": "Ліворуч угорі",
++"Top right": "Праворуч угорі",
++"Bottom left": "Ліворуч унизу",
++"Bottom right": "Праворуч унизу",
++"regions {0}": "регіонів: {0}",
++"About the regions": "Про регіони"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 8548e76..5c133ef 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -4840,5 +4840,26 @@ RuachI18n.add("zh", {
+ "second pass ×{0}": "第二遍 ×{0}",
+ "Extra noise": "附加噪声",
+ "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break": "在从图片开始绘制之前给它加上新的噪声，与 Viktor 的 ComfyUI 工作流（InjectLatentNoise）相同：0 不加，0.3 带来新的颗粒和细节，0.6 是他的第二遍，超过 1 图片的形体开始瓦解",
+-"extra noise {0}": "附加噪声 {0}"
++"extra noise {0}": "附加噪声 {0}",
++"Regions": "区域",
++"Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512": "画面中最多三个部分，各有自己的文字：每一步都会针对每个区域再询问画师一次，使用提示词加上该区域的文字，再按边缘柔和的框把结果混合起来（Latent Couple 的做法）。每个区域每一步要多算一整遍。适用于 Krea 2 和 Qwen-Image 2512",
++"Add a region": "添加区域",
++"Not with Qwen-Image 2.1: it edits by words": "不适用于 Qwen-Image 2.1：它用文字编辑",
++"Where in the frame": "画面中的位置",
++"What is there": "那里有什么",
++"Remove the region": "移除该区域",
++"Left half": "左半边",
++"Right half": "右半边",
++"Top half": "上半边",
++"Bottom half": "下半边",
++"Left third": "左三分之一",
++"Middle third": "中间三分之一",
++"Right third": "右三分之一",
++"The middle": "中间",
++"Top left": "左上",
++"Top right": "右上",
++"Bottom left": "左下",
++"Bottom right": "右下",
++"regions {0}": "区域：{0}",
++"About the regions": "关于区域"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 2c42d58..d9bba13 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1524,6 +1524,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <button type="button" class="btn ghost small" id="arSampReset" data-tip="The painter's own steps, sampler and schedule">Reset</button>
+           </div>
+         </details>
++        <!-- HERESY 1387: regional prompts, as InvokeAI's regional guidance -->
++        <details class="ar-sampling ar-regions" id="arRegions"><summary><span class="label">Regions</span> <em id="arRegSay"></em><span class="info" tabindex="-1" role="img" aria-label="About the regions" data-tip="Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512"></span></summary>
++          <div class="ar-reg-list" id="arRegList"></div>
++          <div class="ar-reg-foot"><button type="button" class="btn ghost small" id="arRegAdd">Add a region</button><span class="row-hint" id="arRegNote" hidden>Not with Qwen-Image 2.1: it edits by words</span></div>
++        </details>
+         <!-- HERESY 1316: the adapters of the painter's family, each at its strength -->
+         <div class="ar-loras" id="arLoras">
+           <div class="ar-loras-head"><span class="label">LoRA <em id="arLoraSay"></em></span>
+-- 
+2.43.0
+

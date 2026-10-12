@@ -1,0 +1,258 @@
+From c49cfe2b636d1b3aa479a647088582e82d146360 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 12 Oct 2026 16:41:28 -0600
+Subject: [PATCH 1364/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201390:=20the?=
+ =?UTF-8?q?=20Writer's=20Max=20tokens=20(32K),=20an=20empty=20answer=20and?=
+ =?UTF-8?q?=20a=20failure=20said=20over=20the=20page,=20the=20answer=20scr?=
+ =?UTF-8?q?olled=20to=20the=20top?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 12.10.2026: «Max tokens», 32K by default (a value kept at the old 8192 taken as the default); an empty answer or a failure of the model in the studio's dialog; an answer that came scrolled to the window's top; the status line at the output limit in the eleven catalogs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            | 16 ++++++++++++----
+ tools/console/heresy-i18n-be.js |  6 +++++-
+ tools/console/heresy-i18n-de.js |  6 +++++-
+ tools/console/heresy-i18n-el.js |  6 +++++-
+ tools/console/heresy-i18n-es.js |  6 +++++-
+ tools/console/heresy-i18n-fr.js |  6 +++++-
+ tools/console/heresy-i18n-it.js |  6 +++++-
+ tools/console/heresy-i18n-ja.js |  6 +++++-
+ tools/console/heresy-i18n-pt.js |  6 +++++-
+ tools/console/heresy-i18n-ru.js |  6 +++++-
+ tools/console/heresy-i18n-uk.js |  6 +++++-
+ tools/console/heresy-i18n-zh.js |  6 +++++-
+ tools/console/index.html        |  2 +-
+ 13 files changed, 68 insertions(+), 16 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 7e71b35..0b0811c 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8915,7 +8915,7 @@
+     $("assistTask").value = saved.task || "song";
+     $("assistStructure").value = saved.structure || "";
+     if (saved.temp !== undefined) $("assistTemp").value = saved.temp;
+-    if (saved.max) $("assistMax").value = saved.max;
++    if (saved.max && +saved.max !== 8192) $("assistMax").value = saved.max;   // HERESY 1390: the old default (8192) gives way to 32K
+     var saveAssist = function () {
+       store(ASSIST_KEY, JSON.stringify({ brief: $("assistBrief").value, prefs: $("assistPrefs").value, task: $("assistTask").value,
+                                          temp: $("assistTemp").value, max: $("assistMax").value,
+@@ -9061,7 +9061,7 @@
+         return;
+       }
+       var task = $("assistTask").value, temp = $("assistTemp").value.trim();
+-      var max = Math.max(256, parseInt($("assistMax").value, 10) || 8192);
++      var max = Math.max(256, parseInt($("assistMax").value, 10) || 32768);   // HERESY 1390
+       button.disabled = true;
+       $("assistLabel").textContent = "Writing…";
+       // HERESY 1167 (Viktor: «OpenRouter активность не отображается в системном логе»): the page asks the writer itself, so
+@@ -9118,13 +9118,21 @@
+           $("assistDraft").classList.add("is-hidden");
+           $("assistRaw").open = true;
+         }
+-        $("assistStatus").textContent = cut ? "The answer reached the output limit: review it carefully, or raise Max output tokens."
++        $("assistStatus").textContent = cut ? "The answer reached the output limit: review it carefully, or raise Max tokens."
+           : draft ? "Your draft is ready. Review and edit it, then apply what you like."
+           : "The model did not return a complete draft; its raw answer is below.";
++        if (!text.trim()) {                              // HERESY 1390b: nothing came back: said over the page, not only in the log
++          $("assistStatus").textContent = "";
++          window.HeresyDialog.alert("The model gave an empty answer: nothing came back from " + model + ".\n\n" +
++            "It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.");
++        } else {                                         // HERESY 1390b: the answer brought to the window's top
++          var shown = draft ? $("assistDraft") : $("assistRaw");
++          requestAnimationFrame(function () { shown.scrollIntoView({ block: "start", behavior: "smooth" }); });
++        }
+       }).catch(function (error) {
+         $("assistStatus").textContent = "";
+         addLogLine("[Writer] " + (model || "the writer") + " failed: " + (error.message || String(error)), false);
+-        toast(error.message || String(error), "bad");
++        window.HeresyDialog.alert("The writer failed: " + (error.message || String(error)));   // HERESY 1390b: over the page
+       }).then(function () { clearInterval(ticker); button.disabled = false; $("assistLabel").textContent = "Send the request to LLM"; });   // HERESY 1167
+     });
+ 
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 27ee84a..0adfa1a 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -4985,5 +4985,9 @@ RuachI18n.add("be", {
+ "for its style only (Qwen-Image 2.1)": "толькі дзеля стылю (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Як выкарыстоўваецца малюнак: маляваць з яго (image to image, мастаком формы, наколькі дазваляе «Наколькі можна мяняць»); правіць словамі промпта (Qwen-Image 2.1 захоўвае сцэну і мяняе тое, што сказана словамі); або толькі яго стыль (Qwen-Image 2.1 піша сцэну з промпта ў тэхніцы, мазку, палітры і святле малюнка). Qwen-Image 2.1 пад Qwen Research Licence: толькі для даследаванняў і ацэнкі",
+ "in the picture's style": "у стылі малюнка",
+-"edited by words": "праўка словамі"
++"edited by words": "праўка словамі",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "Адказ упёрся ў мяжу вываду: правер яго ўважліва або падымі «Макс. токенаў».",
++"The model gave an empty answer: nothing came back from {0}.": "Мадэль дала пусты адказ: ад {0} нічога не прыйшло.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Магчыма, яна патраціла ўвесь адказ на развагі або адразу спынілася. Адпраў яшчэ раз, падымі «Макс. токенаў» або выберы іншую мадэль.",
++"The writer failed: {0}": "Пісьменнік не справіўся: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 109cf32..458cee0 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -4868,5 +4868,9 @@ RuachI18n.add("de", {
+ "for its style only (Qwen-Image 2.1)": "nur für seinen Stil (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Wie das Bild dient: von ihm aus malen (Image to Image, mit dem Maler des Formulars, so weit Wie stark es sich ändern darf es sagt); es mit den Worten des Prompts bearbeiten (Qwen-Image 2.1 behält die Szene und ändert, was die Worte sagen); oder nur sein Stil (Qwen-Image 2.1 malt die Szene des Prompts in Technik, Pinselstrich, Palette und Licht des Bildes). Qwen-Image 2.1 steht unter der Qwen Research Licence: nur Forschung und Bewertung",
+ "in the picture's style": "im Stil des Bildes",
+-"edited by words": "mit Worten bearbeitet"
++"edited by words": "mit Worten bearbeitet",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "Die Antwort hat die Ausgabegrenze erreicht: prüfe sie sorgfältig oder erhöhe «Max. Tokens».",
++"The model gave an empty answer: nothing came back from {0}.": "Das Modell gab eine leere Antwort: von {0} kam nichts.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Vielleicht hat es die ganze Antwort mit Nachdenken verbraucht oder sofort aufgehört. Sende erneut, erhöhe «Max. Tokens» oder wähle ein anderes Modell.",
++"The writer failed: {0}": "Der Schreiber ist gescheitert: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 2796487..ad48da0 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -4984,5 +4984,9 @@ RuachI18n.add("el", {
+ "for its style only (Qwen-Image 2.1)": "μόνο για το ύφος της (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Πώς χρησιμοποιείται η εικόνα: ζωγραφική από αυτήν (image to image, από τον ζωγράφο της φόρμας, όσο λέει το Πόσο μπορεί να αλλάξει)· διόρθωση με τις λέξεις του prompt (το Qwen-Image 2.1 κρατά τη σκηνή και αλλάζει ό,τι λένε οι λέξεις)· ή μόνο το ύφος της (το Qwen-Image 2.1 ζωγραφίζει τη σκηνή του prompt με την τεχνική, την πινελιά, την παλέτα και το φως της εικόνας). Το Qwen-Image 2.1 είναι υπό την Qwen Research Licence: μόνο για έρευνα και αξιολόγηση",
+ "in the picture's style": "στο ύφος της εικόνας",
+-"edited by words": "διορθωμένη με λέξεις"
++"edited by words": "διορθωμένη με λέξεις",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "Η απάντηση έφτασε στο όριο εξόδου: έλεγξέ την προσεκτικά ή αύξησε το «Μέγ. tokens».",
++"The model gave an empty answer: nothing came back from {0}.": "Το μοντέλο έδωσε κενή απάντηση: δεν ήρθε τίποτα από το {0}.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Ίσως ξόδεψε όλη την απάντηση στη σκέψη του ή σταμάτησε αμέσως. Στείλ' το ξανά, αύξησε το «Μέγ. tokens» ή διάλεξε άλλο μοντέλο.",
++"The writer failed: {0}": "Ο Συγγραφέας απέτυχε: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 39e9114..1a9e6f2 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -4984,5 +4984,9 @@ RuachI18n.add("es", {
+ "for its style only (Qwen-Image 2.1)": "solo por su estilo (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Cómo se usa la imagen: pintar desde ella (image to image, con el pintor del formulario, hasta donde diga Cuánto puede cambiar); editarla con las palabras del prompt (Qwen-Image 2.1 guarda la escena y cambia lo que dicen las palabras); o solo su estilo (Qwen-Image 2.1 pinta la escena del prompt con la técnica, la pincelada, la paleta y la luz de la imagen). Qwen-Image 2.1 está bajo la Qwen Research Licence: solo investigación y evaluación",
+ "in the picture's style": "con el estilo de la imagen",
+-"edited by words": "editada con palabras"
++"edited by words": "editada con palabras",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "La respuesta llegó al límite de salida: revísala con cuidado o sube «Máx. tokens».",
++"The model gave an empty answer: nothing came back from {0}.": "El modelo dio una respuesta vacía: no llegó nada de {0}.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Puede que gastara toda la respuesta en pensar, o que se detuviera enseguida. Envíalo otra vez, sube «Máx. tokens» o elige otro modelo.",
++"The writer failed: {0}": "El Escritor falló: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 10617fb..518d118 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -4868,5 +4868,9 @@ RuachI18n.add("fr", {
+ "for its style only (Qwen-Image 2.1)": "pour son style seulement (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Comment l'image sert : peindre à partir d'elle (image to image, par le peintre du formulaire, aussi loin que le dit Combien elle peut changer) ; la modifier par les mots du prompt (Qwen-Image 2.1 garde la scène et change ce que disent les mots) ; ou son style seulement (Qwen-Image 2.1 peint la scène du prompt avec la technique, la touche, la palette et la lumière de l'image). Qwen-Image 2.1 est sous la Qwen Research Licence : recherche et évaluation seulement",
+ "in the picture's style": "dans le style de l'image",
+-"edited by words": "modifiée par les mots"
++"edited by words": "modifiée par les mots",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "La réponse a atteint la limite de sortie : relis-la avec soin, ou augmente « Tokens max ».",
++"The model gave an empty answer: nothing came back from {0}.": "Le modèle a donné une réponse vide : rien n'est venu de {0}.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Il a peut-être dépensé toute la réponse à réfléchir, ou s'est arrêté aussitôt. Renvoie-la, augmente « Tokens max » ou choisis un autre modèle.",
++"The writer failed: {0}": "L'Écrivain a échoué : {0}"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 77b34c9..0dfb05d 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -4984,5 +4984,9 @@ RuachI18n.add("it", {
+ "for its style only (Qwen-Image 2.1)": "solo per il suo stile (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Come si usa l'immagine: dipingere da essa (image to image, con il pittore del modulo, fin dove dice Quanto può cambiare); modificarla con le parole del prompt (Qwen-Image 2.1 tiene la scena e cambia ciò che dicono le parole); o solo il suo stile (Qwen-Image 2.1 dipinge la scena del prompt con la tecnica, la pennellata, la tavolozza e la luce dell'immagine). Qwen-Image 2.1 è sotto la Qwen Research Licence: solo ricerca e valutazione",
+ "in the picture's style": "nello stile dell'immagine",
+-"edited by words": "modificata con le parole"
++"edited by words": "modificata con le parole",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "La risposta ha raggiunto il limite di uscita: controllala con cura o alza «Max token».",
++"The model gave an empty answer: nothing came back from {0}.": "Il modello ha dato una risposta vuota: da {0} non è arrivato nulla.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Forse ha speso tutta la risposta nel ragionare, o si è fermato subito. Invialo di nuovo, alza «Max token» o scegli un altro modello.",
++"The writer failed: {0}": "Lo Scrittore non è riuscito: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index df45c3e..f2e3f43 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -4868,5 +4868,9 @@ RuachI18n.add("ja", {
+ "for its style only (Qwen-Image 2.1)": "スタイルだけ（Qwen-Image 2.1）",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "画像の使い方：ここから描く（image to image、フォームの画家で、「どれだけ変えてよいか」の範囲まで）、プロンプトの言葉で編集する（Qwen-Image 2.1 がシーンを保ち、言葉の言う部分を変えます）、またはスタイルだけ（Qwen-Image 2.1 がプロンプトのシーンを、画像の技法・筆致・パレット・光で描きます）。Qwen-Image 2.1 は Qwen Research Licence で、研究と評価のみに使えます",
+ "in the picture's style": "画像のスタイルで",
+-"edited by words": "言葉で編集"
++"edited by words": "言葉で編集",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "回答が出力の上限に達しました：よく確認するか、「最大トークン」を上げてください。",
++"The model gave an empty answer: nothing came back from {0}.": "モデルの回答が空でした：{0} から何も返ってきませんでした。",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "思考で回答をすべて使い切ったか、すぐに止まった可能性があります。もう一度送るか、「最大トークン」を上げるか、別のモデルを選んでください。",
++"The writer failed: {0}": "ライターが失敗しました：{0}"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 1364c66..5b49180 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -4868,5 +4868,9 @@ RuachI18n.add("pt", {
+ "for its style only (Qwen-Image 2.1)": "só pelo estilo dela (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Como a imagem é usada: pintar a partir dela (image to image, pelo pintor do formulário, até onde diz Quanto pode mudar); editá-la pelas palavras do prompt (o Qwen-Image 2.1 mantém a cena e muda o que as palavras dizem); ou só o estilo dela (o Qwen-Image 2.1 pinta a cena do prompt com a técnica, a pincelada, a paleta e a luz da imagem). O Qwen-Image 2.1 está sob a Qwen Research Licence: só pesquisa e avaliação",
+ "in the picture's style": "no estilo da imagem",
+-"edited by words": "editada por palavras"
++"edited by words": "editada por palavras",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "A resposta chegou ao limite de saída: revise com cuidado ou aumente «Máx. de tokens».",
++"The model gave an empty answer: nothing came back from {0}.": "O modelo deu uma resposta vazia: nada veio de {0}.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Talvez tenha gasto toda a resposta pensando, ou parado de imediato. Envie de novo, aumente «Máx. de tokens» ou escolha outro modelo.",
++"The writer failed: {0}": "O Escritor falhou: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 262ee5d..538a4c4 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -4990,5 +4990,9 @@ RuachI18n.add("ru", {
+ "for its style only (Qwen-Image 2.1)": "только ради стиля (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Как используется картинка: рисовать с неё (image to image, художником формы, насколько разрешает «Насколько можно менять»); править словами промпта (Qwen-Image 2.1 сохраняет сцену и меняет то, что сказано словами); или только её стиль (Qwen-Image 2.1 пишет сцену из промпта в технике, мазке, палитре и свете картинки). Qwen-Image 2.1 под Qwen Research Licence: только для исследований и оценки",
+ "in the picture's style": "в стиле картинки",
+-"edited by words": "правка словами"
++"edited by words": "правка словами",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "Ответ упёрся в предел вывода: проверь его внимательно или подними «Макс. токенов».",
++"The model gave an empty answer: nothing came back from {0}.": "Модель дала пустой ответ: от {0} ничего не пришло.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Возможно, она потратила весь ответ на размышления или сразу остановилась. Отправь ещё раз, подними «Макс. токенов» или выбери другую модель.",
++"The writer failed: {0}": "Писатель не справился: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 84a2dcc..0a24e6e 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -4985,5 +4985,9 @@ RuachI18n.add("uk", {
+ "for its style only (Qwen-Image 2.1)": "лише заради стилю (Qwen-Image 2.1)",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "Як використовується картинка: малювати з неї (image to image, художником форми, наскільки дозволяє «Наскільки можна змінювати»); правити словами промпта (Qwen-Image 2.1 зберігає сцену й змінює те, що сказано словами); або лише її стиль (Qwen-Image 2.1 пише сцену з промпта в техніці, мазку, палітрі й світлі картинки). Qwen-Image 2.1 під Qwen Research Licence: лише для досліджень і оцінки",
+ "in the picture's style": "у стилі картинки",
+-"edited by words": "правка словами"
++"edited by words": "правка словами",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "Відповідь уперлася в межу виводу: перевір її уважно або підніми «Макс. токенів».",
++"The model gave an empty answer: nothing came back from {0}.": "Модель дала порожню відповідь: від {0} нічого не прийшло.",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "Можливо, вона витратила всю відповідь на міркування або одразу зупинилася. Надішли ще раз, підніми «Макс. токенів» або вибери іншу модель.",
++"The writer failed: {0}": "Письменник не впорався: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index fad1c87..7c6160c 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -4868,5 +4868,9 @@ RuachI18n.add("zh", {
+ "for its style only (Qwen-Image 2.1)": "只取它的风格（Qwen-Image 2.1）",
+ "How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only": "图片的用法：从它开始绘制（图生图，用表单中的画师，程度由“允许改变多少”决定）；用提示词的文字编辑（Qwen-Image 2.1 保留场景，只改文字所说的部分）；或只取它的风格（Qwen-Image 2.1 用图片的技法、笔触、配色和光线画出提示词的场景）。Qwen-Image 2.1 采用 Qwen Research Licence：仅限研究和评估",
+ "in the picture's style": "沿用图片风格",
+-"edited by words": "用文字编辑"
++"edited by words": "用文字编辑",
++"The answer reached the output limit: review it carefully, or raise Max tokens.": "回答已达到输出上限：请仔细检查，或调高“最大 token 数”。",
++"The model gave an empty answer: nothing came back from {0}.": "模型给出了空回答：{0} 没有返回任何内容。",
++"It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.": "它可能把整个回答都用在了思考上，或者立刻就停止了。请再发送一次、调高“最大 token 数”，或换一个模型。",
++"The writer failed: {0}": "写作室失败了：{0}"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 9004fe3..962ead4 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1194,7 +1194,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+               <option value="full">Full arc — intro, pre-chorus, bridge, outro</option>
+             </select></label>
+           <label class="field assist-num" data-tip="How free the drafts are: lower keeps close to the brief and repeats itself more, higher invents more and wanders. Blank: the server's or the model's own default."><span class="label">Temperature</span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
+-          <label class="field assist-num" data-tip="The longest answer the model may give, in tokens. Too few cut a song off in the middle; a thinking model spends part of them on its thinking first."><span class="label">Max output tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="8192" /></label>
++          <label class="field assist-num" data-tip="The longest answer the model may give, in tokens. Too few cut a song off in the middle; a thinking model spends part of them on its thinking first."><span class="label">Max tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="32768" /></label>   <!-- HERESY 1390 -->
+         </div>
+         <details class="assist-prefs">
+           <summary>Your writing preferences <span class="dim" id="assistPrefsSize"></span></summary>
+-- 
+2.43.0
+

@@ -15,15 +15,19 @@ and 8 steps by its README for the base, at 0.55 and 12 steps for a fine-tune as 
 10.10.2026, 1328²: Q6_K 32 s a picture, 17.6 GB at the peak; Q4_K_M 30 s, 14.3 GB; the JibMix v6 fp8 fine-tune at 0.55 and 12 steps
 37 s, 21.0 GB. The text encoder (Qwen2.5-VL-7B, 16.6 GB in bf16) reads the prompt on the card when it holds it, else on the CPU, and
 leaves before the painter comes (HERESY 1338b: on the card when the room free there now holds it). A shape is drawn at Qwen-Image's own size and kept at the room's (Lanczos)."""
-import gc, json, math, os, re, sys, time
+import copy, gc, json, math, os, re, sys, time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+ONLY = {int(x) for x in os.environ.get("ART_ONLY", "").split(",") if x.strip().isdigit()}   # HERESY 1354: this card's pictures of the run
 import art_job  # noqa: E402
 import artist_loras  # noqa: E402
 
 KIT = art_job.KIT
+KEPT = art_job.KEPT                                  # HERESY 1370: what a serving process keeps (artist_job.serve), one dict with artist_job's
+SERVE = os.environ.get("ART_SERVE") == "1"
+OWN = {}                                             # HERESY 1370: the scheduler build() gave the last pipeline, before a run's sampler
 Q2512 = KIT / "artwork" / "Qwen-Image-2512"
 Q21 = KIT / "artwork" / "Qwen-Image-2.1"
 GGUF = {"qwen2512-q4": "qwen-image-2512-Q4_K_M.gguf", "qwen2512-q6": "qwen-image-2512-Q6_K.gguf"}
@@ -40,7 +44,8 @@ ENC_ROOM = int(float(os.environ.get("ART_ENC_ROOM_GB") or 16.5) * 2 ** 30)
 # run needs on the card beside the painter's weights (the activations, the VAE's tiles, the card's own context), measured; a painter
 # whose weights with this do not fit the room free on its card streams its blocks from RAM (STREAMS: the painters tried so)
 WORK_ROOM = int(float(os.environ.get("ART_WORK_ROOM_GB") or 2.0) * 2 ** 30)
-STREAMS = {"qwen2512-fp8"}
+WORK_ROOM_OF = {"krea2-q4": int(3.5 * 2 ** 30), "krea2-q8": int(3.5 * 2 ** 30)}   # HERESY 1351: Krea 2 decodes 1920 × 1088 beside its weights
+STREAMS = {"qwen2512-fp8", "qwen2512-q4", "qwen2512-q6", "krea2-q4", "krea2-q8"}   # 1348: the GGUF ones too (Q4 streamed whole: 33.9 s against 30.6, 2.2 GB at the peak, the same picture)
 
 
 def weights_bytes(m):
@@ -57,7 +62,8 @@ def place(pipe, painter):
     tr = pipe.transformer
     size, free = weights_bytes(tr), torch.cuda.mem_get_info()[0]
     asked = os.environ.get("ART_STREAM") == "1"
-    if painter not in STREAMS or (not asked and free >= size + WORK_ROOM):
+    work = WORK_ROOM_OF.get(painter, WORK_ROOM)
+    if painter not in STREAMS or (not asked and free >= size + work):
         tr.to("cuda")
         return None
     # HERESY 1342b: the blocks the room holds stay (the parts outside the blocks too, and two blocks' room for the one coming in), the
@@ -65,12 +71,12 @@ def place(pipe, painter):
     blocks = list(tr.transformer_blocks)
     per = max(weights_bytes(b) for b in blocks)
     rest = size - sum(weights_bytes(b) for b in blocks)
-    keep = int((free - WORK_ROOM - rest - 2 * per) // per)
+    keep = int((free - work - rest - 2 * per) // per)
     if os.environ.get("ART_STREAM_KEEP"):                    # a test's own share
         keep = int(os.environ["ART_STREAM_KEEP"])
     keep = max(0, min(len(blocks) - 1, keep))
     cuda, cpu = torch.device("cuda"), torch.device("cpu")
-    if keep < len(blocks) // 2:
+    if len(blocks) - keep > 15:                          # 1348: more than a quarter to stream: all of them, prefetched (quicker than copies in turn)
         tr.enable_group_offload(onload_device=cuda, offload_device=cpu, offload_type="block_level", num_blocks_per_group=1, use_stream=True)
         keep = 0
     else:
@@ -91,6 +97,37 @@ def place(pipe, painter):
             # finished before it computes, else its first look could read weights still on their way
             HookRegistry.check_if_exists_or_initialize(b).get_hook("group_offloading").group.non_blocking = False
     return {"stream": True, "weights_gb": round(size / 2 ** 30, 1), "free_gb": round(free / 2 ** 30, 1), "asked": asked, "kept": keep, "of": len(blocks)}
+
+
+# HERESY 1388: a reference for its style alone: the scene from the prompt, the look from the picture (tried 12.10.2026 on the 1384 lighthouse,
+# oils: a fox in a snowy forest under the moon, in its brushwork, nothing of its subject kept)
+STYLE_ASK = ("Paint a completely new picture: {prompt}. Use only the style of the given image: its painting technique, brushwork, palette and "
+             "light. Do not keep its subject, objects or composition.")
+
+
+def place21(pipe):
+    """HERESY 1386: Qwen-Image 2.1's parts on the card in turn (enable_model_cpu_offload: 16.4 GB at the peak from words, 19.1 editing, on a
+    3090) when the room free there holds the larger of its text encoder and its transformer with the work beside it; else (the lab asks
+    it with ART_STREAM=1 when no card here takes the run whole, or the room says so) both stream from RAM over a CUDA stream, the
+    transformer block by block, the encoder (Qwen3-VL, a transformers model) leaf by leaf; the VAE on the card, in tiles. The same
+    weights, slower by what the bus cannot hide. Returns what is said of it, or None."""
+    import torch
+    te, tr = pipe.text_encoder, pipe.transformer
+    big = max(weights_bytes(te), weights_bytes(tr))
+    free = torch.cuda.mem_get_info()[0]
+    asked = os.environ.get("ART_STREAM") == "1"
+    if not asked and free >= big + WORK_ROOM_OF.get("qwen21", WORK_ROOM):
+        pipe.enable_model_cpu_offload()
+        return None
+    from diffusers.hooks import apply_group_offloading
+    cuda, cpu = torch.device("cuda"), torch.device("cpu")
+    tr.enable_group_offload(onload_device=cuda, offload_device=cpu, offload_type="block_level", num_blocks_per_group=1, use_stream=True)
+    apply_group_offloading(te, onload_device=cuda, offload_device=cpu, offload_type="leaf_level", use_stream=True)
+    pipe.vae.to(cuda)
+    if hasattr(pipe.vae, "enable_tiling"):
+        pipe.vae.enable_tiling()
+    return {"stream": True, "weights_gb": round((weights_bytes(tr) + weights_bytes(te)) / 2 ** 30, 1), "free_gb": round(free / 2 ** 30, 1),
+            "asked": asked, "kept": 0, "of": len(list(getattr(tr, "transformer_blocks", None) or []))}
 
 
 def lightning():
@@ -158,9 +195,7 @@ def adapter_dict(p, modules):
     """An adapter's tensors as diffusers' Qwen loader reads them: PEFT's «.default.» taken out, a kohya file renamed by the
     checkpoint's own layer names."""
     from safetensors.torch import load_file
-    sd = load_file(str(p))
-    if any(".default." in k for k in sd):
-        sd = {k.replace(".lora_A.default.", ".lora_A.").replace(".lora_B.default.", ".lora_B."): v for k, v in sd.items()}
+    sd = artist_loras.plain_named(load_file(str(p)), "qwen")   # HERESY 1353: «.default.» out; a PEFT file without its prefix given «transformer.»
     missed = 0
     if any(k.startswith("lora_unet_") for k in sd):
         sd, missed = artist_loras.kohya_to_comfy(sd, modules)
@@ -182,6 +217,37 @@ def load_adapters(pipe, wanted, modules):
     if names:
         pipe.set_adapters(names, adapter_weights=weights)
     return out
+
+
+def tune(painter, speed):
+    """HERESY 1370: Lightning's strength (0: off), the steps and the true CFG of a 2512 run, as build() reckons them, for a pipeline kept
+    from the run before too."""
+    kind = "base" if painter in GGUF else "fine"
+    lw, steps = SPEED[kind]
+    if speed.get("lightning") is not None:
+        lw = float(speed["lightning"])
+    elif kind in OFF_BY_DEFAULT:
+        lw = 0.0
+    if speed.get("steps"):
+        steps = int(speed["steps"])
+    if lightning() and lw > 0:
+        return lw, steps, 1.0
+    return 0.0, int(speed.get("steps") or SLOW[0]), float(speed.get("cfg") or SLOW[1])
+
+
+def rekept(painter, speed, loras):
+    """HERESY 1370: the kept pipeline for this run: its own scheduler again, the run's sampler and schedule, its adapters at this run's
+    strengths (Lightning at its own), the steps and guidance as build() reckons them: (pipe, said, steps, cfg)."""
+    import artist_job
+    pipe = KEPT["pipe"]
+    lw, steps, cfg = tune(painter, speed)
+    pipe.scheduler = copy.deepcopy(KEPT["own"])
+    names = ["a%d" % i for i in range(len(loras))] + (["speed"] if lw > 0 else [])
+    weights = [float(l.get("weight", artist_loras.WEIGHT)) for l in loras] + ([lw] if lw > 0 else [])
+    if names:
+        pipe.set_adapters(names, adapter_weights=weights)
+    artist_job.set_schedule(pipe, speed)
+    return pipe, [dict(s, weight=w) for s, w in zip(KEPT.get("said") or [], weights)], steps, cfg
 
 
 def build(painter, model, loras, speed):
@@ -222,6 +288,7 @@ def build(painter, model, loras, speed):
     else:
         steps, cfg = (int(speed.get("steps") or SLOW[0]), float(speed.get("cfg") or SLOW[1]))
     said = load_adapters(pipe, wanted, modules_of(ckpt)) if wanted else []
+    OWN["sched"] = copy.deepcopy(pipe.scheduler)             # HERESY 1370: its own, set again for a run of a kept pipeline
     import artist_job
     artist_job.set_schedule(pipe, speed)                     # HERESY 1319: the sampler and the schedule asked
     if store is not None:                                    # fp8 on the card, each layer bf16 while it computes; the adapters' own bf16
@@ -285,16 +352,42 @@ def main(run, ask, painter):
     prompt, seed, count = str(ask["prompt"]), int(ask["seed"]), max(1, min(4, int(ask.get("count") or 1)))
     shapes = [s for s in ask.get("shapes") or ["1:1"] if s in SHAPES]
     preview = bool(ask.get("preview"))
-    pipe, said, steps, cfg = build(painter, ask.get("model"), ask.get("loras") or [], ask.get("sampling") or ask.get("speed") or {})   # HERESY 1319
+    speed = ask.get("sampling") or ask.get("speed") or {}
+    key = None if painter == "qwen21" else ("qwen", painter, str(ask.get("model") or ""), tuple(l["id"] for l in ask.get("loras") or []), tune(painter, speed)[0] > 0)
+    if key is not None and KEPT.get("key") == key:   # HERESY 1370: kept from the run before: no loading
+        pipe, said, steps, cfg = rekept(painter, speed, ask.get("loras") or [])
+        print(json.dumps({"kept": True}), flush=True)
+    else:
+        import artist_job
+        artist_job.drop()                            # HERESY 1370: another painter kept: let go before this one loads
+        pipe, said, steps, cfg = build(painter, ask.get("model"), ask.get("loras") or [], speed)   # HERESY 1319
+        if SERVE and key is not None:
+            KEPT.update(key=key, pipe=pipe, own=OWN.get("sched"), said=said)
     if said:
         print(json.dumps({"loras": said}), flush=True)
+    import artist_job
+    sched = artist_job.lora_sched(ask.get("loras"))  # HERESY 1365: the adapters' strengths by their keyframes; Lightning (speed) kept
+    if sched:                                        # at its own strength in every step's set, or it would be let go
+        sched += [("speed", float(x.get("weight") or 1.0), None) for x in said if x.get("id") == "lightning"]
+
+    def keyed(kw):                                   # HERESY 1365: step 0's strengths now, each next one before its step
+        if sched:
+            n_ = int(kw.get("num_inference_steps") or steps)
+            artist_job.lora_start(pipe, sched, n_)
+            kw.update(callback_on_step_end=artist_job.lora_steps(pipe, sched, n_, kw.get("callback_on_step_end")),
+                      callback_on_step_end_tensor_inputs=kw.get("callback_on_step_end_tensor_inputs") or ["latents"])
+        return kw
     ref = Image.open(run / ask["ref"]).convert("RGB") if ask.get("ref") else None
     mask = Image.open(run / ask["mask"]).convert("L") if ask.get("mask") else None
     big = torch.cuda.mem_get_info()[0] >= ENC_ROOM          # HERESY 1338b: the room free now, not the card's size
     if painter == "qwen21":                                  # its parts on the card in turn (16.4 GB from words, 19.1 editing, 3090)
         if mask is not None or ask.get("fit"):
             raise RuntimeError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Krea 2 or Qwen-Image 2512")
-        pipe.enable_model_cpu_offload()
+        streamed = place21(pipe)                             # HERESY 1386: its parts in turn, or streamed on a card too small for them
+        if streamed:
+            print(json.dumps(streamed), flush=True)
+            KEPT["streamed"] = True
+        torch.cuda.reset_peak_memory_stats()
         e = m = None
     else:
         dev = torch.device("cuda" if big else "cpu")        # the encoder on the card when it holds it (16.6 GB), else on the CPU
@@ -302,17 +395,20 @@ def main(run, ask, painter):
         with torch.inference_mode():
             e, m = pipe.encode_prompt(prompt, device=dev)
             ne, nm = pipe.encode_prompt(NEGATIVE, device=dev) if cfg > 1 else (None, None)
+            regs = [pipe.encode_prompt(p, device=dev) for p in artist_job.region_prompts(prompt, ask)]   # HERESY 1387
         pipe.text_encoder.to("cpu")
         gc.collect()
         torch.cuda.empty_cache()
         e = e.to("cuda")
         m = m.to("cuda") if m is not None else None
+        regs = [(pe.to("cuda"), pm.to("cuda") if pm is not None else None) for pe, pm in regs]   # HERESY 1387
         if ne is not None:
             ne = ne.to("cuda")
             nm = nm.to("cuda") if nm is not None else None
         streamed = place(pipe, painter)                      # HERESY 1342: whole on the card, or its blocks streamed from RAM
         if streamed:
             print(json.dumps(streamed), flush=True)
+            KEPT["streamed"] = True                          # HERESY 1370: its blocks hooked to stream: not kept after this run
         torch.cuda.reset_peak_memory_stats()                 # HERESY 1342b: the painting's own peak, the encoder's moment before it left out
         pipe.vae.to("cuda")
         pipe.vae.enable_tiling()
@@ -321,18 +417,24 @@ def main(run, ask, painter):
     n = 0
     for k in range(count):
         for shape in shapes:
-            (gw, gh), (w, h) = SHAPES[shape]
+            (gw, gh), (w, h) = artist_job.sized(SHAPES, shape, ask)   # HERESY 1384: times the scale of a second pass
             n += 1
+            if ONLY and n not in ONLY:                   # HERESY 1354: another card paints this one (the lab spread the run)
+                continue
             t1 = time.time()
             g = torch.Generator("cuda").manual_seed(seed + k)
             if hasattr(pipe.scheduler, "heresy"):         # HERESY 1333: our samplers noise by the pictures seed
                 pipe.scheduler.heresy = dict(pipe.scheduler.heresy, seed=seed + k)
             more = {"callback_on_step_end": live(run, n, gw, gh, w, h, steps), "callback_on_step_end_tensor_inputs": ["latents"]} if preview and painter != "qwen21" else {}
+            if painter != "qwen21":                     # HERESY 1387: this picture's regions, or none
+                artist_job.regions_set(pipe.transformer, e, [(pe, pm, t) for (pe, pm), t in zip(regs, artist_job.region_tokens(pipe, ask, gw, gh))],
+                                       "encoder_hidden_states_mask")
             if painter == "qwen21":
-                kw = {"prompt": prompt, "width": gw, "height": gh, "num_inference_steps": steps, "generator": g}
+                kw = {"prompt": STYLE_ASK.format(prompt=prompt.rstrip(" .")) if ask.get("ref_as") == "style" and ref is not None else prompt,   # HERESY 1388
+                      "width": gw, "height": gh, "num_inference_steps": steps, "generator": g}
                 if ref is not None:
                     kw["image"] = cover(ref, gw, gh)
-                img = pipe(**kw).images[0]
+                img = pipe(**keyed(kw)).images[0]
             else:
                 kw = {"prompt_embeds": e, "prompt_embeds_mask": m, "width": gw, "height": gh, "num_inference_steps": steps, "true_cfg_scale": cfg, "generator": g, **more}
                 if cfg > 1:
@@ -343,17 +445,17 @@ def main(run, ask, painter):
                     if shape not in fits:
                         fits[shape] = artist_job.placed(ref, mask, gw, gh, pl)
                     if shape not in x0s:
-                        x0s[shape] = artist_job.ref_latents(pipe, fits[shape][0], gw, gh)
+                        x0s[shape] = artist_job.ref_latents(pipe, fits[shape][0], gw, gh, artist_job.ref_rs(ask))
                     sig, s0 = artist_job.ref_sigmas(pipe, float(ask.get("strength") or 0.6) if fits[shape][2] else 1.0, steps, mu_of(pipe, gw, gh))
                     noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
-                    kw.update(latents=(1 - s0) * x0s[shape] + s0 * noise, sigmas=sig, num_inference_steps=len(sig))
+                    kw.update(latents=(1 - s0) * artist_job.jolt(pipe, x0s[shape], ask, seed + k) + s0 * noise, sigmas=sig, num_inference_steps=len(sig))   # HERESY 1385
                     if fits[shape][1] is not None:
                         grow, edge, soft, grain = artist_job.mask_opts(ask)
                         if shape not in masks:
                             masks[shape] = artist_job.mask_tokens(pipe, fits[shape][1], gw, gh, grow, edge, soft)
                         kw.update(callback_on_step_end=artist_job.blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, kw.get("callback_on_step_end")),
                                   callback_on_step_end_tensor_inputs=["latents"])
-                    img = pipe(**kw).images[0]
+                    img = pipe(**keyed(kw)).images[0]
                     if fits[shape][1] is not None:
                         img = artist_job.composite(img, fits[shape][0], masks[shape][1], artist_job.mask_opts(ask)[3])
                 elif ref is not None:                # HERESY 1320: as Krea's: the reference noised to the strength's sigma, the tail
@@ -362,21 +464,21 @@ def main(run, ask, painter):
                     if fit and shape not in fits:
                         fits[shape] = artist_job.fitted(ref, mask, gw, gh)
                     if shape not in x0s:
-                        x0s[shape] = artist_job.ref_latents(pipe, fits[shape][0] if fit else ref, gw, gh)
+                        x0s[shape] = artist_job.ref_latents(pipe, fits[shape][0] if fit else ref, gw, gh, artist_job.ref_rs(ask))
                     sig, s0 = artist_job.ref_sigmas(pipe, 1.0 if fit else float(ask.get("strength") or 0.6), steps, mu_of(pipe, gw, gh))
                     noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
-                    kw.update(latents=(1 - s0) * x0s[shape] + s0 * noise, sigmas=sig, num_inference_steps=len(sig))
+                    kw.update(latents=(1 - s0) * artist_job.jolt(pipe, x0s[shape], ask, seed + k) + s0 * noise, sigmas=sig, num_inference_steps=len(sig))   # HERESY 1385
                     if mask is not None or fit:
                         grow, edge, soft, grain = artist_job.mask_opts(ask)
                         if shape not in masks:
                             masks[shape] = artist_job.mask_tokens(pipe, fits[shape][1] if fit else mask, gw, gh, grow, edge, soft)
                         kw.update(callback_on_step_end=artist_job.blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, kw.get("callback_on_step_end")),
                                   callback_on_step_end_tensor_inputs=["latents"])
-                    img = pipe(**kw).images[0]
+                    img = pipe(**keyed(kw)).images[0]
                     if mask is not None or fit:
                         img = artist_job.composite(img, fits[shape][0] if fit else artist_job.cover(ref, gw, gh), masks[shape][1], artist_job.mask_opts(ask)[3])
                 else:
-                    img = pipe(**kw).images[0]
+                    img = pipe(**keyed(kw)).images[0]
             img = img.convert("RGB")
             if (img.width, img.height) != (w, h):
                 img = cover(img, w, h)

@@ -112,15 +112,26 @@ def empty_fits(c, need_mb):
             and need_mb <= c["total_mb"] - SPARE_MB)
 
 
-def pick(preferred, fallback=True, need_mb=0, root=KIT, limited=True):
+def pick(preferred, fallback=True, need_mb=0, root=KIT, limited=True, less=None, held=None):
     """The preferred cards in their order of free memory, then (with fallback) any card the guard passes; None when
     none will do (the caller says why, with verdict()). limited (HERESY 1294): the room under each card's limit counts, not
-    its whole free memory (the studio's own start passes False)."""
+    its whole free memory (the studio's own start passes False). less (HERESY 1376): {index: MiB} given to jobs a moment ago
+    whose processes may not hold them yet, taken off the card's room; a card with such a claim is not an empty one. held (HERESY
+    1378): {index: MiB} a process holds that will do the job itself (a kept painter), counted as free on its card."""
     cards = snapshot(root)
+    for c in cards:                                     # HERESY 1378: the job's own process, its memory the job's
+        mb = (held or {}).get(c["index"]) or 0
+        if mb > 0:
+            c["free_mb"] = min(c["total_mb"], c["free_mb"] + mb)
+            c["room_mb"] = max(0, c["free_mb"] - (c["total_mb"] - c["limit_mb"])) if c.get("limit_mb") else c["free_mb"]
     key = "room_mb" if limited else "free_mb"
-    good = [c for c in cards if c["ok"] and (c[key] >= need_mb or empty_fits(c, need_mb))]
-    first = sorted((c for c in good if c["index"] in preferred), key=lambda c: -c[key])
-    rest = sorted((c for c in good if c["index"] not in preferred), key=lambda c: -c[key]) if fallback else []
+    less = less or {}
+
+    def room(c):
+        return c[key] - less.get(c["index"], 0)
+    good = [c for c in cards if c["ok"] and (room(c) >= need_mb or (not less.get(c["index"]) and empty_fits(c, need_mb)))]
+    first = sorted((c for c in good if c["index"] in preferred), key=lambda c: -room(c))
+    rest = sorted((c for c in good if c["index"] not in preferred), key=lambda c: -room(c)) if fallback else []
     return (first + rest or [None])[0], cards
 
 

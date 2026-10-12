@@ -1,0 +1,103 @@
+From 7ca35c0895ca452a89faad204d53cdbeb78ea40e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 15:21:43 -0600
+Subject: [PATCH 1344/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201362:=20the?=
+ =?UTF-8?q?=20updater's=20two=20new=20answers=20in=20the=20six=20languages?=
+ =?UTF-8?q?=20(under=20Pinokio:=20update=20there;=20no=20systemd-run:=20th?=
+ =?UTF-8?q?e=20way=20by=20hand)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-i18n-be.js | 5 +++++
+ tools/console/heresy-i18n-el.js | 5 +++++
+ tools/console/heresy-i18n-es.js | 5 +++++
+ tools/console/heresy-i18n-it.js | 5 +++++
+ tools/console/heresy-i18n-ru.js | 5 +++++
+ tools/console/heresy-i18n-uk.js | 5 +++++
+ 6 files changed, 30 insertions(+)
+
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index c60d27b..db944ab 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -4827,3 +4827,8 @@ RuachI18n.add("be", {
+ RuachI18n.add("be", {
+ "The take would not start: press ▶ again": "Сэмпл не запусціўся: націсні ▶ яшчэ раз"
+ });
++// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
++RuachI18n.add("be", {
++"this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "гэтая студыя запушчана пад Pinokio: абнаўляй яе там, праз Update у меню Pinokio",
++"this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "на гэтай машыне няма systemd-run, у якім ішло б абнаўленне: абнаві ўручную (git fetch --tags, git checkout на рэліз, ./build.sh)"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index a6ec419..dda8467 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -4826,3 +4826,8 @@ RuachI18n.add("el", {
+ RuachI18n.add("el", {
+ "The take would not start: press ▶ again": "Η λήψη δεν ξεκίνησε: πάτα ▶ ξανά"
+ });
++// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
++RuachI18n.add("el", {
++"this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "αυτό το στούντιο τρέχει μέσα από το Pinokio: ενημέρωσέ το εκεί, με το Update στο μενού του Pinokio",
++"this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "αυτό το μηχάνημα δεν έχει systemd-run για να τρέξει η ενημέρωση: ενημέρωσε με το χέρι (git fetch --tags, git checkout στην έκδοση, ./build.sh)"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 78ea6cc..190b6d8 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -4826,3 +4826,8 @@ RuachI18n.add("es", {
+ RuachI18n.add("es", {
+ "The take would not start: press ▶ again": "La toma no arrancó: pulsa ▶ otra vez"
+ });
++// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
++RuachI18n.add("es", {
++"this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "este estudio se ejecuta en Pinokio: actualízalo allí, con Update en el menú de Pinokio",
++"this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "esta máquina no tiene systemd-run donde correr la actualización: actualiza a mano (git fetch --tags, git checkout de la versión, ./build.sh)"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index ec1f27a..4792124 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -4826,3 +4826,8 @@ RuachI18n.add("it", {
+ RuachI18n.add("it", {
+ "The take would not start: press ▶ again": "Il take non è partito: premi di nuovo ▶"
+ });
++// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
++RuachI18n.add("it", {
++"this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "questo studio gira sotto Pinokio: aggiornalo lì, con Update nel menu di Pinokio",
++"this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "questa macchina non ha systemd-run in cui far girare l'aggiornamento: aggiorna a mano (git fetch --tags, git checkout della versione, ./build.sh)"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 8360645..3d6b860 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -4832,3 +4832,8 @@ RuachI18n.add("ru", {
+ RuachI18n.add("ru", {
+ "The take would not start: press ▶ again": "Семпл не запустился: нажми ▶ ещё раз"
+ });
++// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
++RuachI18n.add("ru", {
++"this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "эта студия запущена под Pinokio: обновляй её там, через Update в меню Pinokio",
++"this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "на этой машине нет systemd-run, в котором шло бы обновление: обнови вручную (git fetch --tags, git checkout на релиз, ./build.sh)"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index b7269fa..459bfd8 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -4827,3 +4827,8 @@ RuachI18n.add("uk", {
+ RuachI18n.add("uk", {
+ "The take would not start: press ▶ again": "Семпл не запустився: натисни ▶ ще раз"
+ });
++// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
++RuachI18n.add("uk", {
++"this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "ця студія запущена під Pinokio: оновлюй її там, через Update у меню Pinokio",
++"this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "на цій машині немає systemd-run, у якому йшло б оновлення: онови вручну (git fetch --tags, git checkout на реліз, ./build.sh)"
++});
+-- 
+2.43.0
+

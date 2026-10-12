@@ -60,14 +60,21 @@
 *.part
 *.bak
 .DS_Store
-# HERESY 1285: what Pinokio writes beside its scripts (its logs, its environment, the notes it leaves for agents)
-/pinokio/logs/
-/pinokio/ENVIRONMENT
-/pinokio/*.md
-/pinokio/.clinerules
-/pinokio/.cursorrules
-/pinokio/.geminiignore
-/pinokio/.windsurfrules
+# HERESY 1285, 1352: what Pinokio writes beside pinokio.js (its environment, its logs and caches, the notes it leaves for agents),
+# and the folder the launcher's scripts lived in until rc5, where Pinokio wrote them then
+/ENVIRONMENT
+/logs/
+/cache/
+/.pinokio-temp
+/AGENTS.md
+/CLAUDE.md
+/GEMINI.md
+/QWEN.md
+/.clinerules
+/.cursorrules
+/.geminiignore
+/.windsurfrules
+/pinokio/
 
 # ---- the user's settings (single-user studio: they live here, not in ~/.config)
 /user/*

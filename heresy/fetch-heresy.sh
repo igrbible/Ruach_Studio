@@ -16,6 +16,12 @@
 #                                      HERESY 1323: also the Artist's Qwen painters, each asked first with its size:
 #                                      Qwen-Image-2512 with Lightning (Apache-2.0; Q4_K_M from a 16 GB card, Q6_K from 24)
 #                                      and Qwen-Image-2.1 (Qwen's research licence: not for commercial use, the question says so)
+#   heresy/fetch-heresy.sh --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8[,…] [--yes]
+#                                      HERESY 1347: also an fp8 fine-tune of Qwen-Image-2512 from our models repo (a card of
+#                                      24 GB), with 2512's own parts and Lightning when they are not here; shared there by
+#                                      their authors' leave (Civitai: share and sell)
+#   heresy/fetch-heresy.sh --art-loras all [--yes]
+#                                      HERESY 1347: also the Artist's adapters whose authors let them be shared (seven, 3.1 GB)
 #   heresy/fetch-heresy.sh --trainer bf16|int8 [--yes]
 #                                      also the base for the studio's own LoRA trainer (lab/trainer), asked first
 #                                      with its size; bf16 trains on unquantized weights, int8 on a smaller card
@@ -37,7 +43,7 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -48,7 +54,9 @@ while [ $# -gt 0 ]; do
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
     --qwen) QWEN="${2:-}"; shift ;;
-    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
+    --art-loras) ARTLORAS="${2:-all}"; shift ;;
+    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -399,6 +407,40 @@ if [ -n "$QWEN" ]; then
       *) echo "--qwen takes 2512-q4, 2512-q6, 2.1 (several with commas)"; exit 2 ;;
     esac
   done
+fi
+
+# HERESY 1347 (Viktor 10.10.2026: «Залей в него все модели диффузные, что у нас накопились, и LoRA адаптеры, и настрой выборочное
+# скачивание прямо в студии Художника»): the fp8 fine-tunes of Qwen-Image 2512 from our models repo, each only when asked for and
+# asked again with its size, with 2512's own parts and Lightning when they are not here (as --qwen fetches them); only those whose
+# authors let them be shared (Civitai: share and sell), the others are fetched by the user from Civitai itself. The same for the
+# Artist's adapters.
+if [ -n "$QFINE" ]; then
+  Q_DIR="$ROOT/artwork/Qwen-Image-2512"
+  for q in ${QFINE//,/ }; do
+    case "$q" in
+      jibmix-v6) f="JibMix QW2512 v6 fp8.safetensors"; who="Jib Mix Qwen v6 by J1B" ;;
+      intorealism-v1) f="IntoRealism QW2512 v1 fp8.safetensors"; who="IntoRealism Qwen v1 by enzino" ;;
+      real-v2) f="Real QW2512 v2 fp8.safetensors"; who="Real-Qwen-Image v2 by wikeeyang" ;;
+      base-fp8) f="BASE QW2512 fp8_e4m3fn.safetensors"; who="Qwen-Image-2512 itself in fp8 (Civitai's own)" ;;
+      *) echo "--qwen-fine takes jibmix-v6, intorealism-v1, real-v2, base-fp8 (several with commas)"; exit 2 ;;
+    esac
+    asked qwen-fine "Artwork: $who (an fp8 fine-tune of Qwen-Image-2512)"
+    go=1
+    if [ $MODE != check ] && [ $YES = 0 ] && ! [ -s "$Q_DIR/checkpoints/$f" ]; then
+      printf "%s" "Download up to 38 GB (the fine-tune 20.4, Qwen-Image-2512's parts 16.8 and Lightning 0.85 when they are not here)? It paints on a card of 24 GB. [y/N] "
+      read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+    fi
+    if [ $go = 1 ]; then
+      hf_into_at "artwork/Qwen-Image-2512 (its parts)" Qwen/Qwen-Image-2512 "$Q_DIR" "model_index.json" "scheduler/*" "tokenizer/*" "processor/*" "text_encoder/*" "vae/*" "transformer/config.json" "LICENSE*"
+      hf_into_at "artwork/Qwen-Image-2512/lightning" lightx2v/Qwen-Image-2512-Lightning "$Q_DIR/lightning" "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
+      hf_into "artwork/Qwen-Image-2512/checkpoints/$f" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/checkpoints/$f"
+      [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: lab/install-venv.sh --art)"
+    fi
+  done
+fi
+if [ -n "$ARTLORAS" ]; then
+  asked art-loras "Artwork: the Artist's adapters shared by their authors (seven, 3.1 GB: Krea 2, Qwen-Image 2.1 and 2512)"
+  hf_into "artwork/loras (shared by their authors)" goldhub/Ruach_Studio_Models_v2 "artwork/loras/*"
 fi
 
 # HERESY 1086: the studio's own LoRA trainer (lab/trainer), only when asked for, and asked again with its size.

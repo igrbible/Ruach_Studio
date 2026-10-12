@@ -115,7 +115,7 @@
     $("inResult").innerHTML = ""; $("inRun").textContent = "Inspect"; say("");
     // an earlier measurement shows at once (the lab keeps it)
     var token = state.token;
-    fetch("/lab/inspect?cached=1&name=" + encodeURIComponent(take.name)).then(function (r) { return r.status === 200 ? r.json() : null; })
+    fetch("/lab/inspect?cached=1&name=" + encodeURIComponent(take.name), { priority: "low" }).then(function (r) { return r.status === 200 ? r.json() : null; })
       .then(function (r) { if (r && token === state.token && r.loudness) { paint(r); $("inRun").textContent = "Inspect again"; } })
       .catch(function () {});
   }
@@ -132,7 +132,7 @@
     sel.value = source; state.source = source; state.token++;
     $("inResult").innerHTML = ""; $("inRun").textContent = "Inspect"; say("");
     var token = state.token;
-    fetch("/lab/inspect?cached=1&name=" + encodeURIComponent(state.take.name) + src()).then(function (r) { return r.status === 200 ? r.json() : null; })
+    fetch("/lab/inspect?cached=1&name=" + encodeURIComponent(state.take.name) + src(), { priority: "low" }).then(function (r) { return r.status === 200 ? r.json() : null; })
       .then(function (r) { if (r && token === state.token && r.loudness) { paint(r); $("inRun").textContent = "Inspect again"; } })
       .catch(function () {});
   }

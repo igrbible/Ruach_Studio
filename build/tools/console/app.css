@@ -1175,7 +1175,6 @@ select:disabled { opacity: .7; }
   border: 1px dashed var(--line);
   border-radius: var(--r-lg);
   color: var(--dim);
-  max-width: 62ch;
 }
 .take-empty p { margin: 0; }
 .take-empty .take-empty-title { margin-bottom: 6px; font: 500 14px/1.55 var(--heading); color: var(--ink); }
@@ -2613,6 +2612,10 @@ body.coll-dragging .coll-peek { display: none; }
 .coll-play .ui-play { margin-left: 3px; }
 .coll-act .ui-ico { width: 15px; height: 15px; }
 [aria-pressed="true"] > .ui-like, [aria-pressed="true"] > .ui-dislike, [aria-pressed="true"] > .ui-star { fill: currentColor; fill-opacity: .25; }
+/* HERESY 1368: a take's shield, lit as the Artist's (1367) */
+.coll-act.prot[aria-pressed="true"], #protTake[aria-pressed="true"] { opacity: 1; color: #6fb38a; }
+.coll-act.prot[aria-pressed="true"] > .ui-shield, #protTake[aria-pressed="true"] > .ui-shield { fill: currentColor; fill-opacity: 1; }
+#deleteTake.is-off { opacity: .35; cursor: not-allowed; }
 #pbFav[aria-pressed="true"] > .ui-star, #sheetFav[aria-pressed="true"] > .ui-star, .coll-act.fav[aria-pressed="true"] > .ui-star { fill-opacity: 1; }
 .skip-btn .ui-ico { width: 15px; height: 15px; }
 
@@ -3279,7 +3282,7 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
 .hg-body pre { padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); overflow-x: auto; }
 .hg-body pre code { padding: 0; background: none; }
 .hg-body a { color: var(--amber); }
-.hg-note { margin: 10px 0 14px; padding: 10px 14px; border-left: 3px solid var(--amber); background: color-mix(in srgb, var(--amber) 7%, transparent); border-radius: 0 var(--r-sm) var(--r-sm) 0; max-width: 78ch; }
+.hg-note { margin: 10px 0 14px; padding: 10px 14px; border-left: 3px solid var(--amber); background: color-mix(in srgb, var(--amber) 7%, transparent); border-radius: 0 var(--r-sm) var(--r-sm) 0; }   /* HERESY 1349: the column's width, not 78ch */
 .hg-table { border-collapse: collapse; margin: 6px 0 14px; font-size: 13.5px; }
 .hg-table th, .hg-table td { padding: 5px 14px 5px 0; border-bottom: 1px solid var(--line-soft, var(--line)); text-align: left; vertical-align: top; }
 .hg-table th { color: var(--dim); font-weight: 500; }
@@ -4075,6 +4078,7 @@ html.i18n-wait .boot-veil > * { visibility: hidden; }
 /* HERESY 1281: ♂ and ♀ in the Style's head, lit by what the Style says */
 .voice-togs { display: inline-flex; align-items: center; gap: 2px; }
 .voice-tog { width: 24px; height: 24px; min-width: 0; padding: 0; display: inline-grid; place-items: center; color: var(--dim); }
+.voice-togs .voice-tog { padding: 0; }             /* HERESY 1373: .btn.small's padding (two classes) beat the one above: the sign ran out on the right */
 .voice-tog .ui-ico { width: 16px; height: 16px; }
 .voice-tog.is-on { color: var(--amber); border-color: var(--amber); }
 .style-warn { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border: 1px solid var(--amber); border-radius: 999px;
@@ -4593,8 +4597,39 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .tr-voice .tr-chip { padding: 2px 9px; }
 .tr-voice .tr-chip.is-on { border-color: var(--amber); color: var(--amber); }
 /* HERESY 1322: the upscale's row under the stage's buttons */
-.ar-up-row { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 4px; }
+.ar-up-row { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; padding-top: 4px; }   /* HERESY 1353: «Выставь эту строку в центральную позицию» */
 .ar-up-row select { max-width: 22em; }
+.ar-ref-as select { max-width: 100%; }               /* HERESY 1388: edited by words or its style: the strength and the mask are not 2.1's */
+.ar-ref.is-q21 .ar-ref-str input[type="range"], .ar-ref.is-q21 #arRefSay, .ar-ref.is-q21 .ar-ref-fit { opacity: .45; pointer-events: none; }
+.ar-reg-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }   /* HERESY 1387: the regions */
+.ar-reg { display: grid; grid-template-columns: 44px minmax(7em, auto) 1fr auto; align-items: center; gap: 6px; }
+.ar-reg-map { position: relative; width: 44px; height: 25px; border: 1px solid var(--line-a); border-radius: 3px; background: var(--wash); }
+.ar-reg-map i { position: absolute; background: var(--amber); opacity: .55; border-radius: 2px; }
+.ar-reg input[type="text"] { min-width: 0; }
+.ar-reg-foot { display: flex; align-items: center; gap: 8px; padding-bottom: 4px; }
+.ar-sp-str { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; margin-left: 6px; }   /* HERESY 1384: the second pass's strength */
+.ar-sp-str input { width: 140px; }
+.ar-sp-str output { min-width: 2.6em; font-variant-numeric: tabular-nums; }
+/* HERESY 1355: the upscaler's i, its window, the passes */
+.ar-up-row .ar-up-info { cursor: pointer; margin: 0 4px 0 2px; }
+.ar-ug { width: min(1180px, 100%); }
+.ar-ug-v { display: grid; grid-template-columns: minmax(11em, 1.1fr) 7.5em 4.5em minmax(0, 2.6fr) 8em 5em; gap: 10px; align-items: center; padding: 6px 8px; border: 1px solid var(--line-a); border-radius: var(--r-sm, 4px); cursor: pointer; }
+.ar-ug-v:hover { border-color: var(--line-strong); }
+.ar-ug-v.is-on { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
+.ar-ug-v b small, .ar-ug-v span small { display: block; font-weight: 400; font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ug-v .mono { color: var(--muted); font-size: 12px; }
+.ar-ug-v > span:nth-child(4) { font-size: 12.5px; }
+.ar-ug-lic { font-size: 11.5px; color: var(--muted); }
+.ar-ug-lic.is-nc { color: var(--amber); }
+.ar-up-chain { flex: 1 1 100%; display: flex; flex-direction: column; gap: 6px; margin: 6px auto 0; padding: 10px 12px; width: min(620px, 100%); border: 1px solid var(--line-a); border-radius: var(--r-md); background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.ar-uc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ar-uc-row { display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto 26px; gap: 8px; align-items: center; }
+.ar-uc-row select { min-width: 0; }
+.ar-uc-f input { width: 4.6em; }
+.ar-uc-add { align-self: flex-start; }
+.ar-uc-opts, .ar-uc-go { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.ar-uc-go { justify-content: space-between; }
+@media (max-width: 900px) { .ar-ug-v { grid-template-columns: 1fr auto; } .ar-ug-v > span:nth-child(n+4) { grid-column: 1 / -1; } }
 /* HERESY 1320: the mask's options under the reference */
 .ar-mask-opts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; padding-top: 8px; }
 .ar-mask-opts[hidden] { display: none; }
@@ -4613,6 +4648,8 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .ar-samp-row select { min-width: 7.5em; }
 .ar-samp-steps input, .ar-samp-num input { width: 5.5em; }
 .ar-samp-row .field[hidden] { display: none; }   /* HERESY 1328: .field's own display beat [hidden]: Guidance stood beside Lightning on */
+.ar-samp-row2 { padding-top: 0; }                         /* HERESY 1369: Lightning, Guidance and Reset under the steps */
+.ar-samp-row2 #arSampReset { margin-left: auto; }
 .ar-light-row { display: flex; align-items: center; gap: 6px; }
 .ar-light-row input[type="checkbox"] { width: auto; margin: 0; }
 .ar-light-row input[type="number"]:disabled { opacity: .45; }
@@ -4647,6 +4684,18 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .ar-lib { width: min(1500px, 100%); height: min(88vh, 1100px); display: flex; flex-direction: column; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); overflow: hidden; }
 .ar-lib-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-bottom: 1px solid var(--line-a); }
 .ar-lib-head .spacer { flex: 1; }
+/* HERESY 1347: the Artist's list of what can be fetched */
+.ar-get-row { flex: 1 1 100%; display: flex; justify-content: flex-end; margin-top: -4px; }
+.ar-get { width: min(980px, 100%); height: auto; max-height: min(88vh, 1100px); }
+.ar-get-body { overflow-y: auto; padding: 6px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+.ar-get-x h4 { margin: 10px 0 2px; font: 600 13px/1.3 var(--sans); letter-spacing: .04em; }
+.ar-get-x p { margin: 0 0 6px; }
+.ar-get-x ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ar-get-v { display: grid; grid-template-columns: minmax(12em, 1.2fr) 5.5em minmax(0, 2fr) auto; gap: 10px; align-items: center; padding: 6px 8px; border: 1px solid var(--line-a); border-radius: var(--r-sm, 4px); }
+.ar-get-v .mono { color: var(--muted); font-size: 12px; text-align: right; }
+.ar-get-note { font-size: 12px; color: var(--muted); }
+.ar-get-here { font-size: 12px; color: var(--good, #3f9a4a); }
+.ar-get-v.is-here { opacity: .75; }
 .ar-lib .ar-lib-head input.ar-lib-q { width: min(320px, 40vw); flex: 0 1 320px; }
 .ar-lib-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); }
 .ar-lib-folders { display: flex; flex-direction: column; gap: 2px; padding: 10px; border-right: 1px solid var(--line-a); overflow: auto; }
@@ -4664,8 +4713,27 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .ar-lib-meta { display: flex; justify-content: space-between; gap: 6px; padding: 0 8px; font-size: 11px; color: var(--dim); }
 .ar-lib-meta span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ar-lib-cv { color: var(--amber); font-weight: 600; }
+/* HERESY 1353: an adapter whose layers belong to another model, dimmed, its model named; the adapter's Info window */
+.ar-lib-card.is-alien { opacity: .55; }
+.ar-lib-card.is-alien:hover { opacity: .85; }
+.ar-lib-alien { position: absolute; top: 6px; right: 6px; padding: 1px 7px; border-radius: 999px; background: var(--bad, #e06c5a); color: #fff; font: 600 11px/1.5 var(--sans); }
+.ar-li { width: min(860px, 100%); }
+.ar-li-body { flex-direction: row; align-items: flex-start; gap: 16px; padding-top: 14px; }
+.ar-li-pic { flex: 0 0 220px; width: 220px; aspect-ratio: 1; object-fit: contain; border: 1px solid var(--line-a); border-radius: var(--r-sm, 4px); background: var(--ground); }
+.ar-li-rows { flex: 1; min-width: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; align-items: baseline; font-size: 13px; }
+.ar-li-rows > b { font-weight: 600; color: var(--muted); font-size: 12px; }
+.ar-li-rows > span { min-width: 0; overflow-wrap: anywhere; }
+.ar-li-rows .ar-li-ok { color: var(--good, #3f9a4a); }
+.ar-li-rows .ar-li-bad { color: var(--bad, #e06c5a); }
+.ar-li-rows details { grid-column: 1 / -1; }
+.ar-li-rows details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.ar-li-meta { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 12px; margin-top: 6px; font: 12px/1.45 var(--mono); }
+.ar-li-meta span { overflow-wrap: anywhere; }
+.ar-li-acts { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid var(--line-a); }
+.ar-li-acts .spacer { flex: 1; }
+@media (max-width: 700px) { .ar-li-body { flex-direction: column; } .ar-li-pic { width: 100%; flex-basis: auto; } }
 .ar-lib-words { padding: 0 8px; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ar-lib-empty { grid-column: 1 / -1; max-width: 70ch; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.ar-lib-empty { grid-column: 1 / -1; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
 /* HERESY 1315: the section under the pointer over the wave, with its lines as written */
 .wave-pop { position: fixed; z-index: 60; max-width: min(440px, calc(100vw - 16px)); padding: 9px 12px 10px; border: 1px solid var(--line-a); border-radius: var(--r-md);
   background: var(--panel); color: var(--ink); box-shadow: 0 10px 28px rgba(0, 0, 0, .35); pointer-events: none; }
@@ -4718,7 +4786,8 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .take-tools .tool-group.tg-dl { order: 1; }
 .take-tools .tool-group.tg-refine { order: 2; }
 .take-tools .tool-group.tg-files { order: 3; }
-.take-tools .tool-group.tg-again { order: 4; flex-basis: 100%; }
+.take-tools .tool-group.tg-edit { order: 4; }   /* HERESY 1356: Crop, Remove a section, Speed */
+.take-tools .tool-group.tg-again { order: 5; flex-basis: 100%; }
 .take-tools .tool-cap { display: block; margin: 0; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .take-tools .tool-row { display: flex; flex-wrap: wrap; gap: 6px; }
 /* «обрезанный параграф объяснений… нахер там не нужен»: the LoRA picker's notes in a tip beside the LoRAs' name */
@@ -4732,6 +4801,17 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 /* «ещё один оверлей поверх оверлея!… поверх всего где-то 60% ширины экрана, и шрифт автоматом на 10% крупнее»: the lyrics over
    everything (app.js lyricsOver moves the box there and back) */
 .lyr-big { margin-left: 6px; vertical-align: middle; }
+/* HERESY 1357: Tighten beside the lyrics' buttons; the style's suggestions under its box; Tighten's window of the two texts */
+.lyr-tighten { margin-left: 8px; vertical-align: middle; font-size: 11.5px; padding: 2px 8px; }
+.style-sug { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 6px; }
+.style-sug-chips { display: contents; }
+.style-sug-chip { font-size: 11.5px; padding: 1px 9px; }
+.tg-win { width: min(1240px, 100%); }
+.tg-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 16px; min-height: 0; flex: 1; }
+.tg-cols label { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.tg-cols textarea { flex: 1; min-height: 50vh; resize: none; font: 13px/1.5 var(--mono); }
+.tg-lost { color: var(--bad, #e06c5a); }
+@media (max-width: 800px) { .tg-cols { grid-template-columns: 1fr; } .tg-cols textarea { min-height: 30vh; } }
 .lyr-txt { margin-left: 2px; }   /* HERESY 1277: the .txt pair beside ⤢ */
 .lyr-over { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 40; display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55)); backdrop-filter: blur(3px); }
@@ -4930,6 +5010,7 @@ body[data-tab="artist"] .col-grip.left { display: none; }
 .cv-keys { font-size: 11px; margin-top: auto; }
 .cv-foot { display: flex; gap: 18px; padding: 5px 14px; border-top: 1px solid var(--line-a); font-size: 11px; color: var(--muted); }
 .cv .pb-btn:disabled { opacity: .35; }
+.cv-draw { min-width: 7em; text-transform: uppercase; letter-spacing: .06em; justify-content: center; }   /* HERESY 1350 */
 @media (max-width: 900px) { .cv-body { grid-template-columns: 44px minmax(0, 1fr); } .cv-side { display: none; } }
 /* HERESY 1307: «Paint around it» under the strength; with it the strength gives way */
 .ar-ref-mid { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -5091,7 +5172,7 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
 #arStop[hidden] { display: none; }   /* HERESY 1345: a .btn shows through [hidden] (1340 left Stop in sight with no run going) */
 #arDraw.is-stop:hover { filter: brightness(1.08); }
 /* HERESY 1271: the Artist in three columns, the outer two as wide as their edges are dragged (kept), the stage the rest */
-.ar-cols { display: grid; grid-template-columns: var(--ar-l, 380px) 12px minmax(280px, 1fr) 12px var(--ar-r, 560px); column-gap: 4px; align-items: start; margin-top: 14px; }
+.ar-cols { display: grid; grid-template-columns: clamp(25vw, var(--ar-l, 25vw), 30vw) 12px minmax(280px, 1fr) 12px clamp(20vw, var(--ar-r, 28vw), 35vw); column-gap: 4px; align-items: start; margin-top: 14px; }   /* HERESY 1366: 25–30 % and 20–35 % of the window */
 .ar-left, .ar-stage, .ar-right { min-width: 0; }
 .ar-left, .ar-stage { position: sticky; top: 8px; }
 /* HERESY 1340 (Viktor 10.10.2026: «Левая колонка Художника не прокручивается независимо»; «Среднюю колонку фрейм промпта растянуть
@@ -5150,9 +5231,11 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
 @media (min-width: 1281px) {
   .ar-stage-tip { position: absolute; top: 0; left: calc(100% + 20px); width: calc(var(--ar-r, 560px) - 10px); max-height: 100%; overflow: auto; z-index: 30;
     padding: 14px 16px 16px; gap: 10px; background: var(--panel); border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 12px 36px rgba(0, 0, 0, .35);
-    visibility: hidden; opacity: 0; transform: translateX(-6px); transition: opacity .14s ease, transform .14s ease, visibility 0s linear .32s; }
+    visibility: hidden; opacity: 0; transform: translateX(-6px); transition: opacity .18s ease .4s, transform .18s ease .4s, visibility 0s linear .58s; }
+  /* HERESY 1353 (Viktor 11.10.2026: «Тултип по наводке на центральное изображение сделай с задержкой появления и исчезновения»): it comes
+     0.6 s after the pointer rests on the picture and goes 0.4 s after it leaves (the tip itself keeps it, reached across the gap) */
   .ar-stage:has(.ar-stage-pic:hover) .ar-stage-tip, .ar-stage:has(.ar-stage-pic:focus-visible) .ar-stage-tip, .ar-stage-tip:hover {
-    visibility: visible; opacity: 1; transform: none; transition: opacity .14s ease .12s, transform .14s ease .12s, visibility 0s linear .12s; }
+    visibility: visible; opacity: 1; transform: none; transition: opacity .18s ease .6s, transform .18s ease .6s, visibility 0s linear .6s; }
   .ar-stage-tip .ar-stage-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 0 0 10px; border: 0; border-bottom: 1px solid var(--line-a); border-radius: 0; background: none; }
   .ar-stage-tip .ar-stage-prompt { max-height: none; overflow: visible; font-size: 13.5px; line-height: 1.5; }
 }
@@ -5230,3 +5313,83 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 .ar-trash-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
 .ar-aside-pic { position: relative; }
 .ar-aside-pic .ar-aside-x { position: absolute; top: 4px; right: 4px; }
+/* HERESY 1358: a slice of the section's spectrogram in its card */
+.wave-pop-spec { display: block; width: 300px; max-width: 100%; height: 56px; margin: 6px 0 4px; border-radius: var(--r-sm, 4px); image-rendering: auto; }
+/* HERESY 1360: an adapter from Civitai, by its link, with the user's own key */
+.ar-cv { width: min(720px, 100%); }
+.ar-cv-body { padding-top: 14px; gap: 12px; }
+.ar-cv-keyrow { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.ar-cv-keyrow .field { flex: 1 1 260px; }
+.ar-cv-keyrow .check { padding-bottom: 8px; }
+.ar-cv-body > .row-hint { margin: 0; }
+.ar-cv-what:empty { display: none; }
+.ar-cv-what > p { margin: 10px 0 0; }
+.ar-cv-say { overflow-wrap: anywhere; text-align: right; }
+/* HERESY 1364: TTA beside the upscaler */
+.ar-up-row .ar-up-tta { flex: none; gap: 6px; font-size: 12px; }
+/* HERESY 1365: an adapter's keyframes */
+.ar-lora { grid-template-areas: "pic name x" "pic slide kb" "words words words" "gone gone gone" "keys keys keys"; }
+.ar-lora .ar-lora-kb { grid-area: kb; width: 24px; height: 24px; padding: 0; opacity: .55; }
+.ar-lora .ar-lora-kb.is-on { opacity: 1; color: var(--amber, #e0a030); }
+.ar-lora-keys { grid-area: keys; display: flex; }
+.ar-lora-keys .ar-lora-k { flex: 1; min-width: 0; font-size: 12px; padding: 3px 6px; }
+.ar-lora-keys .ar-lora-k.is-bad { border-color: var(--bad, #e06c5a); }
+/* HERESY 1366 (Viktor 11.10.2026: «Выровняй высоты полей ввода в пар с дропдаун селекторами. При сжатии колонки РАСПИСАНИЕ остаётся на той же
+   строке и врубает скроллинг горизонтальный»): the Artist's fields one height with its selects (they stood 42 px to the selects' 36, the
+   seed's mode at 33); the sampling block narrows with the column (its summary's line, a flex item that never wraps, held it at 382 px:
+   the block may be narrower than that line, which ends in «…», and its fields wrap), and so do the painter's and the fine-tune's selects
+   (their longest name held them) */
+#view-artist .ar-left :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(.ar-lora-k), select) { height: 36px; padding-top: 0; padding-bottom: 0; }
+#view-artist .ar-left #arSeedNew { height: 36px; min-width: 36px; }
+.ar-left .ar-sampling { min-width: 0; }
+.ar-left .ar-sampling > summary { min-width: 0; }
+.ar-left .ar-knobs > .ar-painter, .ar-left .ar-knobs > .ar-model { flex: 1 1 100%; min-width: 0; }   /* 1345: each a row of its own */
+.ar-left .ar-painter select, .ar-left .ar-model select { min-width: 0; width: 100%; }
+/* HERESY 1367: the shield of a protected picture */
+.ar-prot-ico { width: 17px; height: 17px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+.ar-prot-ico.is-on { fill: #6fb38a; stroke: #6fb38a; }
+.ar-fshape .ar-prot-ico.is-on { fill: currentColor; stroke: currentColor; }
+.ar-prot { position: absolute; top: 6px; right: 36px; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%;
+  background: color-mix(in srgb, #000 45%, transparent); color: #fff; cursor: pointer; opacity: 0; transition: opacity .12s; }
+.ar-gpic:hover .ar-prot, .ar-prot:focus-visible, .ar-prot.is-on { opacity: 1; }
+.ar-prot.is-on, .ar-vprot.is-on { color: #6fb38a; }
+.ar-pic.is-protected { position: relative; }
+.ar-pic.is-protected::after { content: ""; position: absolute; top: 6px; left: 6px; width: 18px; height: 18px; pointer-events: none;
+  background: #6fb38a; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l7.8 2.9v6.1c0 4.9-3.3 8.6-7.8 9.8-4.5-1.2-7.8-4.9-7.8-9.8V5.5z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l7.8 2.9v6.1c0 4.9-3.3 8.6-7.8 9.8-4.5-1.2-7.8-4.9-7.8-9.8V5.5z'/%3E%3C/svg%3E") center / contain no-repeat; }
+
+/* ---------------------------------------------------------------- HERESY 1169 · 1374: the wave's scope (heresy-wavescope.js)
+   Viktor 11.10.2026: «выводить спектральный граф полной длиной на весь трек, а тултип с отрезком текста выше. Займёт наверное около
+   30-40% высоты всей страницы, но это норм». The whole take's spectrogram on the player's top edge, as wide as the wave's drawing (an
+   outline of shadow, not a border, so its pixels stand over the wave's), under the section's card (.wave-pop, 60); a plot, so dark in
+   every theme */
+.wave-scope { position: fixed; z-index: 59; overflow: hidden; background: #0a0014; border-radius: var(--r-md) var(--r-md) 0 0; cursor: crosshair;
+  box-shadow: 0 0 0 1px var(--line-a), 0 -18px 40px -22px var(--shadow-lg, rgba(0,0,0,.45)); }
+.wave-scope[hidden] { display: none; }
+.wave-scope canvas { position: absolute; left: 0; top: 0; display: block; }
+.ws-head { position: absolute; left: 0; right: 0; top: 0; height: 24px; display: flex; align-items: center; gap: 14px; padding: 0 10px; box-sizing: border-box;
+  background: rgba(10, 8, 6, .66); color: #e8d5a0; font: 11px "IBM Plex Mono", monospace; white-space: nowrap; overflow: hidden; cursor: default; }
+.ws-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 600 12px "IBM Plex Sans", sans-serif; color: #ffd27a; }
+.ws-stats { flex: 0 1 auto; min-width: 0; display: flex; gap: 12px; overflow: hidden; color: rgba(232, 213, 160, .82); }
+.ws-bands { display: flex; gap: 9px; color: rgba(232, 213, 160, .62); }
+.ws-keys { flex: none; display: flex; gap: 12px; margin-left: auto; }
+.ws-key::before { content: ""; display: inline-block; width: 14px; height: 2px; margin-right: 5px; vertical-align: middle; border-radius: 1px; }
+.ws-key-cen::before { background: #ff5ce1; }
+.ws-key-rms::before { background: #ff8c28; }
+.ws-scale { flex: none; display: inline-flex; border: 1px solid rgba(232, 213, 160, .3); border-radius: 4px; overflow: hidden; }
+.ws-scale button { padding: 1px 8px; border: 0; background: none; color: rgba(232, 213, 160, .75); font: inherit; cursor: pointer; }
+.ws-scale button:hover { color: #fff; }
+.ws-scale button.is-on { background: rgba(255, 140, 40, .3); color: #fff; }
+.ws-read { position: absolute; z-index: 2; padding: 6px 9px; border: 1px solid rgba(232, 213, 160, .22); border-radius: 6px; background: rgba(10, 8, 6, .86);
+  color: #e8d5a0; font: 11px/1.5 "IBM Plex Mono", monospace; white-space: nowrap; pointer-events: none; }
+.ws-read[hidden] { display: none; }
+.ws-read b { color: #fff; font-weight: 600; }
+.ws-read .ws-r-here { color: #fff; }
+.ws-read .ws-note { color: #ffd27a; }
+.ws-say { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 6px 12px; border-radius: 6px; background: rgba(10, 8, 6, .7);
+  color: #e8d5a0; font: 12px "IBM Plex Mono", monospace; pointer-events: none; }
+.ws-say:empty { display: none; }
+.ws-say.is-bad { color: #ff8a78; }
+/* HERESY 1169 · 1377 (Viktor 11.10.2026: «миллион пространств… В контекстном меню нужна прокрутка»): a menu no taller than the window,
+   scrolled inside itself (heresy-menu.js places it within the window and closes its submenu as it scrolls) */
+.hm-menu { max-height: calc(100vh - 12px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }

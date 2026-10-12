@@ -13,6 +13,7 @@ base_model:
   - Mothersuperior/YuE2-Vae-merge-0.666
   - ntc-ai/yue2-particle-sliders
   - krea/Krea-2-Turbo
+  - Qwen/Qwen-Image-2512
 ---
 
 # Ruach Studio · Models v2
@@ -36,7 +37,7 @@ and the Artist's, when you want it (17.7 GB with Krea 2 Muse Q4, 32.3 GB with Q8
 hf download goldhub/Ruach_Studio_Models_v2 --local-dir . --include "artwork/Krea-2-Turbo/*" "artwork/Krea-2-Muse/*Q4*" "artwork/Krea-2-Muse/*.txt" "artwork/Krea-2-Muse/*.pdf"
 ```
 
-**Nothing here is ours but the conversions.** These are the works of the people and teams credited below: the decoders and the sliders converted to GGUF (F32) by `convert-extras.py` of [yue2-kit](https://github.com/IronWolve/yue2-kit) with their values unchanged, Krea 2 Muse and Krea 2's parts unchanged, CyberRealistic XL converted from fp32 to diffusers fp16. The conversion is deterministic: the studio's own copies made on 30.09.2026 and a fresh conversion of the same pinned sources on 09.10.2026 have the same SHA-256, file for file (`SHA256SUMS`). Every file keeps its source's licence (the decoders and the sliders **CC BY-NC 4.0: non-commercial, with attribution**; the Artist's models their own, below). Not affiliated with M-A-P, Mothersuperior, NTC-AI, Krea, Stable Yogi or Cyberdelia. If you are an author and want a file of yours taken down, open a discussion here and it goes.
+**Nothing here is ours but the conversions.** These are the works of the people and teams credited below: the decoders and the sliders converted to GGUF (F32) by `convert-extras.py` of [yue2-kit](https://github.com/IronWolve/yue2-kit) with their values unchanged, Krea 2 Muse and Krea 2's parts unchanged, CyberRealistic XL converted from fp32 to diffusers fp16, the Qwen-Image 2512 fine-tunes and the adapters unchanged (each its author's own file, byte for byte). The conversion is deterministic: the studio's own copies made on 30.09.2026 and a fresh conversion of the same pinned sources on 09.10.2026 have the same SHA-256, file for file (`SHA256SUMS`). Every file keeps its source's licence (the decoders and the sliders **CC BY-NC 4.0: non-commercial, with attribution**; the Artist's models their own, below). Not affiliated with M-A-P, Mothersuperior, NTC-AI, Krea, Stable Yogi, Cyberdelia, the Qwen team, Civitai or the fine-tunes' and adapters' authors named below. If you are an author and want a file of yours taken down, open a discussion here and it goes.
 
 ---
 
@@ -50,16 +51,31 @@ hf download goldhub/Ruach_Studio_Models_v2 --local-dir . --include "artwork/Krea
 | `artwork/Krea-2-Muse/` | `museByStableYogi_v35Q8Extended.gguf` · `…Q4Extended.gguf` | 14.6 · 8.3 GB | paints a take's artwork (player, cards, the MP3's cover): **Krea 2 Muse by Stable Yogi** v3.5 Extended, a fine-tune of Krea 2 Turbo, 8 steps | [Muse by Stable Yogi](https://civitai.com/models/2741166) by Stable Yogi, the author's own GGUF files, unchanged | Krea 2 Community License |
 | `artwork/Krea-2-Turbo/` | `text_encoder/` (Qwen3-VL-4B), `vae/` (Qwen-Image), `tokenizer/`, `scheduler/`, `model_index.json`, `transformer/config.json` (no transformer weights: the fine-tune above brings its own) | 9.4 GB | what Krea 2 needs beside its transformer | [krea/Krea-2-Turbo](https://huggingface.co/krea/Krea-2-Turbo), unchanged | Krea 2 Community License |
 | `artwork/CyberRealistic-XL-v10/` | diffusers, fp16 | 6.5 GB | the artwork's painter on cards under 16 GB (Krea 2 wants about 15 GB at Q4, 21 GB at Q8, its prompt writer included) | [CyberRealistic XL v10](https://civitai.com/models/312530) by Cyberdelia (SDXL 1.0 finetune), converted from fp32 | CreativeML Open RAIL++-M |
+| `artwork/Qwen-Image-2512/checkpoints/JibMix QW2512 v6 fp8.safetensors` | ComfyUI's single file, fp8 e4m3fn | 20.4 GB | the Artist's painter for finished realism on a card of 24 GB (with Qwen-Image 2512's own parts from Qwen) | [Jib Mix Qwen](https://civitai.com/models/1936965?modelVersionId=2753478) v6.0 by J1B, unchanged | the author's: share and sell (Civitai) |
+| `artwork/Qwen-Image-2512/checkpoints/IntoRealism QW2512 v1 fp8.safetensors` | the same | 20.4 GB | the same | [IntoRealism Qwen](https://civitai.com/models/2510144?modelVersionId=2821489) v1.0 by enzino, unchanged | the author's: share and sell (Civitai) |
+| `artwork/Qwen-Image-2512/checkpoints/Real QW2512 v2 fp8.safetensors` | the same | 20.4 GB | the same | [Real-Qwen-Image](https://civitai.com/models/1898752?modelVersionId=2607270) v2.0 fp8 by wikeeyang, unchanged | the author's: share and sell (Civitai) |
+| `artwork/Qwen-Image-2512/checkpoints/BASE QW2512 fp8_e4m3fn.safetensors` | the same | 20.4 GB | Qwen-Image 2512 itself in fp8, the fine-tunes' base | [Qwen-Image-2512](https://civitai.com/models/2268063?modelVersionId=2552908) fp8_e4m3fn as Civitai publishes it, unchanged | Apache-2.0 (Qwen) |
+| `artwork/loras/` | seven adapters, `.safetensors` | 3.1 GB | the Artist's LoRA library: for Krea 2 [Cinematic Movie Still](https://civitai.com/models/2840790) and [Cinematic Dark Lighting](https://civitai.com/models/2477155) by vizsumit, [Lenovo UltraReal](https://civitai.com/models/1662740) by Danrisi; for Qwen-Image 2.1 Lenovo UltraReal by Danrisi and the [Frank Frazetta Style](https://civitai.com/models/1720935) by tarn59; for Qwen-Image 2512 [Film Photography](https://civitai.com/models/1901782) by bluejaysierra and [Photostyle by Sean Archer](https://civitai.com/models/1632416) (SFW) by FASCIUM | their authors' files, unchanged | each its author's: share and sell (Civitai) |
 
 **What the conversion changed:** the format only. Each decoder's tensors go into one GGUF (F32) through yue2.cpp's own converter (its VAE path); each slider's routed-particle adapter weights (on the 112 attention projections of the AR stage) into one GGUF, and `catalog.json` names each slider (id, label, description, file) with the SHA-256 of the source file it was made from. Every source was checked against its published checksum before conversion.
 
 The default decoder (`YuE2-Vae-F32.gguf`), the music model itself (`YuE2-3B-*.gguf`) and the transcriber are not here: they come already as GGUF from [Serveurperso/YuE2-GGUF](https://huggingface.co/Serveurperso/YuE2-GGUF), converted from [m-a-p/YuE2-3B](https://huggingface.co/m-a-p/YuE2-3B) and its siblings, and the studio's install fetches them there.
+
+The Qwen-Image 2512 fine-tunes and the adapters are here because their authors let them be shared: on Civitai each allows its use without credit, selling what it makes, running it on services and sharing and selling the model itself and its merges (they are credited all the same). The many others the Artist paints with stay with their authors: the studio's LoRA library looks them up on Civitai by their SHA-256, and they are fetched from there.
+
+```bash
+hf download goldhub/Ruach_Studio_Models_v2 --local-dir . --include "artwork/Qwen-Image-2512/checkpoints/JibMix*"   # one fine-tune, 20.4 GB
+hf download goldhub/Ruach_Studio_Models_v2 --local-dir . --include "artwork/loras/*"                                # the seven adapters, 3.1 GB
+```
+
+In the studio: Engine → Models and LoRAs, or the Artist's own Get painters and adapters… under its painter.
 
 ## Licences
 
 - The decoders and the sliders: **CC BY-NC 4.0** ([`LICENSE`](LICENSE), as M-A-P publishes it with YuE2-Vae-legacy; the merge and the sliders inherit it from their sources).
 - **Krea 2 Community License** — Krea 2 and Krea 2 Muse (`artwork/Krea-2-Turbo/`, `artwork/Krea-2-Muse/`). By taking these files you agree to it and to Krea's [Acceptable Use Policy](https://www.krea.ai/krea-2-use-policy); its copy (`LICENSE.pdf`) and the `NOTICE.txt` it asks for lie beside them. In short: use, copy and share them (with that licence and notice); commercial use only while your yearly revenue stays under one million US dollars; whoever deploys them must filter what is generated (section 4.2).
 - **CreativeML Open RAIL++-M** — CyberRealistic XL (from SDXL 1.0): free use; its use restrictions (Attachment A, in `artwork/CyberRealistic-XL-v10/LICENSE.md`) bind everyone who uses it.
+- **Qwen-Image 2512** (`BASE QW2512 fp8_e4m3fn`) — Apache-2.0, the Qwen team's; the fine-tunes on it and the adapters — their authors' permissions on Civitai, as above (share and sell, use without credit).
 - Third-party code named by the decoders' sources: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), with the full texts in `licenses/` (stable-audio-tools, MIT, Stability AI; SnakeBeta/BigVGAN, MIT, NVIDIA).
 - The sliders' code licences as their repository ships them: `licenses/particle-sliders-LICENSE.txt` and `licenses/particle-sliders-LOADER_LICENSE.txt` (MIT).
 
@@ -73,6 +89,9 @@ Using the decoders in research, please cite [YuE](https://arxiv.org/abs/2503.086
 - **Krea 2** — [Krea](https://krea.ai) (Krea 2 is licensed under the Krea 2 Community License Agreement; see https://krea.ai/krea-2-licensing); its text encoder Qwen3-VL-4B and its VAE from Qwen-Image — the Qwen team.
 - **Krea 2 Muse** — [Stable Yogi](https://civitai.com/models/2741166), who modified Krea 2 into it.
 - **CyberRealistic XL** — Cyberdelia.
+- **Qwen-Image 2512** — the Qwen team (Alibaba); its fp8 single file as Civitai publishes it.
+- **The Qwen-Image 2512 fine-tunes** — J1B (Jib Mix Qwen), enzino (IntoRealism Qwen), wikeeyang (Real-Qwen-Image).
+- **The adapters** — vizsumit (Cinematic Movie Still, Cinematic Dark Lighting), Danrisi (Lenovo UltraReal), tarn59 (Frank Frazetta Style), bluejaysierra (Film Photography), FASCIUM (Photostyle by Sean Archer).
 - **The conversion** — `convert-extras.py` of the YuE2 Kit by IronWolve ([yue2-kit](https://github.com/IronWolve/yue2-kit)), through the converter of [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by Serveurperso.
 
 Converted and gathered for Ruach Studio by Viktor Zhuromskyy (ЙирмиЙа́Ѓу) with Claude (Anthropic) · HERETICAL TANDEM™.

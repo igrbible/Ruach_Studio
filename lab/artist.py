@@ -17,9 +17,11 @@ or deleted for good on the user's word (bin_list, bin_act).
     POST /artist/star {id, file, star}      HERESY 1257: a picture starred or not
     POST /artist/trash {id} · POST /artist/restore {id}   the run to the trash and back
     POST /artist/stop {id}                  HERESY 1270: a waiting run off the queue, a drawing one's painter ended («stopped»)
+    POST /artist/unload                     HERESY 1370: the painters kept between runs, let go (the busy ones paint on)
+    POST /artist/covers {items | id}        HERESY 1372: which takes have one of these pictures as their cover now
     GET  /artist/prompt?name=TAKE           a prompt to start from: the one the take's artwork was drawn from, else
                                             one from its title and style"""
-import collections, json, os, random, re, shutil, subprocess, threading, time
+import collections, json, os, queue, random, re, shutil, subprocess, threading, time
 from pathlib import Path
 
 import artist_loras                                   # HERESY 1316: the adapters a run asks for
@@ -28,7 +30,7 @@ HERE = Path(__file__).resolve().parent
 H = {}                     # the lab's own parts (setup): kit, jobs, lock, wait_card, turn, free_gpu, say, take_dir, pair, copy, painter, py; 1337: outputs, frozen
 SHAPES = ("1:1", "16:9", "9:16")
 RUN_RE = re.compile(r"^\d{8}-\d{6}-[0-9a-f]{4}$")
-FILE_RE = re.compile(r"^(?:(?:thumbs/)?\d{2}-(?:1x1|16x9|9x16)-s\d+(?:-up(?:\dx|[24]k))?\.(?:png|jpg)|preview/\d{2}\.jpg|ref\.(?:png|jpg|webp)|mask\.png)$")   # 1257: a step's picture; 1305: the reference; 1306: its mask
+FILE_RE = re.compile(r"^(?:(?:thumbs/)?\d{2}-(?:1x1|16x9|9x16)-s\d+(?:-up(?:\dx|[24]k|\dp))?\.(?:png|jpg)|preview/\d{2}\.jpg|ref\.(?:png|jpg|webp)|mask\.png)$")   # 1257: a step's picture; 1305: the reference; 1306: its mask; 1364: -upNp, a picture made in passes (1355)
 # the card a run needs at its largest shape, the VAE in tiles (RTX 3090, 08.10.2026, reserved at the peak: Q8 15.1 GB at
 # 1024², 15.9 at 1280², 16.9 at 1920×1088; Q4 9.3, 10.1, 11.1; untiled the VAE's decode alone took 4 to 8 GB more), with a
 # margin for the card's own context
@@ -40,8 +42,9 @@ QWEN = {"qwen2512-q4": ("Qwen-Image 2512 · Q4", 15500), "qwen2512-q6": ("Qwen-I
         "qwen2512-fp8": ("Qwen-Image 2512 · fp8", 22500), "qwen21": ("Qwen-Image 2.1 · research licence", 21000)}
 NEED.update({k: v[1] for k, v in QWEN.items()})
 NEED["upscale"] = 4000                                # HERESY 1322: a DAT 4x model peaked at 2.1 GB in tiles of 512 (RTX 3090)
+QWEN21_STREAM_MB = 9500                              # HERESY 1386: Qwen-Image 2.1 streamed, encoder and transformer both: 4.1 GB at the peak from words, 7.9 editing (3090)
 # HERESY 1342: the card a run needs when its painter's blocks stream from RAM (artist_qwen.place), asked when no card here takes it whole
-STREAM_NEED = {"qwen2512-fp8": 6000}   # measured 10.10.2026: 2.3 GB at the peak with every block streamed (1328², Lightning, four adapters)
+STREAM_NEED = {"qwen2512-fp8": 6000, "qwen2512-q4": 5000, "qwen2512-q6": 5500, "krea2-q4": 6000, "krea2-q8": 6500, "qwen21": QWEN21_STREAM_MB}   # measured 10.10.2026: 2.3 GB at the peak with every block streamed (1328², Lightning, four adapters)
 QWEN_NOTE = {"qwen21": "Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only, not for commercial use "
              "(a cover for a song you sell is commercial use); a reference is a picture it edits by the prompt's words",
              "qwen2512-q4": "Qwen-Image 2512 (Apache-2.0) from a 4-bit GGUF: for a card of 16 GB",
@@ -141,6 +144,9 @@ def painters():
         if k != "qwen21":
             e["lightning"] = _art("Qwen-Image-2512", "lightning", "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors").exists()
         out.append(e)
+    cards = H["job_cards"]() if H.get("job_cards") else []   # HERESY 1354: the lab's cards, each one's room
+    for e in out:
+        e["cards"] = sum(1 for room in cards if room >= e["need_mb"]) or 1
     return {"painters": out}
 
 
@@ -223,6 +229,11 @@ def draw(body):
         model = Path(str(body.get("model") or "")).name
         if model not in qwen_models():
             raise ValueError("pick the fine-tune: one of artwork/Qwen-Image-2512/checkpoints/")
+    ref_as = str(body.get("ref_as") or "")            # HERESY 1388: the picture edited by words, or its style alone (Qwen-Image 2.1)
+    if ref_as not in ("", "edit", "style"):
+        raise ValueError("a reference is used to paint from, to edit by words («edit») or for its style («style»)")
+    if ref_as and (painter != "qwen21" or not body.get("ref")):
+        raise ValueError("editing by words and a style reference are Qwen-Image 2.1's: choose it as the painter, with a picture")
     if painter == "qwen21" and (body.get("mask") or body.get("fit")):
         raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Krea 2 or Qwen-Image 2512")
     if painter not in NEED:
@@ -235,6 +246,8 @@ def draw(body):
     if why:
         raise ValueError(why)
     ref, ref_from, strength = _reference(body)          # HERESY 1305: a picture to paint from, or None
+    scale = _scale(body, painter, ref)               # HERESY 1384: a second pass over it at 1.5 or 2 times, or None
+    regions = _regions(body, painter)                # HERESY 1387: checked before the run's folder is made
     mask = _mask(body) if ref else None              # HERESY 1306: and what of it to repaint, or None
     if body.get("mask") and not ref:
         raise ValueError("a mask goes with a reference picture: it says what of the picture to repaint")
@@ -252,6 +265,10 @@ def draw(body):
         ask["loras"] = loras                             # HERESY 1316
     if model:
         ask["model"] = model                             # HERESY 1318: the fp8 fine-tune
+    if regions:
+        ask["regions"] = regions                     # HERESY 1387: the regions' own words
+    if ref_as:
+        ask["ref_as"] = ref_as                       # HERESY 1388
     place = _places(body.get("place")) if ref else {}  # HERESY 1346: the canvas's places, shape by shape
     mo = body.get("mask_opts") if (body.get("mask") or body.get("fit") or place) else None   # HERESY 1320: the mask's options
     if mo:
@@ -262,6 +279,8 @@ def draw(body):
         if not (-64 <= mo["grow"] <= 128 and 0 <= mo["edge"] <= 96 and 0 <= mo["grain"] <= 0.6):
             raise ValueError("the mask's options: grow -64 to 128 px, edge 0 to 96 px, grain 0 to 0.6")
         ask["mask_opts"] = mo
+    if scale:                                        # HERESY 1384: the second pass, the picture brought up by nearest as his workflow does
+        ask.update(scale=scale, ref_resample="nearest")
     smp = sampling(painter, body.get("sampling"))
     if smp:
         ask["sampling"] = smp                            # HERESY 1319
@@ -269,6 +288,9 @@ def draw(body):
         name = "ref" + ref[0]
         (d / name).write_bytes(ref[1])
         ask.update(ref=name, strength=strength)
+        inject = _inject(body)                       # HERESY 1385: his InjectLatentNoise+, fresh noise on the picture first
+        if inject:
+            ask["inject"] = inject
         if body.get("fit"):                          # HERESY 1307: the whole picture in each shape, the edges painted around it
             ask.update(fit=True) if place else ask.update(fit=True, strength=1.0)   # HERESY 1346: a placed shape keeps the strength asked
         if place:
@@ -294,6 +316,34 @@ def draw(body):
 
 
 REF_MAX = 40 * 2 ** 20                               # HERESY 1305: a reference picture's bytes at most
+SCALE_MB = {}                                        # HERESY 1384: the more a second pass asks of the card, by painter (measured)
+
+
+def second_pass_mb(run):
+    """HERESY 1384: the MiB a second pass asks beyond its painter's own (its picture 1.5 or 2 times larger), 0 for a run of its own size."""
+    s = float(run.get("scale") or 1)
+    return 0 if s == 1 else int(SCALE_MB.get(run["painter"], 6000) * (s * s - 1) / 3)
+
+
+def _scale(body, painter, ref):
+    """HERESY 1384 (Viktor's ComfyUI workflow, AIO QWEN IMAGE 2512 HERESY Draft #4: «1st Pass + 2x Upscale», then the second KSampler
+    from step 20 of 60): a second pass paints over a picture of an earlier run at 1.5 or 2 times its shape's size; None when not asked."""
+    s = body.get("scale")
+    if s in (None, "", 1, 1.0, "1"):
+        return None
+    try:
+        s = float(s)
+    except (TypeError, ValueError):
+        raise ValueError("the second pass: 1.5 or 2 times the picture")
+    if s not in (1.5, 2.0):
+        raise ValueError("the second pass: 1.5 or 2 times the picture")
+    if not ref:
+        raise ValueError("a second pass paints over a picture: it goes with the picture to paint over")
+    if painter == "qwen21":
+        raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a second pass wants Krea 2 or Qwen-Image 2512")
+    if body.get("mask") or body.get("fit") or body.get("place"):
+        raise ValueError("a second pass paints over the whole picture: no mask, no canvas")
+    return s
 
 
 def _places(p):
@@ -315,6 +365,48 @@ def _places(p):
             raise ValueError("a shape's place on the canvas: x and y from -1 to 2, s from 0.05 to 6")
         out[k] = {"x": round(x, 4), "y": round(y, 4), "s": round(s, 4)}
     return out
+
+
+def _regions(body, painter):
+    """HERESY 1387: up to three regions, [{"prompt", "box": [x, y, w, h] in the frame's shares}]; a region without words is left out;
+    none, []."""
+    rs = body.get("regions") or []
+    if not rs:
+        return []
+    if painter == "qwen21":
+        raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: regions want Krea 2 or Qwen-Image 2512")
+    if not isinstance(rs, list) or len(rs) > 3:
+        raise ValueError("regions: three at most")
+    out = []
+    for r in rs:
+        try:
+            p = str(r.get("prompt") or "").strip()
+            x, y, w, h = (float(v) for v in r.get("box"))
+        except (TypeError, ValueError, AttributeError):
+            raise ValueError("a region: its words and its box [x, y, w, h] in the frame's shares")
+        if not p:
+            continue
+        if len(p) > 600:
+            raise ValueError("a region's words: 600 characters at most")
+        if not (0 <= x < 1 and 0 <= y < 1 and 0.05 <= w <= 1 and 0.05 <= h <= 1 and x + w <= 1.001 and y + h <= 1.001):
+            raise ValueError("a region's box: inside the frame, at least a twentieth of it wide and high")
+        out.append({"prompt": p, "box": [round(x, 4), round(y, 4), round(w, 4), round(h, 4)]})
+    return out
+
+
+def _inject(body):
+    """HERESY 1385: the noise added to the picture's latents before a run paints from it (his ComfyUI workflow's InjectLatentNoise+), 0 to 2;
+    0 or none, None."""
+    v = body.get("inject")
+    if v in (None, "", 0, "0"):
+        return None
+    try:
+        v = round(float(v), 2)
+    except (TypeError, ValueError):
+        raise ValueError("the extra noise is a number from 0 to 2")
+    if not 0 <= v <= 2:
+        raise ValueError("the extra noise is a number from 0 to 2")
+    return v or None
 
 
 def _reference(body):
@@ -379,107 +471,68 @@ def _mask(body):
 
 def work(d, run, job):
     key, need, gpu = "artist:" + run["id"], NEED[run["painter"]] + sum(x.get("mb", 0) for x in run.get("loras") or []), None   # HERESY 1316
+    more = second_pass_mb(run)                       # HERESY 1384: a second pass's larger picture
+    need += more
     try:
+        _settle(run)                                 # HERESY 1370c: a kept painter putting its weights away, waited for
         while True:                                  # in the queue for a card, then for its turn (as the artwork waits)
             try:
-                H["wait_card"](job, need, f"the Artist · {run['id']}")
+                H["wait_card"](job, need, f"the Artist · {run['id']}", held=lambda: _kept_held(run))   # HERESY 1378
             except RuntimeError as e:                # HERESY 1342: no card here takes it whole: its painter's blocks stream from RAM
                 if not str(e).startswith("no card here can take this") or run["painter"] not in STREAM_NEED or run.get("stream"):
                     raise
                 run["stream"] = True
-                need = STREAM_NEED[run["painter"]]
+                need = STREAM_NEED[run["painter"]] + more   # HERESY 1384
                 write(d, run)
                 H["say"](f"the Artist · {run['id']} · no card here takes it whole: its painter's blocks will stream from RAM (slower)")
                 continue
             with H["turn"](job):
                 try:
-                    gpu, _ = H["free_gpu"](need)     # asked again now that its turn has come
+                    gpu = _kept_card(run, need)      # HERESY 1370b: the card of its painter kept, when it has room
+                    if gpu is None:
+                        gpu, _ = H["free_gpu"](need, held=_kept_held(run))   # asked again now that its turn has come (1378: held)
                 except RuntimeError:
                     job["status"] = "queued"         # the card was taken meanwhile: back to waiting for one
                     continue
+                gpus = [gpu] + _more_cards(run, need, gpu)   # HERESY 1354: the lab's other cards with room for it, its pictures shared
                 job.update(status="running", gpu=gpu)
                 job.pop("waiting", None)
                 run.update(status="running", gpu=gpu, began=time.time())
+                if len(gpus) > 1:
+                    run["gpus"] = gpus
+                    H["say"](f"the Artist · {run['id']} · its {run['of']} pictures on {len(gpus)} cards at once: GPU " + ", ".join(str(g) for g in gpus))
                 write(d, run)
-                env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", ART_PAINTER=run["painter"])
-                if run.get("stream"):
-                    env["ART_STREAM"] = "1"                 # HERESY 1342
-                p = subprocess.Popen([str(H["py"]), str(HERE / "artist_job.py"), str(d)], env=env, text=True,
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                job["proc"] = p                      # HERESY 1270: for Stop
-                errs = collections.deque(maxlen=40)
-                # HERESY 1340: a painter is stopped when it is quiet, not when it is slow (a cap on the whole run stopped fp8 runs of
-                # three shapes in their second picture): no line, its progress on stderr included, for ten minutes while it loads,
-                # five once it paints
-                seen = {"t": time.time(), "painting": False, "over": False}
-
-                def drain():
-                    for x in p.stderr:
-                        errs.append(x)
-                        seen["t"] = time.time()
-                        if "it/s" in x or "s/it" in x:
-                            seen["painting"] = True
-
-                def quiet():
-                    while p.poll() is None and not seen["over"]:
-                        q = QUIET_PAINT if seen["painting"] else QUIET_LOAD
-                        if time.time() - seen["t"] > q:
-                            seen["why"] = f"its painter said nothing for {q // 60} minutes: stopped" if q >= 60 else f"its painter said nothing for {q} s: stopped"
-                            p.kill()
-                            return
-                        time.sleep(min(5, max(0.2, q / 10)))
-                t = threading.Thread(target=drain, daemon=True)
-                t.start()
-                watch = threading.Thread(target=quiet, daemon=True)
-                watch.start()
-                try:
-                    for line in p.stdout:            # each picture as it comes, so the page shows them one by one
-                        seen["t"] = time.time()
-                        try:
-                            row = json.loads(line)
-                        except ValueError:
-                            continue
-                        if row.get("done"):
-                            run["took"] = row.get("took")
-                            if row.get("peak_gb") is not None:
-                                run["peak_gb"] = row["peak_gb"]   # HERESY 1342: the card's peak
-                        elif "stream" in row:        # HERESY 1342: the painter's blocks streamed from RAM (asked, or its own choice)
-                            run["streamed"] = {k: row.get(k) for k in ("weights_gb", "free_gb", "asked", "kept", "of")}
-                            write(d, run)
-                            H["say"](f"the Artist · {run['id']} · its painter streams from RAM: {row.get('weights_gb')} GB of weights, "
-                                     f"{row.get('free_gb')} GB free on its card, " + (f"{row.get('kept')} of its {row.get('of')} blocks kept on it"
-                                     if row.get("kept") else "every block streamed"))
-                        elif "loras" in row:         # HERESY 1316: the adapters on, each with the layers it reached
-                            run["loras_on"] = row["loras"]
-                            write(d, run)
-                        elif "live" in row:          # HERESY 1257: the step being painted, its picture an eighth the size
-                            run["live"] = dict(row, t=time.time())
-                            write(d, run)
-                        else:
-                            run.pop("live", None)
-                            run["pictures"].append(row)
-                            write(d, run)
-                    p.wait(timeout=60)
-                finally:
-                    seen["over"] = True
-                t.join(timeout=5)
+                lock, lives, outs, threads = threading.Lock(), {}, [], []
+                for g, only in zip(gpus, _shares(run["of"], len(gpus))):
+                    o = {}
+                    outs.append(o)
+                    th = threading.Thread(target=_part_any, args=(d, run, job, g, only, lock, lives, o), daemon=True)   # HERESY 1370
+                    th.start()
+                    threads.append(th)
+                for th in threads:
+                    th.join()
                 if job.get("stop"):                  # HERESY 1270: ended on purpose; what it finished is kept
                     raise Stopped()
-                if p.returncode != 0 and seen.get("why"):   # HERESY 1340: the watchdog's reason, not the last progress line
-                    raise RuntimeError(seen["why"])
-                if p.returncode != 0:
-                    last = [x.strip() for x in errs if x.strip()]
-                    raise RuntimeError("the painter stopped: " + (last[-1][-300:] if last else f"exit {p.returncode}"))
+                bad = [o for o in outs if o.get("code") != 0]
+                if bad:
+                    o = bad[0]
+                    if o.get("why"):                 # HERESY 1340: the watchdog's reason, not the last progress line
+                        raise RuntimeError(o["why"])
+                    last = [x.strip() for x in o.get("errs") or [] if x.strip()]
+                    raise RuntimeError("the painter stopped: " + (last[-1][-300:] if last else f"exit {o.get('code')}"))
             break
         kept = [x for x in run["pictures"] if x.get("kept")]
         flagged = len(run["pictures"]) - len(kept)
         run.pop("live", None)
+        run.pop("lives", None)                       # HERESY 1354
+        run.pop("chain_at", None)                    # HERESY 1355
         run.update(status="done", ended=time.time())
         write(d, run)
         H["say"](f"the Artist ({run['painter']}) · {run['id']} · {len(kept)} of {run['of']} picture(s) in {run.get('took') or 0:.0f} s "
-                 f"on GPU {gpu}" + (f" · {flagged} not kept: the content filter flagged them" if flagged else ""))
+                 f"on GPU {', '.join(str(g) for g in run.get('gpus') or [gpu])}" + (f" · {flagged} not kept: the content filter flagged them" if flagged else ""))
     except Exception as e:                           # Cancelled (taken off the queue) included
         run.pop("live", None)
+        run.pop("lives", None)                       # HERESY 1354
         if job.get("stop"):                          # HERESY 1270: Stop, waiting or drawing
             kept = [x for x in run["pictures"] if x.get("kept")]
             run.update(status="stopped", ended=time.time())
@@ -492,6 +545,409 @@ def work(d, run, job):
     finally:
         with H["lock"]:
             H["jobs"].pop(key, None)
+
+
+CARDS_MAX = 4              # HERESY 1354: the cards a run's pictures are spread over, at most
+# HERESY 1354: a painter's own RAM at its peak, GB (its VmHWM measured on the Forge 11.10.2026: Krea 2 Muse Q4 17.3, Q8 28.0; Qwen-Image
+# 2512 Q4 30.0, Q6 33.4, an fp8 fine-tune 57.8; Qwen-Image 2.1 32.6), its adapters beside it, so that two at once are started only where
+# RAM holds both with 8 GB left over
+RAM_NEED_GB = {"krea2-q4": 18, "krea2-q8": 29, "qwen2512-q4": 31, "qwen2512-q6": 34, "qwen2512-fp8": 58, "qwen21": 33,
+               "upscale": 6}                         # HERESY 1364: an upscaler's process (its model tens of MB, a picture of 600 MP at most)
+
+
+def _ram_free_gb():
+    try:
+        with open("/proc/meminfo", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) / 2 ** 20
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0.0
+
+
+def _more_cards(run, need, first):
+    """HERESY 1354: the other cards given to the lab's jobs with room for this painter now (never a card of another role), so a run of
+    two pictures or more is painted on them at once, each card loading the painter and painting its share; none when the painter
+    streams from RAM, and only as many as RAM holds a painter for (the first one's counted)."""
+    if int(run.get("of") or 1) < 2 or run.get("stream") or not H.get("more_gpus"):
+        return []
+    try:
+        more = H["more_gpus"](need, exclude=[first], most=min(int(run["of"]), CARDS_MAX) - 1)
+    except Exception:                                # a card that cannot be read leaves the run on the one it has
+        return []
+    each = RAM_NEED_GB.get(run["painter"], 58) + sum(x.get("mb", 0) for x in run.get("loras") or []) / 1024
+    room = int((_ram_free_gb() - 8) // each) - 1
+    return list(more[:max(0, room)])
+
+
+def _shares(of, parts):
+    """The pictures' numbers in the run (1…of, a variation's shapes in a row) dealt to the cards in turn: [[1, 3], [2]]; one card, [[]]
+    (all of them, as before)."""
+    if parts <= 1:
+        return [[]]
+    return [[n for n in range(1, of + 1) if (n - 1) % parts == k] for k in range(parts)]
+
+
+def _part(d, run, job, gpu, only, lock, lives, out):
+    """HERESY 1354: one painter on one card (only: the numbers of its pictures in the run; empty: all of them), its rows into the run
+    as they come, under the run's lock; out: {code, why, errs} for the run's thread. The painter alone on the card as before when the
+    run has one card: its rows, its watchdog and its Stop are 1340's."""
+    try:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", ART_PAINTER=run["painter"])
+        if run.get("stream"):
+            env["ART_STREAM"] = "1"                 # HERESY 1342
+        if only:
+            env["ART_ONLY"] = ",".join(str(n) for n in only)
+        p = subprocess.Popen([str(H["py"]), str(HERE / "artist_job.py"), str(d)], env=env, text=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        with lock:
+            job.setdefault("procs", []).append(p)    # HERESY 1270, 1354: for Stop, every card's painter
+            job["proc"] = p
+        errs = collections.deque(maxlen=40)
+        # HERESY 1340: a painter is stopped when it is quiet, not when it is slow: no line, its progress on stderr included, for ten
+        # minutes while it loads, five once it paints
+        seen = {"t": time.time(), "painting": False, "over": False}
+
+        def drain():
+            for x in p.stderr:
+                errs.append(x)
+                seen["t"] = time.time()
+                if "it/s" in x or "s/it" in x:
+                    seen["painting"] = True
+
+        def quiet():
+            while p.poll() is None and not seen["over"]:
+                q = QUIET_PAINT if seen["painting"] else QUIET_LOAD
+                if time.time() - seen["t"] > q:
+                    seen["why"] = f"its painter said nothing for {q // 60} minutes: stopped" if q >= 60 else f"its painter said nothing for {q} s: stopped"
+                    p.kill()
+                    return
+                time.sleep(min(5, max(0.2, q / 10)))
+        t = threading.Thread(target=drain, daemon=True)
+        t.start()
+        watch = threading.Thread(target=quiet, daemon=True)
+        watch.start()
+        try:
+            for line in p.stdout:                    # each picture as it comes, so the page shows them one by one
+                seen["t"] = time.time()
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                with lock:
+                    _row(d, run, gpu, only, lives, row)
+            p.wait(timeout=60)
+        finally:
+            seen["over"] = True
+        t.join(timeout=5)
+        out.update(code=p.returncode, why=seen.get("why"), errs=list(errs))
+    except Exception as e:                           # said as the run's failure, never lost in a thread
+        out.update(code=-1, why=f"the painter on GPU {gpu} could not run: {e}")
+
+
+def _row(d, run, gpu, only, lives, row):
+    """A painter's line into its run (under the run's lock): its end, the streaming said, an upscale's pass, the adapters on, a step
+    being painted, a picture; HERESY 1370: a painter kept from the run before, said."""
+    if row.get("done"):
+        run["took"] = max(run.get("took") or 0, row.get("took") or 0)   # the slowest card's
+        if row.get("peak_gb") is not None:
+            run["peak_gb"] = max(run.get("peak_gb") or 0, row["peak_gb"])   # HERESY 1342: the card's peak
+    elif "stream" in row:            # HERESY 1342: the painter's blocks streamed from RAM (asked, or its own choice)
+        run["streamed"] = {k: row.get(k) for k in ("weights_gb", "free_gb", "asked", "kept", "of")}
+        write(d, run)
+        H["say"](f"the Artist · {run['id']} · its painter streams from RAM: {row.get('weights_gb')} GB of weights, "
+                 f"{row.get('free_gb')} GB free on its card, " + (f"{row.get('kept')} of its {row.get('of')} blocks kept on it"
+                 if row.get("kept") else "every block streamed"))
+    elif row.get("kept") is True and "n" not in row:   # HERESY 1370: no loading: the painter of the run before
+        run["kept"] = True
+        write(d, run)
+        H["say"](f"the Artist · {run['id']} · its painter kept from the run before on GPU {gpu}: no loading")
+    elif "chain" in row:             # HERESY 1355: an upscale in passes: the pass just done
+        run["chain_at"] = row["chain"]
+        write(d, run)
+    elif "loras" in row:             # HERESY 1316: the adapters on, each with the layers it reached
+        run["loras_on"] = row["loras"]
+        write(d, run)
+    elif "live" in row:              # HERESY 1257: the step being painted, its picture an eighth the size
+        lives[gpu] = dict(row, t=time.time())
+        _live(run, lives)
+        write(d, run)
+    else:
+        lives.pop(gpu, None)
+        _live(run, lives)
+        run["pictures"].append(row)
+        if only:                     # HERESY 1354: in the run's own order, whichever card finished first
+            run["pictures"].sort(key=lambda r: int(r.get("n") or 0))
+        write(d, run)
+
+
+# HERESY 1370 (Viktor 11.10.2026: «Да, отпускай модели Художника через 10 минут. Это правильно»): a painter kept between runs, one
+# serving process a card (artist_job.py, ART_SERVE=1): the next run of the same painter with the same adapters paints without loading;
+# between runs its weights lie in RAM and its card is free. Let go after KEPT_IDLE_S idle, for the RAM another painter needs, on Unload,
+# or by Stop. A run that streams its painter, Qwen-Image 2.1 and the upscalers keep a process of their own as before.
+KEPT_IDLE_S = int(os.environ.get("ART_KEPT_IDLE_S") or 600)
+KEPT_PAINTERS = {"krea2-q4", "krea2-q8", "qwen2512-q4", "qwen2512-q6", "qwen2512-fp8"}
+SERVED, SLOCK, REAPER = {}, threading.Lock(), []
+
+
+class Served:
+    """HERESY 1370: the serving painter of one card: its lines as they come (rows; None once it ended), its stderr's last lines and when
+    it last spoke (1340's watchdog), busy from a run's start to its end, idle since when (None while it paints or puts itself away)."""
+
+    def __init__(self, gpu):
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", ART_SERVE="1")
+        env.pop("ART_ONLY", None)
+        env.pop("ART_STREAM", None)
+        self.gpu, self.painter, self.idle, self.busy, self.ok = gpu, "", None, True, True
+        self.rows, self.errs, self.seen = queue.Queue(), collections.deque(maxlen=40), {"t": time.time(), "painting": False}
+        self.p = subprocess.Popen([str(H["py"]), str(HERE / "artist_job.py")], env=env, text=True, bufsize=1,
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        threading.Thread(target=self._out, daemon=True).start()
+        threading.Thread(target=self._err, daemon=True).start()
+
+    def _out(self):
+        for line in self.p.stdout:
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(row, dict) and "idle" in row:      # its run put away: the weights in RAM, the card free
+                if row["idle"]:
+                    self.idle = time.time()
+                else:
+                    self.ok = False
+                continue
+            self.rows.put(row)
+        self.ok = False
+        self.rows.put(None)
+        with SLOCK:
+            if SERVED.get(self.gpu) is self:
+                SERVED.pop(self.gpu, None)
+
+    def _err(self):
+        for x in self.p.stderr:
+            self.errs.append(x)
+            self.seen["t"] = time.time()
+            if "it/s" in x or "s/it" in x:
+                self.seen["painting"] = True
+
+    def alive(self):
+        return self.ok and self.p.poll() is None
+
+    def ask(self, d, run, only):
+        self.errs.clear()
+        self.seen.update(t=time.time(), painting=False)
+        self.idle, self.painter = None, run["painter"]
+        self.p.stdin.write(json.dumps({"run": str(d), "painter": run["painter"], "only": list(only or []), "stream": bool(run.get("stream"))}) + "\n")
+        self.p.stdin.flush()
+
+    def end(self):
+        self.ok = False
+        if self.p.poll() is None:
+            self.p.terminate()
+            threading.Timer(5, lambda p=self.p: p.poll() is None and p.kill()).start()
+
+
+def _served(gpu, ram_gb):
+    """HERESY 1370: the card's kept painter for a run, claimed: idle, or putting itself away (a minute at most); a new one when there is
+    none or it could not be kept (the other cards' idle painters let go first when RAM lacks ram_gb for it); None when it paints another
+    run on this card (this one then paints apart, as before)."""
+    with SLOCK:
+        s = SERVED.get(gpu)
+        if s is not None and s.alive() and s.busy:
+            return None
+        if s is not None:
+            s.busy = True
+    if s is not None:
+        t0 = time.time()
+        while s.alive() and s.idle is None and time.time() - t0 < 60:
+            time.sleep(0.2)
+        if s.alive() and s.idle is not None:
+            return s
+        s.end()
+    if _ram_free_gb() < ram_gb:                      # another card's idle painter holds RAM a new one needs: let go first
+        release_idle("RAM for another painter")
+    s = Served(gpu)
+    with SLOCK:
+        SERVED[gpu] = s
+    _reaper()
+    return s
+
+
+def _reaper():
+    """HERESY 1370: once, a thread that lets a painter go after KEPT_IDLE_S idle."""
+    if REAPER:
+        return
+    REAPER.append(True)
+
+    def loop():
+        while True:
+            time.sleep(15)
+            for s in _take_idle(lambda s: s.idle is not None and time.time() - s.idle > KEPT_IDLE_S):
+                _let_go(s, f"{KEPT_IDLE_S // 60} minutes idle" if KEPT_IDLE_S >= 60 else f"{KEPT_IDLE_S} s idle")
+    threading.Thread(target=loop, daemon=True).start()
+
+
+def kept():
+    with SLOCK:
+        return list(SERVED.values())
+
+
+def _take_idle(cond):
+    """HERESY 1370: the kept painters not painting that meet cond, taken out under the lock (no run can claim them meanwhile)."""
+    with SLOCK:
+        out = [s for s in SERVED.values() if not s.busy and cond(s)]
+        for s in out:
+            SERVED.pop(s.gpu, None)
+            s.busy = True
+    return out
+
+
+def _let_go(s, why):
+    s.end()
+    H["say"](f"the Artist · its painter ({s.painter or 'none yet'}) let go on GPU {s.gpu}: {why}")
+
+
+def release_idle(why, gpu=None):
+    """HERESY 1370: the kept painters not painting now (on that card, or all), let go: [{gpu, painter}]."""
+    out = []
+    for s in _take_idle(lambda s: gpu is None or s.gpu == gpu):
+        _let_go(s, why)
+        out.append({"gpu": s.gpu, "painter": s.painter})
+    return out
+
+
+def unload():
+    """HERESY 1370 (Viktor 11.10.2026: «на кнопку ВЫГРУЗИТЬ в Баре тоже подключи выгруз не только YuE2 моделей, но абсолютно всего, что у
+    нас в VRAM студийного»): POST /artist/unload: every kept painter not painting, let go; the busy ones said."""
+    gone = release_idle("Unload")
+    return {"released": gone, "busy": [{"gpu": s.gpu, "painter": s.painter} for s in kept() if s.busy]}
+
+
+def kept_painters():
+    """HERESY 1370: the kept painters, for the lab's activity (the Bar's Unload): [{gpu, painter, busy, idle_s}]. HERESY 1375: a name of
+    its own: as painters() it took the place of the room's list of painters (1318) and GET /artist/painters said []."""
+    now = time.time()
+    return [{"gpu": s.gpu, "painter": s.painter, "busy": bool(s.busy), "idle_s": round(now - s.idle) if s.idle else None} for s in kept() if s.alive()]
+
+
+def _part_kept(s, d, run, job, gpu, only, lock, lives, out):
+    """HERESY 1370: a card's share of a run through its kept painter: as _part, its rows till its end ({"done"}); the painter stays."""
+    try:
+        with lock:
+            job.setdefault("procs", []).append(s.p)  # HERESY 1270, 1354: Stop ends it (the next run starts another)
+            job["proc"] = s.p
+        s.ask(d, run, only)
+        over = {"done": False, "why": None}
+
+        def quiet():                                 # HERESY 1340: silent too long while loading or painting: stopped
+            while s.alive() and not over["done"]:
+                q = QUIET_PAINT if s.seen["painting"] else QUIET_LOAD
+                if time.time() - s.seen["t"] > q:
+                    over["why"] = f"its painter said nothing for {q // 60} minutes: stopped" if q >= 60 else f"its painter said nothing for {q} s: stopped"
+                    s.p.kill()
+                    return
+                time.sleep(min(5, max(0.2, q / 10)))
+        threading.Thread(target=quiet, daemon=True).start()
+        while True:
+            row = s.rows.get()
+            if row is None:
+                break
+            s.seen["t"] = time.time()
+            with lock:
+                _row(d, run, gpu, only, lives, row)
+            if row.get("done"):
+                over["done"] = True
+                break
+        s.busy = False
+        if over["done"]:
+            out.update(code=0, why=None, errs=list(s.errs))
+        else:
+            try:
+                s.p.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                s.p.kill()
+            out.update(code=s.p.returncode if s.p.returncode is not None else -1, why=over["why"], errs=list(s.errs))
+    except Exception as e:                           # said as the run's failure, never lost in a thread
+        s.busy = False
+        out.update(code=-1, why=f"the painter on GPU {gpu} could not run: {e}")
+
+
+def _settle(run):
+    """HERESY 1370c: a run of a kept painter waits (a minute at most) for any kept painter still putting its weights away, so the cards
+    are measured as they will be."""
+    if run["painter"] not in KEPT_PAINTERS or run.get("stream"):
+        return
+    t0 = time.time()
+    while any(s.alive() and not s.busy and s.idle is None for s in kept()) and time.time() - t0 < 60:
+        time.sleep(0.5)
+
+
+def _kept_held(run):
+    """HERESY 1378 (Viktor 11.10.2026: «повторный ран выбрал другую видеокарту… Это неправильно»): {card: MiB} the idle kept painters'
+    own processes hold (their CUDA context, 428 MiB measured), for a run of a kept painter: on such a card that very process paints
+    it (_served), so the memory is the run's own. Without it a painter needing nearly the whole card (qwen2512-fp8 with three
+    adapters, 24 047 MB) found its kept card not empty, went to another one and loaded again; on one card it waited ten minutes."""
+    if run["painter"] not in KEPT_PAINTERS or run.get("stream"):
+        return {}
+    idle = [s for s in kept() if s.alive() and not s.busy and s.idle is not None]
+    if not idle:
+        return {}
+    try:
+        a = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,used_memory", "--format=csv,noheader,nounits"],
+                           capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    mb = {}
+    for line in a.stdout.strip().splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+            mb[int(parts[0])] = mb.get(int(parts[0]), 0) + int(parts[1])
+    return {s.gpu: mb[s.p.pid] for s in idle if mb.get(s.p.pid)}
+
+
+def _kept_card(run, need):
+    """HERESY 1370b: for a run of a kept painter, the card of an idle one of its painter when that card has room for it now; a kept
+    painter still putting its weights away is waited for first (a minute at most), so its card's memory is back before any card is
+    measured. None: the cards are asked as before."""
+    if run["painter"] not in KEPT_PAINTERS or run.get("stream"):
+        return None
+    t0 = time.time()
+    while any(s.alive() and not s.busy and s.idle is None for s in kept()) and time.time() - t0 < 60:
+        time.sleep(0.5)
+    for s in kept():
+        if s.alive() and not s.busy and s.idle is not None and s.painter == run["painter"]:
+            try:
+                return H["free_gpu"](need, only=s.gpu, held=_kept_held(run))[0]   # HERESY 1378: its own process given back
+            except (RuntimeError, TypeError):
+                return None
+    return None
+
+
+def _part_any(d, run, job, gpu, only, lock, lives, out):
+    """HERESY 1370: a card's share through the card's kept painter when its painter is kept, else a process of its own (_part)."""
+    if run["painter"] in KEPT_PAINTERS and not run.get("stream") and not job.get("stop"):
+        try:
+            s = _served(gpu, RAM_NEED_GB.get(run["painter"], 58) + 8)
+        except Exception:                            # a serving process that could not start: the run's own, as before
+            s = None
+        if s is not None:
+            return _part_kept(s, d, run, job, gpu, only, lock, lives, out)
+    return _part(d, run, job, gpu, only, lock, lives, out)
+
+
+def _live(run, lives):
+    """The step the stage shows: the lowest picture being painted (one card, its own, as before); with more cards, each card's step for
+    the progress (run["lives"])."""
+    if not lives:
+        run.pop("live", None)
+        run.pop("lives", None)
+        return
+    rows = sorted(lives.values(), key=lambda r: int(r.get("live") or 0))
+    run["live"] = rows[0]
+    if len(run.get("gpus") or []) > 1:
+        run["lives"] = [{"live": r.get("live"), "step": r.get("step"), "of": r.get("of")} for r in rows]
 
 
 class Stopped(Exception):
@@ -508,10 +964,11 @@ def stop(rid):
         if not job:
             raise ValueError("this run is not drawing")
         job["stop"] = job["cancel"] = True
-        p = job.get("proc")
-    if p is not None and p.poll() is None:
-        p.terminate()
-        threading.Timer(5, lambda: p.poll() is None and p.kill()).start()
+        procs = list(job.get("procs") or ([job["proc"]] if job.get("proc") else []))   # HERESY 1354: every card's painter
+    for p in procs:
+        if p is not None and p.poll() is None:
+            p.terminate()
+            threading.Timer(5, lambda p=p: p.poll() is None and p.kill()).start()
     return {"id": rid, "stopping": True}
 
 
@@ -611,34 +1068,94 @@ def star(body):
     return {"star": on, "file": name}
 
 
+def protect(body):
+    """HERESY 1367 (Viktor 11.10.2026: «добавь Protect опцию для картинок. Такое нельзя ни в коем случае упустить в корзину, а потом
+    ненароком в бездну»): pictures protected, or let go with protect false. A protected picture is never put aside (aside() leaves it and
+    says so), its run never goes to the trash, and nothing protected is deleted for good; one put aside comes back into the room when it
+    is protected. Not while its run draws (the drawing run writes its own run.json). {protect, done: [{id, file}]}"""
+    items, on = body.get("items") or [], body.get("protect") is not False
+    if not isinstance(items, list) or not items or len(items) > 500:
+        raise ValueError("the pictures: one to five hundred")
+    by = {}
+    for it in items:
+        rid, name = str((it or {}).get("id") or ""), str((it or {}).get("file") or "")
+        picture(rid, name)
+        by.setdefault(rid, set()).add(name)
+    with H["lock"]:
+        busy = [r for r in by if "artist:" + r in H["jobs"]]
+    if busy:
+        raise ValueError("a run is drawing: protect its pictures when it ends")
+    done = []
+    for rid, names in by.items():
+        d = run_dir(rid)
+        run = read(d) or {}
+        for pic in run.get("pictures") or []:
+            if pic.get("file") in names:
+                if on:
+                    pic["protected"] = True
+                    pic.pop("aside", None)
+                else:
+                    pic.pop("protected", None)
+                done.append({"id": rid, "file": pic["file"]})
+        write(d, run)
+    if done:
+        H["say"](f"the Artist · {len(done)} picture{'s' if len(done) != 1 else ''} " + ("protected: never to the trash" if on else "no longer protected"))
+    return {"protect": on, "done": done}
+
+
+def protected_in(run):
+    """HERESY 1367: the run's protected pictures' files."""
+    return [p.get("file") for p in (run or {}).get("pictures") or [] if p.get("protected")]
+
+
 UPSCALE_MAX = 10240                                     # HERESY 1322: the long side of an upscaled picture, at most
 TARGETS = {"2k": 2560, "4k": 3840}                      # HERESY 1332: the long side of 2K and 4K (QHD and UHD)
 
 
+UP_INFO = None
+
+
 def upscalers():
-    """HERESY 1322: the upscalers in artwork/upscalers/ (a face restorer is not one), each with its scale by its name and its size."""
+    """HERESY 1322: the upscalers in artwork/upscalers/ (a face restorer is not one), each with its scale by its name and its size; 1355: and
+    its notes from lab/upscalers.json where it is a known one (what it is for, its author, licence and page, its time measured here)."""
+    global UP_INFO
+    if UP_INFO is None:
+        try:
+            with open(HERE / "upscalers.json", encoding="utf-8") as f:
+                UP_INFO = json.load(f)
+        except (OSError, ValueError):
+            UP_INFO = {}
+    known = UP_INFO.get("models") or {}
     d = _art("upscalers")
     out = []
     if d.exists():
         for p in sorted(d.rglob("*")):
             if p.suffix.lower() in (".pth", ".safetensors") and p.is_file() and not re.search(r"gfpgan|codeformer|restoreformer", p.name, re.I):
                 m = re.match(r"^(\d)x", p.name, re.I)
-                out.append({"name": p.relative_to(d).as_posix(), "scale": int(m.group(1)) if m else 4, "mb": round(p.stat().st_size / 2 ** 20, 1)})
-    return {"upscalers": out}
+                e = {"name": p.relative_to(d).as_posix(), "scale": int(m.group(1)) if m else 4, "mb": round(p.stat().st_size / 2 ** 20, 1)}
+                if p.name in known:
+                    e["info"] = known[p.name]
+                    e["scale"] = int(known[p.name].get("scale") or e["scale"])
+                out.append(e)
+    return {"upscalers": out, "measured": UP_INFO.get("measured") or ""}
 
 
 def upscale(body):
     """HERESY 1322: a picture upscaled 2 or 4 times, as a run of its own (its source, the model and the factor said)."""
+    if body.get("items") is not None:                    # HERESY 1364: the pictures picked, in one run
+        return _upscale_batch(body)
     rid, name = str(body.get("id") or ""), str(body.get("file") or "")
     picture(rid, name)
     src = read(run_dir(rid)) or {}
     pic = next((x for x in src.get("pictures") or [] if x.get("file") == name), None)
     if pic is None or not pic.get("kept"):
         raise FileNotFoundError("no such picture in the run")
+    w0, h0 = int(pic.get("w") or 0), int(pic.get("h") or 0)
+    if body.get("passes"):                               # HERESY 1355: in passes, as Viktor's ComfyUI stack
+        return _upscale_chain(body, rid, name, src, pic, w0, h0)
     model = str(body.get("model") or "")
     if model not in [u["name"] for u in upscalers()["upscalers"]]:
         raise ValueError("pick an upscaler: one of artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN… as .pth or .safetensors)")
-    w0, h0 = int(pic.get("w") or 0), int(pic.get("h") or 0)
     target, size = str(body.get("target") or "").lower(), None
     if target in TARGETS:                                # HERESY 1332: 2K or 4K by the long side, the size exact
         long = max(w0, h0)
@@ -657,14 +1174,160 @@ def upscale(body):
     nid = time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
     d = home() / nid
     d.mkdir(parents=True)
-    ask = {"source": {"id": rid, "file": name}, "model": model, "factor": factor, "shape": pic.get("shape") or "1:1", "seed": pic.get("seed") or 0}
+    ask = {"source": {"id": rid, "file": name}, "model": model, "factor": factor, "shape": pic.get("shape") or "1:1", "seed": pic.get("seed") or 0,
+           "tta": bool(body.get("tta"))}                 # HERESY 1364
     if size:
         ask.update(size=size, target=target)
     with open(d / "ask.json", "w", encoding="utf-8") as f:
         json.dump(ask, f, ensure_ascii=False, indent=1)
-    run = {"id": nid, "kind": "upscale", "prompt": src.get("prompt", ""), "painter": "upscale", "model": model, "factor": factor, "target": target,
+    run = {"id": nid, "kind": "upscale", "prompt": src.get("prompt", ""), "painter": "upscale", "model": model, "factor": factor, "target": target, "tta": ask["tta"],
            "shapes": [ask["shape"]], "seed": ask["seed"], "count": 1, "take": src.get("take"), "created": time.time(), "status": "queued", "of": 1,
            "pictures": [], "upscaled_from": {"id": rid, "file": name, "painter": src.get("painter")}}
+    write(d, run)
+    job = {"status": "queued", "started": time.time(), "kind": "artist"}
+    with H["lock"]:
+        H["jobs"]["artist:" + nid] = job
+    threading.Thread(target=work, args=(d, run, job), daemon=True).start()
+    return run
+
+
+PASSES_MAX = 4
+
+
+def _upscale_chain(body, rid, name, src, pic, w0, h0):
+    """HERESY 1355: an upscale in passes (1 to 4, each a model of artwork/upscalers/ and a factor of the picture's size from 0.25 to 8), how
+    each lands (bilinear, lanczos, bicubic), the long side after them (none, or 512 to UPSCALE_MAX) and the colours matched or not; a run
+    of its own, as one model's upscale is."""
+    names = [u["name"] for u in upscalers()["upscalers"]]
+    passes = body.get("passes")
+    if not isinstance(passes, list) or not 1 <= len(passes) <= PASSES_MAX:
+        raise ValueError(f"the passes: one to {PASSES_MAX}")
+    out = []
+    for ps in passes:
+        model = str((ps or {}).get("model") or "")
+        if model not in names:
+            raise ValueError("each pass: one of the upscalers in artwork/upscalers/")
+        try:
+            f = round(float((ps or {}).get("factor")), 3)
+        except (TypeError, ValueError):
+            raise ValueError("each pass's factor: a number")
+        if not 0.25 <= f <= 8:
+            raise ValueError("each pass's factor: from 0.25 to 8 (of the picture's own size)")
+        out.append({"model": model, "factor": f})
+    resample = str(body.get("resample") or "bilinear")
+    if resample not in ("bilinear", "lanczos", "bicubic"):
+        raise ValueError("how each pass lands: bilinear, lanczos or bicubic")
+    long = int(body.get("long") or 0)
+    if long and not 512 <= long <= UPSCALE_MAX:
+        raise ValueError(f"the long side: 512 to {UPSCALE_MAX} px")
+    if not (w0 and h0):
+        raise ValueError("the picture's size is not known")
+    side = long or round(max(w0, h0) * out[-1]["factor"])
+    if side > UPSCALE_MAX:
+        raise ValueError(f"too large: {side} px on the long side, {UPSCALE_MAX} is the most")
+    nid = time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
+    d = home() / nid
+    d.mkdir(parents=True)
+    ask = {"source": {"id": rid, "file": name}, "passes": out, "resample": resample, "long": long or None, "match": bool(body.get("match")),
+           "shape": pic.get("shape") or "1:1", "seed": pic.get("seed") or 0, "tta": bool(body.get("tta"))}   # HERESY 1364: tta
+    with open(d / "ask.json", "w", encoding="utf-8") as f:
+        json.dump(ask, f, ensure_ascii=False, indent=1)
+    run = {"id": nid, "kind": "upscale", "prompt": src.get("prompt", ""), "painter": "upscale", "model": out[0]["model"], "passes": out,
+           "factor": out[-1]["factor"], "target": "", "long": long or None, "match": ask["match"], "resample": resample, "tta": ask["tta"],
+           "shapes": [ask["shape"]], "seed": ask["seed"], "count": 1, "take": src.get("take"), "created": time.time(), "status": "queued", "of": 1,
+           "pictures": [], "upscaled_from": {"id": rid, "file": name, "painter": src.get("painter")}}
+    write(d, run)
+    job = {"status": "queued", "started": time.time(), "kind": "artist"}
+    with H["lock"]:
+        H["jobs"]["artist:" + nid] = job
+    threading.Thread(target=work, args=(d, run, job), daemon=True).start()
+    return run
+
+
+BATCH_MAX = 64                                          # HERESY 1364: the pictures one batch upscales
+
+
+def _upscale_batch(body):
+    """HERESY 1364 (from Upscayl's batch, TODO.md: «a folder upscaled at once»): the pictures picked (Ctrl or Shift + click), each upscaled as
+    the one would be (a model to 2K or 4K, ×2 or ×4, or the passes; tta for all), in one run whose pictures they become in their order,
+    dealt to the lab's cards as a painter's are. {items: [{id, file}], model, target | factor, or passes, resample, long, match; tta}"""
+    items = body.get("items")
+    if not isinstance(items, list) or not 1 <= len(items) <= BATCH_MAX:
+        raise ValueError(f"the pictures: one to {BATCH_MAX}")
+    srcs, first = [], None
+    for it in items:
+        rid, name = str((it or {}).get("id") or ""), str((it or {}).get("file") or "")
+        picture(rid, name)
+        src = read(run_dir(rid)) or {}
+        pic = next((x for x in src.get("pictures") or [] if x.get("file") == name), None)
+        if pic is None or not pic.get("kept"):
+            raise FileNotFoundError(f"no such picture in the run: {rid}/{name}")
+        w0, h0 = int(pic.get("w") or 0), int(pic.get("h") or 0)
+        if not (w0 and h0):
+            raise ValueError(f"the size of {name} is not known")
+        srcs.append({"id": rid, "file": name, "shape": pic.get("shape") or "1:1", "seed": pic.get("seed") or 0, "w": w0, "h": h0})
+        first = first or (src, rid, name)
+    names = [u["name"] for u in upscalers()["upscalers"]]
+    ask = {"sources": srcs, "tta": bool(body.get("tta"))}
+    if body.get("passes"):                               # the passes, as _upscale_chain checks them
+        passes = body.get("passes")
+        if not isinstance(passes, list) or not 1 <= len(passes) <= PASSES_MAX:
+            raise ValueError(f"the passes: one to {PASSES_MAX}")
+        out = []
+        for ps in passes:
+            model = str((ps or {}).get("model") or "")
+            if model not in names:
+                raise ValueError("each pass: one of the upscalers in artwork/upscalers/")
+            try:
+                f = round(float((ps or {}).get("factor")), 3)
+            except (TypeError, ValueError):
+                raise ValueError("each pass's factor: a number")
+            if not 0.25 <= f <= 8:
+                raise ValueError("each pass's factor: from 0.25 to 8 (of the picture's own size)")
+            out.append({"model": model, "factor": f})
+        resample = str(body.get("resample") or "bilinear")
+        if resample not in ("bilinear", "lanczos", "bicubic"):
+            raise ValueError("how each pass lands: bilinear, lanczos or bicubic")
+        long = int(body.get("long") or 0)
+        if long and not 512 <= long <= UPSCALE_MAX:
+            raise ValueError(f"the long side: 512 to {UPSCALE_MAX} px")
+        for s in srcs:
+            side = long or round(max(s["w"], s["h"]) * out[-1]["factor"])
+            if side > UPSCALE_MAX:
+                raise ValueError(f"too large: {s['file']} would be {side} px on the long side, {UPSCALE_MAX} is the most")
+        ask.update(passes=out, resample=resample, long=long or None, match=bool(body.get("match")))
+        say = {"model": out[0]["model"], "passes": out, "factor": out[-1]["factor"], "target": "", "long": long or None, "match": ask["match"], "resample": resample}
+    else:                                                # one model, as upscale() checks it
+        model = str(body.get("model") or "")
+        if model not in names:
+            raise ValueError("pick an upscaler: one of artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN… as .pth or .safetensors)")
+        target = str(body.get("target") or "").lower()
+        if target in TARGETS:
+            for s in srcs:
+                long0 = max(s["w"], s["h"])
+                if long0 >= TARGETS[target]:
+                    raise ValueError(f"{s['file']} is {s['w']}×{s['h']} already: {target.upper()} is {TARGETS[target]} px on its long side")
+                s["size"] = [round(s["w"] * TARGETS[target] / long0), round(s["h"] * TARGETS[target] / long0)]
+            factor = 4
+        else:
+            target = ""
+            factor = 4 if int(body.get("factor") or 2) >= 4 else 2
+            for s in srcs:
+                if max(s["w"], s["h"]) * factor > UPSCALE_MAX:
+                    raise ValueError(f"too large: {s['file']} at ×{factor}, {UPSCALE_MAX} px is the most on the long side")
+        ask.update(model=model, factor=factor, target=target)
+        say = {"model": model, "factor": factor, "target": target}
+    src, rid, name = first
+    nid = time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
+    d = home() / nid
+    d.mkdir(parents=True)
+    with open(d / "ask.json", "w", encoding="utf-8") as f:
+        json.dump(ask, f, ensure_ascii=False, indent=1)
+    run = dict(say, **{"id": nid, "kind": "upscale", "prompt": src.get("prompt", ""), "painter": "upscale", "tta": ask["tta"], "batch": len(srcs),
+                       "shapes": sorted({s["shape"] for s in srcs}), "seed": srcs[0]["seed"], "count": len(srcs), "take": src.get("take"),
+                       "created": time.time(), "status": "queued", "of": len(srcs), "pictures": [],
+                       "upscaled_from": {"id": rid, "file": name, "painter": src.get("painter")},
+                       "batch_from": [{"id": s["id"], "file": s["file"]} for s in srcs]})
     write(d, run)
     job = {"status": "queued", "started": time.time(), "kind": "artist"}
     with H["lock"]:
@@ -688,12 +1351,15 @@ def aside(body):
         busy = [r for r in by if "artist:" + r in H["jobs"]]
     if busy:
         raise ValueError("a run is drawing: put its pictures aside when it ends")
-    done, gone = [], []
+    done, gone, kept = [], [], []
     for rid, names in by.items():
         d = run_dir(rid)
         run = read(d) or {}
         for pic in run.get("pictures") or []:
             if pic.get("file") in names:
+                if on and pic.get("protected"):          # HERESY 1367: protected: it stays in the room, said
+                    kept.append({"id": rid, "file": pic["file"], "why": "protected"})
+                    continue
                 if on:
                     pic["aside"] = True
                 else:
@@ -703,7 +1369,60 @@ def aside(body):
         if on and not any(p.get("kept") and not p.get("aside") for p in run.get("pictures") or []):
             trash(rid)                                   # nothing of it left to show: the run itself to the trash
             gone.append(rid)
-    return {"aside": on, "done": done, "trashed": gone}
+    out = {"aside": on, "done": done, "trashed": gone, "kept": kept}
+    if on and done and body.get("covers") == "off":      # HERESY 1372: their covers taken off the takes too, on the user's word
+        out["covers_off"] = covers_off(done)
+    return out
+
+
+def covers_of(items):
+    """HERESY 1372 (Viktor 11.10.2026: «Если стоит обложкой на треке то, что у Художника, при удалении изображения из галлереи
+    спрашивать, или снимать, или оставить»): the takes whose cover now is one of these pictures, by their artwork.json (its run and
+    file; an A/B pair's other letter carries the same): {"covers": [{id, file, takes: [{name, title}]}]}. A cover is the take's own
+    copy: the picture going leaves it as it is, unless it is taken off (covers_off)."""
+    want = {(str((it or {}).get("id") or ""), str((it or {}).get("file") or "")) for it in items or []}
+    found, root = {}, H.get("outputs")
+    for a in sorted(root.glob("*/artwork.json")) if root and root.is_dir() else []:
+        try:
+            m = json.load(open(a, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        k = (str(m.get("run") or ""), str(m.get("file") or ""))
+        if k not in want or not (a.parent / "artwork.jpg").is_file():
+            continue
+        try:
+            title = json.load(open(a.parent / "meta.json", encoding="utf-8")).get("title") or a.parent.name
+        except (OSError, ValueError):
+            title = a.parent.name
+        found.setdefault(k, []).append({"name": a.parent.name, "title": title})
+    return {"covers": [{"id": k[0], "file": k[1], "takes": v} for k, v in found.items()]}
+
+
+def covers_off(items):
+    """HERESY 1372: the covers that are these pictures, taken off their takes (kept beside each take, as Remove current artwork keeps them;
+    the takes' MP3s made again); a frozen workspace's take keeps its own. The takes' names."""
+    frozen = H["frozen"]() if H.get("frozen") else set()
+    off = []
+    for c in covers_of(items)["covers"]:
+        for t in c["takes"]:
+            if t["name"] in frozen or t["name"] in off:
+                continue
+            r = H["art_remove"](t["name"])
+            if not r.get("error"):
+                off.append(t["name"])
+    if off:
+        H["say"](f"the Artist · the cover taken off {len(off)} take(s) with its picture: " + ", ".join(off[:4]) + ("…" if len(off) > 4 else ""))
+    return off
+
+
+def trash_run(body):
+    """HERESY 1372: POST /artist/trash {id, covers}: the run to the trash; covers "off": the covers its pictures gave to takes taken off too."""
+    rid = str(body.get("id") or "")
+    items = [{"id": rid, "file": p.get("file")} for p in (read(run_dir(rid)) or {}).get("pictures") or [] if p.get("kept")] if RUN_RE.match(rid) else []
+    out = trash(rid)
+    if body.get("covers") == "off" and items:
+        out["covers_off"] = covers_off(items)
+    return out
 
 
 def asides():
@@ -722,6 +1441,8 @@ def trash(rid):
     with H["lock"]:
         if "artist:" + rid in H["jobs"]:
             raise ValueError("it is drawing: let it end first")
+    if protected_in(read(d)):                         # HERESY 1367
+        raise ValueError("it holds a protected picture: take its protection off first")
     to = H["kit"] / "trash" / "artist" / rid
     to.parent.mkdir(parents=True, exist_ok=True)
     if to.exists():
@@ -806,7 +1527,8 @@ def bin_list():
         d = run_dir(p["id"])
         p["bytes"] = _size(d / p["file"], *([d / p["thumb"]] if p.get("thumb") else []))
     covers = _covers(_frozen())
-    return {"runs": runs, "pictures": pics, "covers": covers, "bytes": sum(x["bytes"] for x in runs + pics + covers)}
+    loras = artist_loras.trashed(H["kit"])             # HERESY 1353: the adapters taken out of the LoRA library
+    return {"runs": runs, "pictures": pics, "covers": covers, "loras": loras, "bytes": sum(x["bytes"] for x in runs + pics + covers + loras)}
 
 
 def bin_file(take, stamp):
@@ -876,6 +1598,8 @@ def _picture_gone(rid, name):
     pic = next((x for x in run.get("pictures") or [] if x.get("file") == name), None)
     if not pic or not pic.get("aside"):
         raise ValueError("only a picture put aside goes for good")
+    if pic.get("protected"):                         # HERESY 1367: never, whatever brought it here
+        raise ValueError("it is protected: never deleted")
     for rel in [pic["file"]] + ([pic["thumb"]] if pic.get("thumb") else []):
         if FILE_RE.match(rel):
             (d / rel).unlink(missing_ok=True)
@@ -889,11 +1613,13 @@ def _run_gone(rid):
     d = trash_dir() / rid
     if not (d / "run.json").is_file():
         raise FileNotFoundError(f"no run {rid} in the trash")
+    if protected_in(read(d)):                         # HERESY 1367: never, whatever brought it here
+        raise ValueError("it holds a protected picture: never deleted")
     shutil.rmtree(d)
 
 
 def bin_act(body):
-    """HERESY 1337: {op: restore | delete | empty, items: [{kind: run, id} | {kind: picture, id, file} | {kind: cover, take, stamp}]}:
+    """HERESY 1337: {op: restore | delete | empty, items: [{kind: run, id} | {kind: picture, id, file} | {kind: cover, take, stamp} | {kind: lora, stamp}]}:
     each given back, or deleted for good; empty: all the trash lists but a frozen workspace's covers. {op, done, kept: [{…, why}]}"""
     op = str(body.get("op") or "")
     if op not in ("restore", "delete", "empty"):
@@ -902,7 +1628,8 @@ def bin_act(body):
     if op == "empty":
         b = bin_list()
         items = [{"kind": "run", "id": r["id"]} for r in b["runs"]] + [{"kind": "picture", "id": p["id"], "file": p["file"]} for p in b["pictures"]] + \
-                [{"kind": "cover", "take": c["take"], "stamp": c["stamp"]} for c in b["covers"] if not c["frozen"]]
+                [{"kind": "cover", "take": c["take"], "stamp": c["stamp"]} for c in b["covers"] if not c["frozen"]] + \
+                [{"kind": "lora", "stamp": x["stamp"]} for x in b["loras"]]
     else:
         items = body.get("items")
         if not isinstance(items, list) or not items or len(items) > 5000:
@@ -927,8 +1654,10 @@ def bin_act(body):
                 if take in frozen:
                     raise ValueError("its workspace is frozen: its takes are never changed")
                 (_cover_back if op == "restore" else _cover_gone)(take, stamp)
+            elif kind == "lora":                     # HERESY 1353: an adapter back in artwork/loras/, or deleted for good
+                (artist_loras.restore if op == "restore" else artist_loras.gone)(H["kit"], str(it.get("stamp") or ""))
             else:
-                raise ValueError("kind: run, picture or cover")
+                raise ValueError("kind: run, picture, cover or lora")
             done.append(it)
         except (ValueError, FileNotFoundError, OSError) as e:
             kept.append(dict(it, why=str(e)))

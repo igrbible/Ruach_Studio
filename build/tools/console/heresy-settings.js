@@ -10,13 +10,13 @@
 // with the ones removed on purpose. The file merges them; it never forgets a key it was not
 // told to. When most keys vanish at once (site data cleared under a live page), that is not a
 // choice to forget: no removals are sent. Only the Engine room's Reset empties the file.
-// The OpenRouter key and the running-jobs list stay in the browser only: the file is served to
+// The OpenRouter key, the Civitai key (HERESY 1360) and the running-jobs list stay in the browser only: the file is served to
 // anyone on the network who opens the page, and the jobs belong to one session.
 (function () {
   "use strict";
 
   var PREFIX = "yue2.", STAMP = "yue2.savedAt";
-  var KEEP_LOCAL = { "yue2.orKey": 1, "yue2.jobs": 1, "yue2.savedAt": 1 };
+  var KEEP_LOCAL = { "yue2.orKey": 1, "yue2.jobs": 1, "yue2.savedAt": 1, "yue2.civitaiKey": 1 };   // HERESY 1360: the Civitai key too
   // ?scope=NAME in the page address keeps a separate file (a test page must not write into yours)
   var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
   var URL = "/lab/settings" + (SCOPE ? "?scope=" + encodeURIComponent(SCOPE) : "");

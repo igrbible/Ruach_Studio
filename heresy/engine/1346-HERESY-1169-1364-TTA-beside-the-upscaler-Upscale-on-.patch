@@ -1,0 +1,287 @@
+From 3f0834a6ee54872bc5353eb38cece2860581a1f4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 16:04:02 -0600
+Subject: [PATCH 1346/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201364:=20TTA?=
+ =?UTF-8?q?=20beside=20the=20upscaler;=20=C2=ABUpscale=E2=80=A6=C2=BB=20on?=
+ =?UTF-8?q?=20the=20bar=20of=20the=20pictures=20picked:=202K,=204K=20or=20?=
+ =?UTF-8?q?the=20passes=20kept,=20all=20in=20one=20run?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+From Upscayl (TODO.md: «TTA (eight flips averaged, steadier, eight times slower) and a folder upscaled at once»). TTA kept beside the upscaler and sent with one picture and with the passes; the picked bar's «Upscale…» opens 2K and 4K by the upscaler chosen, the passes kept and TTA, and sends the pictures in one request. The words in the six languages (13 rows, the lab's about a batch among them). Suite (suite-1364.part).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  2 ++
+ tools/console/heresy-artist.js  | 44 +++++++++++++++++++++++++++++++--
+ tools/console/heresy-i18n-be.js | 16 ++++++++++++
+ tools/console/heresy-i18n-el.js | 16 ++++++++++++
+ tools/console/heresy-i18n-es.js | 16 ++++++++++++
+ tools/console/heresy-i18n-it.js | 16 ++++++++++++
+ tools/console/heresy-i18n-ru.js | 16 ++++++++++++
+ tools/console/heresy-i18n-uk.js | 16 ++++++++++++
+ 8 files changed, 140 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 41b232a..c6d4b53 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5307,3 +5307,5 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
+ .ar-cv-what:empty { display: none; }
+ .ar-cv-what > p { margin: 10px 0 0; }
+ .ar-cv-say { overflow-wrap: anywhere; text-align: right; }
++/* HERESY 1364: TTA beside the upscaler */
++.ar-up-row .ar-up-tta { flex: none; gap: 6px; font-size: 12px; }
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index a6ee39c..9f386f4 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -882,6 +882,10 @@
+   }
+   // HERESY 1332 (Viktor: «2K и 4K максимум. Нехер ручные значения вводить»): the long side to 2560 or 3840
+   var UP_TARGETS = { "2k": 2560, "4k": 3840 };
++  // HERESY 1364 (from Upscayl's TTA): each tile through the upscaler in its eight orientations, averaged; kept, for one picture, the passes
++  // and the pictures picked alike
++  function ttaOn() { return recall("yue2.arUpTta") === "1"; }
++  var TTA_TIP = "TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)";
+   function upSize(p, t) { var w = +p.w || 0, h = +p.h || 0, long = Math.max(w, h); return long ? [Math.round(w * UP_TARGETS[t] / long), Math.round(h * UP_TARGETS[t] / long)] : null; }
+   function upRow(p) {
+     var list = state.upscalers || [];
+@@ -900,6 +904,7 @@
+         var tip = done ? tr("It is as large already") + " (" + p.w + "\u00d7" + p.h + ")" : sz ? p.w + "\u00d7" + p.h + " \u2192 " + sz[0] + "\u00d7" + sz[1] : "";
+         return '<button type="button" class="btn small" data-up="' + t + '"' + (done ? " disabled" : "") + ' data-tip="' + esc(tip) + '">' + t.toUpperCase() + "</button>";
+       }).join("") +
++      '<label class="check ar-up-tta" data-tip="' + esc(tr(TTA_TIP)) + '"><input type="checkbox" data-up-tta' + (ttaOn() ? " checked" : "") + ' /> <span translate="no">TTA</span></label>' +   // HERESY 1364
+       '<button type="button" class="btn ghost small' + (state.upChainOpen ? " is-on" : "") + '" data-up-chain data-tip="' + esc(tr("An upscale in passes, as Viktor's ComfyUI stack: each pass a model and a size of the picture's own")) + '">' + esc(tr("Passes\u2026")) + "</button>" +
+       "</div>" + (state.upChainOpen ? chainPanel(p, list) : "");
+   }
+@@ -1010,7 +1015,7 @@
+     return c;
+   }
+   function chainGo(src, c) {
+-    return api("/artist/upscale", { id: src.id, file: src.file, passes: c.passes, resample: c.resample, long: c.long || 0, match: !!c.match }).then(function (run) {
++    return api("/artist/upscale", { id: src.id, file: src.file, passes: c.passes, resample: c.resample, long: c.long || 0, match: !!c.match, tta: ttaOn() }).then(function (run) {
+       state.upOpen = false; state.upChainOpen = false;
+       state.pinSel = false;
+       state.runs.unshift(run);
+@@ -1021,7 +1026,7 @@
+   }
+   function upscaleIt(src, model, target) {           // HERESY 1332: «2k» or «4k»; a number is 1322's factor (an older run's Again)
+     keep("yue2.arUpModel", model);
+-    var body = { id: src.id, file: src.file, model: model };
++    var body = { id: src.id, file: src.file, model: model, tta: ttaOn() };   // HERESY 1364
+     if (UP_TARGETS[target]) body.target = target; else body.factor = +target || 2;
+     return api("/artist/upscale", body).then(function (run) {
+       state.upOpen = false;
+@@ -1060,6 +1065,7 @@
+     bar.hidden = !n;
+     bar.innerHTML = n ? '<span class="ar-picked-n">' + n + " " + esc(tr(n === 1 ? "picked" : "picked")) + "</span>" +
+       '<button type="button" class="chip ar-fshape" data-pick="star" aria-label="' + esc(tr("Star them")) + '" data-tip="' + esc(tr("Star them all")) + '">' + starIcon(true) + "</button>" +
++      '<button type="button" class="chip" data-pick="up" data-tip="' + esc(tr("Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept")) + '">' + esc(tr("Upscale\u2026")) + "</button>" +   // HERESY 1364
+       '<button type="button" class="chip" data-pick="aside" data-tip="' + esc(tr("Put them in the trash: the library's Trash brings them back")) + '">' + esc(tr("Trash")) + "</button>" +
+       '<button type="button" class="pb-btn" data-pick="clear" aria-label="' + esc(tr("Let them go (Esc)")) + '">\u2715</button>' : "";
+   }
+@@ -1072,6 +1078,38 @@
+       return load().then(function () { if (state.look === "trash") paintTrash(); });
+     }).catch(function (e) { toast(e.message, "bad"); });
+   }
++  // HERESY 1364 (from Upscayl's batch, TODO.md: «a folder upscaled at once»): the pictures picked, upscaled in one run, each as one picture
++  // would be: 2K or 4K by the upscaler chosen in the row (kept), or the passes kept; TTA as its box says, toggled here too
++  function upPickedMenu(btn) {
++    loadUpscalers().then(function (list) {
++      list = list || [];
++      if (!list.length || !window.HeresyMenu) return toast(tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into artwork/upscalers/"), "bad");
++      var names = list.map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
++      var model = names.indexOf(want) >= 0 ? want : names.indexOf("4x_Nomos8kDAT.pth") >= 0 ? "4x_Nomos8kDAT.pth" : names[0];
++      var c = chainNow(list), r = btn.getBoundingClientRect();
++      window.HeresyMenu.open(r.left, r.bottom + 4, [
++        { label: tr("2K · " + upShort(model)), action: function () { upPicked({ model: model, target: "2k" }, "2K · " + upShort(model)); } },
++        { label: tr("4K · " + upShort(model)), action: function () { upPicked({ model: model, target: "4k" }, "4K · " + upShort(model)); } },
++        { label: tr("In passes: " + c.passes.map(function (x) { return upShort(x.model) + " \u00d7" + x.factor; }).join(" \u2192 ")),
++          action: function () { upPicked({ passes: c.passes, resample: c.resample, long: c.long || 0, match: !!c.match }, c.passes.length + " passes"); } },
++        { label: "TTA", checked: ttaOn(), hint: tr("steadier, up to ×8 the time"), action: function () { keep("yue2.arUpTta", ttaOn() ? null : "1"); state.stageKey = ""; paintStage(); upPickedMenu(btn); } }
++      ]);
++    });
++  }
++  function upPicked(opts, what) {
++    var items = pickedList(), n = items.length;
++    if (!n) return;
++    return api("/artist/upscale", Object.assign({ items: items, tta: ttaOn() }, opts)).then(function (run) {
++      clearPicked();
++      state.pinSel = false;
++      state.runs.unshift(run);
++      paintRuns();
++      toast(tr("Upscaling " + countOf(n, "picture", "pictures") + " in one run: " + what + (ttaOn() ? " · TTA" : "")));
++      schedule(1500);
++    }).catch(function (e) { toast(tr("Not upscaled: " + e.message), "bad"); alog(tr("Not upscaled:") + " " + e.message, "bad"); });
++  }
++  window.HeresyArtistUp = { picked: upPicked, menu: upPickedMenu, tta: ttaOn,   // for the checks
++    pick: function (list) { state.picked = {}; (list || []).forEach(function (x) { state.picked[x.id + "|" + x.file] = true; }); paintPicked(); } };
+   function starPicked() {
+     var all = pickedList(), go = function (i) {
+       if (i >= all.length) { clearPicked(); return load(); }
+@@ -1385,6 +1423,7 @@
+   });
+   document.addEventListener("change", function (e) {     // HERESY 1355: a field of the passes kept, the size and time said again; the i's tip
+     if (e.target.closest("#arStage [data-up-chain-panel]")) { chainRead(); state.stageKey = ""; return paintStage(); }
++    if (e.target.matches && e.target.matches("[data-up-tta]")) { keep("yue2.arUpTta", e.target.checked ? "1" : null); return; }   // HERESY 1364
+     if (e.target.id === "arUpModel") {
+       keep("yue2.arUpModel", e.target.value);
+       var i = document.querySelector("#arStage .ar-up-info"), u = (state.upscalers || []).filter(function (v) { return v.name === e.target.value; })[0];
+@@ -2142,6 +2181,7 @@
+         if (!b) return;
+         if (b.dataset.pick === "clear") clearPicked();
+         else if (b.dataset.pick === "aside") asidePics(pickedList());
++        else if (b.dataset.pick === "up") upPickedMenu(b);   // HERESY 1364
+         else if (b.dataset.pick === "star") starPicked();
+       });
+       document.addEventListener("keydown", function (e) {
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index db944ab..c7986eb 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -4832,3 +4832,19 @@ RuachI18n.add("be", {
+ "this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "гэтая студыя запушчана пад Pinokio: абнаўляй яе там, праз Update у меню Pinokio",
+ "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "на гэтай машыне няма systemd-run, у якім ішло б абнаўленне: абнаві ўручную (git fetch --tags, git checkout на рэліз, ./build.sh)"
+ });
++// HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
++RuachI18n.add("be", {
++"TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)": "TTA: кожны тайл праходзіць праз апскейлер у васьмі становішчах (чатыры павароты, кожны яшчэ і люстэркава), і вынікі ўсярэдняюцца: раўнейшыя краі і тэкстуры, да васьмі разоў даўжэй (так робіць Upscayl)",
++"Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept": "Апскейл іх усіх адным ранам: 2K або 4K выбраным апскейлерам, або захаванымі праходамі",
++"2K · {0}": "2K · {0}",
++"4K · {0}": "4K · {0}",
++"In passes: {0}": "Праходамі: {0}",
++"steadier, up to ×8 the time": "раўней, да ×8 па часе",
++"Upscaling {0} in one run: {1}": "Апскейл адным ранам ({0}): {1}",
++"the pictures: one to {#0}": "малюнкі: ад аднаго да {#0}",
++"the size of {0} is not known": "памер {0} невядомы",
++"too large: {0} would be {#1} px on the long side, {#2} is the most": "завялікая: {0} выйшла б {#1} px па доўгім баку, мяжа {#2}",
++"{0} is {#1}×{#2} already: {3} is {#4} px on its long side": "{0} ужо {#1}×{#2}: {3} — гэта {#4} px па доўгім баку",
++"too large: {0} at ×{#1}, {#2} px is the most on the long side": "завялікая: {0} пры ×{#1}, мяжа {#2} px па доўгім баку",
++"no such picture in the run: {0}": "няма такога малюнка ў ране: {0}"
++});
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index dda8467..7418ccd 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -4831,3 +4831,19 @@ RuachI18n.add("el", {
+ "this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "αυτό το στούντιο τρέχει μέσα από το Pinokio: ενημέρωσέ το εκεί, με το Update στο μενού του Pinokio",
+ "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "αυτό το μηχάνημα δεν έχει systemd-run για να τρέξει η ενημέρωση: ενημέρωσε με το χέρι (git fetch --tags, git checkout στην έκδοση, ./build.sh)"
+ });
++// HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
++RuachI18n.add("el", {
++"TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)": "TTA: κάθε πλακίδιο περνά από τον αναβαθμιστή σε οκτώ προσανατολισμούς (τέσσερις στροφές, η καθεμία και καθρεφτισμένη) και βγαίνει ο μέσος όρος: πιο σταθερές άκρες και υφές, έως οκτώ φορές τον χρόνο (όπως το κάνει το Upscayl)",
++"Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept": "Αναβάθμιση όλων σε μία εκτέλεση: 2K ή 4K με τον επιλεγμένο αναβαθμιστή, ή με τα περάσματα που κρατήθηκαν",
++"2K · {0}": "2K · {0}",
++"4K · {0}": "4K · {0}",
++"In passes: {0}": "Σε περάσματα: {0}",
++"steadier, up to ×8 the time": "πιο σταθερό, έως ×8 τον χρόνο",
++"Upscaling {0} in one run: {1}": "Αναβάθμιση σε μία εκτέλεση ({0}): {1}",
++"the pictures: one to {#0}": "οι εικόνες: από μία έως {#0}",
++"the size of {0} is not known": "το μέγεθος του {0} δεν είναι γνωστό",
++"too large: {0} would be {#1} px on the long side, {#2} is the most": "πολύ μεγάλη: η {0} θα είχε {#1} px στη μεγάλη πλευρά, {#2} το πολύ",
++"{0} is {#1}×{#2} already: {3} is {#4} px on its long side": "το {0} είναι ήδη {#1}×{#2}: το {3} είναι {#4} px στη μεγάλη πλευρά",
++"too large: {0} at ×{#1}, {#2} px is the most on the long side": "πολύ μεγάλη: η {0} στο ×{#1}, {#2} px το πολύ στη μεγάλη πλευρά",
++"no such picture in the run: {0}": "δεν υπάρχει τέτοια εικόνα στην εκτέλεση: {0}"
++});
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 190b6d8..72c0cd4 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -4831,3 +4831,19 @@ RuachI18n.add("es", {
+ "this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "este estudio se ejecuta en Pinokio: actualízalo allí, con Update en el menú de Pinokio",
+ "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "esta máquina no tiene systemd-run donde correr la actualización: actualiza a mano (git fetch --tags, git checkout de la versión, ./build.sh)"
+ });
++// HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
++RuachI18n.add("es", {
++"TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)": "TTA: cada mosaico pasa por el reescalador en sus ocho orientaciones (cuatro giros, cada uno también en espejo) y se promedian: bordes y texturas más estables, hasta ocho veces el tiempo (como lo hace Upscayl)",
++"Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept": "Reescalarlas todas en una ejecución: 2K o 4K con el reescalador elegido, o con las pasadas guardadas",
++"2K · {0}": "2K · {0}",
++"4K · {0}": "4K · {0}",
++"In passes: {0}": "En pasadas: {0}",
++"steadier, up to ×8 the time": "más estable, hasta ×8 el tiempo",
++"Upscaling {0} in one run: {1}": "Reescalando en una ejecución ({0}): {1}",
++"the pictures: one to {#0}": "las imágenes: de una a {#0}",
++"the size of {0} is not known": "no se conoce el tamaño de {0}",
++"too large: {0} would be {#1} px on the long side, {#2} is the most": "demasiado grande: {0} tendría {#1} px en el lado largo, {#2} como máximo",
++"{0} is {#1}×{#2} already: {3} is {#4} px on its long side": "{0} ya es {#1}×{#2}: {3} son {#4} px en su lado largo",
++"too large: {0} at ×{#1}, {#2} px is the most on the long side": "demasiado grande: {0} a ×{#1}, {#2} px como máximo en el lado largo",
++"no such picture in the run: {0}": "no hay esa imagen en la ejecución: {0}"
++});
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 4792124..9451976 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -4831,3 +4831,19 @@ RuachI18n.add("it", {
+ "this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "questo studio gira sotto Pinokio: aggiornalo lì, con Update nel menu di Pinokio",
+ "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "questa macchina non ha systemd-run in cui far girare l'aggiornamento: aggiorna a mano (git fetch --tags, git checkout della versione, ./build.sh)"
+ });
++// HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
++RuachI18n.add("it", {
++"TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)": "TTA: ogni tessera passa per l'upscaler nei suoi otto orientamenti (quattro rotazioni, ognuna anche specchiata) e se ne fa la media: bordi e texture più stabili, fino a otto volte il tempo (come fa Upscayl)",
++"Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept": "Upscale di tutte in un'esecuzione: 2K o 4K con l'upscaler scelto, o con i passaggi tenuti",
++"2K · {0}": "2K · {0}",
++"4K · {0}": "4K · {0}",
++"In passes: {0}": "A passaggi: {0}",
++"steadier, up to ×8 the time": "più stabile, fino a ×8 il tempo",
++"Upscaling {0} in one run: {1}": "Upscale in un'esecuzione ({0}): {1}",
++"the pictures: one to {#0}": "le immagini: da una a {#0}",
++"the size of {0} is not known": "la dimensione di {0} non è nota",
++"too large: {0} would be {#1} px on the long side, {#2} is the most": "troppo grande: {0} sarebbe {#1} px sul lato lungo, {#2} al massimo",
++"{0} is {#1}×{#2} already: {3} is {#4} px on its long side": "{0} è già {#1}×{#2}: {3} sono {#4} px sul lato lungo",
++"too large: {0} at ×{#1}, {#2} px is the most on the long side": "troppo grande: {0} a ×{#1}, {#2} px al massimo sul lato lungo",
++"no such picture in the run: {0}": "non c'è questa immagine nell'esecuzione: {0}"
++});
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 3d6b860..0c0e1e8 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -4837,3 +4837,19 @@ RuachI18n.add("ru", {
+ "this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "эта студия запущена под Pinokio: обновляй её там, через Update в меню Pinokio",
+ "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "на этой машине нет systemd-run, в котором шло бы обновление: обнови вручную (git fetch --tags, git checkout на релиз, ./build.sh)"
+ });
++// HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
++RuachI18n.add("ru", {
++"TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)": "TTA: каждый тайл проходит через апскейлер в восьми положениях (четыре поворота, каждый ещё и зеркально), и результаты усредняются: ровнее края и текстуры, до восьми раз дольше (так делает Upscayl)",
++"Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept": "Апскейл их всех одним раном: 2K или 4K выбранным апскейлером, или сохранёнными проходами",
++"2K · {0}": "2K · {0}",
++"4K · {0}": "4K · {0}",
++"In passes: {0}": "Проходами: {0}",
++"steadier, up to ×8 the time": "ровнее, до ×8 по времени",
++"Upscaling {0} in one run: {1}": "Апскейл одним раном ({0}): {1}",
++"the pictures: one to {#0}": "картинки: от одной до {#0}",
++"the size of {0} is not known": "размер {0} неизвестен",
++"too large: {0} would be {#1} px on the long side, {#2} is the most": "слишком большая: {0} вышла бы {#1} px по длинной стороне, предел {#2}",
++"{0} is {#1}×{#2} already: {3} is {#4} px on its long side": "{0} уже {#1}×{#2}: {3} — это {#4} px по длинной стороне",
++"too large: {0} at ×{#1}, {#2} px is the most on the long side": "слишком большая: {0} при ×{#1}, предел {#2} px по длинной стороне",
++"no such picture in the run: {0}": "нет такой картинки в ране: {0}"
++});
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 459bfd8..d0b2e03 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -4832,3 +4832,19 @@ RuachI18n.add("uk", {
+ "this studio runs under Pinokio: update it there, by Update in Pinokio's menu": "ця студія запущена під Pinokio: оновлюй її там, через Update у меню Pinokio",
+ "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "на цій машині немає systemd-run, у якому йшло б оновлення: онови вручну (git fetch --tags, git checkout на реліз, ./build.sh)"
+ });
++// HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
++RuachI18n.add("uk", {
++"TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)": "TTA: кожен тайл проходить через апскейлер у восьми положеннях (чотири повороти, кожен ще й дзеркально), і результати усереднюються: рівніші краї й текстури, до восьми разів довше (так робить Upscayl)",
++"Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept": "Апскейл їх усіх одним раном: 2K або 4K вибраним апскейлером, або збереженими проходами",
++"2K · {0}": "2K · {0}",
++"4K · {0}": "4K · {0}",
++"In passes: {0}": "Проходами: {0}",
++"steadier, up to ×8 the time": "рівніше, до ×8 за часом",
++"Upscaling {0} in one run: {1}": "Апскейл одним раном ({0}): {1}",
++"the pictures: one to {#0}": "картинки: від однієї до {#0}",
++"the size of {0} is not known": "розмір {0} невідомий",
++"too large: {0} would be {#1} px on the long side, {#2} is the most": "завелика: {0} вийшла б {#1} px за довгою стороною, межа {#2}",
++"{0} is {#1}×{#2} already: {3} is {#4} px on its long side": "{0} уже {#1}×{#2}: {3} — це {#4} px за довгою стороною",
++"too large: {0} at ×{#1}, {#2} px is the most on the long side": "завелика: {0} при ×{#1}, межа {#2} px за довгою стороною",
++"no such picture in the run: {0}": "немає такої картинки в рані: {0}"
++});
+-- 
+2.43.0
+

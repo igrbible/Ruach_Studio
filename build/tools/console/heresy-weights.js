@@ -80,6 +80,7 @@
       if (S.hooks.props) S.hooks.props();
     }
     paint();
+    try { window.dispatchEvent(new CustomEvent("ruach-weights", { detail: d })); } catch (e) { /* an old browser: the Artist asks again itself */ }   // HERESY 1347
   }
   // while the card is seen and a run goes: every 1.5 s (a reopened Engine asks again)
   function schedule() {
@@ -182,11 +183,13 @@
                 listener: "The Trainer's listener hears a set's songs with it; a GGUF one needs llama.cpp built in vendor/llama.cpp (the fetch says how).",
                 artwork: "The Artist paints with it.",
                 qwen: "The Artist offers it under Painter.",   // HERESY 1323
+                "qwen-fine": "The Artist offers it under Fine-tune.",   // HERESY 1347
+                "art-loras": "The Artist's LoRA library shows them under their painters.",
                 trainer: "The Trainer starts from it." };
-  function fetchExtra(name) {
+  function fetchExtra(name, asked) {                 // HERESY 1347: a variant asked by its id (the Artist's list), else the one picked
     var e = ((S.data && S.data.extras) || []).filter(function (x) { return x.name === name; })[0];
     if (!e) return;
-    var id = S.pick[name] || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;
+    var id = asked || S.pick[name] || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;
     var v = e.variants.filter(function (x) { return x.id === id; })[0];
     if (!v || v.here) return;
     var body = {};
@@ -241,5 +244,6 @@
     });
     window.addEventListener("ruach-lang", paint);
   }
-  window.HeresyWeights = { init: init, load: load, state: function () { return { data: S.data, running: running(), pick: S.pick }; } };
+  window.HeresyWeights = { init: init, load: load, fetchExtra: fetchExtra,   // HERESY 1347: for the Artist's own list
+    state: function () { return { data: S.data, running: running(), pick: S.pick }; } };
 })();

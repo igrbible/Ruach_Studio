@@ -1,0 +1,51 @@
+From bb070d02ab68e59b23d7e75cc83fbbb72d439a7e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 02:10:49 -0600
+Subject: [PATCH 1333/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201349:=20the?=
+ =?UTF-8?q?=20never-break-lines=20pass=20done:=20the=20last=20three=20text?=
+ =?UTF-8?q?=20boxes=20measured=20in=20ch=20wrap=20at=20their=20column?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 08.10.2026: «НИКОГДА НЕ ЛОМАТЬ СТРОКУ… пройтись по всему коду и вернуть ломанные строки в их текущие autowrap параграфы». The page's strings carry no newline inside a sentence (scanned), the docs no hard-wrapped paragraph (scanned: only YAML front matter); the empty take's card (62ch), the guide's note (78ch) and the LoRA library's empty word (70ch) lose their measure.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index ccef3ac..1b7552c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1175,7 +1175,6 @@ select:disabled { opacity: .7; }
+   border: 1px dashed var(--line);
+   border-radius: var(--r-lg);
+   color: var(--dim);
+-  max-width: 62ch;
+ }
+ .take-empty p { margin: 0; }
+ .take-empty .take-empty-title { margin-bottom: 6px; font: 500 14px/1.55 var(--heading); color: var(--ink); }
+@@ -3279,7 +3278,7 @@ body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - v
+ .hg-body pre { padding: 10px 12px; border-radius: var(--r-sm); background: var(--sunk); overflow-x: auto; }
+ .hg-body pre code { padding: 0; background: none; }
+ .hg-body a { color: var(--amber); }
+-.hg-note { margin: 10px 0 14px; padding: 10px 14px; border-left: 3px solid var(--amber); background: color-mix(in srgb, var(--amber) 7%, transparent); border-radius: 0 var(--r-sm) var(--r-sm) 0; max-width: 78ch; }
++.hg-note { margin: 10px 0 14px; padding: 10px 14px; border-left: 3px solid var(--amber); background: color-mix(in srgb, var(--amber) 7%, transparent); border-radius: 0 var(--r-sm) var(--r-sm) 0; }   /* HERESY 1349: the column's width, not 78ch */
+ .hg-table { border-collapse: collapse; margin: 6px 0 14px; font-size: 13.5px; }
+ .hg-table th, .hg-table td { padding: 5px 14px 5px 0; border-bottom: 1px solid var(--line-soft, var(--line)); text-align: left; vertical-align: top; }
+ .hg-table th { color: var(--dim); font-weight: 500; }
+@@ -4677,7 +4676,7 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
+ .ar-lib-meta span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .ar-lib-cv { color: var(--amber); font-weight: 600; }
+ .ar-lib-words { padding: 0 8px; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+-.ar-lib-empty { grid-column: 1 / -1; max-width: 70ch; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
++.ar-lib-empty { grid-column: 1 / -1; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+ /* HERESY 1315: the section under the pointer over the wave, with its lines as written */
+ .wave-pop { position: fixed; z-index: 60; max-width: min(440px, calc(100vw - 16px)); padding: 9px 12px 10px; border: 1px solid var(--line-a); border-radius: var(--r-md);
+   background: var(--panel); color: var(--ink); box-shadow: 0 10px 28px rgba(0, 0, 0, .35); pointer-events: none; }
+-- 
+2.43.0
+

@@ -3,7 +3,7 @@
 catalog()            every take with what is made from it (stems, remaster, upscale, debuzz), its
                      kind (generated, imported, trimmed, regenerated, replayed) and the collection's
                      own marks: hidden, workspaces
-collection_post()    hide / show, workspaces (create, rename, delete, add, remove), the trash policy
+collection_post()    hide / show, workspaces (create, rename, delete, add, remove), the trash policy, protect (1368)
 trash_*()            to the trash (trash/DATE/TAKE, never deleted here), list, restore, empty (the
                      page asks first), and an automatic empty after N days (0 = never, the default)
 export_*()           a ZIP of chosen takes (FLAC or WAV, with or without what is made from them),
@@ -36,6 +36,9 @@ def load(config_dir):
     # regen_of: {new take: the take it was made again from}
     d.setdefault("played", [])
     d.setdefault("regen_of", {})
+    # HERESY 1368 (Viktor 11.10.2026: «И на аудио треки в студии тоже защиту добавь в опцию и в фильтр в Библиотеке не забудь эту
+    # опцию»): the takes protected: never to the trash, never deleted for good (the page's direct deletion asks the same of it)
+    d.setdefault("protected", [])
     if "fresh_since" not in d:                   # from the day this came: the takes before it are not all fresh at once
         d["fresh_since"] = int(time.time())
         save(config_dir, d)
@@ -150,7 +153,7 @@ def frozen_takes(d):
 
 def _frozen_guard(d, op, ws, names, data):
     ice = frozen_takes(d)
-    if op in ("hide", "show", "rate", "note", "pin", "ws-add", "ws-move", "ws-remove"):
+    if op in ("hide", "show", "rate", "note", "pin", "ws-add", "ws-move", "ws-remove", "protect"):
         n = sum(1 for x in names if x in ice)
         if n:
             raise ValueError(f"{n} take{'s' if n > 1 else ''} frozen with {'their' if n > 1 else 'its'} workspace: unfreeze it first")
@@ -201,6 +204,7 @@ def catalog(outputs, config_dir):
             ws_of.setdefault(n, []).append(ws)
     rows, played, since = [], set(marks["played"]), marks.get("fresh_since") or 0
     ice = frozen_takes(marks)                    # HERESY 1166
+    shield = set(marks["protected"])             # HERESY 1368
     for d in sorted(outputs.iterdir()) if outputs.is_dir() else []:
         mp = d / "meta.json"
         if not mp.is_file():
@@ -238,7 +242,7 @@ def catalog(outputs, config_dir):
                      "hidden": d.name in hidden, "workspaces": sorted(ws_of.get(d.name, [])),
                      "rating": marks["ratings"].get(d.name, 0), "note": marks["notes"].get(d.name, ""), "seeds": req.get("seeds"),
                      "fresh": (meta.get("created") or 0) >= since and d.name not in played,     # HERESY 1162
-                     "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice})
+                     "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice, "protected": d.name in shield})
     return {"takes": rows, "workspaces": sorted(marks["workspaces"]), "trash_days": marks["trash_days"], "locks": marks["locks"],
             "pins": marks["pins"], "frozen": marks["frozen"]}
 
@@ -354,6 +358,14 @@ def collection_post(config_dir, outputs, data):
                     d["notes"][n] = text
                 else:
                     d["notes"].pop(n, None)
+        elif op == "protect":                      # HERESY 1368: on = true | false; only a take in the library is protected
+            if data.get("on"):
+                have = [n for n in names if (outputs / n / "meta.json").is_file()]
+                if len(have) < len(names):
+                    raise ValueError(f"{len(names) - len(have)} of them not in the library: nothing protected")
+                d["protected"] = sorted(set(d["protected"]) | set(have))
+            else:
+                d["protected"] = sorted(set(d["protected"]) - set(names))
         elif op == "played":                       # HERESY 1162: a take heard once is fresh no more
             d["played"] = sorted(set(d["played"]) | set(names))
         elif op == "regen-of":                     # HERESY 1162: the lab records what a take was made again from
@@ -398,13 +410,18 @@ def trash_list(kit):
 
 
 def trash_move(kit, outputs, names, config_dir=None):
-    """Takes to the trash; a take in a workspace whose tracks are locked stays, and is said (HERESY 1070)."""
+    """Takes to the trash; a take in a workspace whose tracks are locked stays, and is said (HERESY 1070); a protected one too, said
+    apart (HERESY 1368)."""
     day = trash_dir(kit) / time.strftime("%Y-%m-%d")
     day.mkdir(parents=True, exist_ok=True)
-    moved, kept = [], []
+    moved, kept, shielded = [], [], []
     marks = load(config_dir) if config_dir else None
     guard = (locked_takes(marks) | frozen_takes(marks)) if marks else set()     # HERESY 1166: a frozen take stays too
+    shield = set(marks["protected"]) if marks else set()
     for n in names:
+        if n in shield:
+            shielded.append(n)
+            continue
         if n in guard:
             kept.append(n)
             continue
@@ -417,7 +434,7 @@ def trash_move(kit, outputs, names, config_dir=None):
         shutil.move(str(src), str(dst))
         os.utime(dst, None)                       # the time it went to the trash
         moved.append(n)
-    return {"moved": moved, "locked": kept}
+    return {"moved": moved, "locked": kept, "protected": shielded}
 
 
 def trash_restore(kit, outputs, items):
@@ -433,20 +450,25 @@ def trash_restore(kit, outputs, items):
     return {"restored": back}
 
 
-def trash_empty(kit, items=None, older_than_days=None):
-    """Delete from the trash: the given items, or all, or those older than N days."""
-    gone, now = [], time.time()
+def trash_empty(kit, items=None, older_than_days=None, config_dir=None):
+    """Delete from the trash: the given items, or all, or those older than N days. A protected take is never deleted, whatever
+    brought it there (HERESY 1368): it stays, said."""
+    gone, now, kept = [], time.time(), []
+    shield = set(load(config_dir)["protected"]) if config_dir else set()
     for it in trash_list(kit)["items"]:
         if items is not None and not any(i.get("day") == it["day"] and i.get("name") == it["name"] for i in items):
             continue
         if older_than_days is not None and now - it["trashed"] < older_than_days * 86400:
+            continue
+        if it["name"] in shield:
+            kept.append(it["name"])
             continue
         shutil.rmtree(trash_dir(kit) / it["day"] / it["name"], ignore_errors=True)
         gone.append(it["name"])
     for day in trash_dir(kit).iterdir() if trash_dir(kit).is_dir() else []:
         if day.is_dir() and not any(day.iterdir()):
             day.rmdir()
-    return {"emptied": gone}
+    return {"emptied": gone, "protected": kept}
 
 
 # ---- export: a ZIP built as a job, then fetched as a file

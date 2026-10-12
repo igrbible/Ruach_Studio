@@ -16,18 +16,24 @@
   var PAINTER_INFO = {};                                 // HERESY 1318: the lab's word on each painter (need, family, note, models)
   // HERESY 1334: the Artist's own log (the dock's Artist view), what it is asked and what comes of it
   function alog(text, kind) { if (window.RuachArtistLog) window.RuachArtistLog.add(text, kind); }
-  function painterLabel(r) {                            // HERESY 1322: an upscaler's run says so, with its factor
+  function painterLabel(r) {                            // HERESY 1322: an upscaler's run says so, with its factor; 1355: its passes
+    if (r.kind === "upscale" && r.passes && r.passes.length) return tr("Upscale") + " · " + tr(r.passes.length + " passes");
     return r.kind === "upscale" ? tr("Upscale") + " " + (r.target ? String(r.target).toUpperCase() : "\u00d7" + r.factor) : PAINTERS[r.painter] || r.painter || "";
   }
+  function upShort(name) { return String(name).replace(/\.(pth|safetensors)$/, ""); }
   var KEY = { prompt: "yue2.arPrompt", shapes: "yue2.arShapes", count: "yue2.arCount", seed: "yue2.arSeed", painter: "yue2.arPainter",
     live: "yue2.arLive", look: "yue2.arLook", filter: "yue2.arFilter", size: "yue2.arSize" };
   // HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта? Изучи интерфейс и функционал InvokeAI»):
   // the pictures as runs or as one gallery (InvokeAI's grid: every picture, the newest first, filtered, starred, three sizes)
-  var FILTERS = [["all", "All"], ["1:1", "1:1"], ["16:9", "16:9"], ["9:16", "9:16"], ["star", "Starred"]];
+  var FILTERS = [["all", "All"], ["1:1", "1:1"], ["16:9", "16:9"], ["9:16", "9:16"], ["star", "Starred"], ["protected", "Protected"]];   // HERESY 1367
   // HERESY 1321 (Viktor 10.10.2026: «aspect ratios… SVG КВАДРАТ, горизонтальное и вертикальное расположение прямоугольника»; «звезда наша SVG»)
   function shapeIcon(id) {
     var r = { "1:1": [4, 4, 12, 12], "16:9": [1.5, 5.5, 17, 9], "9:16": [5.5, 1.5, 9, 17] }[id] || [4, 4, 12, 12];
     return '<svg class="ar-shape-ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '" rx="1.6"/></svg>';
+  }
+  // HERESY 1367: a shield, filled when the picture is protected
+  function shieldIcon(on) {
+    return '<svg class="ar-prot-ico' + (on ? " is-on" : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l7.8 2.9v6.1c0 4.9-3.3 8.6-7.8 9.8-4.5-1.2-7.8-4.9-7.8-9.8V5.5z"/></svg>';
   }
   function starIcon(on) {
     return '<svg class="ar-star-ico' + (on ? " is-on" : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.9l2.75 5.95 6.5.75-4.85 4.45 1.3 6.45L12 17.3l-5.7 3.2 1.3-6.45L2.75 9.6l6.5-.75z"/></svg>';
@@ -74,7 +80,12 @@
     var pk = $("arPainter").value, ps = sampNow(pk);   // HERESY 1319: the time follows the steps
     if (/^krea2/.test(pk)) secs = 25 + (secs - 25) * (+ps.steps || 8) / 8 * sampLooks(ps);   // HERESY 1333: and its looks a step
     if (/^qwen/.test(pk)) secs = 90 + n * (pk === "qwen21" ? 3 * (+ps.steps || 30) : 3.5 * (+ps.steps || 8) * (sampFast(pk, ps) ? 1 : 2) * sampLooks(ps));   // HERESY 1318: its parts; 1328: the switch; 1333: its looks first, then each picture
-    $("arCost").textContent = n ? tr((n === 1 ? "1 picture" : n + " pictures") + " · " + minutes(secs) + " on one card") : tr("pick a shape");   // HERESY 1339: one sentence
+    if (pk !== "qwen21") secs = 25 + (secs - 25) * (1 + regionsBody().length);   // HERESY 1387: a whole pass more a step for each region
+    // HERESY 1354 (Viktor 11.10.2026: «Художник говорит "Около 8.5 минут на одной карте". А карт-то у меня две выделены для Lab Works»):
+    // the lab paints a run's pictures on its cards at once, each card loading the painter and painting its share
+    var cards = Math.max(1, Math.min(n, +((PAINTER_INFO[pk] || {}).cards) || 1)), load = /^qwen/.test(pk) ? 90 : 25;
+    if (cards > 1) secs = load + (secs - load) * Math.ceil(n / cards) / n;
+    $("arCost").textContent = n ? tr((n === 1 ? "1 picture" : n + " pictures") + " · " + minutes(secs) + (cards > 1 ? " on " + cards + " cards" : " on one card")) : tr("pick a shape");   // HERESY 1339: one sentence
     // HERESY 1340 (Viktor: «разреши батчинг/очередь до двух батчей»): Draw draws while a run goes, the second run waiting behind it,
     // two at a time; Stop is a button of its own (1270's: the drawing run, else the waiting one)
     var busy = drawingRun(), full = runsFull();
@@ -179,6 +190,7 @@
         return '<option value="' + esc(p.key) + '">' + esc(p.label + " (" + tr("from " + (p.need_mb / 1000).toFixed(1).replace(".0", "") + " GB") + ")") + "</option>";
       }).join("");
       sel.value = PAINTER_INFO[was] ? was : list[0].key;
+      state.painted = true;                              // HERESY 1375: the choice is the lab's list now: kept from here on
       paintPainter();
     }).catch(function () { paintPainter(); });
   }
@@ -200,6 +212,7 @@
       note.dataset.tip = note.textContent;              // HERESY 1345: an i, its words in its tip
       note.classList.toggle("is-warn", p.key === "qwen21");
     }
+    if (typeof paintRefAs === "function" && $("arRefAs")) paintRefAs();   // HERESY 1388: Qwen-Image 2.1 here or not
     paintLoras();
     paintSampling();                                     // HERESY 1319
     paintForm();
@@ -209,6 +222,9 @@
     keep(KEY.shapes, shapesPicked().join(","));
     keep(KEY.count, $("arCount").value === "1" ? null : $("arCount").value);
     keep(KEY.seed, $("arSeed").value.trim());
+    // HERESY 1375 (Viktor 11.10.2026: «Не сохраняется выбор моделей у Художника после F5»): the painter and its fine-tune kept once the
+    // lab's list has come, or once the user picks one: before it the choice holds Krea alone, and a word typed meanwhile wrote it over
+    if (!state.painted) return;
     keep(KEY.painter, $("arPainter").value === "krea2-q4" ? null : $("arPainter").value);
     if (!$("arModelBox").hidden) keep("yue2.arModel", $("arModel").value);   // HERESY 1318
   }
@@ -248,9 +264,21 @@
     rd.onerror = function () { toast(tr("The picture could not be read"), "bad"); };
     rd.readAsDataURL(f);
   }
+  // HERESY 1388: how the reference is used: "" painted from (the form's painter), "edit" or "style" (Qwen-Image 2.1, when it is here)
+  function refAsOk() { return [].some.call($("arPainter").options, function (o) { return o.value === "qwen21" && !o.disabled; }); }
+  function refAs() { var v = $("arRefAs") ? $("arRefAs").value : ""; return v && refAsOk() ? v : ""; }
+  function paintRefAs() {
+    var s = $("arRefAs");
+    if (!s) return;
+    var ok = refAsOk();
+    [].forEach.call(s.options, function (o) { if (o.value) o.disabled = !ok; });
+    if (!ok && s.value) s.value = "";
+    $("arRef").classList.toggle("is-q21", !!refAs());
+  }
   function paintRefSay() {
     var fit = $("arRefFit") && $("arRefFit").checked;   // HERESY 1307: painting around: the edges from the noise, the middle kept
     $("arRefSay").textContent = fit ? tr("the edges painted anew") : (+$("arRefStr").value).toFixed(2);
+    if ($("arRefNoise")) $("arRefNoiseSay").textContent = (+$("arRefNoise").value).toFixed(2);   // HERESY 1385
     $("arRef").classList.toggle("is-fit", !!fit);
     if ($("arMaskOpts")) $("arMaskOpts").hidden = !(state.ref && (state.mask || fit));   // HERESY 1320: the mask's options when there is one
   }
@@ -368,7 +396,8 @@
           paintCanvasSay();
           paintRefSay();
           toast(tr("The canvas is kept: Draw paints each shape as it lies there"));
-        } });
+        },
+        onDraw: function () { if (!$("arDraw").disabled) draw(); else toast(tr($("arDraw").dataset.tip || "Draw"), "bad"); } });   // HERESY 1350
     };
     pic.onerror = function () { toast(tr("The picture could not be read"), "bad"); };
     pic.src = ref.data || fileUrl(ref.id, ref.file);
@@ -384,6 +413,51 @@
     var rw = pic && pic.naturalWidth || 1, rh = pic && pic.naturalHeight || 1;
     box.querySelector("em").textContent = tr("On the canvas:") + " " + shapesPicked().map(function (s) {
       return s + " " + tr(window.HeresyCanvas.covers(s, pl[s], rw, rh) ? "from it" : "around"); }).join(" · ");
+  }
+  // HERESY 1347 (Viktor 10.10.2026: «настрой выборочное скачивание прямо в студии Художника, чтобы было всё под рукой»): what the studio
+  // can fetch for the Artist, from Engine → Models and LoRAs' own list (heresy-weights.js) and through its own fetch
+  var GET = ["artwork", "qwen", "qwen-fine", "art-loras"];
+  function openGet() {
+    if (!window.HeresyWeights) return;
+    var back = document.createElement("div"), timer = 0, was = false;
+    back.className = "ar-lib-back ar-get-back";
+    back.setAttribute("role", "dialog");
+    back.setAttribute("aria-label", tr("Painters and adapters to fetch"));
+    back.innerHTML = '<div class="ar-lib ar-get"><div class="ar-lib-head"><b>' + esc(tr("Painters and adapters to fetch")) + "</b>" +
+      '<span class="row-hint ar-get-say"></span><span class="spacer"></span><button type="button" class="btn primary small" data-get="close">' + esc(tr("Done")) + "</button></div>" +
+      '<div class="ar-get-body"></div></div>';
+    document.body.appendChild(back);
+    var body = back.querySelector(".ar-get-body"), say = back.querySelector(".ar-get-say");
+    function paint() {
+      var st = window.HeresyWeights.state(), d = st.data, j = d && d.job, going = !!(j && j.status === "running" && j.kind === "fetch");
+      if (!d) { body.innerHTML = '<p class="row-hint">' + esc(tr("Asking the lab what is here…")) + "</p>"; return; }
+      say.textContent = going ? tr("Fetching:") + " " + tr(j.what) : "";
+      body.innerHTML = (d.extras || []).filter(function (e) { return GET.indexOf(e.name) >= 0; }).map(function (e) {
+        return '<section class="ar-get-x" data-extra="' + esc(e.name) + '"><h4>' + esc(tr(e.label)) + '</h4><p class="row-hint">' + esc(tr(e.what)) + "</p><ul>" +
+          e.variants.map(function (v) {
+            var now = going && j.which && j.which.extra === e.name && j.which.variant === v.id;
+            return '<li class="ar-get-v' + (v.here ? " is-here" : "") + '"><b translate="no">' + esc(v.label || v.id) + '</b><span class="mono">' + esc(v.size) + "</span>" +
+              (v.note ? '<span class="ar-get-note">' + esc(tr(v.note)) + "</span>" : "<span></span>") +
+              (v.here ? '<span class="ar-get-here">' + esc(tr("here")) + "</span>" : '<button type="button" class="btn ghost small" data-get-x="' + esc(e.name) + '" data-get-v="' + esc(v.id) + '"' +
+                (going || !d.script ? " disabled" : "") + ">" + esc(tr(now ? "Fetching…" : "Fetch")) + "</button>") + "</li>";
+          }).join("") + "</ul></section>";
+      }).join("") || '<p class="row-hint">' + esc(tr("This tree has no heresy/fetch-heresy.sh: nothing to check or fetch from here.")) + "</p>";
+      if (was && !going) { loadPainters(); loadLoras(); }  // what came: the painters and the adapters read again
+      was = going;
+      clearTimeout(timer);
+      if (going) timer = setTimeout(function () { window.HeresyWeights.load(); }, 2000);
+    }
+    function close() { clearTimeout(timer); window.removeEventListener("ruach-weights", paint); document.removeEventListener("keydown", key, true); back.remove(); }
+    function key(e) { if (e.key === "Escape" && !document.querySelector(".hd-back, .dialog-back")) { e.preventDefault(); close(); } }
+    window.addEventListener("ruach-weights", paint);
+    document.addEventListener("keydown", key, true);
+    back.addEventListener("click", function (e) {
+      var b = e.target.closest("button");
+      if (e.target === back || (b && b.dataset.get === "close")) return close();
+      if (b && b.dataset.getX && !b.disabled) window.HeresyWeights.fetchExtra(b.dataset.getX, b.dataset.getV);
+    });
+    paint();
+    window.HeresyWeights.load();
   }
   function maskEditor() {
     var ref = state.ref;
@@ -491,12 +565,21 @@
     if (smp && Object.keys(smp).length) body.sampling = smp;
     if (again && again.ref) { body.ref = { id: again.id, file: again.ref }; body.strength = again.strength; if (again.fit) body.fit = true; }   // HERESY 1305: its own; 1307
     else if (!again && state.ref) { body.ref = state.ref.data || { id: state.ref.id, file: state.ref.file }; body.strength = +$("arRefStr").value; }
+    if (again && again.ref && again.inject) body.inject = again.inject;   // HERESY 1385: the extra noise, the run's own or the form's
+    var as = again ? (again.ref && again.ref_as) || "" : (state.ref ? refAs() : "");   // HERESY 1388: edited by words, or its style alone
+    if (as) {
+      body.ref_as = as;
+      if (!again && body.painter !== "qwen21") { body.painter = "qwen21"; delete body.model; delete body.sampling; body.qwen21Only = true; }
+      delete body.mask; delete body.fit; delete body.place; delete body.mask_opts; delete body.inject;
+    }
+    else if (!again && state.ref && +$("arRefNoise").value > 0) body.inject = +$("arRefNoise").value;
     if (again && again.ref && again.mask) body.mask = { id: again.id, file: again.mask };   // HERESY 1306: Again repaints by the run's own
     if (!again && state.ref && state.mask) body.mask = state.mask.data;
     if (again && again.mask_opts) body.mask_opts = again.mask_opts;     // HERESY 1320
     else if (!again && state.ref && (state.mask || $("arRefFit").checked)) body.mask_opts = maskOpts();
     if (!again && state.ref && $("arRefFit").checked) body.fit = true;   // HERESY 1307: painted around
     if (again && again.place) body.place = again.place;                 // HERESY 1346: the canvas's places
+    if (again && again.scale) body.scale = again.scale;                 // HERESY 1384: a second pass again at its size
     else if (!again && state.ref && state.place) {
       body.place = {};
       body.shapes.forEach(function (s) { if (state.place[s]) body.place[s] = state.place[s]; });
@@ -506,15 +589,18 @@
     if (state.take) body.take = state.take.name;
     // HERESY 1316: the adapters on (Again: the run's own, its painter's family being the same)
     var ls = again ? (again.loras || []) : lorasNow().filter(function (l) { return !state.loraLib || loraFind(l.id); });
+    var rg = again ? (again.regions || []) : regionsBody();            // HERESY 1387: the regions' own words, the run's own for Again
+    if (rg.length && body.painter !== "qwen21") body.regions = rg;
     ls = ls.filter(function (l) { return !l.muted && +l.weight > 0; });   // HERESY 1341: a muted one or one at nought paints nothing, and its room was asked
-    if (ls.length) body.loras = ls.map(function (l) { return { id: l.id, weight: +l.weight }; });
+    if (body.qwen21Only) { ls = []; delete body.qwen21Only; }      // HERESY 1388: the form's adapters are its painter's family, not 2.1's
+    if (ls.length) body.loras = ls.map(function (l) { return l.keys ? { id: l.id, weight: +l.weight, keys: l.keys } : { id: l.id, weight: +l.weight }; });   // HERESY 1365
     if (!body.prompt) return toast(tr("Write what to paint first"), "bad");
     if (!body.shapes.length) return toast(tr("Pick a shape: 1:1, 16:9 or 9:16"), "bad");
     state.sending = true;
     paintForm();
     alog(tr("Draw asked:") + " " + (PAINTERS[body.painter] || body.painter) + (body.model ? " · " + String(body.model).replace(/\.safetensors$/, "") : "") + " · " + body.shapes.join(", ") +
       (body.count > 1 ? " × " + body.count : "") + " · " + tr("seed") + " " + (body.seed == null ? tr("new") : body.seed) + (body.sampling ? " · " + JSON.stringify(body.sampling) : "") +
-      (body.loras ? " · LoRA " + body.loras.map(function (l) { return loraName(loraFind(l.id), l.id) + " " + l.weight; }).join(", ") : "") + (body.ref ? " · " + tr("from a reference") : ""));
+      (body.loras ? " · LoRA " + body.loras.map(function (l) { return loraName(loraFind(l.id), l.id) + " " + l.weight + (l.keys ? " \u23f1 " + keysText(l.keys) : ""); }).join(", ") : "") + (body.ref ? " · " + tr("from a reference") : ""));
     return api("/artist/draw", body).then(function (run) {
       alog(tr("Run") + " " + run.id + ": " + tr(countOf(run.of, "picture", "pictures")) + ", " + tr("seed") + " " + run.seed + " · " + tr("in the queue"));
       if (!again && state.seedMode) { state.seedMode.after(run.count || body.count, run.seed); keepForm(); }   // HERESY 1330: Next or Previous past its seeds
@@ -677,7 +763,7 @@
     state.runs.forEach(function (r) {
       (r.pictures || []).forEach(function (p) {
         if (!p.kept) return;
-        if (state.filter === "star" ? !p.star : state.filter !== "all" && p.shape !== state.filter) return;
+        if (state.filter === "star" ? !p.star : state.filter === "protected" ? !p.protected : state.filter !== "all" && p.shape !== state.filter) return;   // HERESY 1367
         out.push({ r: r, p: p });
       });
     });
@@ -696,14 +782,17 @@
   function paintGallery() {
     var list = items(), h = (SIZES.filter(function (z) { return z[0] === state.size; })[0] || SIZES[1])[2];
     // HERESY 1284 (Viktor: «всё свалено в кучу. Сделай честный тайлинг»): even tiles, square for every shape, the shape's own for one
-    var one = state.filter !== "all" && state.filter !== "star" ? shapeOf(state.filter) : null, cell = one ? one.w + " / " + one.h : "1 / 1";
-    $("arRuns").innerHTML = !list.length ? '<p class="ar-empty">' + esc(tr(state.filter === "star" ? "No starred picture yet: ☆ on a picture stars it." : "No picture of this shape yet.")) + "</p>"
+    var one = state.filter !== "all" && state.filter !== "star" && state.filter !== "protected" ? shapeOf(state.filter) : null, cell = one ? one.w + " / " + one.h : "1 / 1";
+    $("arRuns").innerHTML = !list.length ? '<p class="ar-empty">' + esc(tr(state.filter === "star" ? "No starred picture yet: ☆ on a picture stars it." :
+      state.filter === "protected" ? "No protected picture yet: the shield on a picture protects it." : "No picture of this shape yet.")) + "</p>"
       : '<div class="ar-gallery" style="--g-h:' + h + "px;--cell:" + cell + '">' + list.map(function (it, i) {
         var sh = shapeOf(it.p.shape);
         return '<figure class="ar-gpic" style="--ar:' + sh.w + "/" + sh.h + '" data-g="' + i + '">' +
           '<button type="button" class="ar-thumb" data-act="gview" aria-label="' + esc(tr("Look at it")) + '" data-tip="' + esc(it.p.shape + " · " + tr("seed") + " " + it.p.seed + " · " + when(it.r.created)) + '">' +
           '<img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(it.r.id, it.p.thumb || it.p.file)) + '" /></button>' +
-          '<button type="button" class="ar-star' + (it.p.star ? " is-on" : "") + '" data-act="gstar" aria-pressed="' + (it.p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(it.p.star) + "</button></figure>";   // HERESY 1321
+          '<button type="button" class="ar-star' + (it.p.star ? " is-on" : "") + '" data-act="gstar" aria-pressed="' + (it.p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(it.p.star) + "</button>" +   // HERESY 1321
+          '<button type="button" class="ar-prot' + (it.p.protected ? " is-on" : "") + '" data-act="gprot" aria-pressed="' + (it.p.protected ? "true" : "false") + '" aria-label="' + esc(tr(it.p.protected ? "Take its protection off" : "Protect it")) +
+          '" data-tip="' + esc(tr(it.p.protected ? PROT_ON : PROT_OFF)) + '">' + shieldIcon(it.p.protected) + "</button></figure>";   // HERESY 1367
       }).join("") + "</div>";
   }
   function paintRuns() { paintRunsList(); paintStage(); paintPicked(); }   // HERESY 1271: the library, then the stage; 1321: the picked
@@ -830,24 +919,228 @@
   }
   // HERESY 1332 (Viktor: «2K и 4K максимум. Нехер ручные значения вводить»): the long side to 2560 or 3840
   var UP_TARGETS = { "2k": 2560, "4k": 3840 };
+  // HERESY 1364 (from Upscayl's TTA): each tile through the upscaler in its eight orientations, averaged; kept, for one picture, the passes
+  // and the pictures picked alike
+  function ttaOn() { return recall("yue2.arUpTta") === "1"; }
+  var TTA_TIP = "TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)";
   function upSize(p, t) { var w = +p.w || 0, h = +p.h || 0, long = Math.max(w, h); return long ? [Math.round(w * UP_TARGETS[t] / long), Math.round(h * UP_TARGETS[t] / long)] : null; }
   function upRow(p) {
     var list = state.upscalers || [];
     if (!list.length) return '<div class="ar-up-row"><span class="row-hint">' + esc(state.upscalers ? tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into artwork/upscalers/") : tr("Reading the upscalers…")) + "</span></div>";
     var names = list.map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
     var pick = names.indexOf(want) >= 0 ? want : names.indexOf("4x_Nomos8kDAT.pth") >= 0 ? "4x_Nomos8kDAT.pth" : names[0];
+    var cur = list.filter(function (u) { return u.name === pick; })[0];
     return '<div class="ar-up-row"><select id="arUpModel" translate="no" aria-label="' + esc(tr("The upscaler")) + '">' + list.map(function (u) {
       return '<option value="' + esc(u.name) + '"' + (u.name === pick ? " selected" : "") + ">" + esc(u.name.replace(/\.(pth|safetensors)$/, "") + " (" + u.mb + " MB)") + "</option>";
     }).join("") + "</select>" +
+      // HERESY 1355 (Viktor 11.10.2026: «Пройдись по репо всех моих апскейлеров и собери инфу по каждому, и оформи это в попап подсказки, чтобы
+      // человек видел, на что какой годится»): its notes in the i's tip; a click on it, the window of them all
+      '<span class="info ar-up-info" tabindex="0" role="button" data-up-guide aria-label="' + esc(tr("What each upscaler is for")) + '" data-tip="' + esc(upTip(cur)) + '"></span>' +
       ["2k", "4k"].map(function (t) {
         var long = p ? Math.max(+p.w || 0, +p.h || 0) : 0, sz = p ? upSize(p, t) : null, done = long >= UP_TARGETS[t];
         var tip = done ? tr("It is as large already") + " (" + p.w + "\u00d7" + p.h + ")" : sz ? p.w + "\u00d7" + p.h + " \u2192 " + sz[0] + "\u00d7" + sz[1] : "";
         return '<button type="button" class="btn small" data-up="' + t + '"' + (done ? " disabled" : "") + ' data-tip="' + esc(tip) + '">' + t.toUpperCase() + "</button>";
-      }).join("") + "</div>";
+      }).join("") +
+      '<label class="check ar-up-tta" data-tip="' + esc(tr(TTA_TIP)) + '"><input type="checkbox" data-up-tta' + (ttaOn() ? " checked" : "") + ' /> <span translate="no">TTA</span></label>' +   // HERESY 1364
+      '<button type="button" class="btn ghost small' + (state.upChainOpen ? " is-on" : "") + '" data-up-chain data-tip="' + esc(tr("An upscale in passes, as Viktor's ComfyUI stack: each pass a model and a size of the picture's own")) + '">' + esc(tr("Passes\u2026")) + "</button>" +
+      "</div>" + (state.upChainOpen ? chainPanel(p, list) : "");
+  }
+  // HERESY 1355: an upscaler's notes in one line for its tip (lab/upscalers.json: what it is for, its time measured on an RTX 3090)
+  function upTip(u) {
+    if (!u) return tr("What each upscaler is for: a click");
+    var i = u.info;
+    if (!i) return upShort(u.name) + " · " + u.mb + " MB · " + tr("no notes on this one: the window (a click) lists those that have them");
+    return i.title + " · " + (i.arch ? i.arch + " " : "") + "\u00d7" + (i.scale || u.scale) + " · " + tr(i.for) + (i.s_1024 ? " · " + tr("about " + i.s_1024 + " s for a 1024² picture") : "") +
+      (i.license ? " · " + i.license : "");
+  }
+  var UP_GROUPS = [["photo", "Photos and realism"], ["faces", "Faces and skin"], ["art", "Art and anime"], ["", "Without notes"]];
+  function openUpGuide() {
+    var list = state.upscalers || [], pick = $("arUpModel") ? $("arUpModel").value : "";
+    var back = document.createElement("div");
+    back.className = "ar-lib-back ar-get-back ar-ug-back";
+    back.setAttribute("role", "dialog");
+    back.setAttribute("aria-label", tr("What each upscaler is for"));
+    back.innerHTML = '<div class="ar-lib ar-get ar-ug"><div class="ar-lib-head"><b>' + esc(tr("What each upscaler is for")) + "</b>" +
+      '<span class="row-hint">' + esc(tr("The time: a 1024² picture through it on an RTX 3090, the studio's own way")) + "</span>" +
+      '<span class="spacer"></span><button type="button" class="btn primary small" data-ug="close">' + esc(tr("Done")) + "</button></div>" +
+      '<div class="ar-get-body">' + UP_GROUPS.map(function (g) {
+        var rows = list.filter(function (u) { return (u.info ? u.info.group : "") === g[0]; })
+          .sort(function (a, b) { return ((a.info && a.info.s_1024) || 99) - ((b.info && b.info.s_1024) || 99); });
+        if (!rows.length) return "";
+        return '<section class="ar-get-x"><h4>' + esc(tr(g[1])) + '</h4><ul>' + rows.map(function (u) {
+          var i = u.info || {}, nc = /NC/.test(i.license || "");
+          return '<li class="ar-ug-v' + (u.name === pick ? " is-on" : "") + '" data-ug-pick="' + esc(u.name) + '" tabindex="0">' +
+            '<b translate="no">' + esc(i.title || upShort(u.name)) + '<small translate="no">' + esc(u.name) + "</small></b>" +
+            '<span class="mono" translate="no">' + esc("\u00d7" + (i.scale || u.scale) + (i.arch ? " · " + i.arch : "")) + "</span>" +
+            '<span class="mono">' + esc(i.s_1024 ? i.s_1024 + " s" : "") + (i.peak_gb ? '<small>' + esc(i.peak_gb + " GB") + "</small>" : "") + "</span>" +
+            "<span>" + esc(i.for ? tr(i.for) : u.mb + " MB") + (i.author ? '<small translate="no">' + esc(i.author) + "</small>" : "") + "</span>" +
+            '<span class="ar-ug-lic' + (nc ? " is-nc" : "") + '" translate="no">' + esc(i.license || "") + (nc ? '<small>' + esc(tr("non-commercial")) + "</small>" : "") + "</span>" +
+            (i.source ? '<a href="' + esc(i.source) + '" target="_blank" rel="noopener" data-tip="' + esc(i.source) + '">' + esc(tr("its page")) + "</a>" : "<span></span>") + "</li>";
+        }).join("") + "</ul></section>";
+      }).join("") + "</div></div>";
+    document.body.appendChild(back);
+    function close() { document.removeEventListener("keydown", key, true); back.remove(); }
+    function key(e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }
+    document.addEventListener("keydown", key, true);
+    back.addEventListener("click", function (e) {
+      if (e.target === back || e.target.closest('[data-ug="close"]')) return close();
+      if (e.target.closest("a")) return;
+      var row = e.target.closest("[data-ug-pick]");
+      if (!row) return;
+      keep("yue2.arUpModel", row.dataset.ugPick);
+      state.stageKey = ""; paintStage();
+      close();
+    });
+    var on = back.querySelector(".ar-ug-v.is-on");
+    if (on) on.scrollIntoView({ block: "center" });
+  }
+  // HERESY 1355 (Viktor 11.10.2026: «И можно ли двух-трёх проходный апскейл делать наподобие того, как у меня в ComfyUI workflow?»): his AIO
+  // QWEN IMAGE 2512 HERESY workflow's CR Multi Upscale Stack, each pass a model and a factor of the picture's own size, the long side after
+  // them and the colours matched (his ColorMatch hm-mvgd-hm); kept in this browser
+  var VIKTOR_CHAIN = { name: "Viktor's Qwen 2512 chain (ComfyUI)", passes: [{ model: "4x_Nomos8k_span_otf_strong.pth", factor: 2 }, { model: "4x_Nomos8kDAT.pth", factor: 4 },
+    { model: "4x_foolhardy_Remacri.pth", factor: 1.5 }, { model: "4x_UltraMix_Balanced.pth", factor: 2 }], resample: "bilinear", long: 7680, match: true };
+  function chainNow(list) {
+    var c = null;
+    try { c = JSON.parse(recall("yue2.arUpChain") || "null"); } catch (e) { c = null; }
+    var names = (list || []).map(function (u) { return u.name; });
+    if (!c || !Array.isArray(c.passes) || !c.passes.length) {
+      var has = VIKTOR_CHAIN.passes.every(function (x) { return names.indexOf(x.model) >= 0; });
+      c = has ? JSON.parse(JSON.stringify(VIKTOR_CHAIN)) : { passes: [{ model: upModel(list) || "", factor: 2 }], resample: "bilinear", long: 0, match: false };
+    }
+    c.passes = c.passes.slice(0, 4).map(function (x) { return { model: names.indexOf(x.model) >= 0 ? x.model : upModel(list) || "", factor: +x.factor || 2 }; });
+    return c;
+  }
+  function chainKeep(c) { keep("yue2.arUpChain", JSON.stringify({ passes: c.passes, resample: c.resample, long: c.long, match: c.match })); }
+  function chainSays(p, c, list) {                       // the size it lands at and about how long (each pass by its measured time)
+    var w = +p.w || 0, h = +p.h || 0, last = c.passes[c.passes.length - 1], fw = Math.round(w * last.factor), fh = Math.round(h * last.factor);
+    if (+c.long) { var k = +c.long / Math.max(fw, fh); fw = Math.round(fw * k); fh = Math.round(fh * k); }
+    var secs = 0, inW = w, inH = h;
+    c.passes.forEach(function (x) {
+      var u = (list || []).filter(function (v) { return v.name === x.model; })[0], s = (u && u.info && u.info.s_1024) || 3;
+      secs += s * inW * inH / 1048576;
+      inW = w * x.factor; inH = h * x.factor;
+    });
+    return { w: fw, h: fh, secs: secs + 5 * c.passes.length };
+  }
+  function chainPanel(p, list) {
+    var c = chainNow(list), say = chainSays(p, c, list), names = list.map(function (u) { return u.name; });
+    var has = VIKTOR_CHAIN.passes.every(function (x) { return names.indexOf(x.model) >= 0; });
+    var opts = function (sel) { return list.map(function (u) { return '<option value="' + esc(u.name) + '"' + (u.name === sel ? " selected" : "") + ">" + esc(upShort(u.name)) + "</option>"; }).join(""); };
+    return '<div class="ar-up-chain" data-up-chain-panel>' +
+      '<div class="ar-uc-head"><b>' + esc(tr("Passes")) + '</b><span class="info" tabindex="-1" role="img" data-tip="' + esc(tr("Each pass runs its model over the picture as it stands and lands at the picture's own size × its factor (each factor the picture's, not the pass before's): Viktor's ComfyUI stack, CR Apply Multi Upscale. Then the long side, then the colours put back to the picture's.")) + '"></span>' +
+        (has ? '<button type="button" class="btn ghost small" data-uc="viktor">' + esc(tr(VIKTOR_CHAIN.name)) + "</button>" : "") + "</div>" +
+      c.passes.map(function (x, k) {
+        return '<div class="ar-uc-row" data-uc-k="' + k + '"><span class="ar-uc-n mono">' + (k + 1) + '</span><select data-uc-model translate="no" aria-label="' + esc(tr("The pass's upscaler")) + '">' + opts(x.model) + "</select>" +
+          '<label class="ar-uc-f">\u00d7 <input type="number" data-uc-factor min="0.25" max="8" step="0.25" value="' + x.factor + '" aria-label="' + esc(tr("The picture's own size times")) + '" /></label>' +
+          (c.passes.length > 1 ? '<button type="button" class="pb-btn" data-uc-x aria-label="' + esc(tr("Take the pass off")) + '">\u2715</button>' : "<span></span>") + "</div>";
+      }).join("") +
+      (c.passes.length < 4 ? '<button type="button" class="btn ghost small ar-uc-add" data-uc="add">' + esc(tr("+ a pass")) + "</button>" : "") +
+      '<div class="ar-uc-opts"><label>' + esc(tr("Lands")) + ' <select data-uc-resample>' + ["bilinear", "lanczos", "bicubic"].map(function (r) { return '<option value="' + r + '"' + (c.resample === r ? " selected" : "") + ">" + esc(tr(r)) + "</option>"; }).join("") + "</select></label>" +
+        '<label>' + esc(tr("Long side")) + ' <select data-uc-long>' + [[0, "as it lands"], [2560, "2K · 2560"], [3840, "4K · 3840"], [7680, "8K · 7680"]].map(function (o) { return '<option value="' + o[0] + '"' + (+c.long === o[0] ? " selected" : "") + ">" + esc(tr(o[1])) + "</option>"; }).join("") + "</select></label>" +
+        '<label class="ar-uc-match"><input type="checkbox" data-uc-match' + (c.match ? " checked" : "") + " /> " + esc(tr("Colours as the picture's")) + "</label></div>" +
+      '<div class="ar-uc-go"><span class="row-hint" data-uc-say>' + esc((p.w || "?") + "\u00d7" + (p.h || "?") + " \u2192 " + say.w + "\u00d7" + say.h + " · " + tr(minutes(say.secs) + " on a card")) + "</span>" +
+        '<button type="button" class="btn small primary" data-uc="go"' + (Math.max(say.w, say.h) > 10240 ? " disabled" : "") + ">" + esc(tr("Upscale in passes")) + "</button></div></div>";
+  }
+  function chainRead() {                                  // the panel as it stands, kept
+    var box = document.querySelector("#arStage [data-up-chain-panel]");
+    if (!box) return null;
+    var c = { passes: [], resample: box.querySelector("[data-uc-resample]").value, long: +box.querySelector("[data-uc-long]").value, match: box.querySelector("[data-uc-match]").checked };
+    Array.prototype.forEach.call(box.querySelectorAll("[data-uc-k]"), function (row) {
+      c.passes.push({ model: row.querySelector("[data-uc-model]").value, factor: Math.min(8, Math.max(0.25, +row.querySelector("[data-uc-factor]").value || 2)) });
+    });
+    chainKeep(c);
+    return c;
+  }
+  function chainGo(src, c) {
+    return api("/artist/upscale", { id: src.id, file: src.file, passes: c.passes, resample: c.resample, long: c.long || 0, match: !!c.match, tta: ttaOn() }).then(function (run) {
+      state.upOpen = false; state.upChainOpen = false;
+      state.pinSel = false;
+      state.runs.unshift(run);
+      paintRuns();
+      toast(tr("Upscaling in " + c.passes.length + " passes: " + c.passes.map(function (x) { return upShort(x.model) + " \u00d7" + x.factor; }).join(" \u2192 ")));
+      schedule(1500);
+    }).catch(function (e) { toast(tr("Not upscaled: " + e.message), "bad"); alog(tr("Not upscaled:") + " " + e.message, "bad"); });
+  }
+  // HERESY 1384 (Viktor's ComfyUI workflow, AIO QWEN IMAGE 2512 HERESY Draft #4: «1st Pass + 2x Upscale», then the second KSampler from
+  // step 20 of 60, the same sampler as the first): the picture brought up 1.5 or 2 times by nearest and painted over by its own run's
+  // painter, fine-tune, adapters, prompt and seed; the steps, sampler, schedule and Lightning the form's when the form paints with that
+  // painter (his recipe wants more steps and no Lightning for it), else the run's own
+  // HERESY 1387: the regions: a place of the frame each ([x, y, w, h] in its shares) and words of their own, kept in this browser
+  var REGION_PLACES = [["left", "Left half", [0, 0, 0.5, 1]], ["right", "Right half", [0.5, 0, 0.5, 1]], ["top", "Top half", [0, 0, 1, 0.5]],
+    ["bottom", "Bottom half", [0, 0.5, 1, 0.5]], ["left3", "Left third", [0, 0, 0.3333, 1]], ["mid3", "Middle third", [0.3333, 0, 0.3334, 1]],
+    ["right3", "Right third", [0.6667, 0, 0.3333, 1]], ["middle", "The middle", [0.25, 0.2, 0.5, 0.6]], ["tl", "Top left", [0, 0, 0.5, 0.5]],
+    ["tr", "Top right", [0.5, 0, 0.5, 0.5]], ["bl", "Bottom left", [0, 0.5, 0.5, 0.5]], ["br", "Bottom right", [0.5, 0.5, 0.5, 0.5]]];
+  function regionBox(id) { var p = REGION_PLACES.filter(function (x) { return x[0] === id; })[0]; return (p || REGION_PLACES[0])[2]; }
+  function regionsNow() {
+    try { var v = JSON.parse(recall("yue2.arRegions") || "[]"); return Array.isArray(v) ? v.slice(0, 3) : []; } catch (e) { return []; }
+  }
+  function regionsKeep(list) { keep("yue2.arRegions", list.length ? JSON.stringify(list) : null); }
+  function regionsBody() {
+    return regionsNow().filter(function (r) { return String(r.prompt || "").trim(); }).map(function (r) { return { prompt: String(r.prompt).trim(), box: regionBox(r.place) }; });
+  }
+  function regionMap(id) {
+    var b = regionBox(id);
+    return '<span class="ar-reg-map" aria-hidden="true"><i style="left:' + b[0] * 100 + "%;top:" + b[1] * 100 + "%;width:" + b[2] * 100 + "%;height:" + b[3] * 100 + '%"></i></span>';
+  }
+  function paintRegions() {
+    var list = regionsNow(), box = $("arRegList");
+    if (!box) return;
+    box.innerHTML = list.map(function (r, i) {
+      return '<div class="ar-reg" data-ri="' + i + '">' + regionMap(r.place) + '<select data-rp aria-label="' + esc(tr("Where in the frame")) + '">' +
+        REGION_PLACES.map(function (p) { return '<option value="' + p[0] + '"' + (p[0] === r.place ? " selected" : "") + ">" + esc(tr(p[1])) + "</option>"; }).join("") +
+        '</select><input type="text" data-rw maxlength="600" spellcheck="false" placeholder="' + esc(tr("What is there")) + '" value="' + esc(r.prompt || "") + '" />' +
+        '<button type="button" class="pb-btn" data-rx aria-label="' + esc(tr("Remove the region")) + '">\u2715</button></div>';
+    }).join("");
+    $("arRegAdd").disabled = list.length >= 3;
+    paintRegionSay();
+  }
+  function paintRegionSay() {
+    var n = regionsBody().length, q21 = $("arPainter").value === "qwen21";
+    if ($("arRegSay")) $("arRegSay").textContent = n ? String(n) : "";
+    if ($("arRegNote")) $("arRegNote").hidden = !(q21 && regionsNow().length);
+  }
+  function spOk(r) { return !!(r && r.kind !== "upscale" && r.prompt && r.painter !== "qwen21"); }
+  function spStr() { var v = parseFloat(recall("yue2.arSpStr")); return v >= 0.2 && v <= 0.9 ? v : 0.5; }
+  function spNoise() { var v = parseFloat(recall("yue2.arSpNoise")); return v >= 0 && v <= 1.5 ? v : 0.6; }   // HERESY 1385: as his workflow, 0.6
+  function spButton(r) {
+    return spOk(r) ? '<button type="button" class="btn ghost small' + (state.spOpen ? " is-on" : "") + '" data-stage="second" data-tip="' +
+      esc(tr("A second pass, as Viktor's ComfyUI workflow makes it: the picture brought up 1.5 or 2 times and painted over by its own painter, adapters, prompt and seed, with the form's steps and sampler; a run of its own")) + '">' + esc(tr("Second pass\u2026")) + "</button>" : "";
+  }
+  var NOISE_TIP = "Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break";
+  function spRow(p) {
+    var s = spStr();
+    return '<div class="ar-up-row ar-sp-row">' + [1.5, 2].map(function (k) {
+      var w = Math.round((+p.w || 0) * k), h = Math.round((+p.h || 0) * k);
+      return '<button type="button" class="btn small" data-sp="' + k + '" data-tip="' + esc(p.w + "\u00d7" + p.h + " \u2192 " + w + "\u00d7" + h) + '">\u00d7' + k + "</button>";
+    }).join("") +
+      '<label class="ar-sp-str" data-tip="' + esc(tr("How much the second pass may change the picture: 0.3 keeps its drawing and adds detail, 0.5 sharpens its matter, 0.7 repaints its forms")) + '"><span>' +
+      esc(tr("How much it may change")) + '</span> <input type="range" id="arSpStr" min="0.2" max="0.9" step="0.05" value="' + s + '" /> <output id="arSpStrOut" translate="no">' + s.toFixed(2) + "</output></label>" +
+      '<label class="ar-sp-str" data-tip="' + esc(tr(NOISE_TIP)) + '"><span>' + esc(tr("Extra noise")) + '</span> <input type="range" id="arSpNoise" min="0" max="1.5" step="0.05" value="' + spNoise() +
+      '" /> <output id="arSpNoiseOut" translate="no">' + spNoise().toFixed(2) + "</output></label></div>";   // HERESY 1385
+  }
+  function secondPass(r, p, k) {
+    if (runsFull()) return toast(tr("Two runs at a time: the next one can be asked when one of them ends"), "bad");
+    var body = { prompt: r.prompt, shapes: [p.shape], count: 1, seed: p.seed, painter: r.painter, ref: { id: r.id, file: p.file }, strength: spStr(), scale: k, preview: $("arLive").checked };
+    if (spNoise() > 0) body.inject = spNoise();       // HERESY 1385
+    if (r.model) body.model = r.model;
+    var smp = $("arPainter").value === r.painter ? samplingBody() : r.sampling;
+    if (smp && Object.keys(smp).length) body.sampling = smp;
+    var ls = (r.loras || []).filter(function (l) { return !l.muted && +l.weight > 0; });
+    if (ls.length) body.loras = ls.map(function (l) { return l.keys ? { id: l.id, weight: +l.weight, keys: l.keys } : { id: l.id, weight: +l.weight }; });
+    if (state.take) body.take = state.take.name;
+    alog(tr("Second pass asked:") + " \u00d7" + k + " · " + (PAINTERS[r.painter] || r.painter) + " · " + body.strength.toFixed(2) + " · " + r.id + "/" + p.file);
+    return api("/artist/draw", body).then(function (run) {
+      state.spOpen = false;
+      state.pinSel = false;
+      state.runs.unshift(run);
+      paintRuns();
+      toast(tr("The second pass \u00d7" + k + " waits for a card with room, then paints the picture over"));
+      schedule(1500);
+    }).catch(function (e) { toast(tr("No second pass: " + e.message), "bad"); alog(tr("No second pass:") + " " + e.message, "bad"); });
   }
   function upscaleIt(src, model, target) {           // HERESY 1332: «2k» or «4k»; a number is 1322's factor (an older run's Again)
     keep("yue2.arUpModel", model);
-    var body = { id: src.id, file: src.file, model: model };
+    var body = { id: src.id, file: src.file, model: model, tta: ttaOn() };   // HERESY 1364
     if (UP_TARGETS[target]) body.target = target; else body.factor = +target || 2;
     return api("/artist/upscale", body).then(function (run) {
       state.upOpen = false;
@@ -880,24 +1173,115 @@
     Array.prototype.forEach.call(document.querySelectorAll("#arRuns .ar-pic[data-i]"), function (f) {
       var run = runOf(f), p = run && run.pictures[+f.dataset.i];
       f.classList.toggle("is-picked", !!(p && state.picked[run.id + "|" + p.file]));
+      f.classList.toggle("is-protected", !!(p && p.protected));   // HERESY 1367
     });
     var bar = $("arPicked"), n = Object.keys(state.picked).length;
     if (!bar) return;
     bar.hidden = !n;
     bar.innerHTML = n ? '<span class="ar-picked-n">' + n + " " + esc(tr(n === 1 ? "picked" : "picked")) + "</span>" +
       '<button type="button" class="chip ar-fshape" data-pick="star" aria-label="' + esc(tr("Star them")) + '" data-tip="' + esc(tr("Star them all")) + '">' + starIcon(true) + "</button>" +
+      '<button type="button" class="chip ar-fshape" data-pick="protect" aria-label="' + esc(tr("Protect them")) + '" data-tip="' + esc(tr("Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)")) + '">' + shieldIcon(true) + "</button>" +   // HERESY 1367
+      '<button type="button" class="chip" data-pick="up" data-tip="' + esc(tr("Upscale them all, in one run: 2K or 4K by the upscaler chosen, or the passes kept")) + '">' + esc(tr("Upscale\u2026")) + "</button>" +   // HERESY 1364
       '<button type="button" class="chip" data-pick="aside" data-tip="' + esc(tr("Put them in the trash: the library's Trash brings them back")) + '">' + esc(tr("Trash")) + "</button>" +
       '<button type="button" class="pb-btn" data-pick="clear" aria-label="' + esc(tr("Let them go (Esc)")) + '">\u2715</button>' : "";
   }
-  function asidePics(items, back) {
-    return api("/artist/aside", { items: items, aside: !back }).then(function (d) {
+  // HERESY 1367 (Viktor 11.10.2026: «добавь Protect опцию для картинок. Такое нельзя ни в коем случае упустить в корзину, а потом ненароком в
+  // бездну»): a picture protected never goes to the trash and is never deleted for good (the lab refuses both); one in the trash comes back
+  var PROT_ON = "Protected: it never goes to the trash and is never deleted; the shield takes the protection off";
+  var PROT_OFF = "Protect it: never to the trash, never deleted for good";
+  function protectPics(list, on) {
+    return api("/artist/protect", { items: list, protect: on }).then(function (d) {
       var n = (d.done || []).length;
+      toast(on ? tr(countOf(n, "picture", "pictures") + " protected: never to the trash, never deleted") : tr("Protection taken off: " + countOf(n, "picture", "pictures")), on ? "good" : "");
+      state.stageKey = "";
+      return load().then(function () { if (state.look === "trash") paintTrash(); });
+    }).catch(function (e) { toast(tr("Not protected: " + e.message), "bad"); });
+  }
+  function protectPicked() {
+    var list = pickedList(), all = list.length && list.every(function (x) { var p = picOf(x); return p && p.protected; });
+    return protectPics(list, !all).then(clearPicked);
+  }
+  function picOf(x) {
+    var r = state.runs.filter(function (q) { return q.id === x.id; })[0];
+    return r ? (r.pictures || []).filter(function (p) { return p.file === x.file; })[0] : null;
+  }
+  // HERESY 1372 (Viktor 11.10.2026: «Если стоит обложкой на треке то, что у Художника, при удалении изображения из галлереи спрашивать,
+  // или снимать, или оставить»): the takes whose cover now is one of these pictures (the lab reads their artwork.json); the takes' titles
+  function coverTakes(body) {
+    return api("/artist/covers", body).then(function (d) {
+      var takes = [];
+      (d.covers || []).forEach(function (x) { (x.takes || []).forEach(function (t) { var n = t.title || t.name; if (takes.indexOf(n) < 0) takes.push(n); }); });
+      return takes;
+    }, function () { return []; });                    // the lab could not say: as before, the covers stay
+  }
+  function coverAsk(takes) {
+    return takes.length === 1 ? tr("“" + takes[0] + "” has this picture as its cover: take it off the take too, or leave it? The take keeps a copy of its own.")
+      : tr(takes.length + " takes have these pictures as their covers: take the covers off them too, or leave them? Each take keeps a copy of its own.");
+  }
+  function coverHow(takes, lead) {                     // "off", "keep", or null (cancelled)
+    return window.HeresyDialog.confirm((lead ? lead + "\n\n" : "") + coverAsk(takes), { ok: tr(takes.length === 1 ? "Take it off too" : "Take them off too"),
+      alt: tr(takes.length === 1 ? "Leave it" : "Leave them"), cancel: tr("Cancel"), danger: true }).then(function (a) { return a === true ? "off" : a === "alt" ? "keep" : null; });
+  }
+  function coversSaid(d) {
+    var off = (d && d.covers_off) || [];
+    if (!off.length) return;
+    toast(off.length === 1 ? tr("The cover taken off “" + off[0] + "”") : tr("The covers taken off " + off.length + " takes"), "good");
+    if (state.hooks.refreshArts) state.hooks.refreshArts().then(paintHead);
+  }
+  function asidePics(items, back) {
+    return (back ? Promise.resolve([]) : coverTakes({ items: items })).then(function (takes) {
+      return takes.length ? coverHow(takes) : "keep";
+    }).then(function (how) {
+      if (!how) return;
+      return asideGo(items, back, how);
+    });
+  }
+  function asideGo(items, back, how) {
+    return api("/artist/aside", { items: items, aside: !back, covers: how }).then(function (d) {
+      coversSaid(d);                                   // HERESY 1372
+      var n = (d.done || []).length, kept = (d.kept || []).length;   // HERESY 1367: the protected stay
+      if (!back && kept) toast(tr(countOf(kept, "protected picture", "protected pictures") + " stayed in the room: take the protection off first"), n ? "" : "bad");
+      if (!back && !n && kept) { clearPicked(); return; }
       toast(back ? tr("Back in the room: " + countOf(n, "picture", "pictures"))   // HERESY 1339: one sentence
         : tr(countOf(n, "picture", "pictures") + " in the trash: the library's Trash brings them back" + ((d.trashed || []).length ? " · a run with nothing left went with them" : "")));
       clearPicked();
       return load().then(function () { if (state.look === "trash") paintTrash(); });
     }).catch(function (e) { toast(e.message, "bad"); });
   }
+  // HERESY 1364 (from Upscayl's batch, TODO.md: «a folder upscaled at once»): the pictures picked, upscaled in one run, each as one picture
+  // would be: 2K or 4K by the upscaler chosen in the row (kept), or the passes kept; TTA as its box says, toggled here too
+  function upPickedMenu(btn) {
+    loadUpscalers().then(function (list) {
+      list = list || [];
+      if (!list.length || !window.HeresyMenu) return toast(tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into artwork/upscalers/"), "bad");
+      var names = list.map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
+      var model = names.indexOf(want) >= 0 ? want : names.indexOf("4x_Nomos8kDAT.pth") >= 0 ? "4x_Nomos8kDAT.pth" : names[0];
+      var c = chainNow(list), r = btn.getBoundingClientRect();
+      window.HeresyMenu.open(r.left, r.bottom + 4, [
+        { label: tr("2K · " + upShort(model)), action: function () { upPicked({ model: model, target: "2k" }, "2K · " + upShort(model)); } },
+        { label: tr("4K · " + upShort(model)), action: function () { upPicked({ model: model, target: "4k" }, "4K · " + upShort(model)); } },
+        { label: tr("In passes: " + c.passes.map(function (x) { return upShort(x.model) + " \u00d7" + x.factor; }).join(" \u2192 ")),
+          action: function () { upPicked({ passes: c.passes, resample: c.resample, long: c.long || 0, match: !!c.match }, c.passes.length + " passes"); } },
+        { label: "TTA", checked: ttaOn(), hint: tr("steadier, up to ×8 the time"), action: function () { keep("yue2.arUpTta", ttaOn() ? null : "1"); state.stageKey = ""; paintStage(); upPickedMenu(btn); } }
+      ]);
+    });
+  }
+  function upPicked(opts, what) {
+    var items = pickedList(), n = items.length;
+    if (!n) return;
+    return api("/artist/upscale", Object.assign({ items: items, tta: ttaOn() }, opts)).then(function (run) {
+      clearPicked();
+      state.pinSel = false;
+      state.runs.unshift(run);
+      paintRuns();
+      toast(tr("Upscaling " + countOf(n, "picture", "pictures") + " in one run: " + what + (ttaOn() ? " · TTA" : "")));
+      schedule(1500);
+    }).catch(function (e) { toast(tr("Not upscaled: " + e.message), "bad"); alog(tr("Not upscaled:") + " " + e.message, "bad"); });
+  }
+  window.HeresyArtistUp = { picked: upPicked, menu: upPickedMenu, tta: ttaOn,   // for the checks
+    pick: function (list) { state.picked = {}; (list || []).forEach(function (x) { state.picked[x.id + "|" + x.file] = true; }); paintPicked(); } };
+  window.HeresyArtistKeys = { parse: keysParse, text: keysText };   // HERESY 1365: for the checks
+  window.HeresyArtistProtect = { pics: protectPics, picked: protectPicked };   // HERESY 1367: for the checks
   function starPicked() {
     var all = pickedList(), go = function (i) {
       if (i >= all.length) { clearPicked(); return load(); }
@@ -906,11 +1290,15 @@
     return go(0);
   }
   function trashRun(r) {
-    return window.HeresyDialog.confirm(tr("The run and its " + countOf((r.pictures || []).filter(function (p) { return p.kept; }).length, "picture", "pictures") + " to the trash?") + "\n\n" +
-      tr("They go to the studio's trash/artist/ and can come back from there; a cover already given to a take stays with the take."),
-      { ok: tr("To the trash"), danger: true }).then(function (ok) {
-      if (!ok) return;
-      return api("/artist/trash", { id: r.id }).then(function () {
+    var head = tr("The run and its " + countOf((r.pictures || []).filter(function (p) { return p.kept; }).length, "picture", "pictures") + " to the trash?");
+    return coverTakes({ id: r.id }).then(function (takes) {   // HERESY 1372: a cover it gave a take, asked about
+      return takes.length ? coverHow(takes, head) : window.HeresyDialog.confirm(head + "\n\n" +
+        tr("They go to the studio's trash/artist/ and can come back from there; a cover already given to a take stays with the take."),
+        { ok: tr("To the trash"), danger: true }).then(function (ok) { return ok ? "keep" : null; });
+    }).then(function (how) {
+      if (!how) return;
+      return api("/artist/trash", { id: r.id, covers: how }).then(function (d) {
+        coversSaid(d);
         state.runs = state.runs.filter(function (x) { return x.id !== r.id; });
         paintRuns();
         toast(tr("In the trash: the studio's trash/artist/ keeps it; the library's Trash brings it back"));   // HERESY 1310
@@ -944,6 +1332,60 @@
     state.pinSel = true;
     paintStage();
   }
+  // HERESY 1369 (Viktor 11.10.2026: «в галерее картинок сделай навигацию стрелочными кнопками клавиатуры»): the library walked by the
+  // arrows: ← → the picture before and after (the gallery as shown, or the runs' pictures in their order), ↑ ↓ a row of the gallery up
+  // and down, in the runs the run before and after; the stage follows and the thumbnail comes into sight. Not while typing, nor with a
+  // window, a menu or the picture over the page open (it has its own ← →); the player's ← → (seek) everywhere else
+  function navStep(key, cur) {
+    if (state.look === "gallery") {
+      var list = items(), at = -1;
+      list.forEach(function (x, k) { if (x.r.id === cur.r.id && x.p.file === cur.p.file) at = k; });
+      if (at < 0) return list[0] || null;
+      var figs = document.querySelectorAll("#arRuns .ar-gpic[data-g]"), cols = 0;
+      for (var c = 0; c < figs.length && figs[c].offsetTop === figs[0].offsetTop; c++) cols++;
+      var d = key === "ArrowLeft" ? -1 : key === "ArrowRight" ? 1 : (key === "ArrowUp" ? -1 : 1) * Math.max(1, cols);
+      return list[at + d] || null;
+    }
+    var runs = state.runs.filter(function (r) { return keptList(r).length; }), ri = -1, pi = 0;
+    runs.forEach(function (r, k) { if (r.id === cur.r.id) { ri = k; pi = keptList(r).map(function (x) { return x.p; }).indexOf(cur.p); } });
+    if (ri < 0) return null;
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      var to = runs[ri + (key === "ArrowUp" ? -1 : 1)];
+      if (!to) return null;
+      var kl = keptList(to);
+      return kl[Math.min(Math.max(pi, 0), kl.length - 1)];
+    }
+    var flat = [];
+    runs.forEach(function (r) { keptList(r).forEach(function (x) { flat.push(x); }); });
+    var fi = -1;
+    flat.forEach(function (x, k) { if (x.r.id === cur.r.id && x.p.file === cur.p.file) fi = k; });
+    return flat[fi + (key === "ArrowLeft" ? -1 : 1)] || null;
+  }
+  function thumbOf(it) {
+    if (state.look === "gallery") {
+      var at = -1;
+      items().forEach(function (x, k) { if (x.r.id === it.r.id && x.p.file === it.p.file) at = k; });
+      return at < 0 ? null : document.querySelector('#arRuns .ar-gpic[data-g="' + at + '"]');
+    }
+    return document.querySelector('#arRuns .ar-run[data-id="' + it.r.id + '"] .ar-pic[data-i="' + it.r.pictures.indexOf(it.p) + '"]');
+  }
+  document.addEventListener("keydown", function (e) {
+    var k = e.key;
+    if (k !== "ArrowLeft" && k !== "ArrowRight" && k !== "ArrowUp" && k !== "ArrowDown") return;
+    if (document.body.dataset.tab !== "artist" || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (state.look !== "gallery" && state.look !== "runs") return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || (t.closest && t.closest("#arEdgeL, #arEdgeR, [role=slider], [role=separator], .hm-menu")))) return;
+    if (state.view || state.compare || document.querySelector(".hd-back, .hm-menu, .ar-lib-back, .ar-mask, .ar-cmp")) return;
+    var cur = selected();
+    if (!cur) return;                                    // no picture: the keys stay the player's (its seek)
+    e.preventDefault();                                  // the library's keys, at its ends too
+    var next = navStep(k, cur);
+    if (!next) return;
+    pick(next, false);
+    var th = thumbOf(next);
+    if (th && th.scrollIntoView) th.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, true);
   function stageList(it) {                               // what ‹ › walk over the page: the gallery as shown, else the picture's run
     var list = state.look === "gallery" ? items() : keptList(it.r), at = -1;
     list.forEach(function (x, k) { if (x.r.id === it.r.id && x.p.file === it.p.file) at = k; });
@@ -953,7 +1395,11 @@
     var meta = [];
     if (p) meta.push(p.shape + " · " + p.w + "×" + p.h, tr("seed " + p.seed));   // HERESY 1339: one phrase each
     else meta.push((r.shapes || []).join(" · ") + (r.count > 1 ? " × " + r.count : ""), tr("seed " + r.seed + (r.count > 1 ? "…" + (r.seed + r.count - 1) : "")));
-    meta.push(painterLabel(r) + (r.model ? " · " + String(r.model).replace(/\.(safetensors|pth)$/, "") : ""), when(r.created));   // HERESY 1318: its fine-tune; 1322: its upscaler
+    meta.push(painterLabel(r) + (r.model && !(r.passes && r.passes.length) ? " · " + String(r.model).replace(/\.(safetensors|pth)$/, "") : ""), when(r.created));   // HERESY 1318: its fine-tune; 1322: its upscaler
+    if (r.passes && r.passes.length) {                   // HERESY 1355: each pass, how they landed, the long side, the colours
+      meta.push(r.passes.map(function (x) { return upShort(x.model) + " \u00d7" + x.factor; }).join(" \u2192 "));
+      meta.push(tr("lands") + " " + tr(r.resample || "bilinear") + (r.long ? " · " + tr("long side " + r.long) : "") + (r.match ? " · " + tr("colours as the picture's") : ""));
+    }
     if (r.took) meta.push(Math.round(r.took) + " s");
     if (r.sampling && Object.keys(r.sampling).length) {   // HERESY 1319; 1328: a run's lightning > 0 was Lightning on, 0 off
       var rs = Object.assign(sampDefaults(r.painter), r.sampling);
@@ -961,9 +1407,14 @@
       meta.push(sampSay(r.painter, rs));
     }
     if (r.loras && r.loras.length) meta.push("LoRA " + r.loras.map(function (l) { return loraName(loraFind(l.id), l.id) + " " + (+l.weight).toFixed(2); }).join(", "));   // HERESY 1316
-    if (r.ref) meta.push(tr("from a reference · " + (r.fit ? "painted around" : (+r.strength).toFixed(2)) + (r.masked ? " · masked" : "")));   // HERESY 1305–1307
+    if (r.ref && r.ref_as) meta.push(tr(r.ref_as === "style" ? "in the picture's style" : "edited by words"));   // HERESY 1388
+    else if (r.ref) meta.push(tr("from a reference · " + (r.fit ? "painted around" : (+r.strength).toFixed(2)) + (r.masked ? " · masked" : "")));   // HERESY 1305–1307
     if (r.ref && r.place) meta.push(tr("placed on the canvas"));     // HERESY 1346
-    if (r.gpu != null) meta.push("GPU " + r.gpu);
+    if (r.scale) meta.push(tr("second pass \u00d7" + r.scale));      // HERESY 1384
+    if (r.regions && r.regions.length) meta.push(tr("regions " + r.regions.length));   // HERESY 1387
+    if (r.inject) meta.push(tr("extra noise " + (+r.inject).toFixed(2)));   // HERESY 1385
+    if (r.gpus && r.gpus.length > 1) meta.push("GPU " + r.gpus.join(", "));   // HERESY 1354: on the lab's cards at once
+    else if (r.gpu != null) meta.push("GPU " + r.gpu);
     // HERESY 1342 (Viktor: «Адаптивный offload на CPU можно предусмотреть в таких случаях?»): its painter streamed from RAM, and the card's peak
     if (r.streamed) meta.push(r.streamed.kept ? tr("streamed from RAM: " + r.streamed.kept + " of its " + r.streamed.of + " blocks on the card") : tr("streamed from RAM, block by block"));
     if (r.peak_gb) meta.push(tr("VRAM peak " + r.peak_gb + " GB"));
@@ -981,9 +1432,13 @@
         '" download="' + esc("ruach-artist-" + r.id + "-" + p.file) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
         '<button type="button" class="btn ghost small" data-stage="view" data-tip="' + esc(tr("Over the whole page: ← → walk the pictures, Esc closes")) + '">' + esc(tr("Over the page")) + "</button>" +
         '<button type="button" class="pb-btn ar-vstar' + (p.star ? " is-on" : "") + '" data-stage="star" aria-pressed="' + (p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(p.star) + "</button>" +
-        '<button type="button" class="btn ghost small ar-aside" data-stage="aside" data-tip="' + esc(tr("This picture to the trash: the library's Trash brings it back")) + '">' + esc(tr("Trash")) + "</button>" +   // HERESY 1321
+        '<button type="button" class="pb-btn ar-vprot' + (p.protected ? " is-on" : "") + '" data-stage="protect" aria-pressed="' + (p.protected ? "true" : "false") + '" aria-label="' + esc(tr(p.protected ? "Take its protection off" : "Protect it")) +   // HERESY 1367
+          '" data-tip="' + esc(tr(p.protected ? PROT_ON : PROT_OFF)) + '">' + shieldIcon(p.protected) + "</button>" +
+        '<button type="button" class="btn ghost small ar-aside" data-stage="aside"' + (p.protected ? " disabled" : "") + ' data-tip="' + esc(tr(p.protected ? "Protected: it never goes to the trash" : "This picture to the trash: the library's Trash brings it back")) + '">' + esc(tr("Trash")) + "</button>" +   // HERESY 1321; 1367
+        spButton(r) +                                   // HERESY 1384: the second pass
         '<button type="button" class="btn ghost small' + (state.upOpen ? " is-on" : "") + '" data-stage="upscale" data-tip="' + esc(tr("Make it 2K or 4K (its long side 2560 or 3840) with an upscaler from artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN…): a run of its own")) + '">' + esc(tr("Upscale…")) + "</button>" +
-        (state.upOpen ? upRow(p) : "");   // HERESY 1322; 1332: by the picture's size
+        (state.upOpen ? upRow(p) : "") +   // HERESY 1322; 1332: by the picture's size
+        (state.spOpen && spOk(r) ? spRow(p) : "");   // HERESY 1384
     }
     // HERESY 1345 (Viktor: «фрейм с промптом убрать в массивный, но не мешающий тултип > вправо от картинки поверх правой колонки — при
     // наведении мышью на картинку… Инфу по самой генерации тоже в этот же тултип»): the buttons under the picture, the data and the prompt
@@ -1038,7 +1493,8 @@
     if (!box) return;
     var run = drawingRun(), it = (!run || state.pinSel) ? selected() : null, key, html;
     if (run && !state.pinSel) {
-      var n = (run.pictures || []).length + 1, step = run.status === "running" && run.live && run.live.live === n ? run.live : null;
+      var lv = run.status === "running" && run.live ? run.live : null;   // HERESY 1354: two cards finish out of turn: the step names its picture
+      var n = lv ? +lv.live : (run.pictures || []).length + 1, step = lv;
       var sh = shapeOf((run.shapes || ["1:1"])[(n - 1) % (run.shapes || ["1:1"]).length]);
       key = "live:" + run.id + ":" + run.status + ":" + n + ":" + (step ? step.step : 0) + ":" + (run.waiting || "");
       html = run.status === "running"
@@ -1057,6 +1513,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("#arRuns .ar-thumb.is-sel"), function (x) { x.classList.remove("is-sel"); });
     if (it) markPicked(it);
     paintProgress();                                     // HERESY 1332
+    key += ":" + (window.RuachI18n ? window.RuachI18n.lang() : "en");   // HERESY 1380: the page's language too: its words are written in it
     if (key === state.stageKey) return fitStage();
     state.stageKey = key;
     ($("arStageIn") || box).innerHTML = html;               // HERESY 1345: the progress over it stays
@@ -1080,11 +1537,16 @@
     if (!run) { box.hidden = true; return; }
     box.hidden = false;
     var of = run.of || 1, done = (run.pictures || []).length, live = run.status === "running" && run.live ? run.live : null;
-    var frac = run.status === "running" ? Math.min(1, (done + (live && live.of ? live.step / live.of : 0)) / of) : 0;
+    var lives = run.status === "running" && run.lives && run.lives.length ? run.lives : live ? [live] : [];   // HERESY 1354: each card's step
+    var frac = run.status === "running" ? Math.min(1, (done + lives.reduce(function (s, l) { return s + (l.of ? l.step / l.of : 0); }, 0)) / of) : 0;
+    if (run.status === "running" && run.passes && run.passes.length) frac = Math.min(1, ((run.chain_at && run.chain_at.k) || 0) / run.passes.length);   // HERESY 1355
+    var on = (run.gpus || []).length;
     box.classList.toggle("is-waiting", run.status !== "running");
     box.querySelector("i").style.width = (run.status === "running" ? Math.round(frac * 100) : 100) + "%";
     $("arProgressSay").textContent = run.status === "running"
-      ? tr((run.kind === "upscale" ? "upscaling…" : "picture " + Math.min(of, done + 1) + " of " + of + (live && live.of ? " · step " + live.step + " / " + live.of : "")) + " · " + Math.round(frac * 100) + "%")
+      ? (run.kind === "upscale" && run.passes && run.passes.length ? tr("upscaling · pass " + Math.min(run.passes.length, ((run.chain_at && run.chain_at.k) || 0) + 1) + " of " + run.passes.length) :   // HERESY 1355
+        tr((run.kind === "upscale" ? "upscaling…" : "picture " + (live ? +live.live : Math.min(of, done + 1)) + " of " + of + (live && live.of ? " · step " + live.step + " / " + live.of : "")) + " · " + Math.round(frac * 100) + "%")) +
+        (on > 1 ? " · " + tr("on " + on + " cards") : "")
       : tr(run.waiting ? "waits for a card" : "in the queue");
   }
   // HERESY 1336 (Viktor: «По максимуму на картинки контекстное меню»): a picture's menu, a right click on it in the room or over the page
@@ -1138,6 +1600,8 @@
       { label: tr("Upscale"), items: [up("2k"), up("4k")] },
       { sep: true },
       { label: p.star ? tr("Unstar") : tr("Star it"), action: function () { var b = vw && vw.querySelector(".ar-vstar"); if (b) b.click(); else star(r, p, !p.star); } },
+      { label: p.protected ? tr("Take its protection off") : tr("Protect it"), hint: tr(p.protected ? PROT_ON : PROT_OFF),   // HERESY 1367
+        action: function () { var b = vw && vw.querySelector(".ar-vprot"); if (b) b.click(); else protectPics([{ id: r.id, file: p.file }], !p.protected); } },
       { label: picked ? tr("Let go") : tr("Pick it"), hint: tr("The picked are starred or put in the trash together from the bar over the library"), action: function () { togglePick(it, false, items()); } },
       { label: tr("Copy the prompt"), disabled: !r.prompt, action: function () { copyText(r.prompt || "", tr("The prompt copied")); } },
       { label: tr("Copy the seed") + " · " + p.seed, raw: true, action: function () { copyText(p.seed, tr("The seed copied: " + p.seed)); } },
@@ -1179,13 +1643,53 @@
     var act = b.dataset.stage;
     if (act === "view") { var w = stageList(it); view(w.list, w.at); }
     else if (act === "star") star(it.r, it.p, !it.p.star);
+    else if (act === "protect") protectPics([{ id: it.r.id, file: it.p.file }], !it.p.protected);   // HERESY 1367
     else if (act === "cover") cover(it.r, it.p);
     else if (act === "form") { fillForm({ prompt: it.r.prompt, shapes: [it.p.shape], count: 1, seed: it.p.seed, painter: it.r.kind === "upscale" ? null : it.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
     else if (act === "ref") setRef({ id: it.r.id, file: it.p.file, url: fileUrl(it.r.id, it.p.thumb || it.p.file) });   // HERESY 1305
     else if (act === "compare") comparePick(it);                                                                         // HERESY 1308
     else if (act === "aside") asidePics([{ id: it.r.id, file: it.p.file }]);                                           // HERESY 1321
-    else if (act === "upscale") { state.upOpen = !state.upOpen; if (state.upOpen) loadUpscalers(); state.stageKey = ""; paintStage(); }   // HERESY 1322
+    else if (act === "second") { state.spOpen = !state.spOpen; state.stageKey = ""; paintStage(); }   // HERESY 1384
+    else if (act === "upscale") { state.upOpen = !state.upOpen; if (state.upOpen) { state.upscalers = null; loadUpscalers(); } state.stageKey = ""; paintStage(); }   // HERESY 1322; 1355: read anew each time it opens (a model put in meanwhile)
   }
+  document.addEventListener("click", function (e) {      // HERESY 1355: the upscalers' window, the passes
+    var g = e.target.closest("#arStage [data-up-guide]"), ch = e.target.closest("#arStage [data-up-chain]"), uc = e.target.closest("#arStage [data-uc], #arStage [data-uc-x]");
+    if (g) return openUpGuide();
+    if (ch) { state.upChainOpen = !state.upChainOpen; state.stageKey = ""; return paintStage(); }
+    if (!uc) return;
+    var it = selected(), c = chainRead() || chainNow(state.upscalers);
+    if (uc.hasAttribute("data-uc-x")) { c.passes.splice(+uc.closest("[data-uc-k]").dataset.ucK, 1); chainKeep(c); }
+    else if (uc.dataset.uc === "add" && c.passes.length < 4) { c.passes.push({ model: c.passes[c.passes.length - 1].model, factor: c.passes[c.passes.length - 1].factor }); chainKeep(c); }
+    else if (uc.dataset.uc === "viktor") chainKeep(JSON.parse(JSON.stringify(VIKTOR_CHAIN)));
+    else if (uc.dataset.uc === "go" && it && !uc.disabled) return chainGo({ id: it.r.id, file: it.p.file }, c);
+    state.stageKey = ""; paintStage();
+  });
+  document.addEventListener("change", function (e) {     // HERESY 1355: a field of the passes kept, the size and time said again; the i's tip
+    if (e.target.closest("#arStage [data-up-chain-panel]")) { chainRead(); state.stageKey = ""; return paintStage(); }
+    if (e.target.matches && e.target.matches("[data-up-tta]")) { keep("yue2.arUpTta", e.target.checked ? "1" : null); return; }   // HERESY 1364
+    if (e.target.id === "arUpModel") {
+      keep("yue2.arUpModel", e.target.value);
+      var i = document.querySelector("#arStage .ar-up-info"), u = (state.upscalers || []).filter(function (v) { return v.name === e.target.value; })[0];
+      if (i) i.dataset.tip = upTip(u);
+    }
+  });
+  document.addEventListener("keydown", function (e) {    // the i opens its window from the keys too
+    if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("#arStage [data-up-guide]")) { e.preventDefault(); openUpGuide(); }
+  });
+  document.addEventListener("click", function (e) {      // HERESY 1384: ×1.5 and ×2 of the second pass
+    var b = e.target.closest("#arStage [data-sp]"), it = b && selected();
+    if (it && !b.disabled) secondPass(it.r, it.p, +b.dataset.sp);
+  });
+  document.addEventListener("input", function (e) {      // HERESY 1384: how much it may change, kept
+    if (e.target.id === "arSpNoise") {                 // HERESY 1385: the extra noise, kept
+      keep("yue2.arSpNoise", e.target.value);
+      if ($("arSpNoiseOut")) $("arSpNoiseOut").textContent = (+e.target.value).toFixed(2);
+      return;
+    }
+    if (e.target.id !== "arSpStr") return;
+    keep("yue2.arSpStr", e.target.value);
+    if ($("arSpStrOut")) $("arSpStrOut").textContent = (+e.target.value).toFixed(2);
+  });
   document.addEventListener("click", function (e) {      // HERESY 1322: ×2 and ×4 in the stage's row
     var b = e.target.closest("#arStage [data-up]");
     if (!b) return;
@@ -1195,14 +1699,25 @@
   function edges() {                                     // the two edges: dragged, ← →, Home or a double click; the widths kept
     var cols = $("arCols");
     if (!cols) return;
-    var E = { l: { key: "yue2.arL", min: 280, max: 640, def: 380, col: ".ar-left", prop: "--ar-l", sign: 1 },
-              r: { key: "yue2.arR", min: 300, max: 900, def: 560, col: ".ar-right", prop: "--ar-r", sign: -1 } };
+    // HERESY 1366 (Viktor 11.10.2026: «Поставь минимум 25% ширины экрана, максимум 30%. На правую колонку минимум 20%, максимум 35%»): the
+    // edges' bounds and their own widths are shares of the window, measured each time: a window made wider or narrower brings the kept
+    // widths back inside them
+    var E = { l: { key: "yue2.arL", min: 0.25, max: 0.30, def: 0.25, col: ".ar-left", prop: "--ar-l", sign: 1 },
+              r: { key: "yue2.arR", min: 0.20, max: 0.35, def: 0.28, col: ".ar-right", prop: "--ar-r", sign: -1 } };
+    function px(f) { return Math.round(f * window.innerWidth); }
     Object.keys(E).forEach(function (s) {
       var e = E[s], rz = $(s === "l" ? "arEdgeL" : "arEdgeR"), col = cols.querySelector(e.col);
       if (!rz || !col) return;
-      function setW(w) { w = Math.max(e.min, Math.min(e.max, Math.round(w))); cols.style.setProperty(e.prop, w + "px"); rz.setAttribute("aria-valuenow", String(w)); fitStage(); return w; }
-      rz.setAttribute("aria-valuemin", String(e.min)); rz.setAttribute("aria-valuemax", String(e.max));
-      setW(parseInt(recall(e.key), 10) || e.def);
+      function setW(w) {
+        var lo = px(e.min), hi = px(e.max);
+        w = Math.max(lo, Math.min(hi, Math.round(w)));
+        cols.style.setProperty(e.prop, w + "px");
+        rz.setAttribute("aria-valuemin", String(lo)); rz.setAttribute("aria-valuemax", String(hi)); rz.setAttribute("aria-valuenow", String(w));
+        fitStage();
+        return w;
+      }
+      setW(parseInt(recall(e.key), 10) || px(e.def));
+      window.addEventListener("resize", function () { setW(parseInt(recall(e.key), 10) || px(e.def)); });
       rz.addEventListener("pointerdown", function (ev) {
         if (ev.button !== 0) return;
         ev.preventDefault();
@@ -1217,7 +1732,7 @@
         }
         rz.addEventListener("pointermove", move); rz.addEventListener("pointerup", up); rz.addEventListener("pointercancel", up);
       });
-      rz.addEventListener("dblclick", function () { keep(e.key, null); setW(e.def); });
+      rz.addEventListener("dblclick", function () { keep(e.key, null); setW(px(e.def)); });
       rz.addEventListener("keydown", function (k) {
         if (k.key === "ArrowLeft" || k.key === "ArrowRight") { k.preventDefault(); k.stopPropagation(); keep(e.key, String(setW(col.getBoundingClientRect().width + e.sign * (k.key === "ArrowRight" ? 16 : -16)))); }
         else if (k.key === "Home") { k.preventDefault(); k.stopPropagation(); keep(e.key, null); setW(e.def); }
@@ -1235,6 +1750,7 @@
       '<img class="art-img" alt="" draggable="false" />' +
       '<figcaption class="art-cap"><span class="art-title" translate="no"></span><span class="art-count"></span>' +
       '<button type="button" class="pb-btn ar-vstar" aria-label="' + esc(tr("Star it")) + '"></button>' +
+      '<button type="button" class="pb-btn ar-vprot" aria-label="' + esc(tr("Protect it")) + '"></button>' +   // HERESY 1367
       '<button type="button" class="btn small ghost ar-vform" data-tip="' + esc(tr("Its prompt, seed and shape back in the form")) + '">' + esc(tr("To the form")) + "</button>" +
       '<button type="button" class="btn small ar-cover" data-act="cover"></button>' +
       '<a class="pb-btn art-dl" aria-label="' + esc(tr("Download the picture")) + '" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '">' +
@@ -1265,6 +1781,11 @@
       st.textContent = p.star ? "★" : "☆";
       st.classList.toggle("is-on", !!p.star);
       st.dataset.tip = p.star ? tr("Starred: ☆ takes the star off") : tr("Star it: the gallery's ★ shows the starred");
+      var pt = back.querySelector(".ar-vprot");               // HERESY 1367
+      pt.innerHTML = shieldIcon(p.protected);
+      pt.classList.toggle("is-on", !!p.protected);
+      pt.setAttribute("aria-label", tr(p.protected ? "Take its protection off" : "Protect it"));
+      pt.dataset.tip = tr(p.protected ? PROT_ON : PROT_OFF);
       var img = back.querySelector(".art-img"), full = fileUrl(r.id, p.file), small = p.thumb ? fileUrl(r.id, p.thumb) : "";
       if (coming) { coming.onload = coming.onerror = null; coming.src = ""; }   // the step before's full picture: let go
       var tok = ++loads, pre = coming = new Image();
@@ -1310,6 +1831,7 @@
       if (e.target.closest(".art-next")) return step(1);
       if (e.target.closest(".ar-cover")) { var it = list[i]; close(); cover(it.r, it.p); }
       if (e.target.closest(".ar-vstar")) { var s0 = list[i]; star(s0.r, s0.p, !s0.p.star).then(paint); }
+      if (e.target.closest(".ar-vprot")) { var v0 = list[i]; protectPics([{ id: v0.r.id, file: v0.p.file }], !v0.p.protected).then(paint); }   // HERESY 1367
       if (e.target.closest(".ar-vform")) { var f0 = list[i]; close(); fillForm({ prompt: f0.r.prompt, shapes: [f0.p.shape], count: 1, seed: f0.p.seed, painter: f0.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
     });
     state.view = { close: close };
@@ -1321,8 +1843,10 @@
   // HERESY 1316 (Viktor 10.10.2026: «Положил в artwork/loras/<семейство>/»; «скан поддиректорий»; «возле адаптера лежит его картинка»;
   // «сканирование Civitai по хешу»; «Адаптеры пользователи пусть себе тянут по твоему Гайду прямо в комнате»): the adapters of the
   // painter's family, each at its strength, up to four, kept per family in this browser; the library to pick them from
+  // HERESY 1353 (Viktor 11.10.2026: «В списке LoRA у нас макс 4 адаптера. Разреши добавление до 8, но... активными только макс 4»): eight
+  // in the list, four of them in the run (the others muted, 1341's way); a fifth brought in comes muted
   var FAMILY = { "krea2-q4": "krea2", "krea2-q8": "krea2", "qwen21": "qwen-image-2.1", "qwen2512-q4": "qwen-image-2512", "qwen2512-q6": "qwen-image-2512", "qwen2512-fp8": "qwen-image-2512" };
-  var LORA_MAX = 4;
+  var LORA_MAX = 8, LORA_ON = 4;
   KEY.loras = "yue2.arLoras";
   function familyNow() { return FAMILY[$("arPainter").value] || ""; }
   function lorasAll() { try { var a = JSON.parse(recall(KEY.loras) || "{}"); return a && typeof a === "object" ? a : {}; } catch (e) { return {}; } }
@@ -1333,11 +1857,66 @@
   function loraFind(id) { return loraRows(String(id).split("/")[0]).filter(function (r) { return r.id === id; })[0] || null; }
   function loraName(e, id) { var info = (e && e.info) || {}; return info.title || (e ? e.name : String(id).split("/").pop().replace(/\.safetensors$/, "")); }
   function loadLoras() { return api("/artist/loras").then(function (d) { state.loraLib = d; paintLoras(); return d; }).catch(function () { paintLoras(); }); }
+  function loraOn(list) { return (list || []).filter(function (l) { return !l.muted; }).length; }
+  function archTitle(e) { var a = (state.loraLib && state.loraLib.arch) || {}; return (e && a[e.made_for]) || (e && e.made_for) || ""; }
+  // HERESY 1353 (Viktor 11.10.2026: «Автодобавление триггерных слов в промпт»): an adapter brought into the run puts its trigger words
+  // into the prompt (those not there yet), and taken out of it (muted, taken off) takes out what it put there, unless another adapter in
+  // the run has the same word; what each put in is kept in this browser. Off and on again in the adapters' menu.
+  KEY.loraWords = "yue2.arLoraWords";
+  function autoWords() { return recall("yue2.arLoraAuto") !== "0"; }
+  function wordsPut() { try { var o = JSON.parse(recall(KEY.loraWords) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } }
+  function wordRe(w, lead) { return new RegExp((lead ? ",\\s*" : "(^|[,;.\\s])") + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?=\\s*$|\\s*[,;.])", "i"); }
+  function wordsIn(id) {
+    if (!autoWords()) return;
+    var e = loraFind(id), words = ((e && e.info && e.info.words) || []).slice(0, 4), p = $("arPrompt"), v = p.value.replace(/\s+$/, ""), put = [];
+    words.forEach(function (w) { if (!wordRe(w).test(v)) { v = v ? v + (/[,.;:]$/.test(v) ? " " : ", ") + w : w; put.push(w); } });
+    if (!put.length) return;
+    p.value = v;
+    var all = wordsPut(); all[id] = (all[id] || []).concat(put); keep(KEY.loraWords, JSON.stringify(all));
+    keepForm(); paintForm();
+    toast(tr("Its trigger words into the prompt:") + " " + put.join(", "));
+  }
+  function wordsOut(id) {
+    var all = wordsPut(), put = all[id] || [];
+    delete all[id]; keep(KEY.loraWords, JSON.stringify(all));
+    if (!put.length) return;
+    var others = [], p = $("arPrompt"), v = p.value, out = [];
+    lorasNow().forEach(function (l) { if (!l.muted && l.id !== id) { var o = loraFind(l.id); others = others.concat((o && o.info && o.info.words) || []); } });
+    put.forEach(function (w) {
+      if (others.some(function (o) { return o.toLowerCase() === w.toLowerCase(); })) return;
+      var lead = wordRe(w, true), alone = new RegExp("^\\s*" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*(,\\s*|$)", "i");
+      if (lead.test(v)) { v = v.replace(lead, ""); out.push(w); }          // «…, word» as it was put
+      else if (alone.test(v)) { v = v.replace(alone, ""); out.push(w); }   // or the prompt's first word
+    });
+    if (!out.length) return;
+    p.value = v;
+    keepForm(); paintForm();
+    toast(tr("Its trigger words out of the prompt:") + " " + out.join(", "));
+  }
+  // HERESY 1365 (TODO.md: «Their strength by steps (keyframes, as Viktor's ComfyUI hooks)»): an adapter's keyframes, multipliers of its
+  // strength at shares of the run's steps, typed as «0%:1, 50%:1, 60%:0» (eight at most); the strength stays its own, they shape it
+  var KEYS_TIP = "Its strength over the steps: keyframes of a multiplier at a share of the steps, as ComfyUI's LoRA hooks. «0%:1, 50%:1, 60%:0» keeps it whole for half the steps and lets it go by 60 %; «0%:0, 30%:1» brings it in after the start. Between keyframes the multiplier runs straight; two at one share make a step.";
+  function keysParse(text) {                             // [[share, multiplier]…], null for nothing, or an Error
+    var s = String(text || "").trim();
+    if (!s) return null;
+    var out = [], parts = s.split(/[,;]+/);
+    for (var i = 0; i < parts.length; i++) {
+      var m = /^\s*(\d+(?:[.,]\d+)?)\s*%?\s*[:=]\s*(\d+(?:[.,]\d+)?)\s*$/.exec(parts[i]);
+      if (!m) return new Error(parts[i].trim());
+      var p = +m[1].replace(",", "."), w = +m[2].replace(",", ".");
+      if (p > 100 || w > 2) return new Error(parts[i].trim());
+      out.push([Math.round(p * 100) / 10000, Math.round(w * 1000) / 1000]);
+    }
+    if (out.length > 8) return new Error(">8");
+    out.sort(function (a, b) { return a[0] - b[0]; });
+    return out.every(function (k) { return k[1] === 1; }) ? null : out;
+  }
+  function keysText(keys) { return (keys || []).map(function (k) { return +(k[0] * 100).toFixed(2) + "%:" + k[1]; }).join(", "); }
   function paintLoras() {
     var box = $("arLoraList"), list = lorasNow(), fam = familyNow();
     if (!box) return;
     var titles = (state.loraLib && state.loraLib.titles) || {}, have = state.loraLib ? loraRows(fam).length : null;
-    $("arLoraSay").textContent = list.length ? list.length + " / " + LORA_MAX : have === 0 ? tr("none here for " + (titles[fam] || fam)) : have ? tr(have + " here") : "";
+    $("arLoraSay").textContent = list.length ? tr(loraOn(list) + " on · " + list.length + " / " + LORA_MAX) : have === 0 ? tr("none here for " + (titles[fam] || fam)) : have ? tr(have + " here") : "";   // HERESY 1353
     $("arLoraAdd").disabled = !fam;
     box.innerHTML = list.map(function (l, i) {
       var e = loraFind(l.id), words = ((e && e.info && e.info.words) || []).slice(0, 4);
@@ -1346,11 +1925,14 @@
         '<span class="ar-lora-name" translate="no" title="' + esc(l.id) + '">' + esc(loraName(e, l.id)) +
         (l.muted ? '<span class="lora-muted-tag" data-tip="' + esc(tr("Right-click: back in the run")) + '">' + esc(tr("muted")) + "</span>" : "") + "</span>" +   // HERESY 1341
         '<button type="button" class="pb-btn ar-lora-x" data-lx="' + i + '" aria-label="' + esc(tr("Take it off")) + '">\u2715</button>' +
+        '<button type="button" class="pb-btn ar-lora-kb' + (l.keys ? " is-on" : "") + '" data-lk="' + i + '" aria-label="' + esc(tr("Its strength over the steps")) + '" data-tip="' + esc(tr(KEYS_TIP)) + '">\u23f1</button>' +   // HERESY 1365
         '<span class="ar-lora-slide"><input type="range" class="ar-lora-w" min="0" max="1.5" step="0.05" value="' + (+l.weight).toFixed(2) + '" aria-label="' + esc(tr("Its strength")) + '" />' +
         '<span class="ar-lora-wv mono">' + (+l.weight).toFixed(2) + "</span></span>" +
         (words.length ? '<span class="ar-lora-words">' + words.map(function (w) {
           return '<button type="button" class="ar-lora-word" data-word="' + esc(w) + '" data-tip="' + esc(tr("Into the prompt:") + " " + w) + '" translate="no">' + esc(w) + "</button>"; }).join("") + "</span>" : "") +
-        (state.loraLib && !e ? '<span class="ar-lora-gone">' + esc(tr("not in artwork/loras/ any more")) + "</span>" : "") + "</div>";
+        (state.loraLib && !e ? '<span class="ar-lora-gone">' + esc(tr("not in artwork/loras/ any more")) + "</span>" : "") +
+        (l.keys || l.keysOpen ? '<span class="ar-lora-keys"><input type="text" class="ar-lora-k mono" spellcheck="false" autocomplete="off" value="' + esc(keysText(l.keys)) +   // HERESY 1365
+          '" placeholder="0%:1, 50%:1, 60%:0" aria-label="' + esc(tr("Its keyframes")) + '" data-tip="' + esc(tr(KEYS_TIP)) + '" /></span>' : "") + "</div>";
     }).join("") + loraTotalBar(list);                     // HERESY 1335
   }
   // HERESY 1335: the adapters' strengths together, zoned; dragged, all of them in proportion
@@ -1376,12 +1958,265 @@
   }
   function loraToggle(id) {
     var list = lorasNow(), at = list.map(function (l) { return l.id; }).indexOf(id);
-    if (at >= 0) { list.splice(at, 1); setLoras(list); return false; }
-    if (list.length >= LORA_MAX) { toast(tr("Four adapters at most: take one off first"), "bad"); return false; }
-    list.push({ id: id, weight: 0.8 });
+    if (at >= 0) { var gone = list.splice(at, 1)[0]; setLoras(list); if (!gone.muted) wordsOut(id); return false; }
+    var e = loraFind(id);
+    if (e && e.fits === false) { toast(tr("Made for " + archTitle(e) + ": it reaches none of this painter's layers"), "bad"); return false; }   // HERESY 1353
+    if (list.length >= LORA_MAX) { toast(tr("Eight adapters at most in the list: take one off first"), "bad"); return false; }
+    var muted = loraOn(list) >= LORA_ON;                 // HERESY 1353: four in the run; a fifth comes muted
+    list.push(muted ? { id: id, weight: 0.8, muted: true } : { id: id, weight: 0.8 });
     setLoras(list);
+    if (muted) toast(tr("Four in the run at most: this one came in muted (right-click: mute another and bring it in)"));
+    else wordsIn(id);
     return true;
   }
+  function loraMute(at) {                                // HERESY 1341, 1353: muted, or back in the run when fewer than four are on
+    var ls = lorasNow(), l = ls[at];
+    if (!l) return;
+    if (l.muted) {
+      if (loraOn(ls) >= LORA_ON) return toast(tr("Four in the run at most: mute one first"), "bad");
+      delete l.muted; setLoras(ls); wordsIn(l.id);
+    } else { l.muted = true; setLoras(ls); wordsOut(l.id); }
+  }
+  function loraOff(at) { var ls = lorasNow(), gone = ls.splice(at, 1)[0]; setLoras(ls); if (gone && !gone.muted) wordsOut(gone.id); }
+  // HERESY 1353 (Viktor 11.10.2026: «В LoRA менеджере заведи контекстное окно... инфо, триггер, удалить, etc.»): an adapter's menu, in the
+  // library and on its row in the form
+  function loraMenu(id, x, y, after) {
+    if (!window.HeresyMenu) return;
+    var e = loraFind(id), info = (e && e.info) || {}, words = info.words || [], inList = lorasNow().some(function (l) { return l.id === id; });
+    var again = function () { if (after) after(); paintLoras(); };
+    window.HeresyMenu.open(x, y, [
+      { label: inList ? "Take it off the list" : "Add it to the list", icon: inList ? "\u2715" : "+", disabled: !inList && e && e.fits === false, action: function () { loraToggle(id); again(); } },
+      { label: "Info\u2026", icon: "\u24d8", hint: "What it is made for, its trigger words, its file and what its trainer wrote into it", action: function () { openLoraInfo(id, after); } },
+      { sep: true },
+      { label: "Its trigger words into the prompt", icon: "\u270e", disabled: !words.length, action: function () { words.slice(0, 4).forEach(wordIntoPrompt); } },
+      { label: "Copy its trigger words", icon: "\u29c9", disabled: !words.length, action: function () { copyText(words.join(", "), tr("Copied")); } },
+      { label: "Trigger words go into the prompt by themselves", checked: autoWords(), hint: "When an adapter comes into the run its trigger words are added to the prompt, and taken out when it leaves", action: function () { keep("yue2.arLoraAuto", autoWords() ? "0" : ""); } },
+      { sep: true },
+      { label: "Look it up on Civitai", icon: "\u2315", disabled: !!info.url, hint: "Its SHA-256 alone goes to civitai.com: its name, base model and trigger words come back", action: function () { loraLookOne(id).then(again); } },
+      { label: "Its page on Civitai", icon: "\u2197", disabled: !info.url, action: function () { window.open(info.url, "_blank", "noopener"); } },
+      { label: "Copy its file's name", icon: "\u29c9", action: function () { copyText(String(id).split("/").pop(), tr("Copied")); } },
+      { sep: true },
+      { label: "To the art's trash\u2026", icon: "\u2715", danger: true, hint: "With the files beside it; the Librarian's Trash (Art) gives it back", action: function () { loraTrash(id, after); } }
+    ]);
+  }
+  function loraLookOne(id) {
+    return api("/artist/lora-civitai", { id: id }).then(function (e) {
+      var rows = loraRows(String(id).split("/")[0]);
+      for (var k = 0; k < rows.length; k++) if (rows[k].id === e.id) rows[k] = e;
+      toast(e.info && e.info.url ? tr("Known to Civitai: " + (e.info.title || e.name)) : tr("Civitai does not know this file"));
+    }).catch(function (err) { toast(err.message, "bad"); });
+  }
+  function loraTrash(id, after) {
+    var e = loraFind(id), name = loraName(e, id);
+    var go = function () {
+      return api("/artist/lora-trash", { id: id }).then(function () {
+        var ls = lorasNow(), at = ls.map(function (l) { return l.id; }).indexOf(id);
+        if (at >= 0) loraOff(at);
+        toast(tr("In the art's trash: " + name + " (the Librarian's Trash (Art) gives it back)"));
+        var info = document.querySelector(".ar-li-back");
+        if (info) info.remove();
+        return loadLoras().then(function () {               // the library, when it is open, shows it gone too
+          var lib = state.loraLibOpen;
+          if (after) after(); else if (lib && document.querySelector(".ar-lib-back:not(.ar-li-back):not(.ar-get-back)")) lib.paint();
+        });
+      }).catch(function (err) { toast(tr("Not moved: " + err.message), "bad"); });
+    };
+    if (!window.HeresyDialog) return go();
+    window.HeresyDialog.confirm(tr("Move " + name + " to the art's trash, with the files beside it (its picture, its notes)? The Librarian's Trash (Art) gives it back."),
+      { ok: tr("To the trash") }).then(function (ok) { if (ok) go(); });
+  }
+  function openLoraInfo(id, after) {
+    var old = document.querySelector(".ar-li-back");
+    if (old) old.remove();
+    var back = document.createElement("div");
+    back.className = "ar-lib-back ar-li-back";
+    back.setAttribute("role", "dialog");
+    back.setAttribute("aria-label", tr("The adapter"));
+    back.innerHTML = '<div class="ar-lib ar-get ar-li"><div class="ar-lib-head"><b class="ar-li-title" translate="no">' + esc(String(id).split("/").pop().replace(/\.safetensors$/, "")) + "</b>" +
+      '<span class="spacer"></span><button type="button" class="btn primary small" data-li="close">' + esc(tr("Done")) + "</button></div>" +
+      '<div class="ar-get-body ar-li-body"><p class="row-hint">' + esc(tr("Reading the adapter\u2026")) + "</p></div><div class=\"ar-li-acts\"></div></div>";
+    document.body.appendChild(back);
+    var body = back.querySelector(".ar-li-body"), acts = back.querySelector(".ar-li-acts");
+    function close() { document.removeEventListener("keydown", key, true); back.remove(); }
+    function key(ev) { if (ev.key === "Escape" && !document.querySelector(".hd-back, .dialog-back, .hm-menu")) { ev.preventDefault(); ev.stopPropagation(); close(); } }
+    document.addEventListener("keydown", key, true);
+    function paint(d) {
+      var info = d.info || {}, how = d.how || {}, inList = lorasNow().some(function (l) { return l.id === d.id; });
+      back.querySelector(".ar-li-title").textContent = info.title ? info.title + (info.version ? " \u00b7 " + info.version : "") : d.name;
+      var made = d.arch ? (d.arch_title || d.arch) + " " + (d.fits === false ? '<span class="ar-li-bad">' + esc(tr("\u2717 not this painter's: it reaches none of its layers")) + "</span>" :
+        '<span class="ar-li-ok">' + esc(tr("\u2713 this painter's")) + "</span>") : esc(tr("its layers do not say"));
+      var row = function (k, v, raw) { return v ? "<b>" + esc(tr(k)) + "</b><span" + (raw ? "" : ' translate="no"') + ">" + v + "</span>" : ""; };
+      var meta = Object.keys(d.meta || {});
+      body.innerHTML = (d.picture ? '<img class="ar-li-pic" alt="" draggable="false" src="' + esc(loraPic(d.id, 440)) + '" />' : "") +
+        '<div class="ar-li-rows">' +
+        row("Made for", made, true) +
+        row("Its file", esc([how.format, how.layers ? how.layers + " " + tr("layers") : "", how.rank ? tr("rank") + " " + how.rank : "", d.mb + " MB"].filter(Boolean).join(" \u00b7 "))) +
+        row("Base model", esc(info.base || "")) +
+        row("Trigger words", (info.words || []).map(function (w) { return '<button type="button" class="ar-lora-word" data-word="' + esc(w) + '" data-tip="' + esc(tr("Into the prompt:") + " " + w) + '">' + esc(w) + "</button>"; }).join(" ")) +
+        row("Where", esc(d.path)) +
+        row("Beside it", esc((d.beside || []).join(", "))) +
+        row("Changed", esc(d.modified ? when(d.modified) : "")) +
+        row("SHA-256", esc(d.sha256 || "")) +
+        row("Civitai", info.url ? '<a href="' + esc(info.url) + '" target="_blank" rel="noopener">' + esc(info.url.replace(/^https:\/\//, "")) + "</a>" :
+          esc(d.civitai === "not there" ? tr("Civitai does not know this file") : tr("not looked up yet")), true) +
+        (meta.length ? "<details><summary>" + esc(tr("What its trainer wrote into the file")) + " (" + meta.length + ")</summary>" +
+          '<div class="ar-li-meta" translate="no">' + meta.map(function (k) { return "<b>" + esc(k) + "</b><span>" + esc(d.meta[k]) + "</span>"; }).join("") + "</div></details>" : "") +
+        "</div>";
+      acts.innerHTML = '<button type="button" class="btn small" data-li="list"' + (!inList && d.fits === false ? " disabled" : "") + ">" + esc(tr(inList ? "Take it off the list" : "Add it to the list")) + "</button>" +
+        ((info.words || []).length ? '<button type="button" class="btn ghost small" data-li="words">' + esc(tr("Its trigger words into the prompt")) + "</button>" : "") +
+        (info.url ? "" : '<button type="button" class="btn ghost small" data-li="civitai">' + esc(tr("Look it up on Civitai")) + "</button>") +
+        '<span class="spacer"></span><button type="button" class="btn ghost small ar-aside" data-li="trash">' + esc(tr("To the art's trash\u2026")) + "</button>";
+      back.heresyInfo = d;
+    }
+    function load() {
+      return api("/artist/lora-info?id=" + encodeURIComponent(id)).then(paint)
+        .catch(function (err) { body.innerHTML = '<p class="row-hint">' + esc(tr("The adapter could not be read: " + err.message)) + "</p>"; });
+    }
+    back.addEventListener("click", function (ev) {
+      var b = ev.target.closest("[data-li]"), w = ev.target.closest("[data-word]");
+      if (ev.target === back || (b && b.dataset.li === "close")) return close();
+      if (w) return wordIntoPrompt(w.dataset.word);
+      if (!b || b.disabled) return;
+      var d = back.heresyInfo || {};
+      if (b.dataset.li === "list") { loraToggle(id); if (after) after(); paint(d); }
+      else if (b.dataset.li === "words") ((d.info && d.info.words) || []).slice(0, 4).forEach(wordIntoPrompt);
+      else if (b.dataset.li === "civitai") loraLookOne(id).then(load).then(function () { if (after) after(); paintLoras(); });
+      else if (b.dataset.li === "trash") loraTrash(id, after);
+    });
+    load();
+  }
+  // HERESY 1169 · 1360 (Viktor 11.10.2026: «ПО CivitAI согласен»: what our models repository may not share, the user fetches with their
+  // own key): an adapter from Civitai by its link, looked at first (its name, what it is made for, its trigger words, its file and
+  // size), then fetched by the lab into its family's folder (lab/civitai_fetch.py), the progress here and a toast when the window is
+  // closed before it ends; the key lives in this page's memory, and in this browser with Remember (never in user/settings.json, which
+  // anyone on the network can read: heresy-settings.js keeps yue2.civitaiKey local)
+  var CV_KEY = "yue2.civitaiKey", cvTimer = null;
+  function mbOf(b) { return tr((b / 1048576).toFixed(b < 10485760 ? 1 : 0) + " MB"); }
+  function cvFollow(s, win) {
+    clearTimeout(cvTimer);
+    var open = win && document.body.contains(win.back);
+    if (s.status === "starting" || s.status === "running") {
+      if (open) win.running(s);
+      cvTimer = setTimeout(function () {
+        api("/artist/civitai-fetch").then(function (n) { cvFollow(n, win); }).catch(function (err) { if (win && document.body.contains(win.back)) win.said(err.message); });
+      }, 600);
+      return;
+    }
+    if (open) win.ended(s);
+    if (s.status === "done") {
+      if (!s.here) toast(tr("Fetched from Civitai: " + String(s.id || "").split("/").pop()), "good");
+      loadLoras().then(function () { if (state.loraLibOpen) state.loraLibOpen.paint(); });
+    } else if (s.status === "failed" && !open) toast(s.error || tr("The fetch from Civitai failed"), "bad");
+  }
+  function openCivitai(fam, after) {
+    var old = document.querySelector(".ar-cv-back");
+    if (old) old.remove();
+    var titles = Object.assign({ "krea2": "Krea 2", "sdxl": "SDXL", "qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512" },   // the lab's TITLES
+                               (state.loraLib && state.loraLib.titles) || {}), seen = null, target = fam;
+    var back = document.createElement("div");
+    back.className = "ar-lib-back ar-li-back ar-cv-back";
+    back.setAttribute("role", "dialog");
+    back.setAttribute("aria-label", tr("An adapter from Civitai"));
+    back.innerHTML = '<div class="ar-lib ar-get ar-li ar-cv"><div class="ar-lib-head"><b>' + esc(tr("An adapter from Civitai")) + "</b>" +
+      '<span class="spacer"></span><button type="button" class="btn primary small" data-cv="close">' + esc(tr("Done")) + "</button></div>" +
+      '<div class="ar-get-body ar-cv-body">' +
+      '<label class="field"><span class="label">' + esc(tr("Its page on Civitai")) + '</span><input type="text" class="ar-cv-ref" spellcheck="false" autocomplete="off" placeholder="https://civitai.com/models/\u2026" /></label>' +
+      '<div class="ar-cv-keyrow"><label class="field"><span class="label">' + esc(tr("API key")) + '</span><input type="password" class="ar-cv-key" spellcheck="false" autocomplete="off" placeholder="' +
+        esc(tr("civitai.com \u2192 Account settings \u2192 API Keys")) + '" /></label>' +
+      '<label class="check"><input type="checkbox" class="ar-cv-keep" /> <span>' + esc(tr("Remember the key")) + "</span></label></div>" +
+      '<p class="row-hint">' + esc(tr("Many adapters come without a key; some ask for one. The key goes from this page to the studio's lab and from there to civitai.com alone, never into a file.")) + "</p>" +
+      '<div class="ar-cv-what"></div></div>' +
+      '<div class="ar-li-acts"><button type="button" class="btn small" data-cv="look">' + esc(tr("Look")) + "</button>" +
+      '<button type="button" class="btn primary small" data-cv="fetch" disabled>' + esc(tr("Fetch")) + "</button>" +
+      '<button type="button" class="btn ghost small" data-cv="stop" hidden>' + esc(tr("Stop")) + "</button>" +
+      '<button type="button" class="btn ghost small" data-cv="add" hidden>' + esc(tr("Add it to the list")) + "</button>" +
+      '<span class="spacer"></span><span class="row-hint ar-cv-say" aria-live="polite"></span></div></div>';
+    document.body.appendChild(back);
+    var ref = back.querySelector(".ar-cv-ref"), keyIn = back.querySelector(".ar-cv-key"), remem = back.querySelector(".ar-cv-keep");
+    var what = back.querySelector(".ar-cv-what"), say = back.querySelector(".ar-cv-say");
+    var bLook = back.querySelector('[data-cv="look"]'), bFetch = back.querySelector('[data-cv="fetch"]'), bStop = back.querySelector('[data-cv="stop"]'), bAdd = back.querySelector('[data-cv="add"]');
+    var kept = recall(CV_KEY) || "", added = "";
+    keyIn.value = state.civitaiKey || kept;
+    remem.checked = !!kept;
+    function key() { return keyIn.value.trim(); }
+    function remember() { state.civitaiKey = key(); keep(CV_KEY, remem.checked ? key() : null); }
+    var win = {
+      back: back,
+      said: function (text) { say.textContent = text; },
+      running: function (s) {
+        bStop.hidden = false; bLook.disabled = true; bFetch.disabled = true;
+        say.textContent = s.size ? tr(mbOf(s.got || 0) + " of " + mbOf(s.size)) + " \u00b7 " + Math.floor(s.pct || 0) + " %" : tr("Fetching\u2026");
+      },
+      ended: function (s) {
+        bStop.hidden = true; bLook.disabled = false;
+        if (s.status === "done") {
+          added = s.id || "";
+          say.textContent = tr((s.here ? "Here already: " : "Fetched: ") + added);
+          bAdd.hidden = !added || added.split("/")[0] !== familyNow() || lorasNow().some(function (l) { return l.id === added; });
+        } else {
+          say.textContent = s.status === "stopped" ? tr("Stopped: nothing kept") : (s.error || tr("The fetch from Civitai failed"));
+          bFetch.disabled = !(seen && seen.adapter);
+        }
+      }
+    };
+    function close() { document.removeEventListener("keydown", onKey, true); back.remove(); }
+    function onKey(ev) { if (ev.key === "Escape" && !document.querySelector(".hd-back, .dialog-back, .hm-menu")) { ev.preventDefault(); ev.stopPropagation(); close(); } }
+    document.addEventListener("keydown", onKey, true);
+    function paintWhat() {
+      var v = seen, notes = [];
+      if (!v) { what.innerHTML = ""; return; }
+      target = v.family || fam;
+      var row = function (k, val, raw) { return val ? "<b>" + esc(tr(k)) + "</b><span" + (raw ? "" : ' translate="no"') + ">" + val + "</span>" : ""; };
+      if (!v.adapter) notes.push('<p class="ar-li-bad">' + esc(tr("This is a " + (v.type || "model") + " on Civitai, not an adapter: the Artist takes adapters (LORA, LoCon, DoRA).")) + "</p>");
+      else if (v.family && v.family !== fam) notes.push('<p class="row-hint">' + esc(tr("Made for " + v.base + ": it goes into the folder of " + (titles[v.family] || v.family) + ".")) + "</p>");
+      else if (!v.family) notes.push('<p class="ar-li-bad">' + esc(tr("Made for " + (v.base || "a model Civitai does not name") + ": no painter here is known to take it, so it may reach none of the layers of " + (titles[fam] || fam) + ".")) + "</p>");
+      if ((v.here || []).length) notes.push('<p class="row-hint">' + esc(tr("Here already: " + v.here.join(", "))) + "</p>");
+      what.innerHTML = '<div class="ar-li-rows">' +
+        row("Adapter", esc(v.title + (v.name ? " \u00b7 " + v.name : ""))) +
+        row("Base model", esc(v.base || "")) +
+        row("Trigger words", esc((v.words || []).join(" \u00b7 "))) +
+        row("Its file", esc(v.file + (v.bytes ? " \u00b7 " + mbOf(v.bytes) : ""))) +
+        row("Civitai", '<a href="' + esc(v.url) + '" target="_blank" rel="noopener noreferrer">' + esc(String(v.url).replace(/^https:\/\//, "")) + "</a>", true) +
+        "</div>" + notes.join("");
+      bFetch.disabled = !v.adapter || (v.here || []).length > 0;
+      bFetch.textContent = tr("Fetch") + (v.bytes ? " \u00b7 " + mbOf(v.bytes) : "");
+    }
+    function look() {
+      var r = ref.value.trim();
+      if (!r) { ref.focus(); return; }
+      remember();
+      seen = null; paintWhat(); bAdd.hidden = true;
+      bLook.disabled = true; bFetch.disabled = true;
+      say.textContent = tr("Asking Civitai\u2026");
+      api("/artist/civitai-look", { ref: r, key: key() }).then(function (v) { seen = v; say.textContent = ""; paintWhat(); })
+        .catch(function (err) { say.textContent = err.message; })
+        .then(function () { bLook.disabled = false; });
+    }
+    function fetchIt() {
+      if (!seen || !seen.adapter) return;
+      remember();
+      bLook.disabled = true; bFetch.disabled = true;
+      say.textContent = tr("Asking Civitai\u2026");
+      api("/artist/civitai-fetch", { ref: String(seen.version), key: key(), family: target }).then(function (s) { cvFollow(s, win); })
+        .catch(function (err) { say.textContent = err.message; bLook.disabled = false; bFetch.disabled = false; });
+    }
+    [ref, keyIn].forEach(function (el) { el.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); look(); } }); });
+    remem.addEventListener("change", remember);
+    back.addEventListener("click", function (ev) {
+      var b = ev.target.closest("[data-cv]");
+      if (ev.target === back || (b && b.dataset.cv === "close")) return close();
+      if (!b || b.disabled) return;
+      if (b.dataset.cv === "look") look();
+      else if (b.dataset.cv === "fetch") fetchIt();
+      else if (b.dataset.cv === "stop") api("/artist/civitai-fetch", { cancel: true }).catch(function (err) { say.textContent = err.message; });
+      else if (b.dataset.cv === "add" && added) { loraToggle(added); bAdd.hidden = true; if (after) after(); }
+    });
+    // a fetch under way (the window closed and opened again): its progress here
+    api("/artist/civitai-fetch").then(function (s) { if (s.status === "starting" || s.status === "running") cvFollow(s, win); }).catch(function () { /* the lab answers later */ });
+    ref.focus();
+    return win;
+  }
+  window.HeresyArtistCivitai = { open: function () { var f = familyNow(); return f ? openCivitai(f) : null; } };   // for the checks
   function wordIntoPrompt(w) {
     var p = $("arPrompt"), v = p.value.trim();
     if (v.toLowerCase().indexOf(w.toLowerCase()) >= 0) return toast(tr("Already in the prompt: " + w));
@@ -1399,6 +2234,8 @@
     back.innerHTML = '<div class="ar-lib"><div class="ar-lib-head"><b>' + esc(tr("LoRA for " + (titles[fam] || fam))) + "</b>" +
       '<input type="search" class="ar-lib-q" placeholder="' + esc(tr("Search: name, words")) + '" aria-label="' + esc(tr("Search")) + '" />' +
       '<span class="row-hint ar-lib-say"></span><span class="spacer"></span>' +
+      '<button type="button" class="btn ghost small" data-lib="fetch" data-tip="' + esc(tr("An adapter from Civitai into this family's folder: its link, and your own API key when it asks for one")) + '">' +   // HERESY 1360
+        esc(tr("From Civitai\u2026")) + "</button>" +
       '<button type="button" class="btn ghost small" data-lib="civitai" data-tip="' + esc(tr("Each adapter not yet known looked up on civitai.com by its SHA-256 alone: its name, its base model and its trigger words kept beside it (NAME.civitai.info), with its first picture rated safe when it has none")) + '">' + esc(tr("Look up on Civitai")) + "</button>" +
       '<button type="button" class="btn primary small" data-lib="close">' + esc(tr("Done")) + "</button></div>" +
       '<div class="ar-lib-body"><nav class="ar-lib-folders" aria-label="' + esc(tr("Folders")) + '"></nav><div class="ar-lib-grid"></div></div></div>';
@@ -1425,11 +2262,14 @@
         grid.innerHTML = '<div class="ar-lib-empty"><p>' + esc(tr("No adapters for " + (titles[fam] || fam) + " here yet.")) + "</p><p>" +   // HERESY 1339: one sentence each
           esc(tr("Put .safetensors files into the studio's artwork/loras/" + fam + "/ folder: any folders inside it become groups here; a picture beside a file with its name (NAME.jpg, NAME.png, NAME.preview.png) shows on its card.")) + "</p><p>" +
           esc(tr("On Civitai, pick adapters by their base model (" + ({ "krea2": "Krea 2", "qwen-image-2.1": "Qwen 2.1", "qwen-image-2512": "Qwen", "sdxl": "SDXL 1.0" }[fam] || fam) + "), " +
-            "download the .safetensors and put it there; Look up on Civitai then fills in its name and its trigger words.")) + "</p></div>";
+            "download the .safetensors and put it there; Look up on Civitai then fills in its name and its trigger words.")) + "</p><p>" +
+          esc(tr("Or From Civitai\u2026 above: its link, and your own API key when it asks for one; the lab fetches it here.")) + "</p></div>";   // HERESY 1360
       } else {
         grid.innerHTML = list.map(function (r) {
           var info = r.info || {}, on = chosen.indexOf(r.id), mark = r.civitai === "known" ? "\u2713" : r.civitai === "not there" ? "\u2014" : "";
-          return '<button type="button" class="ar-lib-card' + (on >= 0 ? " is-on" : "") + '" data-lid="' + esc(r.id) + '" title="' + esc(r.id) + '" translate="no">' +   // HERESY 1339: a file and its names
+          var alien = r.fits === false;                  // HERESY 1353: its layers are another model's
+          return '<button type="button" class="ar-lib-card' + (on >= 0 ? " is-on" : "") + (alien ? " is-alien" : "") + '" data-lid="' + esc(r.id) + '" title="' + esc(r.id) + '" translate="no">' +   // HERESY 1339: a file and its names
+            (alien ? '<span class="ar-lib-alien" data-tip="' + esc(tr("Made for " + archTitle(r) + ": it reaches none of this painter's layers")) + '">\u2717 ' + esc(archTitle(r)) + "</span>" : "") +
             (r.picture ? '<img alt="" loading="lazy" draggable="false" src="' + esc(loraPic(r.id, 320)) + '" />' : '<span class="ar-lib-nopic" translate="no">' + esc(r.name) + "</span>") +
             (on >= 0 ? '<span class="ar-lib-n">' + (on + 1) + "</span>" : "") +
             '<span class="ar-lib-name" translate="no">' + esc(loraName(r, r.id)) + "</span>" +
@@ -1438,7 +2278,7 @@
             ((info.words || []).length ? '<span class="ar-lib-words" translate="no">' + esc(info.words.slice(0, 3).join(" \u00b7 ")) + "</span>" : "") + "</button>";
         }).join("") || '<p class="row-hint">' + esc(tr("Nothing here matches.")) + "</p>";
       }
-      say.textContent = looking ? say.textContent : chosen.length + " / " + LORA_MAX + " " + tr("on");
+      say.textContent = looking ? say.textContent : tr(loraOn(lorasNow()) + " on · " + chosen.length + " / " + LORA_MAX);   // HERESY 1353
     }
     function lookUp() {
       if (looking) { looking = false; return; }
@@ -1457,16 +2297,23 @@
       next();
     }
     function close() { looking = false; document.removeEventListener("keydown", key, true); back.remove(); paintLoras(); }
-    function key(e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }
+    function key(e) { if (e.key === "Escape" && !document.querySelector(".ar-li-back, .hd-back, .dialog-back, .hm-menu")) { e.preventDefault(); e.stopPropagation(); close(); } }   // HERESY 1353: the Info window first
     document.addEventListener("keydown", key, true);
     back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
     back.querySelector(".ar-lib-q").addEventListener("input", function () { query = this.value.trim(); paintLib(); });
+    grid.addEventListener("contextmenu", function (e) {   // HERESY 1353: the library's own menu on an adapter
+      var c = e.target.closest("[data-lid]");
+      if (!c || !window.HeresyMenu) return;
+      e.preventDefault();
+      loraMenu(c.dataset.lid, e.clientX, e.clientY, paintLib);
+    });
     back.addEventListener("click", function (e) {
       var c = e.target.closest("[data-lid]"), f = e.target.closest("[data-folder]"), b = e.target.closest("[data-lib]");
       if (c) { loraToggle(c.dataset.lid); paintLib(); }
       else if (f) { folder = f.dataset.folder; paintLib(); }
       else if (b && b.dataset.lib === "close") close();
       else if (b && b.dataset.lib === "civitai") lookUp();
+      else if (b && b.dataset.lib === "fetch") openCivitai(fam, paintLib);   // HERESY 1360
     });
     paintLib();
     loadLoras().then(paintLib);
@@ -1495,6 +2342,7 @@
     // HERESY 1316: the adapters: the library, a strength, a word into the prompt, one taken off; the family follows the painter
     $("arLoraAdd").addEventListener("click", openLoraLib);
     $("arPainter").addEventListener("change", paintPainter);   // HERESY 1318: the fine-tune, the note, the adapters' family
+    $("arPainter").addEventListener("change", function () { state.painted = true; keepForm(); }, true);   // HERESY 1375: picked by the user: kept
     $("arModel").addEventListener("change", keepForm);
     ["arSteps", "arSampler", "arSchedule", "arLightOn", "arLight", "arCfg"].forEach(function (id) { $(id).addEventListener("change", keepSampling); });   // HERESY 1319, 1328
     // HERESY 1345 (Viktor: «Фолдинг СЕМПЛИНГА запоминаем при F5 также»)
@@ -1518,6 +2366,19 @@
         loraTotalPaint(lst);
         return;
       }
+      var kin = e.target.closest(".ar-lora-k");          // HERESY 1365: an adapter's keyframes, read as typed
+      if (kin) {
+        var kl = lorasNow(), kat = +kin.closest("[data-li]").dataset.li, parsed = keysParse(kin.value);
+        kin.classList.toggle("is-bad", parsed instanceof Error);
+        kin.dataset.tip = parsed instanceof Error ? tr("Not a keyframe: «" + parsed.message + "». Keyframes as «0%:1, 50%:1, 60%:0»: a share of the steps and a multiplier from 0 to 2, eight at most") : tr(KEYS_TIP);
+        if (!(parsed instanceof Error) && kl[kat]) {
+          kl[kat].keys = parsed; kl[kat].keysOpen = true;
+          var kall = lorasAll(); kall[familyNow()] = kl; keep(KEY.loras, JSON.stringify(kall));
+          var kb = kin.closest("[data-li]").querySelector(".ar-lora-kb");
+          if (kb) kb.classList.toggle("is-on", !!parsed);
+        }
+        return;
+      }
       var w = e.target.closest(".ar-lora-w");
       if (!w) return;
       var row = w.closest("[data-li]"), list = lorasNow(), at = +row.dataset.li;
@@ -1526,6 +2387,17 @@
       loraTotalPaint(list);                              // HERESY 1335
     });
     $("arLoraList").addEventListener("change", function (e) { if (e.target.closest(".ar-lora-tw")) { state.loraTotalDrag = null; loraTotalPaint(lorasNow()); } });
+    $("arLoraList").addEventListener("click", function (e) {   // HERESY 1365: ⏱ opens and closes an adapter's keyframes (closed empty, they go)
+      var kb = e.target.closest("[data-lk]");
+      if (!kb) return;
+      var l = lorasNow(), at = +kb.dataset.lk;
+      if (!l[at]) return;
+      l[at].keysOpen = !(l[at].keysOpen || l[at].keys);
+      if (!l[at].keysOpen) l[at].keys = null;
+      var all = lorasAll(); all[familyNow()] = l; keep(KEY.loras, JSON.stringify(all));
+      paintLoras();
+      if (l[at].keysOpen) { var f = document.querySelector('#arLoraList [data-li="' + at + '"] .ar-lora-k'); if (f) f.focus(); }
+    });
     // HERESY 1341 (Viktor: «Как у Творца мы можем отключить адаптер, не удаляя его из включенных»): the Creator's right-click menu
     $("arLoraList").addEventListener("contextmenu", function (e) {
       var row = e.target.closest(".ar-lora[data-li]");
@@ -1533,16 +2405,21 @@
       e.preventDefault();
       var at = +row.dataset.li, list = lorasNow(), l = list[at];
       if (!l) return;
+      var lw = (function () { var o = loraFind(l.id); return (o && o.info && o.info.words) || []; })();
       window.HeresyMenu.open(e.clientX, e.clientY, [
         { label: l.muted ? "Unmute: back in the run" : "Mute: left out of the run, its strengths kept", icon: l.muted ? "\u25b6" : "\u23f8",
-          action: function () { var ls = lorasNow(); if (!ls[at]) return; if (ls[at].muted) delete ls[at].muted; else ls[at].muted = true; setLoras(ls); } },
+          disabled: l.muted && loraOn(list) >= LORA_ON, hint: l.muted && loraOn(list) >= LORA_ON ? "Four in the run at most: mute one first" : "",   // HERESY 1353
+          action: function () { loraMute(at); } },
+        { label: "Info\u2026", icon: "\u24d8", action: function () { openLoraInfo(l.id); } },   // HERESY 1353
+        { label: "Its trigger words into the prompt", icon: "\u270e", disabled: !lw.length, action: function () { lw.slice(0, 4).forEach(wordIntoPrompt); } },
+        { label: "Trigger words go into the prompt by themselves", checked: autoWords(), action: function () { keep("yue2.arLoraAuto", autoWords() ? "0" : ""); } },
         { sep: true },
-        { label: "Take it off", icon: "\u2715", action: function () { var ls = lorasNow(); ls.splice(at, 1); setLoras(ls); } }
+        { label: "Take it off", icon: "\u2715", action: function () { loraOff(at); } }
       ]);
     });
     $("arLoraList").addEventListener("click", function (e) {
       var x = e.target.closest("[data-lx]"), wd = e.target.closest("[data-word]");
-      if (x) { var list = lorasNow(); list.splice(+x.dataset.lx, 1); setLoras(list); }
+      if (x) loraOff(+x.dataset.lx);                     // HERESY 1353: its trigger words out with it
       else if (wd) wordIntoPrompt(wd.dataset.word);
     });
     paintLoras();
@@ -1552,6 +2429,7 @@
     $("arRefX").addEventListener("click", function () { setRef(null); });
     $("arMaskOpen").addEventListener("click", maskEditor);   // HERESY 1306
     $("arCanvasOpen").addEventListener("click", openCanvas);   // HERESY 1346
+    $("arGet").addEventListener("click", openGet);           // HERESY 1347
     $("arCanvasX").addEventListener("click", function () { state.place = null; paintCanvasSay(); });
     $("arShapes").addEventListener("change", paintCanvasSay);
     $("arRefTake").addEventListener("click", refFromTake);   // HERESY 1309
@@ -1572,6 +2450,42 @@
     if (str >= 0.2 && str <= 1) $("arRefStr").value = String(str);
     paintRefSay();
     $("arRefStr").addEventListener("input", function () { paintRefSay(); keep("yue2.arRefStr", $("arRefStr").value); });
+    var noise = parseFloat(recall("yue2.arRefNoise"));     // HERESY 1385: the extra noise, kept
+    if (noise >= 0 && noise <= 1.5) $("arRefNoise").value = String(noise);
+    paintRefSay();
+    $("arRefNoise").addEventListener("input", function () { paintRefSay(); keep("yue2.arRefNoise", $("arRefNoise").value); });
+    // HERESY 1387: the regions: added, placed, written, removed; kept as they change
+    paintRegions();
+    if (regionsNow().length) $("arRegions").open = true;
+    $("arRegAdd").addEventListener("click", function () {
+      var l = regionsNow(), used = l.map(function (r) { return r.place; });
+      if (l.length >= 3) return;
+      l.push({ place: ["left", "right", "middle"].filter(function (p) { return used.indexOf(p) < 0; })[0] || "middle", prompt: "" });
+      regionsKeep(l); paintRegions(); paintForm();
+      var f = document.querySelector('#arRegList [data-ri="' + (l.length - 1) + '"] [data-rw]'); if (f) f.focus();
+    });
+    $("arRegList").addEventListener("input", function (e) {
+      var row = e.target.closest("[data-ri]"), l = regionsNow();
+      if (!row || !l[+row.dataset.ri]) return;
+      if (e.target.hasAttribute("data-rw")) { l[+row.dataset.ri].prompt = e.target.value; regionsKeep(l); paintRegionSay(); paintForm(); }
+    });
+    $("arRegList").addEventListener("change", function (e) {
+      var row = e.target.closest("[data-ri]"), l = regionsNow();
+      if (!row || !l[+row.dataset.ri] || !e.target.hasAttribute("data-rp")) return;
+      l[+row.dataset.ri].place = e.target.value; regionsKeep(l);
+      row.querySelector(".ar-reg-map").outerHTML = regionMap(e.target.value);
+    });
+    $("arRegList").addEventListener("click", function (e) {
+      var x = e.target.closest("[data-rx]"), row = x && x.closest("[data-ri]"), l = regionsNow();
+      if (!row) return;
+      l.splice(+row.dataset.ri, 1); regionsKeep(l); paintRegions(); paintForm();
+    });
+    $("arPainter").addEventListener("change", paintRegionSay);
+    var ra = recall("yue2.arRefAs");                     // HERESY 1388: how the reference is used, kept
+    if (ra === "edit" || ra === "style") $("arRefAs").value = ra;
+    paintRefAs();
+    $("arRefAs").addEventListener("change", function () { keep("yue2.arRefAs", $("arRefAs").value || null); paintRefAs(); paintForm(); });
+    window.addEventListener("ruach-lang", paintRegions);
     $("arFromTake").addEventListener("click", fromTake);
     $("arPrompt").addEventListener("keydown", function (e) {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("arDraw").disabled) { e.preventDefault(); draw(); }   // HERESY 1340: a second run too
@@ -1584,6 +2498,7 @@
         if (g.dataset.act === "gview" && state.cmpA) compare(state.cmpA, list[at]);   // HERESY 1308: the other of two compared
         else if (g.dataset.act === "gview") pick(list[at], true);    // HERESY 1271: to the stage; 1340: again, back to the run
         else if (g.dataset.act === "gstar") star(list[at].r, list[at].p, !list[at].p.star);
+        else if (g.dataset.act === "gprot") protectPics([{ id: list[at].r.id, file: list[at].p.file }], !list[at].p.protected);   // HERESY 1367
         return;
       }
       var b = e.target.closest("[data-act]"), r = b && runOf(b);
@@ -1598,6 +2513,7 @@
       else if (act === "view") pick({ r: r, p: r.pictures[+fig.dataset.i] }, true);   // HERESY 1271: to the stage; 1340: again, back to the run
       else if (act === "cover" && p) cover(r, p);
       else if (act === "form") { fillForm(r, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, shapes, variations and seed")); }
+      else if (act === "again" && r.kind === "upscale" && r.upscaled_from && r.passes) chainGo(r.upscaled_from, { passes: r.passes, resample: r.resample, long: r.long, match: r.match });   // HERESY 1355
       else if (act === "again" && r.kind === "upscale" && r.upscaled_from) upscaleIt(r.upscaled_from, r.model, r.target || r.factor);   // HERESY 1322, 1332
       else if (act === "again") draw(r);
       else if (act === "trash") trashRun(r);
@@ -1612,6 +2528,7 @@
       var sh = SHAPES.filter(function (s) { return s.id === f[0]; })[0];
       if (sh) return '<button type="button" class="chip ar-fshape" data-filter="' + f[0] + '" aria-label="' + esc(sh.label) + '" data-tip="' + esc(sh.label) + '">' + shapeIcon(f[0]) + "</button>";
       if (f[0] === "star") return '<button type="button" class="chip ar-fshape" data-filter="star" aria-label="' + esc(tr("Starred")) + '" data-tip="' + esc(tr("The starred pictures")) + '">' + starIcon(true) + "</button>";
+      if (f[0] === "protected") return '<button type="button" class="chip ar-fshape" data-filter="protected" aria-label="' + esc(tr("Protected")) + '" data-tip="' + esc(tr("The protected pictures")) + '">' + shieldIcon(true) + "</button>";   // HERESY 1367
       return '<button type="button" class="chip" data-filter="' + f[0] + '">' + esc(tr(f[1])) + "</button>";
     }).join("");
     $("arSizes").innerHTML = SIZES.map(function (z) { return '<button type="button" class="chip" data-size="' + z[0] + '" aria-label="' + esc(tr("Size") + " " + z[1]) + '">' + z[1] + "</button>"; }).join("");
@@ -1624,7 +2541,9 @@
         if (!b) return;
         if (b.dataset.pick === "clear") clearPicked();
         else if (b.dataset.pick === "aside") asidePics(pickedList());
+        else if (b.dataset.pick === "up") upPickedMenu(b);   // HERESY 1364
         else if (b.dataset.pick === "star") starPicked();
+        else if (b.dataset.pick === "protect") protectPicked();   // HERESY 1367
       });
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && Object.keys(state.picked).length && !$("view-artist").classList.contains("is-hidden")) { clearPicked(); }
@@ -1662,7 +2581,7 @@
     edges();
     $("arLive").checked = recall(KEY.live) !== "0";
     $("arLive").addEventListener("change", function () { keep(KEY.live, this.checked ? null : "0"); });
-    window.addEventListener("ruach-lang", function () { paintForm(); paintHead(); paintRuns(); });
+    window.addEventListener("ruach-lang", function () { paintForm(); paintSampling(); paintHead(); paintRuns(); });   // HERESY 1380: paintSampling too
     if (state.hooks.take) setTake(state.hooks.take()); else paintHead();
     paintForm();
   }
@@ -1672,7 +2591,10 @@
     setMask: function (m) { setMask(m); paintRefSay(); },                                            // 1320
     compare: function () { return state.compare; }, picking: function () { return !!state.cmpA; } };  // 1308
   window.HeresyArtist = { init: init, reload: function () { state.pinSel = false; paintHead(); return load(); }, setTake: setTake,
-    loras: { reload: loadLoras, now: lorasNow, set: setLoras, open: openLoraLib, lib: function () { return state.loraLibOpen; } },   // HERESY 1316: for the checks
+    loras: { reload: loadLoras, now: lorasNow, set: setLoras, open: openLoraLib, lib: function () { return state.loraLibOpen; },   // HERESY 1316: for the checks
+             toggle: loraToggle, mute: loraMute, off: loraOff, info: openLoraInfo, menu: loraMenu, max: function () { return [LORA_MAX, LORA_ON]; } },   // HERESY 1353
     painters: loadPainters, sampling: { now: sampNow, body: samplingBody, paint: paintSampling },   // HERESY 1318, 1319
-    canvas: { open: openCanvas, place: function () { return state.place; } } };   // HERESY 1346: for the checks
+    forget: function () { state.painted = false; },     // HERESY 1375: for the checks: a page whose list of painters has not come yet
+    canvas: { open: openCanvas, place: function () { return state.place; } },   // HERESY 1346: for the checks
+    get: openGet };                                      // HERESY 1347
 })();

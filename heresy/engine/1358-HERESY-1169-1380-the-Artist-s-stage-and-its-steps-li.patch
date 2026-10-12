@@ -1,0 +1,42 @@
+From 633aa70b625e24b8cd0e14f4224ee8ab8d70cb88 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 11 Oct 2026 22:24:14 -0600
+Subject: [PATCH 1358/1364] =?UTF-8?q?HERESY=201169=20=C2=B7=201380:=20the?=
+ =?UTF-8?q?=20Artist's=20stage=20and=20its=20steps=20line=20follow=20a=20c?=
+ =?UTF-8?q?hange=20of=20the=20page's=20language?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Found by the 1379 probe: the stage's buttons kept the language they were made in (paintStage skipped a stage whose key had not changed, and the key had no language), and paintSampling was not asked on ruach-lang. The stage's key ends with the page's language; the listener asks paintSampling too.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-artist.js | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 0b92a97..6408f21 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -1404,6 +1404,7 @@
+     Array.prototype.forEach.call(document.querySelectorAll("#arRuns .ar-thumb.is-sel"), function (x) { x.classList.remove("is-sel"); });
+     if (it) markPicked(it);
+     paintProgress();                                     // HERESY 1332
++    key += ":" + (window.RuachI18n ? window.RuachI18n.lang() : "en");   // HERESY 1380: the page's language too: its words are written in it
+     if (key === state.stageKey) return fitStage();
+     state.stageKey = key;
+     ($("arStageIn") || box).innerHTML = html;               // HERESY 1345: the progress over it stays
+@@ -2420,7 +2421,7 @@
+     edges();
+     $("arLive").checked = recall(KEY.live) !== "0";
+     $("arLive").addEventListener("change", function () { keep(KEY.live, this.checked ? null : "0"); });
+-    window.addEventListener("ruach-lang", function () { paintForm(); paintHead(); paintRuns(); });
++    window.addEventListener("ruach-lang", function () { paintForm(); paintSampling(); paintHead(); paintRuns(); });   // HERESY 1380: paintSampling too
+     if (state.hooks.take) setTake(state.hooks.take()); else paintHead();
+     paintForm();
+   }
+-- 
+2.43.0
+

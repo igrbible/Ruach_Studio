@@ -89,6 +89,9 @@
     trim(parent.level);
     var sub = build(it.items, parent.level + 1), r = button.getBoundingClientRect();
     stack.push(sub);
+    // HERESY 1377: a long list (the workspaces) opens with its ticked row in sight
+    var tick = sub.el.querySelector('.hm-item[aria-checked="true"]');
+    if (tick && sub.el.scrollHeight > sub.el.clientHeight) sub.el.scrollTop = Math.max(0, tick.offsetTop - sub.el.clientHeight / 2);
     place(sub.el, r.right - 2, r.top - 5, r.left + 2);
     button.setAttribute("aria-expanded", "true");
     return sub;
@@ -134,6 +137,11 @@
   // tips do; the server log following its new lines scrolls itself every moment and took the menu away
   document.addEventListener("scroll", function (e) {
     var box = e.target;
+    if (root && box.classList && box.classList.contains("hm-menu")) {      // HERESY 1377: a menu scrolled: its open submenu goes
+      var at = stack.map(function (m) { return m.el; }).indexOf(box);
+      if (at >= 0) trim(at);
+      return;
+    }
     if (!root || (box.closest && box.closest(".hm-menu"))) return;
     if (box === document || box === document.documentElement || box === document.body || !anchor || (box.contains && box.contains(anchor))) close();
   }, true);

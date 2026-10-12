@@ -96,8 +96,10 @@
   }
   function askHowOften() {
     return window.HeresyDialog.choose("How often should the studio look for a new release?\n\nIt asks GitHub for the list of its releases, nothing more. When one is out you are asked first; Engine → Updates can update by itself instead, and look whenever you ask.",
-      [{ label: "Every week", value: "week", note: "recommended", current: true }, { label: "Every day", value: "day" }, { label: "Every month", value: "month" },
-        { label: "Never", value: "never", note: "Engine → Updates looks when you ask" }], { cancel: "Ask me later" }).then(function (v) {
+      // HERESY 1379b: words, not names: in the page's language (they stayed English under the list's translate="no")
+      [{ label: "Every week", value: "week", note: "recommended", current: true, words: true }, { label: "Every day", value: "day", words: true },
+        { label: "Every month", value: "month", words: true }, { label: "Never", value: "never", note: "Engine → Updates looks when you ask", words: true }],
+      { cancel: "Ask me later" }).then(function (v) {
       if (!v) return;
       var p = prefs(); p.every = v; p.asked = true; keep(p); paint();
     });

@@ -72,7 +72,7 @@
         (long ? '<input type="search" class="hd-input hd-filter" placeholder="' + esc(opts.filter || "Filter") + '" />' : "") +
         '<div class="hd-list" role="listbox">' + items.map(function (it, i) {
           return '<button type="button" role="option" class="hd-item' + (it.current ? " is-current" : "") + '" data-i="' + i +
-            '" style="--depth:' + (it.depth || 0) + '"' + (it.current ? ' aria-selected="true"' : "") + '><span class="hd-item-label" translate="no">' +
+            '" style="--depth:' + (it.depth || 0) + '"' + (it.current ? ' aria-selected="true"' : "") + '><span class="hd-item-label"' + (it.words ? "" : ' translate="no"') + '>' +   // HERESY 1379b: words: true, a word to translate, not a name
             esc(it.label) + "</span>" + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") +
             (it.current ? '<span class="hd-item-tick" aria-hidden="true">\u2713</span>' : "") + "</button>";
         }).join("") + "</div>" +

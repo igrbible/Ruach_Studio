@@ -125,7 +125,7 @@
   function watchChain(name) {
     clearTimeout(chain.timer);
     chain.watching = name;
-    fetch("/lab/chain?name=" + encodeURIComponent(name)).then(function (r) { return r.json(); }).then(function (job) {
+    fetch("/lab/chain?name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.json(); }).then(function (job) {
       if (chain.watching !== name) return;
       if (state.take && state.take.name === name) paintChain(job);
       if (job.status === "running") { chain.timer = setTimeout(function () { watchChain(name); }, 2000); return; }

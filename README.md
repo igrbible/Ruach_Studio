@@ -23,7 +23,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > - **Post-production**: spectrum, artifacts, debuzz, stems (BS-Roformer, htdemucs), remaster, upscale (UniverSR), a lyrics check by Whisper; one chain runs them all.
 > - **Into your DAW** (experimental): a REAPER project with the stems, the score as MIDI, the tempo, the sections as regions and the lyrics on the timeline; DAWproject for Waveform and Bitwig.
 > - **A librarian for every take**: workspaces, likes, favourites, pins, notes, locks, a trash that gives back; a writer with versions and a chat model; 200 instruments probed by ear; a guide in every room.
-> - **Your language**: the page whole in English, Russian, Ukrainian, Belarusian, Greek, Spanish and Italian, at a click in the bar, the logo's words with it.
+> - **Your language**: the page whole in English, Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, French, Portuguese, German, Japanese and Chinese, at a click in the bar, the logo's words with it.
 > - **Several GPUs, several jobs**: synthesis on one card, training on the others.
 >
 > ### **WHY RUACH STUDIO'S YuE2 BEATS SUNO, AND WHERE IT DOES NOT (YET)**
@@ -37,6 +37,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > | repeat a take | exactly: two seeds you keep | no |
 > | your own sound | train a LoRA on your songs, in the studio | no training |
 > | after the render | stems, debuzz, remaster, upscale, lyrics check, all local | stems, in the cloud |
+> | seeing the sound | the take's whole spectrogram over the player, in time with its wave: the sections, the brightness and loudness, the spectrum and note under the pointer | a waveform |
 > | into a DAW | a REAPER project with the score, sections and lyrics (experimental) | audio stems |
 > | the code | open, every change documented | closed |
 > | **polish out of the box** | **less**: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them) | **more** |
@@ -51,7 +52,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 
 Around the model there is a whole studio of six rooms: the **Creator** makes the song, the **Writer** writes it with a chat model, the **Refiner** finishes it, the **Artist** paints its pictures, the **Librarian** keeps every take, and the **LoRA Trainer** teaches YuE2 your own songs with its own trainer.
 
-**The full guide, room by room, is inside the studio** (the **?** in the bar) and here: [docs/GUIDE.md](docs/GUIDE.md).
+**The full guide, room by room, is inside the studio** (the **?** in the bar) and here: [docs/GUIDE.md](docs/GUIDE.md). The Artist in depth: [docs/ARTIST.md](docs/ARTIST.md).
 
 ## The Rooms
 
@@ -253,15 +254,27 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
-### To Do › rc6 and After
+### Done › 2.0.0-rc6 (October 2026)
 
-2.0.0-rc5 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+- **The Artist room, nearly closed**: regions (up to three parts of the frame, each with words of its own), a reference edited by the prompt's words or used for its style alone, a second pass at ×1.5 or ×2 with extra noise as Viktor's ComfyUI workflow paints it, Qwen-Image 2.1 on a 16 GB card, adapters' strength over the steps and from Civitai, a painter kept between runs, a run's pictures on several cards, upscale in passes with TTA, protected pictures; the whole room in depth: [docs/ARTIST.md](docs/ARTIST.md).
+- **Five more languages**: French, Portuguese, German, Japanese and Chinese, the page whole and the guide in all twelve.
+- **SUNO's quick ideas**: Crop and Remove a section on the score's bar lines, Adjust speed with the tempo written into the score, Tighten these lyrics and style suggestions, the wave's sections on the music's own changes, and the take's whole spectrogram over the player.
+- **The LoRA Trainer, held at 90 %**: it trains well on our own songs and voices, and your sets and scenarios are not ours; tell us how it went, with the set, the mode, the settings and what you heard ([a trainer report](https://github.com/igrbible/Ruach_Studio/issues/new?template=trainer-report.md)).
 
-- **The Artist room, the rest of it**: its models fetched at a click from the room itself, the title and the artist written on the cover, the versions of each take's picture, regional prompts and a style reference on the canvas.
-- **Five more languages** for the page: Chinese, French, Portuguese, German and Japanese. Right-to-left languages (Arabic, Hebrew, Urdu) come once the page itself runs right to left.
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### To Do › 2.0.0 and After
+
+2.0.0-rc6 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+
+- **Songs edited as the model writes them** (2.0.0): a take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens and decoded whole, the best joins heard first; an instrumental layer on the take's own score, locked to its bars.
+- **A DAW in the Refiner, an early preview** (2.0.0): [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System)'s score editor (Apache-2.0): a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in, the score going both ways.
+- **Lettering on a cover**: the title and the artist written into the picture itself, typeset and painted in.
+- **Right-to-left languages** (Arabic, Hebrew, Urdu), once the page itself runs right to left.
+- **The Videographer** (2.1.0): a music video for the song, its scenes prompted by a helper and its key frames painted by the Artist.
+- **SeedVR** as an upscaler (2.1.0).
 - **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its services itself (Ctrl+1…6 for the rooms there), packed as an **AppImage**: the studio, its Python and its CUDA libraries in one file, the models fetched at the first start, and the models and the songs kept wherever you choose on your disk.
 - **Pinokio on Windows 11**: the launcher runs on Linux now; on Windows its steps will run inside WSL2, the path of INSTALL_WINDOWS.md (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)).
-- **A score editor as a DAW has one**: a piano roll, a chord lane, the lyrics over the notes, sections copied and moved, a MIDI keyboard to play ideas in; [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System) (Apache-2.0) shows the way.
 - **Native plugins** for REAPER, Waveform and Bitwig, once the studio has found its people.
 
 Issues and pull requests are welcome: they are read and answered.
@@ -358,6 +371,61 @@ Viktor Zhuromskyy, l'autore di Ruach Studio, non lo pubblica per fare clamore. L
 Non ha messo insieme lo studio alla buona, giusto perché funzionasse. Lo ha fatto a modo suo, perché anche il suo lavoro è suo: le sue traduzioni, i suoi testi interlineari e molto altro. Ha cercato di farci stare il massimo, di rifinire l'interfaccia fino all'ultimo dettaglio e di rendere il lavoro con lo studio non un cliccare a vuoto tra stampelle e buche, ma qualcosa di davvero produttivo.
 
 *Questa è tutta la storia. Ora lo studio è anche tuo.*
+
+</details>
+<details><summary>Français</summary>
+
+#### Une petite histoire
+
+Viktor Zhuromskyy, l'auteur de Ruach Studio, ne le publie pas pour faire parler de lui. Il l'a fait pour lui-même. Après plus de six mois à se débattre avec Suno sur des formules payantes, et à chercher un modèle qui en vaille la peine (ACE-Step, MiniMax et d'autres), il s'est mis à construire son propre studio audio, sur sa propre machine. Son choix s'est arrêté sur YuE2 : de tous les modèles ouverts, c'est le plus rentable et le plus raffiné.
+
+Il n'a pas bricolé le studio à la va-vite, juste pour avoir quelque chose qui tourne. Il l'a fait à sa manière, parce que son travail est le sien : ses traductions, ses textes interlinéaires et bien plus encore. Il y a fait entrer tout ce qu'il a pu, a poli l'interface aussi loin qu'il a pu, et a fait du travail avec le studio non pas un tâtonnement de clics entre béquilles et nids-de-poule, mais quelque chose de vraiment productif.
+
+*Voilà toute l'histoire. Maintenant, le studio est aussi à toi.*
+
+</details>
+<details><summary>Português</summary>
+
+#### Uma pequena história
+
+Viktor Zhuromskyy, o autor do Ruach Studio, não o publica pelo hype. Ele o fez para si mesmo. Depois de mais de meio ano sofrendo com o Suno em planos pagos, e procurando um modelo que valesse a pena (ACE-Step, MiniMax e outros), ele decidiu construir o seu próprio estúdio de áudio, na sua própria máquina. A escolha caiu no YuE2: de todos os modelos abertos, é o de melhor custo-benefício e o mais refinado.
+
+Ele não montou o estúdio de qualquer jeito, só para ter algo que rodasse. Fez do seu jeito, porque o trabalho dele é dele: as suas traduções, os seus textos interlineares e muito mais. Colocou nele o máximo que pôde, poliu a interface até onde pôde e fez do trabalho com o estúdio não um cutucar e clicar entre muletas e buracos, mas algo de fato produtivo.
+
+*Essa é a história toda. Agora o estúdio também é seu.*
+
+</details>
+<details><summary>Deutsch</summary>
+
+#### Eine kleine Geschichte
+
+Viktor Zhuromskyy, der Autor von Ruach Studio, veröffentlicht es nicht für den Hype. Er hat es für sich selbst gemacht. Nach mehr als einem halben Jahr Mühe mit Suno in bezahlten Tarifen und der Suche nach einem Modell, mit dem sich arbeiten lässt (ACE-Step, MiniMax und andere), machte er sich daran, ein eigenes Audiostudio zu bauen, auf seiner eigenen Maschine. Die Wahl fiel auf YuE2: von allen offenen Modellen das lohnendste und das ausgefeilteste.
+
+Er hat das Studio nicht zusammengeschustert, nur damit irgendetwas läuft. Er hat es auf seine Art gebaut, denn seine Arbeit ist seine eigene: seine Übersetzungen, seine Interlinearübersetzungen und vieles mehr. Er hat so viel hineingepackt, wie er konnte, die Oberfläche poliert, so weit er konnte, und die Arbeit damit nicht zu einem Stochern und Klicken zwischen Krücken und Schlaglöchern gemacht, sondern zu etwas wirklich Produktivem.
+
+*Das ist die ganze Geschichte. Jetzt ist das Studio auch deins.*
+
+</details>
+<details><summary>日本語</summary>
+
+#### ちょっとした話
+
+Ruach Studio の作者 Viktor Zhuromskyy は、話題づくりのためにこれを公開しているのではありません。自分のために作ったのです。有料プランで Suno と半年以上格闘し、取り組むに値するモデルを探し回った末に（ACE-Step、MiniMax ほか）、彼は自分のマシンの上に自分だけのオーディオスタジオを作ろうと決めました。選んだのは YuE2 でした。オープンなモデルの中で、最も割に合い、最も洗練されているからです。
+
+彼は、とりあえず動けばいいという作り方はしませんでした。自分の流儀で作りました。彼の仕事は彼自身のものだからです：自身の翻訳、行間対訳のテキスト、そのほか多くのもの。詰め込めるだけ詰め込み、磨けるだけインターフェースを磨き、スタジオでの作業を、松葉杖と穴ぼこの間を手探りでクリックすることではなく、本当に生産的なものにしました。
+
+*話はこれで全部です。これからは、このスタジオはあなたのものでもあります。*
+
+</details>
+<details><summary>中文</summary>
+
+#### 一个小故事
+
+Ruach Studio 的作者 Viktor Zhuromskyy 发布它并不是为了炒作。他是为自己做的。在付费套餐上和 Suno 折腾了半年多，又四处寻找值得投入的模型（ACE-Step、MiniMax 等）之后，他决定在自己的机器上搭建一个属于自己的音频工作室。他选定了 YuE2：在所有开放模型中，它最划算，也最精致。
+
+他没有随便拼凑一个能跑就行的工作室，而是按自己的方式来做，因为他的工作也是他自己的：他的译本、他的逐行对照文本，还有许多别的。他尽可能多地装进其中，把界面打磨到力所能及的极致，让用这个工作室工作不再是在拐杖和坑洼之间胡乱点击，而是真正高效的事。
+
+*故事就是这样。现在，这个工作室也是你的了。*
 
 </details>
 

@@ -11,14 +11,27 @@ LANGS = (("el", re.compile(r"[Ͱ-Ͽἀ-῿]")), ("he", re.compile(r"[֐-׿]")),
          ("uk", re.compile(r"[іїєґІЇЄҐ]")), ("ru", re.compile(r"[Ѐ-ӿ]")), ("en", re.compile(r"[A-Za-z]")))
 
 
+def sung(lyrics):
+    """HERESY 1391: the lines that are sung, without the [tags] and the (directions), inline ones too."""
+    out = []
+    for raw in lyrics.splitlines():
+        s = raw.strip()
+        if not s or s.startswith(("[", "(")):
+            continue
+        out.append(re.sub(r"\([^)]*\)|\[[^\]]*\]", " ", s))
+    return "\n".join(out)
+
+
 def language(lyrics):
-    """The language Whisper is told, from the script; None (Whisper decides) when several mix."""
+    """The language Whisper is told, from the script of the sung lines (HERESY 1391: not the [tags] nor the English (directions)
+    around Russian words, which had left Whisper to guess); the main one when it holds 60 % of their letters, else None (Whisper decides)."""
+    lyrics = sung(lyrics) or lyrics
     counts = {code: len(rx.findall(lyrics)) for code, rx in LANGS}
     if counts["uk"] >= 3 or (counts["uk"] and counts["uk"] >= counts["ru"] * 0.003):   # і ї є ґ inside the Cyrillic
         counts["ru"], counts["uk"] = 0, counts["ru"]
     total = sum(counts.values()) or 1
     code, n = max(counts.items(), key=lambda kv: kv[1])
-    return code if n / total >= 0.85 else None
+    return code if n / total >= 0.6 else None   # HERESY 1391: the main language (0.85 before)
 
 
 def rows_of(lyrics):

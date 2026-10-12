@@ -588,5 +588,8 @@
     render();
   }
 
-  window.HeresySpectrum = { init: init, setTake: setTake, compareWith: compareWith };
+  // HERESY 1169 · 1374: the measuring and the palette for the wave's scope (heresy-wavescope.js), one cache with the card's; drop: a take
+  // measured anew when next asked
+  function drop(url) { cache = cache.filter(function (c) { return c.url !== url; }); }
+  window.HeresySpectrum = { init: init, setTake: setTake, compareWith: compareWith, data: analyse, lut: LUT, drop: drop };
 })();

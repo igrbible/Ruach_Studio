@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: The guide
+    url: https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.md
+    about: Every room explained (F1 inside the studio).
+  - name: The Artist in Depth
+    url: https://github.com/igrbible/Ruach_Studio/blob/main/docs/ARTIST.md
+    about: The painting room, every control and how it is made inside.

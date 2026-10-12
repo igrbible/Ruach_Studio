@@ -1,9 +1,11 @@
 // HERESY 1148: the page in the user's language (Viktor, 01.10 and 03.10.2026). English is the page's own text and the
-// default; Russian, Ukrainian, Belarusian, Greek, Spanish and Italian come from catalogs keyed by that English
+// default; Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, French, Portuguese, German, Japanese and Chinese come from catalogs keyed by that English
 // (heresy-i18n-LANG.js), so no module has to change to be translated: the text people read (text nodes, and the title,
 // placeholder, aria-label, data-tip and alt attributes) is looked up as it appears, and again when the language changes.
 // No RTL: Hebrew is left out (Viktor: «не будем мучить интерфейс с перекладкой в RTL. Получится уродство»); Chinese was
-// made and called off (Viktor, 03.10.2026: «Отмена по китайской»).
+// made and called off (Viktor, 03.10.2026: «Отмена по китайской») and came back on 11.10 with French, Portuguese, German and
+// Japanese for 2.0.0 (HERESY 1379). Japanese and Chinese have no font of the page's own: html lang (ja, zh-CN) lets the browser
+// take the system's CJK font for the glyphs the page's fonts lack, each language's own forms.
 //
 // The choice is the yue2.lang key: heresy-settings.js mirrors it into user/settings.json and reads it back before this
 // runs, so F5 and a cleared browser keep the language. The head script hides the page for the moment the first pass
@@ -15,6 +17,8 @@
 // {#0}…{#9} take a number only, so "{#0} MB" never swallows a longer text that happens to end in MB. What a part holds is
 // looked up too (a known word, or another pattern), and a translation may be the plural forms of its language
 // ({ one, few, many, other }, chosen by Intl.PluralRules on the key's first number): 1 трек, 2 трека, 5 треков.
+// A text whose line breaks show (its element under white-space: pre-line or pre-wrap: a dialog's message) keeps its lines:
+// a key that holds it whole, else a line at a time, each line a sentence of its own (HERESY 1359).
 (function () {
   "use strict";
 
@@ -25,7 +29,12 @@
     { code: "be", name: "Беларуская", html: "be" },
     { code: "el", name: "Ελληνικά", html: "el" },
     { code: "es", name: "Español", html: "es" },
-    { code: "it", name: "Italiano", html: "it" }
+    { code: "it", name: "Italiano", html: "it" },
+    { code: "fr", name: "Français", html: "fr" },        // HERESY 1379
+    { code: "pt", name: "Português", html: "pt-BR" },
+    { code: "de", name: "Deutsch", html: "de" },
+    { code: "ja", name: "日本語", html: "ja" },
+    { code: "zh", name: "中文", html: "zh-CN" }
   ];
   var KEY = "yue2.lang", ATTRS = ["title", "placeholder", "aria-label", "data-tip", "alt", "data-tip-head"];   // 1168: a tip's first line
   var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, CODE: 1, PRE: 1, NOSCRIPT: 1, TEMPLATE: 1 };
@@ -77,7 +86,7 @@
           .replace(/\\\{(\d)\\\}/g, "(?<p$1>[\\s\\S]+?)") + "$";
         // the longest fixed piece of the key: a text without it cannot match, so most texts skip the expression
         var lit = en.split(/\{#?\d\}/).sort(function (a, b) { return b.length - a.length; })[0];
-        pat.push({ re: new RegExp(re), lit: lit, fixed: en.replace(/\{#?\d\}/g, "").length, out: table[raw] });
+        pat.push({ re: new RegExp(re), lit: lit, fixed: en.replace(/\{#?\d\}/g, "").length, out: table[raw], lines: /\n/.test(raw) });   // 1359
       } else {
         cat[en] = typeof table[raw] === "string" ? table[raw] : (table[raw] || {}).other || "";   // forms need a number
       }
@@ -100,15 +109,16 @@
     return out[form] !== undefined ? out[form] : out.other !== undefined ? out.other : out.many || out.one || "";
   }
   // the English for this language, or null when the catalog has none; the parts of a pattern are looked up in turn
-  // (a word, or a pattern of their own, three deep), and kept as they are when the catalog does not know them
-  function look(en, code, depth) {
+  // (a word, or a pattern of their own, three deep), and kept as they are when the catalog does not know them.
+  // HERESY 1169 · 1359: lines, a text of its own lines: only by a pattern whose key had its line breaks too
+  function look(en, code, depth, lines) {
     var c = code || lang, cat = CAT[c];
     if (!cat || !en) return null;
     en = norm(en);
     if (cat[en] !== undefined) return cat[en];
     var pats = PAT[c] || [];
     for (var i = 0; i < pats.length; i++) {
-      if (pats[i].lit && en.indexOf(pats[i].lit) < 0) continue;
+      if ((lines && !pats[i].lines) || (pats[i].lit && en.indexOf(pats[i].lit) < 0)) continue;
       var m = pats[i].re.exec(en);
       if (m) return plural(pats[i].out, m, c).replace(/\{#?(\d)\}/g, function (_, n) {
         var v = m.groups["p" + n];
@@ -120,9 +130,24 @@
     return null;
   }
   // a whole string with its own spaces kept: "  Save " -> "  Сохранить "
-  function render(en) {
+  // HERESY 1169 · 1359: lines, a text with line breaks of its own (a dialog's message under white-space: pre-line; true, or a function
+  // asked only when needed): the whole of it by a key that had them too; else a line at a time, so a one-line pattern ("{0}: {1}") does
+  // not run across the lines and join them into one paragraph (the machine's scan read as one in the six other languages); only when
+  // no line of it is known does the whole go to the patterns as before, and is taken where it says something new
+  function render(en, lines) {
     if (lang === "en") return en;
-    var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(en), tr = m[2] ? look(m[2]) : null;
+    var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(en), tr;
+    if (lines && m[2].indexOf("\n") >= 0) {
+      tr = look(m[2], null, 0, true);
+      if (tr !== null) return m[1] + tr + m[3];
+      if (typeof lines !== "function" || lines()) {
+        var each = m[2].split("\n").map(function (l) { return /\S/.test(l) ? render(l) : l; }).join("\n");
+        if (each !== m[2]) return m[1] + each + m[3];
+        tr = look(m[2]);
+        return m[1] + (tr !== null && norm(tr) !== norm(m[2]) ? tr : each) + m[3];
+      }
+    }
+    tr = m[2] ? look(m[2]) : null;
     // HERESY 1169 · 1247: the page draws a warning's ⚠ apart (app.js .warn-ico) and writes its words alone; the catalog keeps them
     // under «⚠ …», so they are looked up there and given back without the sign
     if (tr === null && m[2] && m[2].charAt(0) !== "\u26a0") {
@@ -145,11 +170,17 @@
     var mine = MINE.get(node);
     return mine !== undefined && mine === node.nodeValue && SRC.has(node) ? SRC.get(node) : node.nodeValue;
   }
-  function doText(node) {
+  // HERESY 1169 · 1359: a text's line breaks are its own where its element keeps them (pre-line, pre-wrap, pre, break-spaces); the
+  // style is read only for a text of several lines the catalog does not know whole (own: read already by the walk, all in one go)
+  var LINES = /\S\s*\n\s*\S/;
+  function ownLines(el) {
+    try { return !!el && el.nodeType === 1 && /^pre|break-spaces/.test(getComputedStyle(el).whiteSpace || ""); } catch (e) { return false; }
+  }
+  function doText(node, own) {
     if (MISS) CUR = where(node.parentNode);
     var en = source(node);
     SRC.set(node, en);
-    var out = render(en);
+    var out = render(en, LINES.test(en) && (own !== undefined ? own : function () { return ownLines(node.parentNode); }));
     if (node.nodeValue !== out) node.nodeValue = out;
     MINE.set(node, out);
   }
@@ -183,8 +214,17 @@
         return /\S/.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
       }
     });
+    // HERESY 1359: a text of several lines the catalog does not know whole waits for the rest; then their elements' styles are read in
+    // one go (one recalculation of the page's styles, not one a text), and they are written
+    var later = [], s;
     for (var n = w.nextNode(); n; n = w.nextNode()) {
-      if (n.nodeType === 3) doText(n); else doElement(n);
+      if (n.nodeType !== 3) doElement(n);
+      else if (lang !== "en" && LINES.test(s = source(n)) && look(s, null, 0, true) === null) later.push(n);
+      else doText(n);
+    }
+    if (later.length) {
+      var own = later.map(function (x) { return ownLines(x.parentNode); });
+      later.forEach(function (x, i) { doText(x, own[i]); });
     }
   }
   function onMutations(records) {

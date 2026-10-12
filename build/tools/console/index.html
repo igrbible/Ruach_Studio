@@ -614,6 +614,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <span class="label">Style</span>
             <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
             <span class="row-hint size-meter" id="styleMeter"></span>
+            <!-- HERESY 1357 (from SUNO v6: the ✦ and ↻ under its Styles): tags the Writer's model suggests for this song; a click puts one in -->
+            <span class="style-sug" id="styleSug"><button type="button" class="btn ghost small" id="styleSugGo" data-tip="Style suggestions: the Writer's model reads the Style, the Title and the lyrics' first lines and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)">✦ Suggest</button><span class="style-sug-chips" id="styleSugChips"></span><button type="button" class="btn ghost small icon-btn" id="styleSugMore" hidden aria-label="Other suggestions" data-tip="Other suggestions">&#x21bb;</button></span>
             <span class="key-check is-hidden" id="keyCheck"><span id="keyCheckText"></span>
               <button type="button" class="btn ghost small" id="keyToScore"></button>
               <button type="button" class="btn ghost small" id="keyToStyle"></button></span>
@@ -627,7 +629,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         </section>
         <section class="k-card k-lyrics">
           <label class="field" data-fold="lyrics">
-            <span class="label" data-head="section tags on their own line">Lyrics <button type="button" class="btn ghost small icon-btn lyr-big" id="lyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The lyrics over everything" data-tip="The lyrics over everything, a tenth larger: Esc or this button puts them back"></button><!-- HERESY 1277 (Viktor 09.10.2026: «Кнопку экспорта/импорта содержимого редактора в голый txt формат, авто имя файла по Title трека») --><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtOut" data-ui="file-down" aria-label="Save the lyrics as a .txt" data-tip="Save the lyrics as a plain .txt, named by the Title"></button><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtIn" data-ui="file-up" aria-label="Open a .txt into the lyrics" data-tip="Put a plain .txt (UTF-8) in place of the lyrics: asked first when the box has words; Ctrl+Z in the box brings them back"></button></span>
+            <span class="label" data-head="section tags on their own line">Lyrics <button type="button" class="btn ghost small icon-btn lyr-big" id="lyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The lyrics over everything" data-tip="The lyrics over everything, a tenth larger: Esc or this button puts them back"></button><!-- HERESY 1277 (Viktor 09.10.2026: «Кнопку экспорта/импорта содержимого редактора в голый txt формат, авто имя файла по Title трека») --><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtOut" data-ui="file-down" aria-label="Save the lyrics as a .txt" data-tip="Save the lyrics as a plain .txt, named by the Title"></button><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtIn" data-ui="file-up" aria-label="Open a .txt into the lyrics" data-tip="Put a plain .txt (UTF-8) in place of the lyrics: asked first when the box has words; Ctrl+Z in the box brings them back"></button><!-- HERESY 1357 (from SUNO v6) --><button type="button" class="btn ghost small lyr-tighten" id="lyricsTighten" data-tip="Tighten these lyrics: the Writer's model cuts filler and weak lines, keeps the meaning, the language, the rhymes and every section tag; you see both side by side before anything changes (Ctrl+Z in the box brings the old ones back)">✦ Tighten</button></span>
             <!-- HERESY 1168 (Viktor: «теперь, когда у нас две отдельные колонки в левом фрейме, поле лирики можно увеличить на десять
                  строк»): 16 rows to 26; the lyrics' meter (heresy-lyrics.js) draws beside it and counts under it -->
             <textarea id="lyrics" rows="16" data-max-rows="26" spellcheck="true" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
@@ -996,6 +998,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <button type="button" class="btn ghost small" id="endAt" data-tip="End the take at a moment: its last 2 s fade out, and nothing after it is kept. For a song that runs on past its proper end (in Full, the score's leftover bars after the last words). The moment is where the player stands when this take plays; otherwise you are asked. From the take's kept latents in seconds (the very sound), else its music codes rendered again. A new take; this one stays.">End at…</button>
           <button type="button" class="btn ghost small" id="fadeIn" data-tip="Fade the take in: its first seconds rise from silence (2 s unless you say otherwise), for a song that starts too abruptly. From the take's kept latents in seconds (the very sound), else its music codes rendered again. A new take; this one stays.">Fade in…</button>
         </div></div>
+        <!-- HERESY 1356 (from SUNO v6): the take's own sound cut on its score's sections or stretched; a new take each time -->
+        <div class="tool-group tg-edit"><span class="tool-cap">Edit</span><div class="tool-row">
+          <button type="button" class="btn ghost small" id="cropTake" data-tip="Crop: keep the stretch from one section to another of this take's own sound, cut on its score's bar lines, the score cut along. A new take; this one stays.">Crop…</button>
+          <button type="button" class="btn ghost small" id="cutSection" data-tip="Remove a section: take one or more sections out of this take's own sound, each cut on its score's bar lines and healed by a short crossfade, the score cut along. A new take; this one stays.">Remove a section…</button>
+          <button type="button" class="btn ghost small" id="speedTake" data-tip="Speed: this take faster or slower, its pitch kept (Rubber Band), its score's tempo written anew. A new take; this one stays.">Speed…</button>
+        </div></div>
         <div class="tool-group tg-refine"><span class="tool-cap">Refiner</span><div class="tool-row">
           <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum">Spectrum</button>
           <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in the Refiner: Whisper against the lyrics">Lyrics check</button>
@@ -1186,7 +1194,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
               <option value="full">Full arc — intro, pre-chorus, bridge, outro</option>
             </select></label>
           <label class="field assist-num" data-tip="How free the drafts are: lower keeps close to the brief and repeats itself more, higher invents more and wanders. Blank: the server's or the model's own default."><span class="label">Temperature</span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
-          <label class="field assist-num" data-tip="The longest answer the model may give, in tokens. Too few cut a song off in the middle; a thinking model spends part of them on its thinking first."><span class="label">Max output tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="8192" /></label>
+          <label class="field assist-num" data-tip="The longest answer the model may give, in tokens. Too few cut a song off in the middle; a thinking model spends part of them on its thinking first."><span class="label">Max tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="32768" /></label>   <!-- HERESY 1390 -->
         </div>
         <details class="assist-prefs">
           <summary>Your writing preferences <span class="dim" id="assistPrefsSize"></span></summary>
@@ -1473,8 +1481,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="ar-ref-on" id="arRefOn" hidden>
           <span class="ar-ref-pic"><img id="arRefImg" alt="" draggable="false" translate="no" /><canvas id="arRefMask" hidden aria-hidden="true"></canvas></span>
           <div class="ar-ref-mid">   <!-- HERESY 1307: the strength and «Paint around it» in one column -->
+          <label class="field ar-ref-as" data-tip="How the picture is used: painted from (image to image, by the form's painter, as far as How much it may change says); edited by the prompt's words (Qwen-Image 2.1 keeps the scene and changes what the words say); or for its style only (Qwen-Image 2.1 paints the prompt's own scene in the picture's technique, brushwork, palette and light). Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only"><span class="label">Use it</span><select id="arRefAs">   <!-- HERESY 1388 -->
+            <option value="">to paint from</option><option value="edit">to edit by words (Qwen-Image 2.1)</option><option value="style">for its style only (Qwen-Image 2.1)</option></select></label>
           <label class="field ar-ref-str"><span class="label">How much it may change <em id="arRefSay">0.60</em></span>
             <input type="range" id="arRefStr" min="0.2" max="1" step="0.05" value="0.6" data-tip="How far from the picture the painting begins: 0.3 keeps it nearly as it is, 0.6 keeps its composition and changes its matter, 0.9 paints the prompt's scene in its light and colours, 1.0 paints anew" /></label>
+            <label class="field ar-ref-str ar-ref-noise"><span class="label">Extra noise <em id="arRefNoiseSay">0.00</em></span>   <!-- HERESY 1385 -->
+            <input type="range" id="arRefNoise" min="0" max="1.5" step="0.05" value="0" data-tip="Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break" /></label>
             <!-- HERESY 1307: outpaint, a sibling of the strength --><span class="ar-ref-fit"><label class="check" data-tip="Each shape holds the whole picture in its middle and paints the edges it leaves anew, in the picture's colours and light: a square cover into a 16:9 for a video or a 9:16 for a short. The middle stays as it is"><input type="checkbox" id="arRefFit" /> <span>Paint around it</span></label></span>
             <span class="ar-cv-say" id="arCanvasSay" hidden><em></em><button type="button" class="pb-btn" id="arCanvasX" aria-label="Off the canvas: each shape as the form paints it" data-tip="Off the canvas: each shape as the form paints it">✕</button></span>   <!-- HERESY 1346 -->
           </div>
@@ -1499,16 +1511,25 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <label class="field ar-painter"><span class="label">Painter <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arPainter" translate="no" data-tip="Krea 2 Muse by Stable Yogi: Q4 wants a card with 12.5 GB free, Q8 (finer) 18.5 GB; about 35 s a square picture and 47 s a wide or tall one on an RTX 3090"><option value="krea2-q4">Krea 2 Muse · Q4 (from 12.5 GB)</option><option value="krea2-q8">Krea 2 Muse · Q8 (from 18.5 GB)</option></select></label>
         <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512, and the painter's note (Qwen-Image 2.1's licence) -->
         <label class="field ar-model" id="arModelBox" hidden><span class="label">Fine-tune</span><select id="arModel" translate="no" data-tip="The fp8 fine-tunes of Qwen-Image 2512 in artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): a card of 24 GB"></select></label>
+        <div class="ar-get-row"><button type="button" class="btn ghost small" id="arGet" data-tip="The painters, the Qwen fine-tunes and the adapters the studio can fetch for the Artist, each with its size, here or not: from the studio's models repository and from their makers">Get painters and adapters…</button></div>   <!-- HERESY 1347 -->
         <!-- HERESY 1319: the sampling: steps, sampler, schedule; 2512's Lightning and guidance -->
         <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em><span class="info is-warn" id="arSampWarn" tabindex="-1" role="img" aria-label="A warning on the sampling" hidden></span></summary>
           <div class="ar-samp-row">
             <label class="field ar-samp-steps"><span class="label">Steps</span><input type="number" id="arSteps" min="4" max="16" step="1" inputmode="numeric" data-tip="How many steps from the noise to the picture: Krea 2 and Qwen-Image 2512 with Lightning 4 to 16 (8 their own), 2512 without it and Qwen-Image 2.1 10 to 60" /></label>
             <label class="field"><span class="label">Sampler</span><select id="arSampler" data-tip="How each step is taken. Euler: the plain step; Euler SDE: fresh noise each step (soft on Qwen without Lightning). ER-SDE: a stochastic solver of third order, one look a step. RES 2s and 3s: the refined exponential solver, two or three looks a step (ODE: without noise). Heun++: up to three looks a step. Exp Heun 2 x0: the exponential Heun, two looks (SDE: with noise). More looks: finer, and as many times longer"><option value="euler" translate="no">Euler</option><option value="euler-sde" translate="no">Euler SDE</option><option value="er_sde" translate="no">ER-SDE</option><option value="res_2s" translate="no">RES 2s</option><option value="res_2s_ode" translate="no">RES 2s ODE</option><option value="res_3s" translate="no">RES 3s</option><option value="res_3s_ode" translate="no">RES 3s ODE</option><option value="heunpp2" translate="no">Heun++ 2</option><option value="exp_heun_2_x0" translate="no">Exp Heun 2 x0</option><option value="exp_heun_2_x0_sde" translate="no">Exp Heun 2 x0 SDE</option></select></label>
             <label class="field"><span class="label">Schedule</span><select id="arSchedule" data-tip="How the steps are spread from the noise to the picture: Simple (the painter's own), Karras and Exponential (more steps near the end, for detail; with Lightning they can paint the subject twice), Beta and Beta 57 (more at both ends), KL optimal (Align Your Steps' spacing), SGM uniform (even in time), Bong tangent (two slopes, through the middle)"><option value="simple" translate="no">Simple</option><option value="karras" translate="no">Karras</option><option value="exponential" translate="no">Exponential</option><option value="beta" translate="no">Beta</option><option value="beta57" translate="no">Beta 57</option><option value="kl_optimal" translate="no">KL optimal</option><option value="sgm_uniform" translate="no">SGM uniform</option><option value="bong_tangent" translate="no">Bong tangent</option></select></label>
+          </div>
+          <!-- HERESY 1369 (Viktor: «Lightning и Ведение с кнопкой сброса на следующую полосу перенеси») -->
+          <div class="ar-samp-row ar-samp-row2">
             <label class="field ar-samp-num ar-samp-light" id="arLightBox" hidden><span class="label">Lightning</span><span class="ar-light-row"><input type="checkbox" id="arLightOn" aria-label="Lightning" data-tip="Lightning: Qwen-Image 2512 in 4 to 16 steps and one pass a step, for drafts and the takes' covers; off for finished realism: 10 to 60 steps with guidance, about four times as long" /><input type="number" id="arLight" min="0.05" max="1.5" step="0.05" data-tip="Lightning's strength: 1.0 as its makers give it, lower for a fine-tune (0.55 with 12 steps)" /></span></label>
             <label class="field ar-samp-num" id="arCfgBox" hidden><span class="label">Guidance</span><input type="number" id="arCfg" min="1" max="10" step="0.5" data-tip="Without Lightning: how closely the picture follows the prompt (true CFG, two passes a step); 4 is Qwen-Image's own" /></label>
             <button type="button" class="btn ghost small" id="arSampReset" data-tip="The painter's own steps, sampler and schedule">Reset</button>
           </div>
+        </details>
+        <!-- HERESY 1387: regional prompts, as InvokeAI's regional guidance -->
+        <details class="ar-sampling ar-regions" id="arRegions"><summary><span class="label">Regions</span> <em id="arRegSay"></em><span class="info" tabindex="-1" role="img" aria-label="About the regions" data-tip="Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512"></span></summary>
+          <div class="ar-reg-list" id="arRegList"></div>
+          <div class="ar-reg-foot"><button type="button" class="btn ghost small" id="arRegAdd">Add a region</button><span class="row-hint" id="arRegNote" hidden>Not with Qwen-Image 2.1: it edits by words</span></div>
         </details>
         <!-- HERESY 1316: the adapters of the painter's family, each at its strength -->
         <div class="ar-loras" id="arLoras">
@@ -1674,7 +1695,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <span class="coll-group" role="group" aria-label="Marks">
             <button type="button" class="btn ghost small icon-btn" id="collLike" data-ui="like" aria-label="Like the checked" data-tip="Like every checked take (all liked already: taken back)"></button>
             <button type="button" class="btn ghost small icon-btn" id="collDislike" data-ui="dislike" aria-label="Dislike the checked" data-tip="Dislike every checked take (all disliked already: taken back)"></button>
-            <button type="button" class="btn ghost small icon-btn" id="collFav" data-ui="star" aria-label="Favourite the checked" data-tip="Favourite every checked take (all favourites already: taken back)"></button></span>
+            <button type="button" class="btn ghost small icon-btn" id="collFav" data-ui="star" aria-label="Favourite the checked" data-tip="Favourite every checked take (all favourites already: taken back)"></button>
+            <button type="button" class="btn ghost small icon-btn" id="collProtect" data-ui="shield" aria-label="Protect them" data-tip="Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)"></button></span>
           <span class="coll-group" role="group" aria-label="Workspaces">
             <select id="collWsPick" aria-label="Add to workspace"></select>
             <select id="collWsMove" aria-label="Move to workspace" title="Into that workspace and out of this one (out of every other when you are in All Workspaces)"></select>
@@ -1793,6 +1815,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <!-- HERESY 1275 (Viktor 28.09.2026: «звуковое оповещение при окончании генерации») -->
     <button type="button" class="icon-btn pb-tog autoplay-btn" id="runChime" aria-pressed="true" aria-label="A sound when a run ends"
       data-tip="A sound when a run made here ends: two notes up when it is done (a queue of runs once, when its last one ends), two down when one fails. None over a new song that starts playing by itself; as loud as the player. Click to make none." data-ui="bell">🔔</button>
+    <!-- HERESY 1169 · 1374 (Viktor 11.10.2026: «выводить спектральный граф полной длиной на весь трек… Максимум анализа по волне»): the wave's scope -->
+    <button type="button" class="icon-btn pb-tog autoplay-btn" id="waveScopeBtn" aria-pressed="true" aria-label="Spectrum over the wave"
+      data-tip="Spectrum over the wave: the pointer on the wave brings the whole take's spectrogram up over the player, as wide as the wave, the section's words above it. Click to turn it off." data-ui="scope">▥</button>
     <select class="speed-pick mono" id="playSpeed" aria-label="Playback speed" data-tip="Playback speed: slower to hear a detail, faster to skim; the pitch stays">
     <option value="0.5">0.50×</option><option value="0.75">0.75×</option><option value="1" selected>1.00×</option><option value="1.25">1.25×</option><option value="1.5">1.50×</option><option value="1.75">1.75×</option><option value="2">2.00×</option>
     </select>
@@ -1819,7 +1844,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <span class="log-dock-acts">
       <span class="log-dock-views" id="logDockViews" role="tablist" aria-label="Which log">
         <button type="button" role="tab" class="log-view is-on" data-view="server" aria-selected="true" data-tip="The server's log: the engine and the lab">Server</button>
-        <button type="button" role="tab" class="log-view" data-view="artist" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button></span>
+        <button type="button" role="tab" class="log-view" data-view="artist" id="logViewArtist" translate="no" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button></span>
       <label class="check small-check"><input type="checkbox" id="logDockFollow" checked data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read." /> <span>Follow</span></label>
       <!-- HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, or back -->
       <button type="button" class="btn ghost small log-dock-tall" id="logDockTall" aria-pressed="false" aria-label="Full height"
@@ -1972,6 +1997,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-i18n-el.js"></script>
 <script src="heresy-i18n-es.js"></script>
 <script src="heresy-i18n-it.js"></script>
+<script src="heresy-i18n-fr.js"></script>
+<script src="heresy-i18n-pt.js"></script>
+<script src="heresy-i18n-de.js"></script>
+<script src="heresy-i18n-ja.js"></script>
+<script src="heresy-i18n-zh.js"></script>
 <script>RuachI18n.start();</script>
 <script src="examples.js"></script>
 <script src="instrumental.js"></script>
@@ -2006,6 +2036,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-canvas.js"></script>   <!-- HERESY 1346: the Artist's canvas -->
 <script src="heresy-zoom.js"></script>
 <script src="heresy-spectrum.js"></script>
+<script src="heresy-wavescope.js"></script>   <!-- HERESY 1374: the wave's scope -->
 <script src="themes.js"></script>
 <script src="app.js"></script>
 </body>
