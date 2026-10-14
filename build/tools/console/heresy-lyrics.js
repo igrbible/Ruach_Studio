@@ -231,6 +231,9 @@
   function groupOf(name) {
     var n = name.toLowerCase().replace(/\s+/g, " ").trim();
     var head = n.split(/\s[–—-]\s|:|\||\/|\(/)[0].replace(/[\d#.]+/g, " ").trim();
+    // HERESY 1426: «Solo Female Voice» names who sings, not an instrument's solo (Viktor 14.10.2026: «Solo не воспринимается в командах-
+    // переключателях полов»); a section's own head (Chorus: Deep Female Vocal) still names its section
+    if (/\bsolo\b/.test(head) && /\b(vocals?|voices?|male|female|singer)\b/.test(head)) return null;
     for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i][0].test(head)) return SECTIONS[i][1];
     if (/^(genres?|style|mood|tempo|instrumentation|arrangement|production|structure|dynamics|emotions|meta)\b/.test(head)) return null;
     if (/\b(vocals?|vox|voices?|narrator|spoken|lead|male|female|him|her|both|all|duet|choir|ad-?libs?|baritone|tenor|soprano|alto|rapper)\b/.test(n)) return null;

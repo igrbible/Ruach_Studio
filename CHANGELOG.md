@@ -6,6 +6,12 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 
 The closing pass: the screenshots, the strings in every language, the 💎 probes at full length, the promo (HERESY 1169, patches 1426 and up).
 
+- **Voices among the lyrics' tags** (HERESY 1426): Viktor's form, `[Vocal: Female - …]`, `[Vocal: Male - …]`, `[Spoken: Female - …]`, `[Spoken: Male - …]` (who, then how after a dash; no Solo, which YuE2 does not hear in a voice), offered under «[» after the sections and marked *not a section*; the meter reads a voice named with Solo as who sings, not as an instrument's solo. The guide's lyrics in twelve languages: round brackets are no command (a word or two sung as a choir's echo), square ones are; the stress mark holds in about 90 % of lines, a capital alone seldom; one syllable moves the whole song (the seed is the dice); YuE2 holds 8 to 9 minutes.
+- **Covers that do not lie** (HERESY 1426): an instrument's cover painted from its look word for word (the painter never hears the name, which it half knows), the critic judging by the look, not the name; no picture at all when three tries never show it. The looks of the duduk, the gudok, the sambuca (Greek strings), the kemenche, the nyckelharpa, the kinnor, the slide guitar, a closed grand piano and a bugle said plainly.
+- **The Artist's stage as icons** (HERESY 1426): two halves, what is made from the picture and how it is seen and kept.
+- **Fonts** (HERESY 1426): Raleway, Michroma and Liberation Mono by default; Liberation Mono, Raleway whole, Lato 2.015 and Noto Sans' bold and italics in the studio itself; a chosen font falls back on the studio's own for the letters it lacks.
+- **Unload reaches the Artist again** (HERESY 1426): the Bar's Unload let go of the Artist's kept painters only in words since 1370 (the lab refused its empty request); a painter at work is still never let go.
+
 ## 2.0.0-rc7 · 2026-10-13
 
 The seventh release candidate: songs edited as the model writes them (Replace a section, several in one go, the seam unheard; Free tempo; two guidances, the style's and the lyrics'), compare with namesakes at 1200 px, the studio's own trainer with score mode and separation (AI-Toolkit out), covers by the cards on Qwen-Image 2512, the Refiner's Colour, the Artist's guide in twelve languages (HERESY 1169, patches 1390–1425).

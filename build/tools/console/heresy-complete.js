@@ -52,7 +52,13 @@
     var rows = (g ? g.rows : []).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: r[1], note: r[2], test: !r[1] }; });
     if (!rows.length) rows = FIRST.concat(ONCE).map(function (name) { return { name: name, n: 0, note: "", test: false }; });
     var pos = function (r) { var i = ARC.indexOf(r.name); return i < 0 ? ARC.length + rows.indexOf(r) : i; };
-    return rows.slice().sort(function (a, b) { return pos(a) - pos(b); });
+    return rows.slice().sort(function (a, b) { return pos(a) - pos(b); }).concat(voiceTags());   // HERESY 1426: then the voices
+  }
+  // HERESY 1426 (Viktor 14.10.2026: «Пометь их особо как не структурные»): the voices, in his form (the cheat-sheet's group marked voice)
+  function voiceTags() {
+    var g = window.HeresyInstruments && window.HeresyInstruments.lyricTags ? window.HeresyInstruments.lyricTags() : [];
+    var v = g.filter(function (x) { return x.voice; })[0];
+    return (v ? v.rows : []).map(function (r) { return { name: r[0].replace(/^\[|\]$/g, ""), n: 0, note: r[2] || "", test: false, voice: true }; });
   }
 
   // HERESY 1278: the tags a line takes after its first: who sings, as the examples write it, then the ones he writes too
@@ -65,13 +71,13 @@
     var male = rows.findIndex(function (r) { return r.name === "Male Vocals"; });
     rows.splice(male + 1, 0, { name: "Female Vocals", n: 0, note: CHAIN_MORE["Female Vocals"], test: true });
     rows.push({ name: "Break", n: 0, note: CHAIN_MORE.Break, test: true }, { name: "Silence", n: 0, note: CHAIN_MORE.Silence, test: true });
-    return rows;
+    return rows.concat(voiceTags());                                // HERESY 1426
   }
   function offerChain(q) {
     var head = fold(q), out = [];
     chainTags().forEach(function (t, k) {
-      var r = rank(t.name, head);
-      if (r) out.push({ tag: "[" + t.name + "]", note: t.note, n: t.n, rank: r, k: k, next: false, test: !!t.test, chain: true });
+      var r = rank(t.voice ? t.name.split(" - ")[0] : t.name, head);   // HERESY 1426: a voice by who, not by how
+      if (r) out.push({ tag: "[" + t.name + "]", note: t.note, n: t.n, rank: r, k: k, next: false, test: !!t.test, chain: true, voice: !!t.voice });
     });
     return out.sort(function (a, b) { return (a.rank - b.rank) || (a.k - b.k); });
   }
@@ -112,12 +118,12 @@
     if (num && !head.trim()) return [];
     var have = present(text), out = [];
     ordered().forEach(function (t, k) {
-      var r = rank(t.name, head);
-      if (!r) return;
+      var r = rank(t.voice ? t.name.split(" - ")[0] : t.name, head);   // HERESY 1426: a voice by who, not by how
+      if (!r || (num && t.voice)) return;                           // HERESY 1426: a voice takes no number
       var name = SPELL[t.name] || t.name, next = false;
       if (num) name += " " + num;
       else if (t.name === "Verse" && have.verse) { name = "Verse " + (have.verse + 1); next = true; }
-      var it = { tag: "[" + name + "]", note: t.note, n: t.n, rank: r, k: k, next: next, test: !!t.test };
+      var it = { tag: "[" + name + "]", note: t.note, n: t.n, rank: r, k: k, next: next, test: !!t.test, voice: !!t.voice };
       if (ONCE.indexOf(t.name) >= 0 && have.once[t.name] !== undefined) it.there = have.once[t.name];
       else if (name !== (SPELL[t.name] || t.name) && have.named[name.toLowerCase()] !== undefined) it.there = have.named[name.toLowerCase()];
       out.push(it);
@@ -163,6 +169,7 @@
   function count(it) {
     if (it.there !== undefined) return tr("Already in the lyrics, line {0}: a song has one").replace("{0}", it.there + 1);
     if (it.next) return tr("The lyrics number their verses: this is the next one");
+    if (it.voice) return tr("Not a section: who sings and how; the lines stay in the section before. Viktor's form; on a long ballad YuE2 followed such tags about 95 % of the time. «Solo» is not heard in a voice's tag: name the voice.");
     if (it.test) return "TEST: none of the 110 official examples writes it, so YuE2 may sing it as words or pass it by. Listen before you keep it.";
     return it.n ? tr("{0} times in the 110 official examples").replace("{0}", it.n) : "";
   }
@@ -172,9 +179,9 @@
   function render() {
     list.innerHTML = items.map(function (it, i) {
       var there = it.there !== undefined;
-      var say = there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.test ? "TEST" : it.n ? "×" + it.n : "";
+      var say = there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.voice ? tr("not a section") : it.test ? "TEST" : it.n ? "×" + it.n : "";
       return '<div class="tc-item' + (there ? " is-there" : "") + '" role="option" id="tcOpt' + i + '" data-i="' + i + '" aria-selected="false"' +
-        (there ? ' aria-disabled="true"' : "") + '><span class="tc-tag" translate="no">' + esc(it.tag) + '</span><span class="tc-say' + (it.test && !there && !it.next ? " tc-test" : "") + '">' + esc(say) + "</span></div>";
+        (there ? ' aria-disabled="true"' : "") + '><span class="tc-tag" translate="no">' + esc(it.tag) + '</span><span class="tc-say' + (it.test && !there && !it.next ? " tc-test" : "") + (it.voice ? " tc-voice" : "") + '">' + esc(say) + "</span></div>";
     }).join("");
     mark(true);
   }

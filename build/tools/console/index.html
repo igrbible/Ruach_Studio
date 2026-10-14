@@ -16,8 +16,9 @@
   var sc = localStorage.getItem("yue2.scheme");
   if ((!sc || sc === "auto") && window.matchMedia) document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches
     ? localStorage.getItem("yue2.theme.night") || "igr-night" : localStorage.getItem("yue2.theme.day") || "igr-day";
-  var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: "sans-serif", heading: "sans-serif", mono: "monospace" };
-  for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, JSON.stringify(f[k]) + ", " + g[k]);
+  // HERESY 1426: a chosen font falls back on the studio's own (app.js FONT_BACK), the heading's «same as the text» on the text's
+  var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: '"Noto Sans", sans-serif', heading: "var(--sans)", mono: '"Noto Sans Mono", monospace' };
+  for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, f[k] ? JSON.stringify(f[k]) + ", " + g[k] : "var(--sans)");
   var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners"];
   for (var i = 0; i < o.length; i++) if (typeof L[o[i]] === "string") document.documentElement.dataset[o[i]] = L[o[i]];
   var T = JSON.parse(localStorage.getItem("yue2.textSize") || "{}");   // HERESY 1169: the text's size before the first paint

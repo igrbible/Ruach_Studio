@@ -254,7 +254,17 @@
     { group: "A section and how it is sung (after a dash or a colon)", rows: [
       ["[Verse 1 – Male voice (raspy, relaxed)]", 1, ""], ["[Chorus – Both voices (call & response)]", 1, ""], ["[Pre-Chorus – Sung softly]", 1, ""],
       ["[Verse 1 – Melodic Rap / Spoken Rhythmically]", 1, ""], ["[Intro – Muse (whispered)]", 1, ""], ["[Intro – Warlord (spoken/half-sung)]", 1, ""],
-      ["[Final Chorus – Full power, layered vocals]", 1, ""], ["[Chorus: All]", 2, ""], ["[Verse 1 – Him]", 1, "Verse 1 – Her"], ["[Outro – Piano + fading echo]", 1, ""]] },
+      ["[Final Chorus – Full power, layered vocals]", 1, ""], ["[Chorus: All]", 2, ""], ["[Verse 1 – Him]", 1, "Verse 1 – Her"], ["[Outro – Piano + fading echo]", 1, ""],
+      ["[Chorus: Deep Female Vocal]", 0, "A section and its voice: a deep female voice takes the chorus (heard on a long ballad; «Solo» in it is not heard)", "heard"]] },
+    // HERESY 1426 (Viktor 14.10.2026: «Пометь их особо как не структурные»; «правильнее будет писать `[Vocal: Female/Male ... ]`, `[Spoken:
+    // Female/Male ... ]`. Без Solo»): the voices in his form: sung or said, who, then how after a dash; no section (the meter's own reading)
+    { group: "Voices (not a section: the lines stay in the section before; Viktor's form: sung or said, who, then how after a dash; no Solo)", voice: true, rows: [
+      ["[Vocal: Female - …]", 0, "A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy."],
+      ["[Vocal: Male - …]", 0, "A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy."],
+      ["[Spoken: Female - …]", 0, "A woman says the lines that follow instead of singing them; after the dash how: Soft Whisper, Intimate, Sacred."],
+      ["[Spoken: Male - …]", 0, "A man says the line instead of singing it; after the dash how: Soft Whisper; Calm."],
+      ["[Spoken: Female - Soft Whisper, Intimate, Sacred]", 0, "Heard on a long ballad (written there «Female Voice - …»): a narrator's whisper between sung verses."],
+      ["[Spoken: Female - Soft Whisper]", 0, "A spoken tag may lead the line itself: «[Spoken: Female - Soft Whisper] Ты слышишь?»."]] },
     { group: "Who sings (no new section: the lines stay in the one before)", rows: [
       ["[Male Vocals]", 25, ""], ["[Female ad-libs]", 1, "Vocal ad-libs"], ["[NARRATOR — NOT SUNG | cinematic voiceover]", 2, ""], ["[Spoken: …]", 1, ""]] },
     { group: "What plays (an instrumental cue as a section)", rows: [
@@ -263,13 +273,13 @@
     { group: "Meta-tags (one example of 110: their place is the Style prompt)", rows: [
       ["[GENRES: …]", 1, "MOOD, TEMPO, INSTRUMENTATION, ARRANGEMENT, PRODUCTION, STRUCTURE, DYNAMICS, EMOTIONS too"]] },
     { group: "The phonetic hand (Viktor's, from SUNO; YuE2 follows it as well)", hand: true, rows: [
-      ["́", 0, "a stress mark after a vowel: обе́щано, сули́т (holds in more than 95 % of lines)", "stress mark"],
-      ["О́", 0, "a capital stressed vowel pushes the stress where the rhyme wants it: базилиО́", "capital stressed vowel"],
+      ["́", 0, "a stress mark after a vowel: обе́щано, сули́т (holds in about 90 % of lines; the rest is the seed's luck)", "stress mark"],
+      ["О́", 0, "a capital stressed vowel with its mark pushes the stress where the rhyme wants it: базилиО́; a capital alone (дрОв) seldom moves it", "capital stressed vowel"],
       ["ע", 0, "ע inside a Russian word sings a soft о/а: кעмо́рка, пעле́но; it also brakes rap that runs ahead", "ayin"],
       ["o", 0, "a Latin o inside a Russian word sings a hard, open o where the model would say а: Кo дну", "Latin o"],
       ["о-о-о", 0, "a stretched vowel holds a note: where the music has room for it, not on every line", "stretched vowel"],
       ["Бу-ра-ти-но", 0, "syllables apart with hyphens, each on its own beat", "syllables apart"],
-      ["( )", 0, "round brackets may be sung: an echo, a backing line (the first Buratino takes sang them)", "round brackets"],
+      ["( )", 0, "round brackets are no command: a word or two in the lyrics' language is mostly sung as a choir's echo; a direction in them is mostly passed by, or sung", "round brackets"],
       ["רוּחַ", 0, "a Hebrew word with its vowel points is said better than in transliteration", "Hebrew with its points"]] }
   ];
   function paintTags() {
@@ -279,10 +289,12 @@
       if (!rows.length) return;
       n += rows.length;
       html += '<tr class="hi-fam"><th colspan="4">' + esc(g.group) + " <em>" + rows.length + "</em></th></tr>" + rows.map(function (r) {
-        return '<tr class="' + (r[1] || g.hand ? "is-heard" : "is-test") + '"><td class="hi-name"><button type="button" class="hi-tag" data-hi-lyr="' + esc(r[0]) + '"' + (g.hand ? ' data-hi-hand="1"' : "") +
+        return '<tr class="' + (r[1] || g.hand || g.voice || r[3] === "heard" ? "is-heard" : "is-test") + '"><td class="hi-name"><button type="button" class="hi-tag" data-hi-lyr="' + esc(r[0]) + '"' + (g.hand ? ' data-hi-hand="1"' : "") +
           ' translate="no" data-tip="' + (g.hand ? "Onto the clipboard (in the lyrics, put it where the cursor stands)" : "Onto the clipboard (in the lyrics, «[» offers it as you type)") + '">' + esc(g.hand ? (r[3] ? r[0] + "  ·  " + r[3] : r[0]) : r[0]) + "</button></td>" +
           '<td class="hi-say" colspan="2"><div>' + esc(r[2]) + "</div></td>" +
           '<td class="hi-plays mono">' + (r[1] ? "×" + esc(String(r[1])) : g.hand ? "" :
+            g.voice ? '<span class="hi-voice" data-tip="Not a section: who sings and how; the lines stay in the section before">' + esc(tr("not a section")) + "</span>" :   // HERESY 1426
+            r[3] === "heard" ? '<span class="hi-voice" data-tip="Heard by Viktor\'s ear, not counted in the official examples">' + esc(tr("heard")) + "</span>" :
             '<span class="hi-test" data-tip="None of the 110 official examples writes it: YuE2 may sing it as words or pass it by">TEST</span>') + "</td></tr>";
       }).join("");
     });

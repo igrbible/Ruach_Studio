@@ -1487,22 +1487,32 @@
     var acts = "";
     if (p) {
       var take = state.take, square = p.shape === "1:1";
-      acts =
-        '<button type="button" class="btn ghost small" data-stage="form" data-tip="' + esc(tr("Its prompt, seed and shape back in the form")) + '">' + esc(tr("To the form")) + "</button>" +
-        '<button type="button" class="btn ghost small" data-stage="ref" data-tip="' + esc(tr("Paint from this picture: it becomes the form's reference")) + '">' + esc(tr("As reference")) + "</button>" +   // HERESY 1305
-        (refAsOk() && r.kind !== "upscale" ? '<button type="button" class="btn ghost small" data-stage="letter" data-tip="' + esc(tr("Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept")) + '">' + esc(tr("Letter it")) + "</button>" : "") +   // HERESY 1394
-        '<button type="button" class="btn ghost small" data-stage="compare" data-tip="' + esc(tr("Compare it with another: pick that one in the library, then a divider between them")) + '">' + esc(tr("Compare…")) + "</button>" +   // HERESY 1308
-        (square ? '<button type="button" class="btn ghost small ar-cover" data-stage="cover"' + (take ? "" : " disabled") + ' data-tip="' +
-          esc(take ? tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" : tr("Pick a take on the right to give it this cover")) + '">' + esc(tr("Set as cover")) + "</button>" : "") +
+      // HERESY 1426 (Viktor 14.10.2026: «Разрежь эту строку надвое равномерно, и логично отсортируй их по функции. Что можно, всегда
+      // переноси в SVG кнопки-иконки»): icons in two halves, what is made from the picture, then how it is seen and kept; each named in its
+      // label and told in its tip (a wide stage keeps them on one line, a narrow one puts the halves one under the other)
+      var ico = function (n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : ""; };
+      var ib = function (stage, icon, name, tip, more) {
+        more = more || {};
+        return '<button type="button" class="pb-btn ar-ico' + (more.cls ? " " + more.cls : "") + (more.on ? " is-on" : "") + '" data-stage="' + stage + '"' +
+          (more.disabled ? " disabled" : "") + ' aria-label="' + esc(tr(name)) + '" data-tip="' + esc(tip) + '">' + ico(icon) + "</button>";
+      };
+      var make = ib("form", "pencil", "To the form", tr("Its prompt, seed and shape back in the form")) +
+        ib("ref", "image", "As reference", tr("Paint from this picture: it becomes the form's reference")) +   // HERESY 1305
+        (refAsOk() && r.kind !== "upscale" ? ib("letter", "type", "Letter it", tr("Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept")) : "") +   // HERESY 1394
+        (square ? ib("cover", "disc", "Set as cover", take ? tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" : tr("Pick a take on the right to give it this cover"),
+          { cls: "ar-cover", disabled: !take }) : "") +
+        (spOk(r) ? ib("second", "sparkles", "Second pass\u2026", tr("A second pass, as Viktor's ComfyUI workflow makes it: the picture brought up 1.5 or 2 times and painted over by its own painter, adapters, prompt and seed, with the form's steps and sampler; a run of its own"), { on: state.spOpen }) : "") +   // HERESY 1384
+        ib("upscale", "scaling", "Upscale\u2026", tr("Make it 2K or 4K (its long side 2560 or 3840) with an upscaler from artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN…): a run of its own"), { on: state.upOpen });   // HERESY 1322
+      var keep = ib("view", "maximize", "Over the page", tr("Over the whole page: ← → walk the pictures, Esc closes")) +
+        ib("compare", "cols-2", "Compare\u2026", tr("Compare it with another: pick that one in the library, then a divider between them")) +   // HERESY 1308
         '<a class="ar-dl" aria-label="' + esc(tr("Download")) + '" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '" href="' + esc(fileUrl(r.id, p.file)) +
         '" download="' + esc("ruach-artist-" + r.id + "-" + p.file) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
-        '<button type="button" class="btn ghost small" data-stage="view" data-tip="' + esc(tr("Over the whole page: ← → walk the pictures, Esc closes")) + '">' + esc(tr("Over the page")) + "</button>" +
         '<button type="button" class="pb-btn ar-vstar' + (p.star ? " is-on" : "") + '" data-stage="star" aria-pressed="' + (p.star ? "true" : "false") + '" aria-label="' + esc(tr("Star it")) + '">' + starIcon(p.star) + "</button>" +
         '<button type="button" class="pb-btn ar-vprot' + (p.protected ? " is-on" : "") + '" data-stage="protect" aria-pressed="' + (p.protected ? "true" : "false") + '" aria-label="' + esc(tr(p.protected ? "Take its protection off" : "Protect it")) +   // HERESY 1367
           '" data-tip="' + esc(tr(p.protected ? PROT_ON : PROT_OFF)) + '">' + shieldIcon(p.protected) + "</button>" +
-        '<button type="button" class="btn ghost small ar-aside" data-stage="aside"' + (p.protected ? " disabled" : "") + ' data-tip="' + esc(tr(p.protected ? "Protected: it never goes to the trash" : "This picture to the trash: the library's Trash brings it back")) + '">' + esc(tr("Trash")) + "</button>" +   // HERESY 1321; 1367
-        spButton(r) +                                   // HERESY 1384: the second pass
-        '<button type="button" class="btn ghost small' + (state.upOpen ? " is-on" : "") + '" data-stage="upscale" data-tip="' + esc(tr("Make it 2K or 4K (its long side 2560 or 3840) with an upscaler from artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN…): a run of its own")) + '">' + esc(tr("Upscale…")) + "</button>" +
+        ib("aside", "trash", "Trash", tr(p.protected ? "Protected: it never goes to the trash" : "This picture to the trash: the library's Trash brings it back"), { cls: "ar-aside", disabled: p.protected });   // HERESY 1321; 1367
+      acts = '<span class="ar-stage-half" role="group" aria-label="' + esc(tr("Made from it")) + '">' + make + "</span>" +
+        '<span class="ar-stage-half" role="group" aria-label="' + esc(tr("Seen and kept")) + '">' + keep + "</span>" +
         (state.upOpen ? upRow(p) : "") +   // HERESY 1322; 1332: by the picture's size
         (state.spOpen && spOk(r) ? spRow(p) : "");   // HERESY 1384
     }

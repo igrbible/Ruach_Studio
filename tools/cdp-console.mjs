@@ -642,7 +642,7 @@ await tcKey("[", "BracketLeft", 219, { text: "[" });
 const tc1 = await tcState(), tcAt = await tcWhere();
 check("A «[» at a line's start opens the tags along a song's arc, Intro to End (as the examples write it, since his 08.10); Intro, there already, in its place and dimmed; the next verse in hand (the lyrics number theirs); nothing the 110 official examples never write ([Break], [Inst])",
   tc1.open && tc1.box === "lyrics" && tc1.active === "[Verse 2]" && tc1.tags.slice(0, 7).join() === "[Intro]@1,[Instrumental Intro],[Verse 2],[Pre-Chorus],[Chorus],[Post-Chorus],[Refrain]" && !tc1.tags.some((t) => /^\[(Break|Inst)\]/.test(t)) &&
-  tc1.tags[tc1.tags.length - 1] === "[End]" && !!tcAt && tcAt.inside && /the next one/.test(tcAt.about), JSON.stringify({ tc1, tcAt }));
+  tc1.tags.filter((t) => !/^\[(Vocal|Spoken):/.test(t)).slice(-1)[0] === "[End]" && /^\[(Vocal|Spoken):/.test(tc1.tags[tc1.tags.length - 1]) && !!tcAt && tcAt.inside && /the next one/.test(tcAt.about), JSON.stringify({ tc1, tcAt }));
 // HERESY 1169 (Viktor 08.10.2026: «ты правильно деактивируешь единственные вхождения в промпт лирики, но позволь двигаться по ним
 // и читать шпаргалку/описание»): ↑ ↑ from the next verse reaches the Intro there already; Enter leaves the lyrics as they are
 await tcKey("ArrowUp", "ArrowUp", 38); await tcKey("ArrowUp", "ArrowUp", 38);
@@ -732,7 +732,7 @@ const tcClick = { ...(await tcTail(10)), open: (await tcState()).open, focus: aw
 check("  a «[» inside a line opens nothing; «]» closes it (a tag of one's own); Ctrl+Space at a line's start types the «[» and opens it; a click puts a tag in",
   tcMid === false && tcV === true && tcShut === false && tcCs.open && tcCs.tail === "\n[" && tcClick.tail === "\n[Chorus]\n" && !tcClick.open && tcClick.focus === "lyrics",
   JSON.stringify({ tcMid, tcV, tcShut, tcCs, tcBr, tcClick }));
-const tcLogic = await ev(`(() => { const o = (t, q) => HeresyComplete.offer(t, q).map(i => i.tag + (i.there !== undefined ? "@" + (i.there + 1) : ""));
+const tcLogic = await ev(`(() => { const o = (t, q) => HeresyComplete.offer(t, q).filter(i => !i.voice).map(i => i.tag + (i.there !== undefined ? "@" + (i.there + 1) : ""));   // 1426: the voices apart
   return { once: [o("[Intro]\\nстрока\\n[END]\\n", "")[0], o("[Intro]\\nстрока\\n[END]\\n", "").slice(-1)[0]].join(), outro: o("[Intro]\\n[END]\\n", "").indexOf("[Outro]") >= 0,
     next: o("[Verse 1]\\nа\\n[Verse 2]\\nб\\n", "v").join(), num: o("", "v2").join(), dup: o("[Verse 2]\\n", "verse 2").join(), ru: o("", "мук").join(),
     word: o("", "solo").join(), desc: o("", "Verse 1 – Him").length, intro: o("[Intro: Piano & Flute]\\n", "intr").join(),
@@ -3242,7 +3242,7 @@ const rf05 = await ev(`(async () => {
   // the stage's picture «As reference», then Draw sends the run and the picture
   window.HeresyArtistRef.set({ id: runs[0].id, file: runs[0].pictures[0].file, url: "/lab/artist/file?id=" + runs[0].id + "&file=thumbs/01-1x1-s7.jpg" }, true);
   const stageBtn = document.querySelector('#arStage [data-stage="ref"]');
-  o.stageBtn = !!stageBtn && stageBtn.textContent;
+  o.stageBtn = !!stageBtn && (stageBtn.getAttribute("aria-label") || stageBtn.textContent);   // 1426: an icon
   await until(() => !document.getElementById("arDraw").disabled, 3000);
   document.getElementById("arDraw").click();
   await until(() => sent.length >= 2, 3000); await wait(300);
@@ -3416,7 +3416,7 @@ const cp08 = await ev(`(async () => {
   thumb(0).click(); await wait(200);
   const o = {};
   const cmpBtn = await until(() => document.querySelector('#arStage [data-stage="compare"]'), 3000);
-  o.btn = cmpBtn && cmpBtn.textContent;
+  o.btn = cmpBtn && (cmpBtn.getAttribute("aria-label") || cmpBtn.textContent);   // 1426: an icon
   if (cmpBtn) cmpBtn.click(); await wait(100);
   o.picking = window.HeresyArtistRef.picking() && document.body.classList.contains("ar-cmp-picking");
   key("Escape"); await wait(100);
@@ -7641,6 +7641,36 @@ const tk25 = await ev(`(async () => {
     return { span: cs.gridColumnStart + "/" + cs.gridColumnEnd, slack: Math.round(f.getBoundingClientRect().width - used) }; }); })()`);
 check("  a take's card in the Creator: the title row across the card, so its marks' row is as wide as they are and the workspace beside them keeps its room",
   !tk25.none && tk25.every((x) => x.span === "1/-1" && x.slack < 24), JSON.stringify(tk25));
+
+// HERESY 1169 · 1426 (Viktor 14.10.2026): the voices in his form among the lyrics' tags, not a section; his fonts by default, Liberation Mono carried
+section("the voices in his form under a «[», marked not a section, and the meter's reading of them; Raleway, Michroma and Liberation Mono by default");
+const vx26 = await ev(`(() => {
+  const H = window.HeresyInstruments, C = window.HeresyComplete, L = window.HeresyLyrics;
+  const g = H && H.lyricTags ? H.lyricTags().filter((x) => x.voice)[0] : null;
+  const pick = (q) => (C ? C.offer("", q) : []).filter((x) => x.voice);
+  return { rows: g ? g.rows.map((r) => r[0]) : null, solo: g ? g.rows.some((r) => /solo/i.test(r[0])) : null,
+    spoken: pick("spo").map((x) => x.tag), vocal: pick("vo").map((x) => x.tag), female: pick("fe").length, numbered: pick("vo2").length,
+    sections: (C ? C.offer("", "ch") : []).filter((x) => !x.voice).length,
+    groups: L ? ["Spoken: Female - Soft Whisper", "Vocal: Male - Calm", "Solo Female Voice", "Chorus: Deep Female Vocal", "Guitar Solo"].map(L.groupOf) : null }; })()`);
+check("the voices: Vocal and Spoken, Female and Male, no Solo; «[» offers them after the sections at a line's start, marked not a section, never numbered; the meter reads them as who sings (a Solo with a voice too), a section's voice as its section",
+  vx26.rows && vx26.rows.length === 6 && vx26.solo === false && vx26.spoken.length >= 2 && vx26.vocal.length >= 2 && vx26.female >= 2 && vx26.numbered === 0 &&
+  vx26.sections >= 3 && JSON.stringify(vx26.groups) === JSON.stringify([null, null, null, "chorus", "solo"]), JSON.stringify(vx26));
+const fo26 = await ev(`(() => {
+  const css = getComputedStyle(document.documentElement), faces = [];
+  for (const sh of document.styleSheets) {
+    let rules; try { rules = sh.cssRules; } catch (e) { continue; }
+    for (const r of rules) if (r.type === CSSRule.FONT_FACE_RULE && /Liberation Mono/.test(r.style.getPropertyValue("font-family")))
+      faces.push(r.style.getPropertyValue("font-weight") + " " + r.style.getPropertyValue("font-style") + " " + (r.style.getPropertyValue("src").match(/LiberationMono-[A-Za-z]+\\.ttf/) || [""])[0]);
+  }
+  const first = (v) => css.getPropertyValue(v).trim().split(",")[0].replace(/["']/g, "");
+  return { saved: localStorage.getItem("yue2.fonts"), sans: first("--sans"), heading: first("--heading"), mono: first("--mono"),
+    pick: ["fontSans", "fontHeading", "fontMono"].map((id) => document.getElementById(id) ? document.getElementById(id).value : null),
+    same: !!document.querySelector('#fontHeading option[value=""]'), lib: [...document.querySelectorAll("#fontMono option")].filter((o) => o.value === "Liberation Mono").length,
+    faces: faces.sort() }; })()`);
+check("  his fonts by default (Raleway, Michroma, Liberation Mono), the headings may still follow the text; Liberation Mono among the studio's own once, its four faces carried by the studio",
+  (fo26.saved !== null || (fo26.sans === "Raleway" && fo26.heading === "Michroma" && fo26.mono === "Liberation Mono")) &&
+  (fo26.saved !== null || JSON.stringify(fo26.pick) === JSON.stringify(["Raleway", "Michroma", "Liberation Mono"])) && fo26.same && fo26.lib === 1 &&
+  JSON.stringify(fo26.faces) === JSON.stringify(["400 italic LiberationMono-Italic.ttf", "400 normal LiberationMono-Regular.ttf", "700 italic LiberationMono-BoldItalic.ttf", "700 normal LiberationMono-Bold.ttf"]), JSON.stringify(fo26));
 // ================================================================== fonts
 section("fonts (Engine page)");
 const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"), kids = [...s.children], hr = kids.findIndex(k => k.tagName === "HR");
@@ -7648,9 +7678,9 @@ const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"
   return { first: kids.slice(0, hr).map(k => k.textContent), hr, system: kids.slice(hr + 1).map(k => k.value), value: s.value,
     heading: document.getElementById("fontHeading").options[0].textContent, mono: document.getElementById("fontMono").value,
     card: cards.findIndex(c => c.id === "appearanceCard"), about: cards.findIndex(c => c.id === "aboutCard"), n: cards.length }; })()`);
-check("Fonts: the app's fonts first (the default marked), a line, then the fonts this computer has", fontMenu.first.join() === "Noto Sans (default),Noto Sans Mono,IBM Plex Sans,IBM Plex Mono,Bodoni Moda,Space Grotesk,Michroma,Raleway,Roboto,Lato" &&
-  fontMenu.hr === 10 && !fontMenu.system.some((f) => ["Noto Sans", "Roboto", "Lato", "Raleway"].includes(f)) && fontMenu.system.length >= 1 && fontMenu.value === "Noto Sans" && fontMenu.heading === "Same as the text (default)" &&
-  fontMenu.mono === "Noto Sans Mono" && /* HERESY 1167: Viktor's fonts are the app's own */ fontMenu.card >= 0 && fontMenu.about === fontMenu.n - 1, JSON.stringify({ ...fontMenu, system: fontMenu.system.slice(0, 6) }));
+check("Fonts: the app's fonts first (the default marked), a line, then the fonts this computer has", fontMenu.first.join() === "Noto Sans,Noto Sans Mono,IBM Plex Sans,IBM Plex Mono,Bodoni Moda,Space Grotesk,Michroma,Raleway (default),Roboto,Lato,Liberation Mono" &&
+  fontMenu.hr === 11 && !fontMenu.system.some((f) => ["Noto Sans", "Roboto", "Lato", "Raleway"].includes(f)) && fontMenu.system.length >= 1 && fontMenu.value === "Raleway" && fontMenu.heading === "Same as the text" &&
+  fontMenu.mono === "Liberation Mono" && /* HERESY 1167: Viktor's fonts are the app's own */ fontMenu.card >= 0 && fontMenu.about === fontMenu.n - 1, JSON.stringify({ ...fontMenu, system: fontMenu.system.slice(0, 6) }));
 // HERESY 1166 (Viktor 04.10.2026: «как всё ужать и передвинуть, чтобы на 1080p всё встало красиво и не таким длинным
 // полотенцем»): his rows on one grid of thirty: Server over Hardware beside the log (1/3 · 2/3), Compute | GPUs (2/5 · 3/5),
 // Appearance | Writer (4/6 · 2/6), VAEs | LoRAs (1/6 · 5/6), Sliders, About; Appearance's two parts still side by side
@@ -7717,7 +7747,7 @@ check("  both survive a reload, and the menus show them", f3.body.includes(sysFo
 await click("#fontsReset");
 await answerDialog(true);
 const f4 = await ev(fontsNow);
-check("  Default fonts puts the app's own back and forgets the choice", f4.body.startsWith('"Noto Sans"') && f4.head.startsWith('"Noto Sans"') && f4.saved === null,
+check("  Default fonts puts the app's own back and forgets the choice", f4.body.startsWith("Raleway") && f4.head.startsWith("Michroma") && f4.saved === null,
   JSON.stringify(f4));
 
 // ============================================================ tips vs the log

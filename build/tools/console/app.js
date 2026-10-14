@@ -4297,7 +4297,9 @@
     $("unloadNow").disabled = true;
     // HERESY 1370 (Viktor 11.10.2026: «на кнопку ВЫГРУЗИТЬ в Баре тоже подключи выгруз не только YuE2 моделей, но абсолютно всего»): the
     // Artist's kept painters with the engine's models
-    var art = keptPainters().length ? post("/lab/artist/unload").catch(function () { return null; }) : Promise.resolve(null);
+    // HERESY 1426 (Viktor 14.10.2026: «На кнопке выгрузки моделей нет сторожа… перепроверь»): with a body: the lab takes no POST without
+    // one («send the file as the body»), and since 1370 this one came back 400 and let go of nothing (a painter at work is never let go)
+    var art = keptPainters().length ? post("/lab/artist/unload", {}).catch(function () { return null; }) : Promise.resolve(null);
     var eng = engine ? post("/unload") : Promise.resolve(null);
     var painted = function (a) {
       var gone = a && a.released || [], busy = a && a.busy || [];
@@ -8180,14 +8182,17 @@
   // the text (--sans), the headings (--heading, the text font unless picked) and numbers and code (--mono).
   // Each menu lists the app's own fonts, a line, then the fonts this computer has: a common set, found by
   // measuring, or every installed family after List all my fonts (the browser asks first; Chrome and Edge).
+  // HERESY 1426 (Viktor 14.10.2026: «По скрину как у меня - выставь эти же шрифты по умолчанию»): Raleway, Michroma, Liberation Mono;
+  // a chosen font falls back on the studio's own (back), so a letter it lacks comes from Noto, not from whatever the computer has; the
+  // headings may still follow the text («Same as the text»)
   var FONT_ROLES = {
-    // HERESY 1167 (Viktor: «дефолтом выставь все мои параметры»): Noto Sans and Noto Sans Mono, loaded with the page
-    sans: { select: "fontSans", generic: "sans-serif", own: "Noto Sans" },
-    heading: { select: "fontHeading", generic: "sans-serif", own: "" },
-    mono: { select: "fontMono", generic: "monospace", own: "Noto Sans Mono" }
+    sans: { select: "fontSans", generic: "sans-serif", own: "Raleway", back: '"Noto Sans", sans-serif' },
+    heading: { select: "fontHeading", generic: "sans-serif", own: "Michroma", back: "var(--sans)" },
+    mono: { select: "fontMono", generic: "monospace", own: "Liberation Mono", back: '"Noto Sans Mono", monospace' }
   };
   // HERESY 1274 (Viktor 09.10.2026: «Добавь ещё в движок шрифты Raleway, Roboto, Lato»): ten of the app's own, all in the studio itself
-  var APP_FONTS = ["Noto Sans", "Noto Sans Mono", "IBM Plex Sans", "IBM Plex Mono", "Bodoni Moda", "Space Grotesk", "Michroma", "Raleway", "Roboto", "Lato"];
+  var APP_FONTS = ["Noto Sans", "Noto Sans Mono", "IBM Plex Sans", "IBM Plex Mono", "Bodoni Moda", "Space Grotesk", "Michroma", "Raleway", "Roboto", "Lato",
+    "Liberation Mono"];                                             // HERESY 1426
   var COMMON_FONTS = ["Aptos", "Arial", "Avenir", "Avenir Next", "Bahnschrift", "Baskerville", "Calibri", "Cambria", "Candara",
     "Cantarell", "Cascadia Code", "Cascadia Mono", "Charter", "Consolas", "Constantia", "Corbel", "Courier New", "DejaVu Sans",
     "DejaVu Sans Mono", "DejaVu Serif", "Didot", "Fira Mono", "Fira Sans", "Franklin Gothic Medium", "Futura", "Garamond",
@@ -8206,7 +8211,7 @@
   function applyFonts() {
     var saved = savedFonts(), root = document.documentElement;
     Object.keys(FONT_ROLES).forEach(function (role) {
-      if (typeof saved[role] === "string") root.style.setProperty("--" + role, JSON.stringify(saved[role]) + ", " + FONT_ROLES[role].generic);
+      if (typeof saved[role] === "string") root.style.setProperty("--" + role, saved[role] ? JSON.stringify(saved[role]) + ", " + FONT_ROLES[role].back : "var(--sans)");
       else root.style.removeProperty("--" + role);
     });
   }
@@ -8234,8 +8239,9 @@
       var r = FONT_ROLES[role], select = $(r.select), want = typeof saved[role] === "string" ? saved[role] : r.own;
       var system = systemFonts.slice();
       if (want && APP_FONTS.indexOf(want) < 0 && system.indexOf(want) < 0) system.push(want);   // kept from a longer list
+      system = system.filter(function (x) { return APP_FONTS.indexOf(x) < 0; });   // HERESY 1426: the studio's own once, among its own
       select.textContent = "";
-      if (!r.own) select.appendChild(fontOption("", "Same as the text (default)"));
+      if (role === "heading") select.appendChild(fontOption("", "Same as the text"));   // HERESY 1426: Michroma is the default now
       APP_FONTS.forEach(function (family) { select.appendChild(fontOption(family, family === r.own ? family + " (default)" : family)); });
       select.appendChild(document.createElement("hr"));
       system.sort(function (a, b) { return a.localeCompare(b); }).forEach(function (family) { select.appendChild(fontOption(family, family)); });

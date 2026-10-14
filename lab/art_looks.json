@@ -2,8 +2,8 @@
  "duduk": {
   "name": "duduk",
   "home": "Armenia",
-  "looks": "a short straight wooden tube (a woodwind, not a smoking pipe) of reddish-brown apricot wood, about 35 cm long, eight finger holes on top, a large flat pale cane reed pushed into its upper end",
-  "not": "an oboe, clarinet or flute with metal keys, or a plain stick or board"
+  "looks": "a short straight cylindrical pipe of reddish-brown apricot wood, about 35 cm long and the same width from end to end, eight finger holes in a row along its top, and a large flat double reed of pale cane, as wide as a thumb, pushed into its upper end",
+  "not": "a gourd, a bottle or any bulging body, a neck, an oboe, clarinet or flute with metal keys"
  },
  "low-wooden-flute": {
   "name": "low wooden flute",
@@ -472,7 +472,8 @@
  "nyckelharpa": {
   "name": "nyckelharpa",
   "home": "Sweden",
-  "looks": "a long fiddle with a row of wooden keys along its neck and many strings, a short bow beside it"
+  "looks": "a long wooden fiddle with a row of small wooden keys along its whole neck and many strings, hung from a strap across the player's chest and played with a short bow",
+  "not": "a violin, viola or cello held under the chin or between the knees"
  },
  "koto": {
   "name": "koto",
@@ -497,7 +498,8 @@
  "slide-guitar": {
   "name": "slide guitar",
   "home": "USA",
-  "looks": ""
+  "looks": "a lap steel guitar lying flat on the player's knees, a polished steel bar sliding along its strings",
+  "not": "an ordinary guitar held upright"
  },
  "pedal-steel-guitar": {
   "name": "pedal steel guitar",
@@ -523,8 +525,8 @@
  "kemenche": {
   "name": "kemenche",
   "home": "Turkey, Black Sea",
-  "looks": "a small pear-shaped fiddle with three strings, held upright on the knee, a short bow",
-  "not": "an ordinary violin"
+  "looks": "a small pear-shaped bowl fiddle with three strings, no waist and no f-holes, two small half-moon sound holes, held upright on the knee and played with a short bow",
+  "not": "a violin, viola or cello: a waisted body, f-shaped holes, a scroll"
  },
  "bouzouki": {
   "name": "bouzouki",
@@ -841,8 +843,8 @@
  "sambuca": {
   "name": "sambuca - greek strings",
   "home": "ancient Near East, Greece",
-  "looks": "Greek plucked strings: a long-necked lute with a round, ribbed wooden bowl back, a slender fretted neck and paired metal strings, played with a plectrum",
-  "not": "a harp of any shape, or a lyre"
+  "looks": "a Greek bouzouki: a deep round ribbed bowl back of dark and light wooden staves, a flat pale top with a round sound hole, a long slender neck with many metal frets, eight metal strings in four pairs",
+  "not": "a harp of any shape, a lyre, a Chinese pipa with frets on its face"
  },
  "sambuca-v2": {
   "name": "sambuca, an ancient triangular harp (sabbeka)",
@@ -921,7 +923,8 @@
  "shofar-v5": {
   "name": "raw bugle calls, two notes",
   "home": "",
-  "looks": ""
+  "looks": "a plain brass bugle without valves",
+  "not": "a trumpet with valves"
  },
  "shofar-v6": {
   "name": "primitive animal horn blasts",
@@ -936,7 +939,8 @@
  "grand-piano-lid-closed": {
   "name": "grand piano, lid closed",
   "home": "Europe",
-  "looks": ""
+  "looks": "a black grand piano with its lid fully closed and lying flat",
+  "not": "a piano with its lid raised"
  },
  "grand-piano-lid-half": {
   "name": "grand piano, lid half open",
@@ -966,7 +970,8 @@
  "kinnor-david": {
   "name": "kinnor, the lyre of King David",
   "home": "ancient Israel",
-  "looks": ""
+  "looks": "a small ancient wooden lyre: two curved arms rising from a wooden sound box and joined by a crossbar, ten gut strings running from the crossbar down to the box, held against the chest",
+  "not": "a harp with a pillar, a guitar or a violin"
  },
  "nevel-harp": {
   "name": "nevel, the ancient Hebrew harp",
@@ -1006,6 +1011,7 @@
  "gudok": {
   "name": "gudok, an archaic bowed fiddle",
   "home": "Russia",
-  "looks": ""
+  "looks": "a small pear-shaped wooden string instrument carved from one piece of wood, a flat top with two small round sound holes, three strings over a low bridge, a short straight neck without frets ending in a flat head with three wooden pegs, held upright on the player's knee with a short arched bow",
+  "not": "a violin, viola or cello: a waisted body, f-shaped holes, a scroll"
  }
 }

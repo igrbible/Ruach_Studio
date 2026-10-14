@@ -248,6 +248,16 @@ ASK = ("You write one prompt for an image model that paints the cover artwork of
        "comma-separated phrases. Write the prompt and nothing else.")
 
 
+# HERESY 1426: an instrument with a look: its look leads the painter's prompt word for word (the prompter, paraphrasing, kept the
+# name and lost the shape: «A duduk with reddish-brown apricot wood…» came out a gourd with a cane through it, 14.10.2026), and the
+# prompter writes only where it is and how it is seen; its name never reaches the painter, which paints what it half knows by it
+ASK_SCENE = ("You write the rest of a prompt for an image model that paints the cover artwork of a song. Its subject is already "
+             "written and comes first; you write ONLY where it is and how it is seen: the place, the light, the colours and an art "
+             "style (photograph, oil painting, ink, digital art…), from the song's style and lyrics below. Never name or describe "
+             "the subject again; no other instruments, no music words, no text or letters, no real people, no brands, nothing sexual "
+             "or gory. One line, at most 40 words, comma-separated phrases. Write the prompt and nothing else.")
+
+
 def take_words(d):
     req = json.load(open(d / "request.json", encoding="utf-8")) if (d / "request.json").is_file() else {}
     style = " ".join(str(req.get("style") or "").split())[:1200]
@@ -284,12 +294,13 @@ def write_prompt(title, style, lyrics, seed, subject):
     dev = "cuda" if torch.cuda.is_available() and torch.cuda.mem_get_info()[0] >= int(9.5 * 2 ** 30) else "cpu"
     model = AutoModelForCausalLM.from_pretrained(PROMPTER, dtype=torch.bfloat16 if dev == "cuda" else torch.float32).to(dev)   # dtype: transformers 4.56 on and 5
     user = f"Title: {title}\nStyle: {style}\nLyrics:\n{lyrics or '(instrumental)'}"
-    if subject:
-        home = subject.get("home") or ""
-        user += (f"\nThe picture's subject is the {subject['name']}" +
-                 (f", which the image model does not know by name: describe it by how it looks: {looks}" if looks else "") +
-                 (f". Show it in its home, {home}: a place, a landscape or a room of that land." if home and home != "everywhere" else "."))
-    msgs = [{"role": "system", "content": ASK}, {"role": "user", "content": user}]
+    home = (subject or {}).get("home") or ""
+    where = f" Show it in its home, {home}: a place, a landscape or a room of that land." if home and home not in ("everywhere", "studio") else ""
+    if subject and looks:                            # HERESY 1426: the scene only; the look goes first as it is written
+        user += f"\nThe subject, already written: {looks}.{where}"
+    elif subject:
+        user += f"\nThe picture's subject is the {subject['name']}.{where}"
+    msgs = [{"role": "system", "content": ASK_SCENE if subject and looks else ASK}, {"role": "user", "content": user}]
     ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt")
     if hasattr(ids, "keys"):                          # HERESY 1167: transformers 5 answers a dict (in .venv-art)
         ids = ids["input_ids"]
@@ -302,6 +313,8 @@ def write_prompt(title, style, lyrics, seed, subject):
     text = " ".join(text.split()).strip('"').strip()
     if not text:
         raise RuntimeError("the prompter wrote nothing")
+    if subject and looks:                            # HERESY 1426
+        text = looks.rstrip(". ") + ", " + text
     return text, PROMPTER.name
 
 
@@ -355,7 +368,9 @@ def look(crit, image, prompt, subject):
     blind: the critic sees the picture and the subject only, never the prompt, and says what it sees before judging
     (with the prompt before it, it said the prompt back as what it saw: measured 03.10.2026, a duduk «seen» on a board).
     A song's subject is its prompt's first phrase (the prompter begins with it)."""
-    what = (f"the {subject['name']}" + (f" ({subject['looks']})" if subject.get("looks") else "")) if subject \
+    # HERESY 1426: by its look alone when it has one: named, the critic said the name back over whatever stood there (a gourd with
+    # a cane through it was «a duduk», a pipa «a sambuca», 14.10.2026)
+    what = (f"an object that looks like this: {subject['looks']}" if subject.get("looks") else f"the {subject['name']}") if subject \
         else prompt.split(",")[0].strip()
     # a rare one is not seen in the common instrument painted in its place (the morin khuur came out a violin beside a
     # live horse, and the critic said yes: 03.10.2026)
@@ -366,7 +381,8 @@ def look(crit, image, prompt, subject):
         common = " An ordinary violin, cello, guitar, flute, oboe, clarinet or trumpet in its place is NO."
     text = ("Look at this picture. Answer in two lines.\n"
             "Line 1: what the picture shows, the main object first, in one sentence.\n"
-            f"Line 2: YES if {what} is clearly in the picture, NO if it is not or something else stands in its place.{common}")
+            f"Line 2: YES if {what} is clearly in the picture, NO if it is not, if its shape or parts differ from those words, or if "
+            f"something else stands in its place.{common}")
     said = omni(crit, image, text, 90)
     votes = re.findall(r"\b(yes|no)\b", said, re.I)
     verdict = votes[-1].lower() == "yes" if votes else None      # the verdict is asked last: its word is the last
@@ -429,6 +445,8 @@ def main():
                 row["seen"] = seen
                 if seen is None:
                     why = "the critic's answer could not be read: this picture kept, unseen"
+                elif seen is False and k < PICTURES - 1 and subject.get("looks"):
+                    pass                                 # HERESY 1426: the look's own words again, on the next seed
                 elif seen is False and k < PICTURES - 1:
                     new = adapt(crit, pic, prompt, subject, row["shows"])
                     if new:
@@ -440,6 +458,10 @@ def main():
             took_critic += time.time() - tc
             if seen is not False or why:
                 break
+        if seen is False and not why and subject.get("looks"):
+            # HERESY 1426 (Viktor 14.10.2026: «Лучше вообще без картинки, чем визуальную ложь»)
+            raise SystemExit(f"no faithful picture of the {subject['name']} in {len(tries)} tries: none kept, better none than a lie "
+                             f"(the critic saw: {(tries[-1].get('shows') or 'something else')[:120]})")
         if seen is False and not why:
             why = f"the subject not found in {len(tries)} pictures: the last kept"
         kept.replace(out)

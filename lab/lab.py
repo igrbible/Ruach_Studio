@@ -25,7 +25,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
        GET /artist/civitai-fetch (the fetch under way or the last; civitai_fetch.py) ·
        HERESY 1337: GET /artist/bin (the art's trash: runs, pictures put aside, covers taken off) · GET /artist/bin-file?take=&stamp= ·
        POST /artist/bin {op: restore | delete | empty, items}
-  GET  /fonts/NAME.woff2           HERESY 1274: the page's fonts (lab/fonts/, OFL), cached a year
+  GET  /fonts/NAME.woff2|.ttf      HERESY 1274: the page's fonts (lab/fonts/, OFL), cached a year (1426: Liberation Mono as TTF)
   POST /jobs/cancel {key}          HERESY 1165: a job waiting for a card off the queue (a running one is refused)
   POST /regen {names, same_seeds}  HERESY 1160: made again, new seeds; same_seeds (1165): its own, at a probe's full length
   POST /section {name, a, b, lyrics, versions, section, parts}  HERESY 1414: a section sung anew (GET /section/live, /section/job?id=, /section/mark?name=)
@@ -2101,9 +2101,9 @@ class Handler(BaseHTTPRequestHandler):
             if url.path.startswith("/fonts/"):               # HERESY 1274: the page's fonts, in the studio itself (no CDN)
                 name = url.path[len("/fonts/"):]
                 font = HERE / "fonts" / name
-                if not re.fullmatch(r"[A-Za-z0-9_-]+\.woff2", name) or not font.is_file():
+                if not re.fullmatch(r"[A-Za-z0-9_-]+\.(woff2|ttf)", name) or not font.is_file():   # HERESY 1426: Liberation Mono as TTF
                     return self.send(404, {"error": "no such font"})
-                return self.send_file(font, "font/woff2", cache="public, max-age=31536000, immutable")
+                return self.send_file(font, "font/ttf" if name.endswith(".ttf") else "font/woff2", cache="public, max-age=31536000, immutable")
             if url.path == "/artist/runs":                   # HERESY 1255: the Artist room
                 return self.send(200, artist.runs())
             if url.path == "/artist/file":

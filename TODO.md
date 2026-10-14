@@ -9,6 +9,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ **2.0.0-rc1** (06.10.2026), **rc2** (07.10), **rc3** (09.10; cut again the same day with the logo the name alone everywhere, the GitHub pre-release with it).
 - ✅ **2.0.0-rc4**, cut as a whole on Viktor's word of 10.10.2026 («собирай RC4 как unified version с багфиксом по факту воспроизведения поведения развёртывания Студии под Pinokio»): the models converted once in goldhub/Ruach_Studio_Models_v2, the install made whole, the Artist as it stands; tried from a clean clone and by a whole fresh install. The community's gate («при росте Issues и PR, и 100+ stars») moves to rc5.
 - ✅ 2.0.0-rc6 cut and published 12.10.2026 (tag v2.0.0-rc6, the pre-release with its tarball, the card on rc6).
+- ✅ 2.0.0-rc7 cut and published 13.10.2026 (tag v2.0.0-rc7, release commit 34e0b23, the pre-release with its tarball, the card on rc7); the last release candidate before 2.0.0.
 - ☐ RC7: the spectrogram's slice out of the section card's tip, the spectrogram only in the full scope (Viktor 12.10.2026).
 - ☐ **2.0.0, the release.** Before it, in one go: every screenshot of the guide, the README and the site taken again (curated: nothing private in them), the new strings in the six other languages, every approved 💎 probe made again full length on its own seeds, and the promo video with everything in.
 - ☐ **2.1.0**: the Videographer room (below) and what SUNO's interface teaches us (below); the working release once issues and pull requests settle.
@@ -170,6 +171,7 @@ Viktor's screenshots of SUNO's newest interface, 09.10.2026 (its Studio, a DAW, 
 - ✅ 1420 (13.10.2026): score mode (Full, Melody) in the studio's own trainer; next: the separation, then AI-Toolkit out of the studio.
 - ✅ 1421 (13.10.2026): compare plays on; the Style as one line; the find bar's ✕; Max length as typed; guidances in tenths; the take card's face; the sambuca in his words.
 - ✅ 1422 (13.10.2026): the separation in the studio's own trainer; AI-Toolkit out of the studio (his own AI_Toolkit folder untouched).
+- ✅ 1426 (14.10.2026): the voices among the lyrics' tags and the guide's lyrics in twelve languages; covers that do not lie; the Artist's stage as icons; Raleway, Michroma and Liberation Mono by default, carried by the studio; Unload reaches the Artist again.
 - ✅ 1425 (13.10.2026): several sections replaced in one go, their versions named by section and stretch and in Takes as they land; compare at 1200 px with its wave, thumbs and «Hide disliked»; the Refiner's Colour (vinyl, tape, room); a cover to its namesakes; Compute's VAE, the memory preset gone; the scan suggests Qwen-Image 2512.
 - ✅ 1423 (13.10.2026): covers by the cards: Qwen-Image 2512 where it fits whole, else Krea 2 Muse; the speeds measured. ☐ 2.1.0: a quicker Qwen cover (the Artist room's kept painter for covers, or nunchaku's int4 kernels, or a 4-step Lightning), on his go.
 

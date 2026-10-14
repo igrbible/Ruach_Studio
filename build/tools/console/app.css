@@ -12,10 +12,11 @@
   --playbar-h: 124px;   /* HERESY 1106: the waveform across, the controls under it */
 
   /* HERESY 1167 (Viktor: «дефолтом выставь все мои параметры»): Noto Sans and Noto Sans Mono, loaded with the page */
-  --sans: "Noto Sans", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --mono: "Noto Sans Mono", "IBM Plex Mono", "Cascadia Mono", ui-monospace, monospace;
+  /* HERESY 1426 (Viktor 14.10.2026: «выставь эти же шрифты по умолчанию»): Raleway, Michroma, Liberation Mono; Noto behind each for what it lacks */
+  --sans: "Raleway", "Noto Sans", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "Liberation Mono", "Noto Sans Mono", "IBM Plex Mono", "Cascadia Mono", ui-monospace, monospace;
   --display: "Bodoni Moda", "Didot", "Times New Roman", serif;   /* the logo and the (i) glyph only */
-  --heading: var(--sans);   /* headings, at medium weight; the Engine page's Fonts card can change all three */
+  --heading: "Michroma", var(--sans);   /* headings (Michroma is Latin only: its Cyrillic and Greek from the text's); the Fonts card changes all three */
 
   /* The score is set on light manuscript paper in every theme. */
   --paper:      #f2e9d5;
@@ -5538,3 +5539,14 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 
 /* HERESY 1425: the GPU memory preset hidden (a card's VRAM limit in Engine → GPUs sets the knobs) */
 #memPresetField[hidden] { display: none; }
+
+/* HERESY 1426: the voices among the tags, no section: marked as heard, not as TEST */
+.tc-say.tc-voice, .tc-about-n.tc-voice { color: var(--good); }
+.hi-voice { color: var(--good); font-size: 11px; letter-spacing: .02em; }
+
+/* HERESY 1426: the Artist's stage buttons as icons in two halves (made from it · seen and kept), one line on a wide stage */
+.ar-stage-acts { column-gap: 22px; row-gap: 4px; }
+.ar-stage-half { display: inline-flex; align-items: center; gap: 2px; }
+.ar-ico.is-on { color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
+.ar-ico[disabled] { opacity: .38; cursor: default; background: none; }
+.ar-stage-acts > .ar-up-row { flex-basis: 100%; }

@@ -953,3 +953,138 @@
   src: url(/lab/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+/* HERESY 1426: the studio's own faces beyond Google's: Liberation Mono (lab/fonts/, OFL), kept by check-vendored.sh --fonts */
+@font-face {
+  font-family: 'Liberation Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/lab/fonts/LiberationMono-Regular.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Liberation Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/lab/fonts/LiberationMono-Bold.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Liberation Mono';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/lab/fonts/LiberationMono-Italic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Liberation Mono';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/lab/fonts/LiberationMono-BoldItalic.ttf) format('truetype');
+}
+/* HERESY 1426 (Viktor 14.10.2026: «Недостающие шрифты бери из моего ~/.fonts/ или из системного»): the faces Google's subsets lacked, whole (Raleway 4.x and Lato 2.015 with Cyrillic and Greek, Noto Sans' bold and italics); declared after Google's, so they are tried first */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/lab/fonts/Raleway-Regular.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/lab/fonts/Raleway-Italic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/lab/fonts/Raleway-Medium.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/lab/fonts/Raleway-MediumItalic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/lab/fonts/Raleway-SemiBold.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/lab/fonts/Raleway-SemiBoldItalic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/lab/fonts/Raleway-Bold.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/lab/fonts/Raleway-BoldItalic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/lab/fonts/NotoSans-Bold.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/lab/fonts/NotoSans-Italic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/lab/fonts/NotoSans-BoldItalic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/lab/fonts/Lato-Regular.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/lab/fonts/Lato-Bold.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/lab/fonts/Lato-Italic.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/lab/fonts/Lato-BoldItalic.ttf) format('truetype');
+}

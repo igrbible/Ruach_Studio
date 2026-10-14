@@ -57,7 +57,10 @@ gone = [p for p in fonts.glob("*.woff2") if p.name not in names]
 for p in gone:
     p.unlink()
 head = "/* HERESY 1274: the page's fonts in the studio itself (lab/fonts/, OFL); made by heresy/tools/check-vendored.sh --fonts */\n"
-css_out.write_text(head + "\n".join(out) + "\n", encoding="utf-8")
+old = css_out.read_text(encoding="utf-8") if css_out.exists() else ""
+mark = "/* HERESY 1426: the studio's own faces beyond Google's"
+local = old[old.index(mark):] if mark in old else ""          # HERESY 1426: Liberation Mono's faces stay (not Google's)
+css_out.write_text(head + "\n".join(out) + "\n" + local, encoding="utf-8")
 print(f"{len(out)} faces, {len(names)} files in {fonts} ({len(gone)} no longer used, removed); {css_out}")
 PY
     echo "${G}the fonts taken again${X}: commit lab/fonts in lab/ and vendor/fonts.css in build/, then ./build.sh"
