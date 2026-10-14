@@ -489,6 +489,11 @@ def main(run=None):
     if asked.startswith("qwen"):                     # HERESY 1318: Qwen-Image 2512 and 2.1 paint in artist_qwen.py
         import artist_qwen
         return artist_qwen.main(run, ask, asked)
+    letters = ask.get("letters")                     # HERESY 1396 (Viktor: «И на Krea 2 Muse тоже тесты прогони»): Krea letters a picture too
+    if letters:
+        import artist_letters
+        prompt = artist_letters.phrase(prompt, letters)
+        print(json.dumps({"letters_prompt": prompt}), flush=True)
     import torch
     t0 = time.time()
     painter = art_job.which_painter()
@@ -533,89 +538,105 @@ def main(run=None):
             mask = Image.open(run / ask["mask"])
     fit, fits = bool(ref is not None and ask.get("fit")), {}   # HERESY 1307: the picture contained, the edges painted around it
     places, full = (ask.get("place") or {}) if ref is not None else {}, None   # HERESY 1346: the canvas's places; the sigmas from the noise
-    n = 0
-    for k in range(count):                           # a variation is the next seed; its shapes share it
-        for shape in shapes:
-            (gw, gh), (w, h) = sized(SHAPES, shape, ask)   # HERESY 1384: times the scale of a second pass
-            n += 1
-            if ONLY and n not in ONLY:                   # HERESY 1354: another card paints this one (the lab spread the run)
-                continue
-            t1 = time.time()
-            g = torch.Generator("cuda").manual_seed(seed + k)
-            if hasattr(krea.pipe.scheduler, "heresy"):   # HERESY 1333: our samplers' noise by the picture's seed
-                krea.pipe.scheduler.heresy = dict(krea.pipe.scheduler.heresy, seed=seed + k)
-            more = {"callback_on_step_end": live(run, n, gw, gh, w, h), "callback_on_step_end_tensor_inputs": ["latents"]} if preview else {}
-            steps = krea_steps                         # HERESY 1319
-            pl = places.get(shape)                   # HERESY 1346: where the canvas put the picture in this shape
-            if pl is not None:
-                if shape not in fits:
-                    fits[shape] = placed(ref, mask, gw, gh, pl)
-                if shape not in x0s:
-                    x0s[shape] = ref_latents(krea.pipe, fits[shape][0], gw, gh, ref_rs(ask))
-                if not fits[shape][2] and full is None:
-                    full = ref_sigmas(krea.pipe, 1.0, krea_steps)
-                psig, ps0 = (sig, s0) if fits[shape][2] else full   # covering: the strength asked; bare edges: from the noise
-                noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
-                more.update(latents=(1 - ps0) * jolt(krea.pipe, x0s[shape], ask, seed + k) + ps0 * noise, sigmas=psig)   # HERESY 1385
-                steps = len(psig)
-                if fits[shape][1] is not None:
-                    grow, edge, soft, grain = mask_opts(ask)
-                    if shape not in masks:
-                        masks[shape] = mask_tokens(krea.pipe, fits[shape][1], gw, gh, grow, edge, soft)
-                    more.update(callback_on_step_end=blender(masks[shape][0], x0s[shape], noise, len(psig), soft, grain, more.get("callback_on_step_end")),
-                                callback_on_step_end_tensor_inputs=["latents"])
-            elif ref is not None:                    # HERESY 1305: the picture noised to the strength's sigma, the tail from there
-                if fit and shape not in fits:        # HERESY 1307: what the VAE sees and what is repainted, for this shape
-                    fits[shape] = fitted(ref, mask, gw, gh)
-                if shape not in x0s:
-                    x0s[shape] = ref_latents(krea.pipe, fits[shape][0] if fit else ref, gw, gh, ref_rs(ask))
-                noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
-                more.update(latents=(1 - s0) * jolt(krea.pipe, x0s[shape], ask, seed + k) + s0 * noise, sigmas=sig)   # HERESY 1385
-                steps = len(sig)
-                if mask is not None or fit:          # HERESY 1306: the kept part put back at every step, noised to its next sigma
-                    grow, edge, soft, grain = mask_opts(ask)   # HERESY 1320
-                    if shape not in masks:
-                        masks[shape] = mask_tokens(krea.pipe, fits[shape][1] if fit else mask, gw, gh, grow, edge, soft)
-                    more.update(callback_on_step_end=blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, more.get("callback_on_step_end")),
-                                callback_on_step_end_tensor_inputs=["latents"])
-            if sched:                                # HERESY 1365: step 0's strengths now, each next one before its step
-                lora_start(krea.pipe, sched, steps)
-                more.update(callback_on_step_end=lora_steps(krea.pipe, sched, steps, more.get("callback_on_step_end")),
-                            callback_on_step_end_tensor_inputs=more.get("callback_on_step_end_tensor_inputs") or ["latents"])
-            ec = e.to("cuda")
-            regions_set(krea.pipe.transformer, ec, [(pe.to("cuda"), pm.to("cuda"), t) for (pe, pm), t in zip(regs, region_tokens(krea.pipe, ask, gw, gh))])   # HERESY 1387
-            img = krea.pipe(prompt_embeds=ec, prompt_embeds_mask=m.to("cuda"), num_inference_steps=steps,
-                            guidance_scale=0.0, height=gh, width=gw, generator=g, **more).images[0]
-            if pl is not None and fits[shape][1] is not None:   # HERESY 1346: outside the mask the placed picture's own pixels
-                img = composite(img, fits[shape][0], masks[shape][1], mask_opts(ask)[3])
-            elif ref is not None and (mask is not None or fit):   # HERESY 1306: outside the mask the reference's own pixels, feathered
-                img = composite(img, fits[shape][0] if fit else cover(ref, gw, gh), masks[shape][1], mask_opts(ask)[3])   # HERESY 1320: and its grain
-            if (gw, gh) != (w, h):
-                x, y = (gw - w) // 2, (gh - h) // 2
-                img = img.crop((x, y, x + w, y + h))
-            score = krea.flagged(img)
-            row = {"n": n, "shape": shape, "seed": seed + k, "w": w, "h": h, "nsfw": score, "took": round(time.time() - t1, 1)}
-            if pl is not None:                       # HERESY 1346: placed on the canvas: covering it, or painted around
-                row.update(ref=round(ps0, 2), placed="covers" if fits[shape][2] else "around")
-                if mask is not None:
-                    row["masked"] = True
-            elif ref is not None:
-                row["ref"] = round(s0, 2)                # HERESY 1305: how far from the reference it began
-                if mask is not None:
-                    row["masked"] = True                 # HERESY 1306
-                if fit:
-                    row["fit"] = True                    # HERESY 1307
-            if score is not None and score >= 0.5:
-                row["kept"] = False
-            else:
-                name = f"{n:02d}-{shape.replace(':', 'x')}-s{seed + k}"
-                img = img.convert("RGB")
-                img.save(run / (name + ".png"))
-                small = img.copy()
-                small.thumbnail((THUMB, THUMB), resample=3)
-                small.save(run / "thumbs" / (name + ".jpg"), "JPEG", quality=85, optimize=True)
-                row.update(kept=True, file=name + ".png", thumb="thumbs/" + name + ".jpg")
-            print(json.dumps(row), flush=True)
+    rounds, pending, tried = (artist_letters.TRIES if letters else 1), None, {}   # HERESY 1396
+    for r in range(rounds):
+        n = 0
+        for k in range(count):                           # a variation is the next seed; its shapes share it
+            for shape in shapes:
+                (gw, gh), (w, h) = sized(SHAPES, shape, ask)   # HERESY 1384: times the scale of a second pass
+                n += 1
+                if ONLY and n not in ONLY:                   # HERESY 1354: another card paints this one (the lab spread the run)
+                    continue
+                if pending is not None and n not in pending:   # HERESY 1396: spelled exactly in a round before
+                    continue
+                sk = seed + k + 1000 * r                     # HERESY 1396: a round more, another seed (the row says which)
+                sk = sk if sk < 2 ** 31 - 1 else seed + k - 1000 * r
+                t1 = time.time()
+                g = torch.Generator("cuda").manual_seed(sk)
+                if hasattr(krea.pipe.scheduler, "heresy"):   # HERESY 1333: our samplers' noise by the picture's seed
+                    krea.pipe.scheduler.heresy = dict(krea.pipe.scheduler.heresy, seed=sk)
+                more = {"callback_on_step_end": live(run, n, gw, gh, w, h), "callback_on_step_end_tensor_inputs": ["latents"]} if preview else {}
+                steps = krea_steps                         # HERESY 1319
+                pl = places.get(shape)                   # HERESY 1346: where the canvas put the picture in this shape
+                if pl is not None:
+                    if shape not in fits:
+                        fits[shape] = placed(ref, mask, gw, gh, pl)
+                    if shape not in x0s:
+                        x0s[shape] = ref_latents(krea.pipe, fits[shape][0], gw, gh, ref_rs(ask))
+                    if not fits[shape][2] and full is None:
+                        full = ref_sigmas(krea.pipe, 1.0, krea_steps)
+                    psig, ps0 = (sig, s0) if fits[shape][2] else full   # covering: the strength asked; bare edges: from the noise
+                    noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
+                    more.update(latents=(1 - ps0) * jolt(krea.pipe, x0s[shape], ask, sk) + ps0 * noise, sigmas=psig)   # HERESY 1385
+                    steps = len(psig)
+                    if fits[shape][1] is not None:
+                        grow, edge, soft, grain = mask_opts(ask)
+                        if shape not in masks:
+                            masks[shape] = mask_tokens(krea.pipe, fits[shape][1], gw, gh, grow, edge, soft)
+                        more.update(callback_on_step_end=blender(masks[shape][0], x0s[shape], noise, len(psig), soft, grain, more.get("callback_on_step_end")),
+                                    callback_on_step_end_tensor_inputs=["latents"])
+                elif ref is not None:                    # HERESY 1305: the picture noised to the strength's sigma, the tail from there
+                    if fit and shape not in fits:        # HERESY 1307: what the VAE sees and what is repainted, for this shape
+                        fits[shape] = fitted(ref, mask, gw, gh)
+                    if shape not in x0s:
+                        x0s[shape] = ref_latents(krea.pipe, fits[shape][0] if fit else ref, gw, gh, ref_rs(ask))
+                    noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
+                    more.update(latents=(1 - s0) * jolt(krea.pipe, x0s[shape], ask, sk) + s0 * noise, sigmas=sig)   # HERESY 1385
+                    steps = len(sig)
+                    if mask is not None or fit:          # HERESY 1306: the kept part put back at every step, noised to its next sigma
+                        grow, edge, soft, grain = mask_opts(ask)   # HERESY 1320
+                        if shape not in masks:
+                            masks[shape] = mask_tokens(krea.pipe, fits[shape][1] if fit else mask, gw, gh, grow, edge, soft)
+                        more.update(callback_on_step_end=blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, more.get("callback_on_step_end")),
+                                    callback_on_step_end_tensor_inputs=["latents"])
+                if sched:                                # HERESY 1365: step 0's strengths now, each next one before its step
+                    lora_start(krea.pipe, sched, steps)
+                    more.update(callback_on_step_end=lora_steps(krea.pipe, sched, steps, more.get("callback_on_step_end")),
+                                callback_on_step_end_tensor_inputs=more.get("callback_on_step_end_tensor_inputs") or ["latents"])
+                ec = e.to("cuda")
+                regions_set(krea.pipe.transformer, ec, [(pe.to("cuda"), pm.to("cuda"), t) for (pe, pm), t in zip(regs, region_tokens(krea.pipe, ask, gw, gh))])   # HERESY 1387
+                img = krea.pipe(prompt_embeds=ec, prompt_embeds_mask=m.to("cuda"), num_inference_steps=steps,
+                                guidance_scale=0.0, height=gh, width=gw, generator=g, **more).images[0]
+                if pl is not None and fits[shape][1] is not None:   # HERESY 1346: outside the mask the placed picture's own pixels
+                    img = composite(img, fits[shape][0], masks[shape][1], mask_opts(ask)[3])
+                elif ref is not None and (mask is not None or fit):   # HERESY 1306: outside the mask the reference's own pixels, feathered
+                    img = composite(img, fits[shape][0] if fit else cover(ref, gw, gh), masks[shape][1], mask_opts(ask)[3])   # HERESY 1320: and its grain
+                if (gw, gh) != (w, h):
+                    x, y = (gw - w) // 2, (gh - h) // 2
+                    img = img.crop((x, y, x + w, y + h))
+                score = krea.flagged(img)
+                row = {"n": n, "shape": shape, "seed": sk, "w": w, "h": h, "nsfw": score, "took": round(time.time() - t1, 1)}
+                if pl is not None:                       # HERESY 1346: placed on the canvas: covering it, or painted around
+                    row.update(ref=round(ps0, 2), placed="covers" if fits[shape][2] else "around")
+                    if mask is not None:
+                        row["masked"] = True
+                elif ref is not None:
+                    row["ref"] = round(s0, 2)                # HERESY 1305: how far from the reference it began
+                    if mask is not None:
+                        row["masked"] = True                 # HERESY 1306
+                    if fit:
+                        row["fit"] = True                    # HERESY 1307
+                if score is not None and score >= 0.5:
+                    row["kept"] = False
+                else:
+                    name = f"{n:02d}-{shape.replace(':', 'x')}-s{sk}"
+                    img = img.convert("RGB")
+                    img.save(run / (name + ".png"))
+                    small = img.copy()
+                    small.thumbnail((THUMB, THUMB), resample=3)
+                    small.save(run / "thumbs" / (name + ".jpg"), "JPEG", quality=85, optimize=True)
+                    row.update(kept=True, file=name + ".png", thumb="thumbs/" + name + ".jpg")
+                if letters:                                  # HERESY 1396: read back before it is said
+                    tried.setdefault(n, []).append(row)
+                else:
+                    print(json.dumps(row), flush=True)
+        if not letters:
+            break
+        pending = artist_letters.judge(run, letters, tried, krea.pipe, bool(streamed))   # HERESY 1396: read, and the misspelled again
+        if not pending:
+            break
+    for row in artist_letters.settle(run, tried) if letters else []:
+        print(json.dumps(row), flush=True)
     print(json.dumps({"done": True, "painter": painter, "took": round(time.time() - t0, 1),
                       "peak_gb": round(torch.cuda.max_memory_reserved() / 2 ** 30, 1)}), flush=True)   # HERESY 1351: the card's peak, as the Qwen painters say it
 

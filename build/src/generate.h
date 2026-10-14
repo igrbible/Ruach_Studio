@@ -66,10 +66,14 @@ static bool yue2_generate(Qwen3LM *                             lm,
                           Yue2Phase                             phase,
                           std::vector<Yue2Generation> *         out,
                           bool (*cancelled)(void *) = nullptr,
-                          void * cancel_data        = nullptr) {
+                          void * cancel_data        = nullptr,
+                          const std::vector<std::vector<int>> * lyricless = nullptr,
+                          float                                 lyrics_scale = -1.0f) {
     const int B       = (int) prefixes.size();
     const int context = kv->cfg.max_seq_len;
-    bool      guided  = cfg_scale != 1.0f;
+    // HERESY 1397: the lyrics' own scale: a third branch, the prompt without its lyrics, in KV sets 2B..3B-1
+    const bool split  = lyricless && (int) lyricless->size() == B && lyrics_scale >= 0.0f && lyrics_scale != cfg_scale;
+    bool      guided  = cfg_scale != 1.0f || split;
     if (guided && (int) negatives.size() != B) {
         fprintf(stderr, "[AR] FATAL: guidance %.3f needs an unconditional prefix per sequence\n", (double) cfg_scale);
         return false;
@@ -81,6 +85,9 @@ static bool yue2_generate(Qwen3LM *                             lm,
     Yue2Sampling s = s_in;
     for (int i = 0; i < B; i++) {
         size_t longest = guided && negatives[i].size() > prefixes[i].size() ? negatives[i].size() : prefixes[i].size();
+        if (split && (*lyricless)[i].size() > longest) {
+            longest = (*lyricless)[i].size();
+        }
         int    room    = context - (int) longest - 1;
         if (room < 1) {
             fprintf(stderr, "[AR] FATAL: prefix %zu leaves no room in context %d\n", longest, context);
@@ -96,7 +103,7 @@ static bool yue2_generate(Qwen3LM *                             lm,
         }
     }
 
-    const int N = guided ? 2 * B : B;
+    const int N = split ? 3 * B : guided ? 2 * B : B;
     if (!qw3lm_kv_sets(kv, N)) {
         return false;
     }
@@ -128,8 +135,14 @@ static bool yue2_generate(Qwen3LM *                             lm,
             yue2_prefill(lm, kv, negatives, B, i, batched.data(), row0, rows, "Unconditional");
         }
     }
-    fprintf(stderr, "[AR] %s prefill: %.0f ms, CFG=%.2f, top_k=%d, budget=%d, songs=%d, batch=%d\n", label,
-            prefill_timer.ms(), (double) cfg_scale, s.top_k, s.max_tokens, B, N);
+    if (split) {
+        for (int i = 0; i < B; i++) {
+            yue2_prefill(lm, kv, *lyricless, 2 * B, i, batched.data(), row0, rows, "Without lyrics");
+        }
+    }
+    fprintf(stderr, "[AR] %s prefill: %.0f ms, CFG=%.2f%s, top_k=%d, budget=%d, songs=%d, batch=%d\n", label,
+            prefill_timer.ms(), (double) cfg_scale, split ? (", lyrics " + std::to_string(lyrics_scale).substr(0, 4)).c_str() : "",
+            s.top_k, s.max_tokens, B, N);
 
     out->assign((size_t) B, { {}, true });
 
@@ -152,7 +165,14 @@ static bool yue2_generate(Qwen3LM *                             lm,
             if (owed[i] < 0) {
                 const float * cond   = batched.data() + (size_t) i * rows;
                 const float * logits = cond;
-                if (guided) {
+                if (split) {                     // HERESY 1397: the style's pull and the lyrics' pull, each at its own scale
+                    const float * uncond = batched.data() + (size_t) (B + i) * rows;
+                    const float * styled = batched.data() + (size_t) (2 * B + i) * rows;
+                    for (int k = 0; k < rows; k++) {
+                        mixed[k] = uncond[k] + cfg_scale * (styled[k] - uncond[k]) + lyrics_scale * (cond[k] - styled[k]);
+                    }
+                    logits = mixed.data();
+                } else if (guided) {
                     const float * uncond = batched.data() + (size_t) (B + i) * rows;
                     for (int k = 0; k < rows; k++) {
                         mixed[k] = uncond[k] + cfg_scale * (cond[k] - uncond[k]);
@@ -177,6 +197,9 @@ static bool yue2_generate(Qwen3LM *                             lm,
             }
             if (guided) {
                 tokens[B + i] = tokens[i];
+            }
+            if (split) {
+                tokens[2 * B + i] = tokens[i];
             }
             pending = pending || owed[i] != 0;
         }

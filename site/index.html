@@ -84,8 +84,10 @@
   .bar nav { display: flex; gap: 18px; margin-left: auto; font-size: 15px; }
   .bar nav a { color: var(--soft); }
   .bar nav a:hover { color: var(--amber); text-decoration: none; }
-  .theme { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); width: 34px; height: 34px; border-radius: 9px;
-           cursor: pointer; font-size: 16px; line-height: 1; }
+  .theme { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); width: 40px; height: 36px; border-radius: 9px;
+           cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+  .theme svg { width: 22px; height: 22px; display: block; }   /* HERESY 1394 (Viktor: «Кнопка режима тем на сайте очень маленькая, мизерная»): a drawn half moon, not a font's ◐ */
+  .theme:hover { color: var(--amber); border-color: var(--amber); }
   @media (max-width: 860px) { .bar nav { display: none; } .theme { margin-left: auto; } }
 
   /* the hero */
@@ -245,7 +247,7 @@
       <a href="#licences">Licences</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a>
     </nav>
     <details class="langs" translate="no"><summary aria-label="Language">EN</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en" aria-current="page">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh">中文</a></div></details>
-    <button class="theme" id="theme" type="button" aria-label="Day or night" title="Day or night">◐</button>
+    <button class="theme" id="theme" type="button" aria-label="Day or night" title="Day or night"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
   </div>
 </header>
 
@@ -261,7 +263,7 @@
     <path transform="translate(624.43 -22.00)" d="M24.67 0.59Q18.3 0.59 12.52 -1.41Q6.74 -3.42 3.47 -6.57L6.17 -12.12Q9.28 -9.3 14.25 -7.4Q19.22 -5.5 24.65 -5.5Q29.67 -5.5 32.82 -6.71Q35.97 -7.93 37.47 -10Q38.97 -12.08 38.97 -14.64Q38.97 -17.7 37.1 -19.55Q35.24 -21.41 32.22 -22.51Q29.19 -23.62 25.55 -24.45Q21.91 -25.29 18.26 -26.33Q14.6 -27.38 11.58 -29.06Q8.55 -30.74 6.69 -33.54Q4.83 -36.35 4.83 -40.81Q4.83 -45.08 7.09 -48.66Q9.34 -52.24 14.02 -54.42Q18.69 -56.59 25.96 -56.59Q30.79 -56.59 35.53 -55.28Q40.27 -53.97 43.72 -51.59L41.32 -45.91Q37.72 -48.27 33.7 -49.38Q29.68 -50.5 25.92 -50.5Q21.08 -50.5 17.94 -49.22Q14.81 -47.94 13.35 -45.83Q11.89 -43.72 11.89 -41.08Q11.89 -38 13.75 -36.15Q15.61 -34.29 18.63 -33.22Q21.66 -32.14 25.31 -31.28Q28.97 -30.42 32.61 -29.39Q36.25 -28.36 39.27 -26.71Q42.3 -25.06 44.16 -22.27Q46.02 -19.49 46.02 -15.11Q46.02 -10.9 43.73 -7.32Q41.43 -3.74 36.7 -1.57Q31.96 0.59 24.67 0.59ZM96.61 0V-49.79H77.21V-56H123.11V-49.79H103.72V0ZM182.16 0.59Q171.22 0.59 164.98 -5.68Q158.74 -11.95 158.74 -24.09V-56H165.86V-24.34Q165.86 -14.78 170.13 -10.29Q174.4 -5.8 182.22 -5.8Q190.04 -5.8 194.31 -10.29Q198.58 -14.78 198.58 -24.34V-56H205.58V-24.09Q205.58 -11.95 199.34 -5.68Q193.1 0.59 182.16 0.59ZM250.72 0V-56H273.97Q282.97 -56 289.75 -52.45Q296.54 -48.9 300.34 -42.61Q304.13 -36.31 304.13 -28Q304.13 -19.69 300.34 -13.39Q296.54 -7.1 289.75 -3.55Q282.97 0 273.97 0ZM257.83 -6.21H273.57Q280.73 -6.21 285.96 -8.98Q291.2 -11.74 294.08 -16.65Q296.96 -21.55 296.96 -28Q296.96 -34.51 294.08 -39.38Q291.2 -44.26 285.96 -47.02Q280.73 -49.79 273.57 -49.79H257.83ZM345 0V-56H352.12V0ZM422.66 0.59Q416.27 0.59 410.85 -1.56Q405.42 -3.71 401.42 -7.58Q397.42 -11.45 395.2 -16.64Q392.99 -21.83 392.99 -28Q392.99 -34.17 395.2 -39.36Q397.42 -44.55 401.43 -48.43Q405.43 -52.31 410.84 -54.45Q416.25 -56.59 422.64 -56.59Q429.04 -56.59 434.43 -54.46Q439.82 -52.33 443.81 -48.47Q447.81 -44.61 450.03 -39.4Q452.24 -34.19 452.24 -27.99Q452.24 -21.8 450.03 -16.59Q447.81 -11.39 443.81 -7.53Q439.82 -3.67 434.43 -1.54Q429.04 0.59 422.66 0.59ZM422.64 -5.8Q427.47 -5.8 431.55 -7.45Q435.63 -9.11 438.66 -12.13Q441.69 -15.14 443.38 -19.18Q445.07 -23.21 445.07 -28.02Q445.07 -32.82 443.39 -36.83Q441.71 -40.85 438.67 -43.87Q435.64 -46.89 431.55 -48.54Q427.47 -50.2 422.64 -50.2Q417.82 -50.2 413.72 -48.54Q409.62 -46.88 406.58 -43.86Q403.53 -40.84 401.85 -36.82Q400.16 -32.8 400.16 -28.02Q400.16 -23.24 401.84 -19.2Q403.53 -15.16 406.57 -12.13Q409.6 -9.09 413.71 -7.45Q417.82 -5.8 422.64 -5.8Z"/>
   </g>
 </svg></div>
-    <div class="osem" translate="no"><b>OSEM</b><span class="say">Simply awesome</span><span>Open Source, Engaged &amp; Musical</span></div>
+    <div class="osem" translate="no"><b>OSEM</b><span class="say">Simply AWESOME</span><span>Open Source, Engaged &amp; Musical</span></div>
     <h1>Songs from words and chords<br>on your own machine</h1>
     <p class="lead">A whole studio around <b>YuE2</b>, the open song model. Write the style and the lyrics, and the studio
       composes, sings and renders the song on <b>your own GPU</b>. Your songs, words and settings never leave it.</p>
@@ -271,7 +273,7 @@
       <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a>
       <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Buy me a Coffee Machine</a>
     </div>
-    <span class="rc"><b>2.0.0-rc6</b> · the sixth release candidate · October 2026</span>
+    <span class="rc"><b>2.0.0-rc7</b> · the seventh release candidate · October 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -372,6 +374,8 @@
             <tr><td>the score</td><td>written first, shown, editable, yours (ABC, MIDI)</td><td>hidden</td></tr>
             <tr><td>the lyrics</td><td>a meter beside each line: its beats against its section's ruler, syllables by each language's own rules; the section tags offered as you type «[»</td><td>a text box; lyrics written for you on request</td></tr>
             <tr><td>repeat a take</td><td>exactly: two seeds you keep</td><td>no</td></tr>
+            <tr><td>guidance</td><td>two, apart: the style's pull and the lyrics' hold, each its own CFG</td><td>one Style Influence knob</td></tr>
+            <tr><td>replace a section</td><td>its words sung anew between the rests the ear finds, the rest of the take kept to the sample: the seam goes unheard; several sections in one go</td><td>Replace Section: in our trials almost never usable, the seams heard and the voice changed</td></tr>
             <tr><td>your own sound</td><td>train a LoRA on your songs, in the studio</td><td>no training</td></tr>
             <tr><td>after the render</td><td>stems, debuzz, remaster, upscale, lyrics check, all local</td><td>stems, in the cloud</td></tr>
             <tr><td>seeing the sound</td><td>the take's whole spectrogram over the player, in time with its wave: the sections, the brightness and loudness, the spectrum and note under the pointer</td><td>a waveform</td></tr>
@@ -408,7 +412,7 @@
   <section id="next">
     <div class="wrap">
       <h2>What comes next</h2>
-      <p class="sub">2.0.0-rc6 is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.0.0 and after.</p>
+      <p class="sub">2.0.0-rc7 is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.0.0 and after.</p>
       <ul class="feats">
         <li><b>Songs edited as the model writes them.</b> A take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens; an instrumental layer on the take's own score.</li>
         <li><b>A DAW in the Refiner.</b> Plenio's score editor in an early preview: a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in.</li>
@@ -440,7 +444,7 @@
         <li><b>AI-Toolkit</b> by Ostris: the trainer's YuE2 code was ported from it</li>
         <li><b>Mothersuperior</b>: the realaudio tokenizer head and the VAE merge</li>
         <li><b>Qwen2.5-Omni</b> (the listener), <b>Whisper</b> (the lyrics check), <b>BS-Roformer</b> and <b>htdemucs</b> (stems), <b>UniverSR</b> (upscale)</li>
-        <li><b>Krea 2 Muse</b> by Stable Yogi and <b>CyberRealistic XL</b> by Cyberdelia: the artwork</li>
+        <li><b>Krea 2 Muse</b> by Stable Yogi: the artwork</li>
         <li><b>YuE2 Studio</b>: the score checker; <b>GTSinger</b>: voices to train on</li>
       </ul>
     </div>
@@ -526,7 +530,7 @@
 
 <footer>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.0-rc6 · a work of <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
+    <span>Ruach Studio · 2.0.0-rc7 · a work of <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
   </div>
 </footer>
 

@@ -10,7 +10,7 @@ One Linux machine with an NVIDIA card. The studio runs there; you use it from a 
 | GPU | NVIDIA, **24 GB** runs everything at full precision; **8 to 16 GB** run songs with the Q8_0 model (measured: 5.1 GB with a context of 12 288 rows, 7.7 GB with the whole); **6 GB** Q8_0 with shorter songs, less Q6_K; int8 training under 24 GB. |
 | CUDA | the **CUDA toolkit 12.8** (`nvcc`), in `/usr/local/cuda-12.8` or on the `PATH`; a driver that supports it |
 | tools | `git`, `cmake` 3.24 or newer, `ninja` (optional, faster), `gcc`/`g++` 13, `python3.12` with `python3.12-venv`, `ffmpeg`, `curl` |
-| disk | **about 30 GB**, measured on fresh installs: the program and its two Pythons 16 GB, the models 13 GB for a 16 GB card (16.5 GB with BF16 for 24 GB); the Artist's models 26 GB more when you take them (41 GB with Krea 2 Muse Q8; 15 GB with SDXL on a card under 16 GB), the 💎 sets 5 GB; and room for your songs |
+| disk | **about 30 GB**, measured on fresh installs: the program and its two Pythons 16 GB, the models 13 GB for a 16 GB card (16.5 GB with BF16 for 24 GB); the Artist's models 26 GB more when you take them (41 GB with Krea 2 Muse Q8; a card under 16 GB streams Krea's blocks from RAM), the 💎 sets 5 GB; and room for your songs |
 | tests only | `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test; Node.js 22+ and Chrome or Chromium for the page tests. The studio itself needs none of them: FLAC is made by the engine and by ffmpeg |
 
 On Ubuntu 24.04, everything but CUDA in one line:
@@ -43,7 +43,7 @@ Without systemd: `./lab/start-lab.sh` and then `./start.sh` (it stays in the ter
 
 ```bash
 heresy/fetch-heresy.sh --listener Q8_0   # the style listener (Qwen2.5-Omni) for training sets, 9.6 GB
-heresy/fetch-heresy.sh --artwork         # the Artist's models: Krea 2 Muse Q4 with its parts, the filter, the prompt writer, 26 GB (a card under 16 GB: SDXL, 15 GB)
+heresy/fetch-heresy.sh --artwork         # the Artist's models: Krea 2 Muse Q4 with its parts, the filter, the prompt writer, 26 GB (a card under 16 GB streams it from RAM)
 heresy/fetch-heresy.sh --qwen 2512-q4    # the Artist's Qwen-Image 2512 at Q4 with Lightning (Apache-2.0), 31 GB, a 16 GB card (2512-q6: 34.5 GB, 24 GB; 2.1: 33 GB, research licence)
 heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 7.8 GB (int8: 4.0 GB)
 heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 7.2 GB

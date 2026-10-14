@@ -32,5 +32,4 @@ numpy
 torchvision==0.26.0+cu128     # timm wants it; the PyPI build is CUDA 13 and breaks torch cu128
 transformers>=4.45,<5        # CLAP for the instrument probe (HERESY night 01.10)
 yt-dlp[default]              # audio of long recordings for instrument sets (HERESY 1100)
-diffusers==0.39.0            # artwork for takes, SDXL (HERESY 1120); 0.40 wants huggingface_hub 1.x, which transformers <5 refuses
 mutagen                      # the artwork's tests read the MP3's tags; audio-separator brings it too

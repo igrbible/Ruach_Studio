@@ -127,11 +127,8 @@
  "<b>AI-Toolkit</b> by Ostris: the trainer's YuE2 code was ported from it": "Ostris による <b>AI-Toolkit</b>：トレーナーの YuE2 コードはここから移植",
  "<b>Mothersuperior</b>: the realaudio tokenizer head and the VAE merge": "<b>Mothersuperior</b>：realaudio トークナイザーヘッドと VAE のマージ",
  "<b>Qwen2.5-Omni</b> (the listener), <b>Whisper</b> (the lyrics check), <b>BS-Roformer</b> and <b>htdemucs</b> (stems), <b>UniverSR</b> (upscale)": "<b>Qwen2.5-Omni</b>（聴き手）、<b>Whisper</b>（歌詞チェック）、<b>BS-Roformer</b> と <b>htdemucs</b>（ステム）、<b>UniverSR</b>（アップスケール）",
- "<b>Krea 2 Muse</b> by Stable Yogi and <b>CyberRealistic XL</b> by Cyberdelia: the artwork": "Stable Yogi による <b>Krea 2 Muse</b> と Cyberdelia による <b>CyberRealistic XL</b>：アートワーク",
+ "<b>Krea 2 Muse</b> by Stable Yogi: the artwork": "Stable Yogi による <b>Krea 2 Muse</b>：アートワーク",
  "<b>YuE2 Studio</b>: the score checker; <b>GTSinger</b>: voices to train on": "<b>YuE2 Studio</b>：楽譜チェッカー、<b>GTSinger</b>：トレーニング用の声",
- "<b>2.0.0-rc6</b> · the sixth release candidate · October 2026": "<b>2.0.0-rc6</b> · 6 番目のリリース候補 · 2026 年 10 月",
- "2.0.0-rc6 is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.0.0 and after.": "2.0.0-rc6 は、私たちが毎日自分たちの歌を作っているスタジオです。2.0.0 以降に向けて進んでいる大きなものはこちら。",
- "<span>Ruach Studio · 2.0.0-rc6 · a work of <a href=\"https://igr.bible\">igr.bible</a></span> <span class=\"links\"><a href=\"https://github.com/igrbible/Ruach_Studio\">GitHub</a><a href=\"https://huggingface.co/goldhub/Ruach_Studio_Models_v2\">Hugging Face</a><a href=\"https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md\">Changelog</a><a href=\"https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02\">☕ Coffee Machine</a></span>": "<span>Ruach Studio · 2.0.0-rc6 · <a href=\"https://igr.bible\">igr.bible</a> の作品</span> <span class=\"links\"><a href=\"https://github.com/igrbible/Ruach_Studio\">GitHub</a><a href=\"https://huggingface.co/goldhub/Ruach_Studio_Models_v2\">Hugging Face</a><a href=\"https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md\">変更履歴</a><a href=\"https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02\">☕ コーヒーマシン</a></span>",
  "<b>12</b><span>languages of the page</span>": "<b>12</b><span>ページの言語</span>",
  "<b>Your language.</b> The page whole, and its guide, in English, Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, French, Portuguese, German, Japanese and Chinese.": "<b>あなたの言語。</b>ページ全体とそのガイドを、英語、ロシア語、ウクライナ語、ベラルーシ語、ギリシャ語、スペイン語、イタリア語、フランス語、ポルトガル語、ドイツ語、日本語、中国語で。",
  "<b>Songs edited as the model writes them.</b> A take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens; an instrumental layer on the take's own score.": "<b>モデルが書くように曲を編集。</b>任意の位置からテイクを延長。隣のセクションの声・調・小節を保ったままセクションを書き直し、モデル自身のトークンで縫い合わせ。テイク自身の楽譜の上に器楽のレイヤーを。",
@@ -139,5 +136,14 @@
  "<b>The Videographer.</b> A music video for the song, its scenes prompted by a helper and its key frames painted by the Artist, in 2.1.0.": "<b>ビデオグラファー。</b>曲のミュージックビデオ。シーンはアシスタントが提案し、キーフレームは絵師が描きます。2.1.0 で。",
  "seeing the sound": "音を見る",
  "the take's whole spectrogram over the player, in time with its wave: the sections, the brightness and loudness, the spectrum and note under the pointer": "プレーヤーの上にテイク全体のスペクトログラム、波形と時間を合わせて：セクション、明るさと音量、ポインター位置のスペクトルと音名",
- "a waveform": "波形"
+ "a waveform": "波形",
+ "guidance": "ガイダンス（CFG）",
+ "two, apart: the style's pull and the lyrics' hold, each its own CFG": "2 つを別々に：スタイルの引きと歌詞の保持、それぞれ独自の CFG",
+ "one Style Influence knob": "Style Influence のつまみ 1 つ",
+ "replace a section": "セクションの差し替え",
+ "its words sung anew between the rests the ear finds, the rest of the take kept to the sample: the seam goes unheard; several sections in one go": "耳が見つける休符の間で歌詞を歌い直し、テイクの残りはサンプル単位でそのまま：継ぎ目は聞こえない。複数のセクションを一度に",
+ "Replace Section: in our trials almost never usable, the seams heard and the voice changed": "Replace Section：私たちの試用ではほぼ使い物にならない。継ぎ目が聞こえ、声が変わる",
+ "<b>2.0.0-rc7</b> · the seventh release candidate · October 2026": "<b>2.0.0-rc7</b> · 7 番目のリリース候補 · 2026 年 10 月",
+ "2.0.0-rc7 is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.0.0 and after.": "2.0.0-rc7 は、私たちが毎日自分たちの歌を作っているスタジオです。2.0.0 以降に向けて進んでいる大きなものはこちら。",
+ "<span>Ruach Studio · 2.0.0-rc7 · a work of <a href=\"https://igr.bible\">igr.bible</a></span> <span class=\"links\"><a href=\"https://github.com/igrbible/Ruach_Studio\">GitHub</a><a href=\"https://huggingface.co/goldhub/Ruach_Studio_Models_v2\">Hugging Face</a><a href=\"https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md\">Changelog</a><a href=\"https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02\">☕ Coffee Machine</a></span>": "<span>Ruach Studio · 2.0.0-rc7 · <a href=\"https://igr.bible\">igr.bible</a> の作品</span> <span class=\"links\"><a href=\"https://github.com/igrbible/Ruach_Studio\">GitHub</a><a href=\"https://huggingface.co/goldhub/Ruach_Studio_Models_v2\">Hugging Face</a><a href=\"https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md\">変更履歴</a><a href=\"https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02\">☕ コーヒーマシン</a></span>"
 }

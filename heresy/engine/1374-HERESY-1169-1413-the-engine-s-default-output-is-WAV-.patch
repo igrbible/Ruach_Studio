@@ -1,0 +1,93 @@
+From 54d581680edbfcb2553e992c49680c4c35b88b7f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 13 Oct 2026 10:33:19 -0600
+Subject: [PATCH 1374/1383] =?UTF-8?q?HERESY=201169=20=C2=B7=201413:=20the?=
+ =?UTF-8?q?=20engine's=20default=20output=20is=20WAV=2024-bit?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 13.10.2026: «Дефолт движка везде выставь на wav 24bit». A request that names no format is rendered as WAV 24 (it was MP3 128: the page, api.py and the regens always named WAV 24; a bare API call, a script of mine, got MP3). /props says wav24; yue-synth writes song.wav; the page's protocol fallback and the mock say the same; docs/ARCHITECTURE.md.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/ARCHITECTURE.md | 6 +++---
+ src/request.cpp      | 2 +-
+ tools/console/app.js | 2 +-
+ tools/yue-synth.cpp  | 2 +-
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 9d0d695..e3a2b1e 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -493,7 +493,7 @@ the server rejects a request with neither.
+     "cfg_scale":       -1.0,
+     "semantic_tokens": "",
+     "peak_clip":       10,
+-    "output_format":   "mp3",
++    "output_format":   "wav24",
+     "mp3_bitrate":     128,
+     "abc_sampling":      { "temperature": 0.7, "top_p": 0.9,  "top_k": 30,  "repetition_penalty": 1.005, "penalty_window": 100, "min_tokens": 32,  "max_tokens": 4096 },
+     "semantic_sampling": { "temperature": 1.0, "top_p": 0.95, "top_k": 100, "repetition_penalty": 1.2,   "penalty_window": 50,  "min_tokens": 200, "max_tokens": 9000 }
+@@ -569,7 +569,7 @@ Output normalization percentile control: the normalization peak is the
+ `1 - peak_clip / 1e6` percentile of the absolute signal. `0` normalizes to
+ the true peak with no clipping. Ignored by `wav32`.
+ 
+-**`output_format`** (string, default `"mp3"`)
++**`output_format`** (string, default `"wav24"`; HERESY 1413)
+ Audio encoder: `"mp3"`, `"wav16"`, `"wav24"`, `"wav32"`.
+ 
+ **`mp3_bitrate`** (int, default `128`)
+@@ -620,7 +620,7 @@ Required:
+   --request <json>       Input request JSON
+ 
+ Optional:
+-  --out <path>           Output audio (default: song.mp3), a batch numbers it
++  --out <path>           Output audio (default: song.wav, 24-bit), a batch numbers it
+   --duration <s>         Target length in seconds
+   --lm-seed <N>          Token sampling seed
+   --seed <N>             Acoustic noise seed
+diff --git a/src/request.cpp b/src/request.cpp
+index 7082202..833d754 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -43,7 +43,7 @@ void request_init(Yue2Request * r) {
+     r->abc_sampling      = YUE2_ABC_SAMPLING;
+     r->semantic_sampling = YUE2_SEMANTIC_SAMPLING;
+ 
+-    r->output_format = OUTPUT_FORMAT_MP3;
++    r->output_format = OUTPUT_FORMAT_WAV24;   // HERESY 1413 (Viktor 13.10.2026: «Дефолт движка везде выставь на wav 24bit»)
+     r->mp3_bitrate   = 128;
+ 
+     // Local additions (console): take title, decoder, sliders, LoRAs, score-only runs, parent take
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 685cffe..738a990 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -79,7 +79,7 @@
+ 
+   // The fallbacks are the protocol's own values; /props replaces them.
+   var PROTOCOL_DEFAULTS = {
+-    cot: "full", duration: 480, steps: 32, peak_clip: 10, mp3_bitrate: 128, output_format: "mp3",
++    cot: "full", duration: 480, steps: 32, peak_clip: 10, mp3_bitrate: 128, output_format: "wav24",   // HERESY 1413: the engine's own default
+     // HERESY 1031: Viktor's stable set, as the engine now has it
+     // HERESY 1088: floors as fuses: a score not under 200 tokens, the music not under 750 (30 s)
+     abc_sampling: { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 200, max_tokens: 6144 },
+diff --git a/tools/yue-synth.cpp b/tools/yue-synth.cpp
+index a47b0b6..420da88 100644
+--- a/tools/yue-synth.cpp
++++ b/tools/yue-synth.cpp
+@@ -41,7 +41,7 @@ static void print_usage(const char * prog) {
+             "  --request <json>       Input request JSON\n"
+             "\n"
+             "Optional:\n"
+-            "  --out <path>           Output audio (default: song.mp3), a batch numbers it\n"
++            "  --out <path>           Output audio (default: song.wav, 24-bit), a batch numbers it\n"
+             "  --duration <s>         Target length in seconds\n"
+             "  --lm-seed <N>          Token sampling seed\n"
+             "  --seed <N>             Acoustic noise seed\n"
+-- 
+2.43.0
+

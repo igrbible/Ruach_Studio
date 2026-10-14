@@ -10,6 +10,7 @@ can compare them honestly, at the same loudness.
 SETTINGS: {"source": "" | "derived/stems-four" | "derived/stems-vocals" | "derived/ID/file.flac", "preset": "balanced",
            "levels": {"vocals": 0.5, ...}, "cleanup": true, "fade": 0, "trim_start": 0, "trim_end": 0,
            "deess": false, "deess_mode": "subtle", "hz432": true, "loudnorm": true, "lufs": -14, "tp": -1,
+           "colour": "" | "vinyl" | "tape" | "room", "colour_db": -36,   (HERESY 1425: a layer under the music, before the loudness)
            "formats": ["wav", "flac"]}
 Prints one line of JSON: the files, the loudness in and out, the log.
 """
@@ -61,6 +62,7 @@ n.update(output=str(outdir), name="remaster", preset=cfg.get("preset", "balanced
          deess=bool(cfg.get("deess", False)), deess_mode=cfg.get("deess_mode", "subtle"), deess_engine="ffmpeg",
          hz432=bool(cfg.get("hz432", True)), skip_loudnorm=not cfg.get("loudnorm", True),
          lufs=float(cfg.get("lufs", -14)), tp=float(cfg.get("tp", -1)), sr=48000,
+         colour=cfg.get("colour") if cfg.get("colour") in db.COLOUR else "", colour_db=max(-60.0, min(-20.0, float(cfg.get("colour_db", -36)))),
          formats=list(cfg.get("formats") or ["wav", "flac"]))
 log = io.StringIO()
 os.environ["NO_COLOR"] = "1"

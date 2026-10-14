@@ -1,7 +1,7 @@
 #!/bin/bash
 # Ruach Studio under Pinokio (HERESY 1259): the models the studio starts without, each asked first with its size by
 # heresy/fetch-heresy.sh (answer y or n in this terminal), chosen by the biggest card here: the Artist's painter (Krea 2 Muse
-# where a card has 16 GB, its Q8 too on 24 GB; SDXL below; HERESY 1323: Qwen-Image 2512 too, Q4 on 16 GB, Q6 on 24), the style listener (Qwen2.5-Omni, Q8_0 from 12 GB, else Q4_K_M)
+# whole on a 16 GB card, streamed from RAM below (1405: SDXL gone), its Q8 too on 24 GB; HERESY 1323: Qwen-Image 2512 too, Q4 on 16 GB, Q6 on 24), the style listener (Qwen2.5-Omni, Q8_0 from 12 GB, else Q4_K_M)
 # and the base the LoRA trainer trains on (bf16 on 24 GB, else int8); HERESY 1285: and the BF16 backbone where the install took
 # Q8_0 (Viktor 09.10.2026: «на эту видеокарту RTX5000 можно ли будет со студии докачать BF16?»). From a terminal: bash launcher/extras.sh
 set -uo pipefail

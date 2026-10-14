@@ -28,6 +28,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET  /fonts/NAME.woff2           HERESY 1274: the page's fonts (lab/fonts/, OFL), cached a year
   POST /jobs/cancel {key}          HERESY 1165: a job waiting for a card off the queue (a running one is refused)
   POST /regen {names, same_seeds}  HERESY 1160: made again, new seeds; same_seeds (1165): its own, at a probe's full length
+  POST /section {name, a, b, lyrics, versions, section, parts}  HERESY 1414: a section sung anew (GET /section/live, /section/job?id=, /section/mark?name=)
   GET /activity?since=SEQ          HERESY 1157: the lab's GPU work as it starts and ends, and what runs now
   POST /regen {names}              HERESY 1160: made again with new seeds; the new take takes the old one's places
   GET /remaster?name=TAKE&s=JSON   the Debunker v6 pipeline (remaster_job.py) on the take or its stems
@@ -119,6 +120,7 @@ import updates  # noqa: E402   HERESY 1169
 import artist  # noqa: E402   HERESY 1255
 import places  # noqa: E402   HERESY 1261: where the user's work lives (outputs, trash, artist, writer)
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
+import section  # noqa: E402   HERESY 1414: Replace a section
 import machine  # noqa: E402   HERESY 1304: the machine as a new studio's first start reads it
 import artist_loras  # noqa: E402   HERESY 1316: the Artist's adapters
 import weights  # noqa: E402   HERESY 1289: the Engine's Models card over heresy/fetch-heresy.sh
@@ -461,8 +463,8 @@ def gpus_state():
 def machine_state():
     """HERESY 1304 (Viktor 10.10.2026: «при самом старте новой Студии сканирование устройств и выбор оптимальных настроек для YuE2
     BF16/кванта и для модели генерации обложек»): the cards with their compute capability, limits and BF16 tensor cores, the
-    studio's card, and the painter that fits here: Krea 2 Muse Q4 first (12.6 GB at its peak, lighter than SDXL's 14.2 and
-    better), SDXL where only it is downloaded; none when no card has the room ({"error"} when the cards cannot be read)."""
+    studio's card, and the painter that fits here: Krea 2 Muse Q4 (12.6 GB at its peak whole, 1405: about 7 GB streamed from RAM);
+    none when no card has even that ({"error"} when the cards cannot be read)."""
     try:
         cards = machine.cards()
     except RuntimeError as e:
@@ -474,10 +476,16 @@ def machine_state():
         c["limit_mb"] = lim.get(c["index"])
         c["bf16_cores"] = machine.has_bf16_cores(c["compute"])
     room = max((min(c["total_mb"], c["limit_mb"] or 10 ** 9) for c in cards), default=0)
-    ready = {"krea2-q4": krea_ready("krea2-q4"), "krea2-q8": krea_ready("krea2-q8"),
-             "sdxl": (KIT / "artwork/CyberRealistic-XL-v10/model_index.json").is_file()}
-    fits = [p for p in ("krea2-q4", "sdxl", "krea2-q8") if ART_NEED[p] <= room]
-    best = next((p for p in ("krea2-q4", "sdxl") if p in fits and ready[p]), "") or ("krea2-q4" if "krea2-q4" in fits else "")
+    ready = {"krea2-q4": krea_ready("krea2-q4"), "krea2-q8": krea_ready("krea2-q8")}   # HERESY 1405: SDXL gone
+    fits = [p for p in ("krea2-q4", "krea2-q8") if ART_NEED[p] <= room or ART_STREAM_NEED[p] <= room]
+    best = "krea2-q4" if "krea2-q4" in fits else ""
+    # HERESY 1425 (Viktor 13.10.2026: «На RTX3090 я бы однозначно советовал QWEN Image 2512, и тем более машине с тремя такими GPU»): where a
+    # card holds it whole (its text encoder leaves the card before the transformer comes), Qwen-Image 2512 by the cards, as art_by_cards
+    for q in ("qwen2512-q6", "qwen2512-q4"):
+        ready[q] = artist.qwen_ready(q)
+        if ART_NEED[q] <= room:
+            fits.insert(0, q)
+    best = next((q for q in ("qwen2512-q6", "qwen2512-q4") if q in fits), best)
     return {"cards": cards, "studio": now if now is not None else roles.get("studio", 0), "room_mb": room,
             "painter": {"suggest": best, "ready": ready, "fits": fits, "need_mb": ART_NEED}}
 
@@ -637,7 +645,32 @@ def timing_async(name, force=False, cached_only=False):
                     os.replace(part, words)
             job["status"] = "running"
             rows = timing.align(json.load(open(words, encoding="utf-8")), lyrics)
-            res = {"name": name, "language": lang or "auto", "rows": rows,
+            heard = sum(not r["guessed"] for r in rows) / len(rows)
+            hinted, by = 0, ""
+            # HERESY 1417 (Viktor: «Лучше Whisper с Qwen-Omni допилить ещё малость»): under 85 % heard, a second pass with the lyrics as
+            # hotwords, on the vocal stem when the take has one; it only times the lines the first pass guessed (timing.merge)
+            if heard < 0.85:
+                d = take_dir(name)
+                stem = next((p for p in sorted(d.glob("derived/stems-*/vocals.flac")) if p.is_file()), None)
+                src = stem or audio
+                words2 = CACHE / f"{name}.words-hint.json"
+                try:
+                    if force or not words2.is_file() or words2.stat().st_mtime < src.stat().st_mtime:
+                        with whisper_turn(job) as wt:
+                            env, gpu, why = whisper_env(wt.gpu)
+                            env = dict(env, WHISPER_HOTWORDS=" ".join(timing.sung(lyrics).split())[:600])
+                            part = Path(str(words2) + ".part")
+                            p = subprocess.run([str(WHISPER_PY), str(HERE / "whisper_job.py"), str(src), str(part), lang or "",
+                                                str(WHISPER_DIR), "words"], env=env, capture_output=True, text=True, timeout=1800)
+                            if p.returncode != 0:
+                                raise RuntimeError((p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
+                            os.replace(part, words2)
+                    rows = timing.merge(rows, timing.align(json.load(open(words2, encoding="utf-8")), lyrics))
+                    hinted = sum(1 for r in rows if r.get("hinted"))
+                    by = "the vocal stem, the lyrics as hints" if stem else "the lyrics as hints"
+                except Exception as e:                   # the second pass is a help, never a failure of the timing
+                    act_say(f"lyrics timing · {name} · the second pass failed: {e}")
+            res = {"name": name, "language": lang or "auto", "rows": rows, "hinted": hinted, "second_pass": by,
                    "heard": round(sum(not r["guessed"] for r in rows) / len(rows), 3), "at": time.strftime("%Y-%m-%d %H:%M")}
             json.dump(res, open(out, "w", encoding="utf-8"), ensure_ascii=False)
             with jobs_lock:
@@ -1299,10 +1332,13 @@ ART_NEED_MB = 15000
 # HERESY 1167 (Viktor 05.10.2026, the A/B: «Muse - отличный файнтюн»; «Для карт ниже 24GB VRAM… оставим SDXL»; «Изначальным
 # выставь Q4»): the painters, each its room on a card at the peak with the prompter before it (RTX 3090, 05.10.2026: Krea 2
 # Muse Q4 11.6 GB, Q8 17.4 GB; SDXL 14.2 GB) and its Python (Krea paints in .venv-art: transformers 5, diffusers 0.40)
-ART_NEED = {"krea2-q4": 15000, "krea2-q8": 21000, "sdxl": ART_NEED_MB}   # with a margin over the peaks
+ART_NEED = {"krea2-q4": 15000, "krea2-q8": 21000}   # with a margin over the peaks (1405: SDXL's gone)
 # HERESY 1297: measured again on GPU2 10.10.2026, the prompter (Qwen3-4B) before the painter, at 1024 px: Krea 2 Muse Q4 12.6 GB
 # (42 s), SDXL 14.2 GB (17 s); Q8 17.4 GB (05.10). A margin of about half a gigabyte: a 16 GB card (15 GB left by a desktop) takes Q4
-ART_NEED = {"krea2-q4": 13500, "krea2-q8": 18500, "sdxl": 15000}
+ART_NEED = {"krea2-q4": 13500, "krea2-q8": 18500}   # HERESY 1405: SDXL gone
+# HERESY 1405: a card too small for the painter whole: its blocks stream from RAM (artist.STREAM_NEED, with Krea's encoder and the prompt
+# writer moving to the CPU when the card has no room for them), a little room over the streamed peak
+ART_STREAM_NEED = {"krea2-q4": 7000, "krea2-q8": 7500}
 ART_PY = Path(os.environ.get("LAB_ART_PY", HERE.parent / ".venv-art/bin/python"))
 MUSE_FILES = {"krea2-q4": "museByStableYogi_v35Q4Extended.gguf", "krea2-q8": "museByStableYogi_v35Q8Extended.gguf"}
 
@@ -1327,12 +1363,12 @@ def art_here(asked):
         if not artist.qwen_ready(k) or (model not in artist.qwen_models() if k == "qwen2512-fp8" else bool(model)):
             return ""
         return k + (":" + model if model else "")
-    return k if not model and (k == "sdxl" or krea_ready(k)) else ""
+    return k if not model and krea_ready(k) else ""
 
 
 def art_painter(asked=None):
     """HERESY 1167: the painter for an artwork: the one asked for, else the user's setting (yue2.artPainter), else by the
-    cards: Krea 2 Muse at Q4 where one has 16 GB, SDXL below; Krea only where its files and environment are. HERESY 1338: a Qwen
+    cards: Krea 2 Muse at Q4 (1405: streamed below 16 GB, SDXL gone); Krea only where its files and environment are. HERESY 1338: a Qwen
     painter as well (a fine-tune as «qwen2512-fp8:FILE»); one whose files are not here gives way to the cards' choice."""
     p = art_here(asked)
     if not p:
@@ -1342,15 +1378,29 @@ def art_painter(asked=None):
             p = ""
     if p:
         return p
-    if p not in ART_NEED:
+    return art_by_cards()
+
+
+def art_by_cards():
+    """HERESY 1423 (Viktor 13.10.2026: «ставь на обложки 2512… для 24GB+ имеем 2512 а для менее жирных оставляем Krea 2 Muse?»): the
+    painter by the cards the lab's jobs may take: Qwen-Image 2512 where one holds it whole (Q6 from 20 GB, Q4 from 15.5 GB: it follows
+    the prompt best and letters a title), else Krea 2 Muse Q4 (HERESY 1405: whole where it fits, streamed from RAM below); "" when
+    neither's files are here. Measured on an RTX 3090 (13.10.2026, the prompt writer and the critic included): Qwen Q6 131 s, Q4 125 s,
+    Krea Q4 65 s a cover: a Qwen cover takes twice Krea's time, and Q4 is no quicker than Q6 (the painting is compute, not memory)."""
+    try:
         cards = training.gpus()
-        big = max((c.get("total_mb", 0) for c in cards), default=0) if isinstance(cards, list) else 0
-        # HERESY 1297: Krea 2 Muse Q4 needs less than SDXL (12.6 GB to 14.2 at their peaks): it is the painter wherever a card has
-        # 16 GB; below, neither fits yet, and art_async says so
-        p = "krea2-q4" if big >= 15000 else "sdxl"
-    if p != "sdxl" and not krea_ready(p):
-        p = "sdxl"
-    return p
+        roles = gpu_roles.load(KIT, cards)
+        lim = {int(k): int(v) for k, v in (roles.get("limits") or {}).items()}
+        mine = [c for c in cards if c["index"] in (roles.get("jobs") or [c["index"]])]
+        room = max((min(c.get("total_mb", 0), lim.get(c["index"], 10 ** 9)) for c in mine), default=0)
+    except Exception:
+        room = 0
+    for k in ("qwen2512-q6", "qwen2512-q4"):
+        if room >= ART_NEED.get(k, 10 ** 9) and art_here(k):
+            return k
+    if krea_ready("krea2-q4"):
+        return "krea2-q4"
+    return art_here("qwen2512-q4") or ""
 
 
 def art_info(name):
@@ -1472,20 +1522,35 @@ def art_refusal(painter, table=None, where="choose it in Engine → Artwork"):
     need = table[painter]
     if room >= need:
         return ""
-    fits = [p for p in ("krea2-q4", "sdxl") if p != painter and p in table and table[p] <= room and (p == "sdxl" or krea_ready(p))]
-    names = {"krea2-q4": "Krea 2 Muse Q4", "krea2-q8": "Krea 2 Muse Q8", "sdxl": "SDXL", "qwen2512-q4": "Qwen-Image 2512 Q4",   # 1338
+    if table is ART_NEED and ART_STREAM_NEED.get(painter, 10 ** 9) <= room:   # HERESY 1405: it streams from RAM there
+        return ""
+    fits = [p for p in ("krea2-q4",) if p != painter and p in table and (table[p] <= room or ART_STREAM_NEED.get(p, 10 ** 9) <= room) and krea_ready(p)]
+    names = {"krea2-q4": "Krea 2 Muse Q4", "krea2-q8": "Krea 2 Muse Q8", "qwen2512-q4": "Qwen-Image 2512 Q4",   # 1338
              "qwen2512-q6": "Qwen-Image 2512 Q6", "qwen2512-fp8": "Qwen-Image 2512 fp8", "qwen21": "Qwen-Image 2.1"}
     return (f"{names.get(painter, painter)} needs about {need / 1024:.1f} GB of VRAM (its peak with a margin), and the biggest card here "
             f"has {room / 1024:.1f} GB" + (" under its limit (Engine → GPUs)" if lim else "") + ": " +
             (f"{names[fits[0]]} fits: {where}" if fits else
-             "no painter fits on this machine yet: Krea 2 Muse Q4 wants a card of 16 GB"))
+             "no painter fits on this machine yet: Krea 2 Muse Q4 wants a card of 8 GB, its blocks streamed from RAM"))
 
 
 def art_async(name, again=False, seed=None, painter=None):
     d = take_dir(name)
     key = f"art:{name}"
     painter = art_painter(painter)                   # HERESY 1167; 1338: a fine-tune of Qwen as «qwen2512-fp8:FILE»
+    if not painter:                                  # HERESY 1405: Krea 2 Muse's files are not here (and no Qwen painter asked)
+        raise ValueError("no painter for the artwork here: Krea 2 Muse's files go into artwork/ (heresy/fetch-heresy.sh --artwork)")
     need = ART_NEED[painter.partition(":")[0]]
+    stream = False                                   # HERESY 1405: no card here has the room whole: its blocks stream from RAM
+    try:
+        cards = training.gpus()
+        roles = gpu_roles.load(KIT, cards)
+        lim = {int(k): int(v) for k, v in (roles.get("limits") or {}).items()}
+        mine = [c for c in cards if c["index"] in (roles.get("jobs") or [c["index"]])]   # the cards the lab's jobs may take
+        room = max((min(c.get("total_mb", 0), lim.get(c["index"], 10 ** 9)) for c in mine), default=0)
+        if room < need and ART_STREAM_NEED.get(painter.partition(":")[0], 10 ** 9) <= room:
+            need, stream = ART_STREAM_NEED[painter.partition(":")[0]], True
+    except Exception:
+        pass
     live = jobs.get(key)                             # HERESY 1297: refused at once, and only asked for a new job
     refuse = "" if live and live.get("status") in ("queued", "running") else art_refusal(painter.partition(":")[0])
     with jobs_lock:
@@ -1522,9 +1587,9 @@ def art_async(name, again=False, seed=None, painter=None):
                     job.pop("waiting", None)
                     job["gpu"] = gpu
                     env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", ART_PAINTER=painter.partition(":")[0],
-                               ART_MODEL=painter.partition(":")[2])   # HERESY 1338
+                               ART_MODEL=painter.partition(":")[2], ART_STREAM="1" if stream else "")   # HERESY 1338; 1405
                     tmp = d / "artwork.part.jpg"
-                    py = ART_PY if painter != "sdxl" else LAB_PY
+                    py = ART_PY                              # HERESY 1405: SDXL (the lab's own Python) gone
                     p = subprocess.run([str(py), str(HERE / "art_job.py"), str(d), str(tmp), str(seed if seed is not None else "")],
                                        env=env, capture_output=True, text=True, timeout=1200)
                     if p.returncode != 0:
@@ -1578,6 +1643,32 @@ def art_remove(name):
         mp3.unlink(missing_ok=True)
     ART_SEEN.pop(name, None)
     return {"removed": name, "kept": f"artwork-removed/{stamp}.jpg"}
+
+
+def art_to_namesakes(name, names, replace):
+    """HERESY 1425 (Viktor 13.10.2026: «В Библиотекаре на треке с обложкой можно опцию "Скопировать обложку в одноимённые семплы"?»): the
+    take's cover given to the takes the page found of its name; one with a cover of its own skipped, or (replace) its own taken off and kept
+    beside it as «Remove current artwork» keeps it; never a frozen one (its workspace frozen), nor one whose picture is being drawn."""
+    src = take_dir(name)
+    if not (src / "artwork.jpg").is_file():
+        raise ValueError("this take has no cover")
+    frozen = collection.frozen_takes(collection.load(config_dir())) or set()
+    done, skipped = [], []
+    for n in [str(x) for x in names or []][:200]:
+        d = take_dir(n)
+        if n == name or not d.is_dir() or n in frozen:
+            continue
+        if (d / "artwork.jpg").is_file():
+            if not replace or art_remove(n).get("error"):
+                skipped.append(n)
+                continue
+        if art_copy(src, d, "copied from its namesake"):
+            for mp3 in d.glob("audio-*k.mp3"):                 # the MP3s made with no cover, or the old one, made again
+                mp3.unlink(missing_ok=True)
+            ART_SEEN.pop(n, None)
+            done.append(n)
+    act_say(f"the cover of {name} copied to {len(done)} of its namesakes" + (f", {len(skipped)} kept their own" if skipped else ""))
+    return {"copied": done, "skipped": skipped}
 
 
 def api_ctx():
@@ -1869,6 +1960,11 @@ artist.setup(kit=KIT, jobs=jobs, lock=jobs_lock, wait_card=wait_card, turn=turn,
              outputs=OUTPUTS, frozen=lambda: collection.frozen_takes(collection.load(config_dir())),   # HERESY 1337: the art's trash
              art_remove=art_remove)                       # HERESY 1372: a cover taken off with its picture
 
+# HERESY 1414: Replace a section reaches the engine through api, the takes' trash for its drafts, the collection for its places
+section.setup(kit=KIT, outputs=OUTPUTS, engine=api._engine, say=act_say, config_dir=config_dir, collection=collection,
+              frozen=lambda: collection.frozen_takes(collection.load(config_dir())),
+              trash=lambda names: collection.trash_move(KIT, OUTPUTS, names, config_dir()))
+
 
 def lab_busy():
     """HERESY 1261: the lab works on something: the card is held, or a job waits or runs."""
@@ -2138,6 +2234,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, collection.catalog(OUTPUTS, config_dir()))
             if url.path == "/trash":
                 return self.send(200, collection.trash_list(KIT))
+            if url.path == "/section/live":              # HERESY 1414: the sections being replaced
+                return self.send(200, {"live": section.live()})
+            if url.path == "/section/job":               # HERESY 1425: one job as it stands, for the page to follow it to its takes
+                st = section.job(q.get("id", ""))
+                return self.send(200, st) if st else self.send(404, {"error": "no such job (ended more than ten minutes ago, or the lab restarted)"})
+            if url.path == "/section/mark":              # HERESY 1414: what of a take was sung anew, for the player's mark
+                return self.send(200, section.mark(q.get("name", "")) or {})
             if url.path == "/collection/diamonds":       # HERESY 1166: the 💎 workspaces on Hugging Face
                 return self.send(200, diamond.listing(KIT, OUTPUTS, config_dir(), refresh=q.get("refresh") == "1"))
             if url.path == "/update":                     # HERESY 1169: this version, the last look at GitHub's releases
@@ -2251,6 +2354,13 @@ class Handler(BaseHTTPRequestHandler):
                     r = takeedit.make(OUTPUTS, str(data.get("name") or ""), data, take_dir)
                 act_say(f"Edit · {r['title']} · {r['edited']['op']}: a new take of {r['seconds']:.0f} s")
                 return self.send(200, r)
+            if url.path == "/art/namesakes":                 # HERESY 1425: {name, to, replace}: a take's cover to its namesakes
+                data = json.loads(body.decode("utf-8"))
+                return self.send(200, art_to_namesakes(str(data.get("name") or ""), data.get("to") or [], bool(data.get("replace"))))
+            if url.path == "/section":                       # HERESY 1414: {name, a, b, lyrics, versions, section}: a section sung anew
+                data = json.loads(body.decode("utf-8"))
+                return self.send(202, section.start(data.get("name"), data.get("a"), data.get("b"), data.get("lyrics"),
+                                                    data.get("versions") or 2, data.get("section") or "", data.get("parts")))
             if url.path == "/regen":                         # HERESY 1160: {names}: made again with new seeds
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, regen([str(n) for n in data.get("names") or []], bool(data.get("same_seeds"))))

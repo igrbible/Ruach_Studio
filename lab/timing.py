@@ -105,6 +105,25 @@ def align(whisper, lyrics):
     return out
 
 
+def merge(base, more):
+    """HERESY 1417: base's heard lines kept as they are; a line base only guessed takes more's time when more heard it, it lies between
+    base's heard neighbours (half a second of slack), lasts a quarter second a word at least and does not start before the line before it
+    ends. Such a line says so (hinted)."""
+    out = []
+    for i, r in enumerate(base):
+        m = more[i] if i < len(more) else None
+        if r.get("guessed") and m and not m.get("guessed"):
+            lo = next((base[j]["end"] for j in range(i - 1, -1, -1) if not base[j].get("guessed")), 0.0)
+            hi = next((base[j]["start"] for j in range(i + 1, len(base)) if not base[j].get("guessed")), float("inf"))
+            prev = out[-1]["end"] if out else 0.0
+            long_enough = m["end"] - m["start"] >= 0.25 * max(1, m.get("n") or 1)
+            if lo - 0.5 <= m["start"] and m["end"] <= hi + 0.5 and long_enough and m["start"] >= prev - 0.2:
+                out.append(dict(m, hinted=True))
+                continue
+        out.append(r)
+    return out
+
+
 def clock_lrc(t):
     return "%02d:%05.2f" % (int(t // 60), t % 60)
 

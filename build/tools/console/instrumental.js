@@ -140,8 +140,9 @@
     var denominator = parseInt(unitMatch[1], 10);
     fail(denominator > 1024 || !isPow2(denominator), "Unsupported L: denominator");
     var unit = 1 / denominator;
+    if (lines[4].indexOf("Q:") !== 0) lines.splice(4, 0, "Q:");   // HERESY 1416: free tempo, read at the nominal 120
     var tempoMatch = /^Q:1\/4=([1-9][0-9]*)$/.exec(lines[4]);
-    fail(!tempoMatch, "Expected integer quarter-note tempo Q:1/4=<BPM>");
+    fail(!tempoMatch && lines[4] !== "Q:", "Expected integer quarter-note tempo Q:1/4=<BPM>");
     fail(lines[5] !== 'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"' ||
          lines[6] !== 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "Preserve native Vocal and Ins voice definitions");
     fail(lines[7].indexOf("K:") !== 0, "Missing header K:");
@@ -200,7 +201,7 @@
     fail(voices.Ins.chords.length !== 0, "Native chord symbols belong in Vocal, not Ins");
     fail(JSON.stringify(voices.Vocal.bars) !== JSON.stringify(voices.Ins.bars), "Voice meter/time grids differ");
     fail(JSON.stringify(voices.Vocal.keys) !== JSON.stringify(voices.Ins.keys), "Voice key-change timelines differ");
-    return { text: text, unit: unit, bpm: parseInt(tempoMatch[1], 10), voices: voices, musicLines: musicLines, lines: lines };
+    return { text: text, unit: unit, bpm: tempoMatch ? parseInt(tempoMatch[1], 10) : 120, free: !tempoMatch, voices: voices, musicLines: musicLines, lines: lines };
   }
 
   // ---------------------------------------------------------------- compiler

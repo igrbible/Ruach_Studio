@@ -353,6 +353,11 @@ def main(run, ask, painter):
     shapes = [s for s in ask.get("shapes") or ["1:1"] if s in SHAPES]
     preview = bool(ask.get("preview"))
     speed = ask.get("sampling") or ask.get("speed") or {}
+    letters = ask.get("letters")                     # HERESY 1394: the lettering's words, asked apart: the phrase written here
+    if letters:
+        import artist_letters
+        prompt = artist_letters.order(letters) if letters.get("way") == "letter" else artist_letters.phrase(prompt, letters)
+        print(json.dumps({"letters_prompt": prompt}), flush=True)
     key = None if painter == "qwen21" else ("qwen", painter, str(ask.get("model") or ""), tuple(l["id"] for l in ask.get("loras") or []), tune(painter, speed)[0] > 0)
     if key is not None and KEPT.get("key") == key:   # HERESY 1370: kept from the run before: no loading
         pipe, said, steps, cfg = rekept(painter, speed, ask.get("loras") or [])
@@ -414,96 +419,112 @@ def main(run, ask, painter):
         pipe.vae.enable_tiling()
     (run / "thumbs").mkdir(exist_ok=True)
     fits, x0s, masks = {}, {}, {}                            # HERESY 1320
-    n = 0
-    for k in range(count):
-        for shape in shapes:
-            (gw, gh), (w, h) = artist_job.sized(SHAPES, shape, ask)   # HERESY 1384: times the scale of a second pass
-            n += 1
-            if ONLY and n not in ONLY:                   # HERESY 1354: another card paints this one (the lab spread the run)
-                continue
-            t1 = time.time()
-            g = torch.Generator("cuda").manual_seed(seed + k)
-            if hasattr(pipe.scheduler, "heresy"):         # HERESY 1333: our samplers noise by the pictures seed
-                pipe.scheduler.heresy = dict(pipe.scheduler.heresy, seed=seed + k)
-            more = {"callback_on_step_end": live(run, n, gw, gh, w, h, steps), "callback_on_step_end_tensor_inputs": ["latents"]} if preview and painter != "qwen21" else {}
-            if painter != "qwen21":                     # HERESY 1387: this picture's regions, or none
-                artist_job.regions_set(pipe.transformer, e, [(pe, pm, t) for (pe, pm), t in zip(regs, artist_job.region_tokens(pipe, ask, gw, gh))],
-                                       "encoder_hidden_states_mask")
-            if painter == "qwen21":
-                kw = {"prompt": STYLE_ASK.format(prompt=prompt.rstrip(" .")) if ask.get("ref_as") == "style" and ref is not None else prompt,   # HERESY 1388
-                      "width": gw, "height": gh, "num_inference_steps": steps, "generator": g}
-                if ref is not None:
-                    kw["image"] = cover(ref, gw, gh)
-                img = pipe(**keyed(kw)).images[0]
-            else:
-                kw = {"prompt_embeds": e, "prompt_embeds_mask": m, "width": gw, "height": gh, "num_inference_steps": steps, "true_cfg_scale": cfg, "generator": g, **more}
-                if cfg > 1:
-                    kw.update(negative_prompt_embeds=ne, negative_prompt_embeds_mask=nm)
-                pl = (ask.get("place") or {}).get(shape) if ref is not None else None   # HERESY 1346: the canvas's place
-                if pl is not None:
-                    import artist_job
-                    if shape not in fits:
-                        fits[shape] = artist_job.placed(ref, mask, gw, gh, pl)
-                    if shape not in x0s:
-                        x0s[shape] = artist_job.ref_latents(pipe, fits[shape][0], gw, gh, artist_job.ref_rs(ask))
-                    sig, s0 = artist_job.ref_sigmas(pipe, float(ask.get("strength") or 0.6) if fits[shape][2] else 1.0, steps, mu_of(pipe, gw, gh))
-                    noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
-                    kw.update(latents=(1 - s0) * artist_job.jolt(pipe, x0s[shape], ask, seed + k) + s0 * noise, sigmas=sig, num_inference_steps=len(sig))   # HERESY 1385
-                    if fits[shape][1] is not None:
-                        grow, edge, soft, grain = artist_job.mask_opts(ask)
-                        if shape not in masks:
-                            masks[shape] = artist_job.mask_tokens(pipe, fits[shape][1], gw, gh, grow, edge, soft)
-                        kw.update(callback_on_step_end=artist_job.blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, kw.get("callback_on_step_end")),
-                                  callback_on_step_end_tensor_inputs=["latents"])
+    rounds, pending, tried = (artist_letters.TRIES if letters else 1), None, {}   # HERESY 1394
+    for r in range(rounds):
+        n = 0
+        for k in range(count):
+            for shape in shapes:
+                (gw, gh), (w, h) = artist_job.sized(SHAPES, shape, ask)   # HERESY 1384: times the scale of a second pass
+                n += 1
+                if ONLY and n not in ONLY:                   # HERESY 1354: another card paints this one (the lab spread the run)
+                    continue
+                if pending is not None and n not in pending:   # HERESY 1394: spelled exactly in a round before
+                    continue
+                sk = seed + k + 1000 * r                     # HERESY 1394: a round more, another seed (the row says which)
+                sk = sk if sk < 2 ** 31 - 1 else seed + k - 1000 * r
+                t1 = time.time()
+                g = torch.Generator("cuda").manual_seed(sk)
+                if hasattr(pipe.scheduler, "heresy"):         # HERESY 1333: our samplers noise by the pictures seed
+                    pipe.scheduler.heresy = dict(pipe.scheduler.heresy, seed=sk)
+                more = {"callback_on_step_end": live(run, n, gw, gh, w, h, steps), "callback_on_step_end_tensor_inputs": ["latents"]} if preview and painter != "qwen21" else {}
+                if painter != "qwen21":                     # HERESY 1387: this picture's regions, or none
+                    artist_job.regions_set(pipe.transformer, e, [(pe, pm, t) for (pe, pm), t in zip(regs, artist_job.region_tokens(pipe, ask, gw, gh))],
+                                           "encoder_hidden_states_mask")
+                if painter == "qwen21":
+                    kw = {"prompt": STYLE_ASK.format(prompt=prompt.rstrip(" .")) if ask.get("ref_as") == "style" and ref is not None else prompt,   # HERESY 1388
+                          "width": gw, "height": gh, "num_inference_steps": steps, "generator": g}
+                    if ref is not None:
+                        kw["image"] = cover(ref, gw, gh)
                     img = pipe(**keyed(kw)).images[0]
-                    if fits[shape][1] is not None:
-                        img = artist_job.composite(img, fits[shape][0], masks[shape][1], artist_job.mask_opts(ask)[3])
-                elif ref is not None:                # HERESY 1320: as Krea's: the reference noised to the strength's sigma, the tail
-                    import artist_job                # from there; the mask's kept part put back each step (diffusers' Qwen inpaint
-                    fit = bool(ask.get("fit"))       # binarized the mask)
-                    if fit and shape not in fits:
-                        fits[shape] = artist_job.fitted(ref, mask, gw, gh)
-                    if shape not in x0s:
-                        x0s[shape] = artist_job.ref_latents(pipe, fits[shape][0] if fit else ref, gw, gh, artist_job.ref_rs(ask))
-                    sig, s0 = artist_job.ref_sigmas(pipe, 1.0 if fit else float(ask.get("strength") or 0.6), steps, mu_of(pipe, gw, gh))
-                    noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
-                    kw.update(latents=(1 - s0) * artist_job.jolt(pipe, x0s[shape], ask, seed + k) + s0 * noise, sigmas=sig, num_inference_steps=len(sig))   # HERESY 1385
-                    if mask is not None or fit:
-                        grow, edge, soft, grain = artist_job.mask_opts(ask)
-                        if shape not in masks:
-                            masks[shape] = artist_job.mask_tokens(pipe, fits[shape][1] if fit else mask, gw, gh, grow, edge, soft)
-                        kw.update(callback_on_step_end=artist_job.blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, kw.get("callback_on_step_end")),
-                                  callback_on_step_end_tensor_inputs=["latents"])
-                    img = pipe(**keyed(kw)).images[0]
-                    if mask is not None or fit:
-                        img = artist_job.composite(img, fits[shape][0] if fit else artist_job.cover(ref, gw, gh), masks[shape][1], artist_job.mask_opts(ask)[3])
                 else:
-                    img = pipe(**keyed(kw)).images[0]
-            img = img.convert("RGB")
-            if (img.width, img.height) != (w, h):
-                img = cover(img, w, h)
-            score = flagged(img)
-            row = {"n": n, "shape": shape, "seed": seed + k, "w": w, "h": h, "nsfw": score, "took": round(time.time() - t1, 1)}
-            pl = (ask.get("place") or {}).get(shape) if ref is not None and painter != "qwen21" else None
-            if pl is not None:                       # HERESY 1346: placed on the canvas
-                row.update(ref=float(ask.get("strength") or 0.6) if fits[shape][2] else 1.0, placed="covers" if fits[shape][2] else "around")
-                if mask is not None:
-                    row["masked"] = True
-            elif ref is not None:
-                row["ref"] = float(ask.get("strength") or 0.6)
-                if mask is not None:
-                    row["masked"] = True
-                if ask.get("fit"):
-                    row["fit"] = True
-            if score is not None and score >= 0.5:
-                row["kept"] = False
-            else:
-                name = f"{n:02d}-{shape.replace(':', 'x')}-s{seed + k}"
-                img.save(run / (name + ".png"))
-                small = img.copy()
-                small.thumbnail((THUMB, THUMB), resample=3)
-                small.save(run / "thumbs" / (name + ".jpg"), "JPEG", quality=85, optimize=True)
-                row.update(kept=True, file=name + ".png", thumb="thumbs/" + name + ".jpg")
-            print(json.dumps(row), flush=True)
+                    kw = {"prompt_embeds": e, "prompt_embeds_mask": m, "width": gw, "height": gh, "num_inference_steps": steps, "true_cfg_scale": cfg, "generator": g, **more}
+                    if cfg > 1:
+                        kw.update(negative_prompt_embeds=ne, negative_prompt_embeds_mask=nm)
+                    pl = (ask.get("place") or {}).get(shape) if ref is not None else None   # HERESY 1346: the canvas's place
+                    if pl is not None:
+                        import artist_job
+                        if shape not in fits:
+                            fits[shape] = artist_job.placed(ref, mask, gw, gh, pl)
+                        if shape not in x0s:
+                            x0s[shape] = artist_job.ref_latents(pipe, fits[shape][0], gw, gh, artist_job.ref_rs(ask))
+                        sig, s0 = artist_job.ref_sigmas(pipe, float(ask.get("strength") or 0.6) if fits[shape][2] else 1.0, steps, mu_of(pipe, gw, gh))
+                        noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
+                        kw.update(latents=(1 - s0) * artist_job.jolt(pipe, x0s[shape], ask, sk) + s0 * noise, sigmas=sig, num_inference_steps=len(sig))   # HERESY 1385
+                        if fits[shape][1] is not None:
+                            grow, edge, soft, grain = artist_job.mask_opts(ask)
+                            if shape not in masks:
+                                masks[shape] = artist_job.mask_tokens(pipe, fits[shape][1], gw, gh, grow, edge, soft)
+                            kw.update(callback_on_step_end=artist_job.blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, kw.get("callback_on_step_end")),
+                                      callback_on_step_end_tensor_inputs=["latents"])
+                        img = pipe(**keyed(kw)).images[0]
+                        if fits[shape][1] is not None:
+                            img = artist_job.composite(img, fits[shape][0], masks[shape][1], artist_job.mask_opts(ask)[3])
+                    elif ref is not None:                # HERESY 1320: as Krea's: the reference noised to the strength's sigma, the tail
+                        import artist_job                # from there; the mask's kept part put back each step (diffusers' Qwen inpaint
+                        fit = bool(ask.get("fit"))       # binarized the mask)
+                        if fit and shape not in fits:
+                            fits[shape] = artist_job.fitted(ref, mask, gw, gh)
+                        if shape not in x0s:
+                            x0s[shape] = artist_job.ref_latents(pipe, fits[shape][0] if fit else ref, gw, gh, artist_job.ref_rs(ask))
+                        sig, s0 = artist_job.ref_sigmas(pipe, 1.0 if fit else float(ask.get("strength") or 0.6), steps, mu_of(pipe, gw, gh))
+                        noise = torch.randn(x0s[shape].shape, generator=g, device="cuda", dtype=x0s[shape].dtype)
+                        kw.update(latents=(1 - s0) * artist_job.jolt(pipe, x0s[shape], ask, sk) + s0 * noise, sigmas=sig, num_inference_steps=len(sig))   # HERESY 1385
+                        if mask is not None or fit:
+                            grow, edge, soft, grain = artist_job.mask_opts(ask)
+                            if shape not in masks:
+                                masks[shape] = artist_job.mask_tokens(pipe, fits[shape][1] if fit else mask, gw, gh, grow, edge, soft)
+                            kw.update(callback_on_step_end=artist_job.blender(masks[shape][0], x0s[shape], noise, len(sig), soft, grain, kw.get("callback_on_step_end")),
+                                      callback_on_step_end_tensor_inputs=["latents"])
+                        img = pipe(**keyed(kw)).images[0]
+                        if mask is not None or fit:
+                            img = artist_job.composite(img, fits[shape][0] if fit else artist_job.cover(ref, gw, gh), masks[shape][1], artist_job.mask_opts(ask)[3])
+                    else:
+                        img = pipe(**keyed(kw)).images[0]
+                img = img.convert("RGB")
+                if (img.width, img.height) != (w, h):
+                    img = cover(img, w, h)
+                score = flagged(img)
+                row = {"n": n, "shape": shape, "seed": sk, "w": w, "h": h, "nsfw": score, "took": round(time.time() - t1, 1)}
+                pl = (ask.get("place") or {}).get(shape) if ref is not None and painter != "qwen21" else None
+                if pl is not None:                       # HERESY 1346: placed on the canvas
+                    row.update(ref=float(ask.get("strength") or 0.6) if fits[shape][2] else 1.0, placed="covers" if fits[shape][2] else "around")
+                    if mask is not None:
+                        row["masked"] = True
+                elif ref is not None:
+                    row["ref"] = float(ask.get("strength") or 0.6)
+                    if mask is not None:
+                        row["masked"] = True
+                    if ask.get("fit"):
+                        row["fit"] = True
+                if score is not None and score >= 0.5:
+                    row["kept"] = False
+                else:
+                    name = f"{n:02d}-{shape.replace(':', 'x')}-s{sk}"
+                    img.save(run / (name + ".png"))
+                    small = img.copy()
+                    small.thumbnail((THUMB, THUMB), resample=3)
+                    small.save(run / "thumbs" / (name + ".jpg"), "JPEG", quality=85, optimize=True)
+                    row.update(kept=True, file=name + ".png", thumb="thumbs/" + name + ".jpg")
+                if letters:                                  # HERESY 1394: read back before it is said
+                    tried.setdefault(n, []).append(row)
+                else:
+                    print(json.dumps(row), flush=True)
+        if not letters:
+            break
+        pending = artist_letters.judge(run, letters, tried, pipe, bool(streamed))   # HERESY 1394: read, and the misspelled again
+        if not pending:
+            break
+    for row in artist_letters.settle(run, tried) if letters else []:
+        print(json.dumps(row), flush=True)
     print(json.dumps({"done": True, "painter": painter, "took": round(time.time() - t0, 1), "steps": steps, "cfg": cfg,
                       "peak_gb": round(torch.cuda.max_memory_reserved() / 2 ** 30, 1)}), flush=True)   # HERESY 1342: the card's peak, said

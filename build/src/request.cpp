@@ -33,6 +33,8 @@ void request_init(Yue2Request * r) {
     r->synth_batch_size = 1;
     r->peak_clip        = 10;
     r->cfg_scale        = -1.0f;
+    r->cfg_lyrics       = -1.0f;   // HERESY 1397
+    r->free_tempo       = false;   // HERESY 1416
     r->semantic_tokens  = "";
     r->semantic_keep    = "";
     r->end_at           = 0.0f;
@@ -42,7 +44,7 @@ void request_init(Yue2Request * r) {
     r->abc_sampling      = YUE2_ABC_SAMPLING;
     r->semantic_sampling = YUE2_SEMANTIC_SAMPLING;
 
-    r->output_format = OUTPUT_FORMAT_MP3;
+    r->output_format = OUTPUT_FORMAT_WAV24;   // HERESY 1413 (Viktor 13.10.2026: «Дефолт движка везде выставь на wav 24bit»)
     r->mp3_bitrate   = 128;
 
     // Local additions (console): take title, decoder, sliders, LoRAs, score-only runs, parent take
@@ -188,6 +190,12 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     }
     if ((v = yyjson_obj_get(obj, "cfg_scale")) && yyjson_is_num(v)) {
         r->cfg_scale = (float) yyjson_get_num(v);
+    }
+    if ((v = yyjson_obj_get(obj, "cfg_lyrics")) && yyjson_is_num(v)) {   // HERESY 1397
+        r->cfg_lyrics = (float) yyjson_get_num(v);
+    }
+    if ((v = yyjson_obj_get(obj, "free_tempo")) && yyjson_is_bool(v)) {   // HERESY 1416
+        r->free_tempo = yyjson_get_bool(v);
     }
     if ((v = yyjson_obj_get(obj, "output_format")) && yyjson_is_str(v)) {
         r->output_format = yy_str(v);
@@ -366,6 +374,12 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     }
     if (!sparse || r->cfg_scale != d.cfg_scale) {
         yyjson_mut_obj_add_real(doc, root, "cfg_scale", r->cfg_scale);
+    }
+    if (!sparse || r->cfg_lyrics != d.cfg_lyrics) {   // HERESY 1397
+        yyjson_mut_obj_add_real(doc, root, "cfg_lyrics", r->cfg_lyrics);
+    }
+    if (r->free_tempo) {   // HERESY 1416: written only when used
+        yyjson_mut_obj_add_bool(doc, root, "free_tempo", true);
     }
     if (!sparse || r->output_format != d.output_format) {
         yyjson_mut_obj_add_strncpy(doc, root, "output_format", r->output_format.c_str(), r->output_format.size());

@@ -50,7 +50,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ rc3 early preview: a prompt of one's own in 1:1, 16:9 and 9:16 from one seed, variations, Krea 2 Muse Q4 and Q8, the live preview step by step, runs and a gallery with stars, Set as cover.
 - ✅ 1270: Draw is Stop while a run waits or draws. 1271: three columns (the prompt | the stage, where a run develops and the picked picture stands with its run's data | the library), the edges dragged.
-- ✅ 1389: **the Artist's mega-guide** in English, docs/ARTIST.md (Viktor 12.10.2026: «Художника закрыли на 95%, пока что только на английском как основу»). ☐ The other eleven languages, later on his word.
+- ✅ 1389: **the Artist's mega-guide** in English, docs/ARTIST.md (Viktor 12.10.2026: «Художника закрыли на 95%, пока что только на английском как основу»). ✅ 1424 (13.10.2026): the other eleven languages, on his word («Доводи его до ума и на все языки»).
 - ✅ 1390: the Writer's «Max tokens» (32K), an empty answer or a failure said over the page, the answer scrolled to the top. ✅ 1391: the lyrics' language for Whisper from the sung lines. ☐ Whisper on the vocal stem for the sections and the timing (the mix is the limit: 60 % of the lines heard on «01 v4.0.11», 85 % on its -ds take).
 - ✅ 1316: LoRA adapters in the Artist (a library by folders, pictures, Civitai by hash, strengths, trigger words). ✅ 1365: their strength by steps (keyframes of a multiplier, ⏱ beside each, as Viktor's ComfyUI hooks).
 - ✅ 1353 (Viktor's list of 11.10.2026): eight adapters in the list, four in the run; their trigger words into the prompt by themselves; the LoRA library's menu and an Info window (what an adapter is made for, read from its file; another model's named on its card); adapters into the art's trash and back; a PEFT file without a prefix loads (the bear's «dead» OilPaint was ours to mend); the picture's tip after a moment; the Upscale row centred. ✅ 1354: a run's formats on the lab's cards at once (two cards: Qwen fp8 6.4 min against 8.6). ✅ 1355: the upscalers' notes (what each is for, measured; an i and a window), an upscale in passes as Viktor's ComfyUI stack (his chain one click away), Upscayl looked into (ncnn on Vulkan: ESRGAN-family only; its ideas taken, not its binary); 4x_Nomos8k_atd_jpg mended (float32). ✅ 1364: from Upscayl, TTA (eight orientations averaged) and the pictures picked upscaled in one run; ☐ the painter's second pass over the upscaled picture (his workflow's 2× latent pass: noise 0.6, from step 20 of 60) as a pass of the chain. ✅ 1360: From Civitai… in the LoRA library, for the adapters only Civitai may give (the user's own key, kept local; agreed 11.10: «ПО CivitAI согласен»).
@@ -155,6 +155,23 @@ Viktor's screenshots of SUNO's newest interface, 09.10.2026 (its Studio, a DAW, 
 - ✅ 1281: **vocal gender** at a click (male, female): its words put into the Style (♂ ♀ in its head).
 - ✅ 1357: **Tighten these lyrics** in the lyrics box, by the Writer's model (both texts side by side first); **style suggestions** as chips under the Style, made anew on demand (SUNO's ✦ and ↻ under its Styles).
 - ✅ 1311: **A/B in one window**: the Refiner's «Compare all» holds the original, its branches and the same music in other takes, switched at the same second, the disliked left out.
+- ✅ 1394: lettering on a cover (Viktor 12.10.2026: «A & B - лучшие. B - реально круто. Впиливай всю эту ересь! 🔥»; «По надписи всё правильно»): a title and a second line in fields of their own, painted with the picture (Qwen-Image 2512 or 2.1) or on the reference (Qwen-Image 2.1, «Letter it»), each picture read back by the listener and painted again when misspelled, up to three times.
+- ✅ 1396–1401 (12.10.2026): lettering on Krea 2 Muse; two guidances (the music's and the lyrics', our yue2.cpp patch; Viktor: «наша величайшая находка за всю неделю»), their lights, the take's medcard, the section card without its spectrogram (RC7), the profiles at 1.6 / 2.2 and his «Musical Heresy of Creator's Ear».
+- ✅ 1405 (12.10.2026): SDXL gone; Krea 2 Muse paints a take's artwork on any card, streamed from RAM below 16 GB.
+- ✅ 1406 (12.10.2026): Trash (Art) as tiles; a click on a tile ticks it; the takes' Trash stays a list.
+- ✅ 1409 (13.10.2026): «Wait: binding the lyrics to the wave…» on the wave and in the section card while Whisper binds them.
+- ✅ 1410–1412 (13.10.2026): the Trainer in epochs, its knobs in three rows; Cancel run asks; the guidances a row each; Shape a band in the take's card.
+- ✅ 1413 (13.10.2026): the engine's default output WAV 24-bit.
+- ✅ 1414 (13.10.2026): Replace a section from the wave (early preview); ☐ its guide after we both have tried it.
+- ✅ 1415 (13.10.2026): compare a take with its namesakes, or two to four checked, in one player.
+- ✅ 1416 (13.10.2026): Free tempo (the score's Q: out before the music; on by the Style's own words; a score without Q: native).
+- ✅ 1417 (13.10.2026): the lyrics' timing in two passes (hotwords, the vocal stem); stable-ts tried and dropped (its developer left it in June).
+- ✅ 1419 (13.10.2026): the guidances as roads; Free tempo as the lyrics' toggles; every corner from Engine's profile; a take's hover tools in one row.
+- ✅ 1420 (13.10.2026): score mode (Full, Melody) in the studio's own trainer; next: the separation, then AI-Toolkit out of the studio.
+- ✅ 1421 (13.10.2026): compare plays on; the Style as one line; the find bar's ✕; Max length as typed; guidances in tenths; the take card's face; the sambuca in his words.
+- ✅ 1422 (13.10.2026): the separation in the studio's own trainer; AI-Toolkit out of the studio (his own AI_Toolkit folder untouched).
+- ✅ 1425 (13.10.2026): several sections replaced in one go, their versions named by section and stretch and in Takes as they land; compare at 1200 px with its wave, thumbs and «Hide disliked»; the Refiner's Colour (vinyl, tape, room); a cover to its namesakes; Compute's VAE, the memory preset gone; the scan suggests Qwen-Image 2512.
+- ✅ 1423 (13.10.2026): covers by the cards: Qwen-Image 2512 where it fits whole, else Krea 2 Muse; the speeds measured. ☐ 2.1.0: a quicker Qwen cover (the Artist room's kept painter for covers, or nunchaku's int4 kernels, or a 4-step Lightning), on his go.
 
 **2.1.0, weighty:**
 

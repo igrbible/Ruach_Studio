@@ -63,8 +63,10 @@
   .bar nav { display: flex; gap: 18px; margin-left: auto; font-size: 15px; }
   .bar nav a { color: var(--soft); }
   .bar nav a:hover { color: var(--amber); text-decoration: none; }
-  .theme { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); width: 34px; height: 34px; border-radius: 9px;
-           cursor: pointer; font-size: 16px; line-height: 1; }
+  .theme { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); width: 40px; height: 36px; border-radius: 9px;
+           cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+  .theme svg { width: 22px; height: 22px; display: block; }   /* HERESY 1394 (Viktor: «Кнопка режима тем на сайте очень маленькая, мизерная»): a drawn half moon, not a font's ◐ */
+  .theme:hover { color: var(--amber); border-color: var(--amber); }
   @media (max-width: 860px) { .bar nav { display: none; } .theme { margin-left: auto; } }
 
   /* the hero */
@@ -224,7 +226,7 @@
       <a href="#licences">Licences</a><a href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a>
     </nav>
     <details class="langs" translate="no"><summary aria-label="Language">{{LANG}}</summary><div class="langs-pop">{{LANGS}}</div></details>
-    <button class="theme" id="theme" type="button" aria-label="Day or night" title="Day or night">◐</button>
+    <button class="theme" id="theme" type="button" aria-label="Day or night" title="Day or night"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
   </div>
 </header>
 
@@ -232,7 +234,7 @@
   <section class="hero-night">
   <div class="wrap hero">
     <div class="logo">{{LOGO}}</div>
-    <div class="osem" translate="no"><b>OSEM</b><span class="say">Simply awesome</span><span>Open Source, Engaged &amp; Musical</span></div>
+    <div class="osem" translate="no"><b>OSEM</b><span class="say">Simply AWESOME</span><span>Open Source, Engaged &amp; Musical</span></div>
     <h1>Songs from words and chords<br>on your own machine</h1>
     <p class="lead">A whole studio around <b>YuE2</b>, the open song model. Write the style and the lyrics, and the studio
       composes, sings and renders the song on <b>your own GPU</b>. Your songs, words and settings never leave it.</p>
@@ -242,7 +244,7 @@
       <a class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a>
       <a class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Buy me a Coffee Machine</a>
     </div>
-    <span class="rc"><b>2.0.0-rc6</b> · the sixth release candidate · October 2026</span>
+    <span class="rc"><b>2.0.0-rc7</b> · the seventh release candidate · October 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -343,6 +345,8 @@
             <tr><td>the score</td><td>written first, shown, editable, yours (ABC, MIDI)</td><td>hidden</td></tr>
             <tr><td>the lyrics</td><td>a meter beside each line: its beats against its section's ruler, syllables by each language's own rules; the section tags offered as you type «[»</td><td>a text box; lyrics written for you on request</td></tr>
             <tr><td>repeat a take</td><td>exactly: two seeds you keep</td><td>no</td></tr>
+            <tr><td>guidance</td><td>two, apart: the style's pull and the lyrics' hold, each its own CFG</td><td>one Style Influence knob</td></tr>
+            <tr><td>replace a section</td><td>its words sung anew between the rests the ear finds, the rest of the take kept to the sample: the seam goes unheard; several sections in one go</td><td>Replace Section: in our trials almost never usable, the seams heard and the voice changed</td></tr>
             <tr><td>your own sound</td><td>train a LoRA on your songs, in the studio</td><td>no training</td></tr>
             <tr><td>after the render</td><td>stems, debuzz, remaster, upscale, lyrics check, all local</td><td>stems, in the cloud</td></tr>
             <tr><td>seeing the sound</td><td>the take's whole spectrogram over the player, in time with its wave: the sections, the brightness and loudness, the spectrum and note under the pointer</td><td>a waveform</td></tr>
@@ -379,7 +383,7 @@
   <section id="next">
     <div class="wrap">
       <h2>What comes next</h2>
-      <p class="sub">2.0.0-rc6 is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.0.0 and after.</p>
+      <p class="sub">2.0.0-rc7 is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.0.0 and after.</p>
       <ul class="feats">
         <li><b>Songs edited as the model writes them.</b> A take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens; an instrumental layer on the take's own score.</li>
         <li><b>A DAW in the Refiner.</b> Plenio's score editor in an early preview: a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in.</li>
@@ -411,7 +415,7 @@
         <li><b>AI-Toolkit</b> by Ostris: the trainer's YuE2 code was ported from it</li>
         <li><b>Mothersuperior</b>: the realaudio tokenizer head and the VAE merge</li>
         <li><b>Qwen2.5-Omni</b> (the listener), <b>Whisper</b> (the lyrics check), <b>BS-Roformer</b> and <b>htdemucs</b> (stems), <b>UniverSR</b> (upscale)</li>
-        <li><b>Krea 2 Muse</b> by Stable Yogi and <b>CyberRealistic XL</b> by Cyberdelia: the artwork</li>
+        <li><b>Krea 2 Muse</b> by Stable Yogi: the artwork</li>
         <li><b>YuE2 Studio</b>: the score checker; <b>GTSinger</b>: voices to train on</li>
       </ul>
     </div>
@@ -497,7 +501,7 @@
 
 <footer>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.0-rc6 · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
+    <span>Ruach Studio · 2.0.0-rc7 · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
   </div>
 </footer>
 

@@ -152,8 +152,8 @@ def export_reaper(name: str) -> dict:
 
 @mcp.tool()
 def draw_artwork(name: str, again: bool = False, wait: bool = True) -> dict:
-    """Draw a take's artwork (HERESY 1120): a small model writes a picture prompt from the take's style and lyrics, an
-    SDXL model paints it (768 px JPEG; about half a minute). again: a new one even when it has one. With wait,
+    """Draw a take's artwork (HERESY 1120): a small model writes a picture prompt from the take's style and lyrics, Krea 2
+    Muse paints it (1405: SDXL gone; a 1024 px JPEG, about a minute). again: a new one even when it has one. With wait,
     returns what was drawn (the prompt, the seed) and where to see it."""
     first = call(f"/takes/{urllib.parse.quote(name)}/artwork", {"again": again}, timeout=60)
     t0 = time.time()

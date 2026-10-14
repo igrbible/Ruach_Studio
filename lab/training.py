@@ -1,18 +1,19 @@
 """HERESY 1063: LoRA training for YuE2, the lab's side (Viktor, 01.10.2026). Imported by lab.py.
 
-The trainer is Ostris' AI-Toolkit (MIT; extensions_built_in/audio_models/yue2): one LoRA over both
-experts, the NAR flow loss always, the AR next-token loss when ar_loss_weight > 0, anchored to the
-base model by ar_kl_weight (the AR learns the training songs by heart on a small set: its notes).
-The studio only prepares, starts, watches and collects:
+The trainer is the studio's own (lab/trainer, ported line by line from Ostris' AI-Toolkit, MIT; HERESY 1083–1086, score
+mode 1420, the separation 1422): one LoRA over both experts, the NAR flow loss always, the AR next-token loss when
+ar_loss_weight > 0, anchored to the base model by ar_kl_weight (the AR learns the training songs by heart on a small set: its
+notes). AI-Toolkit itself left the studio on 13.10.2026 (HERESY 1422), once all it trained was here. The lab prepares,
+starts, watches and collects:
 
   datasets/raw/NAME/        the raw material, as it came (WAV, FLAC, MP3, with or without .txt)
-  datasets/prepared/NAME/   48 kHz stereo WAV + one caption .txt each, AI-Toolkit's own layout:
+  datasets/prepared/NAME/   48 kHz stereo WAV + one caption .txt each (AI-Toolkit's layout, kept):
                             the style line, then [Lyrics] and the lyrics (its parse_caption)
-  training/RUN/             config.yaml, train.log, AI-Toolkit's output (checkpoints, samples)
+  training/RUN/             config.json, train.log, the trainer's output (checkpoints, loss_log.db)
   loras/RUN/                the finished LoRA, where the engine finds it
 
-The weights it trains on are Comfy-Org's repack of YuE2 (the tokenizer embedded), fetched by
-AI-Toolkit into checkpoints/comfy/ (MODELS_PATH); the semantic head is the realaudio tokenizer in
+The weights it trains on are Comfy-Org's repack of YuE2 (the tokenizer embedded), in checkpoints/comfy/
+(heresy/fetch-heresy.sh --trainer); the semantic head is the realaudio tokenizer in
 checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/. A run takes a GPU of its own for hours, so
 it does not hold the lab's heavy lock (Whisper and the stems go on beside it).
 """
@@ -26,10 +27,8 @@ NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 
 def paths(kit):
-    aitk = Path(os.environ.get("AITK_ROOT", kit.parent / "AI_Toolkit"))
     return {"raw": kit / "datasets" / "raw", "prepared": kit / "datasets" / "prepared", "runs": kit / "training",
-            "loras": kit / "loras", "models": kit / "checkpoints" / "comfy", "aitk": aitk,
-            "aitk_py": aitk / ".venv" / "bin" / "python",
+            "loras": kit / "loras", "models": kit / "checkpoints" / "comfy",
             "head": kit / "checkpoints" / "yue2-mothersuperior-realaudio-tokenizer-v4"}
 
 
@@ -73,12 +72,11 @@ def datasets(kit):
             m = json.load(open(man, encoding="utf-8"))
             prepared.append({"name": d.name, "tracks": len(m.get("tracks", [])), "from": m.get("from"), "made": m.get("made"),
                              "seconds": round(sum(t.get("seconds") or 0 for t in m.get("tracks", [])))})
-    ready = P["aitk_py"].is_file() and (P["aitk"] / "run.py").is_file()
     # HERESY 1086: what the studio's own trainer needs, each said by name (heresy/fetch-heresy.sh --trainer fetches it)
     own = {q: (P["models"] / "checkpoints" / f).is_file() for q, f in OWN_CKPT.items()}
     own.update(mert=(kit / "checkpoints" / "MERT-v2-FullSong" / "model.safetensors").is_file(),
                head=(P["head"] / "tokenizer_head_joint_v4.pt").is_file())
-    return {"raw": raw, "prepared": prepared, "aitk": str(P["aitk"]), "aitk_ready": ready, "own": own,
+    return {"raw": raw, "prepared": prepared, "own": own,
             "head": P["head"].is_dir(), "runs": runs(kit)["runs"], "gpus": gpus()}
 
 
@@ -234,41 +232,11 @@ def prepare_status(name):
 # ---- the run
 DEFAULTS = {"steps": 1500, "rank": 32, "lr": 1e-4, "save_epochs": 1, "cot": "off", "ar_loss_weight": 0.5,
             "ar_kl_weight": 0.2, "ar_lr_multiplier": 0.5, "train_window_frames": 1500, "do_separation": False,
-            "quant": "int8", "engine": "ai-toolkit"}
+            "quant": "bf16", "engine": "ruach"}
 # HERESY 1085: engine "ruach" is the studio's own trainer (lab/trainer, ported from Ostris' MIT code, exact on
-# parity: lab/trainer/PARITY.md), bf16 weights (Viktor: "не квантуй ничего"), Direct mode; "ai-toolkit" runs
-# Ostris' AI-Toolkit, kept as the reference.
+# parity: lab/trainer/PARITY.md), bf16 weights (Viktor: "не квантуй ничего"), Direct, score mode (1420), separated (1422).
+# HERESY 1422: the only one: AI-Toolkit, kept as the reference till then, left the studio.
 OWN_CKPT = {"bf16": "yue2_3b_bf16.safetensors", "int8": "yue2_3b_int8_convrot.safetensors"}
-
-
-def config_yaml(kit, run, dataset, o):
-    """AI-Toolkit's job file for a YuE2 LoRA (JSON is YAML: no YAML library needed in the lab)."""
-    P = paths(kit)
-    ckpt = ("Comfy-Org/YuE2/checkpoints/yue2_3b_int8_convrot.safetensors" if o["quant"] == "int8"
-            else "Comfy-Org/YuE2/checkpoints/yue2_3b_bf16.safetensors")
-    model = {"arch": "yue2", "name_or_path": ckpt, "quantize": o["quant"] == "int8", "quantize_te": False, "low_vram": False,
-             "model_kwargs": {"cot": o["cot"], "abc_dropout": 0.5, "ar_loss_weight": o["ar_loss_weight"],
-                              "ar_kl_weight": o["ar_kl_weight"], "ar_lr_multiplier": o["ar_lr_multiplier"],
-                              "train_window_frames": o["train_window_frames"], "do_separation": o["do_separation"],
-                              "semantic_head_path": str(P["head"] / "tokenizer_head_joint_v4.pt"),
-                              "nar_lora_path": str(P["head"] / "nar_lora_joint_v4.pt")}}
-    if o["quant"] == "int8":
-        model["qtype"] = "convrot8"
-    cfg = {"job": "extension", "config": {"name": run, "process": [{
-        "type": "sd_trainer", "training_folder": str(P["runs"] / run / "output"), "device": "cuda:0",
-        "network": {"type": "lora", "linear": o["rank"], "linear_alpha": o["rank"]},
-        # HERESY 1067 (Viktor, 02.10): a checkpoint per epoch, not per so many steps, and every one kept, so
-        # the epochs can be heard against each other; the step loss into loss_log.db (AI-Toolkit's UI logger)
-        "save": {"dtype": "bf16", "save_every": o["save_every"], "max_step_saves_to_keep": o["steps"] // o["save_every"] + 2},
-        "logging": {"log_every": 1, "use_ui_logger": True},
-        "datasets": [{"folder_path": str(P["prepared"] / dataset), "caption_ext": "txt", "caption_dropout_rate": 0,
-                      "cache_latents_to_disk": True, "resolution": [512]}],
-        "train": {"batch_size": 1, "steps": o["steps"], "gradient_accumulation": 1, "train_unet": True,
-                  "train_text_encoder": False, "gradient_checkpointing": True, "noise_scheduler": "flowmatch",
-                  "timestep_type": "sigmoid", "optimizer": "adamw8bit", "lr": o["lr"], "dtype": "bf16",
-                  "unload_text_encoder": False, "disable_sampling": True},
-        "model": model}]}, "meta": {"name": run, "version": "1.0", "studio": "Ruach Studio"}}
-    return cfg
 
 
 CKPT_RE = re.compile(r"_(\d{6,})\.safetensors$")
@@ -628,9 +596,9 @@ def train(kit, spec, gpu_picker):
     P = paths(kit)
     dataset = str(spec.get("dataset", ""))
     _safe_dir(P["prepared"], dataset)
-    own = str(spec.get("engine") or DEFAULTS["engine"]) == "ruach"
-    if not own and not P["aitk_py"].is_file():
-        raise FileNotFoundError(f"AI-Toolkit is not at {P['aitk']} (set AITK_ROOT, or clone ostris/ai-toolkit there)")
+    if str(spec.get("engine") or "ruach") != "ruach":       # HERESY 1422: said, not run
+        raise ValueError("AI-Toolkit left the studio (13.10.2026): its own trainer trains every mode now, Direct, with a score, separated")
+    own = True
     run = str(spec.get("name") or f"{dataset}-{time.strftime('%Y%m%d-%H%M')}")
     if not NAME_RE.match(run):
         raise ValueError("a run name of letters, digits, _ . - (no spaces), up to 64")
@@ -664,8 +632,12 @@ def train(kit, spec, gpu_picker):
     P["models"].mkdir(parents=True, exist_ok=True)
     if own:
         o["engine"] = "ruach"
-        if o["cot"] != "off":
-            raise ValueError("the studio's own trainer runs Direct mode (cot off) for now")
+        if o["cot"] not in ("off", "full", "melody"):
+            raise ValueError("mode: off, full or melody")
+        if o["cot"] != "off" and not ((kit / "build" / "build" / "yue-transcribe").is_file() and list((kit / "models").glob("SheetSage2-*.gguf"))):
+            raise FileNotFoundError("score mode needs the engine's transcriber (build/build/yue-transcribe and models/SheetSage2-*.gguf)")   # HERESY 1420
+        if o["do_separation"] and not (kit / "separation" / "roformer" / "model_bs_roformer_ep_317_sdr_12.9755.ckpt").is_file():
+            raise FileNotFoundError("the separation needs the studio's separator (separation/roformer/model_bs_roformer_ep_317_sdr_12.9755.ckpt)")   # HERESY 1422
         quant = str(spec.get("quant") or "bf16")
         ckpt = P["models"] / "checkpoints" / OWN_CKPT.get(quant, OWN_CKPT["bf16"])
         if not ckpt.is_file():
@@ -673,12 +645,12 @@ def train(kit, spec, gpu_picker):
         o["quant"] = quant if quant in OWN_CKPT else "bf16"
         # the set's latent cache: train.py makes what is missing (lab/trainer/cache.py) before it loads the model
         cfg = {"name": run, "out": str(d), "dataset": str(P["prepared"] / dataset), "checkpoint": str(ckpt),
-               **{k: o[k] for k in ("steps", "save_every", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier", "train_window_frames")}}
+               **{k: o[k] for k in ("steps", "save_every", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier", "train_window_frames", "cot")}}
+        if o["cot"] != "off":                         # HERESY 1420: score mode, AI-Toolkit's abc_dropout
+            cfg["abc_dropout"] = 0.5
+        if o["do_separation"]:                        # HERESY 1422: the separation, AI-Toolkit's weights
+            cfg.update(do_separation=True, separation_vocals_weight=0.5, separation_music_weight=1.0)
         (d / "config.json").write_text(json.dumps(cfg, indent=1, ensure_ascii=False), encoding="utf-8")
-    else:
-        o["engine"] = "ai-toolkit"
-        cfg = config_yaml(kit, run, dataset, o)
-        (d / "config.yaml").write_text(json.dumps(cfg, indent=1, ensure_ascii=False), encoding="utf-8")
     meta = {"name": run, "dataset": dataset, "options": o, "gpu": gpu, "started": time.time(), "status": "running",
             "steps": o["steps"], "tracks": tracks, "epochs": round(o["steps"] / tracks, 1), "kind": str(spec.get("kind") or ""),
             "note": str(spec.get("note") or "")[:500], "unit": _unit(run)}
@@ -687,13 +659,10 @@ def train(kit, spec, gpu_picker):
     env = {"CUDA_VISIBLE_DEVICES": str(gpu), "CUDA_DEVICE_ORDER": "PCI_BUS_ID", "MODELS_PATH": str(P["models"]),
            "HF_HOME": str(kit / "hf_cache"), "PYTHONUNBUFFERED": "1", "HF_HUB_DISABLE_PROGRESS_BARS": "1"}
     log = d / "train.log"
-    cmd = ["systemd-run", "--user", "--unit=" + _unit(run), "--working-directory=" + str(kit if own else P["aitk"]),
+    cmd = ["systemd-run", "--user", "--unit=" + _unit(run), "--working-directory=" + str(kit),
            "-p", f"StandardOutput=append:{log}", "-p", f"StandardError=append:{log}"]
     cmd += ["--setenv=" + k + "=" + v for k, v in env.items()]
-    if own:
-        cmd += [str(kit / ".venv" / "bin" / "python"), str(kit / "lab" / "trainer" / "train.py"), str(d / "config.json")]
-    else:
-        cmd += [str(P["aitk_py"]), "run.py", str(d / "config.yaml")]
+    cmd += [str(kit / ".venv" / "bin" / "python"), str(kit / "lab" / "trainer" / "train.py"), str(d / "config.json")]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     if r.returncode != 0:
         meta.update(status="failed", error="systemd-run: " + (r.stderr.strip() or r.stdout.strip()))

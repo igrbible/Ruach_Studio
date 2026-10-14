@@ -1,0 +1,85 @@
+From 8e0c2cc0bb0111776b25802d80a3cbb22d5596de Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 12 Oct 2026 22:44:08 -0600
+Subject: [PATCH 1371/1383] =?UTF-8?q?HERESY=201169=20=C2=B7=201406:=20Tras?=
+ =?UTF-8?q?h=20(Art)=20as=20tiles;=20a=20click=20on=20a=20tile=20ticks=20i?=
+ =?UTF-8?q?t?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 12.10.2026: «Корзину треша Арта перерисуй в тайлы, но аудио корзину оставь списком как есть». The art trash card wore .coll-art, the class of a take's cover thumb (absolute, 46 px; 28 px in the list), and shrank to it: the prompts ran over each other. Now .coll-binart in a grid of its own (coll-grid artbin, auto-fill from 168 px): the picture square on top, the box on its corner, the prompt in three lines, what it is under it. The takes' Trash stays a list.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css              | 17 ++++++++++++++++-
+ tools/console/heresy-collection.js |  6 ++++--
+ 2 files changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a3bdb90..782cc91 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5327,7 +5327,7 @@ body:has(.ar-view) .hm-menu { z-index: 130; }
+ body:has(.ar-view) .hm-tip { z-index: 131; }
+ /* HERESY 1337: the art's trash: in the library a picture beside each line; in the Artist's Trash look its head and each picture's ✕ */
+ .coll-art-pic { width: 52px; height: 52px; flex: 0 0 52px; object-fit: cover; border-radius: var(--r-sm); background: var(--line-a); }
+-.coll-card.coll-art.is-frozen { opacity: .62; }
++.coll-card.coll-binart.is-frozen { opacity: .62; }
+ .ar-trash-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+ .ar-aside-pic { position: relative; }
+ .ar-aside-pic .ar-aside-x { position: absolute; top: 4px; right: 4px; }
+@@ -5409,3 +5409,18 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
+ /* HERESY 1169 · 1377 (Viktor 11.10.2026: «миллион пространств… В контекстном меню нужна прокрутка»): a menu no taller than the window,
+    scrolled inside itself (heresy-menu.js places it within the window and closes its submenu as it scrolls) */
+ .hm-menu { max-height: calc(100vh - 12px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
++/* HERESY 1406 (Viktor 12.10.2026: «Корзину треша Арта перерисуй в тайлы, но аудио корзину оставь списком как есть»): the art's
++   trash as tiles, the picture whole on top and square, the box on its corner, the prompt in three lines and what it is under it;
++   a tile without a picture (an adapter) keeps the square, empty. The card wore .coll-art before, the cover thumb's class, and
++   shrank to its 28 px */
++.coll-grid.artbin { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px; align-content: start; }
++.coll-grid.artbin .coll-empty { grid-column: 1 / -1; }
++.coll-grid.artbin .coll-card { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 6px; padding: 6px; cursor: pointer; }
++.coll-grid.artbin .coll-card.is-frozen { cursor: default; }
++.coll-grid.artbin .coll-check { position: absolute; top: 10px; left: 10px; z-index: 1; display: flex; width: auto; padding: 3px; order: 0;
++  border-radius: var(--r-sm); background: color-mix(in srgb, var(--panel) 78%, transparent); }
++.coll-grid.artbin .coll-art-pic { display: block; width: 100%; height: auto; aspect-ratio: 1; flex: none; }
++.coll-grid.artbin .coll-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 0 2px 2px; }
++.coll-grid.artbin .coll-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere;
++  font-size: 12.5px; line-height: 1.35; }
++.coll-grid.artbin .coll-meta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; line-height: 1.35; }
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 399b558..3806a47 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -566,7 +566,7 @@
+     var list = artItems(), b = state.artBin, nsel = Object.keys(state.asel).length;
+     $("collWhere").innerHTML = " \u203a <span>Trash (Art)</span>";
+     $("collNote").innerHTML = b ? "<span>" + list.length + " in the art's trash</span> · <span>" + ((+b.bytes || 0) / 1e9).toFixed(2) + " GB</span>" : "";
+-    $("collGrid").className = "coll-grid list";
++    $("collGrid").className = "coll-grid artbin";      // HERESY 1406: tiles (the takes' trash stays a list)
+     $("collEmpty").textContent = nsel ? "Delete " + nsel + " for good" : "Wipe out the art's trash";
+     $("collEmpty").disabled = !list.some(function (it) { return !it.frozen; });
+     $("collRestore").disabled = !nsel;
+@@ -595,7 +595,7 @@
+         if (it.c.prompt) mine = it.c.prompt;
+       }
+       meta.push((it.bytes / 1e6).toFixed(1) + " MB");
+-      return '<article class="coll-card coll-art' + (sel ? " is-sel" : "") + (it.frozen ? " is-frozen" : "") + '" data-akind="' + it.kind + '">' +
++      return '<article class="coll-card coll-binart' + (sel ? " is-sel" : "") + (it.frozen ? " is-frozen" : "") + '" data-akind="' + it.kind + '">' +
+         '<label class="coll-check"><input type="checkbox" data-asel="' + esc(key) + '"' + (sel ? " checked" : "") + (it.frozen ? ' disabled title="Frozen: its takes are heard, never changed"' : "") + " /></label>" +
+         (src ? '<img class="coll-art-pic" alt="" loading="lazy" draggable="false" src="' + esc(src) + '" />' : '<span class="coll-art-pic"></span>') +
+         '<div class="coll-body"><div class="coll-title" translate="no">' + esc(title) + '</div><div class="coll-meta">' + meta.map(function (m) { return "<span>" + esc(m) + "</span>"; }).join(" · ") +
+@@ -1077,6 +1077,8 @@
+       if (tcb) { if (tcb.checked) state.tsel[tcb.dataset.tsel] = 1; else delete state.tsel[tcb.dataset.tsel]; return paint(); }
+       var acb = e.target.closest("[data-asel]");         // HERESY 1337: the art's trash
+       if (acb) { if (acb.checked) state.asel[acb.dataset.asel] = 1; else delete state.asel[acb.dataset.asel]; return paint(); }
++      var atile = e.target.closest(".coll-binart");      // HERESY 1406: a click on a tile of the art's trash ticks it
++      if (atile && !e.target.closest("label, input")) { var abox = atile.querySelector("input[data-asel]:not(:disabled)"); if (abox) abox.click(); return; }
+       if (band.ate) { band.ate = false; return; }             // the click that ends a rubber band is not a click
+       var artb = e.target.closest("[data-art]");             // HERESY 1155: ‹ › walk the pictures of the cards shown
+       if (artb && window.HeresyArt && window.HeresyArt.show) {
+-- 
+2.43.0
+

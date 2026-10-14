@@ -351,6 +351,7 @@
               trim_start: parseFloat($("rmTrimStart").value) || 0, trim_end: parseFloat($("rmTrimEnd").value) || 0,
               deess: $("rmDeess").checked && stemsPicked(), deess_mode: $("rmDeessMode").value, hz432: $("rm432").checked,
               loudnorm: $("rmLoud").checked, lufs: parseFloat($("rmLufs").value) || -14, tp: parseFloat($("rmTp").value) || -1,
+              colour: $("rmColour") ? $("rmColour").value : "", colour_db: $("rmColourDb") ? (parseFloat($("rmColourDb").value) || -36) : -36,   // HERESY 1425
               formats: $("rmMp3").checked ? ["wav", "flac", "mp3"] : ["wav", "flac"] };
     return s;
   }
@@ -423,10 +424,10 @@
     if (state.hooks.pauseMain) state.hooks.pauseMain();
     Array.prototype.forEach.call(document.querySelectorAll("#derivedTree audio"), function (a) { a.pause(); });
     var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems" };
-    var versions = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds }];
+    var versions = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds, take: take.name }];
     // HERESY 1311: the take's family (the same music in other takes), the disliked left out, after the original
     (state.hooks.family ? state.hooks.family(take.name) : []).forEach(function (t) {
-      versions.push({ label: t.label || t.name, group: t.group || "The same music", url: t.url, path: "take:" + t.name, seconds: t.seconds });
+      versions.push({ label: t.label || t.name, group: t.group || "The same music", url: t.url, path: "take:" + t.name, seconds: t.seconds, take: t.name });
     });
     ["debuzz", "remaster", "upscale", "stems"].forEach(function (kind) {
       state.list.filter(function (m) { return m.kind === kind; }).forEach(function (m) {
@@ -437,43 +438,148 @@
       });
     });
     var active = Math.max(0, versions.findIndex(function (v) { return v.path === startPath; }));
+    openCompare(take.label || take.name, versions, active);
+  }
+  // HERESY 1415: the same player for any takes (a take's namesakes, the Librarian's checked ones): versions [{label, group, url, path, seconds, take}]
+  // HERESY 1425 (Viktor 13.10.2026: «Попап сравнения можешь сделать на 1200px ширины и с wavesurfer wave? Стяжка ширины при утирании в ширину
+  // заскейленного экрана»; «добавь лайк, дизлайк и заезду. Галочку "скрыть дизлайк" как в Суно»): 1200 px wide, narrower with the window; the
+  // playing version's wave (the server's peaks of a take, a file's own read in the page) is the seek bar, played part lit; each take its
+  // thumbs and star (the Librarian's own), the disliked hidden when so ticked (kept for the next time); a version disliked while it plays
+  // gives way to the next one shown, from the same second
+  var CMP_HIDE = "yue2.cmpHideDisliked";
+  function cmpHide() { try { return localStorage.getItem(CMP_HIDE) !== "0"; } catch (e) { return true; } }
+  function cmpPeaks(v) {
+    var decode = function () {
+      var Off = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!Off) return null;
+      return fetch(v.url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then(function (buf) { return new Off(1, 1, 44100).decodeAudioData(buf); })
+        .then(function (au) {
+          var ch = au.getChannelData(0), n = 900, step = Math.max(1, Math.floor(ch.length / n)), out = [];
+          for (var k = 0; k < n; k++) {
+            var m = 0;
+            for (var j = k * step, e = Math.min(ch.length, j + step); j < e; j += 4) { var x = Math.abs(ch[j]); if (x > m) m = x; }
+            out.push(m);
+          }
+          return out;
+        });
+    };
+    if (!v.take) return Promise.resolve().then(decode);
+    return fetch("/library/peaks?name=" + encodeURIComponent(v.take)).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (p) { return p && p.peaks && p.peaks.length ? p.peaks : decode(); }, decode);
+  }
+  function openCompare(title, versions, active) {
+    if (!versions || !versions.length) return;
+    var hk = state.hooks || {};
+    if (hk.pauseMain) hk.pauseMain();
+    active = Math.max(0, Math.min(versions.length - 1, active || 0));
     var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; return a; });
+    var rated = !!(hk.rating && hk.rate && versions.some(function (v) { return v.take; }));
+    var hideDis = rated && cmpHide();
+    var ico = function (n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : (n === "pause" ? "❚❚" : "▶"); };
+    var rateHtml = function (v) {
+      if (!rated || !v.take) return "";
+      return '<span class="cmp-rate"><button type="button" class="coll-act" data-cmp-rate="1" aria-label="Like">' + ico("like") + "</button>" +
+        '<button type="button" class="coll-act" data-cmp-rate="-1" aria-label="Dislike">' + ico("dislike") + "</button>" +
+        (hk.favorite ? '<button type="button" class="coll-act fav" data-cmp-fav="1" aria-label="Favourite">' + ico("star") + "</button>" : "") + "</span>";
+    };
     var back = document.createElement("div");
     back.className = "cmp-back";
     back.innerHTML = '<div class="cmp-box" role="dialog" aria-modal="true" aria-label="Compare the versions">' +
-      '<div class="cmp-head"><div><div class="cmp-title">Compare · ' + esc(take.label || take.name) + '</div>' +
+      '<div class="cmp-head"><div><div class="cmp-title">Compare · ' + esc(title) + '</div>' +
       '<div class="row-hint">' + versions.length + " versions · a click (or its number) plays it from the same second · Space plays and pauses · ← → five seconds</div></div>" +
       '<button type="button" class="btn ghost small" data-cmp="close">Close</button></div>' +
+      '<canvas class="cmp-wave" role="slider" aria-label="Position" tabindex="-1"></canvas>' +
       '<div class="cmp-transport"><button type="button" class="cmp-play" data-cmp="play" aria-label="Play"></button>' +
-      '<span class="cmp-time mono">0:00</span><input type="range" class="cmp-seek" min="0" max="1000" value="0" aria-label="Position" /><span class="cmp-total mono">0:00</span></div>' +
+      '<span class="cmp-time mono">0:00</span><span class="cmp-fill"></span>' +
+      (rated ? '<label class="cmp-hide"><input type="checkbox" data-cmp-hide="1"' + (hideDis ? " checked" : "") + "> Hide disliked</label>" : "") +
+      '<span class="cmp-total mono">0:00</span></div>' +
       '<ol class="cmp-list">' + versions.map(function (v, i) {
-        return '<li><button type="button" class="cmp-row" data-cmp-i="' + i + '"><span class="cmp-n mono">' + (i < 9 ? i + 1 : "") + '</span><span class="cmp-name">' + esc(v.label) + "</span>" +
-          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button></li>";
+        return '<li class="cmp-li" data-cmp-li="' + i + '"><button type="button" class="cmp-row" data-cmp-i="' + i + '"><span class="cmp-n mono">' + (i < 9 ? i + 1 : "") + '</span><span class="cmp-name">' + esc(v.label) + "</span>" +
+          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button>" + rateHtml(v) + "</li>";
       }).join("") + "</ol></div>";
     document.body.appendChild(back);
-    var box = back.querySelector(".cmp-box"), seek = box.querySelector(".cmp-seek"), playBtn = box.querySelector(".cmp-play"), dragging = false;
-    var ico = function (n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : (n === "pause" ? "❚❚" : "▶"); };
+    var box = back.querySelector(".cmp-box"), wave = box.querySelector(".cmp-wave"), playBtn = box.querySelector(".cmp-play"), dragging = false;
+    var peaks = [];
     function cur() { return audios[active]; }
+    function dur() { var a = cur(); return isFinite(a.duration) && a.duration > 0 ? a.duration : (versions[active].seconds || 0); }
+    function shown(i) { return !(hideDis && versions[i].take && hk.rating(versions[i].take) < 0); }
+    // HERESY 1421 (Viktor 13.10.2026: «кликание обратно со второго трека на первый останавливает воспроизведение»): a version's play
+    // resolves when it has loaded, and the old callback paused the one it had been switched from, which by then could be the
+    // chosen one again; now whatever resolves last, every version but the chosen one is paused. And the second the switch
+    // goes from is the last one known, not the 0:00 of a version whose length has not loaded yet
+    var lastT = 0;
+    function settle() { audios.forEach(function (a) { if (a !== cur()) a.pause(); }); paint(); }
+    function wantPeaks(i) {
+      if (peaks[i] !== undefined) return;
+      peaks[i] = null;
+      cmpPeaks(versions[i]).then(function (p) { peaks[i] = p && p.length ? p : "none"; drawWave(); }, function () { peaks[i] = "none"; drawWave(); });
+    }
+    function drawWave() {
+      var w = wave.clientWidth, h = wave.clientHeight, dpr = window.devicePixelRatio || 1;
+      if (!w || !h) return;
+      if (wave.width !== Math.round(w * dpr) || wave.height !== Math.round(h * dpr)) { wave.width = Math.round(w * dpr); wave.height = Math.round(h * dpr); }
+      var ctx = wave.getContext("2d"), css = getComputedStyle(box), p = peaks[active], d = dur(), at = d ? Math.min(1, (cur().currentTime || 0) / d) : 0;
+      var lit = css.getPropertyValue("--amber").trim() || "#d9a441", dim = css.getPropertyValue("--dim").trim() || "#888";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      if (!p || p === "none") {
+        ctx.fillStyle = dim; ctx.fillRect(0, h / 2 - 0.5, w, 1);
+        ctx.fillStyle = lit; ctx.fillRect(0, h / 2 - 1, w * at, 2);
+      } else {
+        var max = 0, k;
+        for (k = 0; k < p.length; k++) if (p[k] > max) max = p[k];
+        max = max || 1;
+        var bars = Math.max(1, Math.floor(w / 3));
+        for (var x = 0; x < bars; x++) {
+          var k0 = Math.floor(x * p.length / bars), k1 = Math.max(k0 + 1, Math.floor((x + 1) * p.length / bars)), m = 0;
+          for (k = k0; k < k1 && k < p.length; k++) if (p[k] > m) m = p[k];
+          var bh = Math.max(1, m / max * (h - 6));
+          ctx.fillStyle = (x + 0.5) / bars <= at ? lit : dim;
+          ctx.fillRect(x * 3, (h - bh) / 2, 2, bh);
+        }
+      }
+      ctx.fillStyle = lit; ctx.fillRect(Math.round(w * at) - 1, 0, 2, h);
+    }
+    function paintRates() {
+      if (!rated) return;
+      Array.prototype.forEach.call(box.querySelectorAll(".cmp-li"), function (li) {
+        var v = versions[+li.dataset.cmpLi];
+        li.hidden = !shown(+li.dataset.cmpLi);
+        if (!v.take) return;
+        var r = hk.rating(v.take) || 0;
+        li.querySelectorAll("[data-cmp-rate]").forEach(function (b) { b.setAttribute("aria-pressed", String(+b.dataset.cmpRate === 1 ? r > 0 : r < 0)); });
+        var f = li.querySelector("[data-cmp-fav]");
+        if (f) f.setAttribute("aria-pressed", String(!!hk.favorite(v.take)));
+      });
+      if (!shown(active)) {                                 // the one playing disliked and hidden: the next shown one goes on from its second
+        for (var k = 1; k < versions.length; k++) { var j = (active + k) % versions.length; if (shown(j)) { pick(j); break; } }
+      }
+    }
     function paint() {
-      var a = cur(), d = isFinite(a.duration) ? a.duration : (versions[active].seconds || 0);
+      var a = cur(), d = dur();
+      if (a.readyState >= 1) lastT = a.currentTime || 0;
       playBtn.innerHTML = ico(a.paused ? "play" : "pause");
       playBtn.setAttribute("aria-label", a.paused ? "Play" : "Pause");
       box.querySelector(".cmp-time").textContent = clock(a.currentTime || 0);
       box.querySelector(".cmp-total").textContent = d ? clock(d) : "0:00";
-      if (!dragging && d) seek.value = String(Math.round(1000 * (a.currentTime || 0) / d));
+      wave.setAttribute("aria-valuenow", String(Math.round(a.currentTime || 0)));
       Array.prototype.forEach.call(box.querySelectorAll(".cmp-row"), function (r, i) {
         r.classList.toggle("is-on", i === active);
         r.classList.toggle("is-playing", i === active && !a.paused);
       });
+      wantPeaks(active);
+      drawWave();
     }
     function pick(i) {
       if (i < 0 || i >= audios.length || i === active) return;
-      var from = cur(), to = audios[i], t = from.currentTime || 0, playing = !from.paused;
+      var from = cur(), to = audios[i], t = from.readyState >= 1 ? (from.currentTime || 0) : lastT, playing = !from.paused;
+      lastT = t;
       var place = function () { try { to.currentTime = Math.min(t, isFinite(to.duration) ? Math.max(0, to.duration - 0.05) : t); } catch (e) { /* not seekable yet */ } };
       active = i;
       if (to.readyState >= 1) place(); else to.addEventListener("loadedmetadata", place, { once: true });
       if (playing) {
-        to.play().then(function () { from.pause(); paint(); }, function () { from.pause(); paint(); });
+        to.play().then(settle, settle);
       } else { from.pause(); }
       paint();
     }
@@ -481,35 +587,66 @@
     function close() {
       audios.forEach(function (a) { a.pause(); a.removeAttribute("src"); a.load(); });
       document.removeEventListener("keydown", key, true);
+      window.removeEventListener("resize", drawWave);
       clearInterval(tick);
       back.remove();
     }
     function key(e) {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); return close(); }
-      if (e.target && box.contains(e.target) && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target !== seek) return;
+      if (e.target && box.contains(e.target) && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target.type !== "checkbox") return;
       if (e.key === " ") { e.preventDefault(); return toggle(); }
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); var a = cur(); a.currentTime = Math.max(0, (a.currentTime || 0) + (e.key === "ArrowRight" ? 5 : -5)); return paint(); }
-      if (/^[1-9]$/.test(e.key)) { e.preventDefault(); pick(+e.key - 1); }
+      if (/^[1-9]$/.test(e.key)) { e.preventDefault(); if (shown(+e.key - 1)) pick(+e.key - 1); }
     }
+    var seekAt = function (e) {
+      var r = wave.getBoundingClientRect(), d = dur();
+      if (!d || !r.width) return;
+      cur().currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * d;
+      paint();
+    };
+    wave.addEventListener("pointerdown", function (e) { dragging = true; try { wave.setPointerCapture(e.pointerId); } catch (x) { /* none */ } seekAt(e); });
+    wave.addEventListener("pointermove", function (e) { if (dragging) seekAt(e); });
+    wave.addEventListener("pointerup", function () { dragging = false; });
+    wave.addEventListener("pointercancel", function () { dragging = false; });
+    window.addEventListener("resize", drawWave);
     document.addEventListener("keydown", key, true);
     back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
+    box.addEventListener("change", function (e) {
+      if (!e.target.dataset.cmpHide) return;
+      hideDis = e.target.checked;
+      try { localStorage.setItem(CMP_HIDE, hideDis ? "1" : "0"); } catch (x) { /* kept for this popup only */ }
+      paintRates();
+    });
     box.addEventListener("click", function (e) {
+      var rb = e.target.closest("[data-cmp-rate]"), fb = e.target.closest("[data-cmp-fav]");
+      if (rb || fb) {
+        var v = versions[+(rb || fb).closest("[data-cmp-li]").dataset.cmpLi];
+        if (rb) {
+          var want = +rb.dataset.cmpRate, now = hk.rating(v.take) || 0;
+          var done = hk.rate(v.take, now === want ? 0 : want);
+          paintRates();
+          if (done && done.then) done.then(paintRates, paintRates);
+        } else {
+          var f = hk.toggleFavorite(v.take);
+          if (f && f.then) f.then(paintRates, paintRates);
+        }
+        return;
+      }
       var row = e.target.closest("[data-cmp-i]"), b = e.target.closest("[data-cmp]");
       if (row) {
         var i = +row.dataset.cmpI;
         if (i === active) return toggle();
         var wasPaused = cur().paused;
         pick(i);
-        if (wasPaused) { audios[i].play().catch(function () {}); paint(); }   // a click on a version means: hear it
+        if (wasPaused) audios[i].play().then(settle, settle);   // a click on a version means: hear it
         return;
       }
       if (b && b.dataset.cmp === "close") return close();
       if (b && b.dataset.cmp === "play") return toggle();
     });
-    seek.addEventListener("input", function () { dragging = true; var a = cur(), d = a.duration || versions[active].seconds || 0; box.querySelector(".cmp-time").textContent = clock(d * seek.value / 1000); });
-    seek.addEventListener("change", function () { var a = cur(), d = a.duration || versions[active].seconds || 0; if (d) a.currentTime = d * seek.value / 1000; dragging = false; paint(); });
     audios.forEach(function (a, i) { a.addEventListener("ended", function () { if (i === active) paint(); }); });
     var tick = setInterval(paint, 250);
+    paintRates();
     paint();
     box.setAttribute("tabindex", "-1");                  // the keys are the popup's now, not the field left behind it
     box.focus();
@@ -532,5 +669,5 @@
 
   // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
   function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
-  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess };
+  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare };   // 1415
 })();

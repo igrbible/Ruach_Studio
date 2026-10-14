@@ -1,0 +1,50 @@
+From c40fefc43c10948ae43734e43a1ceadbf91d60ad Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 12 Oct 2026 21:15:36 -0600
+Subject: [PATCH 1368/1383] =?UTF-8?q?HERESY=201169=20=C2=B7=201402:=20Rese?=
+ =?UTF-8?q?t=20sampling=20on=20a=20row=20of=20its=20own,=20to=20the=20righ?=
+ =?UTF-8?q?t;=20Lyrics=20guidance=20wide=20enough=20for=20its=20=C2=ABas?=
+ =?UTF-8?q?=20Guidance=C2=BB?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 12.10.2026: «Перенеси кнопку Reset sampling на новую строку с выключкой вправо. Она вылазит за границу даже при 100% скейле страницы».
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css    | 2 ++
+ tools/console/index.html | 3 +++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a4a2a38..345b5f4 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -4531,6 +4531,8 @@ body[data-frame] :is(#view-compose, #view-take) > .col-head > .frame-tools { mar
+ .out-sub .out-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }               /* under the two samplers, column for column */
+ #advDrawer .out-sub .out-grid > .field:has(> #odeSolver) { grid-column: auto; }   /* over 1168's span: two columns here */
+ .reset-btn { min-width: 128px; justify-content: center; }
++.reset-row .reset-cell { padding-top: 0; }           /* HERESY 1402: Reset sampling on a row of its own, to the right */
++#cfgLyrics { min-width: 9.5em; }                       /* its «as Guidance» whole */
+ #advDrawer .reset-cell { padding-top: 0; align-self: center; }
+ /* HERESY 1169: the Updates card: what is here and what GitHub has, the schedule, the way an update goes */
+ .upd-line { margin: 0 0 10px; font-size: 14px; color: var(--ink); }
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 96f84a0..8881508 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -869,6 +869,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+                   <span class="label">Lyrics guidance</span>
+                   <input type="number" id="cfgLyrics" step="0.01" placeholder="as Guidance" value="2.2" /><span class="cfg-light" id="cfgLyricsLight" tabindex="-1" role="img"></span>
+                 </label>
++              </div>
++              <!-- HERESY 1402 (Viktor 12.10.2026: «Перенеси кнопку Reset sampling на новую строку с выключкой вправо. Она вылазит за границу даже при 100% скейле»): a row of its own -->
++              <div class="field-row reset-row">
+                 <div class="field grow reset-cell">
+                   <button type="button" class="btn ghost small reset-btn" id="resetSampling">Reset sampling</button>
+                 </div>
+-- 
+2.43.0
+

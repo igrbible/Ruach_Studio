@@ -1,0 +1,283 @@
+From ac4b6ce1be4ec3364ad907c6947dba1f8ea4d824 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 12 Oct 2026 22:15:19 -0600
+Subject: [PATCH 1370/1383] =?UTF-8?q?HERESY=201169=20=C2=B7=201405:=20Engi?=
+ =?UTF-8?q?ne=20=E2=86=92=20Artwork=20without=20SDXL;=20the=20LoRA=20libra?=
+ =?UTF-8?q?ry=20without=20its=20family?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The cards' choice is Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below; the SDXL option, its line and the About list's CyberRealistic gone; the catalogs rekeyed, their SDXL sentence out of every language.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            | 6 +++---
+ tools/console/heresy-artist.js  | 4 ++--
+ tools/console/heresy-i18n-be.js | 6 +++++-
+ tools/console/heresy-i18n-de.js | 6 +++++-
+ tools/console/heresy-i18n-el.js | 6 +++++-
+ tools/console/heresy-i18n-es.js | 6 +++++-
+ tools/console/heresy-i18n-fr.js | 6 +++++-
+ tools/console/heresy-i18n-it.js | 6 +++++-
+ tools/console/heresy-i18n-ja.js | 6 +++++-
+ tools/console/heresy-i18n-pt.js | 6 +++++-
+ tools/console/heresy-i18n-ru.js | 6 +++++-
+ tools/console/heresy-i18n-uk.js | 6 +++++-
+ tools/console/heresy-i18n-zh.js | 6 +++++-
+ tools/console/index.html        | 8 +++-----
+ 14 files changed, 63 insertions(+), 21 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index c782f7b..6904854 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4093,7 +4093,7 @@
+   // it: the backbone (BF16 only where the card does BF16 in tensor cores and Auto gives it; else Q8_0, or the nearest one that is
+   // here), Auto's context and VAE tiles for the studio card's memory or limit, the painter that fits; one window, once per install
+   var MACHINE_KEY = "yue2.machineScan", BACKBONES = ["BF16", "Q8_0", "Q6_K", "Q5_K_M"];
+-  var PAINTERS = { "krea2-q4": "Krea 2 Muse Q4 (12.6 GB at its peak)", "krea2-q8": "Krea 2 Muse Q8 (17.4 GB at its peak)", sdxl: "SDXL CyberRealistic (14.2 GB at its peak)" };
++  var PAINTERS = { "krea2-q4": "Krea 2 Muse Q4 (12.6 GB at its peak)", "krea2-q8": "Krea 2 Muse Q8 (17.4 GB at its peak)" };   // HERESY 1405: SDXL gone
+   function machinePlan(m) {
+     var have = (STATE.settings && STATE.settings.models) || [], list = m.cards || [];
+     var card = list.filter(function (c) { return c.index === m.studio; })[0] || list[0];
+@@ -5630,7 +5630,7 @@
+   // HERESY 1106: the take in the player: the style's first words under the title, a tile of its own colour for a cover
+   // (until covers are drawn for takes); one hue from the name, so a take keeps its tile
+   // HERESY 1120: artwork for takes (Viktor: «просто иконка в плеере, в карточке и в mp3 файле»). The lab draws it: a
+-  // prompt from the take's style and words (Qwen3-4B), the picture (an SDXL finetune). Asked for, never on its own.
++  // prompt from the take's style and words (Qwen3-4B), the picture (Krea 2 Muse; 1405: SDXL gone). Asked for, never on its own.
+   STATE.arts = {};
+   STATE.artsUnseen = {};            // HERESY 1156: pictures whose named subject the critic did not find: guesses
+   STATE.artsCredit = {};            // HERESY 1166: pictures someone made (a photograph from Commons): name -> {text, url}
+@@ -5789,7 +5789,7 @@
+       if (want && sel.value !== want && Array.prototype.some.call(sel.options, function (o) { return o.value === want; })) sel.value = want;
+     }
+     window.ruachArtPainters = function (list) { qwenRows(list); return Array.prototype.map.call(sel.options, function (o) { return [o.value, o.textContent]; }); };   // for the checks
+-    api("/lab/artist/painters").then(function (d) { qwenRows(d && d.painters); }).catch(function () { /* the lab later: Krea and SDXL stand */ });
++    api("/lab/artist/painters").then(function (d) { qwenRows(d && d.painters); }).catch(function () { /* the lab later: Krea stands */ });
+   })();
+   function drawArt(name, again, quiet) {
+     var take = findTake(name), title = take ? displayTitle(take) : name;
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index 05760f0..f8380b8 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -2179,7 +2179,7 @@
+   function openCivitai(fam, after) {
+     var old = document.querySelector(".ar-cv-back");
+     if (old) old.remove();
+-    var titles = Object.assign({ "krea2": "Krea 2", "sdxl": "SDXL", "qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512" },   // the lab's TITLES
++    var titles = Object.assign({ "krea2": "Krea 2", "qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512" },   // 1405: SDXL gone   // the lab's TITLES
+                                (state.loraLib && state.loraLib.titles) || {}), seen = null, target = fam;
+     var back = document.createElement("div");
+     back.className = "ar-lib-back ar-li-back ar-cv-back";
+@@ -2329,7 +2329,7 @@
+       if (!rows.length) {
+         grid.innerHTML = '<div class="ar-lib-empty"><p>' + esc(tr("No adapters for " + (titles[fam] || fam) + " here yet.")) + "</p><p>" +   // HERESY 1339: one sentence each
+           esc(tr("Put .safetensors files into the studio's artwork/loras/" + fam + "/ folder: any folders inside it become groups here; a picture beside a file with its name (NAME.jpg, NAME.png, NAME.preview.png) shows on its card.")) + "</p><p>" +
+-          esc(tr("On Civitai, pick adapters by their base model (" + ({ "krea2": "Krea 2", "qwen-image-2.1": "Qwen 2.1", "qwen-image-2512": "Qwen", "sdxl": "SDXL 1.0" }[fam] || fam) + "), " +
++          esc(tr("On Civitai, pick adapters by their base model (" + ({ "krea2": "Krea 2", "qwen-image-2.1": "Qwen 2.1", "qwen-image-2512": "Qwen" }[fam] || fam) + "), " +
+             "download the .safetensors and put it there; Look up on Civitai then fills in its name and its trigger words.")) + "</p><p>" +
+           esc(tr("Or From Civitai\u2026 above: its link, and your own API key when it asks for one; the lab fetches it here.")) + "</p></div>";   // HERESY 1360
+       } else {
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 00fe1a0..17f6966 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5050,5 +5050,9 @@ RuachI18n.add("be", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Тут лірыка ідзе за Вядзеннем: вышэй за 2.6 яна пачынае перапальвацца; дай ёй сваё Вядзенне лірыкі (2.2 трымае яе пры музыцы 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Межы Віктара: музыка ад 1.0 да 4.0; далей агеньчык каля поля становіцца жоўтым, потым чырвоным",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Межы Віктара: лірыка ад 1.0 да 2.6; далей агеньчык каля поля становіцца жоўтым, потым чырвоным. Пуста — як Вядзенне",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два вядзенні мусяць адрознівацца: хаця б на 0.1, лепш на 0.4–1.0 (вуха Віктара); пры роўных палова лірыкі сыходзіць у галюцынацыю, а галосныя губляюць націск"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два вядзенні мусяць адрознівацца: хаця б на 0.1, лепш на 0.4–1.0 (вуха Віктара); пры роўных палова лірыкі сыходзіць у галюцынацыю, а галосныя губляюць націск",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: яго малюнкі праходзяць фільтр змесціва); Час на RTX 3090, без промпта і прагляду крытыкам.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: яе малюнкі праходзяць фільтр змесціва); Qwen-Image 2512 (Apache-2.0) малюе вокладку з Lightning (lightx2v, Apache-2.0), калі яго файл тут; Qwen-Image 2.1 пад даследчай ліцэнзіяй Qwen: толькі даследаванні і ацэнка, не для песні, якую прадаюць. Час — на RTX 3090, без промпта і прагляду.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse малюе інструменты і сцэны куды больш верна, чым калі-небудзь SDXL (A/B студыі на дванаццаці інструментах, 05.10.2026); на карце меншай за 16 ГБ яго блокі ідуць з RAM, крыху павольней",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "Па відэакартах: Krea 2 Muse Q4, цалкам на 16 ГБ, з RAM на меншых"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 6d371d5..cb01de2 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -4933,5 +4933,9 @@ RuachI18n.add("de", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Hier folgt der Text der Führung: über 2.6 beginnt er zu verbrennen; gib ihm seine eigene Führung des Texts (2.2 hält ihn bei Musik 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Viktors Bereich: die Musik 1.0 bis 4.0; darüber wird das Licht neben dem Feld gelb, dann rot",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Viktors Bereich: der Text 1.0 bis 2.6; darüber wird das Licht gelb, dann rot. Leer: wie Führung",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Die beiden Führungen sollten sich unterscheiden: um mindestens 0.1, am besten um 0.4 bis 1.0 (Viktors Ohr); gleich, gleitet die Hälfte des Texts in Halluzination, und die Vokale verlieren ihre Betonung"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Die beiden Führungen sollten sich unterscheiden: um mindestens 0.1, am besten um 0.4 bis 1.0 (Viktors Ohr); gleich, gleitet die Hälfte des Texts in Halluzination, und die Vokale verlieren ihre Betonung",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: seine Bilder gehen durch einen Inhaltsfilter); Zeiten auf einer RTX 3090, Prompt und Durchsicht nicht mitgezählt.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: seine Bilder durchlaufen einen Inhaltsfilter); Qwen-Image 2512 (Apache-2.0) malt ein Cover mit Lightning (lightx2v, Apache-2.0), wenn seine Datei hier ist; Qwen-Image 2.1 steht unter Qwens Forschungslizenz: nur Forschung und Bewertung, nicht für einen verkauften Song. Zeiten auf einer RTX 3090, Prompt und Durchsicht nicht mitgezählt.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse malt Instrumente und Szenen weit treuer, als SDXL es je tat (das A/B des Studios an zwölf Instrumenten, 05.10.2026); auf einer Karte unter 16 GB strömen seine Blöcke aus dem RAM, etwas langsamer",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "Nach den Karten: Krea 2 Muse Q4, ganz auf 16 GB, darunter aus dem RAM"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index c3b524f..ef4d4ff 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5049,5 +5049,9 @@ RuachI18n.add("el", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Εδώ οι στίχοι ακολουθούν την Καθοδήγηση: πάνω από 2.6 αρχίζουν να καίγονται· δώσε τους δική τους Καθοδήγηση στίχων (το 2.2 τους κρατά με τη μουσική στο 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Το εύρος του Βίκτορ: η μουσική 1.0 ως 4.0· πέρα από αυτό το φωτάκι δίπλα στο πεδίο γίνεται κεχριμπαρένιο, μετά κόκκινο",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Το εύρος του Βίκτορ: οι στίχοι 1.0 ως 2.6· πέρα από αυτό το φωτάκι γίνεται κεχριμπαρένιο, μετά κόκκινο. Κενό: όπως η Καθοδήγηση",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Οι δύο καθοδηγήσεις πρέπει να διαφέρουν: τουλάχιστον κατά 0.1, καλύτερα κατά 0.4 ως 1.0 (το αυτί του Βίκτορ)· ίσες, οι μισοί στίχοι γλιστρούν σε παραίσθηση και τα φωνήεντα χάνουν τον τόνο τους"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Οι δύο καθοδηγήσεις πρέπει να διαφέρουν: τουλάχιστον κατά 0.1, καλύτερα κατά 0.4 ως 1.0 (το αυτί του Βίκτορ)· ίσες, οι μισοί στίχοι γλιστρούν σε παραίσθηση και τα φωνήεντα χάνουν τον τόνο τους",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: οι εικόνες του περνούν φίλτρο περιεχομένου)· Χρόνοι σε RTX 3090, χωρίς το prompt και τον έλεγχο.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: οι εικόνες του περνούν από φίλτρο περιεχομένου)· Το Qwen-Image 2512 (Apache-2.0) ζωγραφίζει εξώφυλλο με Lightning (lightx2v, Apache-2.0) όταν το αρχείο του είναι εδώ· το Qwen-Image 2.1 είναι υπό την ερευνητική άδεια του Qwen: μόνο για έρευνα και αξιολόγηση, όχι για τραγούδι που πουλιέται. Χρόνοι σε μια RTX 3090, χωρίς το prompt και τον έλεγχο.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Το Krea 2 Muse ζωγραφίζει όργανα και σκηνές πολύ πιο πιστά απ' ό,τι ποτέ το SDXL (το A/B του στούντιο σε δώδεκα όργανα, 05.10.2026)· σε κάρτα κάτω από 16 GB τα μπλοκ του ρέουν από τη RAM, λίγο πιο αργά",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "Κατά τις κάρτες: Krea 2 Muse Q4, ολόκληρο σε 16 GB, από τη RAM σε μικρότερες"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 7238d8c..2e934e5 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5049,5 +5049,9 @@ RuachI18n.add("es", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Aquí la letra sigue a la Guía: más allá de 2.6 empieza a quemarse; dale su propia Guía de la letra (2.2 la sostiene con la música en 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "El rango de Viktor: la música de 1.0 a 4.0; más allá, la luz junto al campo se vuelve ámbar y luego roja",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "El rango de Viktor: la letra de 1.0 a 2.6; más allá, la luz se vuelve ámbar y luego roja. Vacío: igual que la Guía",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Las dos guías deben diferir: al menos en 0.1, mejor en 0.4 a 1.0 (el oído de Viktor); iguales, media letra se va a la alucinación y las vocales pierden su acento"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Las dos guías deben diferir: al menos en 0.1, mejor en 0.4 a 1.0 (el oído de Viktor); iguales, media letra se va a la alucinación y las vocales pierden su acento",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: sus imágenes pasan un filtro de contenido); Tiempos en una RTX 3090, sin contar el prompt ni la revisión.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: sus imágenes pasan un filtro de contenido); Qwen-Image 2512 (Apache-2.0) pinta una portada con Lightning (lightx2v, Apache-2.0) cuando su archivo está aquí; Qwen-Image 2.1 está bajo la licencia de investigación de Qwen: solo investigación y evaluación, no para una canción que se vende. Tiempos en una RTX 3090, sin contar el prompt ni el repaso.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse pinta instrumentos y escenas mucho más fieles que SDXL jamás (el A/B del estudio con doce instrumentos, 05.10.2026); en una tarjeta de menos de 16 GB sus bloques fluyen desde la RAM, algo más lento",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "Según las tarjetas: Krea 2 Muse Q4, entero con 16 GB, desde la RAM en las menores"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index cea4c04..84ac59e 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -4933,5 +4933,9 @@ RuachI18n.add("fr", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Ici les paroles suivent le Guidage : au-delà de 2.6 elles commencent à brûler ; donne-leur leur propre Guidage des paroles (2.2 les tient avec la musique à 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "La plage de Viktor : la musique de 1.0 à 4.0 ; au-delà, le voyant près du champ passe à l'ambre, puis au rouge",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "La plage de Viktor : les paroles de 1.0 à 2.6 ; au-delà, le voyant passe à l'ambre, puis au rouge. Vide : comme le Guidage",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Les deux guidages doivent différer : d'au moins 0.1, au mieux de 0.4 à 1.0 (l'oreille de Viktor) ; égaux, la moitié des paroles glisse dans l'hallucination et les voyelles perdent leur accent"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Les deux guidages doivent différer : d'au moins 0.1, au mieux de 0.4 à 1.0 (l'oreille de Viktor) ; égaux, la moitié des paroles glisse dans l'hallucination et les voyelles perdent leur accent",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License : ses images passent un filtre de contenu) ; SDXL : CyberRealistic XL par Cyberdelia. Temps sur une RTX 3090, sans compter le prompt ni la relecture.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License : ses images passent un filtre de contenu) ; SDXL : CyberRealistic XL de Cyberdelia. Qwen-Image 2512 (Apache-2.0) peint une pochette avec Lightning (lightx2v, Apache-2.0) quand son fichier est ici ; Qwen-Image 2.1 est sous la licence de recherche de Qwen : recherche et évaluation seulement, pas pour une chanson vendue. Temps sur une RTX 3090, le prompt et la relecture non comptés.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse peint instruments et scènes bien plus fidèlement que SDXL ne l'a jamais fait (l'A/B du studio sur douze instruments, 05.10.2026) ; sur une carte de moins de 16 Go, ses blocs défilent depuis la RAM, un peu plus lentement",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "Selon les cartes : Krea 2 Muse Q4, entier sur 16 Go, depuis la RAM en dessous"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index c37dadd..5e3fb9d 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5049,5 +5049,9 @@ RuachI18n.add("it", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Qui il testo segue la Guida: oltre 2.6 comincia a bruciarsi; dagli una sua Guida del testo (2.2 lo tiene con la musica a 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "L'intervallo di Viktor: la musica da 1.0 a 4.0; oltre, la luce accanto al campo diventa ambra, poi rossa",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "L'intervallo di Viktor: il testo da 1.0 a 2.6; oltre, la luce diventa ambra, poi rossa. Vuoto: come la Guida",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Le due guide devono differire: almeno di 0.1, meglio di 0.4–1.0 (l'orecchio di Viktor); uguali, metà del testo scivola nell'allucinazione e le vocali perdono l'accento"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Le due guide devono differire: almeno di 0.1, meglio di 0.4–1.0 (l'orecchio di Viktor); uguali, metà del testo scivola nell'allucinazione e le vocali perdono l'accento",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: le sue immagini passano un filtro dei contenuti); Tempi su una RTX 3090, senza il prompt e la revisione.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: le sue immagini passano un filtro dei contenuti); Qwen-Image 2512 (Apache-2.0) dipinge una copertina con Lightning (lightx2v, Apache-2.0) quando il suo file è qui; Qwen-Image 2.1 è sotto la licenza di ricerca di Qwen: solo ricerca e valutazione, non per una canzone che si vende. Tempi su una RTX 3090, senza contare il prompt e la revisione.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse dipinge strumenti e scene molto più fedeli di quanto SDXL abbia mai fatto (l'A/B dello studio su dodici strumenti, 05.10.2026); su una scheda sotto i 16 GB i suoi blocchi scorrono dalla RAM, un po' più lento",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "In base alle schede: Krea 2 Muse Q4, intero su 16 GB, dalla RAM sotto"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index bf447fb..fb899a7 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -4933,5 +4933,9 @@ RuachI18n.add("ja", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "ここでは歌詞はガイダンスに従います：2.6 を超えると焼け始めます。歌詞のガイダンスを別に設定してください（音楽 4.0 なら 2.2 で保たれます）",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "ヴィクトルの範囲：音楽は 1.0〜4.0。超えると欄の横のランプが黄、次に赤になります",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "ヴィクトルの範囲：歌詞は 1.0〜2.6。超えるとランプが黄、次に赤。空欄ならガイダンスと同じ",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "2つのガイダンスは差をつけてください：最低 0.1、理想は 0.4〜1.0（ヴィクトルの耳）。同じ値だと歌詞の半分が幻覚に流れ、母音のアクセントが崩れます"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "2つのガイダンスは差をつけてください：最低 0.1、理想は 0.4〜1.0（ヴィクトルの耳）。同じ値だと歌詞の半分が幻覚に流れ、母音のアクセントが崩れます",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "（Krea 2 Community License：画像はコンテンツフィルターを通ります）。SDXL：Cyberdelia の CyberRealistic XL。時間は RTX 3090 で、プロンプトと見直しは含みません。",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "（Krea 2 Community License：画像はコンテンツフィルターを通ります）。Qwen-Image 2512（Apache-2.0）はファイルがあれば Lightning（lightx2v、Apache-2.0）でカバーを描きます。Qwen-Image 2.1 は Qwen の研究用ライセンス：研究と評価のみで、販売する曲には使えません。時間は RTX 3090 でのもので、プロンプトと見直しは含みません。",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse は楽器や場面を SDXL よりはるかに忠実に描きます（スタジオの12楽器での A/B、2026-10-05）。16 GB 未満のカードではブロックを RAM からストリームし、少し遅くなります",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "カードに合わせて：Krea 2 Muse Q4、16 GB なら丸ごと、それ未満は RAM から"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index fdc9883..2cecbb0 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -4933,5 +4933,9 @@ RuachI18n.add("pt", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Aqui a letra segue a Orientação: acima de 2.6 começa a queimar; dê a ela sua própria Orientação da letra (2.2 a segura com a música em 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "A faixa de Viktor: a música de 1.0 a 4.0; além disso, a luz ao lado do campo fica âmbar, depois vermelha",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "A faixa de Viktor: a letra de 1.0 a 2.6; além disso, a luz fica âmbar, depois vermelha. Vazio: igual à Orientação",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "As duas orientações devem diferir: pelo menos 0.1, de preferência 0.4 a 1.0 (o ouvido de Viktor); iguais, metade da letra desliza para a alucinação e as vogais perdem a tônica"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "As duas orientações devem diferir: pelo menos 0.1, de preferência 0.4 a 1.0 (o ouvido de Viktor); iguais, metade da letra desliza para a alucinação e as vogais perdem a tônica",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: as imagens passam por um filtro de conteúdo); Tempos numa RTX 3090, sem contar o prompt nem a revisão.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: suas imagens passam por um filtro de conteúdo); Qwen-Image 2512 (Apache-2.0) pinta uma capa com Lightning (lightx2v, Apache-2.0) quando o arquivo está aqui; Qwen-Image 2.1 está sob a licença de pesquisa da Qwen: só pesquisa e avaliação, não para uma canção vendida. Tempos numa RTX 3090, sem contar o prompt e a revisão.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "O Krea 2 Muse pinta instrumentos e cenas muito mais fiéis do que o SDXL jamais pintou (o A/B do estúdio com doze instrumentos, 05.10.2026); numa placa com menos de 16 GB os seus blocos vêm da RAM, um pouco mais devagar",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "Pelas placas: Krea 2 Muse Q4, inteiro com 16 GB, pela RAM abaixo disso"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index c83d47e..b63a45a 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5055,5 +5055,9 @@ RuachI18n.add("ru", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Здесь лирика идёт за Ведением: выше 2.6 она начинает пережигаться; дай ей своё Ведение лирики (2.2 держит её при музыке 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Пределы Виктора: музыка от 1.0 до 4.0; дальше огонёк у поля становится жёлтым, потом красным",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Пределы Виктора: лирика от 1.0 до 2.6; дальше огонёк у поля становится жёлтым, потом красным. Пусто — как Ведение",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два ведения должны различаться: хотя бы на 0.1, лучше на 0.4–1.0 (ухо Виктора); при равных половина лирики уходит в галлюцинацию, а гласные теряют ударение"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два ведения должны различаться: хотя бы на 0.1, лучше на 0.4–1.0 (ухо Виктора); при равных половина лирики уходит в галлюцинацию, а гласные теряют ударение",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: его картинки проходят фильтр содержимого); Время на RTX 3090, без промпта и просмотра критиком.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: её картинки проходят фильтр содержимого); Qwen-Image 2512 (Apache-2.0) рисует обложку с Lightning (lightx2v, Apache-2.0), когда его файл здесь; Qwen-Image 2.1 под исследовательской лицензией Qwen: только исследования и оценка, не для песни, которая продаётся. Время — на RTX 3090, без промпта и просмотра.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse рисует инструменты и сцены куда вернее, чем когда-либо SDXL (A/B студии на двенадцати инструментах, 05.10.2026); на карте меньше 16 ГБ его блоки идут из RAM, чуть медленнее",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "По видеокартам: Krea 2 Muse Q4, целиком на 16 ГБ, из RAM на меньших"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 6f6a590..150c076 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5050,5 +5050,9 @@ RuachI18n.add("uk", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Тут лірика йде за Веденням: понад 2.6 вона починає перепалюватися; дай їй власне Ведення лірики (2.2 тримає її при музиці 4.0)",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Межі Віктора: музика від 1.0 до 4.0; далі вогник біля поля стає жовтим, потім червоним",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Межі Віктора: лірика від 1.0 до 2.6; далі вогник біля поля стає жовтим, потім червоним. Порожньо — як Ведення",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два ведення мають різнитися: хоча б на 0.1, краще на 0.4–1.0 (вухо Віктора); за рівних половина лірики йде в галюцинацію, а голосні втрачають наголос"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два ведення мають різнитися: хоча б на 0.1, краще на 0.4–1.0 (вухо Віктора); за рівних половина лірики йде в галюцинацію, а голосні втрачають наголос",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: його картинки проходять фільтр вмісту); Час на RTX 3090, без промпта й перегляду критиком.",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "(Krea 2 Community License: її картинки проходять фільтр вмісту); Qwen-Image 2512 (Apache-2.0) малює обкладинку з Lightning (lightx2v, Apache-2.0), коли його файл тут; Qwen-Image 2.1 під дослідницькою ліцензією Qwen: лише дослідження й оцінювання, не для пісні, яку продають. Час — на RTX 3090, без промпту й перегляду.",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse малює інструменти й сцени куди вірніше, ніж будь-коли SDXL (A/B студії на дванадцяти інструментах, 05.10.2026); на карті менше 16 ГБ його блоки йдуть з RAM, трохи повільніше",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "За відеокартами: Krea 2 Muse Q4, цілком на 16 ГБ, з RAM на менших"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index c576b9b..0fbd818 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -4933,5 +4933,9 @@ RuachI18n.add("zh", {
+ "The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "此处歌词跟随引导：超过 2.6 会开始被烧焦；请给它单独的歌词引导（音乐为 4.0 时 2.2 能保住）",
+ "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "维克多的范围：音乐 1.0 到 4.0；超出后字段旁的灯变为琥珀色，再变红",
+ "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "维克多的范围：歌词 1.0 到 2.6；超出后灯变为琥珀色，再变红。留空：同引导",
+-"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "两个引导应当拉开：至少相差 0.1，最好相差 0.4 到 1.0（维克多的耳朵）；相等时一半歌词会滑向幻听，元音也会失去重音"
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "两个引导应当拉开：至少相差 0.1，最好相差 0.4 到 1.0（维克多的耳朵）；相等时一半歌词会滑向幻听，元音也会失去重音",
++"(Krea 2 Community License: its pictures pass a content filter); Times on an RTX 3090, the prompt and the look-over not counted.": "（Krea 2 Community License：其图片要通过内容过滤）；SDXL：Cyberdelia 的 CyberRealistic XL。时间在 RTX 3090 上测得，不含提示和审看。",
++"(Krea 2 Community License: its pictures pass a content filter); Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.": "（Krea 2 Community License：其图片要经过内容过滤）；Qwen-Image 2512（Apache-2.0）在文件就位时用 Lightning（lightx2v，Apache-2.0）画封面；Qwen-Image 2.1 采用 Qwen 的研究许可证：仅限研究和评估，不能用于出售的歌曲。时间在 RTX 3090 上测得，不含提示词和审看。",
++"Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower": "Krea 2 Muse 画乐器和场景远比 SDXL 真实（工作室对十二种乐器的 A/B，2026-10-05）；在小于 16 GB 的显卡上，它的块从内存流式加载，稍慢一些",
++"By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below": "按显卡：Krea 2 Muse Q4，16 GB 上整个运行，更小则从内存流式加载"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 8881508..fb3768d 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -342,15 +342,14 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <h3>Artwork</h3>
+       <p class="hint">Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.</p>
+       <label class="field"><span class="label">Painter</span>
+-        <select id="artPainter" data-tip="Krea 2 Muse paints instruments and scenes far truer than SDXL (the studio's A/B on twelve instruments, 05.10.2026); SDXL is for cards it does not fit">
+-          <option value="">By the cards: Krea 2 Muse Q4 from 16 GB, else SDXL</option>
++        <select id="artPainter" data-tip="Krea 2 Muse paints instruments and scenes far truer than SDXL ever did (the studio's A/B on twelve instruments, 05.10.2026); on a card under 16 GB its blocks stream from RAM, a little slower">   <!-- HERESY 1405: SDXL gone -->
++          <option value="">By the cards: Krea 2 Muse Q4, whole on 16 GB, streamed from RAM below</option>
+           <option value="krea2-q4">Krea 2 Muse · Q4 · about 12 GB · about 25 s a picture</option>
+           <option value="krea2-q8">Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture</option>
+-          <option value="sdxl">SDXL CyberRealistic · about 15 GB · about 10 s a picture</option>
+         </select></label>
+       <p class="row-hint">Krea 2 Muse by <a href="https://civitai.com/models/2741166" target="_blank" rel="noopener noreferrer">Stable Yogi</a>, a fine-tune of
+         <a href="https://krea.ai/krea-2-licensing" target="_blank" rel="noopener noreferrer">Krea 2</a> (Krea 2 Community License: its pictures pass a content filter);
+-        SDXL: CyberRealistic XL by Cyberdelia. Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
++        Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
+     </div>
+ 
+     <div class="card wide lora-card eg-vae">
+@@ -450,7 +449,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <!-- HERESY 1167 (Viktor: «Кредит не забудь автору»): the artwork's painters -->
+             <li><a href="https://civitai.com/models/2741166" target="_blank" rel="noopener noreferrer">Artwork: Krea 2 Muse by Stable Yogi</a><span class="about-where" translate="no">civitai · Krea 2 Community License</span></li>
+             <li><a href="https://krea.ai/krea-2-licensing" target="_blank" rel="noopener noreferrer">Artwork: Krea 2, by Krea</a><span class="about-where" translate="no">Krea 2 is licensed under the Krea 2 Community License Agreement</span></li>
+-            <li><a href="https://civitai.com/models/312530" target="_blank" rel="noopener noreferrer">Artwork on smaller cards: CyberRealistic XL by Cyberdelia</a><span class="about-where" translate="no">civitai · CreativeML Open RAIL++-M</span></li>
+           </ul>
+           <!-- HERESY 1166 (Viktor: «Все наши восходящие HF репозитории добавь в колонку Ruach Studio, через пустую строку»):
+                ours on Hugging Face, after a line's space; private until the release, the 💎 sets' bucket too -->
+-- 
+2.43.0
+

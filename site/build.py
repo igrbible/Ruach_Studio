@@ -16,6 +16,8 @@ from pathlib import Path
 
 here = Path(__file__).resolve().parent
 SITE = "https://ruachstudio.igr.bible"
+SIMPLY = {"ru": "Просто", "uk": "Просто", "be": "Проста", "el": "Απλά", "es": "Simplemente", "it": "Semplicemente",
+          "fr": "Tout simplement", "pt": "Simplesmente", "de": "Einfach", "ja": "とにかく", "zh": "简直"}
 LANGS = [("en", "English"), ("ru", "Русский"), ("uk", "Українська"), ("be", "Беларуская"), ("el", "Ελληνικά"),
          ("es", "Español"), ("it", "Italiano"), ("fr", "Français"), ("pt", "Português"), ("de", "Deutsch"), ("ja", "日本語"),
          ("zh", "中文")]   # HERESY 1383: the five the page speaks since 1379
@@ -151,6 +153,10 @@ def page_for(code, template, units, catalog):
             .replace("{{LANG}}", code.upper()).replace("{{LANGS}}", links).replace("{{ALTERNATES}}", alternates)
             .replace("{{FIRST_VISIT}}", FIRST_VISIT if code == "en" else ""))
     page = page.replace('content="assets/og.jpg"', 'content="%s/assets/og.jpg"' % SITE)
+    # HERESY 1393 (Viktor 12.10.2026: «девиз OSEM как есть, но `Simply` можно на другие языки. И `AWESOME` всё заглавными»): the
+    # slogan stays untranslated (translate="no"), its first word speaks the page's language
+    if code in SIMPLY:
+        page = page.replace('<span class="say">Simply AWESOME</span>', '<span class="say">%s AWESOME</span>' % SIMPLY[code], 1)
     # HERESY 1392: the little story is shown in the page's own language by the page itself, not only by its script (a reader
     # without scripts and a search engine saw the English one on every page)
     if code != "en" and 'data-lang="%s" hidden>' % code in page:

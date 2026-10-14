@@ -87,6 +87,17 @@ struct Yue2Song {
     int                T_audio;    // samples per channel
     int                T_lat;      // semantic frames
     bool               truncated;  // a stage hit its budget before its end token
+    // HERESY 1399: the take's medcard, stage by stage (seconds of the whole batch's stage; tokens of this song)
+    int    score_tokens    = 0;      // the plan written here (0: supplied, or no score)
+    double score_seconds   = 0.0;
+    int    music_tokens    = 0;      // semantic frames written in this run
+    int    music_kept      = 0;      // frames kept from an earlier take and gone on from
+    bool   music_replayed  = false;  // the frames supplied (a retake of the same music)
+    double music_seconds   = 0.0;
+    float  guidance        = 0.0f;   // the music's guidance as applied
+    float  lyrics_guidance = 0.0f;   // the lyrics' own (HERESY 1397)
+    double sound_seconds   = 0.0;    // the acoustic stage
+    double vae_seconds     = 0.0;    // this track's decoding
 };
 
 // Parses the CSV interchange of a semantic stream
@@ -324,6 +335,44 @@ struct KvScope {
 // track song * M + variation. Song i draws its tokens with lm_seed + i in
 // KV set i, variation j draws its noise with seed + j, and the M variations
 // of a song solve in one NAR graph over the set the AR left complete.
+// HERESY 1416: a score without its tempo: the lines that begin with Q: go, and the inline [Q:…] fields within the others
+static std::string yue2_score_without_tempo(const std::string & abc, int * dropped) {
+    std::string out;
+    int         n   = 0;
+    size_t      pos = 0;
+    while (pos <= abc.size()) {
+        size_t e = abc.find('\n', pos);
+        if (e == std::string::npos) {
+            e = abc.size();
+        }
+        std::string line = abc.substr(pos, e - pos);
+        pos              = e + 1;
+        if (line.rfind("Q:", 0) == 0) {
+            n++;
+        } else {
+            for (size_t q = line.find("[Q:"); q != std::string::npos; q = line.find("[Q:")) {
+                size_t z = line.find(']', q);
+                if (z == std::string::npos) {
+                    break;
+                }
+                line.erase(q, z - q + 1);
+                n++;
+            }
+            out += line;
+            if (e < abc.size()) {
+                out += '\n';
+            }
+        }
+        if (e >= abc.size()) {
+            break;
+        }
+    }
+    if (dropped) {
+        *dropped = n;
+    }
+    return out;
+}
+
 // HERESY 1087: why a score the AR wrote is not a score, or "" when it is one. Calibrated on the studio's own
 // takes (02.10.2026): every good score has M:, L: and K: with clean values (M:2/4, L:1/16, Q:1/4=71, K:Dm)
 // and never two colons in a row; the broken ones have no K: line, garbage for Q:, colons in runs of 3 to 13.
@@ -488,6 +537,10 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         }
         lm_hold.emplace(p->store, lm);
     }
+    Timer            score_timer;                    // HERESY 1399
+    std::vector<int> score_tokens(B, 0);
+    double           score_seconds = 0.0, music_seconds = 0.0, sound_seconds = 0.0;
+    int              music_kept    = 0;
     if (has_score && !r.abc.empty()) {
         abc_ids.assign(B, encode(r.abc));
         scores.assign(B, r.abc);
@@ -502,7 +555,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             abc_ids[i]   = plans[i].tokens;
             scores[i]    = bpe_decode(tok, abc_ids[i]);
             truncated[i] = plans[i].truncated;
+            score_tokens[i] = (int) plans[i].tokens.size();   // HERESY 1399
         }
+        score_seconds = score_timer.ms() / 1000.0;
         // HERESY 1087 (Viktor, 02.10.2026): adapters pushed past their limits make the AR write garbage for a
         // score (no key, no meter, colons in runs). The music would be built on it; the run stops here instead.
         for (int i = 0; r.score_guard && i < B; i++) {
@@ -516,6 +571,15 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         }
     }
 
+    // HERESY 1416: free tempo: the music stage reads the score without its tempo and a plan asked alone is returned without it (Viktor: «чтобы руками не чистить»)
+    if (has_score && r.free_tempo) {
+        for (int i = 0; i < B; i++) {
+            int dropped = 0;
+            scores[i]   = yue2_score_without_tempo(scores[i], &dropped);
+            abc_ids[i]  = encode(scores[i]);
+            fprintf(stderr, "[Score] Free tempo: song %d, %d tempo mark%s taken out\n", i, dropped, dropped == 1 ? "" : "s");
+        }
+    }
     // Local addition: the score alone, no music and no audio
     if (r.plan_only) {
         songs->assign((size_t) B, {});
@@ -537,8 +601,20 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     fprintf(stderr, "[Prompt] cot=%s, songs=%d, variations=%d, %zu tracks\n", r.cot.c_str(), B, M, (size_t) B * M);
 
     float                         guidance = r.cfg_scale < 0.0f ? yue2_default_guidance(cot) : r.cfg_scale;
+    // HERESY 1397: the lyrics' own scale; a third stream, the prompt without its lyrics, when it differs from the guidance
+    float                         lyrics_guidance = r.cfg_lyrics < 0.0f ? guidance : r.cfg_lyrics;
+    bool                          split           = lyrics_guidance != guidance;
+    std::vector<std::vector<int>> lyricless;
+    if (split) {
+        lyricless.resize(B);
+        for (int i = 0; i < B; i++) {
+            lyricless[i] = yue2_build_prompt_ids(encode, cot, r.style, std::string(), has_score ? &abc_ids[i] : nullptr);
+        }
+        fprintf(stderr, "[Prompt] guidance %.2f for the music, %.2f for the lyrics: a third branch without the lyrics\n", (double) guidance,
+                (double) lyrics_guidance);
+    }
     std::vector<std::vector<int>> negatives;
-    if (guidance != 1.0f) {
+    if (guidance != 1.0f || split) {
         negatives.resize(B);
         for (int i = 0; i < B; i++) {
             negatives[i] = yue2_build_negative_ids(encode, cot, has_score ? &abc_ids[i] : nullptr);
@@ -593,7 +669,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         // prefixes of this stage only; the acoustic stage below keeps the plain prompt and gets the
         // kept codes in front of the new ones. The kept part counts in the budget.
         std::vector<int>              keep;
-        std::vector<std::vector<int>> gen_prefixes = prefixes, gen_negatives = negatives;
+        std::vector<std::vector<int>> gen_prefixes = prefixes, gen_negatives = negatives, gen_lyricless = lyricless;   // HERESY 1397
         if (!r.semantic_keep.empty()) {
             if (!pipeline_parse_tokens(r.semantic_keep, &keep)) {
                 return false;
@@ -610,6 +686,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                 if (!gen_negatives.empty()) {
                     gen_negatives[i].insert(gen_negatives[i].end(), keep.begin(), keep.end());
                 }
+                if (!gen_lyricless.empty()) {
+                    gen_lyricless[i].insert(gen_lyricless[i].end(), keep.begin(), keep.end());
+                }
             }
             semantic.max_tokens -= (int) keep.size();
             semantic.min_tokens = semantic.min_tokens > (int) keep.size() ? semantic.min_tokens - (int) keep.size() : 1;
@@ -620,8 +699,12 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                     keep.size() / (double) YUE2_FRAME_RATE, semantic.max_tokens);
         }
         sliders.kept     = (int) keep.size();     // HERESY 1166: a curve runs over the whole song, the kept part too
+        Timer music_timer;                           // HERESY 1399
+        music_kept       = (int) keep.size();
         bool semantic_ok = yue2_generate(lm, &p->kv, gen_prefixes, gen_negatives, guidance, semantic, r.lm_seed,
-                                         YUE2_PHASE_SEMANTIC, &codes, cancelled, cancel_data);
+                                         YUE2_PHASE_SEMANTIC, &codes, cancelled, cancel_data, split ? &gen_lyricless : nullptr,
+                                         lyrics_guidance);
+        music_seconds = music_timer.ms() / 1000.0;   // HERESY 1399
         if (semantic_ok && !keep.empty()) {
             for (int i = 0; i < B; i++) {
                 codes[i].tokens.insert(codes[i].tokens.begin(), keep.begin(), keep.end());
@@ -699,6 +782,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     if (!qw3lm_kv_sets(&p->kv, 1)) {
         return false;
     }
+    Timer sound_timer;                               // HERESY 1399
     for (int i = 0; i < B; i++) {
         const int prefix_len = (int) prefixes[i].size();
         const int chunk_size = chunk_sizes[i];
@@ -807,6 +891,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     }
 
     nar_hold.reset();
+    sound_seconds = sound_timer.ms() / 1000.0;      // HERESY 1399
     VAEGGML * vae = require_vae(p, vae_path);
     if (!vae) {
         return false;
@@ -817,6 +902,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         int        max_T_audio = song.T_lat * YUE2_HOP;
         fprintf(stderr, "[VAE] Track %zu/%zu: song %zu variation %zu\n", t + 1, songs->size(), t / M, t % M);
         song.audio.assign((size_t) 2 * max_T_audio, 0.0f);
+        Timer vae_timer;                             // HERESY 1399
         song.T_audio = vae_ggml_decode_tiled(vae, song.latents.data(), song.T_lat, song.audio.data(), max_T_audio,
                                              p->params.vae_core, p->params.vae_halo, cancelled, cancel_data);
         if (song.T_audio < 0) {
@@ -826,6 +912,16 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             return false;
         }
         song.audio.resize((size_t) 2 * song.T_audio);
+        song.vae_seconds     = vae_timer.ms() / 1000.0;   // HERESY 1399: the medcard's stages
+        song.score_tokens    = score_tokens[t / M];
+        song.score_seconds   = score_seconds;
+        song.music_tokens    = replay ? 0 : song.T_lat - music_kept;
+        song.music_kept      = music_kept;
+        song.music_replayed  = replay;
+        song.music_seconds   = music_seconds;
+        song.guidance        = guidance;
+        song.lyrics_guidance = lyrics_guidance;
+        song.sound_seconds   = sound_seconds;
         if (t == 0 && p->dumper.enabled) {
             // Interleaved [T_audio, 2] like the torch reference dump
             std::vector<float> interleaved((size_t) 2 * song.T_audio);

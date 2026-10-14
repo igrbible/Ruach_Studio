@@ -76,8 +76,10 @@
   .bar nav { display: flex; gap: 18px; margin-left: auto; font-size: 15px; }
   .bar nav a { color: var(--soft); }
   .bar nav a:hover { color: var(--amber); text-decoration: none; }
-  .theme { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); width: 34px; height: 34px; border-radius: 9px;
-           cursor: pointer; font-size: 16px; line-height: 1; }
+  .theme { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); width: 40px; height: 36px; border-radius: 9px;
+           cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+  .theme svg { width: 22px; height: 22px; display: block; }   /* HERESY 1394 (Viktor: «Кнопка режима тем на сайте очень маленькая, мизерная»): a drawn half moon, not a font's ◐ */
+  .theme:hover { color: var(--amber); border-color: var(--amber); }
   @media (max-width: 860px) { .bar nav { display: none; } .theme { margin-left: auto; } }
 
   /* the hero */
@@ -234,7 +236,7 @@
     <a class="mark" href="#top"><img src="../assets/ruach-icon-pi-32.png?v=1272" alt="" width="28" height="28">Ruach Studio</a>
     <nav aria-label="Ενότητες"><a href="#rooms">Δωμάτια</a><a href="#studio">Τι κάνει</a><a href="#honestly">Ειλικρινά</a><a href="#need">Τι χρειάζεσαι</a><a href="#next">Τι ακολουθεί</a> <a href="#licences">Άδειες</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">EL</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el" aria-current="page">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh">中文</a></div></details>
-    <button class="theme" id="theme" type="button" aria-label="Μέρα ή νύχτα" title="Μέρα ή νύχτα">◐</button>
+    <button class="theme" id="theme" type="button" aria-label="Μέρα ή νύχτα" title="Μέρα ή νύχτα"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
   </div>
 </header>
 
@@ -250,11 +252,11 @@
     <path transform="translate(625.08 -22.00)" d="M2.82 0V-5.8L21.18 -29.25L3.29 -50.12V-56H40.55V-49.73H20.55Q19.45 -49.73 17.57 -49.73Q15.69 -49.73 13.96 -49.76Q12.24 -49.8 11.37 -49.8L29.02 -29.33L10.59 -6.12Q13.57 -6.12 16.51 -6.16Q19.45 -6.2 22.59 -6.2H42.82V0ZM80.68 0H73.62V-49.8H56.13V-56H98.09V-49.8H80.68ZM163.72 -28.08Q163.72 -19.37 160.78 -12.9Q157.84 -6.43 152.11 -2.82Q146.39 0.78 137.91 0.78Q129.21 0.78 123.44 -2.82Q117.68 -6.43 114.86 -12.94Q112.03 -19.45 112.03 -28.16Q112.03 -36.78 114.86 -43.22Q117.68 -49.65 123.44 -53.25Q129.21 -56.86 137.99 -56.86Q146.39 -56.86 152.11 -53.29Q157.84 -49.73 160.78 -43.25Q163.72 -36.78 163.72 -28.08ZM119.48 -28.08Q119.48 -17.49 123.95 -11.41Q128.42 -5.33 137.91 -5.33Q147.48 -5.33 151.88 -11.41Q156.27 -17.49 156.27 -28.08Q156.27 -38.67 151.88 -44.67Q147.48 -50.67 137.99 -50.67Q128.5 -50.67 123.99 -44.67Q119.48 -38.67 119.48 -28.08ZM200.56 -28.47 215.15 -56H222.75L204.09 -21.73V0H197.03V-21.41L178.36 -56H186.05ZM285.4 0H277.16L247.2 -46.51H246.89Q247.05 -43.76 247.28 -39.69Q247.52 -35.61 247.52 -31.29V0H241.01V-56H249.16L279.05 -9.65H279.36Q279.28 -10.9 279.16 -13.41Q279.05 -15.92 278.93 -18.9Q278.81 -21.88 278.81 -24.39V-56H285.4ZM328.98 0H321.92V-49.8H304.43V-56H346.39V-49.8H328.98ZM381.27 0H361.04V-4.08L367.63 -5.57V-50.35L361.04 -51.92V-56H381.27V-51.92L374.69 -50.35V-5.57L381.27 -4.08ZM451.6 -28.08Q451.6 -19.37 448.66 -12.9Q445.72 -6.43 440 -2.82Q434.27 0.78 425.8 0.78Q417.09 0.78 411.33 -2.82Q405.56 -6.43 402.74 -12.94Q399.92 -19.45 399.92 -28.16Q399.92 -36.78 402.74 -43.22Q405.56 -49.65 411.33 -53.25Q417.09 -56.86 425.88 -56.86Q434.27 -56.86 440 -53.29Q445.72 -49.73 448.66 -43.25Q451.6 -36.78 451.6 -28.08ZM407.37 -28.08Q407.37 -17.49 411.84 -11.41Q416.31 -5.33 425.8 -5.33Q435.37 -5.33 439.76 -11.41Q444.15 -17.49 444.15 -28.08Q444.15 -38.67 439.76 -44.67Q435.37 -50.67 425.88 -50.67Q416.39 -50.67 411.88 -44.67Q407.37 -38.67 407.37 -28.08Z"/>
   </g>
 </svg></div>
-    <div class="osem" translate="no"><b>OSEM</b><span class="say">Simply awesome</span><span>Open Source, Engaged &amp; Musical</span></div>
+    <div class="osem" translate="no"><b>OSEM</b><span class="say">Απλά AWESOME</span><span>Open Source, Engaged &amp; Musical</span></div>
     <h1>Τραγούδια από λέξεις και συγχορδίες<br>στο δικό σου μηχάνημα</h1>
     <p class="lead">Ένα ολόκληρο στούντιο γύρω από το <b>YuE2</b>, το ανοιχτό μοντέλο τραγουδιών. Γράφεις το ύφος και τους στίχους, και το στούντιο συνθέτει, τραγουδά και αποδίδει το τραγούδι στη <b>δική σου GPU</b>. Τα τραγούδια, οι λέξεις και οι ρυθμίσεις σου δεν φεύγουν ποτέ από εκεί.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Πάρ' το από το GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.el.md">Διάβασε τον οδηγό</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Μοντέλα στο Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Κέρασέ με μια μηχανή καφέ</a></div>
-    <span class="rc"><b>2.0.0-rc6</b> · η έκτη υποψήφια έκδοση · Οκτώβριος 2026</span>
+    <span class="rc"><b>2.0.0-rc7</b> · η έβδομη υποψήφια έκδοση · Οκτώβριος 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -353,6 +355,8 @@
             <tr><td>η παρτιτούρα</td><td>γράφεται πρώτη, φαίνεται, αλλάζει, είναι δική σου (ABC, MIDI)</td><td>κρυφή</td></tr>
             <tr><td>οι στίχοι</td><td>ένας μετρητής δίπλα σε κάθε γραμμή: οι χτύποι της απέναντι στον χάρακα του μέρους, οι συλλαβές με τους κανόνες κάθε γλώσσας· οι ετικέτες των μερών προτείνονται καθώς γράφεις «[»</td><td>ένα πλαίσιο κειμένου· στίχους σού γράφει κατόπιν αιτήματος</td></tr>
             <tr><td>επανάληψη μιας λήψης</td><td>ακριβώς: δύο σπόροι που κρατάς</td><td>όχι</td></tr>
+            <tr><td>καθοδήγηση (CFG)</td><td>δύο, χωριστά: η έλξη του ύφους και το κράτημα των στίχων, η καθεμία με το δικό της CFG</td><td>ένα κουμπί Style Influence</td></tr>
+            <tr><td>αντικατάσταση ενότητας</td><td>οι λέξεις της τραγουδιούνται ξανά ανάμεσα στις παύσεις που βρίσκει το αυτί, το υπόλοιπο κρατιέται ως το δείγμα: η ραφή δεν ακούγεται· πολλές ενότητες μονομιάς</td><td>Replace Section: στις δοκιμές μας σχεδόν ποτέ χρήσιμο, οι ραφές ακούγονται και η φωνή αλλάζει</td></tr>
             <tr><td>ο δικός σου ήχος</td><td>εκπαίδευσε ένα LoRA στα τραγούδια σου, μέσα στο στούντιο</td><td>καμία εκπαίδευση</td></tr>
             <tr><td>μετά την απόδοση</td><td>stems, αντιβόμβος, remaster, αναβάθμιση, έλεγχος στίχων, όλα τοπικά</td><td>stems, στο νέφος</td></tr>
             <tr><td>βλέπεις τον ήχο</td><td>το φασματογράφημα όλης της λήψης πάνω από το player, συγχρονισμένο με το κύμα: τα μέρη, η φωτεινότητα και η ένταση, το φάσμα και η νότα κάτω από τον δείκτη</td><td>μια κυματομορφή</td></tr>
@@ -389,7 +393,7 @@
   <section id="next">
     <div class="wrap">
       <h2>Τι ακολουθεί</h2>
-      <p class="sub">Το 2.0.0-rc6 είναι το στούντιο όπου φτιάχνουμε τα δικά μας τραγούδια κάθε μέρα. Αυτά είναι τα μεγαλύτερα κομμάτια που έρχονται, για το 2.0.0 και μετά.</p>
+      <p class="sub">Το 2.0.0-rc7 είναι το στούντιο όπου φτιάχνουμε τα δικά μας τραγούδια κάθε μέρα. Αυτά είναι τα μεγαλύτερα κομμάτια που έρχονται, για το 2.0.0 και μετά.</p>
       <ul class="feats">
         <li><b>Τραγούδια που διορθώνονται όπως τα γράφει το μοντέλο.</b> Μια λήψη συνεχίζεται από οποιαδήποτε στιγμή· ένα μέρος γράφεται ξανά κρατώντας τη φωνή, την τονικότητα και τα μέτρα των γειτόνων του, και ράβεται στα ίδια τα tokens του μοντέλου· ένα οργανικό στρώμα πάνω στην παρτιτούρα της ίδιας της λήψης.</li>
         <li><b>Ένα DAW στον Γυαλιστή.</b> Ο επεξεργαστής παρτιτούρας του Plenio σε πρώιμη προεπισκόπηση: piano roll, γραμμή συγχορδιών, οι στίχοι πάνω από τις νότες, ένα πληκτρολόγιο MIDI για να παίξεις ιδέες.</li>
@@ -421,7 +425,7 @@
         <li><b>AI-Toolkit</b> από τον Ostris: ο κώδικας YuE2 του εκπαιδευτή μεταφέρθηκε από εκεί</li>
         <li><b>Mothersuperior</b>: η κεφαλή του tokenizer realaudio και η συγχώνευση VAE</li>
         <li><b>Qwen2.5-Omni</b> (ο ακροατής), <b>Whisper</b> (ο έλεγχος στίχων), <b>BS-Roformer</b> και <b>htdemucs</b> (stems), <b>UniverSR</b> (αναβάθμιση)</li>
-        <li><b>Krea 2 Muse</b> από τον Stable Yogi και <b>CyberRealistic XL</b> από τον Cyberdelia: τα εξώφυλλα</li>
+        <li><b>Krea 2 Muse</b> από τον Stable Yogi: τα εξώφυλλα</li>
         <li><b>YuE2 Studio</b>: ο έλεγχος παρτιτούρας· <b>GTSinger</b>: φωνές για εκπαίδευση</li>
       </ul>
     </div>
@@ -506,7 +510,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc6 · ένα έργο του <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Αλλαγές</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Μηχανή καφέ</a></span></div>
+  <div class="wrap"><span>Ruach Studio · 2.0.0-rc7 · ένα έργο του <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Αλλαγές</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Μηχανή καφέ</a></span></div>
 </footer>
 
 <script>

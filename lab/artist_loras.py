@@ -3,7 +3,7 @@ artwork/loras/<семейство>/»; «предусмотри скан под�
 представление. И прикрути сканирование Civitai по хешу с подтяжкой инфы по адаптеру, если он там есть. Такое в LoRA Manager в
 ComfyUI заточено»; «Адаптеры пользователи пусть себе тянут по твоему Гайду прямо в комнате»).
 
-KIT/artwork/loras/FAMILY/… holds the adapters, each family a painter's: krea2 (Krea 2 Muse), sdxl, qwen-image-2.1, qwen-image-2512;
+KIT/artwork/loras/FAMILY/… holds the adapters, each family a painter's: krea2 (Krea 2 Muse), qwen-image-2.1, qwen-image-2512 (1405: sdxl gone);
 any depth of folders below it, a folder a group. Beside an adapter: its picture (NAME.preview.png, .jpg…, or NAME.png, .jpeg…),
 and what other tools wrote of it: NAME.metadata.json (ComfyUI's LoRA Manager), NAME.civitai.info (Civitai Helper),
 NAME.cm-info.json (Stability Matrix). A look-up on Civitai sends the file's SHA-256 alone and keeps the answer as
@@ -16,9 +16,9 @@ reaches none of its layers (measured: 2 of Viktor's 9 Krea 2 adapters)."""
 import hashlib, json, os, re, shutil, struct, time, urllib.error, urllib.request
 from pathlib import Path
 
-FAMILIES = {"krea2": ("krea2-q4", "krea2-q8"), "sdxl": ("sdxl",), "qwen-image-2.1": ("qwen21",),
+FAMILIES = {"krea2": ("krea2-q4", "krea2-q8"), "qwen-image-2.1": ("qwen21",),   # HERESY 1405: SDXL gone
             "qwen-image-2512": ("qwen2512-q4", "qwen2512-q6", "qwen2512-fp8")}
-TITLES = {"krea2": "Krea 2", "sdxl": "SDXL", "qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512"}
+TITLES = {"krea2": "Krea 2", "qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512"}
 PICS = (".preview.png", ".preview.jpeg", ".preview.jpg", ".preview.webp", ".jpg", ".jpeg", ".png", ".webp")
 TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 CIVITAI = "https://civitai.com/api/v1/model-versions/by-hash/"

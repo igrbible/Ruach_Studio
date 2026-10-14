@@ -76,8 +76,10 @@
   .bar nav { display: flex; gap: 18px; margin-left: auto; font-size: 15px; }
   .bar nav a { color: var(--soft); }
   .bar nav a:hover { color: var(--amber); text-decoration: none; }
-  .theme { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); width: 34px; height: 34px; border-radius: 9px;
-           cursor: pointer; font-size: 16px; line-height: 1; }
+  .theme { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); width: 40px; height: 36px; border-radius: 9px;
+           cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+  .theme svg { width: 22px; height: 22px; display: block; }   /* HERESY 1394 (Viktor: «Кнопка режима тем на сайте очень маленькая, мизерная»): a drawn half moon, not a font's ◐ */
+  .theme:hover { color: var(--amber); border-color: var(--amber); }
   @media (max-width: 860px) { .bar nav { display: none; } .theme { margin-left: auto; } }
 
   /* the hero */
@@ -235,7 +237,7 @@
     <a class="mark" href="#top"><img src="../assets/ruach-icon-zh-32.png?v=1272" alt="" width="28" height="28">Ruach Studio</a>
     <nav aria-label="章节"><a href="#rooms">房间</a><a href="#studio">它能做什么</a><a href="#honestly">坦白说</a><a href="#need">你需要</a><a href="#next">接下来</a> <a href="#licences">许可</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">ZH</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh" aria-current="page">中文</a></div></details>
-    <button class="theme" id="theme" type="button" aria-label="白天或夜晚" title="白天或夜晚">◐</button>
+    <button class="theme" id="theme" type="button" aria-label="白天或夜晚" title="白天或夜晚"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
   </div>
 </header>
 
@@ -251,11 +253,11 @@
     <path transform="translate(624.51 -24.90)" d="M3.39 -4.69V0.2H61.91V-4.69H35.09V-42.32H58.59V-47.33H6.77V-42.32H29.69V-4.69ZM128.4 -53.9C125.15 -44.33 119.87 -34.89 114.01 -28.78C115.12 -27.99 117.01 -26.3 117.79 -25.45C121.11 -29.1 124.3 -33.85 127.1 -39.13H131.59V5.14H136.54V-10.68H156.14V-15.3H136.54V-25.19H155.29V-29.69H136.54V-39.13H156.79V-43.81H129.44C130.81 -46.68 132.05 -49.67 133.09 -52.67ZM112.71 -54.43C109.07 -44.53 102.95 -34.76 96.5 -28.45C97.41 -27.34 98.85 -24.67 99.37 -23.57C101.58 -25.85 103.73 -28.45 105.81 -31.31V5.08H110.69V-39C113.23 -43.42 115.58 -48.24 117.4 -52.99ZM198.02 -14.06V-9.77H218.33V-1.04H192.16V3.39H249.84V-1.04H223.34V-9.77H244.04V-14.06H223.34V-20.9H218.33V-14.06ZM200.68 -19.73C202.7 -20.51 205.76 -20.77 236.88 -23.18C238.38 -21.68 239.68 -20.18 240.59 -19.01L244.37 -21.68C241.7 -25.06 236.1 -30.08 231.54 -33.59L227.96 -31.18C229.66 -29.82 231.48 -28.32 233.24 -26.69L208.04 -24.93C211.75 -27.67 215.46 -30.92 218.91 -34.37H242.68V-38.61H199.58V-34.37H212.6C208.95 -30.66 205.11 -27.54 203.68 -26.56C201.99 -25.26 200.49 -24.41 199.25 -24.22C199.77 -22.98 200.42 -20.7 200.68 -19.73ZM216.63 -53.97C217.55 -52.47 218.46 -50.58 219.17 -48.89H192.87V-37.37H197.62V-44.46H243.98V-37.37H248.93V-48.89H224.64C223.93 -50.84 222.56 -53.38 221.32 -55.34Z"/>
   </g>
 </svg></div>
-    <div class="osem" translate="no"><b>OSEM</b><span class="say">Simply awesome</span><span>Open Source, Engaged &amp; Musical</span></div>
+    <div class="osem" translate="no"><b>OSEM</b><span class="say">简直 AWESOME</span><span>Open Source, Engaged &amp; Musical</span></div>
     <h1>用文字与和弦写歌<br>在你自己的机器上</h1>
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 请我一台咖啡机</a></div>
-    <span class="rc"><b>2.0.0-rc6</b> · 第六个候选版本 · 2026 年 10 月</span>
+    <span class="rc"><b>2.0.0-rc7</b> · 第七个候选版本 · 2026 年 10 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -354,6 +356,8 @@
             <tr><td>乐谱</td><td>先写出来、可见、可编辑、属于你（ABC、MIDI）</td><td>隐藏</td></tr>
             <tr><td>歌词</td><td>每行旁边的节拍计：拍数对照其段落的标尺，音节按各语言自己的规则；输入 «[» 时提示段落标签</td><td>一个文本框；按需为你写歌词</td></tr>
             <tr><td>重复一段录音</td><td>精确：你保留的两个种子</td><td>不能</td></tr>
+            <tr><td>引导（CFG）</td><td>两个，分开：风格的牵引与歌词的把握，各有自己的 CFG</td><td>一个 Style Influence 旋钮</td></tr>
+            <tr><td>替换一个段落</td><td>在耳朵找到的停顿之间重唱其歌词，作品其余部分精确到采样保持不变：听不出接缝；可一次替换多个段落</td><td>Replace Section：在我们的试用中几乎从不可用，接缝可闻，嗓音改变</td></tr>
             <tr><td>你自己的声音</td><td>在工作室里用你的歌训练 LoRA</td><td>不能训练</td></tr>
             <tr><td>渲染之后</td><td>分轨、去嗡声、母带处理、超分、歌词检查，全部本地</td><td>分轨，在云端</td></tr>
             <tr><td>看见声音</td><td>播放器上方显示整段录音的频谱图，与波形同步：段落、明亮度与响度、指针处的频谱和音符</td><td>波形</td></tr>
@@ -390,7 +394,7 @@
   <section id="next">
     <div class="wrap">
       <h2>接下来</h2>
-      <p class="sub">2.0.0-rc6 是我们每天做自己歌曲的工作室。以下是正在路上的较大部分，面向 2.0.0 及以后。</p>
+      <p class="sub">2.0.0-rc7 是我们每天做自己歌曲的工作室。以下是正在路上的较大部分，面向 2.0.0 及以后。</p>
       <ul class="feats">
         <li><b>像模型写歌那样编辑歌曲。</b>从任意位置延长一段录音；重写一个段落，保留相邻段落的嗓音、调性和小节，并在模型自己的 token 中缝合；在录音自己的乐谱上叠加一层器乐。</li>
         <li><b>精修室里的 DAW。</b>Plenio 的乐谱编辑器抢先预览：钢琴卷帘、和弦轨、音符上方的歌词、用来弹入想法的 MIDI 键盘。</li>
@@ -422,7 +426,7 @@
         <li>Ostris 的 <b>AI-Toolkit</b>：训练器的 YuE2 代码由此移植</li>
         <li><b>Mothersuperior</b>：realaudio 分词器头和 VAE 合并</li>
         <li><b>Qwen2.5-Omni</b>（聆听者）、<b>Whisper</b>（歌词检查）、<b>BS-Roformer</b> 和 <b>htdemucs</b>（分轨）、<b>UniverSR</b>（超分）</li>
-        <li>Stable Yogi 的 <b>Krea 2 Muse</b> 和 Cyberdelia 的 <b>CyberRealistic XL</b>：美术</li>
+        <li>Stable Yogi 的 <b>Krea 2 Muse</b>：美术</li>
         <li><b>YuE2 Studio</b>：乐谱检查器；<b>GTSinger</b>：用于训练的嗓音</li>
       </ul>
     </div>
@@ -507,7 +511,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc6 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
+  <div class="wrap"><span>Ruach Studio · 2.0.0-rc7 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
 </footer>
 
 <script>

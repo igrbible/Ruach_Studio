@@ -41,7 +41,7 @@ static void print_usage(const char * prog) {
             "  --request <json>       Input request JSON\n"
             "\n"
             "Optional:\n"
-            "  --out <path>           Output audio (default: song.mp3), a batch numbers it\n"
+            "  --out <path>           Output audio (default: song.wav, 24-bit), a batch numbers it\n"
             "  --duration <s>         Target length in seconds\n"
             "  --lm-seed <N>          Token sampling seed\n"
             "  --seed <N>             Acoustic noise seed\n"

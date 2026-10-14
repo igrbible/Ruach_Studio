@@ -13,10 +13,10 @@
   "use strict";
 
   var KINDS = {
-    style:    { label: "Style", say: "genre, production, a band's sound", o: { rank: 32, steps: 1500, ar_loss_weight: 0.5, ar_kl_weight: 0.2, ar_lr_multiplier: 0.5 } },
-    voice:    { label: "Voice", say: "one singer's timbre", o: { rank: 16, steps: 1500, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5 } },
-    language: { label: "Language", say: "diction of a language; exact lyrics, many voices", o: { rank: 32, steps: 3000, ar_loss_weight: 1.0, ar_kl_weight: 0.1, ar_lr_multiplier: 1.0 } },
-    artist:   { label: "Artist", say: "all of it; a large, varied catalogue", o: { rank: 32, steps: 3000, ar_loss_weight: 0.7, ar_kl_weight: 0.2, ar_lr_multiplier: 0.7 } }
+    style:    { label: "Style", say: "genre, production, a band's sound", o: { rank: 32, epochs: 40, ar_loss_weight: 0.5, ar_kl_weight: 0.2, ar_lr_multiplier: 0.5 } },
+    voice:    { label: "Voice", say: "one singer's timbre", o: { rank: 16, epochs: 30, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5 } },
+    language: { label: "Language", say: "diction of a language; exact lyrics, many voices", o: { rank: 32, epochs: 20, ar_loss_weight: 1.0, ar_kl_weight: 0.1, ar_lr_multiplier: 1.0 } },
+    artist:   { label: "Artist", say: "all of it; a large, varied catalogue", o: { rank: 32, epochs: 20, ar_loss_weight: 0.7, ar_kl_weight: 0.2, ar_lr_multiplier: 0.7 } }
   };
   var PANES = ["raw", "set", "train", "run"];
   var state = {
@@ -114,8 +114,15 @@
     if (r) el.dataset.tipHead = (r * 1.04 / 16).toFixed(r < 32 ? 1 : 0) + " % of what it adapts · " + Math.round(r * 1.835) + " MB a half" + (r > 64 ? " · for large many-voice sets" : "");
     else delete el.dataset.tipHead;
   }
+  // HERESY 1410: the epochs asked, the steps worked out from the set picked (batch 1: a step a track)
+  function setTracks() { var d = state.data || {}; return ((d.prepared || []).filter(function (p) { return p.name === state.set; })[0] || {}).tracks || 0; }
+  function stepsSay() {
+    var el = $("trStepsSay"), n = setTracks(), ep = Math.max(1, parseInt($("tr_epochs").value, 10) || 0);
+    if (el) el.textContent = n ? "= " + tr(ep * n + " steps") : "";
+  }
   function paintPills() {
     rankSay();
+    stepsSay();
     var d = state.data || {}, r = runOf(state.sel), included = state.rows.filter(function (x) { return x.include; }).length;
     var set = (d.prepared || []).filter(function (p) { return p.name === state.set; })[0];
     // HERESY 1166: the names as typed, the words translated piece by piece
@@ -135,17 +142,12 @@
   // HERESY 1086: what the chosen trainer lacks, said by name; the studio's own needs no AI-Toolkit
   function warn() {
     var d = state.data || {}, own = d.own || {}, q = $("tr_quant").value, html = "";
-    if ($("tr_engine").value === "ruach") {
-      var lack = [];
-      if (!own[q]) lack.push("Comfy-Org's YuE2 " + q + " weights");
-      if (!own.mert) lack.push("MERT-v2-FullSong");
-      if (!own.head) lack.push("the realaudio tokenizer head");
-      if (lack.length) html += '<p class="tr-warn">The studio’s trainer is missing ' + esc(lack.join(", ")) + ": <code>heresy/fetch-heresy.sh --trainer " + esc(q) + "</code>" +
-        (own.mert ? "" : " and <code>tools/download-checkpoints.sh</code>") + ".</p>";
-    } else {
-      if (!d.aitk_ready) html += '<p class="tr-warn">AI-Toolkit is not found at <code>' + esc(d.aitk) + "</code>: clone ostris/ai-toolkit there (or set AITK_ROOT for the lab), or train with the studio’s own trainer.</p>";
-      if (!d.head) html += '<p class="tr-warn">The realaudio tokenizer is missing from <code>checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/</code>.</p>';
-    }
+    var lack = [];                                       // HERESY 1422: the studio's own trainer, the only one
+    if (!own[q]) lack.push("Comfy-Org's YuE2 " + q + " weights");
+    if (!own.mert) lack.push("MERT-v2-FullSong");
+    if (!own.head) lack.push("the realaudio tokenizer head");
+    if (lack.length) html += '<p class="tr-warn">The studio’s trainer is missing ' + esc(lack.join(", ")) + ": <code>heresy/fetch-heresy.sh --trainer " + esc(q) + "</code>" +
+      (own.mert ? "" : " and <code>tools/download-checkpoints.sh</code>") + ".</p>";
     $("trWarn").innerHTML = html;
   }
 
@@ -321,8 +323,8 @@
       var n = parseInt(v, 10);
       if (!(n > at && n <= 1000)) return toast(tr("More epochs than " + now + ", please"), true);
       var spec = { dataset: r.dataset, name: r.name, kind: r.kind || "", engine: "ruach", steps: n * tracks, save_epochs: o.save_epochs || 1, rank: o.rank, lr: o.lr,
-        ar_loss_weight: o.ar_loss_weight, ar_kl_weight: o.ar_kl_weight, ar_lr_multiplier: o.ar_lr_multiplier, cot: "off", quant: o.quant || "bf16",
-        do_separation: false, note: r.note || "" };
+        ar_loss_weight: o.ar_loss_weight, ar_kl_weight: o.ar_kl_weight, ar_lr_multiplier: o.ar_lr_multiplier, cot: o.cot || "off", quant: o.quant || "bf16",
+        do_separation: !!o.do_separation, note: r.note || "" };   // HERESY 1422: the run's own separation kept
       return api("/train/run", spec).then(function () {
         toast(tr(name + " goes on to " + n + " epochs"));
         state.sel = name; keep("yue2.trRun", name);
@@ -748,19 +750,20 @@
     $("trRunSay").innerHTML = say;
   }
   function engineKnobs() {
-    var own = $("tr_engine").value === "ruach";
-    if (own) { $("tr_cot").value = "off"; $("tr_sep").checked = false; }
-    $("tr_cot").disabled = own; $("tr_sep").disabled = own;
+    // HERESY 1420 (Viktor: «Режим можно выбрать только с AI-Toolkit. Это твоя недоработка в коде?»): Mode is the studio's own trainer's
+    // too (Direct, Full, Melody); HERESY 1422: and Separate (AI-Toolkit left the studio: the studio's own is the only trainer)
+    $("tr_cot").disabled = false; $("tr_sep").disabled = false;
   }
   function startRun() {
     var set = state.set;
     if (!set) return toast("Pick a set (made in step 2)", true);
     var spec = { dataset: set, name: slug($("trRunName").value || set + "-" + state.kind), kind: state.kind, engine: $("tr_engine").value };
-    ["steps", "save_epochs", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier"].forEach(function (k) { spec[k] = parseFloat($("tr_" + k).value); });
+    ["save_epochs", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier"].forEach(function (k) { spec[k] = parseFloat($("tr_" + k).value); });
     spec.cot = $("tr_cot").value; spec.quant = $("tr_quant").value; spec.do_separation = $("tr_sep").checked;
     if (runOf(spec.name)) return toast("A run named " + spec.name + " is there already: give this one its own name", true);
     var tracks = ((state.data.prepared || []).filter(function (p) { return p.name === set; })[0] || {}).tracks || 1;
-    var ep = Math.ceil(spec.steps / tracks);
+    var ep = Math.max(1, parseInt($("tr_epochs").value, 10) || 1);   // HERESY 1410: epochs asked, the steps the set's tracks times them
+    spec.steps = ep * tracks;
     // HERESY 1091: said when the run may take the studio's own card (synthesis then waits while it trains)
     api("/gpus").catch(function () { return null; }).then(function (g) {
       var shared = g && g.roles && g.roles.train.indexOf(g.roles.studio) >= 0;
@@ -871,6 +874,7 @@
       engineKnobs(); if (state.data) { warn(); gate(); paintPills(); }
     });
     $("tr_rank").addEventListener("input", paintPills);
+    $("tr_epochs").addEventListener("input", stepsSay);   // HERESY 1410
     $("trRankHow").addEventListener("click", function (e) { e.preventDefault(); if (window.HeresyGuide) window.HeresyGuide.open("lora", "Rank and the other knobs"); });
     // HERESY 1300: the AR knobs, explained with what was measured
     $("trArHow").addEventListener("click", function (e) { e.preventDefault(); if (window.HeresyGuide) window.HeresyGuide.open("lora", "The music half's three knobs"); });

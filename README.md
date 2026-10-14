@@ -52,7 +52,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 
 Around the model there is a whole studio of six rooms: the **Creator** makes the song, the **Writer** writes it with a chat model, the **Refiner** finishes it, the **Artist** paints its pictures, the **Librarian** keeps every take, and the **LoRA Trainer** teaches YuE2 your own songs with its own trainer.
 
-**The full guide, room by room, is inside the studio** (the **?** in the bar) and here: [docs/GUIDE.md](docs/GUIDE.md). The Artist in depth: [docs/ARTIST.md](docs/ARTIST.md).
+**The full guide, room by room, is inside the studio** (the **?** in the bar) and here: [docs/GUIDE.md](docs/GUIDE.md). The Artist in depth: [docs/ARTIST.md](docs/ARTIST.md), in the twelve languages of the studio beside it.
 
 ## The Rooms
 
@@ -132,7 +132,7 @@ Made and tested on Viktor's setup:
 What it needs:
 
 - Linux, an NVIDIA GPU with CUDA. 24 GB runs everything (synthesis in BF16, training in bf16); smaller cards use smaller model copies (Q8_0 3.8 GB, Q6_K, Q5_K_M) and int8 training.
-- About 30 GB of disk, measured on fresh installs (10.10.2026): the program and its two Pythons 16 GB, the models 13.2 GB for a 16 GB card (Q8_0) or 16.5 GB for 24 GB (BF16), the LoRAs among them; the Artist's models 26.1 GB more (40.7 GB with Krea 2 Muse Q8; 15.0 GB with SDXL on a smaller card), its Qwen painters 31 GB more for Qwen-Image 2512 at Q4 (34.5 GB at Q6; Qwen-Image 2.1 33.1 GB), the 💎 sets 5.3 GB, each only when you take it; more for your takes.
+- About 30 GB of disk, measured on fresh installs (10.10.2026): the program and its two Pythons 16 GB, the models 13.2 GB for a 16 GB card (Q8_0) or 16.5 GB for 24 GB (BF16), the LoRAs among them; the Artist's models 26.1 GB more (40.7 GB with Krea 2 Muse Q8; on a smaller card Krea 2 Muse streams its blocks from RAM), its Qwen painters 31 GB more for Qwen-Image 2512 at Q4 (34.5 GB at Q6; Qwen-Image 2.1 33.1 GB), the 💎 sets 5.3 GB, each only when you take it; more for your takes.
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
@@ -161,12 +161,11 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | audio-separator 0.47 | stems: BS-Roformer, htdemucs_ft |
 | faster-whisper 1.2.1 | the lyrics check, karaoke timing, trim to the text |
 | transformers (below 5) | CLAP for the instrument probes, Qwen3-4B for the artwork's prompts |
-| diffusers 0.39 | the artwork's SDXL painter |
 | soundfile, numpy, audioread, mutagen | audio in and out, MP3 tags |
 | yt-dlp | the audio of long recordings for instrument sets |
 | [UniverSR](https://github.com/woongzip1/UniverSR) (cloned at its tested commit) | upscale |
 
-**The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Krea 2's text encoder, the prompt writer, the content filter); diffusers 0.41 (Krea 2, Qwen-Image 2512 and 2.1, SDXL) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT).
+**The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Krea 2's text encoder, the prompt writer, the content filter); diffusers 0.41 (Krea 2, Qwen-Image 2512 and 2.1) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT).
 
 **Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras; sizes, sources and licences in the models card, `heresy/docs/hf-models-README.md`; the legacy and blend decoders and the sliders come converted, from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2)):
 
@@ -180,7 +179,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | BS-Roformer ep317 · htdemucs_ft | stems | not stated by its author · MIT |
 | UniverSR | upscale | CC BY 4.0 |
 | Qwen2.5-Omni-7B (GGUF, through [llama.cpp](https://github.com/ggml-org/llama.cpp), built by you) · extra | the style listener for training sets | Apache-2.0 |
-| CyberRealistic XL v10 (SDXL) and Qwen3-4B-Instruct-2507 · extra | the artwork of a take | CreativeML Open RAIL++-M · Apache-2.0 |
+| Qwen3-4B-Instruct-2507 · extra | the artwork's prompt writer | Apache-2.0 |
 | Krea 2 Muse by Stable Yogi (GGUF Q4, Q8) with Krea 2 Turbo's text encoder and VAE, and the content filter (Falconsai) · extra | the Artist's painter, a take's artwork | Krea 2 Community License · Apache-2.0 |
 | Qwen-Image 2512 (its parts from Qwen; the transformer as GGUF Q4_K_M or Q6_K, by unsloth) with Lightning's 8 steps (lightx2v) · extra | the Artist's Qwen painter | Apache-2.0 |
 | Qwen-Image 2.1 · extra | the Artist's painter that edits by words | Qwen Research License: not for commercial use |
@@ -263,13 +262,22 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.0-rc7 (October 2026)
+
+- **Songs edited as the model writes them**: Replace a section from the player's wave, its words sung anew between the rests the ear finds and the rest of the take kept to the sample, several sections in one go; Free tempo; two guidances, the style's pull and the lyrics' hold.
+- **Compare**: a take with its namesakes, or two to four checked, in one player from the same second, with its wave, thumbs, star and «Hide disliked».
+- **The studio's own LoRA Trainer, whole**: epochs, score mode (Full, Melody) and the separation of vocals and music; AI-Toolkit no longer needed.
+- **Covers by the cards**: Qwen-Image 2512 where a card holds it, Krea 2 Muse below; a cover copied to a take's namesakes; the Refiner's Colour (vinyl, tape, room); the Artist's guide in twelve languages.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › 2.0.0 and After
 
-2.0.0-rc6 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+2.0.0-rc7 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
 
 - **Songs edited as the model writes them** (2.0.0): a take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens and decoded whole, the best joins heard first; an instrumental layer on the take's own score, locked to its bars.
 - **A DAW in the Refiner, an early preview** (2.0.0): [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System)'s score editor (Apache-2.0): a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in, the score going both ways.
-- **Lettering on a cover**: the title and the artist written into the picture itself, typeset and painted in.
+- **Lettering on a cover** (2.0.0, in the studio now): the title and a second line painted into the picture by Qwen-Image, each picture read back and painted again when misspelled.
 - **Right-to-left languages** (Arabic, Hebrew, Urdu), once the page itself runs right to left.
 - **The Videographer** (2.1.0): a music video for the song, its scenes prompted by a helper and its key frames painted by the Artist.
 - **SeedVR** as an upscaler (2.1.0).
@@ -287,7 +295,7 @@ Issues and pull requests are welcome: they are read and answered.
 - **[AI-Toolkit](https://github.com/ostris/ai-toolkit)** by Ostris (MIT): the trainer's YuE2 code was ported from it.
 - **Mothersuperior**: the realaudio tokenizer head (CC BY-NC 4.0) and the VAE merge.
 - **Qwen2.5-Omni** (the listener), **Whisper** (the lyrics check), **BS-Roformer** and **htdemucs_ft** (stems), **UniverSR** (upscale), **GTSinger** (CC BY-NC-SA 4.0, training data for voices).
-- **Krea 2 Muse** by Stable Yogi (the artwork's painter), **CyberRealistic XL** by Cyberdelia (on SDXL, for the cards Krea 2 does not fit) and **Qwen3-4B** (their prompts); **[YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio)** (Apache-2.0): the score checker the page and the lab use.
+- **Krea 2 Muse** by Stable Yogi (the artwork's painter) and **Qwen3-4B** (its prompts); **[YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio)** (Apache-2.0): the score checker the page and the lab use.
 
 Every project is linked from the studio's own Engine → About.
 

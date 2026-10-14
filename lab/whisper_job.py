@@ -27,8 +27,10 @@ data, rate = sf.read(audio, dtype="float32", always_2d=True)
 wave = torch.from_numpy(data.mean(axis=1))
 if rate != 16000:
     wave = torchaudio.functional.resample(wave, rate, 16000)
+# HERESY 1417: a second pass for the lyrics' timing gets the lyrics as hotwords (WHISPER_HOTWORDS)
+HOT = os.environ.get("WHISPER_HOTWORDS") or None
 segments, info = model.transcribe(wave.numpy().astype(np.float32), language=lang or None, condition_on_previous_text=False,
-                                  vad_filter=False, beam_size=5, word_timestamps=WORDS)
+                                  vad_filter=False, beam_size=5, word_timestamps=WORDS, hotwords=HOT)
 segs = []
 for s in segments:
     seg = {"start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip()}

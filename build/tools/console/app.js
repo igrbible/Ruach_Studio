@@ -79,7 +79,7 @@
 
   // The fallbacks are the protocol's own values; /props replaces them.
   var PROTOCOL_DEFAULTS = {
-    cot: "full", duration: 480, steps: 32, peak_clip: 10, mp3_bitrate: 128, output_format: "mp3",
+    cot: "full", duration: 480, steps: 32, peak_clip: 10, mp3_bitrate: 128, output_format: "wav24",   // HERESY 1413: the engine's own default
     // HERESY 1031: Viktor's stable set, as the engine now has it
     // HERESY 1088: floors as fuses: a score not under 200 tokens, the music not under 750 (30 s)
     abc_sampling: { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 200, max_tokens: 6144 },
@@ -648,7 +648,8 @@
   // оверлеями»; «2.4 - макс стабильности. 2.6 и выше - дурдом. Может макс выставим до 4?»): Guidance and Sound and output
   // kept in their bounds, each saying why; a field emptied shows its default again when you leave it
   var FIELD_GUARDS = {
-    cfg: [1, 4, "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off."],
+    cfg: [0, 10, "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red"],   // HERESY 1400: the light, not a clamp at 4
+    cfgLyrics: [0, 10, "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance"],   // HERESY 1397, 1400
     odeSteps: [1, 160, "32 is the release; 8–16 are quick drafts; 160 is the ceiling."],
     maxLength: [10, 960, "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it."],
     variations: [1, 9, "One pass renders nine at most."],
@@ -671,6 +672,8 @@
     var el = $(id), g = FIELD_GUARDS[id], v = parseFloat(el.value);
     if (id === "cfg") {
       if (!el.value.trim() || !isFinite(v)) { el.value = ""; el.dataset.touched = ""; fillCfg(); syncShape(); return; }
+    } else if (id === "cfgLyrics") {                     // HERESY 1397: empty is its own answer (as Guidance)
+      if (!el.value.trim() || !isFinite(v)) { el.value = ""; return; }
     } else if (!el.value.trim() || !isFinite(v)) {
       el.value = fieldDefault(id);
       el.dispatchEvent(new Event("input", { bubbles: true }));
@@ -680,9 +683,10 @@
       el.value = Math.min(g[1], Math.max(g[0], v));
       el.dispatchEvent(new Event("input", { bubbles: true }));
       toastWhy(fieldLabel(el) + " is kept within " + g[0] + "–" + g[1], g[2], "bad");
-    } else if (id === "cfg" && v >= 2.6) {
-      toastWhy("Guidance from 2.6 is an experiment", "The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.");
+    } else if (id === "cfg" && v > 2.6 && !$("cfgLyrics").value.trim()) {   // HERESY 1400: the music may go to 4, the words follow it unless told
+      toast(tr("The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)"));
     }
+    cfgLights();
   }
   setTimeout(function () {
     Object.keys(FIELD_GUARDS).forEach(function (id) { if ($(id)) $(id).addEventListener("change", function () { guardField(id); }); });
@@ -756,7 +760,7 @@
     }
     shown.readOnly = false;
     shown.addEventListener("change", function () {
-      var s = parseClock(shown.value);
+      var s = max ? parseLength(shown.value) : parseClock(shown.value);   // HERESY 1421
       if (isFinite(s)) {
         delete input.dataset.floor; delete input.dataset.held;   // a floor set by hand is the floor
         // the request's duration first: guardKnob re-syncs the ceiling from it (syncMusicCeiling), and an old one would
@@ -770,8 +774,20 @@
         }
       }
       paintTokenTimes();
+      shown.value = clock(parseFloat(input.value) / FRAME_RATE);   // HERESY 1421: what it read, shown at once (Tab leaves while it has the focus)
     });
   }
+  // HERESY 1421 (Viktor 13.10.2026: «Макс длина… обнуляется с опустошённого поля на 0:10. Когда ввёл 9 и Таб, всё равно на 0:10
+  // выставляет. Сделай дефолт для макс длины 8:00, и при табе, если ввёл в лимитах до 15 минут, нормализуй введённое в правильный
+  // временной формат»): the song's Max length as typed: empty is the default (8:00); a bare number up to 15 is minutes (9 is 9:00,
+  // not nine seconds raised to the floor's 0:10), above 15 seconds; m:ss (or m.ss) as written
+  function parseLength(v) {
+    var t = String(v).trim(), m = t.match(/^(\d+)[:.,](\d{1,2})$/);
+    if (!t) return outDefault("duration");
+    if (m) return +m[1] * 60 + +m[2];
+    return /^\d+$/.test(t) ? (+t <= 15 ? +t * 60 : +t) : NaN;
+  }
+  window.ruachParseLength = parseLength;
   function parseClock(v) {                            // "30", "0:30", "1:05"
     var m = String(v).trim().match(/^(\d+)(?::(\d{1,2}))?$/);
     return !m ? NaN : m[2] !== undefined ? +m[1] * 60 + +m[2] : +m[1];
@@ -838,14 +854,86 @@
     // HERESY 1032: the engine's default (1031 moved it to 1.6 and left this at 1.0 / 1.01, so the
     // untouched field went out as an explicit 1.0 and the new default never ran)
     var def = String(defaultCfg(currentCot()));
-    $("cfg").setAttribute("value", def);   // step base: arrows go 1.6 -> 1.61 / 1.59
+    $("cfg").setAttribute("value", def);   // step base: arrows go 1.6 -> 1.7 / 1.5 (HERESY 1421: tenths)
     $("cfg").value = def;
+    cfgLights();                                         // HERESY 1400
+  }
+  // HERESY 1400: a light beside each guidance: green inside Viktor's range (the music 1.0–4.0, the lyrics 1.0–2.6), amber a little past
+  // it, red far past; an empty Lyrics guidance lit by the Guidance it follows
+  var CFG_ZONES = { cfg: [1, 4, 4.6], cfgLyrics: [1, 2.6, 3] };
+  var LYRICS_CFG = "2.2";                                // the lyrics' own beside the default 1.6: his 1.6 / 2.2 kept the words (12.10.2026)
+  var CFG_SAYS = {
+    cfg: ["Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own",
+      "Past 4.0: brighter still, and the music may begin to break; listen before you keep it", "Far past Viktor's range for the music (1.0 to 4.0): expect a broken take"],
+    cfgLyrics: ["Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety",
+      "Past 2.6: the words begin to burn", "Far past 2.6: burnt words"]
+  };
+  function cfgLights() {
+    if (!$("cfgLight") || !$("cfgLyricsLight")) return;
+    var music = parseFloat($("cfg").value), own = $("cfgLyrics").value.trim(), lyrics = own === "" ? music : parseFloat(own);
+    if (!isFinite(music)) music = defaultCfg(currentCot());
+    if (own === "") lyrics = music;
+    [["cfg", music], ["cfgLyrics", lyrics]].forEach(function (x) {
+      var dot = $(x[0] + "Light"), v = x[1], z = CFG_ZONES[x[0]];
+      var k = !isFinite(v) ? -1 : v < z[0] || v > z[2] ? 2 : v > z[1] ? 1 : 0;
+      var tip = k < 0 ? "" : x[0] === "cfgLyrics" && own === "" && k > 0
+        ? tr("The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)")
+        : tr(CFG_SAYS[x[0]][k]);
+      // HERESY 1400 (Viktor: «Оба CFG должны отличаться один от другого хотя бы на 0.1, а в идеале на все 0.4-1.0. Единое значение уходит в
+      // ту самую галлюцинацию в половинке лиричной»; on 2.6/2.6 and 4.0/4.0: «потеря С и косые ударности на гласных»): the two apart
+      var apart = Math.abs(music - lyrics), s = !isFinite(apart) ? -1 : apart < 0.1 ? 2 : apart < 0.4 ? 1 : 0;
+      if (x[0] === "cfgLyrics" && s > Math.max(k, 0)) {
+        k = s;
+        tip = tr("The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress");
+      }
+      dot.className = "cfg-light" + (k < 0 ? "" : " is-" + ["green", "amber", "red"][k]);
+      dot.dataset.tip = tip;
+      dot.setAttribute("aria-label", tip);
+    });
   }
   // HERESY 1167 (Viktor: «когда Backspace в цифровом поле до конца, обнуляется на одну цифру… это лучше делать при потере
   // фокуса курсора»): emptied, it keeps empty while you type; it shows its default again when you leave it (guardField)
   $("cfg").addEventListener("input", function () { this.dataset.touched = this.value.trim() ? "1" : ""; });
+  ["cfg", "cfgLyrics"].forEach(function (id) { $(id).addEventListener("input", cfgLights); });   // HERESY 1400
+  window.addEventListener("ruach-lang", cfgLights);
   all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", fillCfg); });
   fillCfg();
+  // HERESY 1419 (Viktor 13.10.2026: «Может ползунками сделаем как с LoRA адаптерами? Места в горизонтали хватает»): a road before each
+  // guidance, red under 1, green in Viktor's range, amber past it, red far past. The number stays the truth (an empty Guidance: the
+  // profile's default; an empty Lyrics guidance: as Guidance, its thumb hollow there); the road follows the number whoever sets it, and a
+  // drag writes the number as typing does (its input; its change on release, so the guard and the light have their say)
+  var CFG_ROAD = 6, cfgRoadQueued = false;
+  function paintCfgRoads() {
+    cfgRoadQueued = false;
+    var music = parseFloat($("cfg").value), own = $("cfgLyrics").value.trim();
+    if (!isFinite(music)) music = defaultCfg(currentCot());
+    [["cfg", music, false], ["cfgLyrics", own === "" ? music : parseFloat(own), own === ""]].forEach(function (x) {
+      var r = $(x[0] + "Range"), z = CFG_ZONES[x[0]];
+      if (!r) return;
+      ["--z0", "--z1", "--z2"].forEach(function (k, i) { r.style.setProperty(k, (z[i] / CFG_ROAD * 100).toFixed(2) + "%"); });
+      r.value = isFinite(x[1]) ? Math.min(CFG_ROAD, Math.max(0, x[1])) : 0;
+      r.classList.toggle("is-auto", x[2]);
+    });
+  }
+  function queueCfgRoads() {
+    if (cfgRoadQueued) return;
+    cfgRoadQueued = true;
+    requestAnimationFrame(paintCfgRoads);
+  }
+  ["cfg", "cfgLyrics"].forEach(function (id) {
+    var el = $(id), r = $(id + "Range"), d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+    if (!el || !r) return;
+    Object.defineProperty(el, "value", { configurable: true, get: function () { return d.get.call(this); },   // a value set in code moves the road too
+      set: function (v) { d.set.call(this, v); queueCfgRoads(); } });
+    el.addEventListener("input", queueCfgRoads);
+    r.addEventListener("input", function () {
+      el.value = String(Math.round(parseFloat(r.value) * 10) / 10);   // HERESY 1421: tenths
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    r.addEventListener("change", function () { el.dispatchEvent(new Event("change", { bubbles: true })); });
+  });
+  window.ruachCfgRoads = paintCfgRoads;
+  queueCfgRoads();
 
   // HERESY 1081 (Viktor 02.10.2026): a knob left empty (or with no number in it) shows its default again;
   // empty already sent nothing (the engine used its default), but the box looked broken
@@ -898,7 +986,7 @@
     return all("input[data-group]").some(function (input) {
       if (input.dataset.group === "semantic" && input.dataset.key === "max_tokens") return false;   // the song's length: Max length's, not a knob's
       return Number(input.value) !== round(samplingDefault(input.dataset.group, input.dataset.key), 6);
-    }) || !!$("cfg").dataset.touched;
+    }) || !!$("cfg").dataset.touched || $("cfgLyrics").value.trim() !== LYRICS_CFG;   // HERESY 1400: its own default is 2.2
   }
   $("resetSampling").addEventListener("click", function () {
     askReset(samplingChanged(), "Reset sampling to the defaults?\n\nThe values set here now are kept nowhere else.").then(function (ok) {
@@ -907,6 +995,8 @@
         input.value = round(samplingDefault(input.dataset.group, input.dataset.key), 6);
       });
       $("cfg").dataset.touched = "";
+      $("cfgLyrics").value = LYRICS_CFG;                 // HERESY 1397, 1400: apart from the start
+      $("cfg").value = "";
       fillCfg();
       syncShape();
       toast("Sampling reset to defaults");
@@ -1110,11 +1200,11 @@
         (VAE_NOTES[v.name] ? "<small>" + VAE_NOTES[v.name] + "</small>" : "") + "</label>";
     }).join("");
     // HERESY 1168: the ☰ menu's VAE row, under the model: the choice the Composer's (now hidden) radios hold
-    if ($("vaePick")) {
-      $("vaePick").innerHTML = STATE.vaes.map(function (v) {
+    ["vaePick", "setVae"].forEach(function (id) {            // HERESY 1425: and Engine → Compute's, the same choice
+      if ($(id)) $(id).innerHTML = STATE.vaes.map(function (v) {
         return '<option value="' + escape(v.name) + '">' + escape((v.label || v.name) + (YueVaes.kindOf(v) === "add-on" ? " · add-on" : "")) + "</option>";
       }).join("");
-    }
+    });
     var want = current || recall("yue2.vae");
     if (!vaeInfo(want)) want = STATE.defaultVae;
     checkVae(want);
@@ -1127,6 +1217,7 @@
       if (first) first.checked = true;
     }
     if ($("vaePick")) $("vaePick").value = selectedVae();   // HERESY 1168: the menu says the same
+    if ($("setVae")) $("setVae").value = selectedVae();     // HERESY 1425: Engine → Compute too
     YueVaes.repaint();
   }
 
@@ -1138,12 +1229,15 @@
   $("decoders").addEventListener("change", function () {
     store("yue2.vae", selectedVae());
     if ($("vaePick")) $("vaePick").value = selectedVae();
+    if ($("setVae")) $("setVae").value = selectedVae();
     YueVaes.repaint();
   });
-  if ($("vaePick")) $("vaePick").addEventListener("change", function () {   // HERESY 1168: the ☰ menu's VAE
-    checkVae(this.value);
-    store("yue2.vae", selectedVae());
-    toast("VAE for the songs to come: " + vaeLabel(selectedVae()));
+  ["vaePick", "setVae"].forEach(function (id) {             // HERESY 1168: the ☰ menu's VAE; 1425: Engine → Compute's
+    if ($(id)) $(id).addEventListener("change", function () {
+      checkVae(this.value);
+      store("yue2.vae", selectedVae());
+      toast("VAE for the songs to come: " + vaeLabel(selectedVae()));
+    });
   });
 
   // The Engine panel's VAE tiles (vaes.js) mark the one the form has picked
@@ -1524,7 +1618,8 @@
     $("newSong").click();
   });
   function newSong() {
-    ["title", "style", "lyrics", "abc", "lmSeed", "soundSeed", "cfg"].forEach(function (id) { $(id).value = ""; });
+    ["title", "style", "lyrics", "abc", "lmSeed", "soundSeed", "cfg", "cfgLyrics"].forEach(function (id) { $(id).value = ""; });   // HERESY 1397
+    $("cfgLyrics").value = LYRICS_CFG;                   // HERESY 1400: a new song starts with the two apart
     setCot("full");                                   // HERESY 1169 · 1253 (Viktor 08.10.2026: «Full as the default»; 1167 had Direct)
     $("instrumental").checked = false;
     all("input[data-group]").forEach(function (input) {
@@ -1669,6 +1764,14 @@
     return style ? style.slice(0, 48) : "Untitled";
   }
 
+  // HERESY 1421 (Viktor 13.10.2026: «Музыкальный стиль скармливаем движку одной строкой, если в поле стиля многострочие - всё
+  // объединяем»): the Style's lines go to the engine as one, a comma between two unless the first already ends in one (or ; . : ! ?)
+  function styleOneLine(text) {
+    return String(text || "").split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean)
+      .reduce(function (acc, l) { return !acc ? l : acc + (/[,;.:!?]$/.test(acc) ? " " : ", ") + l; }, "");
+  }
+  window.ruachStyleOneLine = styleOneLine;
+
   // One request for a full render or a score-only plan, in the server's own
   // field names. Blank seeds stay out, and the server rolls them.
   function buildRequest(plan, instrumental, loose) {
@@ -1677,7 +1780,7 @@
     // an instrumental picks its own mode from the score
     // (loose, HERESY 1032: the form read as it stands, for a saved profile, with no checks on the texts)
     if (abc && cot === "off" && !instrumental && !loose) throw new Error("Direct mode ignores a supplied score — pick full or melody");
-    var style = $("style").value.trim(), lyrics = $("lyrics").value;
+    var style = styleOneLine($("style").value), lyrics = $("lyrics").value;   // HERESY 1421
     if (!style && !lyrics.trim() && !STATE.codes && !loose) throw new Error("Write a style prompt or lyrics first");
     var body = { title: songTitle(), style: style, lyrics: lyrics, cot: cot };
     if (abc) body.abc = abc;
@@ -1691,6 +1794,13 @@
       if (!isFinite(cfg) || cfg < 0) throw new Error("Guidance must be a number, 0 or more");
       body.cfg_scale = cfg;
     }
+    var lyrRaw = $("cfgLyrics").value.trim();            // HERESY 1397: the lyrics' own guidance; empty: as Guidance
+    if (lyrRaw !== "") {
+      var lyr = parseFloat(lyrRaw);
+      if (!isFinite(lyr) || lyr < 0) throw new Error("Lyrics guidance must be a number, 0 or more");
+      body.cfg_lyrics = lyr;
+    }
+    if (freeTempoOn() && cot !== "off") body.free_tempo = true;   // HERESY 1416: with a score only
     var abcSampling = samplingOverrides("abc"), semanticSampling = samplingOverrides("semantic");
     if (Object.keys(abcSampling).length) body.abc_sampling = abcSampling;
     if (Object.keys(semanticSampling).length) body.semantic_sampling = semanticSampling;
@@ -2002,6 +2112,10 @@
     var cot = MODES[req.cot] ? req.cot : "full";
     document.querySelector('input[name="cot"][value="' + cot + '"]').checked = true;
     paintPlanBtn();   // HERESY 1169 · 1249 (Viktor: «Кнопка … в режиме FULL неактивна»): a mode set here (the draft on load, Retake, Reuse, a prompt file) moved no change event, and the button kept the Direct it was first painted in
+    $("cfgLyrics").value = typeof req.cfg_lyrics === "number" && req.cfg_lyrics >= 0 ? round(req.cfg_lyrics, 4) : "";   // HERESY 1397
+    setFreeTempo(req.free_tempo === true);                // HERESY 1416: a take's own, the draft's, a prompt file's
+    STATE.tempoAsked = TEMPO_FREE.test(String(req.style || "")) && !STYLE_BPM.test(String(req.style || ""));
+    setTimeout(cfgLights, 0);                            // HERESY 1400
     if (typeof req.cfg_scale === "number" && req.cfg_scale >= 0 && round(req.cfg_scale, 4) !== defaultCfg(cot)) {
       $("cfg").value = round(req.cfg_scale, 4);
       $("cfg").dataset.touched = "1";
@@ -2054,7 +2168,7 @@
   // HERESY 1168 (Viktor 07.10.2026, of Open: «О том, что сброшено, Open молчит… да, конечно, это нужно допилить»): what of a
   // prompt file does not come into the form as written is said when it opens. A file that loads «clean» but lost a field, a
   // mode or an adapter on the way lies; each such place says what was there and what the form holds instead.
-  var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "lm_seed", "seed", "cfg_scale", "abc_sampling", "semantic_sampling",
+  var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "lm_seed", "seed", "cfg_scale", "cfg_lyrics", "free_tempo", "abc_sampling", "semantic_sampling",
     "vae", "solver", "sliders", "loras", "plan_only", "semantic_tokens", "semantic_keep", "parent", "duration", "steps",
     "lm_batch_size", "synth_batch_size", "output_format", "mp3_bitrate", "peak_clip", "score_guard", "seconds", "instrumental"];
   var GROUP_NAMES = { abc: "Score planner", semantic: "Music tokens" };
@@ -2769,7 +2883,7 @@
           seconds: 0, format: req.output_format || job.request.format, favorite: false, style: req.style || "",
           lyrics: req.lyrics || "", cot: req.cot || job.request.cot, lm_seed: req.lm_seed, seed: req.seed,
           vae: req.vae || job.request.vae, sliders: req.sliders || [], steps: req.steps || job.request.steps,
-          cfg_scale: typeof req.cfg_scale === "number" ? req.cfg_scale : -1, duration: req.duration,
+          cfg_scale: typeof req.cfg_scale === "number" ? req.cfg_scale : -1, cfg_lyrics: typeof req.cfg_lyrics === "number" ? req.cfg_lyrics : -1, duration: req.duration,
           truncated: false, render_seconds: job.finished ? (job.finished - job.started) / 1000 : 0,
           song: Math.floor(n / variations), variation: n % variations, parent: req.parent || "", has_score: !!req.abc
         };
@@ -3549,6 +3663,13 @@
     var doomed = STATE.jobs.filter(function (j) {
       return j === job || (job.group && j.group === job.group && j.status === "queued");
     });
+    // HERESY 1410 (Viktor 13.10.2026: «Для `Cancel run` добавь диалоговое окно»): asked first, the run named
+    var title = String((job.request && job.request.title) || "").trim();
+    window.HeresyDialog.confirm("Cancel this run?" + (title ? "\n\n\u00ab" + title + "\u00bb" : "") + "\n\nWhat the engine has made of it so far is lost." +
+      (doomed.length > 1 ? "\n\nIts queued versions go with it." : ""), { ok: "Cancel run", cancel: "Keep it running", danger: true })
+      .then(function (ok) { if (ok && isLive(job)) cancelNow(job, doomed); });
+  }
+  function cancelNow(job, doomed) {
     Promise.all(doomed.map(function (j) {
       return post("/job?id=" + encodeURIComponent(j.id) + "&cancel=1").catch(function (error) { toast(error.message, "bad"); });
     })).then(function () {
@@ -4042,7 +4163,10 @@
   // it: the backbone (BF16 only where the card does BF16 in tensor cores and Auto gives it; else Q8_0, or the nearest one that is
   // here), Auto's context and VAE tiles for the studio card's memory or limit, the painter that fits; one window, once per install
   var MACHINE_KEY = "yue2.machineScan", BACKBONES = ["BF16", "Q8_0", "Q6_K", "Q5_K_M"];
-  var PAINTERS = { "krea2-q4": "Krea 2 Muse Q4 (12.6 GB at its peak)", "krea2-q8": "Krea 2 Muse Q8 (17.4 GB at its peak)", sdxl: "SDXL CyberRealistic (14.2 GB at its peak)" };
+  var PAINTERS = { "krea2-q4": "Krea 2 Muse Q4 (12.6 GB at its peak)", "krea2-q8": "Krea 2 Muse Q8 (17.4 GB at its peak)",   // HERESY 1405: SDXL gone
+    // HERESY 1425 (Viktor 13.10.2026: «На RTX3090 я бы однозначно советовал QWEN Image 2512»): by the cards, as Engine → Artwork's first line
+    "qwen2512-q6": "Qwen-Image 2512 Q6 by the cards (about 20 GB at its peak, the text encoder gone from the card by then)",
+    "qwen2512-q4": "Qwen-Image 2512 Q4 by the cards (about 15 GB at its peak, the text encoder gone from the card by then)" };
   function machinePlan(m) {
     var have = (STATE.settings && STATE.settings.models) || [], list = m.cards || [];
     var card = list.filter(function (c) { return c.index === m.studio; })[0] || list[0];
@@ -4079,7 +4203,8 @@
         if (k && k.max_seq !== cur.max_seq) change.max_seq = k.max_seq;
         if (k && k.vae_core !== cur.vae_core) change.vae_core = k.vae_core;
         if (k) store(PRESET_KEY, "auto");
-        if (plan.painter) { store("yue2.artPainter", plan.painter); if ($("artPainter")) $("artPainter").value = plan.painter; }
+        var pick = /^qwen2512/.test(plan.painter) ? "" : plan.painter;   // HERESY 1425: Qwen's as «By the cards», the lab picks Q6 or Q4
+        if (plan.painter) { store("yue2.artPainter", pick || null); if ($("artPainter")) $("artPainter").value = pick; }
         var done = function () {
           var bits = [tr("the backbone {0}").replace("{0}", plan.model || tr("as it was"))];   // HERESY 1339: each piece a sentence of its own
           if (k) bits.push(k.max_seq ? tr("context {0}").replace("{0}", k.max_seq.toLocaleString(loc())) : tr("the whole context"), tr("VAE tiles {0}").replace("{0}", k.vae_core));
@@ -4511,12 +4636,52 @@
     var lorasText = (take.loras || []).length ? YueLoras.describe(take.loras) : "none";
 
     $("metaGrid").innerHTML =
-      '<div class="meta-row trio">' + column("Song", '<dl class="meta-rows">' + song + "</dl>") +
-        column("Sound", '<dl class="meta-rows">' + sound + "</dl>") + column("Shape", '<dl class="meta-rows">' + shape + "</dl>") + "</div>" +
+      // HERESY 1412 (Viktor: «перенёс бы это в следующую полосу, в один ряд, заголовки над полосами с кружками»): Song | Sound, then Shape a band
+      '<div class="meta-row pair">' + column("Song", '<dl class="meta-rows">' + song + "</dl>") +
+        column("Sound", '<dl class="meta-rows">' + sound + "</dl>") + "</div>" +
+      '<div class="meta-row shape-band">' + column("Shape", '<dl class="meta-rows shape-trio">' + shape + "</dl>") + "</div>" +
       '<div class="meta-row duo">' + addonList("Sliders", slidersText, sliderItems) + addonList("LoRAs", lorasText, loraItems) + "</div>" +
       '<div class="meta-row seeds"><dl class="meta-rows seeds">' + seed("Music", "Music seed", seedText(take.lm_seed)) +
-        seed("Sound", "Sound seed", seedText(take.seed)) + "</dl></div>";
+        seed("Sound", "Sound seed", seedText(take.seed)) + "</dl></div>" + medcard(take, req, field, column);
   }
+  // HERESY 1399 (Viktor 12.10.2026: «У нас в медкарте трека не видны токены музыки и голоса, время на их генерацию. И остальное из
+  // параметров генерации по планировщику партитуры и музыкальным токенам. Добавь это в карту ниже чисел сидов… нужна полная
+  // амбулаторная карта трека»): how the take was made, stage by stage, as the Creator's form has it: the Score Planner's and the Music
+  // Tokens' sampling, the tokens each wrote and their seconds, the guidance as applied, the sound; the engine records the stages from
+  // 2.0.0 on (meta "stages"); an older take shows what its request says and a dash where nothing was kept
+  function medcard(take, req, field, column) {
+    var st = take.stages || null, rq = req || {}, music = st && st.music, score = st && st.score, sound = st && st.sound;
+    var cell = function (label, key, text, cls) { text = String(text); return field(label, escape(text), text, key, cls === undefined ? "num" : cls); };
+    var n = function (v) { return v === undefined || v === null || v === "" ? "\u2014" : String(v); };
+    var secs = function (v) { return typeof v === "number" ? v.toFixed(1) + " s" : "\u2014"; };
+    var smp = function (o, of) {
+      o = o || {};
+      return cell("Temperature", of + " temperature", n(o.temperature)) + cell("Top-p", of + " top-p", n(o.top_p)) + cell("Top-k", of + " top-k", n(o.top_k)) +
+        cell("Repetition", of + " repetition", o.repetition_penalty == null ? "\u2014" : o.repetition_penalty + (o.penalty_window ? " \u00b7 " + o.penalty_window : "")) +
+        cell("Min tokens", of + " min tokens", n(o.min_tokens)) + cell("Max tokens", of + " max tokens", n(o.max_tokens));
+    };
+    var codes = rq.semantic_tokens ? String(rq.semantic_tokens).split(",").length : null;
+    var made = music ? music.tokens + (music.kept ? " + " + music.kept + " " + tr("kept") : "") : codes;
+    var frames = music ? music.tokens + music.kept : codes;
+    var g = music ? music.guidance : (typeof rq.cfg_scale === "number" && rq.cfg_scale >= 0 ? rq.cfg_scale : null);
+    var gl = music ? music.lyrics_guidance : (typeof rq.cfg_lyrics === "number" && rq.cfg_lyrics >= 0 ? rq.cfg_lyrics : null);
+    var plan = take.cot === "off" ? cell("Tokens", "Score tokens", tr("no score"), "") :
+      cell("Tokens", "Score tokens", take.provided_score ? tr("supplied") : n(score ? score.tokens : null)) +
+      cell("Time", "Score time", score && score.tokens ? secs(score.seconds) : "\u2014") + smp(rq.abc_sampling, "Score");
+    var mus = cell("Tokens", "Music tokens", n(made)) + cell("Seconds of music", "Music seconds", frames ? (frames / FRAME_RATE).toFixed(1) + " s" : "\u2014") +
+      cell("Time", "Music time", music && !music.replayed ? secs(music.seconds) : music && music.replayed ? tr("supplied") : "\u2014") +
+      cell("Guidance (CFG)", "Music guidance", g === null ? tr("default") : n(g)) + cell("Lyrics guidance", "Lyrics guidance", gl === null || gl === g ? tr("as Guidance") : n(gl)) +
+      smp(rq.semantic_sampling, "Music") + cell("Length cap", "Length cap", rq.duration ? rq.duration + " s" : "\u2014");
+    var run = cell("Solver", "Solver", n(rq.solver), "") + cell("Steps", "Run steps", n(rq.steps || take.steps)) + cell("Sound stage", "Sound stage", sound ? secs(sound.seconds) : "\u2014") +
+      cell("Decoder", "Decoder", sound ? secs(sound.vae_seconds) : "\u2014") + cell("Whole run", "Whole run", secs(take.render_seconds)) +
+      cell("Realtime", "Realtime", take.render_seconds && take.seconds ? "\u00d7" + (take.seconds / take.render_seconds).toFixed(2) : "\u2014") +
+      cell("Versions \u00d7 variations", "Versions x variations", (rq.lm_batch_size || 1) + " \u00d7 " + (rq.synth_batch_size || 1)) +
+      cell("Score guard", "Score guard", tr(rq.score_guard === false ? "off" : "on"), "") +
+      cell("Free tempo", "Free tempo", rq.free_tempo === true ? tr("on") : "\u2014", "");   // HERESY 1416 («off» is Direct's name in the catalogs)
+    return '<div class="meta-row trio medcard">' + column("Score Planner", '<dl class="meta-rows">' + plan + "</dl>") +
+      column("Music Tokens", '<dl class="meta-rows">' + mus + "</dl>") + column("The run", '<dl class="meta-rows">' + run + "</dl>") + "</div>";
+  }
+
 
   // About (bottom of the Engine page): the add-ons' own pages, from loras/sources.json. Only web links
   // become links; a LoRA split into two files (music half, sound half) appears once.
@@ -5542,7 +5707,7 @@
   // HERESY 1106: the take in the player: the style's first words under the title, a tile of its own colour for a cover
   // (until covers are drawn for takes); one hue from the name, so a take keeps its tile
   // HERESY 1120: artwork for takes (Viktor: «просто иконка в плеере, в карточке и в mp3 файле»). The lab draws it: a
-  // prompt from the take's style and words (Qwen3-4B), the picture (an SDXL finetune). Asked for, never on its own.
+  // prompt from the take's style and words (Qwen3-4B), the picture (Krea 2 Muse; 1405: SDXL gone). Asked for, never on its own.
   STATE.arts = {};
   STATE.artsUnseen = {};            // HERESY 1156: pictures whose named subject the critic did not find: guesses
   STATE.artsCredit = {};            // HERESY 1166: pictures someone made (a photograph from Commons): name -> {text, url}
@@ -5679,7 +5844,8 @@
     });
     // HERESY 1338 (Viktor 10.10.2026: «в Engine не забудь прописать выборы всех генеративных art моделей»): the Qwen painters this
     // machine has, as the Artist room lists them, a cover painted with Lightning; each fine-tune of 2512 its own line
-    var SPEED = { "qwen2512-q4": "about 30 s a picture", "qwen2512-q6": "about 30 s a picture", "qwen2512-fp8": "about 40 s a picture", "qwen21": "about 2 min a picture" };
+    // HERESY 1423: as measured on an RTX 3090 (13.10.2026), the prompt writer and the critic included (Q4 125 s, Q6 131 s)
+    var SPEED = { "qwen2512-q4": "about 125 s a picture", "qwen2512-q6": "about 130 s a picture", "qwen2512-fp8": "about 40 s a picture", "qwen21": "about 2 min a picture" };
     function qwenRows(list) {
       var have = {};
       Array.prototype.forEach.call(sel.options, function (o) { have[o.value] = 1; });
@@ -5701,7 +5867,7 @@
       if (want && sel.value !== want && Array.prototype.some.call(sel.options, function (o) { return o.value === want; })) sel.value = want;
     }
     window.ruachArtPainters = function (list) { qwenRows(list); return Array.prototype.map.call(sel.options, function (o) { return [o.value, o.textContent]; }); };   // for the checks
-    api("/lab/artist/painters").then(function (d) { qwenRows(d && d.painters); }).catch(function () { /* the lab later: Krea and SDXL stand */ });
+    api("/lab/artist/painters").then(function (d) { qwenRows(d && d.painters); }).catch(function () { /* the lab later: Krea stands */ });
   })();
   function drawArt(name, again, quiet) {
     var take = findTake(name), title = take ? displayTitle(take) : name;
@@ -5781,6 +5947,28 @@
       return refreshArts().then(function () { toast("The artwork is off “" + title + "”: kept beside the take, in artwork-removed/"); });
     }).catch(function (e) { toast("Not removed: " + e.message, "bad"); });
   }
+  // HERESY 1425 (Viktor 13.10.2026: «В Библиотекаре на треке с обложкой можно опцию "Скопировать обложку в одноимённые семплы"?»): the
+  // take's cover to its namesakes (as Compare finds them); where some have one of their own, asked: theirs replaced (kept beside each), or
+  // only the ones without
+  function coverToNamesakes(take) {
+    var others = namesakes(take).filter(function (t) { return t.name !== take.name; }), own = others.filter(function (t) { return artUrl(t.name); });
+    if (!others.length) return Promise.resolve(null);
+    var title = displayTitle(take), text = "Copy the cover of \u201c" + title + "\u201d to its namesakes?\n\n" +
+      others.map(function (t) { return "\u00b7 " + displayTitle(t) + (artUrl(t.name) ? " \u2014 " + tr("has a cover of its own") : ""); }).join("\n");
+    var asked = own.length
+      ? window.HeresyDialog.confirm(text + "\n\n" + tr("A cover replaced is kept beside its take, in artwork-removed/."), { ok: "Replace theirs too", alt: own.length < others.length ? "Only the ones without" : undefined })
+      : window.HeresyDialog.confirm(text, { ok: "Copy" });
+    return asked.then(function (yes) {
+      if (!yes) return null;
+      return post("/lab/art/namesakes", { name: take.name, to: others.map(function (t) { return t.name; }), replace: yes === true && own.length > 0 }).then(function (d) {
+        return refreshArts().then(function () {
+          var n = (d.copied || []).length;
+          toast(n ? tr("The cover copied to {0} of its namesakes").replace("{0}", n) : tr("No namesake took the cover"), n ? "good" : "");
+        });
+      }).catch(function (e) { toast(e.message, "bad"); });
+    });
+  }
+  window.ruachCoverToNamesakes = coverToNamesakes;
   window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts, show: showArt, unseen: artUnseen, remove: removeArt, many: artMany };
   // HERESY 1136: the studio's version (VERSION, through the API) in Engine → About
   api("/api/v1").then(function (d) { if (d && d.studio && $("studioVersion")) $("studioVersion").textContent = d.studio; }).catch(function () {});
@@ -6092,20 +6280,21 @@
     var i = secs.indexOf(s), end = i + 1 < secs.length ? secs[i + 1].t : audio.duration, now = -1;
     (s.rows || []).forEach(function (row) { if (row.start <= t + 0.05) now = row.k; });
     var scope = !!(window.HeresyWaveScope && window.HeresyWaveScope.wanted());   // HERESY 1374: the whole spectrogram over the player
-    var key = (STATE.playerTake ? STATE.playerTake.name : "") + ":" + i + ":" + now + (scope ? ":scope" : "");
+    var rpl = STATE.waveReplaced && STATE.playerTake && STATE.waveReplaced.name === STATE.playerTake.name && (STATE.waveReplaced.parts || [STATE.waveReplaced]).some(function (x) { return t >= x.a && t < x.b; });   // HERESY 1414, 1425: each part
+    var key = (STATE.playerTake ? STATE.playerTake.name : "") + ":" + i + ":" + now + (scope ? ":scope" : "") + (binding() ? ":binding" : "") + (rpl ? ":anew" : "");   // HERESY 1409
     if (wavePopEl.dataset.key !== key) {
       wavePopEl.dataset.key = key;
-      var html = '<div class="wave-pop-head"><b translate="no">' + escape(s.name) + "</b><span>" + clock(s.t) + "\u2013" + clock(end) + "</span></div>";
-      // HERESY 1358: a slice of the take's spectrogram over the section (the lab draws it once and keeps it)
-      if (!scope && STATE.playerTake && !STATE.playerTake.session && end - s.t >= 1 && end - s.t <= 600) {
-        html += '<img class="wave-pop-spec" alt="" draggable="false" src="/lab/spectrogram?name=' + encodeURIComponent(STATE.playerTake.name) + "&t0=" + s.t.toFixed(2) + "&t1=" + end.toFixed(2) + '&w=300&h=56" />';
-      }
+      var html = '<div class="wave-pop-head"><b translate="no">' + escape(s.name) + "</b><span>" + clock(s.t) + "\u2013" + clock(end) + "</span></div>" +
+        (rpl ? '<p class="wave-pop-hint wave-pop-anew">' + escape("Sung anew here (Replace a section); the rest is as its parent made it") + "</p>" : "");   // HERESY 1414
+      // HERESY 1398 (Viktor 12.10.2026: «Из обычного режима подсветки тултипом убери спектрограмму. Пусть спектрограмма будет только в полном
+      // режиме на весь трек. Пусть это будет уже в RC7»): 1358's slice of the spectrogram is gone from the card; the scope (1374) shows it whole
       if (s.lines && s.lines.length) {
         html += '<div class="wave-pop-lines" translate="no">' + s.lines.slice(0, 12).map(function (l, k) { return "<p" + (k === now ? ' class="is-now"' : "") + ">" + escape(l) + "</p>"; }).join("") +
           (s.lines.length > 12 ? '<p class="wave-pop-more">\u2026</p>' : "") + "</div>" +
           (s.unheard ? '<p class="wave-pop-hint">' + escape("placed between its neighbours: Whisper did not hear these lines clearly") + "</p>" : "");
       } else if (STATE.waveSections.how === "score") {
-        html += '<p class="wave-pop-hint">' + escape("A mark of the score. Each section of the lyrics with its words: the take's menu, Find the sections by ear") + "</p>";
+        html += '<p class="wave-pop-hint">' + escape(binding() ? "Wait: Whisper is binding the lyrics to the wave; the words come here in a moment"   // HERESY 1409
+          : "A mark of the score. Each section of the lyrics with its words: the take's menu, Find the sections by ear") + "</p>";
       } else {
         html += '<p class="wave-pop-hint">' + escape("no words here") + "</p>";
       }
@@ -6156,6 +6345,16 @@
   // its first line begins, an instrumental one where the one before it ends (a run of them shares the gap up to the next sung one).
   // The score's marks stay for a take never timed; the timing is asked once and the lab keeps it.
   var sectionsTimed = {}, sectionsAsked = {};
+  // HERESY 1409 (Viktor 13.10.2026: «Нужно дописать ПОДОЖДИ! ИДЁТ ПРИВЯЗКА ЛИРИКИ К ВОЛНЕ...»): Whisper binding the take in the player
+  function binding() { return !!(STATE.playerTake && sectionsAsked && sectionsAsked[STATE.playerTake.name] === "running"); }
+  function bindingChanged() { if (wavePopEl) wavePopEl.dataset.key = ""; drawWave(); }
+  window.ruachBinding = function (on, how) {                 // for the checks: the take in the player as being bound, or not
+    if (!STATE.playerTake) return false;
+    if (on) sectionsAsked[STATE.playerTake.name] = "running"; else delete sectionsAsked[STATE.playerTake.name];
+    if (how && STATE.waveSections) STATE.waveSections.how = how;
+    bindingChanged();
+    return binding();
+  };
   function lyricParts(lyrics) {
     var out = [], cur = null;
     String(lyrics || "").split(/\r?\n/).forEach(function (raw) {
@@ -6257,6 +6456,7 @@
   function timeSections(name, force) {                       // the lab's karaoke timing of a take, then its sections from it
     if (sectionsAsked[name] === "running") return Promise.reject(new Error("already being heard"));
     sectionsAsked[name] = "running";
+    bindingChanged();                                        // HERESY 1409: the wave says «wait»
     var poll = function (first) {
       return fetch("/lab/timing?name=" + encodeURIComponent(name) + (first && force ? "&force=1" : ""))
         .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, d: d }; }); })
@@ -6271,12 +6471,16 @@
       var t = findTake(name);
       if (t && STATE.playerTake && STATE.playerTake.name === name) loadWaveSections(t);
       return d;
-    }, function (e) { sectionsAsked[name] = "failed"; throw e; });
+    }, function (e) { sectionsAsked[name] = "failed"; bindingChanged(); throw e; });
   }
   function loadWaveSections(take) {
     var name = take.name;
     STATE.waveSections = { name: name, list: [], how: "" };
+    STATE.waveReplaced = null;                               // HERESY 1414: what of it was sung anew, for the wave's mark
     if (take.session) return;
+    fetch("/lab/section/mark?name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+      if (m && +m.b > +m.a && STATE.playerTake && STATE.playerTake.name === name) { STATE.waveReplaced = { name: name, a: +m.a, b: +m.b, section: m.section || "", parts: m.parts || null }; drawWave(); }
+    }).catch(function () {});
     var tagged = taggedParts(take.lyrics) >= 2;
     var timed = !tagged ? Promise.resolve(null) : sectionsTimed[name] ? Promise.resolve(sectionsTimed[name])
       : fetch("/lab/timing?cached=1&name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
@@ -6301,6 +6505,163 @@
     }).catch(function () {});
   }
   window.ruachEarSections = earSections;                     // HERESY 1315: for the checks
+  // HERESY 1414 (Viktor 13.10.2026: «Межтактная склейка - это правильный ход… Внедряй в полноформатный плеер»): Replace a section.
+  // The cuts lie in rests heard by ear: halfway from the last line before the section to its first line, and up to two seconds after its last
+  // line (no further than halfway to the next): the lab keeps the take's codes outside them, the model sings what is inside anew
+  function sectionCut(list, i) {
+    var s = list[i];
+    if (!s || !s.rows || !s.rows.length || s.resumed || s.rows[0].guessed || s.rows[s.rows.length - 1].guessed) return null;
+    var first = s.rows[0].start, last = s.rows[s.rows.length - 1].end, prev = null, next = null, j;
+    for (j = i - 1; j >= 0 && prev === null; j--) if (list[j].rows && list[j].rows.length && !list[j].resumed) prev = list[j].rows[list[j].rows.length - 1].end;
+    for (j = i + 1; j < list.length && next === null; j++) if (list[j].rows && list[j].rows.length && !list[j].resumed) next = list[j].rows[0].start;
+    var dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : last + 2;
+    var a = prev !== null && prev < first ? (prev + first) / 2 : Math.max(0, first - 0.3);
+    var b = next !== null && next > last ? Math.min(last + 2, (last + next) / 2) : Math.min(last + 2, dur);
+    return b - a >= 2 ? { a: Math.round(a * 100) / 100, b: Math.round(b * 100) / 100 } : null;
+  }
+  function sectionOcc(list, i) {                             // which of the sections of the same name and words it is
+    var key = list[i].name + "\n" + (list[i].lines || []).join("\n"), n = 0;
+    for (var j = 0; j < i; j++) if (!list[j].resumed && list[j].name + "\n" + (list[j].lines || []).join("\n") === key) n++;
+    return n;
+  }
+  function lyricBlock(lyrics, name, lines, occ) {           // the section's own lines in the lyrics, as written (directions and all)
+    var raw = String(lyrics || "").split(/\r?\n/), parts = [], cur = null;
+    raw.forEach(function (l, i) {
+      var tag = l.trim().match(/^\[([^\]]+)\]/);
+      if (tag) { cur = { name: tag[1].trim(), from: i + 1, to: i + 1 }; parts.push(cur); return; }
+      if (!cur) { cur = { name: "", from: 0, to: 0 }; parts.push(cur); }
+      cur.to = i + 1;
+    });
+    var key = (lines || []).join("\n"), seen = 0;
+    for (var k = 0; k < parts.length; k++) {
+      var p = parts[k], sung = raw.slice(p.from, p.to).map(function (l) { return l.trim(); }).filter(function (l) { return l && l.charAt(0) !== "("; }).join("\n");
+      if ((p.name || "Lyrics") === name && sung === key && seen++ === (occ || 0)) {
+        var to = p.to;
+        while (to > p.from && !raw[to - 1].trim()) to--;
+        return { raw: raw, from: p.from, to: to, text: raw.slice(p.from, to).join("\n") };
+      }
+    }
+    return null;
+  }
+  function replaceBlock(lyrics, name, lines, occ, text) {
+    var b = lyricBlock(lyrics, name, lines, occ);
+    if (!b) return null;
+    return b.raw.slice(0, b.from).concat(String(text).replace(/\s+$/, "").split(/\r?\n/), b.raw.slice(b.to)).join("\n");
+  }
+  function syllables(text) {                                 // the vowels sung: tags and (directions) left out
+    return String(text || "").split(/\r?\n/).filter(function (l) { l = l.trim(); return l && l.charAt(0) !== "[" && l.charAt(0) !== "("; })
+      .join(" ").replace(/\([^)]*\)/g, " ").replace(/[^aeiouyаеёиоуыэюяіїєαεηιουωάέήίόύώ]/gi, "").length;
+  }
+  window.ruachSectionCut = sectionCut; window.ruachLyricBlock = lyricBlock; window.ruachReplaceBlock = replaceBlock; window.ruachSyllables = syllables;
+  window.ruachPlayerTake = function () { return STATE.playerTake ? findTake(STATE.playerTake.name) : null; };   // for the checks
+  window.ruachReplacedMark = function (m) { STATE.waveReplaced = m && STATE.playerTake ? Object.assign({ name: STATE.playerTake.name }, m) : null; drawWave(); return STATE.waveReplaced; };
+  // HERESY 1425 (Viktor 13.10.2026: «Может можно добить так, чтобы множественные секции редактировать одним махом?»): the section
+  // clicked, checked, and every other heard clearly beside it to check too; each checked one its own words; sung anew in one go
+  function replaceSection(take, at) {
+    var list = waveSections(), cands = [];
+    list.forEach(function (sec, i) {
+      var cut = sec.resumed ? null : sectionCut(list, i), occ = cut ? sectionOcc(list, i) : 0, blk = cut ? lyricBlock(take.lyrics, sec.name, sec.lines, occ) : null;
+      if (cut && blk) cands.push({ section: sec, cut: cut, occ: occ, text: blk.text, before: syllables(blk.text), on: sec === at.section });
+    });
+    if (!cands.some(function (c) { return c.on; })) return toast("This section cannot be replaced: its lines were not heard clearly", "bad");
+    var back = document.createElement("div");
+    back.className = "hd-back";
+    back.innerHTML = '<div class="hd-box hd-section" role="dialog" aria-modal="true" aria-label="Replace a section"><div class="hd-title">Replace a section</div>' +
+      '<p class="hd-say">Its words as the lyrics have them: change what you will, and it is sung anew from its start to its end; the rest of the take stays as it is.</p>' +
+      '<div class="hd-parts" role="group" aria-label="Sections to sing anew">' + cands.map(function (c, k) {
+        return '<label class="hd-part"><input type="checkbox" data-k="' + k + '"' + (c.on ? " checked" : "") + '> <b translate="no">' + escape(c.section.name) +
+          '</b> <span class="mono" translate="no">' + clock(c.cut.a) + "–" + clock(c.cut.b) + "</span></label>";
+      }).join("") + "</div>" +
+      '<div class="hd-texts"></div>' +
+      '<div class="hd-acts"><select class="hd-versions" aria-label="Versions"><option value="2">Two versions</option><option value="1">One version</option></select>' +
+      '<span class="hd-spacer"></span><button type="button" class="btn ghost small hd-no">Cancel</button><button type="button" class="btn small primary hd-yes">Sing it anew</button></div></div>';
+    document.body.appendChild(back);
+    var texts = back.querySelector(".hd-texts");
+    var weigh = function (c, el) {
+      var now = syllables(c.text), d = now - c.before, much = Math.abs(d) >= Math.max(2, Math.round(c.before * 0.1)), warn = el.querySelector(".hd-warn");
+      warn.hidden = !much;
+      if (!much) return;
+      warn.querySelector(".hd-warn-say").textContent = d > 0 ? "More syllables than the section held: the model sings them faster, or runs over the cut"
+        : "Fewer syllables than the section held: the model may stretch them or leave a rest";
+      warn.querySelector(".hd-warn-n").textContent = (d > 0 ? "+" : "") + d;
+    };
+    var paintTexts = function () {
+      texts.innerHTML = "";
+      cands.forEach(function (c) {
+        if (!c.on) return;
+        var el = document.createElement("div");
+        el.className = "hd-one";
+        el.innerHTML = '<div class="hd-body"><b translate="no">' + escape(c.section.name) + '</b> <span class="mono" translate="no">' + clock(c.cut.a) + "–" + clock(c.cut.b) + "</span></div>" +
+          '<textarea class="hd-text mono" rows="' + (cands.filter(function (x) { return x.on; }).length > 1 ? 5 : 7) + '" spellcheck="false" translate="no"></textarea>' +
+          '<p class="hd-warn" hidden><span class="hd-warn-say"></span> <b class="mono hd-warn-n" translate="no"></b></p>';
+        var box = el.querySelector(".hd-text");
+        box.value = c.text;
+        box.addEventListener("input", function () { c.text = box.value; weigh(c, el); });
+        texts.appendChild(el);
+        weigh(c, el);
+      });
+      back.querySelector(".hd-yes").disabled = !cands.some(function (c) { return c.on; });
+    };
+    back.querySelector(".hd-parts").addEventListener("change", function (e) {
+      var c = cands[+e.target.dataset.k];
+      if (c) { c.on = e.target.checked; paintTexts(); }
+    });
+    paintTexts();
+    var done = function (go) {
+      document.removeEventListener("keydown", key, true);
+      back.classList.add("is-leaving");
+      setTimeout(function () { back.remove(); }, 120);
+      if (!go) return;
+      var on = cands.filter(function (c) { return c.on; }), lyrics = take.lyrics;
+      // the last first: a section's words changed never move the place of one before it
+      on.slice().sort(function (x, y) { return y.cut.a - x.cut.a; }).forEach(function (c) {
+        if (lyrics !== null) lyrics = replaceBlock(lyrics, c.section.name, c.section.lines, c.occ, c.text);
+      });
+      if (!on.length || lyrics === null) return toast("This section cannot be replaced: its lines were not heard clearly", "bad");
+      var parts = on.map(function (c) { return { a: c.cut.a, b: c.cut.b, section: c.section.name }; });
+      fetch("/lab/section", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: take.name, a: parts[0].a, b: parts[0].b, section: parts[0].section, parts: parts, lyrics: lyrics,
+          versions: +back.querySelector(".hd-versions").value }) })
+        .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; }); })
+        .then(function (d) { toast("Sung anew: its versions come as takes of their own, children of this one"); pollJobs(); if (d && d.id) followSection(d.id); },
+              function (e) { toast(e.message, "bad"); });
+    };
+    var key = function (e) {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(false); }
+      else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.stopPropagation(); done(true); }
+    };
+    document.addEventListener("keydown", key, true);
+    back.addEventListener("mousedown", function (e) { if (e.target === back) done(false); });
+    back.querySelector(".hd-yes").addEventListener("click", function () { done(true); });
+    back.querySelector(".hd-no").addEventListener("click", function () { done(false); });
+    requestAnimationFrame(function () { back.classList.add("is-on"); var b = back.querySelector(".hd-text"); if (b) b.focus(); });
+  }
+  // HERESY 1425 (Viktor 13.10.2026: «При генерации семплов с заменённой секции в Takes не появляются 1/2 новых трека, и в Библиотеке в
+  // воркспейсе тоже только по F5»): the lab's job followed to its takes; each one landed (in its workspaces too) reads the Takes and the
+  // Librarian again. The jobs still running when the page opens are followed as well
+  var sectionFollowed = {};
+  function followSection(id) {
+    if (sectionFollowed[id]) return;
+    sectionFollowed[id] = { seen: {}, misses: 0 };
+    var f = sectionFollowed[id];
+    var tick = function () {
+      fetch("/lab/section/job?id=" + encodeURIComponent(id), { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (st) {
+        if (!st) { if (++f.misses < 5) setTimeout(tick, 6000); return; }
+        f.misses = 0;
+        var landed = (st.versions || []).filter(function (v) { return v.take && !f.seen[v.take]; });
+        landed.forEach(function (v) { f.seen[v.take] = 1; });
+        if (landed.length) {
+          refreshLibrary().catch(function () {});
+          window.dispatchEvent(new Event("ruach-catalog"));
+        }
+        if (st.status === "queued" || st.status === "running") setTimeout(tick, 3000);
+      }).catch(function () { if (++f.misses < 5) setTimeout(tick, 6000); });
+    };
+    setTimeout(tick, 3000);
+  }
+  window.ruachFollowSection = followSection;
+  fetch("/lab/section/live", { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) { ((d && d.live) || []).forEach(function (j) { if (j.id) followSection(j.id); }); }).catch(function () {});
   window.ruachLyricParts = lyricParts;
   function sectionAt(t) {
     var at = null;
@@ -6321,6 +6682,12 @@
     var t = STATE.playerTake && findTake(STATE.playerTake.name);
     if (!t || t.session) return;
     event.preventDefault();
+    STATE.menuSection = null;                              // HERESY 1414: the section under the pointer, heard by ear, for Replace this section
+    if (event.currentTarget === $("wave") && STATE.waveSections && STATE.waveSections.how === "ear" && isFinite(audio.duration) && audio.duration > 0) {
+      var r = $("wave").getBoundingClientRect(), at = Math.max(0, Math.min(1, (event.clientX - r.left) / r.width)) * audio.duration;
+      var secs = waveSections(), sec = sectionAt(at), i = secs.indexOf(sec), cut = i >= 0 ? sectionCut(secs, i) : null;
+      if (cut) STATE.menuSection = { name: t.name, section: sec, cut: cut, occ: sectionOcc(secs, i) };
+    }
     takeMenu(t.name, event.clientX, event.clientY);
   }
   $("wave").addEventListener("contextmenu", playerTakeMenu);
@@ -6512,6 +6879,23 @@
         lastEnd = sx + 2 + lw;
       });
     }
+    // HERESY 1414: a section sung anew (Replace a section): its stretch tinted, edged, «anew» at its top
+    var rp = STATE.waveReplaced;
+    if (rp && STATE.playerTake && rp.name === STATE.playerTake.name && isFinite(audio.duration) && audio.duration > 0) {
+      (rp.parts || [rp]).forEach(function (x) {                // HERESY 1425: the sections of one go, each its own band
+        var rx0 = Math.round(x.a / audio.duration * width), rx1 = Math.round(x.b / audio.duration * width);
+        ctx.fillStyle = themeRGBA("amber", 0.14); ctx.fillRect(rx0, 2, Math.max(1, rx1 - rx0), height - 4);
+        ctx.fillStyle = themeRGBA("amber", 0.85); ctx.fillRect(rx0, 2, 1, height - 4); ctx.fillRect(Math.max(rx0, rx1 - 1), 2, 1, height - 4);
+        ctx.font = '600 9px "IBM Plex Mono", monospace'; ctx.fillText(tr("anew"), rx0 + 4, 11);
+      });
+    }
+    // HERESY 1409: the lyrics on their way to the wave, in its top right corner (the pointer's own label is drawn over it)
+    if (binding()) {
+      ctx.font = '600 11px "IBM Plex Mono", monospace';
+      var wl = tr("Wait: binding the lyrics to the wave…"), ww = ctx.measureText(wl).width + 10, wx = Math.max(2, width - ww - 4);
+      ctx.fillStyle = themeRGBA("panel", 0.92); ctx.fillRect(wx, 2, ww, 16);
+      ctx.fillStyle = themeRGBA("amber", 1); ctx.fillText(wl, wx + 5, 14);
+    }
     if (progress > 0) {
       ctx.fillStyle = themeRGBA("ink", 1);
       ctx.fillRect(progress * width - 0.5, 4, 1.5, height - 8);
@@ -6698,10 +7082,10 @@
         : (job.status === "queued" ? "queued — click to watch" : "generating now — click to watch");
       return '<article class="take is-running-row" data-run="' + escape(job.id) + '" tabindex="0">' +
         '<button type="button" class="take-del take-cancel" data-cancel-run="' + escape(job.id) + '" title="Cancel run" aria-label="Cancel run">✕</button>' +   // HERESY 1167
-        '<div class="take-title">' + escape(job.title) + "</div>" +
+        // HERESY 1421: the run's state at the tail of its title's row
+        '<div class="take-head"><div class="take-title">' + escape(job.title) + '</div><span class="tag full">' + (job.status === "queued" ? "queued" : "running") + "</span></div>" +
         '<div class="take-style">' + escape(what) + "</div>" +
-        '<div class="take-foot"><span class="tag full">' + (job.status === "queued" ? "queued" : "running") + "</span>" +
-        (stage ? "<span>" + escape(stage.label) + "</span>" : "") + "</div></article>";
+        '<div class="take-foot">' + (stage ? "<span>" + escape(stage.label) + "</span>" : "") + "</div></article>";
     }).join("");
 
     if (!shown.length) {
@@ -6714,7 +7098,7 @@
     list.innerHTML = running + shown.map(function (take) {
       var active = STATE.take && STATE.take.name === take.name ? " is-active" : "";
       var title = displayTitle(take), tags = '<span class="tag ' + escape(take.cot || "off") + '">' + escape(take.cot || "?") + "</span>";
-      if (take.vae && take.vae !== STATE.defaultVae) tags += '<span class="tag vae">' + escape(vaeLabel(take.vae)) + "</span>";
+      var vaeTag = take.vae && take.vae !== STATE.defaultVae ? '<span class="tag vae">' + escape(vaeLabel(take.vae)) + "</span>" : "";   // HERESY 1421: in the title's row
       if (take.song > 0 && !/ · v\d+/.test(title)) tags += '<span class="tag">v' + (take.song + 1) + "</span>";
       if (take.variation > 0 && !/ · sound \d+/.test(title)) tags += '<span class="tag">sound ' + (take.variation + 1) + "</span>";
       if (take.format === "mp3") tags += '<span class="tag">mp3</span>';
@@ -6722,18 +7106,24 @@
       var extras = HC && HC.cardExtras && !take.session ? HC.cardExtras(take.name) : "";   // HERESY 1082; 1167: the star in it
       return '<article class="take' + active + (extras ? " has-rate" : "") + (take.favorite ? " is-fav" : "") + (HC && HC.isHidden(take.name) ? " is-hidden-take" : "") + (HC && HC.isFresh && HC.isFresh(take.name) ? " is-fresh" : "") +
         (window.HeresyRegen && window.HeresyRegen.has(take.name) ? " is-regenerating" : "") + '" data-name="' + escape(take.name) + '" tabindex="0">' +
+        // HERESY 1419 (Viktor: «Что это за кнопка, частично покрытая mp3?»): the hover tools in one row, left to right as they are seen,
+        // each as wide as its word (Refine in Russian is wider than the fixed place it had, and «mp3» lay over it)
+        '<span class="take-row-tools">' +
+        (!convertible(take) ? "" : '<a class="take-mp3" data-dl="1" href="' + escape(mp3Url(take)) + '" download="' + escape(fileTitle(take)) +
+        '.mp3" title="Download MP3 (' + mp3Rate() + ' kbps)" aria-label="Download MP3">mp3</a>') +
+        (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '">Refine</button>') +
+        '<a class="take-dl" data-dl="1" href="' + escape(downloadUrl(take)) + '" download="' + escape(audioFileName(take)) +
+        '" title="Download ' + formatExt(take.format).toUpperCase() + '" aria-label="Download">⤓</a>' +
         (extras ? "" : '<button type="button" class="take-fav" data-fav="' + escape(take.name) + '" aria-pressed="' + (take.favorite ? "true" : "false") +
         '" aria-label="Favourite">' + (take.favorite ? "★" : "☆") + "</button>") +
         (HC && HC.isProtected && HC.isProtected(take.name) ? "" :   // HERESY 1368: a protected take has no ✕
         '<button type="button" class="take-del" data-del="' + escape(take.name) + '" title="Delete take" aria-label="Delete take">✕</button>') +
-        (take.session ? "" : '<button type="button" class="take-post" data-post="' + escape(take.name) + '">Refine</button>') +
-        '<a class="take-dl" data-dl="1" href="' + escape(downloadUrl(take)) + '" download="' + escape(audioFileName(take)) +
-        '" title="Download ' + formatExt(take.format).toUpperCase() + '" aria-label="Download">⤓</a>' +
-        (!convertible(take) ? "" : '<a class="take-mp3" data-dl="1" href="' + escape(mp3Url(take)) + '" download="' + escape(fileTitle(take)) +
-        '.mp3" title="Download MP3 (' + mp3Rate() + ' kbps)" aria-label="Download MP3">mp3</a>') +
-        '<div class="take-title">' + escape(title) + "</div>" +
+        "</span>" +
+        // HERESY 1421 (Viktor: «со второй строки лучше перенести в хвост первой ИДЁТ/ИГРАЕТ и VAE. Так во второй появится больше места
+        // для имени воркспейса»): playing and the decoder at the tail of the title's row
+        '<div class="take-head"><div class="take-title">' + escape(title) + '</div><span class="tag playing-tag">playing</span>' + vaeTag + "</div>" +
         '<div class="take-style">' + escape(take.style || "") + "</div>" +
-        '<div class="take-foot"><span class="tag playing-tag">playing</span>' + tags + "<span>" + clock(take.seconds) + "</span><span>" +
+        '<div class="take-foot">' + tags + "<span>" + clock(take.seconds) + "</span><span>" +
         ago(take.created) + "</span></div>" + extras + "</article>";   // HERESY 1082
     }).join("");
     markPlaying();
@@ -7935,6 +8325,8 @@
       title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value,
       lm_seed: $("lmSeed").value.trim(), seed: $("soundSeed").value.trim(), cot: currentCot(),
       cfg_scale: $("cfg").dataset.touched && $("cfg").value.trim() !== "" ? parseFloat($("cfg").value) : -1,
+      cfg_lyrics: $("cfgLyrics").value.trim() !== "" ? parseFloat($("cfgLyrics").value) : -1,   // HERESY 1397
+      free_tempo: freeTempoOn(),                                                                     // HERESY 1416
       steps: parseInt($("odeSteps").value, 10), duration: parseFloat($("maxLength").value),
       solver: $("odeSolver").value,
       synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
@@ -8123,7 +8515,7 @@
   /* ---------------------------------------------- HERESY 1032: saved styles and profiles */
   // A profile is every knob but the texts and seeds, written out in full (defaults too), so it
   // means the same on a server whose defaults moved. Applying one keeps the texts, seeds and codes.
-  var SETUP_KEYS = ["cot", "duration", "cfg_scale", "steps", "solver", "vae", "sliders", "loras", "output_format",
+  var SETUP_KEYS = ["cot", "duration", "cfg_scale", "cfg_lyrics", "steps", "solver", "vae", "sliders", "loras", "output_format",
                     "mp3_bitrate", "peak_clip", "synth_batch_size", "lm_batch_size"];
   function captureSetup() {
     var b = buildRequest(false, false, true), out = {};
@@ -8229,7 +8621,10 @@
     // HERESY 1294: a card's VRAM limit saved: Auto's knobs follow the studio card's at once; rc4's «auto:N» becomes its limit, once
     limits: function () {
       paintPresetSizes();
-      if (recall(PRESET_KEY) !== "auto" || !STATE.settings || STATE.settingsDirty) return;
+      // HERESY 1425 (Viktor 13.10.2026: «Всё можно и нужно двигать ползунками в multi-GPU блоке»): the preset is hidden, so a limit
+      // saved is the word: the knobs follow the studio card's limit, the ones moved by hand before included
+      if (!/^auto/.test(recall(PRESET_KEY) || "")) store(PRESET_KEY, "auto");
+      if (!STATE.settings || STATE.settingsDirty) return;
       var gib = gpuGib(), a = autoKnobs(gib);
       if (!a) return;
       if (a.max_seq === STATE.settings.max_seq && a.vae_core === STATE.settings.vae_core) { $("memPreset").value = "auto"; return paintComputeHint(); }
@@ -8335,6 +8730,8 @@
   /* ---------------------------------------------- HERESY 1048: the right-click menu on a take */
   function takeMenu(name, x, y) {
     var take = findTake(name), HC = window.HeresyCollection, HW = window.HeresyWriter;
+    var menuAt = STATE.menuSection && STATE.menuSection.name === name ? STATE.menuSection : null;   // HERESY 1414
+    STATE.menuSection = null;
     if (!take || !window.HeresyMenu) return;
     var row = HC && HC.row ? HC.row(name) : null, r = HC ? HC.rating(name) : 0;
     var now = STATE.playerTake && STATE.playerTake.name === name && isPlaying();
@@ -8388,6 +8785,10 @@
           timeSections(name, !!sectionsTimed[name]).then(function (d) { toast("The sections found by ear (" + Math.round((d.heard || 0) * 100) + " % of the lines heard)"); },
             function (e) { toast("The sections were not found: " + e.message, "bad"); });
         } } : null,
+      // HERESY 1415: its namesakes in one player, two to four of them
+      !take.session && !bulk && namesakes(take).length > 1 ? { icon: "\u2261", label: "Compare with its namesakes\u2026", hint: namesakes(take).length + " in all", action: function () { compareNamesakes(take); } } : null,
+      // HERESY 1414: from the wave's own menu over a section heard by ear: its words changed, sung anew, the rest of the take kept
+      menuAt && !take.session && !bulk ? { icon: "\u21bb", label: "Replace this section\u2026", hint: menuAt.section.name, action: function () { replaceSection(take, menuAt); } } : null,
       { sep: true },
       HC && bulk && HC.rateMany ? { icon: "👍", label: "Like " + bulk.length, hint: "all liked: taken back", checked: bulkRows.every(function (x) { return x.rating > 0; }), action: function () { HC.rateMany(bulk, 1).then(changed); } }
         : HC ? { icon: "👍", label: "Like", checked: r > 0, action: function () { HC.rate(name, r > 0 ? 0 : 1).then(changed); } } : null,
@@ -8421,6 +8822,8 @@
       // HERESY 1156 (Viktor: «В меню мыши Remove current Artwork»): taken off the take, kept beside it
       take.session ? null : bulk ? (bulkArt.length ? { icon: "✕", label: "Remove artwork from " + bulkArt.length + "…", hint: "kept beside each take", action: function () { removeArtMany(bulkArt); } } : null)
         : !artUrl(name) ? null : { icon: "✕", label: "Remove current artwork", hint: "kept beside the take", action: function () { removeArt(name); } },
+      take.session || bulk || !artUrl(name) || namesakes(take).length < 2 ? null   // HERESY 1425
+        : { icon: "⧉", label: "Copy the cover to its namesakes…", hint: "the takes of the same name", action: function () { coverToNamesakes(take); } },
       { sep: true },
       HC ? { icon: "▦", label: bulk ? "Workspaces of " + bulk.length : "Workspaces", items: ws.map(function (w) {
         var whom = bulk || [name], on = bulk ? bulkRows.length > 0 && bulkRows.every(function (x) { return (x.workspaces || []).indexOf(w) >= 0; }) : inWs.indexOf(w) >= 0;
@@ -8744,6 +9147,30 @@
     lines[0] = first.join(", ");
     return lines.join("\n");
   }
+  // HERESY 1416: free tempo, asked by the Style's own words unless it names a BPM
+  var TEMPO_FREE = /\b(?:rubato|non[- ]?linear|free[- ]?(?:tempo|time)|tempo[- ]?free|ad[- ]?lib(?:itum)?|out of time|unmetered|free rhythm)\b/i;
+  var STYLE_BPM = /\b\d{2,3}\s*bpm\b|\bbpm\s*[:=]?\s*\d{2,3}\b/i;
+  function freeTempoOn() { var b = $("freeTempo"); return !!b && b.getAttribute("aria-pressed") === "true"; }
+  function setFreeTempo(on) {
+    var b = $("freeTempo");
+    if (!b) return;
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.classList.toggle("is-on", !!on);
+    paintTempoWarn();
+    if (typeof queueDraft === "function") queueDraft();
+  }
+  function paintTempoWarn() {
+    var w = $("styleTempoWarn");
+    if (w) w.hidden = !(freeTempoOn() && STYLE_BPM.test($("style").value));
+  }
+  function tempoAsk(typed) {                                  // on by itself when the Style comes to ask for it (not again once turned off)
+    var v = $("style").value, asks = TEMPO_FREE.test(v) && !STYLE_BPM.test(v);
+    if (typed && asks && !STATE.tempoAsked && !freeTempoOn()) { setFreeTempo(true); toast("Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo"); }
+    STATE.tempoAsked = asks;
+    paintTempoWarn();
+  }
+  window.ruachFreeTempo = function (on) { if (on !== undefined) setFreeTempo(!!on); return freeTempoOn(); };   // for the checks
+  window.ruachBuildRequest = function () { return buildRequest(false, false, true); };   // for the checks: what Generate would send
   function setVoice(g) {
     var box = $("style"), v = box.value, out = voiceStyle(v, g), ok = false;
     if (out === v) return;
@@ -8775,6 +9202,21 @@
     end.insertBefore(wrap, end.firstChild);
     $("style").addEventListener("input", paintVoice);
     paintVoice();
+    // HERESY 1416 (Viktor 13.10.2026: «реальный ахуй, снятые BPM оковы. Реп стал живым, не следуя привязке к музыкальному такту»): Free tempo,
+    // between the Style's name and the voice's toggles
+    var ft = document.createElement("button");
+    // HERESY 1419 (Viktor: «приведи её в тот же дизайн, что и кнопки "Номера строк", "Орфография"»): a lyrics' toggle (.lyr-tog), amber when pressed
+    ft.type = "button"; ft.id = "freeTempo"; ft.className = "lyr-tog free-tempo"; ft.setAttribute("aria-pressed", "false");
+    ft.textContent = "Free tempo";
+    ft.dataset.tip = "Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.";
+    ft.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); setFreeTempo(!freeTempoOn()); });   // the head does not fold
+    label.insertBefore(ft, end);
+    var warn = document.createElement("p");
+    warn.className = "row-hint style-tempo-warn"; warn.id = "styleTempoWarn"; warn.hidden = true;
+    warn.textContent = "Want non-linearity or rubato? Remove the BPM from your style!";
+    $("styleMeter").insertAdjacentElement("afterend", warn);
+    $("style").addEventListener("input", function () { tempoAsk(true); });
+    tempoAsk(false);
   })();
 
   /* ---------------------------------------------- HERESY 1014: three workspaces */
@@ -9310,7 +9752,12 @@
     },
     pauseMain: function () { audio.pause(); },
     // HERESY 1311: the take's family for «Compare all»: the same music in other takes, the disliked left out
-    family: function (name) { return compareFamily(name); }
+    family: function (name) { return compareFamily(name); },
+    // HERESY 1425: the compare popup's thumbs and star, the Librarian's own
+    rating: function (name) { var HC = window.HeresyCollection; return HC && HC.rating ? HC.rating(name) : 0; },
+    rate: function (name, v) { var HC = window.HeresyCollection; return HC && HC.rate ? HC.rate(name, v).then(function (x) { paintLibrary(); return x; }) : null; },
+    favorite: function (name) { var t = findTake(name); return !!(t && t.favorite); },
+    toggleFavorite: function (name) { var t = findTake(name); return t ? toggleFavorite(t) : null; }
   });
   function compareFamily(name) {
     var take = findTake(name), HC = window.HeresyCollection;
@@ -9322,6 +9769,40 @@
       });
   }
   window.ruachFamily = compareFamily;                  // HERESY 1311: for the checks
+  // HERESY 1415 (Viktor 13.10.2026: «опцию сравнения одноимённых треков? Выбор до четырёх. Одноимённость берём по основному соответствию имени
+  // трека с игнорированием суффикса типа версии»): a title's base, past what the studio and its user hang on it: what follows « · » (sound 2,
+  // a section anew, a run's own words), (edit) and the like, a version (v4.0.10), «take 2», «#3»; its case and the dots and dashes it ends with
+  function baseTitle(text) {
+    var s = String(text || "").toLowerCase().split(" \u00b7 ")[0];
+    s = s.replace(/\([^)]*\)/g, " ").replace(/\bv\s*\d+(?:[._]\d+)*\b/g, " ")
+      .replace(/\b(?:take|version|ver|sound|edit|copy|remix|mix|final|draft|alt)\b\.?\s*\d*/g, " ").replace(/[#\u2116]\s*\d+/g, " ");
+    return s.replace(/\s+/g, " ").replace(/[\s.,:;_\-\u2013\u2014|]+$/g, "").trim();
+  }
+  function namesakes(take) {                                 // its namesakes, the newest first, itself among them
+    var base = baseTitle(displayTitle(take));
+    if (!base) return [take];
+    return STATE.takes.filter(function (t) { return !t.session && baseTitle(displayTitle(t)) === base; })
+      .sort(function (a, b) { return String(b.created || b.name).localeCompare(String(a.created || a.name)); });
+  }
+  function compareTakes(names) {                             // two to four takes in the Refiner's compare player
+    var list = names.map(findTake).filter(Boolean);
+    if (list.length < 2) return toast("Tick two at least, four at most", "bad");
+    if (list.length > 4) { toast("Four at most: the first four"); list = list.slice(0, 4); }
+    if (!window.HeresyDerived || !window.HeresyDerived.compareList) return;
+    window.HeresyDerived.compareList(baseTitle(displayTitle(list[0])) || displayTitle(list[0]), list.map(function (t) {
+      return { label: displayTitle(t), path: "take:" + t.name, seconds: t.seconds, url: "/library/listen?name=" + encodeURIComponent(t.name), take: t.name,
+               group: t.created ? String(t.created).slice(0, 16).replace("T", " ") : "" };   // HERESY 1425: the thumbs and star its own buttons now
+    }), 0);
+  }
+  function compareNamesakes(take) {
+    var all = namesakes(take);
+    window.HeresyDialog.pick("Compare with its namesakes\n\nTwo to four, played in one player from the same second: a click (or its number) switches.",
+      [{ label: "Its namesakes", items: all.map(function (t) {
+        return { value: t.name, label: displayTitle(t), checked: t.name === take.name, note: (t.seconds ? clock(t.seconds) + " \u00b7 " : "") + String(t.created || "").slice(0, 16).replace("T", " ") };
+      }) }], { ok: "Compare", count: function (v) { return v.length; } })
+      .then(function (r) { if (r && r.values) compareTakes(r.values); });
+  }
+  window.HeresyCompare = { takes: compareTakes, namesakes: function (name) { var t = findTake(name); return t ? namesakes(t).map(function (x) { return x.name; }) : []; }, base: baseTitle };
   window.ruachRefreshLibrary = refreshLibrary;
   if (window.HeresySpectrum) {
     window.HeresySpectrum.init({

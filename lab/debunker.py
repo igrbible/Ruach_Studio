@@ -595,6 +595,48 @@ def convert_432hz(input_path, output_path, sample_rate=48000):
     return ok
 
 
+# ⭐ HERESY 1425 (Виктор 13.10.2026: «Добавление винила, микропотрескиваний и т.п. ... можно встроить как опцию в один из финальных
+# шагов. Это как звуковой эффект, который по любому добавит свой слой в финальный выхлоп»): ОКРАСКА — слой шума под музыкой.
+# Кирпич: цвет шума ffmpeg (anoisesrc), его фильтры, плотность (velvet — редкие импульсы, то есть треск), уровень к опорному в дБ
+# и RMS кирпича при a=1 (замер 13.10.2026, 20 с) — по нему кирпич приводится к опорному. Опорный = громкость музыки (LUFS) + under_db.
+# Каждый канал — свой сид: стерео не моно-шум посередине. Сид случайный, если не задан: два прогона — два разных слоя.
+COLOUR = {
+    "tape": [("pink", "highpass=f=1200,lowpass=f=14000", "", 0, -20.1)],                 # шипение ленты
+    "room": [("brown", "highpass=f=30,lowpass=f=500", "", 0, -15.7)],                     # воздух комнаты
+    "vinyl": [("pink", "bandpass=f=2500:width_type=o:w=2", "", 0, -21.9),               # поверхность пластинки
+              ("velvet", "highpass=f=800,lowpass=f=7000", ":density=0.0003", -12, -40.7),   # мелкий треск
+              ("velvet", "lowpass=f=3000", ":density=0.00002", -20, -56.4),                # редкие щелчки
+              ("brown", "lowpass=f=40", "", -6, -21.5)],                                    # рокот проигрывателя
+}
+
+
+def apply_colour(input_path, output_path, kind, under_db=-36.0, sample_rate=48000, seed=None):
+    """Окраска: слой шума kind (tape | room | vinyl) на under_db дБ под громкостью музыки."""
+    import random
+    if kind not in COLOUR:
+        print(_cvet(f"  ✗ Окраска: нет такой ({kind})", K))
+        return False
+    lufs = measure_lufs(input_path)
+    if lufs is None:
+        print(_cvet("  ✗ Окраска: громкость не замерилась", K))
+        return False
+    ref, seed = lufs + float(under_db), int(seed) if seed is not None else random.randrange(1, 2 ** 30)
+    print(f"  Окраска «{kind}»: {under_db:+.0f} дБ под музыкой ({lufs:.1f} LUFS), сид {seed}...")
+    graph, labels = [], []
+    for i, (col, chain, extra, rel, rms) in enumerate(COLOUR[kind]):
+        gain = ref + rel - rms
+        for ch in (0, 1):
+            graph.append(f"anoisesrc=c={col}:a=1:r={sample_rate}:seed={seed + 2 * i + ch}{extra},{chain},volume={gain:.2f}dB[n{i}{ch}]")
+        graph.append(f"[n{i}0][n{i}1]join=inputs=2:channel_layout=stereo[n{i}]")
+        labels.append(f"[n{i}]")
+    graph.append(f"[0:a]aformat=channel_layouts=stereo[m];[m]{''.join(labels)}amix=inputs={1 + len(labels)}:duration=first:normalize=0[out]")
+    ok = run_ffmpeg(["-i", input_path, "-filter_complex", ";".join(graph), "-map", "[out]", "-ar", str(sample_rate),
+                     "-c:a", "pcm_s24le", output_path], "Окраска")
+    if ok:
+        print(_cvet("  ✓ Окраска", Z))
+    return ok
+
+
 def apply_loudnorm(input_path, output_path, target_lufs=-14, target_tp=-1, lra=11, sample_rate=48000):
     """⭐ v6.1 (YuE2 OS, 30.09.2026): ДВА ПРОХОДА и частота на выходе.
 
@@ -997,6 +1039,7 @@ def nastrojki_po_umolchaniyu():
         "cleanup": True, "fade": 0.0, "trim_start": 0.0, "trim_end": 0.0,
         "deess": False, "deess_mode": "subtle", "deess_engine": "ffmpeg",
         "hz432": True, "skip_loudnorm": False, "lufs": -14.0, "tp": -1.0,
+        "colour": "", "colour_db": -36.0, "colour_seed": None,   # HERESY 1425: окраска, "" — без неё
         "sr": 48000, "formats": ["wav", "flac", "mp3"],
     }
 
@@ -1094,6 +1137,14 @@ def gnat(n):
         if not convert_432hz(current, hz, n["sr"]):
             return False
         current = hz
+
+    if n.get("colour"):                                  # HERESY 1425: слой под музыкой, до громкости — она меряет уже с ним
+        step += 1
+        print(_cvet(f"\n[{step}] Окраска", B))
+        col = os.path.join(output_dir, f"{basename}_04b_colour.wav")
+        if not apply_colour(current, col, n["colour"], n.get("colour_db", -36.0), n["sr"], n.get("colour_seed")):
+            return False
+        current = col
 
     if not n["skip_loudnorm"]:
         step += 1

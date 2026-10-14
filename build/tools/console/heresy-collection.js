@@ -515,6 +515,7 @@
     hb.setAttribute("aria-label", hid ? "Show again" : "Hide");
     hb.dataset.tip = hid ? "Show again: back in the lists" : "Out of the lists, not deleted: Hidden on the left shows them again";
     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
+    $("collCompare").disabled = n < 2 || n > 4;                // HERESY 1415: two to four
   }
 
   function paintTrash() {
@@ -566,7 +567,7 @@
     var list = artItems(), b = state.artBin, nsel = Object.keys(state.asel).length;
     $("collWhere").innerHTML = " \u203a <span>Trash (Art)</span>";
     $("collNote").innerHTML = b ? "<span>" + list.length + " in the art's trash</span> · <span>" + ((+b.bytes || 0) / 1e9).toFixed(2) + " GB</span>" : "";
-    $("collGrid").className = "coll-grid list";
+    $("collGrid").className = "coll-grid artbin";      // HERESY 1406: tiles (the takes' trash stays a list)
     $("collEmpty").textContent = nsel ? "Delete " + nsel + " for good" : "Wipe out the art's trash";
     $("collEmpty").disabled = !list.some(function (it) { return !it.frozen; });
     $("collRestore").disabled = !nsel;
@@ -595,7 +596,7 @@
         if (it.c.prompt) mine = it.c.prompt;
       }
       meta.push((it.bytes / 1e6).toFixed(1) + " MB");
-      return '<article class="coll-card coll-art' + (sel ? " is-sel" : "") + (it.frozen ? " is-frozen" : "") + '" data-akind="' + it.kind + '">' +
+      return '<article class="coll-card coll-binart' + (sel ? " is-sel" : "") + (it.frozen ? " is-frozen" : "") + '" data-akind="' + it.kind + '">' +
         '<label class="coll-check"><input type="checkbox" data-asel="' + esc(key) + '"' + (sel ? " checked" : "") + (it.frozen ? ' disabled title="Frozen: its takes are heard, never changed"' : "") + " /></label>" +
         (src ? '<img class="coll-art-pic" alt="" loading="lazy" draggable="false" src="' + esc(src) + '" />' : '<span class="coll-art-pic"></span>') +
         '<div class="coll-body"><div class="coll-title" translate="no">' + esc(title) + '</div><div class="coll-meta">' + meta.map(function (m) { return "<span>" + esc(m) + "</span>"; }).join(" · ") +
@@ -973,6 +974,7 @@
     $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
     // HERESY 1167: the disliked shown or not: the rooms' takes column's ⋯ («The disliked ones too»), one setting with this
     window.addEventListener("ruach-disliked", function () { paint(); });
+    window.addEventListener("ruach-catalog", function () { if (state.loaded) load(); });   // HERESY 1425: a take landed from the lab
     // HERESY 1169 · 1241: the filters' window, from the button at the end of the search row
     state.logic = recall(LOGIC_KEY) || "and";
     $("collFilterBtn").addEventListener("click", function () { openFilter(); });
@@ -1062,6 +1064,7 @@
         state.sel = {};
       });
     });
+    $("collCompare").addEventListener("click", function () { if (window.HeresyCompare) window.HeresyCompare.takes(names()); });   // HERESY 1415
     $("collWsMove").addEventListener("change", function () {   // HERESY 1050: into one workspace, out of this one
       var w = this.value; this.value = "";
       if (!w) return;
@@ -1077,6 +1080,8 @@
       if (tcb) { if (tcb.checked) state.tsel[tcb.dataset.tsel] = 1; else delete state.tsel[tcb.dataset.tsel]; return paint(); }
       var acb = e.target.closest("[data-asel]");         // HERESY 1337: the art's trash
       if (acb) { if (acb.checked) state.asel[acb.dataset.asel] = 1; else delete state.asel[acb.dataset.asel]; return paint(); }
+      var atile = e.target.closest(".coll-binart");      // HERESY 1406: a click on a tile of the art's trash ticks it
+      if (atile && !e.target.closest("label, input")) { var abox = atile.querySelector("input[data-asel]:not(:disabled)"); if (abox) abox.click(); return; }
       if (band.ate) { band.ate = false; return; }             // the click that ends a rubber band is not a click
       var artb = e.target.closest("[data-art]");             // HERESY 1155: ‹ › walk the pictures of the cards shown
       if (artb && window.HeresyArt && window.HeresyArt.show) {

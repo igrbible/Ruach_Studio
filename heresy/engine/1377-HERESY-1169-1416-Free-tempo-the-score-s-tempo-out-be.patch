@@ -1,0 +1,495 @@
+From d4061a48f09c63d29491b73fbdab078e87546feb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 13 Oct 2026 13:47:39 -0600
+Subject: [PATCH 1377/1383] =?UTF-8?q?HERESY=201169=20=C2=B7=201416:=20Free?=
+ =?UTF-8?q?=20tempo=20=E2=80=94=20the=20score's=20tempo=20out=20before=20t?=
+ =?UTF-8?q?he=20music;=20a=20switch=20in=20the=20Style's=20head?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 13.10.2026: «Мой Буратино реп без Q ожил»; on КРИК: «Теперь лирика не зависит от такта». The engine: free_tempo takes the Q: lines and [Q:…] fields out of the score after it is planned or supplied, before the music stage and before a plan asked alone is returned. The page: «Free tempo» between the Style's name and the voice's toggles, sent with a score; on by itself when the Style asks for rubato or non-linear without a BPM; «Want non-linearity or rubato? Remove the BPM from your style!» under the box when a BPM stands there; the draft, a take's settings and a prompt file keep it; the medcard says it. A score without its tempo reads as native (the nominal 120, «free tempo» in the summary). Eleven catalogs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/pipeline.h                  | 47 +++++++++++++++++++++++++++++++++
+ src/request.cpp                 |  7 +++++
+ src/request.h                   |  1 +
+ tools/console/app.css           |  4 +++
+ tools/console/app.js            | 47 +++++++++++++++++++++++++++++++--
+ tools/console/heresy-abc.js     |  8 +++---
+ tools/console/heresy-i18n-be.js |  4 +++
+ tools/console/heresy-i18n-de.js |  4 +++
+ tools/console/heresy-i18n-el.js |  4 +++
+ tools/console/heresy-i18n-es.js |  4 +++
+ tools/console/heresy-i18n-fr.js |  4 +++
+ tools/console/heresy-i18n-it.js |  4 +++
+ tools/console/heresy-i18n-ja.js |  4 +++
+ tools/console/heresy-i18n-pt.js |  4 +++
+ tools/console/heresy-i18n-ru.js |  4 +++
+ tools/console/heresy-i18n-uk.js |  4 +++
+ tools/console/heresy-i18n-zh.js |  4 +++
+ tools/console/heresy-score.js   |  2 +-
+ tools/console/instrumental.js   |  5 ++--
+ 19 files changed, 157 insertions(+), 8 deletions(-)
+
+diff --git a/src/pipeline.h b/src/pipeline.h
+index 3f67610..168bad5 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -335,6 +335,44 @@ struct KvScope {
+ // track song * M + variation. Song i draws its tokens with lm_seed + i in
+ // KV set i, variation j draws its noise with seed + j, and the M variations
+ // of a song solve in one NAR graph over the set the AR left complete.
++// HERESY 1416: a score without its tempo: the lines that begin with Q: go, and the inline [Q:…] fields within the others
++static std::string yue2_score_without_tempo(const std::string & abc, int * dropped) {
++    std::string out;
++    int         n   = 0;
++    size_t      pos = 0;
++    while (pos <= abc.size()) {
++        size_t e = abc.find('\n', pos);
++        if (e == std::string::npos) {
++            e = abc.size();
++        }
++        std::string line = abc.substr(pos, e - pos);
++        pos              = e + 1;
++        if (line.rfind("Q:", 0) == 0) {
++            n++;
++        } else {
++            for (size_t q = line.find("[Q:"); q != std::string::npos; q = line.find("[Q:")) {
++                size_t z = line.find(']', q);
++                if (z == std::string::npos) {
++                    break;
++                }
++                line.erase(q, z - q + 1);
++                n++;
++            }
++            out += line;
++            if (e < abc.size()) {
++                out += '\n';
++            }
++        }
++        if (e >= abc.size()) {
++            break;
++        }
++    }
++    if (dropped) {
++        *dropped = n;
++    }
++    return out;
++}
++
+ // HERESY 1087: why a score the AR wrote is not a score, or "" when it is one. Calibrated on the studio's own
+ // takes (02.10.2026): every good score has M:, L: and K: with clean values (M:2/4, L:1/16, Q:1/4=71, K:Dm)
+ // and never two colons in a row; the broken ones have no K: line, garbage for Q:, colons in runs of 3 to 13.
+@@ -533,6 +571,15 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+         }
+     }
+ 
++    // HERESY 1416: free tempo: the music stage reads the score without its tempo and a plan asked alone is returned without it (Viktor: «чтобы руками не чистить»)
++    if (has_score && r.free_tempo) {
++        for (int i = 0; i < B; i++) {
++            int dropped = 0;
++            scores[i]   = yue2_score_without_tempo(scores[i], &dropped);
++            abc_ids[i]  = encode(scores[i]);
++            fprintf(stderr, "[Score] Free tempo: song %d, %d tempo mark%s taken out\n", i, dropped, dropped == 1 ? "" : "s");
++        }
++    }
+     // Local addition: the score alone, no music and no audio
+     if (r.plan_only) {
+         songs->assign((size_t) B, {});
+diff --git a/src/request.cpp b/src/request.cpp
+index 833d754..21a2e91 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -34,6 +34,7 @@ void request_init(Yue2Request * r) {
+     r->peak_clip        = 10;
+     r->cfg_scale        = -1.0f;
+     r->cfg_lyrics       = -1.0f;   // HERESY 1397
++    r->free_tempo       = false;   // HERESY 1416
+     r->semantic_tokens  = "";
+     r->semantic_keep    = "";
+     r->end_at           = 0.0f;
+@@ -193,6 +194,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+     if ((v = yyjson_obj_get(obj, "cfg_lyrics")) && yyjson_is_num(v)) {   // HERESY 1397
+         r->cfg_lyrics = (float) yyjson_get_num(v);
+     }
++    if ((v = yyjson_obj_get(obj, "free_tempo")) && yyjson_is_bool(v)) {   // HERESY 1416
++        r->free_tempo = yyjson_get_bool(v);
++    }
+     if ((v = yyjson_obj_get(obj, "output_format")) && yyjson_is_str(v)) {
+         r->output_format = yy_str(v);
+     }
+@@ -374,6 +378,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+     if (!sparse || r->cfg_lyrics != d.cfg_lyrics) {   // HERESY 1397
+         yyjson_mut_obj_add_real(doc, root, "cfg_lyrics", r->cfg_lyrics);
+     }
++    if (r->free_tempo) {   // HERESY 1416: written only when used
++        yyjson_mut_obj_add_bool(doc, root, "free_tempo", true);
++    }
+     if (!sparse || r->output_format != d.output_format) {
+         yyjson_mut_obj_add_strncpy(doc, root, "output_format", r->output_format.c_str(), r->output_format.size());
+     }
+diff --git a/src/request.h b/src/request.h
+index cbad520..48da0b2 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -96,6 +96,7 @@ struct Yue2Request {
+     // and 1.0 otherwise), and a scale of exactly 1.0 keeps a single branch.
+     float cfg_scale;  // -1
+     float cfg_lyrics;  // HERESY 1397: the lyrics' own guidance in the music stage; -1: as cfg_scale
++    bool  free_tempo;  // HERESY 1416: the music stage reads the score without its tempo (Q: lines and [Q:…] fields)
+ 
+     // output normalization percentile control, the peak being the
+     // 1 - peak_clip / 1e6 percentile of the absolute signal
+diff --git a/tools/console/app.css b/tools/console/app.css
+index c065e5d..423bb3b 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5468,3 +5468,7 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
+ .hd-section .hd-acts { display: flex; align-items: center; gap: 8px; }
+ .hd-section .hd-spacer { flex: 1; }
+ .wave-pop-anew { color: var(--amber); }
++/* HERESY 1416: Free tempo in the Style's head, lit when on; the honest word about a BPM under the box */
++.free-tempo { margin-left: 8px; padding: 1px 8px; min-height: 0; font-size: 10.5px; letter-spacing: .06em; text-transform: none; border: 1px solid var(--line-a); border-radius: 999px; }
++.free-tempo.is-on { color: var(--amber); border-color: var(--amber); background: color-mix(in oklab, var(--amber) 10%, transparent); }
++.style-tempo-warn { margin: 2px 0 0; color: var(--amber); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 36d25ae..92b23b3 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1740,6 +1740,7 @@
+       if (!isFinite(lyr) || lyr < 0) throw new Error("Lyrics guidance must be a number, 0 or more");
+       body.cfg_lyrics = lyr;
+     }
++    if (freeTempoOn() && cot !== "off") body.free_tempo = true;   // HERESY 1416: with a score only
+     var abcSampling = samplingOverrides("abc"), semanticSampling = samplingOverrides("semantic");
+     if (Object.keys(abcSampling).length) body.abc_sampling = abcSampling;
+     if (Object.keys(semanticSampling).length) body.semantic_sampling = semanticSampling;
+@@ -2052,6 +2053,8 @@
+     document.querySelector('input[name="cot"][value="' + cot + '"]').checked = true;
+     paintPlanBtn();   // HERESY 1169 · 1249 (Viktor: «Кнопка … в режиме FULL неактивна»): a mode set here (the draft on load, Retake, Reuse, a prompt file) moved no change event, and the button kept the Direct it was first painted in
+     $("cfgLyrics").value = typeof req.cfg_lyrics === "number" && req.cfg_lyrics >= 0 ? round(req.cfg_lyrics, 4) : "";   // HERESY 1397
++    setFreeTempo(req.free_tempo === true);                // HERESY 1416: a take's own, the draft's, a prompt file's
++    STATE.tempoAsked = TEMPO_FREE.test(String(req.style || "")) && !STYLE_BPM.test(String(req.style || ""));
+     setTimeout(cfgLights, 0);                            // HERESY 1400
+     if (typeof req.cfg_scale === "number" && req.cfg_scale >= 0 && round(req.cfg_scale, 4) !== defaultCfg(cot)) {
+       $("cfg").value = round(req.cfg_scale, 4);
+@@ -2105,7 +2108,7 @@
+   // HERESY 1168 (Viktor 07.10.2026, of Open: «О том, что сброшено, Open молчит… да, конечно, это нужно допилить»): what of a
+   // prompt file does not come into the form as written is said when it opens. A file that loads «clean» but lost a field, a
+   // mode or an adapter on the way lies; each such place says what was there and what the form holds instead.
+-  var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "lm_seed", "seed", "cfg_scale", "cfg_lyrics", "abc_sampling", "semantic_sampling",
++  var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "lm_seed", "seed", "cfg_scale", "cfg_lyrics", "free_tempo", "abc_sampling", "semantic_sampling",
+     "vae", "solver", "sliders", "loras", "plan_only", "semantic_tokens", "semantic_keep", "parent", "duration", "steps",
+     "lm_batch_size", "synth_batch_size", "output_format", "mp3_bitrate", "peak_clip", "score_guard", "seconds", "instrumental"];
+   var GROUP_NAMES = { abc: "Score planner", semantic: "Music tokens" };
+@@ -4609,7 +4612,8 @@
+       cell("Decoder", "Decoder", sound ? secs(sound.vae_seconds) : "\u2014") + cell("Whole run", "Whole run", secs(take.render_seconds)) +
+       cell("Realtime", "Realtime", take.render_seconds && take.seconds ? "\u00d7" + (take.seconds / take.render_seconds).toFixed(2) : "\u2014") +
+       cell("Versions \u00d7 variations", "Versions x variations", (rq.lm_batch_size || 1) + " \u00d7 " + (rq.synth_batch_size || 1)) +
+-      cell("Score guard", "Score guard", tr(rq.score_guard === false ? "off" : "on"), "");
++      cell("Score guard", "Score guard", tr(rq.score_guard === false ? "off" : "on"), "") +
++      cell("Free tempo", "Free tempo", rq.free_tempo === true ? tr("on") : "\u2014", "");   // HERESY 1416 («off» is Direct's name in the catalogs)
+     return '<div class="meta-row trio medcard">' + column("Score Planner", '<dl class="meta-rows">' + plan + "</dl>") +
+       column("Music Tokens", '<dl class="meta-rows">' + mus + "</dl>") + column("The run", '<dl class="meta-rows">' + run + "</dl>") + "</div>";
+   }
+@@ -8167,6 +8171,7 @@
+       lm_seed: $("lmSeed").value.trim(), seed: $("soundSeed").value.trim(), cot: currentCot(),
+       cfg_scale: $("cfg").dataset.touched && $("cfg").value.trim() !== "" ? parseFloat($("cfg").value) : -1,
+       cfg_lyrics: $("cfgLyrics").value.trim() !== "" ? parseFloat($("cfgLyrics").value) : -1,   // HERESY 1397
++      free_tempo: freeTempoOn(),                                                                     // HERESY 1416
+       steps: parseInt($("odeSteps").value, 10), duration: parseFloat($("maxLength").value),
+       solver: $("odeSolver").value,
+       synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
+@@ -8982,6 +8987,30 @@
+     lines[0] = first.join(", ");
+     return lines.join("\n");
+   }
++  // HERESY 1416: free tempo, asked by the Style's own words unless it names a BPM
++  var TEMPO_FREE = /\b(?:rubato|non[- ]?linear|free[- ]?(?:tempo|time)|tempo[- ]?free|ad[- ]?lib(?:itum)?|out of time|unmetered|free rhythm)\b/i;
++  var STYLE_BPM = /\b\d{2,3}\s*bpm\b|\bbpm\s*[:=]?\s*\d{2,3}\b/i;
++  function freeTempoOn() { var b = $("freeTempo"); return !!b && b.getAttribute("aria-pressed") === "true"; }
++  function setFreeTempo(on) {
++    var b = $("freeTempo");
++    if (!b) return;
++    b.setAttribute("aria-pressed", on ? "true" : "false");
++    b.classList.toggle("is-on", !!on);
++    paintTempoWarn();
++    if (typeof queueDraft === "function") queueDraft();
++  }
++  function paintTempoWarn() {
++    var w = $("styleTempoWarn");
++    if (w) w.hidden = !(freeTempoOn() && STYLE_BPM.test($("style").value));
++  }
++  function tempoAsk(typed) {                                  // on by itself when the Style comes to ask for it (not again once turned off)
++    var v = $("style").value, asks = TEMPO_FREE.test(v) && !STYLE_BPM.test(v);
++    if (typed && asks && !STATE.tempoAsked && !freeTempoOn()) { setFreeTempo(true); toast("Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo"); }
++    STATE.tempoAsked = asks;
++    paintTempoWarn();
++  }
++  window.ruachFreeTempo = function (on) { if (on !== undefined) setFreeTempo(!!on); return freeTempoOn(); };   // for the checks
++  window.ruachBuildRequest = function () { return buildRequest(false, false, true); };   // for the checks: what Generate would send
+   function setVoice(g) {
+     var box = $("style"), v = box.value, out = voiceStyle(v, g), ok = false;
+     if (out === v) return;
+@@ -9013,6 +9042,20 @@
+     end.insertBefore(wrap, end.firstChild);
+     $("style").addEventListener("input", paintVoice);
+     paintVoice();
++    // HERESY 1416 (Viktor 13.10.2026: «реальный ахуй, снятые BPM оковы. Реп стал живым, не следуя привязке к музыкальному такту»): Free tempo,
++    // between the Style's name and the voice's toggles
++    var ft = document.createElement("button");
++    ft.type = "button"; ft.id = "freeTempo"; ft.className = "btn ghost small free-tempo"; ft.setAttribute("aria-pressed", "false");
++    ft.textContent = "Free tempo";
++    ft.dataset.tip = "Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.";
++    ft.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); setFreeTempo(!freeTempoOn()); });   // the head does not fold
++    label.insertBefore(ft, end);
++    var warn = document.createElement("p");
++    warn.className = "row-hint style-tempo-warn"; warn.id = "styleTempoWarn"; warn.hidden = true;
++    warn.textContent = "Want non-linearity or rubato? Remove the BPM from your style!";
++    $("styleMeter").insertAdjacentElement("afterend", warn);
++    $("style").addEventListener("input", function () { tempoAsk(true); });
++    tempoAsk(false);
+   })();
+ 
+   /* ---------------------------------------------- HERESY 1014: three workspaces */
+diff --git a/tools/console/heresy-abc.js b/tools/console/heresy-abc.js
+index 895da2a..89ebb0e 100644
+--- a/tools/console/heresy-abc.js
++++ b/tools/console/heresy-abc.js
+@@ -126,8 +126,10 @@
+     var denominator = +um[1];
+     fail(denominator > 1024 || (denominator & (denominator - 1)) !== 0, "Unsupported L: denominator");
+     var unit = F(1, denominator);
++    // HERESY 1416: free tempo (an empty Q: or none) is native too, read at the nominal 120 (MIDI's own) and marked free
++    if (lines[4].indexOf("Q:") !== 0) lines.splice(4, 0, "Q:");
+     var tm = /^Q:1\/4=([1-9][0-9]*)$/.exec(lines[4]);
+-    fail(!tm, "Expected integer quarter-note tempo Q:1/4=<BPM>");
++    fail(!tm && lines[4] !== "Q:", "Expected integer quarter-note tempo Q:1/4=<BPM>");
+     fail(lines[5] !== 'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"' ||
+          lines[6] !== 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "Preserve native Vocal and Ins voice definitions");
+     fail(lines[7].indexOf("K:") !== 0, "Missing header K:");
+@@ -180,14 +182,14 @@
+     fail(grid(voices.Vocal) !== grid(voices.Ins), "Voice meter/time grids differ");
+     var keyline = function (v) { return v.keys.map(function (k) { return str(k[0]) + ":" + k[1]; }).join(","); };
+     fail(keyline(voices.Vocal) !== keyline(voices.Ins), "Voice key-change timelines differ");
+-    return { text: text, unit: unit, bpm: +tm[1], key: key, meter: meter, voices: voices, sections: sections };
++    return { text: text, unit: unit, bpm: tm ? +tm[1] : 120, free: !tm, key: key, meter: meter, voices: voices, sections: sections };
+   }
+ 
+   // ---- the numbers a person wants: per voice, and the ratio
+   var NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+   function noteName(p) { return NAMES[p % 12] + (Math.floor(p / 12) - 1); }
+   function report(score) {
+-    var total = score.voices.Vocal.time, secs = num(total) * 60 / score.bpm, out = { bpm: score.bpm, key: score.key,
++    var total = score.voices.Vocal.time, secs = num(total) * 60 / score.bpm, out = { bpm: score.bpm, free: !!score.free, key: score.key,
+       meter: score.meter.join("/"), quarters: num(total), seconds: secs, bars: score.voices.Vocal.bars.length, sections: score.sections.length, voices: {} };
+     VOICES.forEach(function (name) {
+       var v = score.voices[name], sounding = v.notes.reduce(function (s, n) { return s + num(n[2]); }, 0);
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 0546bd3..56d8262 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5067,6 +5067,10 @@ RuachI18n.add("be", {
+ "Realtime": "Хутчэй за рэальны",
+ "Versions × variations": "Версіі × варыяцыі",
+ "Score guard": "Вартавы партытуры",
++"Free tempo": "Вольны тэмп",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Вольны тэмп: музыка робіцца па партытуры без яе тэмпавых пазнак (Q:), і голас з рытмам дыхаюць самі: рубата, нелінейнасць. Партытура ў форме іх захоўвае; у Direct партытуры няма. Уключаецца сам, калі Стыль просіць rubato ці non-linear і не называе BPM.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "Хочаш нелінейнасць ці рубата — прыбяры BPM са свайго стылю!",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Вольны тэмп уключаны: твой Стыль просіць рубата ці нелінейнасць, і музыка робіцца без тэмпу партытуры",
+ "The run": "Прагон",
+ "no score": "без партытуры",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "У межах Віктара для музыкі, ад 1.0 да 4.0: 4.0 — самая яркая, 3.0 — амаль так жа, 1.6 — сваё студыі",
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 283f936..a638e17 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -4950,6 +4950,10 @@ RuachI18n.add("de", {
+ "Realtime": "Echtzeit",
+ "Versions × variations": "Versionen × Variationen",
+ "Score guard": "Partiturwächter",
++"Free tempo": "Freies Tempo",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Freies Tempo: die Musik entsteht aus der Partitur ohne ihre Tempoangaben (Q:), so atmen Stimme und Puls von selbst: Rubato, nichtlinear. Die Partitur im Formular behält sie; Direct hat keine Partitur. Schaltet sich selbst ein, wenn der Stil Rubato oder non-linear verlangt und kein BPM nennt.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "Nichtlinear oder Rubato gewünscht? Nimm das BPM aus deinem Stil!",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Freies Tempo an: dein Stil verlangt Rubato oder Nichtlinearität, also entsteht die Musik ohne das Tempo der Partitur",
+ "The run": "Der Lauf",
+ "no score": "ohne Partitur",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "In Viktors Bereich für die Musik, 1.0 bis 4.0: 4.0 am hellsten, 3.0 fast ebenso, 1.6 das des Studios",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index f35575d..42ac6d3 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5066,6 +5066,10 @@ RuachI18n.add("el", {
+ "Realtime": "Ταχύτητα",
+ "Versions × variations": "Εκδοχές × παραλλαγές",
+ "Score guard": "Φύλακας παρτιτούρας",
++"Free tempo": "Ελεύθερο τέμπο",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Ελεύθερο τέμπο: η μουσική φτιάχνεται από την παρτιτούρα χωρίς τα σημάδια τέμπο της (Q:), κι έτσι η φωνή και ο ρυθμός αναπνέουν μόνοι τους: rubato, μη γραμμικά. Η παρτιτούρα της φόρμας τα κρατά· το Direct δεν έχει παρτιτούρα. Ανάβει μόνο του όταν το Στυλ ζητά rubato ή non-linear χωρίς BPM.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "Θέλεις μη γραμμικότητα ή rubato; Βγάλε το BPM από το στυλ σου!",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Ελεύθερο τέμπο: το Στυλ σου ζητά rubato ή μη γραμμικό, κι η μουσική φτιάχνεται χωρίς το τέμπο της παρτιτούρας",
+ "The run": "Η εκτέλεση",
+ "no score": "χωρίς παρτιτούρα",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Μέσα στο εύρος του Βίκτορ για τη μουσική, 1.0 ως 4.0: το 4.0 το πιο λαμπερό, το 3.0 σχεδόν το ίδιο, το 1.6 του στούντιο",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 9a9fe0c..bb61d1b 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5066,6 +5066,10 @@ RuachI18n.add("es", {
+ "Realtime": "Tiempo real",
+ "Versions × variations": "Versiones × variaciones",
+ "Score guard": "Guardián de la partitura",
++"Free tempo": "Tempo libre",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Tempo libre: la música se hace con la partitura sin sus marcas de tempo (Q:), así la voz y el pulso respiran solos: rubato, no lineal. La partitura del formulario las conserva; Direct no tiene partitura. Se enciende solo cuando el Estilo pide rubato o non-linear y no nombra BPM.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "¿Quieres no linealidad o rubato? ¡Quita el BPM de tu estilo!",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Tempo libre activado: tu Estilo pide rubato o no lineal, así que la música se hace sin el tempo de la partitura",
+ "The run": "La ejecución",
+ "no score": "sin partitura",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Dentro del rango de Viktor para la música, de 1.0 a 4.0: 4.0 lo más brillante, 3.0 casi igual, 1.6 el del estudio",
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index c59e302..bf59e18 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -4950,6 +4950,10 @@ RuachI18n.add("fr", {
+ "Realtime": "Temps réel",
+ "Versions × variations": "Versions × variations",
+ "Score guard": "Garde de la partition",
++"Free tempo": "Tempo libre",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Tempo libre : la musique est faite d'après la partition sans ses marques de tempo (Q:), si bien que la voix et le pouls respirent d'eux-mêmes : rubato, non linéaire. La partition du formulaire les garde ; Direct n'a pas de partition. S'allume seul quand le Style demande rubato ou non-linear sans nommer de BPM.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "Tu veux du non-linéaire ou du rubato ? Retire le BPM de ton style !",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Tempo libre activé : ton Style demande du rubato ou du non-linéaire, la musique est faite sans le tempo de la partition",
+ "The run": "L'exécution",
+ "no score": "sans partition",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Dans la plage de Viktor pour la musique, de 1.0 à 4.0 : 4.0 le plus brillant, 3.0 presque autant, 1.6 celui du studio",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 29ffcf8..51adbdc 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5066,6 +5066,10 @@ RuachI18n.add("it", {
+ "Realtime": "Tempo reale",
+ "Versions × variations": "Versioni × variazioni",
+ "Score guard": "Guardiano della partitura",
++"Free tempo": "Tempo libero",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Tempo libero: la musica si fa dalla partitura senza i suoi segni di tempo (Q:), così voce e ritmo respirano da soli: rubato, non lineare. La partitura nel modulo li conserva; Direct non ha partitura. Si accende da solo quando lo Stile chiede rubato o non-linear e non nomina BPM.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "Vuoi non linearità o rubato? Togli il BPM dal tuo stile!",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Tempo libero acceso: il tuo Stile chiede rubato o non lineare, e la musica si fa senza il tempo della partitura",
+ "The run": "L'esecuzione",
+ "no score": "senza partitura",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Nell'intervallo di Viktor per la musica, da 1.0 a 4.0: 4.0 il più brillante, 3.0 quasi uguale, 1.6 quello dello studio",
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 001e041..cc85478 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -4950,6 +4950,10 @@ RuachI18n.add("ja", {
+ "Realtime": "実時間比",
+ "Versions × variations": "バージョン × バリエーション",
+ "Score guard": "スコアの番人",
++"Free tempo": "自由テンポ",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "自由テンポ：テンポ記号（Q:）を除いたスコアから音楽を作るので、声とビートが自然に呼吸します（ルバート、非線形）。フォームのスコアは記号を保ちます。Direct にはスコアがありません。スタイルが rubato や non-linear を求め、BPM を書いていないときは自動でオンになります。",
++"Want non-linearity or rubato? Remove the BPM from your style!": "非線形やルバートがほしいなら、スタイルから BPM を外して！",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "自由テンポをオン：スタイルがルバートや非線形を求めているので、スコアのテンポなしで音楽を作ります",
+ "The run": "実行",
+ "no score": "スコアなし",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "ヴィクトルの音楽の範囲（1.0〜4.0）内：4.0 が最も鮮やか、3.0 もほぼ同じ、1.6 はスタジオの既定",
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index d117942..28e0082 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -4950,6 +4950,10 @@ RuachI18n.add("pt", {
+ "Realtime": "Tempo real",
+ "Versions × variations": "Versões × variações",
+ "Score guard": "Guarda da partitura",
++"Free tempo": "Andamento livre",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Andamento livre: a música é feita pela partitura sem as marcas de andamento (Q:), e a voz e o pulso respiram sozinhos: rubato, não linear. A partitura do formulário as mantém; o Direct não tem partitura. Liga sozinho quando o Estilo pede rubato ou non-linear e não cita BPM.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "Quer não linearidade ou rubato? Tire o BPM do seu estilo!",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Andamento livre ligado: seu Estilo pede rubato ou não linear, e a música é feita sem o andamento da partitura",
+ "The run": "A execução",
+ "no score": "sem partitura",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Dentro da faixa de Viktor para a música, de 1.0 a 4.0: 4.0 o mais brilhante, 3.0 quase igual, 1.6 o do estúdio",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index afacbed..6a04c4b 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5072,6 +5072,10 @@ RuachI18n.add("ru", {
+ "Realtime": "Быстрее реального",
+ "Versions × variations": "Версии × вариации",
+ "Score guard": "Страж партитуры",
++"Free tempo": "Свободный темп",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Свободный темп: музыка делается по партитуре без её темповых меток (Q:), и голос с ритмом дышат сами: рубато, нелинейность. Партитура в форме их сохраняет; в Direct партитуры нет. Включается сам, когда Стиль просит rubato или non-linear и не называет BPM.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "Хочешь нелинейность или рубато — удали BPM из своего стиля!",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Свободный темп включён: твой Стиль просит рубато или нелинейность, и музыка делается без темпа партитуры",
+ "The run": "Прогон",
+ "no score": "без партитуры",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "В пределах Виктора для музыки, от 1.0 до 4.0: 4.0 — самая яркая, 3.0 — почти так же, 1.6 — своё студии",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 5215d18..9d14172 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5067,6 +5067,10 @@ RuachI18n.add("uk", {
+ "Realtime": "Швидше за реальний",
+ "Versions × variations": "Версії × варіації",
+ "Score guard": "Сторож партитури",
++"Free tempo": "Вільний темп",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "Вільний темп: музика робиться за партитурою без її темпових позначок (Q:), і голос із ритмом дихають самі: рубато, нелінійність. Партитура у формі їх зберігає; у Direct партитури немає. Вмикається сам, коли Стиль просить rubato чи non-linear і не називає BPM.",
++"Want non-linearity or rubato? Remove the BPM from your style!": "Хочеш нелінійність чи рубато — прибери BPM зі свого стилю!",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "Вільний темп увімкнено: твій Стиль просить рубато чи нелінійність, і музика робиться без темпу партитури",
+ "The run": "Прогін",
+ "no score": "без партитури",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "У межах Віктора для музики, від 1.0 до 4.0: 4.0 — найяскравіша, 3.0 — майже так само, 1.6 — своє студії",
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 32b7e77..2a7e95c 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -4950,6 +4950,10 @@ RuachI18n.add("zh", {
+ "Realtime": "实时倍数",
+ "Versions × variations": "版本 × 变体",
+ "Score guard": "乐谱守卫",
++"Free tempo": "自由速度",
++"Free tempo: the music is made from the score without its tempo marks (Q:), so the voice and the beat breathe on their own: rubato, non-linear. The score in the form keeps them; Direct has no score to free. On by itself when the Style asks for rubato or non-linear and names no BPM.": "自由速度：用去掉速度标记（Q:）的乐谱来生成音乐，人声和节拍会自己呼吸：自由速度（rubato）、非线性。表单里的乐谱保留这些标记；Direct 模式没有乐谱。当风格要求 rubato 或 non-linear 且没写 BPM 时会自动开启。",
++"Want non-linearity or rubato? Remove the BPM from your style!": "想要非线性或 rubato？把 BPM 从你的风格里删掉！",
++"Free tempo on: your Style asks for rubato or non-linear, so the music is made without the score's tempo": "已开启自由速度：你的风格要求 rubato 或非线性，音乐将不按乐谱的速度生成",
+ "The run": "运行",
+ "no score": "无乐谱",
+ "Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "在维克多的音乐范围内（1.0 到 4.0）：4.0 最明亮，3.0 几乎一样，1.6 是工作室默认",
+diff --git a/tools/console/heresy-score.js b/tools/console/heresy-score.js
+index c0e8dcb..174ad60 100644
+--- a/tools/console/heresy-score.js
++++ b/tools/console/heresy-score.js
+@@ -33,7 +33,7 @@
+       return "<tr><td>" + name + '</td><td class="mono">' + x.notes + '</td><td class="mono">' + Math.round(x.perMinute) + '</td><td class="mono">' +
+         esc(x.low) + "–" + esc(x.high) + '</td><td class="mono">' + pct(x.sounding) + "</td>" + (name === "Vocal" ? '<td class="mono">' + x.chords + "</td>" : "<td></td>") + "</tr>";
+     };
+-    host.innerHTML = '<p class="sc-ok">✓ Native YuE2 score · ' + esc(r.key) + " · " + r.bpm + " BPM · " + r.meter + " · " + r.bars +
++    host.innerHTML = '<p class="sc-ok">✓ Native YuE2 score · ' + esc(r.key) + " · " + (r.free ? "free tempo" : r.bpm + " BPM") + " · " + r.meter + " · " + r.bars +   // HERESY 1416
+       " bars · " + clock(r.seconds) + " · " + r.sections + " sections</p>" +
+       '<table class="sc-table"><tr><th></th><th>notes</th><th>a minute</th><th>range</th><th>sounding</th><th>chords</th></tr>' +
+       row("Vocal", v) + row("Ins", i) + "</table>" +
+diff --git a/tools/console/instrumental.js b/tools/console/instrumental.js
+index 63e6e63..1b0c776 100644
+--- a/tools/console/instrumental.js
++++ b/tools/console/instrumental.js
+@@ -140,8 +140,9 @@
+     var denominator = parseInt(unitMatch[1], 10);
+     fail(denominator > 1024 || !isPow2(denominator), "Unsupported L: denominator");
+     var unit = 1 / denominator;
++    if (lines[4].indexOf("Q:") !== 0) lines.splice(4, 0, "Q:");   // HERESY 1416: free tempo, read at the nominal 120
+     var tempoMatch = /^Q:1\/4=([1-9][0-9]*)$/.exec(lines[4]);
+-    fail(!tempoMatch, "Expected integer quarter-note tempo Q:1/4=<BPM>");
++    fail(!tempoMatch && lines[4] !== "Q:", "Expected integer quarter-note tempo Q:1/4=<BPM>");
+     fail(lines[5] !== 'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"' ||
+          lines[6] !== 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "Preserve native Vocal and Ins voice definitions");
+     fail(lines[7].indexOf("K:") !== 0, "Missing header K:");
+@@ -200,7 +201,7 @@
+     fail(voices.Ins.chords.length !== 0, "Native chord symbols belong in Vocal, not Ins");
+     fail(JSON.stringify(voices.Vocal.bars) !== JSON.stringify(voices.Ins.bars), "Voice meter/time grids differ");
+     fail(JSON.stringify(voices.Vocal.keys) !== JSON.stringify(voices.Ins.keys), "Voice key-change timelines differ");
+-    return { text: text, unit: unit, bpm: parseInt(tempoMatch[1], 10), voices: voices, musicLines: musicLines, lines: lines };
++    return { text: text, unit: unit, bpm: tempoMatch ? parseInt(tempoMatch[1], 10) : 120, free: !tempoMatch, voices: voices, musicLines: musicLines, lines: lines };
+   }
+ 
+   // ---------------------------------------------------------------- compiler
+-- 
+2.43.0
+

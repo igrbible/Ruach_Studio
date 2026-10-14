@@ -204,7 +204,8 @@ def draw(body):
     if len(going) >= RUNS_MAX:
         raise ValueError(f"two runs at a time: the next one when one of them ends ({len(going)} going)")
     prompt = str(body.get("prompt") or "").strip()
-    if not prompt:
+    letters = _letters(body)                         # HERESY 1394: the lettering's words, asked apart from the prompt
+    if not prompt and not (letters and letters["way"] == "letter"):
         raise ValueError("write what to paint first")
     if len(prompt) > PROMPT_MAX:
         raise ValueError(f"the prompt is too long: {PROMPT_MAX} characters at most")
@@ -234,6 +235,12 @@ def draw(body):
         raise ValueError("a reference is used to paint from, to edit by words («edit») or for its style («style»)")
     if ref_as and (painter != "qwen21" or not body.get("ref")):
         raise ValueError("editing by words and a style reference are Qwen-Image 2.1's: choose it as the painter, with a picture")
+    if letters and painter not in QWEN and not painter.startswith("krea2"):   # HERESY 1394; 1396: Krea 2 Muse letters too
+        raise ValueError("lettering is painted by Qwen-Image or Krea 2 Muse: choose one of them as the painter")
+    if letters and letters["way"] == "letter" and (painter != "qwen21" or not body.get("ref") or ref_as == "style"):
+        raise ValueError("lettering a finished picture is Qwen-Image 2.1's edit by words: choose it as the painter, the picture as its reference")
+    if letters and letters["way"] == "letter":
+        ref_as = "edit"
     if painter == "qwen21" and (body.get("mask") or body.get("fit")):
         raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Krea 2 or Qwen-Image 2512")
     if painter not in NEED:
@@ -269,6 +276,8 @@ def draw(body):
         ask["regions"] = regions                     # HERESY 1387: the regions' own words
     if ref_as:
         ask["ref_as"] = ref_as                       # HERESY 1388
+    if letters:
+        ask["letters"] = letters                     # HERESY 1394
     place = _places(body.get("place")) if ref else {}  # HERESY 1346: the canvas's places, shape by shape
     mo = body.get("mask_opts") if (body.get("mask") or body.get("fit") or place) else None   # HERESY 1320: the mask's options
     if mo:
@@ -392,6 +401,30 @@ def _regions(body, painter):
             raise ValueError("a region's box: inside the frame, at least a twentieth of it wide and high")
         out.append({"prompt": p, "box": [round(x, 4), round(y, 4), round(w, 4), round(h, 4)]})
     return out
+
+
+LETTER_PLACES = ("top", "middle", "bottom")
+
+
+def _letters(body):
+    """HERESY 1394: a picture's lettering, its words in fields of their own: {"title", "sub", "look", "where", "way"} (way «paint»: painted
+    with the picture; «letter»: a finished picture, the reference, lettered by Qwen-Image 2.1); no title, None."""
+    L = body.get("letters")
+    if not L:
+        return None
+    if not isinstance(L, dict):
+        raise ValueError("lettering: its title, a second line, the look of the letters, where and how")
+    title, sub, look = (" ".join(str(L.get(k) or "").split()) for k in ("title", "sub", "look"))
+    if not title:
+        return None
+    if len(title) > 60 or len(sub) > 80 or len(look) > 400:
+        raise ValueError("lettering: the title 60 characters at most, the second line 80, the look of the letters 400")
+    where, way = str(L.get("where") or "top"), str(L.get("way") or "paint")
+    if where not in LETTER_PLACES:
+        raise ValueError("lettering: at the top, in the middle or at the bottom")
+    if way not in ("paint", "letter"):
+        raise ValueError("lettering: painted with the picture («paint») or on a finished one («letter»)")
+    return {"title": title, "sub": sub, "look": look, "where": where, "way": way}
 
 
 def _inject(body):
@@ -663,6 +696,9 @@ def _row(d, run, gpu, only, lives, row):
         run["kept"] = True
         write(d, run)
         H["say"](f"the Artist · {run['id']} · its painter kept from the run before on GPU {gpu}: no loading")
+    elif "letters_prompt" in row:    # HERESY 1394: the phrase the painter read for the lettering
+        run["letters_prompt"] = row["letters_prompt"]
+        write(d, run)
     elif "chain" in row:             # HERESY 1355: an upscale in passes: the pass just done
         run["chain_at"] = row["chain"]
         write(d, run)

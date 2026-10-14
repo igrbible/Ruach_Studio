@@ -126,8 +126,10 @@
     var denominator = +um[1];
     fail(denominator > 1024 || (denominator & (denominator - 1)) !== 0, "Unsupported L: denominator");
     var unit = F(1, denominator);
+    // HERESY 1416: free tempo (an empty Q: or none) is native too, read at the nominal 120 (MIDI's own) and marked free
+    if (lines[4].indexOf("Q:") !== 0) lines.splice(4, 0, "Q:");
     var tm = /^Q:1\/4=([1-9][0-9]*)$/.exec(lines[4]);
-    fail(!tm, "Expected integer quarter-note tempo Q:1/4=<BPM>");
+    fail(!tm && lines[4] !== "Q:", "Expected integer quarter-note tempo Q:1/4=<BPM>");
     fail(lines[5] !== 'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"' ||
          lines[6] !== 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "Preserve native Vocal and Ins voice definitions");
     fail(lines[7].indexOf("K:") !== 0, "Missing header K:");
@@ -180,14 +182,14 @@
     fail(grid(voices.Vocal) !== grid(voices.Ins), "Voice meter/time grids differ");
     var keyline = function (v) { return v.keys.map(function (k) { return str(k[0]) + ":" + k[1]; }).join(","); };
     fail(keyline(voices.Vocal) !== keyline(voices.Ins), "Voice key-change timelines differ");
-    return { text: text, unit: unit, bpm: +tm[1], key: key, meter: meter, voices: voices, sections: sections };
+    return { text: text, unit: unit, bpm: tm ? +tm[1] : 120, free: !tm, key: key, meter: meter, voices: voices, sections: sections };
   }
 
   // ---- the numbers a person wants: per voice, and the ratio
   var NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
   function noteName(p) { return NAMES[p % 12] + (Math.floor(p / 12) - 1); }
   function report(score) {
-    var total = score.voices.Vocal.time, secs = num(total) * 60 / score.bpm, out = { bpm: score.bpm, key: score.key,
+    var total = score.voices.Vocal.time, secs = num(total) * 60 / score.bpm, out = { bpm: score.bpm, free: !!score.free, key: score.key,
       meter: score.meter.join("/"), quarters: num(total), seconds: secs, bars: score.voices.Vocal.bars.length, sections: score.sections.length, voices: {} };
     VOICES.forEach(function (name) {
       var v = score.voices[name], sounding = v.notes.reduce(function (s, n) { return s + num(n[2]); }, 0);

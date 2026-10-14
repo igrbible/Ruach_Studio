@@ -165,8 +165,10 @@ def parse(text: str) -> Score:
     denominator = int(unit_match.group(1))
     fail(denominator > 1024 or denominator & (denominator - 1) != 0, "Unsupported L: denominator")
     unit = Fraction(1, denominator)
+    if not lines[4].startswith("Q:"):                  # HERESY 1416: free tempo (an empty Q: or none), read at the nominal 120
+        lines.insert(4, "Q:")
     tempo_match = re.fullmatch(r"Q:1/4=([1-9][0-9]*)", lines[4])
-    fail(tempo_match is None, "Expected integer quarter-note tempo Q:1/4=<BPM>")
+    fail(tempo_match is None and lines[4] != "Q:", "Expected integer quarter-note tempo Q:1/4=<BPM>")
     expected_voices = ['V: Vocal clef=treble name="Vocal Melody" snm="Vocal"',
                        'V: Ins clef=treble name="Ins Melody" snm="Inst."']
     fail(lines[5:7] != expected_voices, "Preserve native Vocal and Ins voice definitions")
@@ -224,7 +226,7 @@ def parse(text: str) -> Score:
     fail(voices["Ins"].chords != [], "Native chord symbols belong in Vocal, not Ins")
     fail(voices["Vocal"].bars != voices["Ins"].bars, "Voice meter/time grids differ")
     fail(voices["Vocal"].keys != voices["Ins"].keys, "Voice key-change timelines differ")
-    return Score(text, unit, int(tempo_match.group(1)), voices, music_lines)
+    return Score(text, unit, int(tempo_match.group(1)) if tempo_match else 120, voices, music_lines)
 
 
 def json_value(value):

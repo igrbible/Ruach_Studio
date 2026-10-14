@@ -1,5 +1,7 @@
 # The Artist in Depth
 
+**English** · [Русский](ARTIST.ru.md) · [Українська](ARTIST.uk.md) · [Беларуская](ARTIST.be.md) · [Ελληνικά](ARTIST.el.md) · [Español](ARTIST.es.md) · [Italiano](ARTIST.it.md) · [Français](ARTIST.fr.md) · [Português](ARTIST.pt.md) · [Deutsch](ARTIST.de.md) · [日本語](ARTIST.ja.md) · [中文](ARTIST.zh.md)
+
 The Artist is Ruach Studio's room for pictures: a cover for each take, a 16:9 for its video, a 9:16 for a short. The guide inside the studio (F1 in the Artist) says what each control does in a few lines; this document goes all the way down: every control, how it is made inside, the recipes that work, what goes wrong and why, and the numbers measured on an RTX 3090. Everything here is in the studio as it stands; what is still to come is said at the end.
 
 ## Contents
@@ -13,17 +15,18 @@ The Artist is Ruach Studio's room for pictures: a cover for each take, a 16:9 fo
 7. [Samplers and Schedules](#7-samplers-and-schedules)
 8. [Adapters (LoRA)](#8-adapters-lora)
 9. [Regions](#9-regions)
-10. [A Picture to Paint From](#10-a-picture-to-paint-from)
-11. [The Second Pass](#11-the-second-pass)
-12. [Upscale](#12-upscale)
-13. [The Stage, the Library and the Trash](#13-the-stage-the-library-and-the-trash)
-14. [Covers for Takes](#14-covers-for-takes)
-15. [Recipes](#15-recipes)
-16. [When Something Goes Wrong](#16-when-something-goes-wrong)
-17. [The Numbers](#17-the-numbers)
-18. [For Scripts and Agents](#18-for-scripts-and-agents)
-19. [Licences](#19-licences)
-20. [What Comes Next](#20-what-comes-next)
+10. [Lettering](#10-lettering)
+11. [A Picture to Paint From](#11-a-picture-to-paint-from)
+12. [The Second Pass](#12-the-second-pass)
+13. [Upscale](#13-upscale)
+14. [The Stage, the Library and the Trash](#14-the-stage-the-library-and-the-trash)
+15. [Covers for Takes](#15-covers-for-takes)
+16. [Recipes](#16-recipes)
+17. [When Something Goes Wrong](#17-when-something-goes-wrong)
+18. [The Numbers](#18-the-numbers)
+19. [For Scripts and Agents](#19-for-scripts-and-agents)
+20. [Licences](#20-licences)
+21. [What Comes Next](#21-what-comes-next)
 
 ## 1. What the Artist Is For
 
@@ -38,7 +41,7 @@ The room has three columns. On the left the form: the prompt and every knob that
 3. Leave **Shapes** at **1:1**, set **Variations** to 4, and keep the painter the studio chose (Krea 2 Muse Q4 on most cards).
 4. Press **Draw** (Ctrl+Enter). Watch the pictures develop on the stage; about half a minute each on a 3090.
 5. Click the one you like; **Set as cover** makes it the take's cover in its card, in the player and in its MP3.
-6. Liked it but want it finer? **Second pass… ×2** (section 11), then **Upscale… 4K** (section 12).
+6. Liked it but want it finer? **Second pass… ×2** (section 12), then **Upscale… 4K** (section 13).
 
 ## 3. Writing a Prompt
 
@@ -63,7 +66,7 @@ Words that work well: the subject named plainly (*a red fox sitting in the snow*
 
 **Qwen-Image 2512** is the larger painter: finer realism, longer prompts read well, letters drawn right when you ask for them. It comes as GGUF at Q4 or Q6, or as an **fp8 fine-tune**: ComfyUI's single files put into `artwork/Qwen-Image-2512/checkpoints/` and picked under the painter (Jib Mix Qwen, IntoRealism Qwen, Real-Qwen-Image and 2512 itself can be fetched from **Get painters and adapters…**, 20.4 GB each). An fp8 fine-tune is read in bf16, kept on the card in its own fp8, and each layer computes in bf16 while it runs; adapters on it keep their own layers in bf16.
 
-**Qwen-Image 2.1** reads pictures as well as words (its text encoder is Qwen3-VL): it edits a picture by the prompt's words, or paints the prompt's scene in a picture's style (section 10). It is under the Qwen Research Licence: research and evaluation only, not for a cover you sell; the room says so under the painter in the warning's colour.
+**Qwen-Image 2.1** reads pictures as well as words (its text encoder is Qwen3-VL): it edits a picture by the prompt's words, or paints the prompt's scene in a picture's style (section 11). It is under the Qwen Research Licence: research and evaluation only, not for a cover you sell; the room says so under the painter in the warning's colour.
 
 Each painter shows only when its files are here; the ones not here are named under the painter, and **Engine → Models and LoRAs** fetches them, each asked first with its size (2.1 with its licence too). From a terminal: `heresy/fetch-heresy.sh --qwen 2512-q4`.
 
@@ -128,7 +131,7 @@ The form says both warnings when they apply. The samplers were written for the s
 
 ## 8. Adapters (LoRA)
 
-**Where they live**: `artwork/loras/<family>/`, the family the painter's: `krea2`, `qwen-image-2512`, `qwen-image-2.1`, `sdxl`. Folders inside become groups in the library; a picture beside a file with its name (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) shows on its card; what ComfyUI's LoRA Manager (`NAME.metadata.json`) or Stability Matrix (`NAME.cm-info.json`) wrote beside a file is read as well.
+**Where they live**: `artwork/loras/<family>/`, the family the painter's: `krea2`, `qwen-image-2512`, `qwen-image-2.1`. Folders inside become groups in the library; a picture beside a file with its name (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) shows on its card; what ComfyUI's LoRA Manager (`NAME.metadata.json`) or Stability Matrix (`NAME.cm-info.json`) wrote beside a file is read as well.
 
 **The list and the run**: up to eight adapters in the list under the painter, up to four active in a run; each at its strength (the slider 0 to 1.5); a right click **mutes** one (it stays in the list and leaves the run), and an adapter at nought is not loaded either. Its trigger words show under it, and a click on one puts it into the prompt (a run also adds an active adapter's trigger words by itself).
 
@@ -152,7 +155,28 @@ The form says both warnings when they apply. The samplers were written for the s
 
 Regions are kept in this browser; a region without words is not sent; **Again** paints with the run's own. Krea 2 and Qwen-Image 2512; Qwen-Image 2.1 edits by words and paints without them.
 
-## 10. A Picture to Paint From
+## 10. Lettering
+
+**Lettering**, under Regions, folded: a title, and a second line under it, lettered as part of the painting rather than laid over it as a layer that stands apart from the picture. Its words go in fields of their own, never in the prompt, and the studio writes what the painter reads. Two ways, chosen under **How**:
+
+- **Painted with the picture** (Krea 2 Muse, Qwen-Image 2512 or 2.1): the studio adds a phrase to the prompt: where, the title in quotes, what the letters look like, the second line smaller below it, then *painted in the same technique and light as the picture. No other text.* A prompt of one paragraph gets it at its end; a prompt written in paragraphs gets it as a paragraph of its own, *TEXT RENDERING:*, second, after the first: at the end of a long prompt it drowns (Viktor's Fosforida prompt, 3,200 characters in ten paragraphs, painted three pictures without a letter that way). A take's prompt asks for no text (*No text, no letters.*): that sentence is taken out first.
+- **On the reference picture** (Qwen-Image 2.1): a finished picture lettered by words, the rest kept. The order is written from the fields alone, so the prompt may stay empty. **Letter it**, on the stage or in a picture's menu, makes that picture the reference, sets How and opens the block with the title in hand.
+
+**The fields**: **Title** (60 characters); **Second line** (80: the artist, the album; empty for none); **The letters** (400, what they look like in words, as long as a prompt's typography paragraph; empty: *large elegant classical serif capitals in warm gold, with even letter spacing*); **Where** (at the top, in the middle, at the bottom). **The take's title** fills the title from the take picked on the right. The block is kept in this browser; **Again** letters with the run's own words; the run's line keeps the phrase the painter read.
+
+**Read back**: the painters misspell words they have rarely seen. On one lighthouse, Qwen-Image 2512 wrote «RUOCH STUDIO» and Qwen-Image 2.1 «RUUCH STUDIO», while «ПЕСНЯ МАЯКА» and «РУАХ СТУДИЯ» came out right. So each picture is read back by the listener, Qwen2.5-Omni through llama.cpp (about 5 s a picture on an RTX 3090; it read both misspellings as they were), and compared word by word: case and line breaks aside, nothing else forgiven (ё is not е). A picture misspelled is painted again with another seed (its seed plus 1000, then plus 2000), up to three times, in rounds: all the misspelled pictures of a run together, so the painter and the listener change places once a round. The first spelled exactly is kept; the other tries go into the run's misspelled/ folder, kept, never deleted. When no try is right, the nearest is kept and said misspelled, with what it reads. Without the listener the pictures are kept as painted and said unread: never shown as spelled.
+
+**The card for reading**: the listener wants about 11 GB. A painter whole on the card puts its weights in RAM while the listener reads and takes them back after; Qwen-Image 2.1 leaves the card free by itself; a painter streamed with its blocks filling the card lets the listener read on the CPU (about 64 s a picture).
+
+**The marks**: beside each picture **✓ Aa** (spelled as asked), **⚠ Aa** (misspelled in every try; its tip says what it reads and how many tries were made), **? Aa** (not read back). The stage's line says *lettered “…”* and, for a misspelled one, what it reads.
+
+**Times** (RTX 3090, a square): Qwen-Image 2.1 lettered a finished picture in 118 s, read right at once; Qwen-Image 2512 fp8 without Lightning (30 steps, true CFG 4, an fp8 fine-tune's own way) painted one with its letters in 230 s, its loading counted, about 150 s of it the painting. A misspelled picture costs a whole picture again for each try: of two variations of «LANTERN SONG / RUACH STUDIO», one was right at once and the other stayed misspelled in all three tries («RUCH STUDIO»), kept and said so, in 743 s for the run. Lightning makes each try a fraction of that. The form's estimate counts the reading.
+
+**Cyrillic**: Viktor's «ФОСФОРИДА | Возвращение Шехины» in the style of his own album prompt. Qwen-Image 2512 wrote the title right in all nine pictures; the second line in lowercase in none of six tries (the lowercase Щ and Ш scribbled, «Вовуяеные Шехни»); in capitals Щ and Ш came right every time and only the last letter went wrong («ШЕХИНЯ»), with the letters' shapes said too (his idea, HERESY 1396: Ы, Щ, Ш and the other letters a painter trained on Latin rarely saw, and Ф beside the Greek Φ, each described when the words carry it). **Krea 2 Muse wrote both lines exactly**: «ФОСФОРИДА / ВОЗВРАЩЕНИЕ ШЕХИНЫ» in two variations, one at the first try and one at the second, 184 s for the run. A spelled hint («Ф-О-С-Ф-…») was tried and dropped: Krea painted its hyphens into the title, and the listener, asked since to keep hyphens and gaps, read one of them smooth. For Cyrillic, Krea 2 Muse first; capitals; and look at the mark.
+
+**Why painted, not typeset**: a real font set by the studio (kerning, tracking and leading by raqm) and lightly painted over spells exactly, but it stays a layer on the picture. Of the four ways tried, Viktor chose the two where the painter writes the letters itself.
+
+## 11. A Picture to Paint From
 
 **The reference**: drop a picture on its place under the prompt, paste one (Ctrl+V), choose a file, or take the stage's picture with **As reference** (or the take's cover with **The take's cover**). PNG, JPEG or WebP, 40 MB at most.
 
@@ -202,7 +226,7 @@ A round mask's edge can stay visible without them; Grow 16, Edge 24, Soft and Gr
 
 **Canvas…** beside Mask… opens the canvas, as InvokeAI's: each shape's frame a tab on top, saying how it will be painted (**from it**: the picture covers the frame and the run paints from it at the strength asked; **around**: the part of the frame it leaves bare is painted around it). On the board **Move** (V) drags the picture, or a corner to scale it with the opposite corner kept; **Brush** (B) and **Eraser** (E) paint the inpaint mask over it; **Hand** (H, or Space held) moves the board; the wheel zooms, Alt+wheel scales the picture about the pointer, the arrows nudge it (Shift: ten pixels). On the right the layers and the place in numbers; on top **Fit**, **Fill**, **Centre** and **Same in all**, undo and redo (thirty steps). **Done** keeps each shape's place with the reference and the mask in the form. A place is the picture's middle in the frame's share and its width in frame widths.
 
-## 11. The Second Pass
+## 12. The Second Pass
 
 **Second pass…**, on the stage beside Upscale…, paints a picture over larger, as Viktor's ComfyUI workflow does after its first pass: the picture brought up **×1.5** or **×2** by nearest and painted again by its own run's painter, fine-tune, adapters, prompt and seed, from part of the way.
 
@@ -212,7 +236,7 @@ A round mask's edge can stay visible without them; Grow 16, Edge 24, Soft and Gr
 
 **What it costs and gives**: a 16:9 of 1920 × 1080 comes out 3840 × 2160. On a 3090, Krea 2 Q4 at 2560² in 86 s (14.5 GB at the peak); Qwen-Image 2512 fp8 at 3840 × 2160 in 220 s with 12 steps and Lightning (22.9 GB, its blocks streamed). At 0.6 both kept the scene and moved its parts a little; at 0.5 the composition held. Not for Qwen-Image 2.1; no mask or canvas with it. **Again** on a second pass paints it again at its size.
 
-## 12. Upscale
+## 13. Upscale
 
 **Upscale…** on the stage makes a picture **2K** or **4K** (its long side 2560 or 3840) with an upscaler from `artwork/upscalers/` (`.pth` or `.safetensors`, folders allowed): ESRGAN, DAT, HAT, ATD, SPAN, OmniSR and their kin, read by spandrel by the file alone. The picture goes through in tiles of 512 with 32 of overlap, each tile's middle kept (no seam); a 4× model asked for less paints at 4× and is brought down by Lanczos, finer than a 2× model. The long side stops at 10 240 px. The **i** beside the choice says what the chosen upscaler is for (photos, faces, art), its author, licence and measured time; a click opens the notes of all of them, grouped, quickest first, the non-commercial marked.
 
@@ -222,7 +246,7 @@ A round mask's edge can stay visible without them; Grow 16, Edge 24, Soft and Gr
 
 Upscale and the second pass do different things: an upscaler sharpens what is there; a second pass paints new detail at the new size. For a print: second pass ×2 first, then upscale.
 
-## 13. The Stage, the Library and the Trash
+## 14. The Stage, the Library and the Trash
 
 **The stage**: a click on a picture puts it there with its run under it; a click on it (or a double click on any picture) opens it over the page in its own shape (← → walk the run, or the gallery; Esc closes). Under it: **To the form**, **As reference**, **Compare…**, **Set as cover** (a square one), **Download** (PNG, full size), **Over the page**, ★, **Protect** (the shield: a protected picture never goes to the trash nor is deleted, whatever brought it there), **Trash**, **Second pass…**, **Upscale…**. The run's data and prompt stand in a tip beside the picture while the pointer is on it.
 
@@ -238,13 +262,13 @@ Upscale and the second pass do different things: an upscaler sharpens what is th
 
 **The Artist's log**: the server log's frame has an **Artist** view, the room's own: what was asked (the painter, the fine-tune, the shapes, the seed, the sampling, the adapters), what the lab answered (a refusal in its own words), each run's way to its end (waits and why, the card it paints on, done, stopped, failed and why). **⧉** opens it in a window of its own, with the cards live beside it.
 
-## 14. Covers for Takes
+## 15. Covers for Takes
 
 A square picture's **Set as cover** makes it the cover of the take in hand: in its card, in the player and in its MP3. The cover it had is kept beside the take (`artwork-removed/`), and the other letter of an A/B pair gets the new one too when it has none. A cover is the take's own copy (1024 px, naming the run and the picture it came from), so taking it off the take never touches the picture, and the picture going never touches the cover; putting such a picture in the trash asks whether to take the cover off the take too, or leave it.
 
-**A take's own artwork** (*Draw artwork* in its menu, in the Librarian, for one take or many) is painted by the painter chosen in **Engine → Artwork**: by the cards (Krea 2 Muse Q4 from 16 GB, else SDXL), or one you choose, Qwen painters among them; a small language model writes its prompt from the take's style and words.
+**A take's own artwork** (*Draw artwork* in its menu, in the Librarian, for one take or many) is painted by the painter chosen in **Engine → Artwork**, or by the cards when none is chosen: **Qwen-Image 2512** where a card the lab's jobs may take holds it whole (Q6 from 20 GB, Q4 from 16 GB: it follows the prompt best and letters a title right), else **Krea 2 Muse Q4** (whole on a 16 GB card, its blocks from RAM on a smaller one). A small language model writes its prompt from the take's style and words, and the critic looks whether its subject is there. A cover is a job of its own that loads its painter afresh, so a Qwen cover takes about twice a Krea one: on a 3090, Krea 2 Muse Q4 about 65 s, Qwen-Image 2512 Q4 125 s and Q6 131 s, all of it counted (section 18). A Q4 is no quicker than a Q6: the painting is the card's arithmetic, not its memory.
 
-## 15. Recipes
+## 16. Recipes
 
 **A cover, quick.** Krea 2 Muse Q4, 1:1, Variations 4, the sampling as it comes. Two minutes for four candidates; pick, Set as cover.
 
@@ -264,7 +288,7 @@ A square picture's **Set as cover** makes it the cover of the take in hand: in i
 
 **A print.** Second pass ×2, then Passes… to 7680 on the long side, TTA for a smooth sky.
 
-## 16. When Something Goes Wrong
+## 17. When Something Goes Wrong
 
 | what you see | why | what to do |
 |---|---|---|
@@ -281,7 +305,7 @@ A square picture's **Set as cover** makes it the cover of the take in hand: in i
 | regions ignored | Qwen-Image 2.1 chosen, or a region without words | Krea 2 or Qwen-Image 2512, words in each region |
 | slow first run, quick next ones | the painter loads once and stays ten minutes | as meant |
 
-## 17. The Numbers
+## 18. The Numbers
 
 Measured on an RTX 3090 (24 GB) with the studio's own tools.
 
@@ -301,14 +325,16 @@ Measured on an RTX 3090 (24 GB) with the studio's own tools.
 | second pass ×2, Qwen-Image 2512 fp8 to 3840 × 2160 | 220 s | 22.9 GB |
 | upscale ×2, 4x_Nomos8kDAT, 1280² to 2560² | 32 s | 2.1 GB |
 | upscale passes, his chain, 1920 × 1080 to 7680 × 4320 | 246 s | |
+| a take's cover by Krea 2 Muse Q4 (a job of its own: the painter loaded, the prompt written, the critic's look) | about 65 s | |
+| a take's cover by Qwen-Image 2512 Q4 / Q6, the same | 125 s / 131 s | |
 
 A painter's first run adds its loading: about 25 s for Krea 2 Muse, a minute or two for the Qwen painters.
 
-## 18. For Scripts and Agents
+## 19. For Scripts and Agents
 
 The lab answers on the studio's machine (through the page at `/lab/…`); the studio's API (`/api/v1`, OpenAPI 3.1) and its MCP server sit beside it. The Artist's own endpoints:
 
-- `POST /artist/draw`: a run. Its body: `prompt`; `shapes` (`1:1`, `16:9`, `9:16`); `count` (1 to 4); `seed`; `painter` (`krea2-q4`, `krea2-q8`, `qwen2512-q4`, `qwen2512-q6`, `qwen2512-fp8`, `qwen21`); `model` (an fp8 fine-tune's file); `sampling` (`steps`, `sampler`, `schedule`, `lightning`, `cfg`); `loras` (`[{id, weight, keys}]`); `ref` (a data URL, or `{id, file}` of an earlier run's picture) with `strength` (0.2 to 1) and `ref_as` (`edit`, `style`); `mask` with `mask_opts` (`grow`, `edge`, `soft`, `grain`); `fit` (paint around it); `place` (the canvas: `{shape: {x, y, s}}`); `inject` (0 to 2); `scale` (1.5 or 2, a second pass); `regions` (`[{prompt, box: [x, y, w, h]}]`, three at most); `preview`; `take`.
+- `POST /artist/draw`: a run. Its body: `prompt`; `shapes` (`1:1`, `16:9`, `9:16`); `count` (1 to 4); `seed`; `painter` (`krea2-q4`, `krea2-q8`, `qwen2512-q4`, `qwen2512-q6`, `qwen2512-fp8`, `qwen21`); `model` (an fp8 fine-tune's file); `sampling` (`steps`, `sampler`, `schedule`, `lightning`, `cfg`); `loras` (`[{id, weight, keys}]`); `ref` (a data URL, or `{id, file}` of an earlier run's picture) with `strength` (0.2 to 1) and `ref_as` (`edit`, `style`); `mask` with `mask_opts` (`grow`, `edge`, `soft`, `grain`); `fit` (paint around it); `place` (the canvas: `{shape: {x, y, s}}`); `inject` (0 to 2); `scale` (1.5 or 2, a second pass); `regions` (`[{prompt, box: [x, y, w, h]}]`, three at most); `letters` (`{title, sub, look, where, way}`: `where` `top`, `middle` or `bottom`, `way` `paint` or `letter`; with `letter` the painter is `qwen21` with a `ref`, and `prompt` may be empty); `preview`; `take`. A lettered run carries `letters_prompt` (the phrase the painter read), and each of its pictures `letters`: `{read, exact, near, tries}`, or `{unread}` when the listener could not read it.
 - `GET /artist/runs`, `GET /artist/file`, `POST /artist/stop`, `POST /artist/cover`, `POST /artist/star`, `POST /artist/protect`, `POST /artist/trash`, `POST /artist/restore`, `POST /artist/aside`.
 - `GET /artist/painters` (the painters here, their cards and fine-tunes), `POST /artist/unload` (let the kept painters go).
 - `GET /artist/upscalers`, `POST /artist/upscale` (`{id, file, model, target}` with `2k` or `4k`; or `passes`, `resample`, `long`, `match`; `tta`; or `items` for many).
@@ -316,10 +342,10 @@ The lab answers on the studio's machine (through the page at `/lab/…`); the st
 
 A refusal comes back as `400` with the reason in words, the same words the room shows.
 
-## 19. Licences
+## 20. Licences
 
 Krea 2 Muse: the Krea 2 Community License (its content filter applies to every picture the studio paints). Qwen-Image 2512 and Lightning: Apache-2.0. The fp8 fine-tunes: each its author's terms. Qwen-Image 2.1: the Qwen Research Licence, research and evaluation only. Adapters: each its author's terms, as Civitai lists them. Upscalers: each its own; OpenModelDB's notes say which are non-commercial, and the room marks them. What you may do with the pictures you paint follows from these; when it matters, read them before you sell.
 
-## 20. What Comes Next
+## 21. What Comes Next
 
-The title and the artist's name written on a cover (lettering), the versions of a take's picture, and SeedVR as an upscaler (in 2.1.0, with the DAW phase).
+The versions of a take's picture, and SeedVR as an upscaler (in 2.1.0, with the DAW phase).

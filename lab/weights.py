@@ -68,9 +68,9 @@ EXTRAS = [
      "what": "the Artist's Qwen-Image painters: 2512 with Lightning's 8 steps (Apache-2.0: its parts from Qwen, the transformer as GGUF) and 2.1 (Qwen's research licence)",
      "variants": [
          {"id": "2512-q4", "label": "Qwen-Image 2512 Q4", "size": "31 GB",
-          "note": "for a card of 16 GB (below 20 GB its text encoder reads the prompt on the processor: 17 GB of RAM); half a minute a picture on a 3090; less when some of it is here",
+          "note": "31 GB fetched, its text encoder (16.6 GB) among it: the encoder reads the prompt and leaves the card, then the painter takes about 15 GB; for a card of 16 GB (below 20 GB the encoder reads on the processor: 17 GB of RAM); about two minutes a cover on a 3090; less when some of it is here",
           "files": Q2512_PARTS + [Q2512 + "gguf/qwen-image-2512-Q4_K_M.gguf"]},
-         {"id": "2512-q6", "label": "Qwen-Image 2512 Q6", "size": "34.5 GB", "note": "for a card of 24 GB; less when some of it is here",
+         {"id": "2512-q6", "label": "Qwen-Image 2512 Q6", "size": "34.5 GB", "note": "its text encoder among it, gone from the card before the painter comes: the painter takes about 20 GB, for a card of 20 GB; less when some of it is here",
           "files": Q2512_PARTS + [Q2512 + "gguf/qwen-image-2512-Q6_K.gguf"]},
          {"id": "2.1", "label": "Qwen-Image 2.1", "size": "33.1 GB",
           "note": "under Qwen's research licence: research and evaluation only, not for commercial use (a cover for a song that is sold is commercial use); a card of 24 GB, about two minutes a picture",
@@ -99,18 +99,15 @@ EXTRAS = [
          {"id": "int8", "size": "6.5 GB", "note": "for a smaller card; MERT-v2-FullSong's 2.5 GB among them, less when it is here",
           "files": ["checkpoints/comfy/checkpoints/yue2_3b_int8_convrot.safetensors", "checkpoints/MERT-v2-FullSong/model.safetensors"]}]},
 ]
-ARTWORK_BIG = {"name": "artwork", "label": "Artwork",
+# HERESY 1425 (Viktor 13.10.2026: «В МОДЕЛЯХ и LoRA только Krea 2 Muse доступна, тогда как выше я могу выбрать из полного списка»):
+# the row named by its painter, beside «Qwen painters»; Engine → Artwork chooses among the painters these rows fetch
+ARTWORK_BIG = {"name": "artwork", "label": "Krea painter",
                "what": "the Artist's painter: Krea 2 Muse by Stable Yogi with Krea 2's text encoder and VAE, the content filter its licence asks for, and the prompt writer (Qwen3-4B)",
                "variants": [
                    {"id": "q4", "label": "Krea 2 Muse Q4", "size": "26 GB", "note": "less when some of it is here", "files": [MUSE.format("Q4")] + KREA},
                    {"id": "q8", "label": "Krea 2 Muse Q4 and Q8", "size": "41 GB", "note": "less when some of it is here",
                     "files": [MUSE.format("Q4"), MUSE.format("Q8")] + KREA}]}
-ARTWORK_SMALL = {"name": "artwork", "label": "Artwork",
-                 "what": "the Artist's painter (no card here has the 16 GB Krea 2 wants): SDXL CyberRealistic, and the prompt writer (Qwen3-4B)",
-                 "variants": [
-                     {"id": "sdxl", "label": "SDXL CyberRealistic", "size": "15 GB", "note": "a 16 GB card when it draws",
-                      "files": ["artwork/CyberRealistic-XL-v10/model_index.json", "artwork/CyberRealistic-XL-v10/unet/diffusion_pytorch_model.safetensors",
-                                "artwork/Qwen3-4B-Instruct-2507/model.safetensors.index.json"]}]}
+# HERESY 1405: no small-card variant: Krea 2 Muse Q4 streams its blocks from RAM where a card has less than 16 GB (SDXL gone)
 
 LINE = re.compile(r"^(here|differs|missing|fetched|unknown|failed)\s+(.*)$")
 SUM = re.compile(r"^here (\d+) · unknown (\d+) · differs (\d+) · fetched (\d+) · missing (\d+) · failed (\d+)$")
@@ -149,7 +146,7 @@ def _here(kit, files):
 def _extras(kit):
     out = []
     for e in EXTRAS:
-        e = e or (ARTWORK_BIG if _biggest_card_mb() >= 16000 else ARTWORK_SMALL)
+        e = e or ARTWORK_BIG                        # HERESY 1405: any card (SDXL gone)
         out.append(dict({k: v for k, v in e.items() if k != "variants"},
                         variants=[dict({k: v for k, v in x.items() if k != "files"}, here=_here(kit, x["files"])) for x in e["variants"]]))
     return out
@@ -236,10 +233,10 @@ def _args(body):
         if v is None:
             continue
         v = str(v)
-        ids = [x["id"] for x in (e or ARTWORK_BIG)["variants"]] + ([] if e else ["sdxl"])
+        ids = [x["id"] for x in (e or ARTWORK_BIG)["variants"]]
         if v not in ids:
             raise ValueError(f"{name} takes {', '.join(ids)}")
-        x = (e or ARTWORK_BIG)["variants"] + ([] if e else ARTWORK_SMALL["variants"])
+        x = (e or ARTWORK_BIG)["variants"]
         label = (e or ARTWORK_BIG)["label"]
         what = "the " + label[0].lower() + label[1:] + " " + next((y.get("label") or y["id"] for y in x if y["id"] == v), v)
         if name == "artwork":
@@ -265,7 +262,7 @@ def _which(body):
         if body.get(name) is None:
             continue
         v = str(body[name])
-        x = (e or ARTWORK_BIG)["variants"] + ([] if e else ARTWORK_SMALL["variants"])
+        x = (e or ARTWORK_BIG)["variants"]
         return {"extra": name, "variant": v}, _bytes(next((y["size"] for y in x if y["id"] == v), ""))
     return {}, None
 

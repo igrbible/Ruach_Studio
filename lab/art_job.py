@@ -8,23 +8,21 @@ VLM»; «что не знает, то не генерит»): a picture whose su
 listener's model, through llama.cpp) gets the picture and says what it sees and whether the subject is there; when it
 is not, Omni writes the prompt again from the prompt and what it saw, and the painter tries once more, three pictures
 at most. A subject an image model does not know by name (a duduk came out a board on a table) is described to both of
-them in plain visual words (art_looks.json, from the instruments cheat-sheet). The painter is the SDXL behind the link artwork/SDXL-Artwork-Model (Viktor: «чтобы на этот
+them in plain visual words (art_looks.json, from the instruments cheat-sheet). The painter was then the SDXL behind the link artwork/SDXL-Artwork-Model (gone since 1405; Viktor: «чтобы на этот
 симлинк можно было бы посадить другие веса SDXL»; «SDXL — лёгкая и качественная. Никаких FLUX»).
 
     .venv/bin/python lab/art_job.py TAKE_DIR OUT.jpg [SEED]
 
     prompter  artwork/Qwen3-4B-Instruct-2507   (Apache 2.0; absent: the prompt is built from the style)
-    painter   artwork/SDXL-Artwork-Model       a link to an SDXL: ours, CyberRealistic-XL-v10 (an SDXL 1.0 finetune by
-                                               Cyberdelia; CreativeML Open RAIL++-M), or any SDXL finetune, as a diffusers
-                                               folder or one .safetensors file; FLUX, SD 1.5, SD 3 are refused aloud
+    painter   artwork/Krea-2-Muse              Krea 2 Muse by Stable Yogi, Q4 or Q8 (HERESY 1167); a Qwen painter (1338)
     critic    checkpoints/Qwen2.5-Omni-7B-GGUF (llama.cpp's llama-mtmd-cli; absent: the first picture is kept, unseen)
 
 HERESY 1167 (Viktor 05.10.2026, the A/B of SDXL against Krea 2 on twelve instruments: «Muse - отличный файнтюн… убирай
 SDXL долой с глаз»; «Для карт ниже 24GB VRAM… оставим SDXL»): the painter is Krea 2 Muse by Stable Yogi (a fine-tune of Krea 2
 Turbo; the author's GGUF, Q4 or Q8; 8 steps, no guidance) through diffusers' Krea2Pipeline with Krea's own text encoder
 (Qwen3-VL-4B), VAE and tokenizer (artwork/Krea-2-Turbo), in its own environment (.venv-art: transformers 5, diffusers 0.40);
-SDXL stays for cards too small for it. ART_PAINTER says which: krea2-q4 (11.6 GB at the peak, 23 s a picture on an RTX
-3090), krea2-q8 (17.4 GB, 21.5 s), sdxl (14.2 GB with the prompter, 9 s); the lab sets it. A Krea picture passes a content
+(1405: SDXL is gone; a card too small for Krea whole streams its blocks from RAM, ART_STREAM=1). ART_PAINTER says which: krea2-q4 (11.6 GB at the peak, 23 s a picture on an RTX
+3090), krea2-q8 (17.4 GB, 21.5 s); the lab sets it. A Krea picture passes a content
 filter before it is kept (Krea 2 Community License, 4.2: Falconsai/nsfw_image_detection in artwork/nsfw-filter): flagged, it
 is dropped and the next seed tries.
 
@@ -41,8 +39,6 @@ from pathlib import Path
 KIT = Path(__file__).resolve().parent.parent
 KEPT = {}                  # HERESY 1370: what a serving Artist process keeps between runs (artist_job.serve), one dict for its modules
 PROMPTER = KIT / "artwork" / "Qwen3-4B-Instruct-2507"
-LINK = KIT / "artwork" / "SDXL-Artwork-Model"
-OURS = KIT / "artwork" / "CyberRealistic-XL-v10"
 LOOKS = Path(__file__).resolve().parent / "art_looks.json"
 CLI = KIT / "vendor" / "llama.cpp" / "build" / "bin" / "llama-mtmd-cli"
 OMNI = KIT / "checkpoints" / "Qwen2.5-Omni-7B-GGUF"
@@ -55,18 +51,13 @@ CRITICS = [("Qwen2.5-Omni-7B-Q8_0.gguf", "mradermacher/Qwen2.5-Omni-7B.mmproj-Q8
            ("Qwen2.5-Omni-7B-Q4_K_M.gguf", "mmproj-Qwen2.5-Omni-7B-f16.gguf")]
 # HERESY 1166 (Viktor 04.10.2026: «1024x1024, если сейчас так генерится, то оставляй в этом размере»): kept as drawn
 SIZE, KEEP, STEPS, CFG = 1024, 1024, 28, 5.5
-# HERESY 1163 (Viktor: «SDXL Turbo файнтюны будут так же работать?»): they load, being SDXL, but want a few steps and little
-# guidance; at our 28 and 5.5 they come out burnt. A painter whose name says Turbo, Lightning, Hyper or LCM is painted
-# with 8 steps, guidance 2 and Euler ancestral; any painter with what a file beside the link says:
-# artwork/SDXL-Artwork-Model.json {"steps": 8, "cfg": 2.0, "sampler": "euler_a" | "dpmpp"}
-NUMBERS = KIT / "artwork" / "SDXL-Artwork-Model.json"
 # HERESY 1167: Krea 2 Muse by Stable Yogi, the author's GGUF; Krea's own parts beside it; the content filter
 KREA = KIT / "artwork" / "Krea-2-Turbo"
 MUSE = {"krea2-q4": KIT / "artwork" / "Krea-2-Muse" / "museByStableYogi_v35Q4Extended.gguf",
         "krea2-q8": KIT / "artwork" / "Krea-2-Muse" / "museByStableYogi_v35Q8Extended.gguf"}
 FILTER = KIT / "artwork" / "nsfw-filter"
 KREA_STEPS = 8
-PAINTERS = ("krea2-q4", "krea2-q8", "sdxl", "qwen2512-q4", "qwen2512-q6", "qwen2512-fp8", "qwen21")   # HERESY 1338: the Qwen painters
+PAINTERS = ("krea2-q4", "krea2-q8", "qwen2512-q4", "qwen2512-q6", "qwen2512-fp8", "qwen21")   # HERESY 1338: the Qwen painters; 1405: SDXL gone
 # the GGUF's names (Krea's own) → diffusers' (checked on all 430, the values against Krea's own weights, 05.10.2026)
 KREA_RULES = [
     (r"^blocks\.(\d+)\.", r"transformer_blocks.\1."), (r"^txtfusion\.", "text_fusion."),
@@ -139,8 +130,18 @@ class Krea:
         self.pipe = Krea2Pipeline.from_pretrained(KREA, transformer=krea_transformer(path), text_encoder=None, torch_dtype=torch.bfloat16)
         self.pipe.set_progress_bar_config(disable=True)
         self.where, self.filter = "cpu", None
+        self.painter, self.streamed = painter, None      # HERESY 1405
 
     def to(self, device):
+        # HERESY 1405: a card too small for Krea whole (the lab says ART_STREAM=1): its blocks stream from RAM as the Artist room's do
+        # (artist_qwen.place), the VAE alone moves; the critic after it finds the card nearly empty
+        if os.environ.get("ART_STREAM") == "1":
+            if device == "cuda" and self.streamed is None:
+                import artist_qwen
+                self.streamed = artist_qwen.place(self.pipe, self.painter) or {}
+            self.pipe.vae.to(device)
+            self.where = device
+            return self
         self.pipe.to(device)
         self.where = device
         return self
@@ -150,9 +151,12 @@ class Krea:
         if self.where == "cuda":                      # the encoder's turn on the card
             self.to("cpu")
             torch.cuda.empty_cache()
-        self.te.text_encoder.to("cuda")
+        # HERESY 1405: the encoder (Qwen3-VL) on the card when the room there holds it, else on the CPU (a small card)
+        size = sum(t.numel() * t.element_size() for t in self.te.text_encoder.parameters())
+        dev = torch.device("cuda" if torch.cuda.mem_get_info()[0] >= size + 2 ** 30 else "cpu")
+        self.te.text_encoder.to(dev)
         with torch.inference_mode():
-            e, m = self.te.encode_prompt(prompt, device=torch.device("cuda"))
+            e, m = self.te.encode_prompt(prompt, device=dev)
         e, m = e.to("cpu"), m.to("cpu")
         self.te.text_encoder.to("cpu")
         torch.cuda.empty_cache()
@@ -231,16 +235,6 @@ class Qwen:
         return self.aq.flagged(img)
 
 
-def painter_numbers(name):
-    steps, cfg, sampler = STEPS, CFG, "dpmpp"
-    if re.search(r"turbo|lightning|hyper|lcm", name, re.I):
-        steps, cfg, sampler = 8, 2.0, "euler_a"
-    try:
-        o = json.load(open(NUMBERS, encoding="utf-8"))
-        steps, cfg, sampler = int(o.get("steps", steps)), float(o.get("cfg", cfg)), str(o.get("sampler", sampler))
-    except (OSError, ValueError):
-        pass
-    return steps, cfg, sampler
 PICTURES = 3
 NEGATIVE = ("text, letters, words, typography, title, watermark, signature, logo, frame, border, collage, "
             "nsfw, nude, naked, gore, lowres, blurry, jpeg artifacts, deformed, extra fingers, bad anatomy")
@@ -286,7 +280,9 @@ def write_prompt(title, style, lyrics, seed, subject):
         return head + "album cover artwork, " + ", ".join(style.replace(".", ",").split(",")[:8]) + ", cinematic light, painterly", "template"
     from transformers import AutoModelForCausalLM, AutoTokenizer
     tok = AutoTokenizer.from_pretrained(PROMPTER)
-    model = AutoModelForCausalLM.from_pretrained(PROMPTER, dtype=torch.bfloat16).to("cuda")   # dtype: transformers 4.56 on and 5
+    # HERESY 1405: on the card when it has the room (about 9 GB), else on the CPU (a small card; a prompt of 140 tokens)
+    dev = "cuda" if torch.cuda.is_available() and torch.cuda.mem_get_info()[0] >= int(9.5 * 2 ** 30) else "cpu"
+    model = AutoModelForCausalLM.from_pretrained(PROMPTER, dtype=torch.bfloat16 if dev == "cuda" else torch.float32).to(dev)   # dtype: transformers 4.56 on and 5
     user = f"Title: {title}\nStyle: {style}\nLyrics:\n{lyrics or '(instrumental)'}"
     if subject:
         home = subject.get("home") or ""
@@ -297,7 +293,7 @@ def write_prompt(title, style, lyrics, seed, subject):
     ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt")
     if hasattr(ids, "keys"):                          # HERESY 1167: transformers 5 answers a dict (in .venv-art)
         ids = ids["input_ids"]
-    ids = ids.to("cuda")
+    ids = ids.to(dev)
     torch.manual_seed(seed)
     out = model.generate(ids, max_new_tokens=140, do_sample=True, temperature=0.7, top_p=0.9)
     text = tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True).strip()
@@ -310,51 +306,22 @@ def write_prompt(title, style, lyrics, seed, subject):
 
 
 def painter():
-    """The painter ART_PAINTER names (HERESY 1167): Krea 2 Muse at Q4 or Q8, or the SDXL behind the link (ours without it),
-    and the name it is known by. Anything not an SDXL behind the link is refused with what it is, before a minute is spent."""
+    """The painter ART_PAINTER names (HERESY 1167): Krea 2 Muse at Q4 or Q8, or a Qwen painter (1338), and the name it is known by;
+    SDXL refused, said (1405)."""
     kind = which_painter()
     if kind.startswith("qwen"):                          # HERESY 1338
         q = Qwen(kind, os.environ.get("ART_MODEL") or None)
         return q, q.name, (q.steps, q.cfg, "flow-euler")
-    if kind != "sdxl":
-        return Krea(kind), "Krea 2 Muse by Stable Yogi (" + kind[-2:].upper() + ")", (KREA_STEPS, 0.0, "flow-euler")
-    import torch
-    from diffusers import StableDiffusionXLPipeline, DPMSolverMultistepScheduler
-    if LINK.is_symlink() and not LINK.exists():
-        raise RuntimeError(f"artwork/{LINK.name} points at nothing ({os.readlink(LINK)}): point it at an SDXL folder or .safetensors file")
-    real = (LINK if LINK.exists() else OURS).resolve()
-    if real.is_dir():
-        try:
-            kind = json.load(open(real / "model_index.json", encoding="utf-8")).get("_class_name", "")
-        except (OSError, ValueError):
-            raise RuntimeError(f"{real.name} is no diffusers folder (no model_index.json): an SDXL folder or one .safetensors file")
-        if "StableDiffusionXL" not in kind:
-            raise RuntimeError(f"{real.name} is a {kind or 'model of another kind'}, not an SDXL: only SDXL finetunes paint here")
-        pipe = StableDiffusionXLPipeline.from_pretrained(real, torch_dtype=torch.float16, use_safetensors=True)
-    elif real.suffix == ".safetensors":
-        from safetensors import safe_open
-        with safe_open(str(real), "pt") as f:              # SDXL carries two text encoders; SD 1.5 one, FLUX none of these
-            sdxl = any(k.startswith("conditioner.embedders.1.") for k in f.keys())
-        if not sdxl:
-            raise RuntimeError(f"{real.name} is not an SDXL checkpoint (SD 1.5, SD 3, FLUX… do not paint here): only SDXL finetunes")
-        cfg = str(OURS) if (OURS / "model_index.json").is_file() else None   # the parts' configs from our folder: offline
-        pipe = StableDiffusionXLPipeline.from_single_file(str(real), torch_dtype=torch.float16, config=cfg, local_files_only=bool(cfg))
-    else:
-        raise RuntimeError(f"artwork/{LINK.name} leads to {real.name}: neither an SDXL folder nor a .safetensors file")
-    name = real.name if real.is_dir() else real.stem
-    numbers = painter_numbers(name)                      # HERESY 1163
-    if numbers[2] == "euler_a":
-        from diffusers import EulerAncestralDiscreteScheduler
-        pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, timestep_spacing="trailing")
-    else:
-        pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, use_karras_sigmas=True)
-    pipe.set_progress_bar_config(disable=True)
-    return pipe, name, numbers
+    if kind == "sdxl":                                   # HERESY 1405: gone from the studio
+        raise RuntimeError("SDXL left the studio (HERESY 1405): Krea 2 Muse paints a take's artwork, its blocks streamed from RAM on a small card")
+    return Krea(kind), "Krea 2 Muse by Stable Yogi (" + kind[-2:].upper() + ")", (KREA_STEPS, 0.0, "flow-euler")
 
 
 def paint(pipe, numbers, prompt, seed, out):
     import torch
-    if isinstance(pipe, (Krea, Qwen)):               # HERESY 1167: Krea 2 Muse, then the content filter; 1338: Qwen-Image as well
+    if not isinstance(pipe, (Krea, Qwen)):            # HERESY 1405: SDXL gone; no other painter here
+        raise RuntimeError("no painter: Krea 2 Muse or Qwen-Image")
+    if True:                                         # HERESY 1167: Krea 2 Muse, then the content filter; 1338: Qwen-Image as well
         img = pipe.draw(prompt, seed)
         score = pipe.flagged(img)
         if score is not None and score >= 0.5:
@@ -363,16 +330,7 @@ def paint(pipe, numbers, prompt, seed, out):
         if hi - lo < 8:
             raise RuntimeError(f"the picture came out flat ({lo}..{hi}): not kept")
         img.resize((KEEP, KEEP), resample=3).convert("RGB").save(out, "JPEG", quality=90, optimize=True)
-        return
-    pipe.to("cuda")
-    g = torch.Generator("cuda").manual_seed(seed)
-    steps, cfg, _ = numbers
-    img = pipe(prompt=prompt, negative_prompt=NEGATIVE, width=SIZE, height=SIZE, num_inference_steps=steps,
-               guidance_scale=cfg, generator=g).images[0]
-    lo, hi = img.convert("L").getextrema()
-    if hi - lo < 8:                               # a black or flat picture is a failure, said aloud, not kept
-        raise RuntimeError(f"the picture came out flat ({lo}..{hi}): not kept")
-    img.resize((KEEP, KEEP), resample=3).convert("RGB").save(out, "JPEG", quality=90, optimize=True)
+
 
 
 def critic():

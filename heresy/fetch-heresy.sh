@@ -10,8 +10,8 @@
 #   heresy/fetch-heresy.sh --artwork [--artwork-q8] [--yes]
 #                                      also the artwork's models (HERESY 1120, 1167), asked first with their size: the
 #                                      painter by the cards: Krea 2 Muse by Stable Yogi at Q4 (--artwork-q8: Q8 too) with
-#                                      Krea 2's text encoder, VAE and the content filter where a card has 16 GB, else SDXL
-#                                      (CyberRealistic XL v10); both from our models repo; the prompt writer (Qwen3-4B)
+#                                      Krea 2's text encoder, VAE and the content filter (whole on a 16 GB card, streamed
+#                                      from RAM below; 1405: SDXL gone), from our models repo; the prompt writer (Qwen3-4B)
 #   heresy/fetch-heresy.sh --qwen 2512-q4|2512-q6|2.1[,…] [--yes]
 #                                      HERESY 1323: also the Artist's Qwen painters, each asked first with its size:
 #                                      Qwen-Image-2512 with Lightning (Apache-2.0; Q4_K_M from a 16 GB card, Q6_K from 24)
@@ -310,68 +310,36 @@ fi
 # оставим SDXL»): where a card has 16 GB, Krea 2 Muse by Stable Yogi (the author's GGUF, Q4; Q8 when asked) with Krea 2's
 # text encoder, VAE and configs, all from our models repo (Krea 2 Community License: its LICENSE and NOTICE come along),
 # and the content filter the licence asks for (Falconsai/nsfw_image_detection, Apache-2.0); SDXL below, as before.
+# HERESY 1405 (Viktor 12.10.2026: «Да, удаляй лишний обвес SDXL. Лучше Krea 2 Q4, чем SDXL Q8»): Krea 2 Muse for any card: whole where one
+# has 16 GB, its blocks streamed from RAM below (the lab says so to the painter); SDXL gone from the studio
 if [ $ARTWORK = 1 ]; then
   BIG=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | sort -n | tail -1); BIG=${BIG:-0}
-  if [ "$BIG" -ge 16000 ] 2>/dev/null; then
-    asked artwork "Artwork: Krea 2 Muse (a card of ${BIG} MB here), its text encoder and VAE, the content filter, the prompt writer"
-    K_MUSE="$ROOT/artwork/Krea-2-Muse"; K_TURBO="$ROOT/artwork/Krea-2-Turbo"
-    K_WANT=("artwork/Krea-2-Muse/museByStableYogi_v35Q4Extended.gguf")
-    [ $ARTQ8 = 1 ] && K_WANT+=("artwork/Krea-2-Muse/museByStableYogi_v35Q8Extended.gguf")
-    k_here() { local f; for f in "${K_WANT[@]}"; do [ -s "$ROOT/$f" ] || return 1; done
-               [ -s "$K_TURBO/text_encoder/model.safetensors" ] && [ -s "$K_TURBO/vae/diffusion_pytorch_model.safetensors" ]; }
-    go=1
-    if [ $MODE != check ] && [ $YES = 0 ] && ! { k_here && [ -s "$ROOT/artwork/Qwen3-4B-Instruct-2507/config.json" ]; }; then
-      printf "%s" "Download $([ $ARTQ8 = 1 ] && echo 41 || echo 26) GB (Krea 2 Muse Q4 8.3$([ $ARTQ8 = 1 ] && echo ", Q8 14.6"), its encoder and VAE 9.4, the filter 0.3, the prompt writer 8.1)? [y/N] "
-      read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
-    fi
-    if [ $go = 1 ]; then
-      if k_here; then say_here "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2)"
-      elif [ $MODE = check ]; then say_miss "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2)"
-      else
-        hf_ready >/dev/null || { say_fail "$K_MUSE" "(the pinned downloader would not install: tools/hf-env.sh)"; }
-        again "$HF" download --quiet goldhub/Ruach_Studio_Models_v2 --revision "$(pin goldhub/Ruach_Studio_Models_v2)" --include "${K_WANT[@]}" "artwork/Krea-2-Muse/NOTICE.txt" \
-              "artwork/Krea-2-Muse/LICENSE.pdf" "artwork/Krea-2-Turbo/*" --local-dir "$ROOT"
-        if k_here; then say_got "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2; Krea 2 Community License: LICENSE.pdf, NOTICE.txt)"
-        else say_fail "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2: $(why))"; fi
-      fi
-      hf_repo Falconsai/nsfw_image_detection "$ROOT/artwork/nsfw-filter" --include "config.json" "model.safetensors" "preprocessor_config.json"
-      hf_repo Qwen/Qwen3-4B-Instruct-2507 "$ROOT/artwork/Qwen3-4B-Instruct-2507" "${WORK[@]}" LICENSE
-      [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(Krea 2 paints in its own environment: lab/install-venv.sh --art)"
-    fi
-  fi
-fi
-if [ $ARTWORK = 1 ] && ! [ "${BIG:-0}" -ge 16000 ] 2>/dev/null; then
-  asked artwork "Artwork: the painter and the prompt writer (SDXL: no card here has the 16 GB Krea 2 wants)"
-  A_DIR="$ROOT/artwork/CyberRealistic-XL-v10"
-  a_here() { [ -s "$A_DIR/model_index.json" ] && [ -s "$A_DIR/unet/diffusion_pytorch_model.safetensors" ]; }
+  asked artwork "Artwork: Krea 2 Muse (a card of ${BIG} MB here: $([ "$BIG" -ge 16000 ] 2>/dev/null && echo "whole on it" || echo "streamed from RAM")), its text encoder and VAE, the content filter, the prompt writer"
+  K_MUSE="$ROOT/artwork/Krea-2-Muse"; K_TURBO="$ROOT/artwork/Krea-2-Turbo"
+  K_WANT=("artwork/Krea-2-Muse/museByStableYogi_v35Q4Extended.gguf")
+  [ $ARTQ8 = 1 ] && K_WANT+=("artwork/Krea-2-Muse/museByStableYogi_v35Q8Extended.gguf")
+  k_here() { local f; for f in "${K_WANT[@]}"; do [ -s "$ROOT/$f" ] || return 1; done
+             [ -s "$K_TURBO/text_encoder/model.safetensors" ] && [ -s "$K_TURBO/vae/diffusion_pytorch_model.safetensors" ]; }
   go=1
-  if [ $MODE != check ] && [ $YES = 0 ] && ! { a_here && [ -s "$ROOT/artwork/Qwen3-4B-Instruct-2507/config.json" ]; }; then
-    printf "%s" "Download 15 GB (the painter 6.9, the prompt writer 8.1)? It needs a 16 GB card when it draws. [y/N] "
+  if [ $MODE != check ] && [ $YES = 0 ] && ! { k_here && [ -s "$ROOT/artwork/Qwen3-4B-Instruct-2507/config.json" ]; }; then
+    printf "%s" "Download $([ $ARTQ8 = 1 ] && echo 41 || echo 26) GB (Krea 2 Muse Q4 8.3$([ $ARTQ8 = 1 ] && echo ", Q8 14.6"), its encoder and VAE 9.4, the filter 0.3, the prompt writer 8.1)? [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   if [ $go = 1 ]; then
-    if a_here; then say_here "$A_DIR" "(goldhub/Ruach_Studio_Models_v2)"
-    elif [ $MODE = check ]; then say_miss "$A_DIR" "(goldhub/Ruach_Studio_Models_v2)"
+    if k_here; then say_here "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2)"
+    elif [ $MODE = check ]; then say_miss "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2)"
     else
-      hf_ready >/dev/null || { say_fail "$A_DIR" "(the pinned downloader would not install: tools/hf-env.sh)"; }
-      again "$HF" download --quiet goldhub/Ruach_Studio_Models_v2 --revision "$(pin goldhub/Ruach_Studio_Models_v2)" --include "artwork/CyberRealistic-XL-v10/*" --local-dir "$ROOT"
-      if a_here; then say_got "$A_DIR" "(goldhub/Ruach_Studio_Models_v2)"; else say_fail "$A_DIR" "(goldhub/Ruach_Studio_Models_v2: $(why))"; fi
+      hf_ready >/dev/null || { say_fail "$K_MUSE" "(the pinned downloader would not install: tools/hf-env.sh)"; }
+      again "$HF" download --quiet goldhub/Ruach_Studio_Models_v2 --revision "$(pin goldhub/Ruach_Studio_Models_v2)" --include "${K_WANT[@]}" "artwork/Krea-2-Muse/NOTICE.txt" \
+            "artwork/Krea-2-Muse/LICENSE.pdf" "artwork/Krea-2-Turbo/*" --local-dir "$ROOT"
+      if k_here; then say_got "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2; Krea 2 Community License: LICENSE.pdf, NOTICE.txt)"
+      else say_fail "$K_MUSE" "(goldhub/Ruach_Studio_Models_v2: $(why))"; fi
     fi
-    # HERESY 1156 (Viktor: «на нашу модель дать рядом относительный симлинк SDXL-Artwork-Model, чтобы на этот симлинк
-    # можно было бы посадить другие веса SDXL»): the studio paints with whatever SDXL this link points at. Made once,
-    # beside ours; a link the user pointed elsewhere is left as it is, and said
-    A_LINK="$ROOT/artwork/SDXL-Artwork-Model"
-    if [ -L "$A_LINK" ] || [ -e "$A_LINK" ]; then
-      say_here "$A_LINK" "(→ $(readlink "$A_LINK" 2>/dev/null || echo "not a link"))"
-    elif [ $MODE = check ]; then
-      say_miss "$A_LINK" "(→ CyberRealistic-XL-v10: made by a run without --check)"
-    elif a_here; then
-      ln -s CyberRealistic-XL-v10 "$A_LINK" && say_got "$A_LINK" "(→ CyberRealistic-XL-v10, the painter; point it at another SDXL to change it)"
-    fi
+    hf_repo Falconsai/nsfw_image_detection "$ROOT/artwork/nsfw-filter" --include "config.json" "model.safetensors" "preprocessor_config.json"
     hf_repo Qwen/Qwen3-4B-Instruct-2507 "$ROOT/artwork/Qwen3-4B-Instruct-2507" "${WORK[@]}" LICENSE
+    [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(Krea 2 paints in its own environment: lab/install-venv.sh --art)"
   fi
 fi
-
 # HERESY 1323 (Viktor 10.10.2026: «Забирай 2512 тоже в Студию»; «как альтернативу для менее мощных карт бери смело … Q6_K +
 # Lightning… Для 16 ГБ — Q4_K_M»; on Qwen-Image-2.1: «мы предупреждаем пользователя по этому поводу»): the Artist's Qwen painters,
 # only when asked for, each asked again with its size. Qwen-Image-2512 (Apache-2.0): the pipeline's parts from Qwen itself (the

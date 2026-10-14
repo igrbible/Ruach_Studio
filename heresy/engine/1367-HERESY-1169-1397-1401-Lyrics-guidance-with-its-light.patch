@@ -1,0 +1,904 @@
+From 1a5b3f73dd9e542245ea29d56e263c52f38bb2aa Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 12 Oct 2026 21:04:59 -0600
+Subject: [PATCH 1367/1383] =?UTF-8?q?HERESY=201169=20=C2=B7=201397?=
+ =?UTF-8?q?=E2=80=931401:=20Lyrics=20guidance=20with=20its=20light,=20the?=
+ =?UTF-8?q?=20take's=20medcard,=20the=20section=20card=20without=20its=20s?=
+ =?UTF-8?q?pectrogram,=20the=20profiles=20at=201.6=20/=202.2?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+1397: Lyrics guidance beside Guidance (CFG), kept with the form, the draft, Retake and profiles. 1398 (RC7, Viktor's word): the spectrogram slice out of the section card; the scope keeps it whole. 1399: the medcard under the seeds: Score Planner | Music Tokens | The run. 1400: a light beside each guidance, his range by ear (the music 1.0–4.0, the lyrics 1.0–2.6, the two 0.4–1.0 apart), no clamp; a new song starts at 1.6 / 2.2. 1401: the three built-in profiles at 1.6 / 2.2; the third renamed «Musical Heresy of Creator's Ear», 10 minutes, his to save over. Krea 2 letters with the picture too (no Qwen-only note). Eleven catalogs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |   6 +-
+ tools/console/app.js            | 113 ++++++++++++++++++++++++++++----
+ tools/console/heresy-artist.js  |   3 +-
+ tools/console/heresy-i18n-be.js |  32 ++++++++-
+ tools/console/heresy-i18n-de.js |  32 ++++++++-
+ tools/console/heresy-i18n-el.js |  32 ++++++++-
+ tools/console/heresy-i18n-es.js |  32 ++++++++-
+ tools/console/heresy-i18n-fr.js |  32 ++++++++-
+ tools/console/heresy-i18n-it.js |  32 ++++++++-
+ tools/console/heresy-i18n-ja.js |  32 ++++++++-
+ tools/console/heresy-i18n-pt.js |  32 ++++++++-
+ tools/console/heresy-i18n-ru.js |  32 ++++++++-
+ tools/console/heresy-i18n-uk.js |  32 ++++++++-
+ tools/console/heresy-i18n-zh.js |  32 ++++++++-
+ tools/console/heresy-presets.js |  63 ++++++++++++------
+ tools/console/index.html        |   7 +-
+ 16 files changed, 496 insertions(+), 48 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 229d629..a4a2a38 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -1458,6 +1458,10 @@ pre.paper { font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; word-br
+ .meta-row.trio { grid-template-columns: auto auto minmax(0, 1fr); }
+ .meta-row.duo { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
+ .meta-row.seeds { padding: 10px 14px; }
++.cfg-light { display: inline-block; flex: none; width: 10px; height: 10px; margin-left: 8px; border-radius: 50%; background: var(--line); align-self: center; }   /* HERESY 1400 */
++.cfg-light.is-green { background: var(--good); }
++.cfg-light.is-amber { background: var(--amber); }
++.cfg-light.is-red { background: var(--bad); }
+ .meta-col { min-width: 0; padding: 0 14px; border-left: 1px solid var(--line-soft); }
+ .meta-col:first-child { border-left: none; }
+ .meta-col h4 { margin: 0 0 6px; font: 600 10px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+@@ -5320,8 +5324,6 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
+ .ar-trash-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+ .ar-aside-pic { position: relative; }
+ .ar-aside-pic .ar-aside-x { position: absolute; top: 4px; right: 4px; }
+-/* HERESY 1358: a slice of the section's spectrogram in its card */
+-.wave-pop-spec { display: block; width: 300px; max-width: 100%; height: 56px; margin: 6px 0 4px; border-radius: var(--r-sm, 4px); image-rendering: auto; }
+ /* HERESY 1360: an adapter from Civitai, by its link, with the user's own key */
+ .ar-cv { width: min(720px, 100%); }
+ .ar-cv-body { padding-top: 14px; gap: 12px; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 0b0811c..c782f7b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -648,7 +648,8 @@
+   // оверлеями»; «2.4 - макс стабильности. 2.6 и выше - дурдом. Может макс выставим до 4?»): Guidance and Sound and output
+   // kept in their bounds, each saying why; a field emptied shows its default again when you leave it
+   var FIELD_GUARDS = {
+-    cfg: [1, 4, "1.4–1.6 is the verified stable range; 2.0 is dynamic, closer to SUNO; up to 2.4 it holds. From 2.6 the music gets cut short and the lyrics suffer; 1.0 switches guidance off."],
++    cfg: [0, 10, "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red"],   // HERESY 1400: the light, not a clamp at 4
++    cfgLyrics: [0, 10, "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance"],   // HERESY 1397, 1400
+     odeSteps: [1, 160, "32 is the release; 8–16 are quick drafts; 160 is the ceiling."],
+     maxLength: [10, 960, "The model's whole window is 24,576 tokens (16:23 of sound), and the style, the lyrics and, outside Direct, the score take their share of it."],
+     variations: [1, 9, "One pass renders nine at most."],
+@@ -671,6 +672,8 @@
+     var el = $(id), g = FIELD_GUARDS[id], v = parseFloat(el.value);
+     if (id === "cfg") {
+       if (!el.value.trim() || !isFinite(v)) { el.value = ""; el.dataset.touched = ""; fillCfg(); syncShape(); return; }
++    } else if (id === "cfgLyrics") {                     // HERESY 1397: empty is its own answer (as Guidance)
++      if (!el.value.trim() || !isFinite(v)) { el.value = ""; return; }
+     } else if (!el.value.trim() || !isFinite(v)) {
+       el.value = fieldDefault(id);
+       el.dispatchEvent(new Event("input", { bubbles: true }));
+@@ -680,9 +683,10 @@
+       el.value = Math.min(g[1], Math.max(g[0], v));
+       el.dispatchEvent(new Event("input", { bubbles: true }));
+       toastWhy(fieldLabel(el) + " is kept within " + g[0] + "–" + g[1], g[2], "bad");
+-    } else if (id === "cfg" && v >= 2.6) {
+-      toastWhy("Guidance from 2.6 is an experiment", "The music gets cut short and the lyrics suffer, while the instruments come in clearer (Viktor's test in Direct mode, 05.10.2026). Stable: 1.4–1.6; 2.0 is dynamic, closer to SUNO; 2.4 is the edge.");
++    } else if (id === "cfg" && v > 2.6 && !$("cfgLyrics").value.trim()) {   // HERESY 1400: the music may go to 4, the words follow it unless told
++      toast(tr("The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)"));
+     }
++    cfgLights();
+   }
+   setTimeout(function () {
+     Object.keys(FIELD_GUARDS).forEach(function (id) { if ($(id)) $(id).addEventListener("change", function () { guardField(id); }); });
+@@ -840,10 +844,46 @@
+     var def = String(defaultCfg(currentCot()));
+     $("cfg").setAttribute("value", def);   // step base: arrows go 1.6 -> 1.61 / 1.59
+     $("cfg").value = def;
++    cfgLights();                                         // HERESY 1400
++  }
++  // HERESY 1400: a light beside each guidance: green inside Viktor's range (the music 1.0–4.0, the lyrics 1.0–2.6), amber a little past
++  // it, red far past; an empty Lyrics guidance lit by the Guidance it follows
++  var CFG_ZONES = { cfg: [1, 4, 4.6], cfgLyrics: [1, 2.6, 3] };
++  var LYRICS_CFG = "2.2";                                // the lyrics' own beside the default 1.6: his 1.6 / 2.2 kept the words (12.10.2026)
++  var CFG_SAYS = {
++    cfg: ["Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own",
++      "Past 4.0: brighter still, and the music may begin to break; listen before you keep it", "Far past Viktor's range for the music (1.0 to 4.0): expect a broken take"],
++    cfgLyrics: ["Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety",
++      "Past 2.6: the words begin to burn", "Far past 2.6: burnt words"]
++  };
++  function cfgLights() {
++    if (!$("cfgLight") || !$("cfgLyricsLight")) return;
++    var music = parseFloat($("cfg").value), own = $("cfgLyrics").value.trim(), lyrics = own === "" ? music : parseFloat(own);
++    if (!isFinite(music)) music = defaultCfg(currentCot());
++    if (own === "") lyrics = music;
++    [["cfg", music], ["cfgLyrics", lyrics]].forEach(function (x) {
++      var dot = $(x[0] + "Light"), v = x[1], z = CFG_ZONES[x[0]];
++      var k = !isFinite(v) ? -1 : v < z[0] || v > z[2] ? 2 : v > z[1] ? 1 : 0;
++      var tip = k < 0 ? "" : x[0] === "cfgLyrics" && own === "" && k > 0
++        ? tr("The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)")
++        : tr(CFG_SAYS[x[0]][k]);
++      // HERESY 1400 (Viktor: «Оба CFG должны отличаться один от другого хотя бы на 0.1, а в идеале на все 0.4-1.0. Единое значение уходит в
++      // ту самую галлюцинацию в половинке лиричной»; on 2.6/2.6 and 4.0/4.0: «потеря С и косые ударности на гласных»): the two apart
++      var apart = Math.abs(music - lyrics), s = !isFinite(apart) ? -1 : apart < 0.1 ? 2 : apart < 0.4 ? 1 : 0;
++      if (x[0] === "cfgLyrics" && s > Math.max(k, 0)) {
++        k = s;
++        tip = tr("The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress");
++      }
++      dot.className = "cfg-light" + (k < 0 ? "" : " is-" + ["green", "amber", "red"][k]);
++      dot.dataset.tip = tip;
++      dot.setAttribute("aria-label", tip);
++    });
+   }
+   // HERESY 1167 (Viktor: «когда Backspace в цифровом поле до конца, обнуляется на одну цифру… это лучше делать при потере
+   // фокуса курсора»): emptied, it keeps empty while you type; it shows its default again when you leave it (guardField)
+   $("cfg").addEventListener("input", function () { this.dataset.touched = this.value.trim() ? "1" : ""; });
++  ["cfg", "cfgLyrics"].forEach(function (id) { $(id).addEventListener("input", cfgLights); });   // HERESY 1400
++  window.addEventListener("ruach-lang", cfgLights);
+   all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", fillCfg); });
+   fillCfg();
+ 
+@@ -898,7 +938,7 @@
+     return all("input[data-group]").some(function (input) {
+       if (input.dataset.group === "semantic" && input.dataset.key === "max_tokens") return false;   // the song's length: Max length's, not a knob's
+       return Number(input.value) !== round(samplingDefault(input.dataset.group, input.dataset.key), 6);
+-    }) || !!$("cfg").dataset.touched;
++    }) || !!$("cfg").dataset.touched || $("cfgLyrics").value.trim() !== LYRICS_CFG;   // HERESY 1400: its own default is 2.2
+   }
+   $("resetSampling").addEventListener("click", function () {
+     askReset(samplingChanged(), "Reset sampling to the defaults?\n\nThe values set here now are kept nowhere else.").then(function (ok) {
+@@ -907,6 +947,8 @@
+         input.value = round(samplingDefault(input.dataset.group, input.dataset.key), 6);
+       });
+       $("cfg").dataset.touched = "";
++      $("cfgLyrics").value = LYRICS_CFG;                 // HERESY 1397, 1400: apart from the start
++      $("cfg").value = "";
+       fillCfg();
+       syncShape();
+       toast("Sampling reset to defaults");
+@@ -1524,7 +1566,8 @@
+     $("newSong").click();
+   });
+   function newSong() {
+-    ["title", "style", "lyrics", "abc", "lmSeed", "soundSeed", "cfg"].forEach(function (id) { $(id).value = ""; });
++    ["title", "style", "lyrics", "abc", "lmSeed", "soundSeed", "cfg", "cfgLyrics"].forEach(function (id) { $(id).value = ""; });   // HERESY 1397
++    $("cfgLyrics").value = LYRICS_CFG;                   // HERESY 1400: a new song starts with the two apart
+     setCot("full");                                   // HERESY 1169 · 1253 (Viktor 08.10.2026: «Full as the default»; 1167 had Direct)
+     $("instrumental").checked = false;
+     all("input[data-group]").forEach(function (input) {
+@@ -1691,6 +1734,12 @@
+       if (!isFinite(cfg) || cfg < 0) throw new Error("Guidance must be a number, 0 or more");
+       body.cfg_scale = cfg;
+     }
++    var lyrRaw = $("cfgLyrics").value.trim();            // HERESY 1397: the lyrics' own guidance; empty: as Guidance
++    if (lyrRaw !== "") {
++      var lyr = parseFloat(lyrRaw);
++      if (!isFinite(lyr) || lyr < 0) throw new Error("Lyrics guidance must be a number, 0 or more");
++      body.cfg_lyrics = lyr;
++    }
+     var abcSampling = samplingOverrides("abc"), semanticSampling = samplingOverrides("semantic");
+     if (Object.keys(abcSampling).length) body.abc_sampling = abcSampling;
+     if (Object.keys(semanticSampling).length) body.semantic_sampling = semanticSampling;
+@@ -2002,6 +2051,8 @@
+     var cot = MODES[req.cot] ? req.cot : "full";
+     document.querySelector('input[name="cot"][value="' + cot + '"]').checked = true;
+     paintPlanBtn();   // HERESY 1169 · 1249 (Viktor: «Кнопка … в режиме FULL неактивна»): a mode set here (the draft on load, Retake, Reuse, a prompt file) moved no change event, and the button kept the Direct it was first painted in
++    $("cfgLyrics").value = typeof req.cfg_lyrics === "number" && req.cfg_lyrics >= 0 ? round(req.cfg_lyrics, 4) : "";   // HERESY 1397
++    setTimeout(cfgLights, 0);                            // HERESY 1400
+     if (typeof req.cfg_scale === "number" && req.cfg_scale >= 0 && round(req.cfg_scale, 4) !== defaultCfg(cot)) {
+       $("cfg").value = round(req.cfg_scale, 4);
+       $("cfg").dataset.touched = "1";
+@@ -2054,7 +2105,7 @@
+   // HERESY 1168 (Viktor 07.10.2026, of Open: «О том, что сброшено, Open молчит… да, конечно, это нужно допилить»): what of a
+   // prompt file does not come into the form as written is said when it opens. A file that loads «clean» but lost a field, a
+   // mode or an adapter on the way lies; each such place says what was there and what the form holds instead.
+-  var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "lm_seed", "seed", "cfg_scale", "abc_sampling", "semantic_sampling",
++  var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "lm_seed", "seed", "cfg_scale", "cfg_lyrics", "abc_sampling", "semantic_sampling",
+     "vae", "solver", "sliders", "loras", "plan_only", "semantic_tokens", "semantic_keep", "parent", "duration", "steps",
+     "lm_batch_size", "synth_batch_size", "output_format", "mp3_bitrate", "peak_clip", "score_guard", "seconds", "instrumental"];
+   var GROUP_NAMES = { abc: "Score planner", semantic: "Music tokens" };
+@@ -2769,7 +2820,7 @@
+           seconds: 0, format: req.output_format || job.request.format, favorite: false, style: req.style || "",
+           lyrics: req.lyrics || "", cot: req.cot || job.request.cot, lm_seed: req.lm_seed, seed: req.seed,
+           vae: req.vae || job.request.vae, sliders: req.sliders || [], steps: req.steps || job.request.steps,
+-          cfg_scale: typeof req.cfg_scale === "number" ? req.cfg_scale : -1, duration: req.duration,
++          cfg_scale: typeof req.cfg_scale === "number" ? req.cfg_scale : -1, cfg_lyrics: typeof req.cfg_lyrics === "number" ? req.cfg_lyrics : -1, duration: req.duration,
+           truncated: false, render_seconds: job.finished ? (job.finished - job.started) / 1000 : 0,
+           song: Math.floor(n / variations), variation: n % variations, parent: req.parent || "", has_score: !!req.abc
+         };
+@@ -4515,9 +4566,46 @@
+         column("Sound", '<dl class="meta-rows">' + sound + "</dl>") + column("Shape", '<dl class="meta-rows">' + shape + "</dl>") + "</div>" +
+       '<div class="meta-row duo">' + addonList("Sliders", slidersText, sliderItems) + addonList("LoRAs", lorasText, loraItems) + "</div>" +
+       '<div class="meta-row seeds"><dl class="meta-rows seeds">' + seed("Music", "Music seed", seedText(take.lm_seed)) +
+-        seed("Sound", "Sound seed", seedText(take.seed)) + "</dl></div>";
++        seed("Sound", "Sound seed", seedText(take.seed)) + "</dl></div>" + medcard(take, req, field, column);
++  }
++  // HERESY 1399 (Viktor 12.10.2026: «У нас в медкарте трека не видны токены музыки и голоса, время на их генерацию. И остальное из
++  // параметров генерации по планировщику партитуры и музыкальным токенам. Добавь это в карту ниже чисел сидов… нужна полная
++  // амбулаторная карта трека»): how the take was made, stage by stage, as the Creator's form has it: the Score Planner's and the Music
++  // Tokens' sampling, the tokens each wrote and their seconds, the guidance as applied, the sound; the engine records the stages from
++  // 2.0.0 on (meta "stages"); an older take shows what its request says and a dash where nothing was kept
++  function medcard(take, req, field, column) {
++    var st = take.stages || null, rq = req || {}, music = st && st.music, score = st && st.score, sound = st && st.sound;
++    var cell = function (label, key, text, cls) { text = String(text); return field(label, escape(text), text, key, cls === undefined ? "num" : cls); };
++    var n = function (v) { return v === undefined || v === null || v === "" ? "\u2014" : String(v); };
++    var secs = function (v) { return typeof v === "number" ? v.toFixed(1) + " s" : "\u2014"; };
++    var smp = function (o, of) {
++      o = o || {};
++      return cell("Temperature", of + " temperature", n(o.temperature)) + cell("Top-p", of + " top-p", n(o.top_p)) + cell("Top-k", of + " top-k", n(o.top_k)) +
++        cell("Repetition", of + " repetition", o.repetition_penalty == null ? "\u2014" : o.repetition_penalty + (o.penalty_window ? " \u00b7 " + o.penalty_window : "")) +
++        cell("Min tokens", of + " min tokens", n(o.min_tokens)) + cell("Max tokens", of + " max tokens", n(o.max_tokens));
++    };
++    var codes = rq.semantic_tokens ? String(rq.semantic_tokens).split(",").length : null;
++    var made = music ? music.tokens + (music.kept ? " + " + music.kept + " " + tr("kept") : "") : codes;
++    var frames = music ? music.tokens + music.kept : codes;
++    var g = music ? music.guidance : (typeof rq.cfg_scale === "number" && rq.cfg_scale >= 0 ? rq.cfg_scale : null);
++    var gl = music ? music.lyrics_guidance : (typeof rq.cfg_lyrics === "number" && rq.cfg_lyrics >= 0 ? rq.cfg_lyrics : null);
++    var plan = take.cot === "off" ? cell("Tokens", "Score tokens", tr("no score"), "") :
++      cell("Tokens", "Score tokens", take.provided_score ? tr("supplied") : n(score ? score.tokens : null)) +
++      cell("Time", "Score time", score && score.tokens ? secs(score.seconds) : "\u2014") + smp(rq.abc_sampling, "Score");
++    var mus = cell("Tokens", "Music tokens", n(made)) + cell("Seconds of music", "Music seconds", frames ? (frames / FRAME_RATE).toFixed(1) + " s" : "\u2014") +
++      cell("Time", "Music time", music && !music.replayed ? secs(music.seconds) : music && music.replayed ? tr("supplied") : "\u2014") +
++      cell("Guidance (CFG)", "Music guidance", g === null ? tr("default") : n(g)) + cell("Lyrics guidance", "Lyrics guidance", gl === null || gl === g ? tr("as Guidance") : n(gl)) +
++      smp(rq.semantic_sampling, "Music") + cell("Length cap", "Length cap", rq.duration ? rq.duration + " s" : "\u2014");
++    var run = cell("Solver", "Solver", n(rq.solver), "") + cell("Steps", "Run steps", n(rq.steps || take.steps)) + cell("Sound stage", "Sound stage", sound ? secs(sound.seconds) : "\u2014") +
++      cell("Decoder", "Decoder", sound ? secs(sound.vae_seconds) : "\u2014") + cell("Whole run", "Whole run", secs(take.render_seconds)) +
++      cell("Realtime", "Realtime", take.render_seconds && take.seconds ? "\u00d7" + (take.seconds / take.render_seconds).toFixed(2) : "\u2014") +
++      cell("Versions \u00d7 variations", "Versions x variations", (rq.lm_batch_size || 1) + " \u00d7 " + (rq.synth_batch_size || 1)) +
++      cell("Score guard", "Score guard", tr(rq.score_guard === false ? "off" : "on"), "");
++    return '<div class="meta-row trio medcard">' + column("Score Planner", '<dl class="meta-rows">' + plan + "</dl>") +
++      column("Music Tokens", '<dl class="meta-rows">' + mus + "</dl>") + column("The run", '<dl class="meta-rows">' + run + "</dl>") + "</div>";
+   }
+ 
++
+   // About (bottom of the Engine page): the add-ons' own pages, from loras/sources.json. Only web links
+   // become links; a LoRA split into two files (music half, sound half) appears once.
+   function paintAbout() {
+@@ -6096,10 +6184,8 @@
+     if (wavePopEl.dataset.key !== key) {
+       wavePopEl.dataset.key = key;
+       var html = '<div class="wave-pop-head"><b translate="no">' + escape(s.name) + "</b><span>" + clock(s.t) + "\u2013" + clock(end) + "</span></div>";
+-      // HERESY 1358: a slice of the take's spectrogram over the section (the lab draws it once and keeps it)
+-      if (!scope && STATE.playerTake && !STATE.playerTake.session && end - s.t >= 1 && end - s.t <= 600) {
+-        html += '<img class="wave-pop-spec" alt="" draggable="false" src="/lab/spectrogram?name=' + encodeURIComponent(STATE.playerTake.name) + "&t0=" + s.t.toFixed(2) + "&t1=" + end.toFixed(2) + '&w=300&h=56" />';
+-      }
++      // HERESY 1398 (Viktor 12.10.2026: «Из обычного режима подсветки тултипом убери спектрограмму. Пусть спектрограмма будет только в полном
++      // режиме на весь трек. Пусть это будет уже в RC7»): 1358's slice of the spectrogram is gone from the card; the scope (1374) shows it whole
+       if (s.lines && s.lines.length) {
+         html += '<div class="wave-pop-lines" translate="no">' + s.lines.slice(0, 12).map(function (l, k) { return "<p" + (k === now ? ' class="is-now"' : "") + ">" + escape(l) + "</p>"; }).join("") +
+           (s.lines.length > 12 ? '<p class="wave-pop-more">\u2026</p>' : "") + "</div>" +
+@@ -7935,6 +8021,7 @@
+       title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value,
+       lm_seed: $("lmSeed").value.trim(), seed: $("soundSeed").value.trim(), cot: currentCot(),
+       cfg_scale: $("cfg").dataset.touched && $("cfg").value.trim() !== "" ? parseFloat($("cfg").value) : -1,
++      cfg_lyrics: $("cfgLyrics").value.trim() !== "" ? parseFloat($("cfgLyrics").value) : -1,   // HERESY 1397
+       steps: parseInt($("odeSteps").value, 10), duration: parseFloat($("maxLength").value),
+       solver: $("odeSolver").value,
+       synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
+@@ -8123,7 +8210,7 @@
+   /* ---------------------------------------------- HERESY 1032: saved styles and profiles */
+   // A profile is every knob but the texts and seeds, written out in full (defaults too), so it
+   // means the same on a server whose defaults moved. Applying one keeps the texts, seeds and codes.
+-  var SETUP_KEYS = ["cot", "duration", "cfg_scale", "steps", "solver", "vae", "sliders", "loras", "output_format",
++  var SETUP_KEYS = ["cot", "duration", "cfg_scale", "cfg_lyrics", "steps", "solver", "vae", "sliders", "loras", "output_format",
+                     "mp3_bitrate", "peak_clip", "synth_batch_size", "lm_batch_size"];
+   function captureSetup() {
+     var b = buildRequest(false, false, true), out = {};
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index fa6d1f6..05760f0 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -1140,8 +1140,7 @@
+     if (!$("arLetters")) return;
+     $("arLetSay").textContent = L ? "\u201c" + L.title + "\u201d" : "";
+     if (L && L.way === "letter" && !refAsOk()) note = tr("Lettering a finished picture is Qwen-Image 2.1's: it is not on this machine");
+-    else if (L && L.way === "letter" && !state.ref) note = tr("On the reference picture: take one with «As reference» first");
+-    else if (L && L.way === "paint" && !/^qwen/.test($("arPainter").value)) note = tr("Lettering is Qwen-Image's: choose Qwen-Image 2512 or 2.1 as the painter");
++    else if (L && L.way === "letter" && !state.ref) note = tr("On the reference picture: take one with «As reference» first");   // HERESY 1396: every painter of the room letters with the picture (Krea 2 too)
+     $("arLetNote").textContent = note;
+     $("arLetNote").hidden = !note;
+     $("arLetTake").disabled = !state.take;
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index c902c03..00fe1a0 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5020,5 +5020,35 @@ RuachI18n.add("be", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Надпісаць гэтую карціну: назву і другі радок з «Надпісу» ў форме, рукамі Qwen-Image 2.1, астатняе захаваецца",
+ "Letter it": "Надпісаць",
+ "Not read back:": "Не перачытана:",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Дзе ў кадры стаіць надпіс: у верхняй частцы, пасярэдзіне ці ў ніжняй частцы"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Дзе ў кадры стаіць надпіс: у верхняй частцы, пасярэдзіне ці ў ніжняй частцы",
++"Lyrics guidance": "Вядзенне лірыкі",
++"as Guidance": "як Вядзенне",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "Сваё вядзенне лірыкі на стадыі музыкі: наколькі моцна трымаюцца словы, асобна ад цягі стылю, якую трымае Вядзенне. Пуста — як Вядзенне, як раней. Мера Віктара: лірыка ніжэй за 2.6, а музыка стабільная да 4. Свая шкала дадае трэцюю галіну, промпт без лірыкі: крыху больш памяці, амаль той жа час",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "Мера Віктара: лірыка трымаецца ніжэй за 2.6, а музыка ідзе да 4. Пуста — як CFG.",
++"Lyrics guidance from 2.6 is an experiment": "CFG лірыкі ад 2.6 — эксперымент",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "Мера Віктара: лірыка трымаецца ніжэй за 2.6, а музыка (CFG) стабільная да 4.",
++"Lyrics guidance must be a number, 0 or more": "Вядзенне лірыкі — лік ад 0",
++"Repetition": "Паўторы",
++"Tokens": "Токены",
++"Time": "Час",
++"Seconds of music": "Секунд музыкі",
++"Length cap": "Мяжа даўжыні",
++"Sound stage": "Стадыя гуку",
++"Decoder": "Дэкодэр",
++"Whole run": "Увесь прагон",
++"Realtime": "Хутчэй за рэальны",
++"Versions × variations": "Версіі × варыяцыі",
++"Score guard": "Вартавы партытуры",
++"The run": "Прагон",
++"no score": "без партытуры",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "У межах Віктара для музыкі, ад 1.0 да 4.0: 4.0 — самая яркая, 3.0 — амаль так жа, 1.6 — сваё студыі",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Вышэй за 4.0: яшчэ ярчэй, але музыка можа пачаць ламацца; паслухай, перш чым пакінуць",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Далёка за межамі Віктара для музыкі (1.0–4.0): чакай зламаны сэмпл",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "У межах Віктара для лірыкі, ад 1.0 да 2.6: 2.2 трымае словы пры музыцы 4.0; на 1.6 яны аксамітна растваюцца",
++"Past 2.6: the words begin to burn": "Вышэй за 2.6: словы пачынаюць перапальвацца",
++"Far past 2.6: burnt words": "Далёка за 2.6: перапаленыя словы",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Тут лірыка ідзе за Вядзеннем: вышэй за 2.6 яна пачынае перапальвацца; дай ёй сваё Вядзенне лірыкі (2.2 трымае яе пры музыцы 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Межы Віктара: музыка ад 1.0 да 4.0; далей агеньчык каля поля становіцца жоўтым, потым чырвоным",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Межы Віктара: лірыка ад 1.0 да 2.6; далей агеньчык каля поля становіцца жоўтым, потым чырвоным. Пуста — як Вядзенне",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два вядзенні мусяць адрознівацца: хаця б на 0.1, лепш на 0.4–1.0 (вуха Віктара); пры роўных палова лірыкі сыходзіць у галюцынацыю, а галосныя губляюць націск"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 6fbc8f2..6d371d5 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -4903,5 +4903,35 @@ RuachI18n.add("de", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Dieses Bild beschriften: Titel und zweite Zeile aus dem «Schriftzug» des Formulars, durch Qwen-Image 2.1, der Rest bleibt",
+ "Letter it": "Beschriften",
+ "Not read back:": "Nicht zurückgelesen:",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Wo der Schriftzug im Bild steht: im oberen Teil, in der Mitte oder im unteren Teil"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Wo der Schriftzug im Bild steht: im oberen Teil, in der Mitte oder im unteren Teil",
++"Lyrics guidance": "Führung des Texts",
++"as Guidance": "wie Führung",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "Die eigene Führung des Texts in der Musikstufe: wie fest die Worte befolgt werden, getrennt vom Zug des Stils, den die Führung hält. Leer: wie Führung, wie bisher. Viktors Maß: der Text unter 2.6, während die Musik bis 4 stabil bleibt. Eine eigene Skala fügt einen dritten Zweig hinzu, den Prompt ohne Text: etwas mehr Speicher, fast dieselbe Zeit",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "Viktors Maß: der Text hält unter 2.6, während die Musik bis 4 geht. Leer: wie CFG.",
++"Lyrics guidance from 2.6 is an experiment": "CFG des Texts ab 2.6 ist ein Experiment",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "Viktors Maß: der Text hält unter 2.6, während die Musik (CFG) bis 4 stabil ist.",
++"Lyrics guidance must be a number, 0 or more": "Die Führung des Texts muss eine Zahl sein, 0 oder mehr",
++"Repetition": "Wiederholung",
++"Tokens": "Tokens",
++"Time": "Zeit",
++"Seconds of music": "Sekunden Musik",
++"Length cap": "Längengrenze",
++"Sound stage": "Klangstufe",
++"Decoder": "Decoder",
++"Whole run": "Ganzer Lauf",
++"Realtime": "Echtzeit",
++"Versions × variations": "Versionen × Variationen",
++"Score guard": "Partiturwächter",
++"The run": "Der Lauf",
++"no score": "ohne Partitur",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "In Viktors Bereich für die Musik, 1.0 bis 4.0: 4.0 am hellsten, 3.0 fast ebenso, 1.6 das des Studios",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Über 4.0: noch heller, und die Musik kann zu brechen beginnen; hör hin, bevor du sie behältst",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Weit außerhalb von Viktors Bereich für die Musik (1.0–4.0): rechne mit einem kaputten Take",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "In Viktors Bereich für den Text, 1.0 bis 2.6: 2.2 hält die Worte bei Musik 4.0; bei 1.6 lösen sie sich samtig auf",
++"Past 2.6: the words begin to burn": "Über 2.6: die Worte beginnen zu verbrennen",
++"Far past 2.6: burnt words": "Weit über 2.6: verbrannte Worte",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Hier folgt der Text der Führung: über 2.6 beginnt er zu verbrennen; gib ihm seine eigene Führung des Texts (2.2 hält ihn bei Musik 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Viktors Bereich: die Musik 1.0 bis 4.0; darüber wird das Licht neben dem Feld gelb, dann rot",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Viktors Bereich: der Text 1.0 bis 2.6; darüber wird das Licht gelb, dann rot. Leer: wie Führung",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Die beiden Führungen sollten sich unterscheiden: um mindestens 0.1, am besten um 0.4 bis 1.0 (Viktors Ohr); gleich, gleitet die Hälfte des Texts in Halluzination, und die Vokale verlieren ihre Betonung"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 5898d0a..c3b524f 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5019,5 +5019,35 @@ RuachI18n.add("el", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Γράψε σε αυτή την εικόνα: τον τίτλο και τη δεύτερη γραμμή της «Επιγραφής» της φόρμας, με το Qwen-Image 2.1, τα υπόλοιπα μένουν",
+ "Letter it": "Επιγραφή",
+ "Not read back:": "Δεν ξαναδιαβάστηκε:",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Πού στέκεται η επιγραφή στο κάδρο: στο πάνω μέρος, στη μέση ή στο κάτω μέρος"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Πού στέκεται η επιγραφή στο κάδρο: στο πάνω μέρος, στη μέση ή στο κάτω μέρος",
++"Lyrics guidance": "Καθοδήγηση στίχων",
++"as Guidance": "όπως η Καθοδήγηση",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "Η δική τους καθοδήγηση για τους στίχους στο στάδιο της μουσικής: πόσο σφιχτά ακολουθούνται οι λέξεις, χωριστά από την έλξη του ύφους, που κρατά η Καθοδήγηση. Κενό: ίδια με την Καθοδήγηση, όπως πριν. Το μέτρο του Βίκτορ: οι στίχοι κάτω από 2.6, ενώ η μουσική αντέχει ως το 4. Μια δική τους κλίμακα προσθέτει τρίτο κλάδο, το prompt χωρίς στίχους: λίγο περισσότερη μνήμη, σχεδόν ίδιος χρόνος",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "Το μέτρο του Βίκτορ: οι στίχοι κρατούν κάτω από 2.6, ενώ η μουσική πάει ως το 4. Κενό: ίδιο με το CFG.",
++"Lyrics guidance from 2.6 is an experiment": "Το CFG στίχων από 2.6 είναι πείραμα",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "Το μέτρο του Βίκτορ: οι στίχοι κρατούν κάτω από 2.6, ενώ η μουσική (CFG) είναι σταθερή ως το 4.",
++"Lyrics guidance must be a number, 0 or more": "Η Καθοδήγηση στίχων πρέπει να είναι αριθμός, 0 ή περισσότερο",
++"Repetition": "Επανάληψη",
++"Tokens": "Tokens",
++"Time": "Χρόνος",
++"Seconds of music": "Δευτερόλεπτα μουσικής",
++"Length cap": "Όριο διάρκειας",
++"Sound stage": "Στάδιο ήχου",
++"Decoder": "Αποκωδικοποιητής",
++"Whole run": "Όλη η εκτέλεση",
++"Realtime": "Ταχύτητα",
++"Versions × variations": "Εκδοχές × παραλλαγές",
++"Score guard": "Φύλακας παρτιτούρας",
++"The run": "Η εκτέλεση",
++"no score": "χωρίς παρτιτούρα",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Μέσα στο εύρος του Βίκτορ για τη μουσική, 1.0 ως 4.0: το 4.0 το πιο λαμπερό, το 3.0 σχεδόν το ίδιο, το 1.6 του στούντιο",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Πάνω από 4.0: ακόμα πιο λαμπερό, και η μουσική μπορεί να αρχίσει να σπάει· άκουσε πριν το κρατήσεις",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Πολύ έξω από το εύρος του Βίκτορ για τη μουσική (1.0–4.0): περίμενε σπασμένη λήψη",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "Μέσα στο εύρος του Βίκτορ για τους στίχους, 1.0 ως 2.6: το 2.2 κρατά τις λέξεις με τη μουσική στο 4.0· στο 1.6 λιώνουν βελούδινα",
++"Past 2.6: the words begin to burn": "Πάνω από 2.6: οι λέξεις αρχίζουν να καίγονται",
++"Far past 2.6: burnt words": "Πολύ πάνω από 2.6: καμένες λέξεις",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Εδώ οι στίχοι ακολουθούν την Καθοδήγηση: πάνω από 2.6 αρχίζουν να καίγονται· δώσε τους δική τους Καθοδήγηση στίχων (το 2.2 τους κρατά με τη μουσική στο 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Το εύρος του Βίκτορ: η μουσική 1.0 ως 4.0· πέρα από αυτό το φωτάκι δίπλα στο πεδίο γίνεται κεχριμπαρένιο, μετά κόκκινο",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Το εύρος του Βίκτορ: οι στίχοι 1.0 ως 2.6· πέρα από αυτό το φωτάκι γίνεται κεχριμπαρένιο, μετά κόκκινο. Κενό: όπως η Καθοδήγηση",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Οι δύο καθοδηγήσεις πρέπει να διαφέρουν: τουλάχιστον κατά 0.1, καλύτερα κατά 0.4 ως 1.0 (το αυτί του Βίκτορ)· ίσες, οι μισοί στίχοι γλιστρούν σε παραίσθηση και τα φωνήεντα χάνουν τον τόνο τους"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 3ef84dc..7238d8c 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5019,5 +5019,35 @@ RuachI18n.add("es", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Rotular esta imagen: el título y la segunda línea del «Rótulo» del formulario, con Qwen-Image 2.1, el resto se conserva",
+ "Letter it": "Rotular",
+ "Not read back:": "No se volvió a leer:",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Dónde va el rótulo en el encuadre: en su parte de arriba, en el centro o en la de abajo"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Dónde va el rótulo en el encuadre: en su parte de arriba, en el centro o en la de abajo",
++"Lyrics guidance": "Guía de la letra",
++"as Guidance": "como la Guía",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "La guía propia de la letra en la etapa de la música: cuánto se siguen las palabras, aparte del tirón del estilo, que sostiene la Guía. Vacío: igual que la Guía, como antes. La medida de Viktor: la letra por debajo de 2.6, mientras la música aguanta hasta 4. Una escala propia añade una tercera rama, el prompt sin la letra: algo más de memoria, casi el mismo tiempo",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "La medida de Viktor: la letra aguanta por debajo de 2.6, mientras la música llega a 4. Vacío: igual que el CFG.",
++"Lyrics guidance from 2.6 is an experiment": "El CFG de la letra desde 2.6 es un experimento",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "La medida de Viktor: la letra aguanta por debajo de 2.6, mientras la música (CFG) es estable hasta 4.",
++"Lyrics guidance must be a number, 0 or more": "La Guía de la letra debe ser un número, 0 o más",
++"Repetition": "Repetición",
++"Tokens": "Tokens",
++"Time": "Tiempo",
++"Seconds of music": "Segundos de música",
++"Length cap": "Tope de duración",
++"Sound stage": "Etapa del sonido",
++"Decoder": "Decodificador",
++"Whole run": "Toda la ejecución",
++"Realtime": "Tiempo real",
++"Versions × variations": "Versiones × variaciones",
++"Score guard": "Guardián de la partitura",
++"The run": "La ejecución",
++"no score": "sin partitura",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Dentro del rango de Viktor para la música, de 1.0 a 4.0: 4.0 lo más brillante, 3.0 casi igual, 1.6 el del estudio",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Más allá de 4.0: aún más brillante, y la música puede empezar a romperse; escucha antes de quedártela",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Muy fuera del rango de Viktor para la música (1.0–4.0): espera una toma rota",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "Dentro del rango de Viktor para la letra, de 1.0 a 2.6: 2.2 sostiene las palabras con la música en 4.0; en 1.6 se disuelven, aterciopeladas",
++"Past 2.6: the words begin to burn": "Más allá de 2.6: las palabras empiezan a quemarse",
++"Far past 2.6: burnt words": "Muy por encima de 2.6: palabras quemadas",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Aquí la letra sigue a la Guía: más allá de 2.6 empieza a quemarse; dale su propia Guía de la letra (2.2 la sostiene con la música en 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "El rango de Viktor: la música de 1.0 a 4.0; más allá, la luz junto al campo se vuelve ámbar y luego roja",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "El rango de Viktor: la letra de 1.0 a 2.6; más allá, la luz se vuelve ámbar y luego roja. Vacío: igual que la Guía",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Las dos guías deben diferir: al menos en 0.1, mejor en 0.4 a 1.0 (el oído de Viktor); iguales, media letra se va a la alucinación y las vocales pierden su acento"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 85462ce..cea4c04 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -4903,5 +4903,35 @@ RuachI18n.add("fr", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Lettrer cette image : le titre et la seconde ligne du « Lettrage » du formulaire, par Qwen-Image 2.1, le reste gardé",
+ "Letter it": "Lettrer",
+ "Not read back:": "Non relu :",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Où le lettrage se place dans le cadre : en haut, au milieu ou en bas"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Où le lettrage se place dans le cadre : en haut, au milieu ou en bas",
++"Lyrics guidance": "Guidage des paroles",
++"as Guidance": "comme le Guidage",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "Le guidage propre aux paroles dans l'étape de la musique : à quel point les mots sont suivis, à part la poussée du style, que tient le Guidage. Vide : comme le Guidage, comme avant. La mesure de Viktor : les paroles sous 2.6, tandis que la musique tient jusqu'à 4. Une échelle à elles ajoute une troisième branche, le prompt sans les paroles : un peu plus de mémoire, à peu près le même temps",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "La mesure de Viktor : les paroles tiennent sous 2.6, tandis que la musique va jusqu'à 4. Vide : comme le CFG.",
++"Lyrics guidance from 2.6 is an experiment": "Le CFG des paroles dès 2.6 est une expérience",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "La mesure de Viktor : les paroles tiennent sous 2.6, tandis que la musique (CFG) reste stable jusqu'à 4.",
++"Lyrics guidance must be a number, 0 or more": "Le Guidage des paroles doit être un nombre, 0 ou plus",
++"Repetition": "Répétition",
++"Tokens": "Tokens",
++"Time": "Temps",
++"Seconds of music": "Secondes de musique",
++"Length cap": "Limite de durée",
++"Sound stage": "Étape du son",
++"Decoder": "Décodeur",
++"Whole run": "Toute l'exécution",
++"Realtime": "Temps réel",
++"Versions × variations": "Versions × variations",
++"Score guard": "Garde de la partition",
++"The run": "L'exécution",
++"no score": "sans partition",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Dans la plage de Viktor pour la musique, de 1.0 à 4.0 : 4.0 le plus brillant, 3.0 presque autant, 1.6 celui du studio",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Au-delà de 4.0 : plus brillant encore, et la musique peut commencer à casser ; écoute avant de la garder",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Bien au-delà de la plage de Viktor pour la musique (1.0–4.0) : attends-toi à une prise cassée",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "Dans la plage de Viktor pour les paroles, de 1.0 à 2.6 : 2.2 tient les mots avec la musique à 4.0 ; à 1.6 ils se dissolvent, veloutés",
++"Past 2.6: the words begin to burn": "Au-delà de 2.6 : les mots commencent à brûler",
++"Far past 2.6: burnt words": "Bien au-delà de 2.6 : des mots brûlés",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Ici les paroles suivent le Guidage : au-delà de 2.6 elles commencent à brûler ; donne-leur leur propre Guidage des paroles (2.2 les tient avec la musique à 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "La plage de Viktor : la musique de 1.0 à 4.0 ; au-delà, le voyant près du champ passe à l'ambre, puis au rouge",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "La plage de Viktor : les paroles de 1.0 à 2.6 ; au-delà, le voyant passe à l'ambre, puis au rouge. Vide : comme le Guidage",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Les deux guidages doivent différer : d'au moins 0.1, au mieux de 0.4 à 1.0 (l'oreille de Viktor) ; égaux, la moitié des paroles glisse dans l'hallucination et les voyelles perdent leur accent"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 4a2baba..c37dadd 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5019,5 +5019,35 @@ RuachI18n.add("it", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Scrivi su questa immagine: il titolo e la seconda riga della «Scritta» del modulo, con Qwen-Image 2.1, il resto resta",
+ "Letter it": "Scrivi",
+ "Not read back:": "Non riletto:",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Dove sta la scritta nell'inquadratura: nella parte alta, al centro o nella parte bassa"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Dove sta la scritta nell'inquadratura: nella parte alta, al centro o nella parte bassa",
++"Lyrics guidance": "Guida del testo",
++"as Guidance": "come la Guida",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "La guida propria del testo nella fase della musica: quanto si seguono le parole, a parte la spinta dello stile, che tiene la Guida. Vuoto: come la Guida, come prima. La misura di Viktor: il testo sotto 2.6, mentre la musica regge fino a 4. Una scala propria aggiunge un terzo ramo, il prompt senza testo: un po' più di memoria, quasi lo stesso tempo",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "La misura di Viktor: il testo regge sotto 2.6, mentre la musica arriva a 4. Vuoto: come il CFG.",
++"Lyrics guidance from 2.6 is an experiment": "Il CFG del testo da 2.6 è un esperimento",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "La misura di Viktor: il testo regge sotto 2.6, mentre la musica (CFG) è stabile fino a 4.",
++"Lyrics guidance must be a number, 0 or more": "La Guida del testo deve essere un numero, 0 o più",
++"Repetition": "Ripetizione",
++"Tokens": "Token",
++"Time": "Tempo",
++"Seconds of music": "Secondi di musica",
++"Length cap": "Limite di durata",
++"Sound stage": "Fase del suono",
++"Decoder": "Decodificatore",
++"Whole run": "Tutta l'esecuzione",
++"Realtime": "Tempo reale",
++"Versions × variations": "Versioni × variazioni",
++"Score guard": "Guardiano della partitura",
++"The run": "L'esecuzione",
++"no score": "senza partitura",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Nell'intervallo di Viktor per la musica, da 1.0 a 4.0: 4.0 il più brillante, 3.0 quasi uguale, 1.6 quello dello studio",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Oltre 4.0: ancora più brillante, e la musica può cominciare a rompersi; ascolta prima di tenerla",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Molto oltre l'intervallo di Viktor per la musica (1.0–4.0): aspettati una ripresa rotta",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "Nell'intervallo di Viktor per il testo, da 1.0 a 2.6: 2.2 tiene le parole con la musica a 4.0; a 1.6 si sciolgono, vellutate",
++"Past 2.6: the words begin to burn": "Oltre 2.6: le parole cominciano a bruciarsi",
++"Far past 2.6: burnt words": "Molto oltre 2.6: parole bruciate",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Qui il testo segue la Guida: oltre 2.6 comincia a bruciarsi; dagli una sua Guida del testo (2.2 lo tiene con la musica a 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "L'intervallo di Viktor: la musica da 1.0 a 4.0; oltre, la luce accanto al campo diventa ambra, poi rossa",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "L'intervallo di Viktor: il testo da 1.0 a 2.6; oltre, la luce diventa ambra, poi rossa. Vuoto: come la Guida",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Le due guide devono differire: almeno di 0.1, meglio di 0.4–1.0 (l'orecchio di Viktor); uguali, metà del testo scivola nell'allucinazione e le vocali perdono l'accento"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index bd79622..bf447fb 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -4903,5 +4903,35 @@ RuachI18n.add("ja", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "この絵に文字入れ：フォームの「文字入れ」のタイトルと2行目を Qwen-Image 2.1 で。ほかはそのまま",
+ "Letter it": "文字入れ",
+ "Not read back:": "読み返していません：",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "文字を枠のどこに置くか：上部、中央、下部"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "文字を枠のどこに置くか：上部、中央、下部",
++"Lyrics guidance": "歌詞のガイダンス",
++"as Guidance": "ガイダンスと同じ",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "音楽ステージでの歌詞専用のガイダンス：スタイルの引き（ガイダンスが担う）とは別に、言葉をどれだけ強く守るか。空欄ならガイダンスと同じ（従来どおり）。ヴィクトルの目安：歌詞は 2.6 未満、音楽は 4 まで安定。専用の値は第3の分岐（歌詞なしのプロンプト）を加えます：メモリが少し増え、時間はほぼ同じ",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "ヴィクトルの目安：歌詞は 2.6 未満で保ち、音楽は 4 まで。空欄なら CFG と同じ。",
++"Lyrics guidance from 2.6 is an experiment": "歌詞の CFG 2.6 以上は実験です",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "ヴィクトルの目安：歌詞は 2.6 未満で保ち、音楽（CFG）は 4 まで安定。",
++"Lyrics guidance must be a number, 0 or more": "歌詞のガイダンスは 0 以上の数値にしてください",
++"Repetition": "繰り返し",
++"Tokens": "トークン",
++"Time": "時間",
++"Seconds of music": "音楽の秒数",
++"Length cap": "長さの上限",
++"Sound stage": "音のステージ",
++"Decoder": "デコーダー",
++"Whole run": "全体の実行",
++"Realtime": "実時間比",
++"Versions × variations": "バージョン × バリエーション",
++"Score guard": "スコアの番人",
++"The run": "実行",
++"no score": "スコアなし",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "ヴィクトルの音楽の範囲（1.0〜4.0）内：4.0 が最も鮮やか、3.0 もほぼ同じ、1.6 はスタジオの既定",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "4.0 超：さらに鮮やかになりますが、音楽が崩れ始めることがあります。残す前に聴いてください",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "ヴィクトルの音楽の範囲（1.0〜4.0）を大きく外れています：壊れたテイクになりがちです",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "ヴィクトルの歌詞の範囲（1.0〜2.6）内：音楽 4.0 なら 2.2 で言葉が保たれます。1.6 では言葉がビロードのように溶けます",
++"Past 2.6: the words begin to burn": "2.6 超：言葉が焼け始めます",
++"Far past 2.6: burnt words": "2.6 を大きく超える：焼けた言葉",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "ここでは歌詞はガイダンスに従います：2.6 を超えると焼け始めます。歌詞のガイダンスを別に設定してください（音楽 4.0 なら 2.2 で保たれます）",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "ヴィクトルの範囲：音楽は 1.0〜4.0。超えると欄の横のランプが黄、次に赤になります",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "ヴィクトルの範囲：歌詞は 1.0〜2.6。超えるとランプが黄、次に赤。空欄ならガイダンスと同じ",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "2つのガイダンスは差をつけてください：最低 0.1、理想は 0.4〜1.0（ヴィクトルの耳）。同じ値だと歌詞の半分が幻覚に流れ、母音のアクセントが崩れます"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index c1d02f4..fdc9883 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -4903,5 +4903,35 @@ RuachI18n.add("pt", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Letrear esta imagem: o título e a segunda linha do «Letreiro» do formulário, pelo Qwen-Image 2.1, o resto mantido",
+ "Letter it": "Letrear",
+ "Not read back:": "Não relido:",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Onde fica o letreiro no enquadramento: na parte de cima, no meio ou na parte de baixo"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Onde fica o letreiro no enquadramento: na parte de cima, no meio ou na parte de baixo",
++"Lyrics guidance": "Orientação da letra",
++"as Guidance": "como a Orientação",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "A orientação própria da letra na etapa da música: o quanto as palavras são seguidas, à parte da força do estilo, que a Orientação mantém. Vazio: igual à Orientação, como antes. A medida de Viktor: a letra abaixo de 2.6, enquanto a música aguenta até 4. Uma escala própria acrescenta um terceiro ramo, o prompt sem a letra: um pouco mais de memória, quase o mesmo tempo",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "A medida de Viktor: a letra aguenta abaixo de 2.6, enquanto a música vai até 4. Vazio: igual ao CFG.",
++"Lyrics guidance from 2.6 is an experiment": "O CFG da letra a partir de 2.6 é uma experiência",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "A medida de Viktor: a letra aguenta abaixo de 2.6, enquanto a música (CFG) é estável até 4.",
++"Lyrics guidance must be a number, 0 or more": "A Orientação da letra deve ser um número, 0 ou mais",
++"Repetition": "Repetição",
++"Tokens": "Tokens",
++"Time": "Tempo",
++"Seconds of music": "Segundos de música",
++"Length cap": "Limite de duração",
++"Sound stage": "Etapa do som",
++"Decoder": "Decodificador",
++"Whole run": "Execução inteira",
++"Realtime": "Tempo real",
++"Versions × variations": "Versões × variações",
++"Score guard": "Guarda da partitura",
++"The run": "A execução",
++"no score": "sem partitura",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "Dentro da faixa de Viktor para a música, de 1.0 a 4.0: 4.0 o mais brilhante, 3.0 quase igual, 1.6 o do estúdio",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Acima de 4.0: ainda mais brilhante, e a música pode começar a quebrar; ouça antes de ficar com ela",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Muito fora da faixa de Viktor para a música (1.0–4.0): espere uma tomada quebrada",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "Dentro da faixa de Viktor para a letra, de 1.0 a 2.6: 2.2 segura as palavras com a música em 4.0; em 1.6 elas se dissolvem, aveludadas",
++"Past 2.6: the words begin to burn": "Acima de 2.6: as palavras começam a queimar",
++"Far past 2.6: burnt words": "Muito acima de 2.6: palavras queimadas",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Aqui a letra segue a Orientação: acima de 2.6 começa a queimar; dê a ela sua própria Orientação da letra (2.2 a segura com a música em 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "A faixa de Viktor: a música de 1.0 a 4.0; além disso, a luz ao lado do campo fica âmbar, depois vermelha",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "A faixa de Viktor: a letra de 1.0 a 2.6; além disso, a luz fica âmbar, depois vermelha. Vazio: igual à Orientação",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "As duas orientações devem diferir: pelo menos 0.1, de preferência 0.4 a 1.0 (o ouvido de Viktor); iguais, metade da letra desliza para a alucinação e as vogais perdem a tônica"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index dc0b757..c83d47e 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5025,5 +5025,35 @@ RuachI18n.add("ru", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Надписать эту картину: название и вторую строку из «Надписи» в форме, руками Qwen-Image 2.1, остальное сохранится",
+ "Letter it": "Надписать",
+ "Not read back:": "Не перечитано:",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Где в кадре стоит надпись: в верхней части, посередине или в нижней части"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Где в кадре стоит надпись: в верхней части, посередине или в нижней части",
++"Lyrics guidance": "Ведение лирики",
++"as Guidance": "как Ведение",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "Своё ведение лирики на стадии музыки: насколько крепко держатся слова, отдельно от тяги стиля, которую держит Ведение. Пусто — как Ведение, как раньше. Мера Виктора: лирика ниже 2.6, а музыка стабильна до 4. Своя шкала добавляет третью ветку, промпт без лирики: чуть больше памяти, почти то же время",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "Мера Виктора: лирика держится ниже 2.6, а музыка идёт до 4. Пусто — как CFG.",
++"Lyrics guidance from 2.6 is an experiment": "CFG лирики от 2.6 — эксперимент",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "Мера Виктора: лирика держится ниже 2.6, а музыка (CFG) стабильна до 4.",
++"Lyrics guidance must be a number, 0 or more": "Ведение лирики — число от 0",
++"Repetition": "Повторы",
++"Tokens": "Токены",
++"Time": "Время",
++"Seconds of music": "Секунд музыки",
++"Length cap": "Предел длины",
++"Sound stage": "Стадия звука",
++"Decoder": "Декодер",
++"Whole run": "Весь прогон",
++"Realtime": "Быстрее реального",
++"Versions × variations": "Версии × вариации",
++"Score guard": "Страж партитуры",
++"The run": "Прогон",
++"no score": "без партитуры",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "В пределах Виктора для музыки, от 1.0 до 4.0: 4.0 — самая яркая, 3.0 — почти так же, 1.6 — своё студии",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Выше 4.0: ещё ярче, но музыка может начать ломаться; послушай, прежде чем оставить",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Далеко за пределами Виктора для музыки (1.0–4.0): жди сломанный семпл",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "В пределах Виктора для лирики, от 1.0 до 2.6: 2.2 держит слова при музыке 4.0; на 1.6 они бархатно растворяются",
++"Past 2.6: the words begin to burn": "Выше 2.6: слова начинают пережигаться",
++"Far past 2.6: burnt words": "Далеко за 2.6: пережжённые слова",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Здесь лирика идёт за Ведением: выше 2.6 она начинает пережигаться; дай ей своё Ведение лирики (2.2 держит её при музыке 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Пределы Виктора: музыка от 1.0 до 4.0; дальше огонёк у поля становится жёлтым, потом красным",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Пределы Виктора: лирика от 1.0 до 2.6; дальше огонёк у поля становится жёлтым, потом красным. Пусто — как Ведение",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два ведения должны различаться: хотя бы на 0.1, лучше на 0.4–1.0 (ухо Виктора); при равных половина лирики уходит в галлюцинацию, а гласные теряют ударение"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 5d2c9f5..6f6a590 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5020,5 +5020,35 @@ RuachI18n.add("uk", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "Надписати цю картину: назву й другий рядок із «Напису» у формі, руками Qwen-Image 2.1, решта збережеться",
+ "Letter it": "Надписати",
+ "Not read back:": "Не перечитано:",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Де в кадрі стоїть напис: у верхній частині, посередині чи в нижній частині"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "Де в кадрі стоїть напис: у верхній частині, посередині чи в нижній частині",
++"Lyrics guidance": "Ведення лірики",
++"as Guidance": "як Ведення",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "Власне ведення лірики на стадії музики: наскільки міцно тримаються слова, окремо від тяжіння стилю, яке тримає Ведення. Порожньо — як Ведення, як раніше. Міра Віктора: лірика нижче 2.6, а музика стабільна до 4. Власна шкала додає третю гілку, промпт без лірики: трохи більше пам'яті, майже той самий час",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "Міра Віктора: лірика тримається нижче 2.6, а музика йде до 4. Порожньо — як CFG.",
++"Lyrics guidance from 2.6 is an experiment": "CFG лірики від 2.6 — експеримент",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "Міра Віктора: лірика тримається нижче 2.6, а музика (CFG) стабільна до 4.",
++"Lyrics guidance must be a number, 0 or more": "Ведення лірики — число від 0",
++"Repetition": "Повтори",
++"Tokens": "Токени",
++"Time": "Час",
++"Seconds of music": "Секунд музики",
++"Length cap": "Межа довжини",
++"Sound stage": "Стадія звуку",
++"Decoder": "Декодер",
++"Whole run": "Увесь прогін",
++"Realtime": "Швидше за реальний",
++"Versions × variations": "Версії × варіації",
++"Score guard": "Сторож партитури",
++"The run": "Прогін",
++"no score": "без партитури",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "У межах Віктора для музики, від 1.0 до 4.0: 4.0 — найяскравіша, 3.0 — майже так само, 1.6 — своє студії",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "Понад 4.0: ще яскравіше, але музика може почати ламатися; послухай, перш ніж лишити",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "Далеко за межами Віктора для музики (1.0–4.0): чекай зламаний семпл",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "У межах Віктора для лірики, від 1.0 до 2.6: 2.2 тримає слова при музиці 4.0; на 1.6 вони оксамитово розчиняються",
++"Past 2.6: the words begin to burn": "Понад 2.6: слова починають перепалюватися",
++"Far past 2.6: burnt words": "Далеко за 2.6: перепалені слова",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "Тут лірика йде за Веденням: понад 2.6 вона починає перепалюватися; дай їй власне Ведення лірики (2.2 тримає її при музиці 4.0)",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "Межі Віктора: музика від 1.0 до 4.0; далі вогник біля поля стає жовтим, потім червоним",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "Межі Віктора: лірика від 1.0 до 2.6; далі вогник біля поля стає жовтим, потім червоним. Порожньо — як Ведення",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "Два ведення мають різнитися: хоча б на 0.1, краще на 0.4–1.0 (вухо Віктора); за рівних половина лірики йде в галюцинацію, а голосні втрачають наголос"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 4a3fbe3..c576b9b 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -4903,5 +4903,35 @@ RuachI18n.add("zh", {
+ "Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept": "在这幅画上题字：用表单“题字”中的标题和第二行，由 Qwen-Image 2.1 完成，其余保持不变",
+ "Letter it": "题字",
+ "Not read back:": "未回读：",
+-"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "题字在画面中的位置：上部、中间或下部"
++"Where in the frame the lettering stands: across its upper part, its middle or its lower part": "题字在画面中的位置：上部、中间或下部",
++"Lyrics guidance": "歌词引导",
++"as Guidance": "同引导",
++"The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time": "音乐阶段中歌词专用的引导：在风格的牵引（由引导掌握）之外，单独决定歌词被遵循的力度。留空：与引导相同，与以前一样。维克多的经验：歌词低于 2.6，而音乐到 4 都稳定。单独的数值会增加第三条分支（不含歌词的提示词）：内存略多，时间几乎相同",
++"Viktor's measure: the lyrics hold below 2.6 while the music goes up to 4. Empty: the same as Guidance.": "维克多的经验：歌词保持在 2.6 以下，音乐可到 4。留空：与 CFG 相同。",
++"Lyrics guidance from 2.6 is an experiment": "歌词 CFG 从 2.6 起属于实验",
++"Viktor's measure: the lyrics hold below 2.6, while the music (Guidance) is stable up to 4.": "维克多的经验：歌词保持在 2.6 以下，而音乐（CFG）到 4 都稳定。",
++"Lyrics guidance must be a number, 0 or more": "歌词引导必须是 0 或更大的数字",
++"Repetition": "重复",
++"Tokens": "Token",
++"Time": "时间",
++"Seconds of music": "音乐秒数",
++"Length cap": "时长上限",
++"Sound stage": "声音阶段",
++"Decoder": "解码器",
++"Whole run": "整次运行",
++"Realtime": "实时倍数",
++"Versions × variations": "版本 × 变体",
++"Score guard": "乐谱守卫",
++"The run": "运行",
++"no score": "无乐谱",
++"Within Viktor's range for the music, 1.0 to 4.0: 4.0 the brightest, 3.0 just as bright, 1.6 the studio's own": "在维克多的音乐范围内（1.0 到 4.0）：4.0 最明亮，3.0 几乎一样，1.6 是工作室默认",
++"Past 4.0: brighter still, and the music may begin to break; listen before you keep it": "超过 4.0：更明亮，但音乐可能开始破裂；保留前先听听",
++"Far past Viktor's range for the music (1.0 to 4.0): expect a broken take": "远超维克多的音乐范围（1.0–4.0）：预计会得到破损的样本",
++"Within Viktor's range for the lyrics, 1.0 to 2.6: 2.2 holds the words with the music at 4.0; at 1.6 they dissolve, velvety": "在维克多的歌词范围内（1.0 到 2.6）：音乐为 4.0 时 2.2 能保住歌词；在 1.6 时歌词如天鹅绒般融化",
++"Past 2.6: the words begin to burn": "超过 2.6：歌词开始被烧焦",
++"Far past 2.6: burnt words": "远超 2.6：歌词被烧焦",
++"The lyrics follow Guidance here: past 2.6 they begin to burn; give them their own Lyrics guidance (2.2 holds them with the music at 4.0)": "此处歌词跟随引导：超过 2.6 会开始被烧焦；请给它单独的歌词引导（音乐为 4.0 时 2.2 能保住）",
++"Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red": "维克多的范围：音乐 1.0 到 4.0；超出后字段旁的灯变为琥珀色，再变红",
++"Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance": "维克多的范围：歌词 1.0 到 2.6；超出后灯变为琥珀色，再变红。留空：同引导",
++"The two guidances should differ: by 0.1 at the least, by 0.4 to 1.0 at best (Viktor's ear); equal, half the lyrics drift into hallucination, and the vowels lose their stress": "两个引导应当拉开：至少相差 0.1，最好相差 0.4 到 1.0（维克多的耳朵）；相等时一半歌词会滑向幻听，元音也会失去重音"
+ });
+diff --git a/tools/console/heresy-presets.js b/tools/console/heresy-presets.js
+index ffb2155..717075e 100644
+--- a/tools/console/heresy-presets.js
++++ b/tools/console/heresy-presets.js
+@@ -1,7 +1,7 @@
+ // HERESY 1032: a library of styles and profiles, kept by the lab on Forge in the user config folder
+ // (user/presets.json): every browser and device sees the same, and a cleared browser loses none.
+ // A style is a text. A profile is every knob but the texts and seeds (app.js captures and applies it).
+-// Two profiles are built in: Music, as the engine's defaults, and Speech, for long spoken word.
++// Three profiles are built in: Music, as the engine's defaults, Speech, for long spoken word, and Viktor's own, editable (HERESY 1401).
+ (function () {
+   "use strict";
+ 
+@@ -9,21 +9,31 @@
+   // (the music not under 0:30 = 750 tokens, a score not under 200), not the release's 200 and 32
+   var SEM = { temperature: 0.9, top_p: 0.95, top_k: 100, repetition_penalty: 1.3, penalty_window: 100, min_tokens: 750 };
+   var ABC = { temperature: 0.95, top_p: 0.95, top_k: 50, repetition_penalty: 1.005, penalty_window: 100, min_tokens: 200, max_tokens: 6144 };
++  var EAR = "Musical Heresy of Creator's Ear";
+   var BUILT_IN = [
+-    { name: "Music · up to 8:00", builtin: true, request: { cot: "full", duration: 480, cfg_scale: 1.6, abc_sampling: ABC,
++    // HERESY 1401: every built-in profile with the two guidances apart, 1.6 / 2.2 (1397, 1400)
++    { name: "Music · up to 8:00", builtin: true, request: { cot: "full", duration: 480, cfg_scale: 1.6, cfg_lyrics: 2.2, abc_sampling: ABC,
+       semantic_sampling: Object.assign({ max_tokens: 12000 }, SEM) } },
+     // Direct mode: no score in the context, so the music stage gets nearly all of it. 22500 tokens
+     // is 15:00 at 25 a second; the engine cuts the budget to what fits beside the style and the
+     // text (HERESY 1032), and a reading that runs into that cut is marked truncated.
+-    { name: "Speech · up to 15:00", builtin: true, request: { cot: "off", duration: 900, cfg_scale: 1.6, abc_sampling: ABC,
++    { name: "Speech · up to 15:00", builtin: true, request: { cot: "off", duration: 900, cfg_scale: 1.6, cfg_lyrics: 2.2, abc_sampling: ABC,
+       semantic_sampling: Object.assign({ max_tokens: 22500 }, SEM) } },
+     // HERESY 1169 (Viktor 08.10.2026: «Запиши эти параметры как максимально консервативные, но в русском языке весьма идеальные.
+     // Нет ускорений, умеренная речь в рЕпе, просто чудеса»): Composition low, Performance low, Style influence high; 32 Midpoint
+-    { name: "Russian · conservative (Viktor's)", builtin: true, request: { cot: "full", duration: 480, cfg_scale: 1.8, steps: 32, solver: "midpoint",
++    // HERESY 1401: renamed and his to set: «Я подберу для него идеальные параметры» (was «Russian · conservative (Viktor's)», CFG 1.8)
++    // (Viktor: «выставь в нём макс музыку с 8 до 10 минут. Мне уже и 8 минут иногда в Крике не хватает»): 600 s, 15000 music tokens
++    { name: EAR, builtin: true, editable: true, request: { cot: "full", duration: 600, cfg_scale: 1.6, cfg_lyrics: 2.2, steps: 32, solver: "midpoint",
+       abc_sampling: Object.assign({}, ABC, { temperature: 0.85, top_p: 0.92, top_k: 40 }),
+-      semantic_sampling: Object.assign({ max_tokens: 12000 }, SEM, { temperature: 0.85, top_p: 0.93, top_k: 80 }) } }
++      semantic_sampling: Object.assign({ max_tokens: 15000 }, SEM, { temperature: 0.85, top_p: 0.93, top_k: 80 }) } }
+   ];
+   var state = { styles: [], setups: [], hooks: null };
++  // HERESY 1401: a built-in profile as it is now: an editable one's saved values when they are on Forge
++  function builtIn(i) {
++    var p = BUILT_IN[i], own = p && p.editable ? state.setups.filter(function (s) { return s.name === p.name; })[0] : null;
++    return own ? { name: p.name, builtin: true, editable: true, own: true, request: own.request } : p;
++  }
++  function saved() { return state.setups.filter(function (s) { return !BUILT_IN.some(function (b) { return b.editable && b.name === s.name; }); }); }
+   var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
+   var URL = "/lab/presets" + (SCOPE ? "?scope=" + encodeURIComponent(SCOPE) : "");
+   function $(id) { return document.getElementById(id); }
+@@ -50,13 +60,19 @@
+       state.styles.map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + "</option>"; }).join("");
+     $("styleLib").value = state.styles.some(function (s) { return s.name === keepS; }) ? keepS : "";
+     $("styleDel").disabled = !$("styleLib").value;
+-    $("setupLib").innerHTML = '<optgroup label="built in">' + BUILT_IN.map(function (p, i) { return '<option value="b' + i + '">' + esc(p.name) + "</option>"; }).join("") +
+-      "</optgroup>" + (state.setups.length ? '<optgroup label="saved">' + state.setups.map(function (p) {
++    $("setupLib").innerHTML = '<optgroup label="built in">' + BUILT_IN.map(function (p, i) { return '<option value="b' + i + '"' + (p.editable ? ' translate="no"' : "") + ">" + esc(p.name) + (builtIn(i).own ? " \u270e" : "") + "</option>"; }).join("") +
++      "</optgroup>" + (saved().length ? '<optgroup label="saved">' + saved().map(function (p) {
+         return '<option value="s:' + esc(p.name) + '">' + esc(p.name) + "</option>"; }).join("") + "</optgroup>" : "");
+     if (Array.prototype.some.call($("setupLib").options, function (o) { return o.value === keepP; })) $("setupLib").value = keepP;
+-    $("setupDel").disabled = $("setupLib").value.indexOf("s:") !== 0;
++    syncDel();
+     syncTextRow();
+   }
++  // Delete: a saved profile; an editable built-in one back to its built-in values (HERESY 1401)
++  function syncDel() {
++    var v = $("setupLib").value, b = v.charAt(0) === "b" ? builtIn(+v.slice(1)) : null;
++    $("setupDel").disabled = !(v.indexOf("s:") === 0 || (b && b.own));
++    $("setupDel").dataset.tip = b && b.own ? "Back to its built-in values (what you saved over it goes)" : "Delete the saved profile";
++  }
+ 
+   // HERESY 1168 (Viktor 07.10.2026: «Если у Творца ПРОФИЛЬ - музыка, деактивируй текстовый профиль, потому что он чисто для
+   // начитки»): the text profile (a pasted text made ready to read) is for readings. A speech profile is the built-in Speech, or
+@@ -79,7 +95,7 @@
+ 
+   function chosenSetup() {
+     var v = $("setupLib").value;
+-    if (v.charAt(0) === "b") return BUILT_IN[+v.slice(1)];
++    if (v.charAt(0) === "b") return builtIn(+v.slice(1));
+     var name = v.slice(2);
+     return state.setups.filter(function (p) { return p.name === name; })[0];
+   }
+@@ -118,7 +134,7 @@
+         if (ok) return send({ op: "delete", kind: "style", name: name }).then(function (d) { take(d); toast("Style “" + name + "” deleted"); });
+       }).catch(function (e) { toast("Not deleted: " + e.message, true); });
+     });
+-    $("setupLib").addEventListener("change", function () { $("setupDel").disabled = this.value.indexOf("s:") !== 0; syncTextRow(); });
++    $("setupLib").addEventListener("change", function () { syncDel(); syncTextRow(); });
+     $("setupApply").addEventListener("click", function () {
+       var p = chosenSetup();
+       if (!p) return;
+@@ -128,22 +144,31 @@
+     $("setupSave").addEventListener("click", function () {
+       var data;
+       try { data = hooks.capture(); } catch (e) { return toast("The form does not read: " + e.message, true); }
+-      var name;
+-      window.HeresyDialog.prompt("Save the profile\n\nEvery knob of the form but the texts and seeds.", "", { ok: "Save", placeholder: "its name" }).then(function (v) {
++      var name, cur = chosenSetup(), ear = cur && cur.editable;   // HERESY 1401: his own profile, saved over by its name
++      window.HeresyDialog.prompt("Save the profile\n\nEvery knob of the form but the texts and seeds.", ear ? cur.name : "", { ok: "Save", placeholder: "its name" }).then(function (v) {
+         name = (v || "").trim();
+         if (!name) return false;
+-        return state.setups.some(function (s) { return s.name === name; }) ? window.HeresyDialog.confirm("“" + name + "” exists. Replace it?", { ok: "Replace" }) : true;
++        if (BUILT_IN.some(function (b) { return !b.editable && b.name === name; })) { toast("“" + name + "” is built in: save it under another name", true); return false; }
++        var over = BUILT_IN.some(function (b) { return b.editable && b.name === name; });
++        return over ? window.HeresyDialog.confirm("Save the form over “" + name + "”?\n\nDelete brings its built-in values back.", { ok: "Save over it" })
++          : state.setups.some(function (s) { return s.name === name; }) ? window.HeresyDialog.confirm("“" + name + "” exists. Replace it?", { ok: "Replace" }) : true;
+       }).then(function (ok) {
+         if (!ok) return;
+-        return send({ op: "put", kind: "setup", name: name, data: data }).then(function (d) { take(d); $("setupLib").value = "s:" + name; $("setupDel").disabled = false; toast("Profile “" + name + "” saved on Forge"); });
++        return send({ op: "put", kind: "setup", name: name, data: data }).then(function (d) {
++          take(d);
++          var i = BUILT_IN.map(function (b) { return b.editable ? b.name : null; }).indexOf(name);
++          $("setupLib").value = i >= 0 ? "b" + i : "s:" + name;
++          syncDel();
++          toast("Profile “" + name + "” saved on Forge");
++        });
+       }).catch(function (e) { toast("Not saved: " + e.message, true); });
+     });
+     $("setupDel").addEventListener("click", function () {
+-      var v = $("setupLib").value;
+-      if (v.indexOf("s:") !== 0) return;
+-      var name = v.slice(2);
+-      window.HeresyDialog.confirm("Delete the saved profile “" + name + "”?", { danger: true }).then(function (ok) {
+-        if (ok) return send({ op: "delete", kind: "setup", name: name }).then(function (d) { take(d); toast("Profile “" + name + "” deleted"); });
++      var v = $("setupLib").value, b = v.charAt(0) === "b" ? builtIn(+v.slice(1)) : null;
++      if (v.indexOf("s:") !== 0 && !(b && b.own)) return;
++      var name = b ? b.name : v.slice(2);
++      window.HeresyDialog.confirm(b ? "Bring “" + name + "” back to its built-in values?" : "Delete the saved profile “" + name + "”?", { danger: true }).then(function (ok) {
++        if (ok) return send({ op: "delete", kind: "setup", name: name }).then(function (d) { take(d); toast(b ? "“" + name + "” has its built-in values again" : "Profile “" + name + "” deleted"); });
+       }).catch(function (e) { toast("Not deleted: " + e.message, true); });
+     });
+     paint();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f3a7429..96f84a0 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -862,7 +862,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+                 <!-- HERESY 1167 (Viktor: «Guidance (CFG) выстрой в одну строку с полем ввода») -->
+                 <label class="field field-inline">
+                   <span class="label">Guidance (CFG)</span>
+-                  <input type="number" id="cfg" step="0.01" placeholder="default" />
++                  <input type="number" id="cfg" step="0.01" placeholder="default" /><span class="cfg-light" id="cfgLight" tabindex="-1" role="img"></span>
++                </label>
++                <!-- HERESY 1397 (Viktor 12.10.2026: «На музыку один CFG, а на лирику - другой… лирику нужно держать ниже 2.6, тогда как музыка до 4 стабильна») -->
++                <label class="field field-inline" data-tip="The lyrics' own guidance in the music stage: how hard the words are followed, apart from the style's pull, which Guidance keeps. Empty: the same as Guidance, as before. Viktor's measure: the lyrics below 2.6, while the music holds up to 4. A scale of its own adds a third branch, the prompt without its lyrics: a little more memory, about the same time">
++                  <span class="label">Lyrics guidance</span>
++                  <input type="number" id="cfgLyrics" step="0.01" placeholder="as Guidance" value="2.2" /><span class="cfg-light" id="cfgLyricsLight" tabindex="-1" role="img"></span>
+                 </label>
+                 <div class="field grow reset-cell">
+                   <button type="button" class="btn ghost small reset-btn" id="resetSampling">Reset sampling</button>
+-- 
+2.43.0
+

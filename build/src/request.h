@@ -95,6 +95,8 @@ struct Yue2Request {
     // default (HERESY 1031: 1.6 in every mode; the release had 1.01 in off mode
     // and 1.0 otherwise), and a scale of exactly 1.0 keeps a single branch.
     float cfg_scale;  // -1
+    float cfg_lyrics;  // HERESY 1397: the lyrics' own guidance in the music stage; -1: as cfg_scale
+    bool  free_tempo;  // HERESY 1416: the music stage reads the score without its tempo (Q: lines and [Q:…] fields)
 
     // output normalization percentile control, the peak being the
     // 1 - peak_clip / 1e6 percentile of the absolute signal

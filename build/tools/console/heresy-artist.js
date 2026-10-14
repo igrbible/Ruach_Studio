@@ -81,6 +81,8 @@
     if (/^krea2/.test(pk)) secs = 25 + (secs - 25) * (+ps.steps || 8) / 8 * sampLooks(ps);   // HERESY 1333: and its looks a step
     if (/^qwen/.test(pk)) secs = 90 + n * (pk === "qwen21" ? 3 * (+ps.steps || 30) : 3.5 * (+ps.steps || 8) * (sampFast(pk, ps) ? 1 : 2) * sampLooks(ps));   // HERESY 1318: its parts; 1328: the switch; 1333: its looks first, then each picture
     if (pk !== "qwen21") secs = 25 + (secs - 25) * (1 + regionsBody().length);   // HERESY 1387: a whole pass more a step for each region
+    var lt = lettersBody();                          // HERESY 1394: each picture read back (6 s), the misspelled painted again
+    if (lt && /^qwen/.test(pk)) secs += n * 8;
     // HERESY 1354 (Viktor 11.10.2026: «Художник говорит "Около 8.5 минут на одной карте". А карт-то у меня две выделены для Lab Works»):
     // the lab paints a run's pictures on its cards at once, each card loading the painter and painting its share
     var cards = Math.max(1, Math.min(n, +((PAINTER_INFO[pk] || {}).cards) || 1)), load = /^qwen/.test(pk) ? 90 : 25;
@@ -93,11 +95,12 @@
     $("arDraw").dataset.tip = full ? tr("Two runs at a time: the next one can be asked when one of them ends")
       : busy ? tr("Draw these too: the run waits behind the one going now (two runs at a time; Ctrl+Enter)")
       : tr("Draw the pictures picked: every shape, every variation (Ctrl+Enter)");   // HERESY 1332: a tip of its own, not an empty one
-    $("arDraw").disabled = full || !n || !$("arPrompt").value.trim() || state.sending;
+    $("arDraw").disabled = full || !n || (!$("arPrompt").value.trim() && !(lt && lt.way === "letter")) || state.sending;
     $("arStop").hidden = !busy;
     $("arStop").disabled = !!state.stopping;
     $("arStop").dataset.tip = tr("Stop the run: a waiting one leaves the queue, a drawing one ends now; the pictures it finished stay");
     Array.prototype.forEach.call(document.querySelectorAll("#arShapes label"), function (l) { l.classList.toggle("is-on", l.querySelector("input").checked); });
+    paintLetters();                                  // HERESY 1394: its note follows the painter and the reference
   }
   // HERESY 1319: the sampling per painter (kept in this browser), its limits by the painter; only what differs from the painter's own is sent
   KEY.sampling = "yue2.arSampling";
@@ -239,6 +242,7 @@
     if (PAINTERS[run.painter]) { var sa = sampAll(); if (run.sampling) { sa[run.painter] = Object.assign(sampDefaults(run.painter), run.sampling); if (run.sampling.lightning != null) { sa[run.painter].lightOn = +run.sampling.lightning > 0; if (!(+run.sampling.lightning > 0)) delete sa[run.painter].lightning; } } else delete sa[run.painter]; keep(KEY.sampling, JSON.stringify(sa)); paintSampling(); }   // HERESY 1319
     if (run.loras) setLoras(run.loras.map(function (l) { return { id: l.id, weight: l.weight }; }), FAMILY[run.painter]);   // HERESY 1316
     else paintLoras();
+    if (run.id && run.kind !== "upscale") { lettersLoad(run.letters || {}); lettersKeep(); paintLetters(); }   // HERESY 1394: a whole run's
     keepForm();
     paintForm();
   }
@@ -592,15 +596,25 @@
     var rg = again ? (again.regions || []) : regionsBody();            // HERESY 1387: the regions' own words, the run's own for Again
     if (rg.length && body.painter !== "qwen21") body.regions = rg;
     ls = ls.filter(function (l) { return !l.muted && +l.weight > 0; });   // HERESY 1341: a muted one or one at nought paints nothing, and its room was asked
+    var lt = again ? again.letters : lettersBody();                    // HERESY 1394: the lettering, the run's own for Again
+    if (lt) {
+      body.letters = lt;
+      if (lt.way === "letter") {                     // a finished picture, the reference, lettered by Qwen-Image 2.1
+        if (!body.ref) return toast(tr("On the reference picture: take one with «As reference» first"), "bad");
+        if (body.painter !== "qwen21") { body.painter = "qwen21"; delete body.model; delete body.sampling; body.qwen21Only = true; }
+        body.ref_as = "edit";
+        delete body.regions; delete body.mask; delete body.fit; delete body.place; delete body.mask_opts; delete body.inject;
+      }
+    }
     if (body.qwen21Only) { ls = []; delete body.qwen21Only; }      // HERESY 1388: the form's adapters are its painter's family, not 2.1's
     if (ls.length) body.loras = ls.map(function (l) { return l.keys ? { id: l.id, weight: +l.weight, keys: l.keys } : { id: l.id, weight: +l.weight }; });   // HERESY 1365
-    if (!body.prompt) return toast(tr("Write what to paint first"), "bad");
+    if (!body.prompt && !(body.letters && body.letters.way === "letter")) return toast(tr("Write what to paint first"), "bad");
     if (!body.shapes.length) return toast(tr("Pick a shape: 1:1, 16:9 or 9:16"), "bad");
     state.sending = true;
     paintForm();
     alog(tr("Draw asked:") + " " + (PAINTERS[body.painter] || body.painter) + (body.model ? " · " + String(body.model).replace(/\.safetensors$/, "") : "") + " · " + body.shapes.join(", ") +
       (body.count > 1 ? " × " + body.count : "") + " · " + tr("seed") + " " + (body.seed == null ? tr("new") : body.seed) + (body.sampling ? " · " + JSON.stringify(body.sampling) : "") +
-      (body.loras ? " · LoRA " + body.loras.map(function (l) { return loraName(loraFind(l.id), l.id) + " " + l.weight + (l.keys ? " \u23f1 " + keysText(l.keys) : ""); }).join(", ") : "") + (body.ref ? " · " + tr("from a reference") : ""));
+      (body.loras ? " · LoRA " + body.loras.map(function (l) { return loraName(loraFind(l.id), l.id) + " " + l.weight + (l.keys ? " \u23f1 " + keysText(l.keys) : ""); }).join(", ") : "") + (body.ref ? " · " + tr("from a reference") : "") + (body.letters ? " · " + tr("lettered") + " \u201c" + body.letters.title + "\u201d" : ""));
     return api("/artist/draw", body).then(function (run) {
       alog(tr("Run") + " " + run.id + ": " + tr(countOf(run.of, "picture", "pictures")) + ", " + tr("seed") + " " + run.seed + " · " + tr("in the queue"));
       if (!again && state.seedMode) { state.seedMode.after(run.count || body.count, run.seed); keepForm(); }   // HERESY 1330: Next or Previous past its seeds
@@ -726,7 +740,7 @@
     var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length;
     return '<span class="ar-state">' + esc(tr((kept === 1 ? "1 picture" : kept + " pictures") + (r.took ? " · " + Math.round(r.took) + " s" : ""))) + "</span>";
   }
-  function capOf(r, p) { return p.shape + (r.count > 1 ? " · v" + (p.seed - r.seed + 1) : ""); }
+  function capOf(r, p) { return p.shape + (r.count > 1 ? " · v" + (p.letters && p.n && r.shapes && r.shapes.length ? Math.floor((p.n - 1) / r.shapes.length) + 1 : p.seed - r.seed + 1) : ""); }
   function picHtml(r, p, i) {
     var sh = shapeOf(p.shape);
     if (!p.kept) return '<figure class="ar-pic is-gone" style="--ar:' + sh.w + "/" + sh.h + '"><div class="ar-gone">' +
@@ -737,7 +751,7 @@
     return '<figure class="ar-pic" style="--ar:' + sh.w + "/" + sh.h + '" data-i="' + i + '">' +
       '<button type="button" class="ar-thumb" data-act="view" aria-label="' + esc(tr("Look at it")) + '" data-tip="' + esc(p.w + "×" + p.h + " · " + tr("seed") + " " + p.seed) +
       '"><img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(r.id, p.thumb || p.file)) + '" /></button>' +
-      '<figcaption><span class="ar-cap">' + esc(capOf(r, p)) + "</span>" +
+      '<figcaption><span class="ar-cap">' + esc(capOf(r, p)) + "</span>" + letMark(p) +   // HERESY 1394
       '<a class="ar-dl" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '" aria-label="' + esc(tr("Download")) + '" href="' + esc(fileUrl(r.id, p.file)) +
       '" download="' + esc("ruach-artist-" + r.id + "-" + p.file) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
       (square ? '<button type="button" class="btn ghost small ar-cover" data-act="cover"' + (take ? "" : " disabled") + ' data-tip="' + esc(coverTip) + '">' +
@@ -1099,6 +1113,55 @@
     if ($("arRegSay")) $("arRegSay").textContent = n ? String(n) : "";
     if ($("arRegNote")) $("arRegNote").hidden = !(q21 && regionsNow().length);
   }
+  // HERESY 1394 (Viktor 12.10.2026: «A & B - лучшие. B - реально круто. Впиливай всю эту ересь! 🔥»; «По надписи всё правильно»): the
+  // lettering, its words in fields of their own (the lab writes the painter's phrase and reads each picture back), kept in this browser
+  var LET_IDS = { title: "arLetTitle", sub: "arLetSub", look: "arLetLook", where: "arLetWhere", way: "arLetWay" };
+  function lettersNow() {
+    var L = {};
+    Object.keys(LET_IDS).forEach(function (k) { L[k] = $(LET_IDS[k]) ? String($(LET_IDS[k]).value || "").trim() : ""; });
+    return L;
+  }
+  function lettersBody() {
+    var L = lettersNow();
+    if (!L.title) return null;
+    var out = { title: L.title, where: L.where || "top", way: L.way || "paint" };
+    if (L.sub) out.sub = L.sub;
+    if (L.look) out.look = L.look;
+    return out;
+  }
+  function lettersKeep() { var L = lettersNow(); keep("yue2.arLetters", L.title || L.sub || L.look ? JSON.stringify(L) : null); }
+  function lettersLoad(L) {
+    if (!L) { try { L = JSON.parse(recall("yue2.arLetters") || "null"); } catch (e) { L = null; } }
+    L = L || {};
+    Object.keys(LET_IDS).forEach(function (k) { var el = $(LET_IDS[k]); if (el) el.value = L[k] || (k === "where" ? "top" : k === "way" ? "paint" : ""); });
+  }
+  function paintLetters() {
+    var L = lettersBody(), note = "";
+    if (!$("arLetters")) return;
+    $("arLetSay").textContent = L ? "\u201c" + L.title + "\u201d" : "";
+    if (L && L.way === "letter" && !refAsOk()) note = tr("Lettering a finished picture is Qwen-Image 2.1's: it is not on this machine");
+    else if (L && L.way === "letter" && !state.ref) note = tr("On the reference picture: take one with «As reference» first");   // HERESY 1396: every painter of the room letters with the picture (Krea 2 too)
+    $("arLetNote").textContent = note;
+    $("arLetNote").hidden = !note;
+    $("arLetTake").disabled = !state.take;
+  }
+  function letterIt(r, p) {                          // HERESY 1394: this picture lettered by Qwen-Image 2.1, the rest kept
+    if (!refAsOk()) return toast(tr("Lettering a finished picture is Qwen-Image 2.1's: it is not on this machine"), "bad");
+    setRef({ id: r.id, file: p.file, url: fileUrl(r.id, p.thumb || p.file) }, true);
+    $("arLetWay").value = "letter";
+    $("arLetters").open = true;
+    lettersKeep(); paintLetters(); paintForm();
+    $("arLetTitle").focus();
+    toast(tr("Lettering on this picture: write its title, then Draw (Qwen-Image 2.1 letters it and keeps the rest)"));
+  }
+  function letMark(p) {                              // HERESY 1394: read back: spelled as asked, or what it reads
+    var L = p.letters;
+    if (!L) return "";
+    if (L.unread) return '<span class="ar-let is-unread" data-tip="' + esc(tr("Not read back:") + " " + L.unread) + '">? Aa</span>';   // said, never taken for spelled
+    var tip = L.exact ? tr("Spelled as asked: the listener reads it so") : tr("Misspelled in every try: it reads") + " \u201c" + String(L.read || "").replace(/\n/g, " / ") + "\u201d";
+    if (L.tries > 1) tip += " · " + tr("tries") + " " + L.tries;
+    return '<span class="ar-let ' + (L.exact ? "is-ok" : "is-bad") + '" data-tip="' + esc(tip) + '">' + (L.exact ? "\u2713" : "\u26a0") + " Aa</span>";
+  }
   function spOk(r) { return !!(r && r.kind !== "upscale" && r.prompt && r.painter !== "qwen21"); }
   function spStr() { var v = parseFloat(recall("yue2.arSpStr")); return v >= 0.2 && v <= 0.9 ? v : 0.5; }
   function spNoise() { var v = parseFloat(recall("yue2.arSpNoise")); return v >= 0 && v <= 1.5 ? v : 0.6; }   // HERESY 1385: as his workflow, 0.6
@@ -1412,6 +1475,8 @@
     if (r.ref && r.place) meta.push(tr("placed on the canvas"));     // HERESY 1346
     if (r.scale) meta.push(tr("second pass \u00d7" + r.scale));      // HERESY 1384
     if (r.regions && r.regions.length) meta.push(tr("regions " + r.regions.length));   // HERESY 1387
+    if (r.letters) meta.push(tr("lettered") + " \u201c" + r.letters.title + "\u201d");   // HERESY 1394
+    if (p && p.letters && !p.letters.exact) meta.push(tr("misspelled: it reads") + " \u201c" + String(p.letters.read || "").replace(/\n/g, " / ") + "\u201d");
     if (r.inject) meta.push(tr("extra noise " + (+r.inject).toFixed(2)));   // HERESY 1385
     if (r.gpus && r.gpus.length > 1) meta.push("GPU " + r.gpus.join(", "));   // HERESY 1354: on the lab's cards at once
     else if (r.gpu != null) meta.push("GPU " + r.gpu);
@@ -1425,6 +1490,7 @@
       acts =
         '<button type="button" class="btn ghost small" data-stage="form" data-tip="' + esc(tr("Its prompt, seed and shape back in the form")) + '">' + esc(tr("To the form")) + "</button>" +
         '<button type="button" class="btn ghost small" data-stage="ref" data-tip="' + esc(tr("Paint from this picture: it becomes the form's reference")) + '">' + esc(tr("As reference")) + "</button>" +   // HERESY 1305
+        (refAsOk() && r.kind !== "upscale" ? '<button type="button" class="btn ghost small" data-stage="letter" data-tip="' + esc(tr("Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept")) + '">' + esc(tr("Letter it")) + "</button>" : "") +   // HERESY 1394
         '<button type="button" class="btn ghost small" data-stage="compare" data-tip="' + esc(tr("Compare it with another: pick that one in the library, then a divider between them")) + '">' + esc(tr("Compare…")) + "</button>" +   // HERESY 1308
         (square ? '<button type="button" class="btn ghost small ar-cover" data-stage="cover"' + (take ? "" : " disabled") + ' data-tip="' +
           esc(take ? tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" : tr("Pick a take on the right to give it this cover")) + '">' + esc(tr("Set as cover")) + "</button>" : "") +
@@ -1594,6 +1660,7 @@
       { label: tr("All of it to the form"), disabled: r.kind === "upscale", hint: tr("Its painter, fine-tune, sampling and adapters as well, with its seed and shape: Draw paints this picture again"), action: room(function () {
         fillForm(Object.assign({}, r, { shapes: [p.shape], count: 1, seed: p.seed }), true); $("arPrompt").focus(); toast(tr("In the form: all of it, with its seed and shape")); }) },
       { label: tr("As reference"), hint: tr("Draw paints from this picture: it becomes the form's reference"), action: room(function () { setRef({ id: r.id, file: p.file, url: fileUrl(r.id, p.thumb || p.file) }); }) },
+      { label: tr("Letter it"), disabled: !refAsOk() || r.kind === "upscale", hint: tr("Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept"), action: room(function () { letterIt(r, p); }) },   // HERESY 1394
       { label: tr("Compare…"), hint: tr("Then pick the other picture in the library"), action: room(function () { comparePick(it); }) },
       { label: tr("Set as cover"), disabled: !(square && take), hint: !square ? tr("A square picture becomes a cover") : take ? tr("This picture becomes the cover of “" + (take.label || take.name) + "”") : tr("Pick a take on the right to give it this cover"),
         action: function () { cover(r, p); } },
@@ -1647,6 +1714,7 @@
     else if (act === "cover") cover(it.r, it.p);
     else if (act === "form") { fillForm({ prompt: it.r.prompt, shapes: [it.p.shape], count: 1, seed: it.p.seed, painter: it.r.kind === "upscale" ? null : it.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
     else if (act === "ref") setRef({ id: it.r.id, file: it.p.file, url: fileUrl(it.r.id, it.p.thumb || it.p.file) });   // HERESY 1305
+    else if (act === "letter") letterIt(it.r, it.p);   // HERESY 1394
     else if (act === "compare") comparePick(it);                                                                         // HERESY 1308
     else if (act === "aside") asidePics([{ id: it.r.id, file: it.p.file }]);                                           // HERESY 1321
     else if (act === "second") { state.spOpen = !state.spOpen; state.stageKey = ""; paintStage(); }   // HERESY 1384
@@ -2111,7 +2179,7 @@
   function openCivitai(fam, after) {
     var old = document.querySelector(".ar-cv-back");
     if (old) old.remove();
-    var titles = Object.assign({ "krea2": "Krea 2", "sdxl": "SDXL", "qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512" },   // the lab's TITLES
+    var titles = Object.assign({ "krea2": "Krea 2", "qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512" },   // 1405: SDXL gone   // the lab's TITLES
                                (state.loraLib && state.loraLib.titles) || {}), seen = null, target = fam;
     var back = document.createElement("div");
     back.className = "ar-lib-back ar-li-back ar-cv-back";
@@ -2261,7 +2329,7 @@
       if (!rows.length) {
         grid.innerHTML = '<div class="ar-lib-empty"><p>' + esc(tr("No adapters for " + (titles[fam] || fam) + " here yet.")) + "</p><p>" +   // HERESY 1339: one sentence each
           esc(tr("Put .safetensors files into the studio's artwork/loras/" + fam + "/ folder: any folders inside it become groups here; a picture beside a file with its name (NAME.jpg, NAME.png, NAME.preview.png) shows on its card.")) + "</p><p>" +
-          esc(tr("On Civitai, pick adapters by their base model (" + ({ "krea2": "Krea 2", "qwen-image-2.1": "Qwen 2.1", "qwen-image-2512": "Qwen", "sdxl": "SDXL 1.0" }[fam] || fam) + "), " +
+          esc(tr("On Civitai, pick adapters by their base model (" + ({ "krea2": "Krea 2", "qwen-image-2.1": "Qwen 2.1", "qwen-image-2512": "Qwen" }[fam] || fam) + "), " +
             "download the .safetensors and put it there; Look up on Civitai then fills in its name and its trigger words.")) + "</p><p>" +
           esc(tr("Or From Civitai\u2026 above: its link, and your own API key when it asks for one; the lab fetches it here.")) + "</p></div>";   // HERESY 1360
       } else {
@@ -2486,6 +2554,19 @@
     paintRefAs();
     $("arRefAs").addEventListener("change", function () { keep("yue2.arRefAs", $("arRefAs").value || null); paintRefAs(); paintForm(); });
     window.addEventListener("ruach-lang", paintRegions);
+    lettersLoad();                                   // HERESY 1394: the lettering as last typed
+    if (lettersBody()) $("arLetters").open = true;
+    paintLetters();
+    ["arLetTitle", "arLetSub", "arLetLook"].forEach(function (id) { $(id).addEventListener("input", function () { lettersKeep(); paintForm(); }); });
+    ["arLetWhere", "arLetWay"].forEach(function (id) { $(id).addEventListener("change", function () { lettersKeep(); paintForm(); }); });
+    $("arLetClear").addEventListener("click", function () { lettersLoad({}); lettersKeep(); paintForm(); });
+    $("arLetTake").addEventListener("click", function () {
+      var t = state.take;
+      if (!t) return toast(tr("Pick a take on the right first"), "bad");
+      $("arLetTitle").value = String(t.label || t.name).slice(0, 60);
+      lettersKeep(); paintForm();
+    });
+    window.addEventListener("ruach-lang", paintLetters);
     $("arFromTake").addEventListener("click", fromTake);
     $("arPrompt").addEventListener("keydown", function (e) {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("arDraw").disabled) { e.preventDefault(); draw(); }   // HERESY 1340: a second run too

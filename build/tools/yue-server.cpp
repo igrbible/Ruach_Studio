@@ -872,6 +872,7 @@ static yyjson_mut_val * library_entry(yyjson_mut_doc * out, const std::string & 
         yyjson_mut_obj_add_val(out, e, "loras", lo);
         yyjson_mut_obj_add_int(out, e, "steps", r.steps);
         yyjson_mut_obj_add_real(out, e, "cfg_scale", r.cfg_scale);
+        yyjson_mut_obj_add_real(out, e, "cfg_lyrics", r.cfg_lyrics);   // HERESY 1397
         yyjson_mut_obj_add_real(out, e, "duration", r.duration);
         yyjson_mut_obj_add_strcpy(out, e, "parent", r.parent.c_str());
         yyjson_mut_obj_add_bool(out, e, "has_score", !r.abc.empty());
@@ -976,6 +977,23 @@ static std::string library_save(const Yue2Request & replay,
     yyjson_mut_obj_add_int(doc, root, "song", song_index);
     yyjson_mut_obj_add_int(doc, root, "variation", variation);
     yyjson_mut_obj_add_bool(doc, root, "provided_score", provided_score);
+    if (song.T_lat > 0 && song.guidance > 0.0f) {      // HERESY 1399: the take's medcard, stage by stage
+        yyjson_mut_val * st = yyjson_mut_obj(doc), * sc = yyjson_mut_obj(doc), * mu = yyjson_mut_obj(doc), * so = yyjson_mut_obj(doc);
+        yyjson_mut_obj_add_int(doc, sc, "tokens", song.score_tokens);
+        yyjson_mut_obj_add_real(doc, sc, "seconds", std::round(song.score_seconds * 10.0) / 10.0);
+        yyjson_mut_obj_add_int(doc, mu, "tokens", song.music_tokens);
+        yyjson_mut_obj_add_int(doc, mu, "kept", song.music_kept);
+        yyjson_mut_obj_add_bool(doc, mu, "replayed", song.music_replayed);
+        yyjson_mut_obj_add_real(doc, mu, "seconds", std::round(song.music_seconds * 10.0) / 10.0);
+        yyjson_mut_obj_add_real(doc, mu, "guidance", std::round((double) song.guidance * 100.0) / 100.0);
+        yyjson_mut_obj_add_real(doc, mu, "lyrics_guidance", std::round((double) song.lyrics_guidance * 100.0) / 100.0);
+        yyjson_mut_obj_add_real(doc, so, "seconds", std::round(song.sound_seconds * 10.0) / 10.0);
+        yyjson_mut_obj_add_real(doc, so, "vae_seconds", std::round(song.vae_seconds * 10.0) / 10.0);
+        yyjson_mut_obj_add_val(doc, st, "score", sc);
+        yyjson_mut_obj_add_val(doc, st, "music", mu);
+        yyjson_mut_obj_add_val(doc, st, "sound", so);
+        yyjson_mut_obj_add_val(doc, root, "stages", st);
+    }
     {
         std::lock_guard<std::mutex> settings_lock(mtx_settings);
         yyjson_mut_obj_add_strcpy(doc, root, "model", g_settings.model.c_str());

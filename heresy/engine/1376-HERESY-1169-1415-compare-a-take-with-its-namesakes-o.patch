@@ -1,0 +1,363 @@
+From d070d1b33b7faf3ada779520701cbca4572acc3b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Tue, 13 Oct 2026 12:09:08 -0600
+Subject: [PATCH 1376/1383] =?UTF-8?q?HERESY=201169=20=C2=B7=201415:=20comp?=
+ =?UTF-8?q?are=20a=20take=20with=20its=20namesakes,=20or=20the=20checked?=
+ =?UTF-8?q?=20ones,=20two=20to=20four,=20in=20one=20player?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 13.10.2026: «В библиотек можешь добавить опцию сравнения одноимённых треков? Выбор до четырёх. Одноимённость берём по основному соответствию имени трека с игнорированием суффикса типа версии и т.п.». The Refiner's compare player (1138: one transport, a click or a number switches at the same second) opened for any takes (HeresyDerived.compareList); a title's base past « · …», (edit), a version, «take 2», «#3»; the take's menu «Compare with its namesakes…» (tick two to four); the Librarian's Compare for two to four checked. Eleven catalogs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js               | 37 ++++++++++++++++++++++++++++++
+ tools/console/heresy-collection.js |  2 ++
+ tools/console/heresy-derived.js    | 11 +++++++--
+ tools/console/heresy-i18n-be.js    |  8 +++++++
+ tools/console/heresy-i18n-de.js    |  8 +++++++
+ tools/console/heresy-i18n-el.js    |  8 +++++++
+ tools/console/heresy-i18n-es.js    |  8 +++++++
+ tools/console/heresy-i18n-fr.js    |  8 +++++++
+ tools/console/heresy-i18n-it.js    |  8 +++++++
+ tools/console/heresy-i18n-ja.js    |  8 +++++++
+ tools/console/heresy-i18n-pt.js    |  8 +++++++
+ tools/console/heresy-i18n-ru.js    |  8 +++++++
+ tools/console/heresy-i18n-uk.js    |  8 +++++++
+ tools/console/heresy-i18n-zh.js    |  8 +++++++
+ tools/console/index.html           |  2 ++
+ 15 files changed, 138 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index e7c91da..36d25ae 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -8622,6 +8622,8 @@
+           timeSections(name, !!sectionsTimed[name]).then(function (d) { toast("The sections found by ear (" + Math.round((d.heard || 0) * 100) + " % of the lines heard)"); },
+             function (e) { toast("The sections were not found: " + e.message, "bad"); });
+         } } : null,
++      // HERESY 1415: its namesakes in one player, two to four of them
++      !take.session && !bulk && namesakes(take).length > 1 ? { icon: "\u2261", label: "Compare with its namesakes\u2026", hint: namesakes(take).length + " in all", action: function () { compareNamesakes(take); } } : null,
+       // HERESY 1414: from the wave's own menu over a section heard by ear: its words changed, sung anew, the rest of the take kept
+       menuAt && !take.session && !bulk ? { icon: "\u21bb", label: "Replace this section\u2026", hint: menuAt.section.name, action: function () { replaceSection(take, menuAt); } } : null,
+       { sep: true },
+@@ -9558,6 +9560,41 @@
+       });
+   }
+   window.ruachFamily = compareFamily;                  // HERESY 1311: for the checks
++  // HERESY 1415 (Viktor 13.10.2026: «опцию сравнения одноимённых треков? Выбор до четырёх. Одноимённость берём по основному соответствию имени
++  // трека с игнорированием суффикса типа версии»): a title's base, past what the studio and its user hang on it: what follows « · » (sound 2,
++  // a section anew, a run's own words), (edit) and the like, a version (v4.0.10), «take 2», «#3»; its case and the dots and dashes it ends with
++  function baseTitle(text) {
++    var s = String(text || "").toLowerCase().split(" \u00b7 ")[0];
++    s = s.replace(/\([^)]*\)/g, " ").replace(/\bv\s*\d+(?:[._]\d+)*\b/g, " ")
++      .replace(/\b(?:take|version|ver|sound|edit|copy|remix|mix|final|draft|alt)\b\.?\s*\d*/g, " ").replace(/[#\u2116]\s*\d+/g, " ");
++    return s.replace(/\s+/g, " ").replace(/[\s.,:;_\-\u2013\u2014|]+$/g, "").trim();
++  }
++  function namesakes(take) {                                 // its namesakes, the newest first, itself among them
++    var base = baseTitle(displayTitle(take));
++    if (!base) return [take];
++    return STATE.takes.filter(function (t) { return !t.session && baseTitle(displayTitle(t)) === base; })
++      .sort(function (a, b) { return String(b.created || b.name).localeCompare(String(a.created || a.name)); });
++  }
++  function compareTakes(names) {                             // two to four takes in the Refiner's compare player
++    var HC = window.HeresyCollection, list = names.map(findTake).filter(Boolean);
++    if (list.length < 2) return toast("Tick two at least, four at most", "bad");
++    if (list.length > 4) { toast("Four at most: the first four"); list = list.slice(0, 4); }
++    if (!window.HeresyDerived || !window.HeresyDerived.compareList) return;
++    window.HeresyDerived.compareList(baseTitle(displayTitle(list[0])) || displayTitle(list[0]), list.map(function (t) {
++      var r = HC && HC.rating ? HC.rating(t.name) : 0;
++      return { label: displayTitle(t), path: "take:" + t.name, seconds: t.seconds, url: "/library/listen?name=" + encodeURIComponent(t.name),
++               group: [t.created ? String(t.created).slice(0, 16).replace("T", " ") : "", r > 0 ? "\ud83d\udc4d" : r < 0 ? "\ud83d\udc4e" : "", t.favorite ? "\u2605" : ""].filter(Boolean).join(" \u00b7 ") };
++    }), 0);
++  }
++  function compareNamesakes(take) {
++    var all = namesakes(take);
++    window.HeresyDialog.pick("Compare with its namesakes\n\nTwo to four, played in one player from the same second: a click (or its number) switches.",
++      [{ label: "Its namesakes", items: all.map(function (t) {
++        return { value: t.name, label: displayTitle(t), checked: t.name === take.name, note: (t.seconds ? clock(t.seconds) + " \u00b7 " : "") + String(t.created || "").slice(0, 16).replace("T", " ") };
++      }) }], { ok: "Compare", count: function (v) { return v.length; } })
++      .then(function (r) { if (r && r.values) compareTakes(r.values); });
++  }
++  window.HeresyCompare = { takes: compareTakes, namesakes: function (name) { var t = findTake(name); return t ? namesakes(t).map(function (x) { return x.name; }) : []; }, base: baseTitle };
+   window.ruachRefreshLibrary = refreshLibrary;
+   if (window.HeresySpectrum) {
+     window.HeresySpectrum.init({
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index 3806a47..344f916 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -515,6 +515,7 @@
+     hb.setAttribute("aria-label", hid ? "Show again" : "Hide");
+     hb.dataset.tip = hid ? "Show again: back in the lists" : "Out of the lists, not deleted: Hidden on the left shows them again";
+     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
++    $("collCompare").disabled = n < 2 || n > 4;                // HERESY 1415: two to four
+   }
+ 
+   function paintTrash() {
+@@ -1062,6 +1063,7 @@
+         state.sel = {};
+       });
+     });
++    $("collCompare").addEventListener("click", function () { if (window.HeresyCompare) window.HeresyCompare.takes(names()); });   // HERESY 1415
+     $("collWsMove").addEventListener("change", function () {   // HERESY 1050: into one workspace, out of this one
+       var w = this.value; this.value = "";
+       if (!w) return;
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 31e3029..3f11d5f 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -437,11 +437,18 @@
+       });
+     });
+     var active = Math.max(0, versions.findIndex(function (v) { return v.path === startPath; }));
++    openCompare(take.label || take.name, versions, active);
++  }
++  // HERESY 1415: the same player for any takes (a take's namesakes, the Librarian's checked ones): versions [{label, group, url, path, seconds}]
++  function openCompare(title, versions, active) {
++    if (!versions || !versions.length) return;
++    if (state.hooks && state.hooks.pauseMain) state.hooks.pauseMain();
++    active = Math.max(0, Math.min(versions.length - 1, active || 0));
+     var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; return a; });
+     var back = document.createElement("div");
+     back.className = "cmp-back";
+     back.innerHTML = '<div class="cmp-box" role="dialog" aria-modal="true" aria-label="Compare the versions">' +
+-      '<div class="cmp-head"><div><div class="cmp-title">Compare · ' + esc(take.label || take.name) + '</div>' +
++      '<div class="cmp-head"><div><div class="cmp-title">Compare · ' + esc(title) + '</div>' +
+       '<div class="row-hint">' + versions.length + " versions · a click (or its number) plays it from the same second · Space plays and pauses · ← → five seconds</div></div>" +
+       '<button type="button" class="btn ghost small" data-cmp="close">Close</button></div>' +
+       '<div class="cmp-transport"><button type="button" class="cmp-play" data-cmp="play" aria-label="Play"></button>' +
+@@ -532,5 +539,5 @@
+ 
+   // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
+   function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
+-  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess };
++  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare };   // 1415
+ })();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index d426b79..0546bd3 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -1769,6 +1769,14 @@ RuachI18n.add("be", {
+ "Nothing made from this take yet.": "З гэтага сэмпла пакуль нічога не створана.",
+ "Compare it with the original and every other version, at the same second": "Параўнаць з арыгіналам і ўсімі версіямі, на той жа секундзе",
+ "Compare": "Параўнаць",
++"Compare with its namesakes…": "Параўнаць з аднайменнымі…",
++"Compare with its namesakes": "Параўнаць з аднайменнымі",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "Ад двух да чатырох, у адным плэеры з той жа секунды: клік (або нумар) пераключае.",
++"Its namesakes": "Аднайменныя",
++"Tick two at least, four at most": "Адзнач хаця б два, не больш за чатыры",
++"Four at most: the first four": "Не больш за чатыры: першыя чатыры",
++"Compare the checked ones, two to four, in one player from the same second": "Параўнаць адзначаныя, ад двух да чатырох, у адным плэеры з той жа секунды",
++"{#0} in all": "усяго {#0}",
+ "Lay this file over the take in the spectrum": "Накласці гэты файл на сэмпл у спектры",
+ "Whisper on this file against the lyrics": "Whisper на гэтым файле супраць тэксту",
+ "waiting for Forge… {0}": "чакаем Forge… {0}",
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 5c55734..283f936 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -1769,6 +1769,14 @@ RuachI18n.add("de", {
+ "Nothing made from this take yet.": "Aus diesem Take ist noch nichts gemacht.",
+ "Compare it with the original and every other version, at the same second": "Mit dem Original und jeder anderen Version vergleichen, an derselben Sekunde",
+ "Compare": "Vergleichen",
++"Compare with its namesakes…": "Mit den Gleichnamigen vergleichen…",
++"Compare with its namesakes": "Mit den Gleichnamigen vergleichen",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "Zwei bis vier, in einem Player ab derselben Sekunde: ein Klick (oder seine Nummer) schaltet um.",
++"Its namesakes": "Die Gleichnamigen",
++"Tick two at least, four at most": "Mindestens zwei ankreuzen, höchstens vier",
++"Four at most: the first four": "Höchstens vier: die ersten vier",
++"Compare the checked ones, two to four, in one player from the same second": "Die angekreuzten vergleichen, zwei bis vier, in einem Player ab derselben Sekunde",
++"{#0} in all": "{#0} insgesamt",
+ "Lay this file over the take in the spectrum": "Diese Datei im Spektrum über den Take legen",
+ "Whisper on this file against the lyrics": "Whisper auf dieser Datei, gegen den Liedtext",
+ "waiting for Forge… {0}": "wartet auf Forge… {0}",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 4f12cf1..f35575d 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -1768,6 +1768,14 @@ RuachI18n.add("el", {
+ "Nothing made from this take yet.": "Τίποτα δεν έχει φτιαχτεί ακόμη από αυτή τη λήψη.",
+ "Compare it with the original and every other version, at the same second": "Σύγκρινέ τη με το πρωτότυπο και κάθε άλλη έκδοση, στο ίδιο δευτερόλεπτο",
+ "Compare": "Σύγκριση",
++"Compare with its namesakes…": "Σύγκριση με τα συνώνυμά του…",
++"Compare with its namesakes": "Σύγκριση με τα συνώνυμά του",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "Δύο έως τέσσερα, σε έναν player από το ίδιο δευτερόλεπτο: ένα κλικ (ή ο αριθμός του) αλλάζει.",
++"Its namesakes": "Τα συνώνυμα",
++"Tick two at least, four at most": "Τσέκαρε δύο τουλάχιστον, τέσσερα το πολύ",
++"Four at most: the first four": "Τέσσερα το πολύ: τα πρώτα τέσσερα",
++"Compare the checked ones, two to four, in one player from the same second": "Σύγκριση των τσεκαρισμένων, δύο έως τέσσερα, σε έναν player από το ίδιο δευτερόλεπτο",
++"{#0} in all": "{#0} συνολικά",
+ "Lay this file over the take in the spectrum": "Βάλε αυτό το αρχείο πάνω στη λήψη στο φάσμα",
+ "Whisper on this file against the lyrics": "Whisper σε αυτό το αρχείο απέναντι στους στίχους",
+ "waiting for Forge… {0}": "αναμονή για το Forge… {0}",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index dcd2cbc..9a9fe0c 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -1768,6 +1768,14 @@ RuachI18n.add("es", {
+ "Nothing made from this take yet.": "Aún no hay nada creado a partir de esta toma.",
+ "Compare it with the original and every other version, at the same second": "Compararla con el original y cada otra versión, en el mismo segundo",
+ "Compare": "Comparar",
++"Compare with its namesakes…": "Comparar con sus homónimas…",
++"Compare with its namesakes": "Comparar con sus homónimas",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "De dos a cuatro, en un solo reproductor desde el mismo segundo: un clic (o su número) cambia.",
++"Its namesakes": "Sus homónimas",
++"Tick two at least, four at most": "Marca dos al menos, cuatro como mucho",
++"Four at most: the first four": "Cuatro como mucho: las cuatro primeras",
++"Compare the checked ones, two to four, in one player from the same second": "Comparar las marcadas, de dos a cuatro, en un solo reproductor desde el mismo segundo",
++"{#0} in all": "{#0} en total",
+ "Lay this file over the take in the spectrum": "Superponer este archivo a la toma en el espectro",
+ "Whisper on this file against the lyrics": "Whisper sobre este archivo contra la letra",
+ "waiting for Forge… {0}": "esperando a Forge… {0}",
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index b410f44..c59e302 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -1769,6 +1769,14 @@ RuachI18n.add("fr", {
+ "Nothing made from this take yet.": "Rien n'a encore été fait à partir de cette prise.",
+ "Compare it with the original and every other version, at the same second": "La comparer avec l'original et toutes les autres versions, à la même seconde",
+ "Compare": "Comparer",
++"Compare with its namesakes…": "Comparer avec ses homonymes…",
++"Compare with its namesakes": "Comparer avec ses homonymes",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "De deux à quatre, dans un seul lecteur depuis la même seconde : un clic (ou son numéro) bascule.",
++"Its namesakes": "Ses homonymes",
++"Tick two at least, four at most": "Coche-en deux au moins, quatre au plus",
++"Four at most: the first four": "Quatre au plus : les quatre premières",
++"Compare the checked ones, two to four, in one player from the same second": "Comparer les cochées, de deux à quatre, dans un seul lecteur depuis la même seconde",
++"{#0} in all": "{#0} en tout",
+ "Lay this file over the take in the spectrum": "Superposer ce fichier à la prise dans le spectre",
+ "Whisper on this file against the lyrics": "Whisper sur ce fichier, face aux paroles",
+ "waiting for Forge… {0}": "en attente de Forge… {0}",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 3a6de71..29ffcf8 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -1768,6 +1768,14 @@ RuachI18n.add("it", {
+ "Nothing made from this take yet.": "Ancora niente di nato da questo take.",
+ "Compare it with the original and every other version, at the same second": "Confrontalo con l'originale e ogni altra versione, allo stesso secondo",
+ "Compare": "Confronta",
++"Compare with its namesakes…": "Confronta con gli omonimi…",
++"Compare with its namesakes": "Confronta con gli omonimi",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "Da due a quattro, in un solo lettore dallo stesso secondo: un clic (o il suo numero) cambia.",
++"Its namesakes": "Gli omonimi",
++"Tick two at least, four at most": "Spunta almeno due, al massimo quattro",
++"Four at most: the first four": "Al massimo quattro: i primi quattro",
++"Compare the checked ones, two to four, in one player from the same second": "Confronta quelli spuntati, da due a quattro, in un solo lettore dallo stesso secondo",
++"{#0} in all": "{#0} in tutto",
+ "Lay this file over the take in the spectrum": "Sovrapponi questo file al take nello spettro",
+ "Whisper on this file against the lyrics": "Whisper su questo file contro il testo",
+ "waiting for Forge… {0}": "in attesa di Forge… {0}",
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 1ed96ee..001e041 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -1769,6 +1769,14 @@ RuachI18n.add("ja", {
+ "Nothing made from this take yet.": "このテイクからはまだ何も作られていません。",
+ "Compare it with the original and every other version, at the same second": "オリジナルやほかのすべてのバージョンと同じ秒で比較",
+ "Compare": "比較",
++"Compare with its namesakes…": "同名のテイクと比べる…",
++"Compare with its namesakes": "同名のテイクと比べる",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "2〜4 本を 1 つのプレーヤーで同じ秒から再生。クリック（または番号）で切り替えます。",
++"Its namesakes": "同名のテイク",
++"Tick two at least, four at most": "2 つ以上、4 つまでチェックしてください",
++"Four at most: the first four": "4 つまで：最初の 4 つ",
++"Compare the checked ones, two to four, in one player from the same second": "チェックしたものを 2〜4 本、1 つのプレーヤーで同じ秒から比べる",
++"{#0} in all": "全 {#0} 本",
+ "Lay this file over the take in the spectrum": "スペクトルでこのファイルをテイクに重ねる",
+ "Whisper on this file against the lyrics": "このファイルで Whisper、歌詞と照合",
+ "waiting for Forge… {0}": "Forge を待っています… {0}",
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 73e63e5..d117942 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -1769,6 +1769,14 @@ RuachI18n.add("pt", {
+ "Nothing made from this take yet.": "Nada foi feito a partir deste take ainda.",
+ "Compare it with the original and every other version, at the same second": "Comparar com o original e todas as outras versões, no mesmo segundo",
+ "Compare": "Comparar",
++"Compare with its namesakes…": "Comparar com os homônimos…",
++"Compare with its namesakes": "Comparar com os homônimos",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "De dois a quatro, num só player a partir do mesmo segundo: um clique (ou o número) alterna.",
++"Its namesakes": "Os homônimos",
++"Tick two at least, four at most": "Marque pelo menos dois, no máximo quatro",
++"Four at most: the first four": "No máximo quatro: os quatro primeiros",
++"Compare the checked ones, two to four, in one player from the same second": "Comparar os marcados, de dois a quatro, num só player a partir do mesmo segundo",
++"{#0} in all": "{#0} no total",
+ "Lay this file over the take in the spectrum": "Sobrepor este arquivo ao take no espectro",
+ "Whisper on this file against the lyrics": "Whisper neste arquivo, contra a letra",
+ "waiting for Forge… {0}": "esperando o Forge… {0}",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index f1cdeea..afacbed 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -1776,6 +1776,14 @@ RuachI18n.add("ru", {
+ "Nothing made from this take yet.": "Из этого семпла пока ничего не сделано.",
+ "Compare it with the original and every other version, at the same second": "Сравнить с оригиналом и всеми версиями, на той же секунде",
+ "Compare": "Сравнить",
++"Compare with its namesakes…": "Сравнить с одноимёнными…",
++"Compare with its namesakes": "Сравнить с одноимёнными",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "От двух до четырёх, в одном плеере с той же секунды: щелчок (или номер) переключает.",
++"Its namesakes": "Одноимённые",
++"Tick two at least, four at most": "Отметь хотя бы два, не больше четырёх",
++"Four at most: the first four": "Не больше четырёх: первые четыре",
++"Compare the checked ones, two to four, in one player from the same second": "Сравнить отмеченные, от двух до четырёх, в одном плеере с той же секунды",
++"{#0} in all": "всего {#0}",
+ "Lay this file over the take in the spectrum": "Наложить этот файл на семпл в спектре",
+ "Whisper on this file against the lyrics": "Whisper на этом файле против текста",
+ "waiting for Forge… {0}": "ждём Forge… {0}",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 9031192..5215d18 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -1769,6 +1769,14 @@ RuachI18n.add("uk", {
+ "Nothing made from this take yet.": "З цього семплу поки нічого не створено.",
+ "Compare it with the original and every other version, at the same second": "Порівняти з оригіналом і всіма версіями, на тій самій секунді",
+ "Compare": "Порівняти",
++"Compare with its namesakes…": "Порівняти з однойменними…",
++"Compare with its namesakes": "Порівняти з однойменними",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "Від двох до чотирьох, в одному плеєрі з тієї ж секунди: клік (або номер) перемикає.",
++"Its namesakes": "Однойменні",
++"Tick two at least, four at most": "Познач хоча б два, не більше чотирьох",
++"Four at most: the first four": "Не більше чотирьох: перші чотири",
++"Compare the checked ones, two to four, in one player from the same second": "Порівняти позначені, від двох до чотирьох, в одному плеєрі з тієї ж секунди",
++"{#0} in all": "усього {#0}",
+ "Lay this file over the take in the spectrum": "Накласти цей файл на семпл у спектрі",
+ "Whisper on this file against the lyrics": "Whisper на цьому файлі проти тексту",
+ "waiting for Forge… {0}": "чекаємо на Forge… {0}",
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 102650d..32b7e77 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -1769,6 +1769,14 @@ RuachI18n.add("zh", {
+ "Nothing made from this take yet.": "还没有从这个录音生成任何东西。",
+ "Compare it with the original and every other version, at the same second": "与原版和其他所有版本在同一秒比较",
+ "Compare": "比较",
++"Compare with its namesakes…": "与同名录音比较…",
++"Compare with its namesakes": "与同名录音比较",
++"Two to four, played in one player from the same second: a click (or its number) switches.": "两到四条，在同一个播放器里从同一秒播放：点击（或按编号）切换。",
++"Its namesakes": "同名录音",
++"Tick two at least, four at most": "至少勾选两个，最多四个",
++"Four at most: the first four": "最多四个：前四个",
++"Compare the checked ones, two to four, in one player from the same second": "在同一个播放器里从同一秒比较勾选的两到四条",
++"{#0} in all": "共 {#0} 条",
+ "Lay this file over the take in the spectrum": "在频谱中把这个文件叠到录音上",
+ "Whisper on this file against the lyrics": "用 Whisper 听这个文件，对照歌词",
+ "waiting for Forge… {0}": "等待 Forge… {0}",
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 3d72eed..dab9967 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1721,6 +1721,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+             <select id="collWsMove" aria-label="Move to workspace" title="Into that workspace and out of this one (out of every other when you are in All Workspaces)"></select>
+             <button type="button" class="btn ghost small icon-btn" id="collWsOut" data-ui="folder-minus" aria-label="Take out of this workspace" data-tip="Take out of this workspace"></button>
+             <button type="button" class="btn ghost small icon-btn" id="collHide" data-ui="eye-off" aria-label="Hide" data-tip="Out of the lists, not deleted: Hidden on the left shows them again"></button></span>
++          <span class="coll-group" role="group" aria-label="Compare">   <!-- HERESY 1415 -->
++            <button type="button" class="btn ghost small icon-btn" id="collCompare" data-ui="cols-2" aria-label="Compare" data-tip="Compare the checked ones, two to four, in one player from the same second"></button></span>
+           <span class="coll-group" role="group" aria-label="Export">
+             <select id="collExportFmt" aria-label="Export format" data-tip="FLAC: lossless, about half the size of WAV. WAV: for tools that take nothing else."><option value="flac">FLAC</option><option value="wav">WAV</option></select>
+             <label class="icon-check" data-tip="With what is made from them: also every file made from each take (remasters, stems, upscales, debuzzed files), named after the take."><input type="checkbox" id="collExportDer" aria-label="with what is made from them" /><span class="icon-check-face" data-ui="layers"></span></label>
+-- 
+2.43.0
+

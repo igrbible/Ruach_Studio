@@ -839,9 +839,10 @@
   "looks": ""
  },
  "sambuca": {
-  "name": "sambuca strings",
+  "name": "sambuca - greek strings",
   "home": "ancient Near East, Greece",
-  "looks": "an ancient triangular harp: a small angular wooden frame, a sound box along one side, strings running at a slant"
+  "looks": "Greek plucked strings: a long-necked lute with a round, ribbed wooden bowl back, a slender fretted neck and paired metal strings, played with a plectrum",
+  "not": "a harp of any shape, or a lyre"
  },
  "sambuca-v2": {
   "name": "sambuca, an ancient triangular harp (sabbeka)",

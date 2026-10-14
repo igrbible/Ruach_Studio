@@ -1,0 +1,328 @@
+From 9c57afca1b11bed897f67018e2f04598b70ac40e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Mon, 12 Oct 2026 21:04:59 -0600
+Subject: [PATCH 1366/1383] =?UTF-8?q?HERESY=201169=20=C2=B7=201397,=201399?=
+ =?UTF-8?q?:=20the=20music=20stage=20guided=20by=20two=20scales;=20the=20t?=
+ =?UTF-8?q?ake's=20stages=20in=20its=20meta?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+1397 (Viktor: «На музыку один CFG, а на лирику - другой»): a third branch, the prompt without its lyrics; logits = U + g_music·(S − U) + g_lyrics·(C − S); request field cfg_lyrics (−1: as cfg_scale, the one guidance as before, two branches). Measured on a test engine: the same seeds part ways at another lyrics scale; about the same time (three rows in one batch).
+1399 (Viktor: «нужна полная амбулаторная карта трека»): meta.json "stages": the score's tokens and seconds, the music tokens written and kept with their seconds and the guidance applied, the sound stage and the decoder.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/generate.h       | 35 +++++++++++++++++++++++-----
+ src/pipeline.h       | 55 +++++++++++++++++++++++++++++++++++++++++---
+ src/request.cpp      |  7 ++++++
+ src/request.h        |  1 +
+ tools/yue-server.cpp | 18 +++++++++++++++
+ 5 files changed, 107 insertions(+), 9 deletions(-)
+
+diff --git a/src/generate.h b/src/generate.h
+index 65470b3..c070529 100644
+--- a/src/generate.h
++++ b/src/generate.h
+@@ -66,10 +66,14 @@ static bool yue2_generate(Qwen3LM *                             lm,
+                           Yue2Phase                             phase,
+                           std::vector<Yue2Generation> *         out,
+                           bool (*cancelled)(void *) = nullptr,
+-                          void * cancel_data        = nullptr) {
++                          void * cancel_data        = nullptr,
++                          const std::vector<std::vector<int>> * lyricless = nullptr,
++                          float                                 lyrics_scale = -1.0f) {
+     const int B       = (int) prefixes.size();
+     const int context = kv->cfg.max_seq_len;
+-    bool      guided  = cfg_scale != 1.0f;
++    // HERESY 1397: the lyrics' own scale: a third branch, the prompt without its lyrics, in KV sets 2B..3B-1
++    const bool split  = lyricless && (int) lyricless->size() == B && lyrics_scale >= 0.0f && lyrics_scale != cfg_scale;
++    bool      guided  = cfg_scale != 1.0f || split;
+     if (guided && (int) negatives.size() != B) {
+         fprintf(stderr, "[AR] FATAL: guidance %.3f needs an unconditional prefix per sequence\n", (double) cfg_scale);
+         return false;
+@@ -81,6 +85,9 @@ static bool yue2_generate(Qwen3LM *                             lm,
+     Yue2Sampling s = s_in;
+     for (int i = 0; i < B; i++) {
+         size_t longest = guided && negatives[i].size() > prefixes[i].size() ? negatives[i].size() : prefixes[i].size();
++        if (split && (*lyricless)[i].size() > longest) {
++            longest = (*lyricless)[i].size();
++        }
+         int    room    = context - (int) longest - 1;
+         if (room < 1) {
+             fprintf(stderr, "[AR] FATAL: prefix %zu leaves no room in context %d\n", longest, context);
+@@ -96,7 +103,7 @@ static bool yue2_generate(Qwen3LM *                             lm,
+         }
+     }
+ 
+-    const int N = guided ? 2 * B : B;
++    const int N = split ? 3 * B : guided ? 2 * B : B;
+     if (!qw3lm_kv_sets(kv, N)) {
+         return false;
+     }
+@@ -128,8 +135,14 @@ static bool yue2_generate(Qwen3LM *                             lm,
+             yue2_prefill(lm, kv, negatives, B, i, batched.data(), row0, rows, "Unconditional");
+         }
+     }
+-    fprintf(stderr, "[AR] %s prefill: %.0f ms, CFG=%.2f, top_k=%d, budget=%d, songs=%d, batch=%d\n", label,
+-            prefill_timer.ms(), (double) cfg_scale, s.top_k, s.max_tokens, B, N);
++    if (split) {
++        for (int i = 0; i < B; i++) {
++            yue2_prefill(lm, kv, *lyricless, 2 * B, i, batched.data(), row0, rows, "Without lyrics");
++        }
++    }
++    fprintf(stderr, "[AR] %s prefill: %.0f ms, CFG=%.2f%s, top_k=%d, budget=%d, songs=%d, batch=%d\n", label,
++            prefill_timer.ms(), (double) cfg_scale, split ? (", lyrics " + std::to_string(lyrics_scale).substr(0, 4)).c_str() : "",
++            s.top_k, s.max_tokens, B, N);
+ 
+     out->assign((size_t) B, { {}, true });
+ 
+@@ -152,7 +165,14 @@ static bool yue2_generate(Qwen3LM *                             lm,
+             if (owed[i] < 0) {
+                 const float * cond   = batched.data() + (size_t) i * rows;
+                 const float * logits = cond;
+-                if (guided) {
++                if (split) {                     // HERESY 1397: the style's pull and the lyrics' pull, each at its own scale
++                    const float * uncond = batched.data() + (size_t) (B + i) * rows;
++                    const float * styled = batched.data() + (size_t) (2 * B + i) * rows;
++                    for (int k = 0; k < rows; k++) {
++                        mixed[k] = uncond[k] + cfg_scale * (styled[k] - uncond[k]) + lyrics_scale * (cond[k] - styled[k]);
++                    }
++                    logits = mixed.data();
++                } else if (guided) {
+                     const float * uncond = batched.data() + (size_t) (B + i) * rows;
+                     for (int k = 0; k < rows; k++) {
+                         mixed[k] = uncond[k] + cfg_scale * (cond[k] - uncond[k]);
+@@ -178,6 +198,9 @@ static bool yue2_generate(Qwen3LM *                             lm,
+             if (guided) {
+                 tokens[B + i] = tokens[i];
+             }
++            if (split) {
++                tokens[2 * B + i] = tokens[i];
++            }
+             pending = pending || owed[i] != 0;
+         }
+         if (!pending) {
+diff --git a/src/pipeline.h b/src/pipeline.h
+index cedef1f..3f67610 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -87,6 +87,17 @@ struct Yue2Song {
+     int                T_audio;    // samples per channel
+     int                T_lat;      // semantic frames
+     bool               truncated;  // a stage hit its budget before its end token
++    // HERESY 1399: the take's medcard, stage by stage (seconds of the whole batch's stage; tokens of this song)
++    int    score_tokens    = 0;      // the plan written here (0: supplied, or no score)
++    double score_seconds   = 0.0;
++    int    music_tokens    = 0;      // semantic frames written in this run
++    int    music_kept      = 0;      // frames kept from an earlier take and gone on from
++    bool   music_replayed  = false;  // the frames supplied (a retake of the same music)
++    double music_seconds   = 0.0;
++    float  guidance        = 0.0f;   // the music's guidance as applied
++    float  lyrics_guidance = 0.0f;   // the lyrics' own (HERESY 1397)
++    double sound_seconds   = 0.0;    // the acoustic stage
++    double vae_seconds     = 0.0;    // this track's decoding
+ };
+ 
+ // Parses the CSV interchange of a semantic stream
+@@ -488,6 +499,10 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+         }
+         lm_hold.emplace(p->store, lm);
+     }
++    Timer            score_timer;                    // HERESY 1399
++    std::vector<int> score_tokens(B, 0);
++    double           score_seconds = 0.0, music_seconds = 0.0, sound_seconds = 0.0;
++    int              music_kept    = 0;
+     if (has_score && !r.abc.empty()) {
+         abc_ids.assign(B, encode(r.abc));
+         scores.assign(B, r.abc);
+@@ -502,7 +517,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+             abc_ids[i]   = plans[i].tokens;
+             scores[i]    = bpe_decode(tok, abc_ids[i]);
+             truncated[i] = plans[i].truncated;
++            score_tokens[i] = (int) plans[i].tokens.size();   // HERESY 1399
+         }
++        score_seconds = score_timer.ms() / 1000.0;
+         // HERESY 1087 (Viktor, 02.10.2026): adapters pushed past their limits make the AR write garbage for a
+         // score (no key, no meter, colons in runs). The music would be built on it; the run stops here instead.
+         for (int i = 0; r.score_guard && i < B; i++) {
+@@ -537,8 +554,20 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+     fprintf(stderr, "[Prompt] cot=%s, songs=%d, variations=%d, %zu tracks\n", r.cot.c_str(), B, M, (size_t) B * M);
+ 
+     float                         guidance = r.cfg_scale < 0.0f ? yue2_default_guidance(cot) : r.cfg_scale;
++    // HERESY 1397: the lyrics' own scale; a third stream, the prompt without its lyrics, when it differs from the guidance
++    float                         lyrics_guidance = r.cfg_lyrics < 0.0f ? guidance : r.cfg_lyrics;
++    bool                          split           = lyrics_guidance != guidance;
++    std::vector<std::vector<int>> lyricless;
++    if (split) {
++        lyricless.resize(B);
++        for (int i = 0; i < B; i++) {
++            lyricless[i] = yue2_build_prompt_ids(encode, cot, r.style, std::string(), has_score ? &abc_ids[i] : nullptr);
++        }
++        fprintf(stderr, "[Prompt] guidance %.2f for the music, %.2f for the lyrics: a third branch without the lyrics\n", (double) guidance,
++                (double) lyrics_guidance);
++    }
+     std::vector<std::vector<int>> negatives;
+-    if (guidance != 1.0f) {
++    if (guidance != 1.0f || split) {
+         negatives.resize(B);
+         for (int i = 0; i < B; i++) {
+             negatives[i] = yue2_build_negative_ids(encode, cot, has_score ? &abc_ids[i] : nullptr);
+@@ -593,7 +622,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+         // prefixes of this stage only; the acoustic stage below keeps the plain prompt and gets the
+         // kept codes in front of the new ones. The kept part counts in the budget.
+         std::vector<int>              keep;
+-        std::vector<std::vector<int>> gen_prefixes = prefixes, gen_negatives = negatives;
++        std::vector<std::vector<int>> gen_prefixes = prefixes, gen_negatives = negatives, gen_lyricless = lyricless;   // HERESY 1397
+         if (!r.semantic_keep.empty()) {
+             if (!pipeline_parse_tokens(r.semantic_keep, &keep)) {
+                 return false;
+@@ -610,6 +639,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                 if (!gen_negatives.empty()) {
+                     gen_negatives[i].insert(gen_negatives[i].end(), keep.begin(), keep.end());
+                 }
++                if (!gen_lyricless.empty()) {
++                    gen_lyricless[i].insert(gen_lyricless[i].end(), keep.begin(), keep.end());
++                }
+             }
+             semantic.max_tokens -= (int) keep.size();
+             semantic.min_tokens = semantic.min_tokens > (int) keep.size() ? semantic.min_tokens - (int) keep.size() : 1;
+@@ -620,8 +652,12 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                     keep.size() / (double) YUE2_FRAME_RATE, semantic.max_tokens);
+         }
+         sliders.kept     = (int) keep.size();     // HERESY 1166: a curve runs over the whole song, the kept part too
++        Timer music_timer;                           // HERESY 1399
++        music_kept       = (int) keep.size();
+         bool semantic_ok = yue2_generate(lm, &p->kv, gen_prefixes, gen_negatives, guidance, semantic, r.lm_seed,
+-                                         YUE2_PHASE_SEMANTIC, &codes, cancelled, cancel_data);
++                                         YUE2_PHASE_SEMANTIC, &codes, cancelled, cancel_data, split ? &gen_lyricless : nullptr,
++                                         lyrics_guidance);
++        music_seconds = music_timer.ms() / 1000.0;   // HERESY 1399
+         if (semantic_ok && !keep.empty()) {
+             for (int i = 0; i < B; i++) {
+                 codes[i].tokens.insert(codes[i].tokens.begin(), keep.begin(), keep.end());
+@@ -699,6 +735,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+     if (!qw3lm_kv_sets(&p->kv, 1)) {
+         return false;
+     }
++    Timer sound_timer;                               // HERESY 1399
+     for (int i = 0; i < B; i++) {
+         const int prefix_len = (int) prefixes[i].size();
+         const int chunk_size = chunk_sizes[i];
+@@ -807,6 +844,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+     }
+ 
+     nar_hold.reset();
++    sound_seconds = sound_timer.ms() / 1000.0;      // HERESY 1399
+     VAEGGML * vae = require_vae(p, vae_path);
+     if (!vae) {
+         return false;
+@@ -817,6 +855,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+         int        max_T_audio = song.T_lat * YUE2_HOP;
+         fprintf(stderr, "[VAE] Track %zu/%zu: song %zu variation %zu\n", t + 1, songs->size(), t / M, t % M);
+         song.audio.assign((size_t) 2 * max_T_audio, 0.0f);
++        Timer vae_timer;                             // HERESY 1399
+         song.T_audio = vae_ggml_decode_tiled(vae, song.latents.data(), song.T_lat, song.audio.data(), max_T_audio,
+                                              p->params.vae_core, p->params.vae_halo, cancelled, cancel_data);
+         if (song.T_audio < 0) {
+@@ -826,6 +865,16 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+             return false;
+         }
+         song.audio.resize((size_t) 2 * song.T_audio);
++        song.vae_seconds     = vae_timer.ms() / 1000.0;   // HERESY 1399: the medcard's stages
++        song.score_tokens    = score_tokens[t / M];
++        song.score_seconds   = score_seconds;
++        song.music_tokens    = replay ? 0 : song.T_lat - music_kept;
++        song.music_kept      = music_kept;
++        song.music_replayed  = replay;
++        song.music_seconds   = music_seconds;
++        song.guidance        = guidance;
++        song.lyrics_guidance = lyrics_guidance;
++        song.sound_seconds   = sound_seconds;
+         if (t == 0 && p->dumper.enabled) {
+             // Interleaved [T_audio, 2] like the torch reference dump
+             std::vector<float> interleaved((size_t) 2 * song.T_audio);
+diff --git a/src/request.cpp b/src/request.cpp
+index 8f1ace8..7082202 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -33,6 +33,7 @@ void request_init(Yue2Request * r) {
+     r->synth_batch_size = 1;
+     r->peak_clip        = 10;
+     r->cfg_scale        = -1.0f;
++    r->cfg_lyrics       = -1.0f;   // HERESY 1397
+     r->semantic_tokens  = "";
+     r->semantic_keep    = "";
+     r->end_at           = 0.0f;
+@@ -189,6 +190,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+     if ((v = yyjson_obj_get(obj, "cfg_scale")) && yyjson_is_num(v)) {
+         r->cfg_scale = (float) yyjson_get_num(v);
+     }
++    if ((v = yyjson_obj_get(obj, "cfg_lyrics")) && yyjson_is_num(v)) {   // HERESY 1397
++        r->cfg_lyrics = (float) yyjson_get_num(v);
++    }
+     if ((v = yyjson_obj_get(obj, "output_format")) && yyjson_is_str(v)) {
+         r->output_format = yy_str(v);
+     }
+@@ -367,6 +371,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+     if (!sparse || r->cfg_scale != d.cfg_scale) {
+         yyjson_mut_obj_add_real(doc, root, "cfg_scale", r->cfg_scale);
+     }
++    if (!sparse || r->cfg_lyrics != d.cfg_lyrics) {   // HERESY 1397
++        yyjson_mut_obj_add_real(doc, root, "cfg_lyrics", r->cfg_lyrics);
++    }
+     if (!sparse || r->output_format != d.output_format) {
+         yyjson_mut_obj_add_strncpy(doc, root, "output_format", r->output_format.c_str(), r->output_format.size());
+     }
+diff --git a/src/request.h b/src/request.h
+index 43c0d1d..cbad520 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -95,6 +95,7 @@ struct Yue2Request {
+     // default (HERESY 1031: 1.6 in every mode; the release had 1.01 in off mode
+     // and 1.0 otherwise), and a scale of exactly 1.0 keeps a single branch.
+     float cfg_scale;  // -1
++    float cfg_lyrics;  // HERESY 1397: the lyrics' own guidance in the music stage; -1: as cfg_scale
+ 
+     // output normalization percentile control, the peak being the
+     // 1 - peak_clip / 1e6 percentile of the absolute signal
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 318a0d2..ebf203c 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -872,6 +872,7 @@ static yyjson_mut_val * library_entry(yyjson_mut_doc * out, const std::string &
+         yyjson_mut_obj_add_val(out, e, "loras", lo);
+         yyjson_mut_obj_add_int(out, e, "steps", r.steps);
+         yyjson_mut_obj_add_real(out, e, "cfg_scale", r.cfg_scale);
++        yyjson_mut_obj_add_real(out, e, "cfg_lyrics", r.cfg_lyrics);   // HERESY 1397
+         yyjson_mut_obj_add_real(out, e, "duration", r.duration);
+         yyjson_mut_obj_add_strcpy(out, e, "parent", r.parent.c_str());
+         yyjson_mut_obj_add_bool(out, e, "has_score", !r.abc.empty());
+@@ -976,6 +977,23 @@ static std::string library_save(const Yue2Request & replay,
+     yyjson_mut_obj_add_int(doc, root, "song", song_index);
+     yyjson_mut_obj_add_int(doc, root, "variation", variation);
+     yyjson_mut_obj_add_bool(doc, root, "provided_score", provided_score);
++    if (song.T_lat > 0 && song.guidance > 0.0f) {      // HERESY 1399: the take's medcard, stage by stage
++        yyjson_mut_val * st = yyjson_mut_obj(doc), * sc = yyjson_mut_obj(doc), * mu = yyjson_mut_obj(doc), * so = yyjson_mut_obj(doc);
++        yyjson_mut_obj_add_int(doc, sc, "tokens", song.score_tokens);
++        yyjson_mut_obj_add_real(doc, sc, "seconds", std::round(song.score_seconds * 10.0) / 10.0);
++        yyjson_mut_obj_add_int(doc, mu, "tokens", song.music_tokens);
++        yyjson_mut_obj_add_int(doc, mu, "kept", song.music_kept);
++        yyjson_mut_obj_add_bool(doc, mu, "replayed", song.music_replayed);
++        yyjson_mut_obj_add_real(doc, mu, "seconds", std::round(song.music_seconds * 10.0) / 10.0);
++        yyjson_mut_obj_add_real(doc, mu, "guidance", std::round((double) song.guidance * 100.0) / 100.0);
++        yyjson_mut_obj_add_real(doc, mu, "lyrics_guidance", std::round((double) song.lyrics_guidance * 100.0) / 100.0);
++        yyjson_mut_obj_add_real(doc, so, "seconds", std::round(song.sound_seconds * 10.0) / 10.0);
++        yyjson_mut_obj_add_real(doc, so, "vae_seconds", std::round(song.vae_seconds * 10.0) / 10.0);
++        yyjson_mut_obj_add_val(doc, st, "score", sc);
++        yyjson_mut_obj_add_val(doc, st, "music", mu);
++        yyjson_mut_obj_add_val(doc, st, "sound", so);
++        yyjson_mut_obj_add_val(doc, root, "stages", st);
++    }
+     {
+         std::lock_guard<std::mutex> settings_lock(mtx_settings);
+         yyjson_mut_obj_add_strcpy(doc, root, "model", g_settings.model.c_str());
+-- 
+2.43.0
+
