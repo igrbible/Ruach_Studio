@@ -510,7 +510,7 @@ def export_start(kit, outputs, names, fmt, derived):
                             z.write(src, _fname(title, used, ".wav"))
                         else:
                             tmp = out_dir / f"{xid}.flac"
-                            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-c:a", "flac", "-metadata", f"title={title}", str(tmp)], check=True)
+                            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-c:a", "flac", "-metadata", f"title={title}", str(tmp)], check=True, timeout=1800)
                             z.write(tmp, _fname(title, used, ".flac"))
                             tmp.unlink()
                     if derived and (d / "derived").is_dir():

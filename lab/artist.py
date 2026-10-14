@@ -34,7 +34,7 @@ FILE_RE = re.compile(r"^(?:(?:thumbs/)?\d{2}-(?:1x1|16x9|9x16)-s\d+(?:-up(?:\dx|
 # the card a run needs at its largest shape, the VAE in tiles (RTX 3090, 08.10.2026, reserved at the peak: Q8 15.1 GB at
 # 1024², 15.9 at 1280², 16.9 at 1920×1088; Q4 9.3, 10.1, 11.1; untiled the VAE's decode alone took 4 to 8 GB more), with a
 # margin for the card's own context
-NEED = {"krea2-q8": 18500, "krea2-q4": 12500}
+NEED = {}                                          # HERESY 1428: Krea 2 gone; the Qwen painters below
 # HERESY 1318: the Qwen painters, by their peaks on an RTX 3090 (10.10.2026, 1328², Lightning on, the encoder gone by then) with a
 # margin: 2512 Q4 14.3 GB (15.1 held), Q6 17.6 (19.1), an fp8 fine-tune 21.0 (21.3); Qwen-Image 2.1 16.4 painting from words, 19.1
 # editing, its parts on the card in turn
@@ -44,12 +44,13 @@ NEED.update({k: v[1] for k, v in QWEN.items()})
 NEED["upscale"] = 4000                                # HERESY 1322: a DAT 4x model peaked at 2.1 GB in tiles of 512 (RTX 3090)
 QWEN21_STREAM_MB = 9500                              # HERESY 1386: Qwen-Image 2.1 streamed, encoder and transformer both: 4.1 GB at the peak from words, 7.9 editing (3090)
 # HERESY 1342: the card a run needs when its painter's blocks stream from RAM (artist_qwen.place), asked when no card here takes it whole
-STREAM_NEED = {"qwen2512-fp8": 6000, "qwen2512-q4": 5000, "qwen2512-q6": 5500, "krea2-q4": 6000, "krea2-q8": 6500, "qwen21": QWEN21_STREAM_MB}   # measured 10.10.2026: 2.3 GB at the peak with every block streamed (1328², Lightning, four adapters)
+STREAM_NEED = {"qwen2512-fp8": 6000, "qwen2512-q4": 5000, "qwen2512-q6": 5500, "qwen21": QWEN21_STREAM_MB}   # measured 10.10.2026: 2.3 GB at the peak with every block streamed (1328², Lightning, four adapters)
 QWEN_NOTE = {"qwen21": "Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only, not for commercial use "
              "(a cover for a song you sell is commercial use); a reference is a picture it edits by the prompt's words",
              "qwen2512-q4": "Qwen-Image 2512 (Apache-2.0) from a 4-bit GGUF: for a card of 16 GB",
              "qwen2512-q6": "Qwen-Image 2512 (Apache-2.0) from a 6-bit GGUF",
-             "qwen2512-fp8": "a fine-tune of Qwen-Image 2512 in fp8 from artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): a card of 24 GB"}
+             "qwen2512-fp8": "Qwen-Image 2512 in fp8 from artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): 2512's own BASE file "
+                             "paints with Lightning, a fine-tune its finished realism without it unless asked; a card of 24 GB"}
 KEEP = 1024                # a take's artwork, as art_job.py writes it
 PROMPT_MAX = 4000
 STOPPED = "the lab restarted while it was drawing"
@@ -118,6 +119,11 @@ def qwen_models():
     return sorted(p.name for p in d.glob("*.safetensors") if p.is_file()) if d.is_dir() else []
 
 
+def is_base(model):
+    """HERESY 1428: an fp8 file of 2512 itself (BASE QW2512 fp8_e4m3fn), not a fine-tune: artist_qwen.is_base's rule, without its imports."""
+    return bool(model) and Path(str(model)).name.upper().startswith("BASE")
+
+
 def qwen_ready(painter):
     """HERESY 1318: a Qwen painter's files are here."""
     if painter == "qwen21":
@@ -131,16 +137,13 @@ def qwen_ready(painter):
 
 def painters():
     """HERESY 1318: the Artist's painters as this machine has them, for the room's choice."""
-    krea = all(_art(*x).exists() for x in (("Krea-2-Turbo", "text_encoder"), ("Krea-2-Turbo", "vae")))
-    out = [{"key": "krea2-q4", "label": "Krea 2 Muse · Q4", "need_mb": NEED["krea2-q4"], "family": "krea2",
-            "ready": krea and _art("Krea-2-Muse", "museByStableYogi_v35Q4Extended.gguf").is_file()},
-           {"key": "krea2-q8", "label": "Krea 2 Muse · Q8", "need_mb": NEED["krea2-q8"], "family": "krea2",
-            "ready": krea and _art("Krea-2-Muse", "museByStableYogi_v35Q8Extended.gguf").is_file()}]
+    out = []                                          # HERESY 1428: Krea 2 gone
     for k, (label, need) in QWEN.items():
         e = {"key": k, "label": label, "need_mb": need, "family": "qwen-image-2.1" if k == "qwen21" else "qwen-image-2512",
              "ready": qwen_ready(k), "note": QWEN_NOTE.get(k, "")}
         if k == "qwen2512-fp8":
             e["models"] = qwen_models()
+            e["bases"] = [m for m in e["models"] if is_base(m)]   # HERESY 1428: 2512 itself in fp8: a brush with Lightning
         if k != "qwen21":
             e["lightning"] = _art("Qwen-Image-2512", "lightning", "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors").exists()
         out.append(e)
@@ -154,8 +157,9 @@ SAMPLERS = ("euler", "euler-sde", "er_sde", "res_2s", "res_2s_ode", "res_3s", "r
 SCHEDULES = ("simple", "karras", "exponential", "beta", "beta57", "kl_optimal", "sgm_uniform", "bong_tangent")
 
 
-def sampling(painter, s):
-    """HERESY 1319: a run's sampling as asked, checked by its painter; {} for the painter's own."""
+def sampling(painter, s, model=""):
+    """HERESY 1319: a run's sampling as asked, checked by its painter; {} for the painter's own. 1428: the fp8 file it paints with
+    (2512's own BASE paints with Lightning by default, a fine-tune without it)."""
     if not s:
         return {}
     if not isinstance(s, dict):
@@ -170,7 +174,8 @@ def sampling(painter, s):
             raise ValueError("Lightning is not on this machine: its file goes into artwork/Qwen-Image-2512/lightning/ (Engine → Models and LoRAs → Qwen painters)")
         out["lightning"] = round(light, 2)
     # HERESY 1328: not asked, a fine-tune paints without Lightning and a GGUF painter with it (artist_qwen.py's OFF_BY_DEFAULT)
-    fast = painter.startswith("krea2") or (painter.startswith("qwen2512") and (light > 0 if light is not None else painter != "qwen2512-fp8"))
+    fine = painter == "qwen2512-fp8" and not is_base(model)
+    fast = (painter.startswith("qwen2512") and (light > 0 if light is not None else not fine))
     lo, hi = (4, 16) if fast else (10, 60)
     if s.get("steps") is not None:
         n = int(s["steps"])
@@ -235,16 +240,16 @@ def draw(body):
         raise ValueError("a reference is used to paint from, to edit by words («edit») or for its style («style»)")
     if ref_as and (painter != "qwen21" or not body.get("ref")):
         raise ValueError("editing by words and a style reference are Qwen-Image 2.1's: choose it as the painter, with a picture")
-    if letters and painter not in QWEN and not painter.startswith("krea2"):   # HERESY 1394; 1396: Krea 2 Muse letters too
-        raise ValueError("lettering is painted by Qwen-Image or Krea 2 Muse: choose one of them as the painter")
+    if letters and painter not in QWEN:                # HERESY 1394
+        raise ValueError("lettering is painted by Qwen-Image: choose one of its brushes")
     if letters and letters["way"] == "letter" and (painter != "qwen21" or not body.get("ref") or ref_as == "style"):
         raise ValueError("lettering a finished picture is Qwen-Image 2.1's edit by words: choose it as the painter, the picture as its reference")
     if letters and letters["way"] == "letter":
         ref_as = "edit"
     if painter == "qwen21" and (body.get("mask") or body.get("fit")):
-        raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Krea 2 or Qwen-Image 2512")
+        raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Qwen-Image 2512")
     if painter not in NEED:
-        raise ValueError("the Artist paints with Krea 2 Muse, which is not on this machine: heresy/fetch-heresy.sh --artwork")
+        raise ValueError("the Artist paints with Qwen-Image's brushes (Krea 2 left the studio, HERESY 1428): Engine → Models and LoRAs → Qwen painters")
     loras = artist_loras.chosen(H["kit"], painter, body.get("loras"))   # HERESY 1316: checked now, their size asked of the card too
     need = dict(NEED, **{painter: NEED[painter] + sum(x["mb"] for x in loras)})
     why = H["refusal"](painter, need, "choose it as the painter here") if H.get("refusal") else ""   # HERESY 1297: said now
@@ -290,7 +295,7 @@ def draw(body):
         ask["mask_opts"] = mo
     if scale:                                        # HERESY 1384: the second pass, the picture brought up by nearest as his workflow does
         ask.update(scale=scale, ref_resample="nearest")
-    smp = sampling(painter, body.get("sampling"))
+    smp = sampling(painter, body.get("sampling"), model)   # HERESY 1428: by the fp8 file too
     if smp:
         ask["sampling"] = smp                            # HERESY 1319
     if ref:                                          # HERESY 1305: kept beside the run, read by artist_job.py
@@ -349,7 +354,7 @@ def _scale(body, painter, ref):
     if not ref:
         raise ValueError("a second pass paints over a picture: it goes with the picture to paint over")
     if painter == "qwen21":
-        raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a second pass wants Krea 2 or Qwen-Image 2512")
+        raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a second pass wants Qwen-Image 2512")
     if body.get("mask") or body.get("fit") or body.get("place"):
         raise ValueError("a second pass paints over the whole picture: no mask, no canvas")
     return s
@@ -383,7 +388,7 @@ def _regions(body, painter):
     if not rs:
         return []
     if painter == "qwen21":
-        raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: regions want Krea 2 or Qwen-Image 2512")
+        raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: regions want Qwen-Image 2512")
     if not isinstance(rs, list) or len(rs) > 3:
         raise ValueError("regions: three at most")
     out = []
@@ -584,7 +589,7 @@ CARDS_MAX = 4              # HERESY 1354: the cards a run's pictures are spread 
 # HERESY 1354: a painter's own RAM at its peak, GB (its VmHWM measured on the Forge 11.10.2026: Krea 2 Muse Q4 17.3, Q8 28.0; Qwen-Image
 # 2512 Q4 30.0, Q6 33.4, an fp8 fine-tune 57.8; Qwen-Image 2.1 32.6), its adapters beside it, so that two at once are started only where
 # RAM holds both with 8 GB left over
-RAM_NEED_GB = {"krea2-q4": 18, "krea2-q8": 29, "qwen2512-q4": 31, "qwen2512-q6": 34, "qwen2512-fp8": 58, "qwen21": 33,
+RAM_NEED_GB = {"qwen2512-q4": 31, "qwen2512-q6": 34, "qwen2512-fp8": 58, "qwen21": 33,
                "upscale": 6}                         # HERESY 1364: an upscaler's process (its model tens of MB, a picture of 600 MP at most)
 
 
@@ -723,7 +728,7 @@ def _row(d, run, gpu, only, lives, row):
 # between runs its weights lie in RAM and its card is free. Let go after KEPT_IDLE_S idle, for the RAM another painter needs, on Unload,
 # or by Stop. A run that streams its painter, Qwen-Image 2.1 and the upscalers keep a process of their own as before.
 KEPT_IDLE_S = int(os.environ.get("ART_KEPT_IDLE_S") or 600)
-KEPT_PAINTERS = {"krea2-q4", "krea2-q8", "qwen2512-q4", "qwen2512-q6", "qwen2512-fp8"}
+KEPT_PAINTERS = {"qwen2512-q4", "qwen2512-q6", "qwen2512-fp8"}
 SERVED, SLOCK, REAPER = {}, threading.Lock(), []
 
 
@@ -1102,6 +1107,36 @@ def star(body):
         pic.pop("star", None)
     write(d, run)
     return {"star": on, "file": name}
+
+
+NOTE_MAX = 4000
+
+
+def note(body):
+    """HERESY 1428 (Viktor 14.10.2026: «Вложи промпты маяка в студию. И к картинкам тоже прикрути поле для заметок плиз»): a picture's
+    note of one's own (what it was made for, the words that lettered it, what to try next), kept with its run as star keeps its star; an
+    empty note takes it off. Not while its run draws (the drawing run writes its own run.json). {note, file}"""
+    rid, name, text = str(body.get("id") or ""), str(body.get("file") or ""), body.get("note")
+    if text is not None and not isinstance(text, str):
+        raise ValueError("a note is words")
+    text = (text or "").replace("\r\n", "\n").rstrip()
+    if len(text) > NOTE_MAX:
+        raise ValueError(f"a note: up to {NOTE_MAX} characters")
+    picture(rid, name)
+    with H["lock"]:
+        if "artist:" + rid in H["jobs"]:
+            raise ValueError("it is drawing: write its pictures' notes when it ends")
+    d = run_dir(rid)
+    run = read(d) or {}
+    pic = next((x for x in run.get("pictures") or [] if x.get("file") == name), None)
+    if pic is None:
+        raise FileNotFoundError("no such picture in the run")
+    if text:
+        pic["note"] = text
+    else:
+        pic.pop("note", None)
+    write(d, run)
+    return {"note": text, "file": name}
 
 
 def protect(body):

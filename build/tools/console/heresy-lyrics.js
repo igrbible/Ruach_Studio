@@ -555,7 +555,20 @@
     var last = null, queued = false;
     var ax = aids(area, function () { if (meter) paintMeter(last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : ""))); });   // HERESY 1169
 
+    // HERESY 1427 (Viktor 14.10.2026: «в подвале редактора отображение статистики разведи на читаемые блоки»): the counts in blocks, their
+    // numbers bold (the words read as before); the line numbers and the spelling by the Lyrics' title (opts.head) as icons
+    function bold(html) {                             // the text between tags only: an attribute (a tip's «U+0301») stays as it is
+      return html.replace(/>([^<]*)</g, function (m, t) { return ">" + t.replace(/(\d[\d\u00a0\u202f ,.]*\d|\d)/g, "<b>$1</b>") + "<"; });
+    }
+    function block(kind, items) { return items.length ? '<span class="lyr-blk lyr-blk-' + kind + '">' + items.join("") + "</span>" : ""; }
+    function paintHead() {
+      if (!head) return;
+      var n = head.querySelector('[data-lyr="nums"]'), sp = head.querySelector('[data-lyr="spell"]');
+      if (n) n.setAttribute("aria-pressed", String(recall("yue2.lyrNums") !== "off"));
+      if (sp) sp.setAttribute("aria-pressed", String(recall("yue2.lyrSpell") !== "off"));
+    }
     function paintMeter(m) {
+      paintHead();
       if (!meter) return;
       var spell = recall("yue2.lyrSpell") !== "off", manual = !!area.dataset.manual;
       var parts = [
@@ -595,10 +608,17 @@
       if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
         esc(tr("Marks: {0}").replace("{0}", num(mk))) + "</button>");
       parts.push('<button type="button" class="lyr-tog lyr-keys" data-lyr="keys" data-tip="' + esc(tr(KEYS)) + '">' + esc(tr("Keys")) + "</button>");   // HERESY 1169
+      if (!head) {
       parts.push('<button type="button" class="lyr-tog" data-lyr="nums" aria-pressed="' + (recall("yue2.lyrNums") !== "off") + '" data-tip="' + esc(tr("The lines' numbers in the box, as a code editor shows them (Alt+K marks a line, Alt+J goes to the next mark)")) + '">' + esc(tr("Line numbers")) + "</button>");
       parts.push('<button type="button" class="lyr-tog" data-lyr="spell" aria-pressed="' + spell + '" data-tip="' + esc(tr("The browser's spelling check in the lyrics' language; press to switch it off or on")) + '">' + esc(tr("Spelling")) + "</button>");
+      }
       if (manual) parts.push('<button type="button" class="lyr-tog" data-lyr="auto" data-tip="' + esc(tr("The box grows with the words again, as it did before you drew it")) + '">' + esc(tr("Auto height")) + "</button>");
-      meter.innerHTML = parts.join("");
+      var counts = parts.filter(function (x) { return x.indexOf('class="lyr-c') >= 0; }).map(bold);
+      var words = counts.filter(function (x) { return x.indexOf("lyr-hand") < 0; });
+      var look = parts.filter(function (x) { return x.indexOf("lyr-warn") >= 0; });
+      var tools = parts.filter(function (x) { return x.indexOf("<button") === 0 && x.indexOf("lyr-warn") < 0; });
+      meter.innerHTML = block("words", words.slice(0, words.length - 2)) + block("tags", words.slice(-2)) +
+        block("hand", counts.filter(function (x) { return x.indexOf("lyr-hand") >= 0; })) + block("look", look) + block("tools", tools);
     }
 
     function draw() {
@@ -713,8 +733,27 @@
       probe.scrollIntoView({ block: "center", inline: "nearest" });
       probe.remove();
     }
-    if (meter) meter.addEventListener("click", function (e) {
+    var head = null;
+    if (opts.head) {                                  // HERESY 1427: the line numbers and the spelling by the Lyrics' title, as icons
+      head = document.createElement("span");
+      head.className = "label-end lyr-head-togs";
+      [["nums", "list-ordered", "Line numbers", "The lines' numbers in the box, as a code editor shows them (Alt+K marks a line, Alt+J goes to the next mark)"],
+       ["spell", "spell-check", "Spelling", "The browser's spelling check in the lyrics' language; press to switch it off or on"]].forEach(function (d) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn ghost small icon-btn lyr-head-tog";
+        b.dataset.lyr = d[0];
+        b.setAttribute("aria-label", tr(d[2]));
+        b.dataset.tip = tr(d[2]) + ": " + tr(d[3]);
+        b.innerHTML = window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(d[1]) : d[2];
+        head.appendChild(b);
+      });
+      opts.head.appendChild(head);
+      head.addEventListener("click", function (e) { onLyr(e); });
+    }
+    function onLyr(e) {
       var b = e.target.closest("[data-lyr]");
+      if (b && head && head.contains(b)) { e.preventDefault(); e.stopPropagation(); }   // a button inside the label: the box keeps its own focus
       if (!b) return;
       if (b.dataset.lyr === "stress" || b.dataset.lyr === "stress2") {
         var st = stressFaults(area.value), list = b.dataset.lyr === "stress" ? st.faults : st.twos;
@@ -735,7 +774,8 @@
         if (opts.fit) opts.fit(area);
       }
       draw();
-    });
+    }
+    if (meter) meter.addEventListener("click", onLyr);
     later();
     return { draw: draw, aids: ax, lintNext: lintNext, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
   }

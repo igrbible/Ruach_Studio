@@ -1578,7 +1578,8 @@
   $("lyrics").addEventListener("input", growLyrics);
   // HERESY 1168: the lyrics' meter: each line's syllables against its group's ruler, the counts under the box, the browser's
   // spelling check; the box drawn by hand keeps its height (heresy-lyrics.js)
-  var lyricsMeter = window.HeresyLyrics ? window.HeresyLyrics.attach($("lyrics"), { meter: $("lyricsMeter"), style: $("style"), fit: function (area) { fitText(area); } }) : null;
+  var lyricsMeter = window.HeresyLyrics ? window.HeresyLyrics.attach($("lyrics"), { meter: $("lyricsMeter"), style: $("style"), fit: function (area) { fitText(area); },
+    head: $("lyrics").closest(".field").querySelector(".label") }) : null;   // HERESY 1427: the line numbers and spelling by the title
   if (window.HeresyLyrics) window.HeresyLyrics.aids($("wrLyrics"), null, $("wrLyrics").closest(".field").querySelector(".label"));   // HERESY 1169: the Writer's lyrics numbered, marked, their tags lit; its label says the keys
 
   // Each dice toggles: an empty box (random each run) gets a seed to keep or edit; a seed is cleared
@@ -4163,7 +4164,7 @@
   // it: the backbone (BF16 only where the card does BF16 in tensor cores and Auto gives it; else Q8_0, or the nearest one that is
   // here), Auto's context and VAE tiles for the studio card's memory or limit, the painter that fits; one window, once per install
   var MACHINE_KEY = "yue2.machineScan", BACKBONES = ["BF16", "Q8_0", "Q6_K", "Q5_K_M"];
-  var PAINTERS = { "krea2-q4": "Krea 2 Muse Q4 (12.6 GB at its peak)", "krea2-q8": "Krea 2 Muse Q8 (17.4 GB at its peak)",   // HERESY 1405: SDXL gone
+  var PAINTERS = {   // HERESY 1405: SDXL gone; 1428: Krea 2 gone
     // HERESY 1425 (Viktor 13.10.2026: «На RTX3090 я бы однозначно советовал QWEN Image 2512»): by the cards, as Engine → Artwork's first line
     "qwen2512-q6": "Qwen-Image 2512 Q6 by the cards (about 20 GB at its peak, the text encoder gone from the card by then)",
     "qwen2512-q4": "Qwen-Image 2512 Q4 by the cards (about 15 GB at its peak, the text encoder gone from the card by then)" };
@@ -4192,7 +4193,7 @@
                      " (" + tr("Auto for {0} GB").replace("{0}", plan.gib.toFixed(1)) + ")"
                    : "· " + tr("{0} GB is too small for YuE2: the knobs stay as they are").replace("{0}", plan.gib.toFixed(1)));
       lines.push("· " + (plan.painter ? tr("artwork: {0}").replace("{0}", tr(PAINTERS[plan.painter])) + (plan.ready[plan.painter] ? "" : ", " + tr("once fetched (Engine → Models and LoRAs)"))
-                                    : tr("artwork: no painter fits on this machine yet (Krea 2 Muse Q4 wants a card of 16 GB)")));
+                                    : tr("artwork: no painter fits on this machine yet (Qwen-Image 2512 Q4 wants a card of 6 GB, streamed from 32 GB of RAM)")));
       var text = tr("The machine, as the studio found it") + "\n\n" + cards.join("\n") + "\n\n" + tr("What suits it:") + "\n" + lines.join("\n") +
         "\n\n" + tr("Engine → Compute and Engine → Artwork keep them yours to change; «Scan the machine» there asks again.");
       return window.HeresyDialog.confirm(text, { ok: "Set them", cancel: "Not now" }).then(function (yes) {
@@ -4218,6 +4219,173 @@
     }).catch(function (e) { if (asked) toast("The machine could not be read: " + e.message, "bad"); return null; });
   }
   window.ruachMachineScan = machineScan;               // for the checks: a test browser is never asked by itself
+  // HERESY 1429 (Viktor 14.10.2026: «IP Студии и Лаба мы же раньше уже ограничивали локалхостом и масками локальных сетей… юзеры без
+  // файрвола... или на публичном вайфае - это проблема. Может в Engine настройки блок по безопасности IP сетки добавить? И напоминалку
+  // попапом для свежих инсталляций. С минигайдом там же, и чекбокс "Моё решение осознанное"»): who may open the studio, the engine's
+  // own gate (GET/POST /access, user/access.json): this computer only, private networks (1114's, the default) or the networks listed.
+  // Engine → Security changes it; a studio whose user never decided asks at its start, before the machine's scan
+  var ACCESS = { a: null };
+  var ACCESS_MODES = [
+    ["local", "This computer only", "the safest: no other machine can open it, not even your phone"],
+    ["private", "This computer and private networks", "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too"],
+    ["list", "This computer and the networks I list", "only the networks you trust, written as 10.0.0.0/24, a comma between them"]];
+  function accessYou(a) {
+    if (!a || !a.you) return "";
+    return (a.you_local ? tr("You open it from {0}: this computer") : a.you_private ? tr("You open it from {0}: a private network") : tr("You open it from {0}"))
+      .replace("{0}", a.you);
+  }
+  function accessMine(a) {                              // the caller's own network, as a /24 (IPv4) to offer in the list
+    var m = a && !a.you_local && /^(\d+)\.(\d+)\.(\d+)\.\d+$/.exec(a.you || "");
+    return m ? m[1] + "." + m[2] + "." + m[3] + ".0/24" : "";
+  }
+  function accessFormHtml(a, name) {
+    var mine = accessMine(a);
+    return '<div class="acc-modes" role="radiogroup" aria-label="' + escape(tr("Who may open the studio")) + '">' +
+      ACCESS_MODES.map(function (m) {
+        return '<label class="acc-mode"><input type="radio" name="' + name + '" value="' + m[0] + '"' + (a && a.mode === m[0] ? " checked" : "") + " />" +
+          '<span><b>' + escape(tr(m[1])) + "</b><small>" + escape(tr(m[2])) + "</small></span></label>";
+      }).join("") + "</div>" +
+      '<div class="acc-nets"><input type="text" class="acc-nets-in" spellcheck="false" autocomplete="off" placeholder="10.0.0.0/24, 172.16.0.0/24" value="' +
+      escape(((a && a.nets) || []).join(", ")) + '" aria-label="' + escape(tr("The networks I list")) + '" />' +
+      (mine ? '<button type="button" class="btn ghost small acc-mine" data-net="' + mine + '" data-tip="' + escape(tr("Add the network you open it from now: {0}").replace("{0}", mine)) + '">+ ' + escape(mine) + "</button>" : "") + "</div>";
+  }
+  function accessRead(box, name) {
+    var r = box.querySelector('input[name="' + name + '"]:checked'), nets = box.querySelector(".acc-nets-in");
+    return { mode: r ? r.value : "", nets: nets ? nets.value.split(/[\s,;]+/).filter(Boolean) : [] };
+  }
+  function accessWire(box, name, changed) {               // the box's listeners once (the card is painted again and again)
+    box._accChanged = changed;
+    var paint = function () {
+      var v = accessRead(box, name), nets = box.querySelector(".acc-nets");
+      if (nets) nets.classList.toggle("is-off", v.mode !== "list");
+      if (box._accChanged) box._accChanged(v);
+    };
+    if (box._accWired) { paint(); return; }
+    box._accWired = true;
+    box.addEventListener("change", paint);
+    box.addEventListener("input", paint);
+    box.addEventListener("click", function (e) {
+      var b = e.target.closest(".acc-mine");
+      if (!b) return;
+      var inp = box.querySelector(".acc-nets-in"), list = inp.value.split(/[\s,;]+/).filter(Boolean);
+      if (list.indexOf(b.dataset.net) < 0) list.push(b.dataset.net);
+      inp.value = list.join(", ");
+      var r = box.querySelector('input[name="' + name + '"][value="list"]');
+      if (r) r.checked = true;
+      paint();
+    });
+    paint();
+  }
+  function accessSay(a) {
+    return a.mode === "local" ? tr("the studio answers this computer only")
+      : a.mode === "list" ? tr("the studio answers this computer and {0} listed networks").replace("{0}", String((a.nets || []).length))
+      : tr("the studio answers this computer and private networks");
+  }
+  // the decision sent; one that closes the studio to whoever asks is asked again first
+  function accessSend(v, extra) {
+    var body = Object.assign({ mode: v.mode, nets: v.nets }, extra || {});
+    return fetch("/access", { method: "POST", headers: { "Content-Type": "application/json" }, body: toJSON(body) }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (b) {
+        if (r.ok) return b;
+        if (r.status === 409 && b.lockout) {
+          return window.HeresyDialog.confirm(tr("This closes the studio to you") + "\n\n" +
+            tr("You open it from {0}, which the new choice leaves out: the page stops answering here, and only the studio's own computer can open it again (Engine → Security there, or delete user/access.json). Close it anyway?").replace("{0}", ACCESS.a && ACCESS.a.you || "?"),
+            { ok: tr("Close it to me"), cancel: tr("Not now"), danger: true }).then(function (yes) {
+            return yes ? accessSend(v, Object.assign({}, extra || {}, { lockout: true })) : null;
+          });
+        }
+        var e = new Error(b.error || ("HTTP " + r.status));
+        e.status = r.status;
+        throw e;
+      });
+    });
+  }
+  function paintAccess(a) {
+    var card = $("accessCard");
+    if (!card) return;
+    ACCESS.a = a;
+    var why = $("accWhy");
+    if (!a) {
+      $("accYou").textContent = tr("The engine does not answer about its access: build it again (./build.sh --server).");
+      $("accForm").innerHTML = ""; $("accSave").disabled = true; why.hidden = true;
+      return;
+    }
+    $("accYou").textContent = accessYou(a) + (a.acknowledged ? " · " + tr("decided {0}").replace("{0}", String(a.acknowledged).replace("T", " ").slice(0, 16)) : "");
+    $("accForm").innerHTML = accessFormHtml(a, "accMode");
+    var notes = [];
+    if (a.public) notes.push(tr("RUACH_ALLOW_PUBLIC=1 is set: the studio answers anyone, whatever is chosen here."));
+    if (!a.kept) notes.push(tr("This engine keeps no settings file, so it answers this computer and private networks; start it with ./start.sh to choose."));
+    why.hidden = !notes.length;
+    why.textContent = notes.join(" ");
+    accessWire($("accForm"), "accMode", function (v) {
+      $("accSave").disabled = !a.kept || !v.mode || (v.mode === "list" && !v.nets.length) ||
+        (v.mode === a.mode && v.nets.join(",") === (a.nets || []).join(","));
+    });
+  }
+  function refreshAccess() {
+    return api("/access").then(function (a) { paintAccess(a); return a; }).catch(function () { paintAccess(null); return null; });
+  }
+  if ($("accSave")) $("accSave").addEventListener("click", function () {
+    var v = accessRead($("accForm"), "accMode"), b = this;
+    b.disabled = true;
+    accessSend(v, ACCESS.a && !ACCESS.a.acknowledged ? { acknowledged: true } : null).then(function (a) {
+      if (!a) { paintAccess(ACCESS.a); return; }
+      paintAccess(a);
+      toast(tr("Kept: {0}").replace("{0}", accessSay(a)), "good");
+    }).catch(function (e) { toast(tr("Not kept: {0}").replace("{0}", e.message), "bad"); paintAccess(ACCESS.a); });
+  });
+  // the first start's question: a mini guide, the three choices, «My decision is a conscious one»; Later asks again at the next start
+  function accessAsk(a) {
+    return new Promise(function (done) {
+      var back = document.createElement("div"), before = document.activeElement, port = location.port || (location.protocol === "https:" ? "443" : "80");
+      back.className = "hd-back acc-back";
+      back.innerHTML = '<div class="hd-box acc-box" role="dialog" aria-modal="true" aria-label="' + escape(tr("Who may open this studio?")) + '">' +
+        '<div class="hd-title">' + escape(tr("Who may open this studio?")) + "</div>" +
+        '<div class="acc-guide">' + [
+          tr("The studio listens on port {0} of every network this computer is on. Whoever opens its page can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.").replace("{0}", port),
+          tr("At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not."),
+          tr("On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks."),
+          tr("Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.")
+        ].map(function (t) { return "<p>" + escape(t) + "</p>"; }).join("") + "</div>" +
+        '<p class="acc-you">' + escape(accessYou(a)) + "</p>" +
+        '<div class="acc-form">' + accessFormHtml(a, "accAsk") + "</div>" +
+        '<label class="check acc-sure"><input type="checkbox" class="acc-sure-in" /> <span>' + escape(tr("My decision is a conscious one")) + "</span></label>" +
+        '<div class="hd-acts"><button type="button" class="btn ghost small hd-no">' + escape(tr("Later")) + '</button>' +
+        '<button type="button" class="btn small primary hd-yes" disabled>' + escape(tr("Keep it")) + "</button></div></div>";
+      document.body.appendChild(back);
+      var form = back.querySelector(".acc-form"), sure = back.querySelector(".acc-sure-in"), yes = back.querySelector(".hd-yes");
+      var gate = function () { var v = accessRead(form, "accAsk"); yes.disabled = !sure.checked || !v.mode || (v.mode === "list" && !v.nets.length); };
+      accessWire(form, "accAsk", gate);
+      sure.addEventListener("change", gate);
+      var close = function (v) {
+        document.removeEventListener("keydown", key, true);
+        back.classList.add("is-leaving");
+        setTimeout(function () { back.remove(); }, 120);
+        if (before && before.focus) { try { before.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
+        done(v);
+      };
+      var key = function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(null); } };
+      document.addEventListener("keydown", key, true);
+      back.querySelector(".hd-no").addEventListener("click", function () { close(null); });
+      yes.addEventListener("click", function () {
+        var v = accessRead(form, "accAsk");
+        yes.disabled = true;
+        accessSend(v, { acknowledged: true }).then(function (got) {
+          if (!got) { gate(); return; }
+          paintAccess(got);
+          toast(tr("Kept: {0}").replace("{0}", accessSay(got)), "good");
+          close(got);
+        }).catch(function (e) { toast(tr("Not kept: {0}").replace("{0}", e.message), "bad"); gate(); });
+      });
+      requestAnimationFrame(function () { back.classList.add("is-on"); var c = back.querySelector("input:checked") || back.querySelector('input[type="radio"]'); if (c) c.focus(); });
+    });
+  }
+  function accessFirst() {                              // asked once a start while the user has not decided
+    return refreshAccess().then(function (a) { return a && a.kept && !a.acknowledged && !a.public ? accessAsk(a) : null; });
+  }
+  window.ruachAccessAsk = accessAsk;                    // for the checks: a test browser is never asked by itself
+  window.ruachAccess = { refresh: refreshAccess, paint: paintAccess, send: accessSend };
+
   if ($("scanMachine")) $("scanMachine").addEventListener("click", function () { machineScan(true); });
   function refreshHardware() {
     return api("/hardware").then(function (hw) {
@@ -5709,7 +5877,7 @@
   // HERESY 1106: the take in the player: the style's first words under the title, a tile of its own colour for a cover
   // (until covers are drawn for takes); one hue from the name, so a take keeps its tile
   // HERESY 1120: artwork for takes (Viktor: «просто иконка в плеере, в карточке и в mp3 файле»). The lab draws it: a
-  // prompt from the take's style and words (Qwen3-4B), the picture (Krea 2 Muse; 1405: SDXL gone). Asked for, never on its own.
+  // prompt from the take's style and words (Qwen3-4B), the picture (Qwen-Image 2512; 1405: SDXL gone; 1428: Krea 2 gone). Asked for, never on its own.
   STATE.arts = {};
   STATE.artsUnseen = {};            // HERESY 1156: pictures whose named subject the critic did not find: guesses
   STATE.artsCredit = {};            // HERESY 1166: pictures someone made (a photograph from Commons): name -> {text, url}
@@ -5790,7 +5958,7 @@
       var credit = STATE.artsCredit[n], line = back.querySelector(".art-credit"), link = line.querySelector("a");
       line.hidden = !credit;
       link.firstChild.textContent = credit ? credit.text : "";     // the credit is data, the tip is the page's own words
-      if (credit && credit.url) link.href = credit.url; else link.removeAttribute("href");
+      if (credit && /^https?:\/\//i.test(credit.url || "")) link.href = credit.url; else link.removeAttribute("href");   // HERESY 1430: a web page's link only
       Array.prototype.forEach.call(back.querySelectorAll(".art-step"), function (b) { b.hidden = list.length < 2; });
       [at - 1, at + 1].forEach(function (i) { var u = artUrl(list[(i + list.length) % list.length]); if (u) new Image().src = u; });
       paintPlay();
@@ -5840,6 +6008,7 @@
     var sel = $("artPainter");
     if (!sel) return;
     sel.value = recall("yue2.artPainter") || "";
+    if (sel.selectedIndex < 0) sel.value = "";         // HERESY 1428: a Krea 2 painter kept from before: by the cards
     sel.addEventListener("change", function () {
       store("yue2.artPainter", this.value || null);
       toast(this.value ? "Artwork from now on: " + this.options[this.selectedIndex].textContent : "Artwork: the painter by the cards");
@@ -5847,7 +6016,7 @@
     // HERESY 1338 (Viktor 10.10.2026: «в Engine не забудь прописать выборы всех генеративных art моделей»): the Qwen painters this
     // machine has, as the Artist room lists them, a cover painted with Lightning; each fine-tune of 2512 its own line
     // HERESY 1423: as measured on an RTX 3090 (13.10.2026), the prompt writer and the critic included (Q4 125 s, Q6 131 s)
-    var SPEED = { "qwen2512-q4": "about 125 s a picture", "qwen2512-q6": "about 130 s a picture", "qwen2512-fp8": "about 40 s a picture", "qwen21": "about 2 min a picture" };
+    var SPEED = { "qwen2512-q4": "about 105 s a picture", "qwen2512-q6": "about 130 s a picture", "qwen2512-fp8": "about 95 s a picture", "qwen21": "about 2 min a picture" };   // HERESY 1428: Q4 and fp8 BASE measured 14.10.2026
     function qwenRows(list) {
       var have = {};
       Array.prototype.forEach.call(sel.options, function (o) { have[o.value] = 1; });
@@ -5869,7 +6038,7 @@
       if (want && sel.value !== want && Array.prototype.some.call(sel.options, function (o) { return o.value === want; })) sel.value = want;
     }
     window.ruachArtPainters = function (list) { qwenRows(list); return Array.prototype.map.call(sel.options, function (o) { return [o.value, o.textContent]; }); };   // for the checks
-    api("/lab/artist/painters").then(function (d) { qwenRows(d && d.painters); }).catch(function () { /* the lab later: Krea stands */ });
+    api("/lab/artist/painters").then(function (d) { qwenRows(d && d.painters); }).catch(function () { /* the lab later: by the cards stands */ });
   })();
   function drawArt(name, again, quiet) {
     var take = findTake(name), title = take ? displayTitle(take) : name;
@@ -5908,7 +6077,7 @@
   // HERESY 1169 · 1235 (Viktor 08.10.2026: «Та же генерация обложек. На одну уходит до минуты в Krea 2 Muse. `Человече, ты запрашиваешь генерацию обложек на 00 треков одним залпом? Твоя видеокарта не схудится?`»): artwork for every checked take, asked first, then drawn one after another; a redraw keeps the old picture beside its take
   function artMany(list) {
     var have = list.filter(function (n) { return !!artUrl(n); }), none = list.filter(function (n) { return !artUrl(n); });
-    var text = "Human, artwork for " + list.length + " takes in one volley? Won't your graphics card waste away?\n\nEach picture is about a minute on a GPU (Krea 2 Muse): some " + list.length + " minutes in all, drawn one after another; the studio stays yours meanwhile." +
+    var text = "Human, artwork for " + list.length + " takes in one volley? Won't your graphics card waste away?\n\nEach picture is about two minutes on a GPU (Qwen-Image 2512 with Lightning, the prompt and the look-over included): some " + (list.length * 2) + " minutes in all, drawn one after another; the studio stays yours meanwhile." +
       (have.length && none.length ? "\n\n" + have.length + " of them have artwork already: drawing for the " + none.length + " without leaves those as they are; redrawing all keeps each old picture beside its take." :
        have.length ? "\n\nAll of them have artwork already: each old picture is kept beside its take." : "");
     var opts = have.length && none.length ? { ok: "Draw the " + none.length + " without", alt: "Redraw all " + list.length, cancel: "Not now" }
@@ -5916,7 +6085,7 @@
     return window.HeresyDialog.confirm(text, opts).then(function (r) {
       if (!r) return;
       var todo = r === "alt" || !none.length ? list : none, done = 0, i = 0;
-      toast("Drawing artwork for " + todo.length + " takes, one after another: about " + todo.length + " minutes");
+      toast("Drawing artwork for " + todo.length + " takes, one after another: about " + (todo.length * 2) + " minutes");
       var next = function () {
         if (i >= todo.length) { toast("Artwork drawn: " + done + " of " + todo.length, done === todo.length ? "good" : "bad"); return; }
         var n = todo[i++];
@@ -8188,11 +8357,12 @@
   var FONT_ROLES = {
     sans: { select: "fontSans", generic: "sans-serif", own: "Raleway", back: '"Noto Sans", sans-serif' },
     heading: { select: "fontHeading", generic: "sans-serif", own: "Michroma", back: "var(--sans)" },
-    mono: { select: "fontMono", generic: "monospace", own: "Liberation Mono", back: '"Noto Sans Mono", monospace' }
+    mono: { select: "fontMono", generic: "monospace", own: "Liberation Mono", back: '"Noto Sans Mono", monospace' },
+    rooms: { select: "fontRooms", generic: "sans-serif", own: "", back: "var(--sans)" }   // HERESY 1428: the rooms' names in the bar; the text's by default
   };
   // HERESY 1274 (Viktor 09.10.2026: «Добавь ещё в движок шрифты Raleway, Roboto, Lato»): ten of the app's own, all in the studio itself
   var APP_FONTS = ["Noto Sans", "Noto Sans Mono", "IBM Plex Sans", "IBM Plex Mono", "Bodoni Moda", "Space Grotesk", "Michroma", "Raleway", "Roboto", "Lato",
-    "Liberation Mono"];                                             // HERESY 1426
+    "Liberation Mono", "Unbounded", "Tektur", "Jura"];               // HERESY 1426; 1428: three Michroma-like ones with Cyrillic and weights
   var COMMON_FONTS = ["Aptos", "Arial", "Avenir", "Avenir Next", "Bahnschrift", "Baskerville", "Calibri", "Cambria", "Candara",
     "Cantarell", "Cascadia Code", "Cascadia Mono", "Charter", "Consolas", "Constantia", "Corbel", "Courier New", "DejaVu Sans",
     "DejaVu Sans Mono", "DejaVu Serif", "Didot", "Fira Mono", "Fira Sans", "Franklin Gothic Medium", "Futura", "Garamond",
@@ -8242,6 +8412,7 @@
       system = system.filter(function (x) { return APP_FONTS.indexOf(x) < 0; });   // HERESY 1426: the studio's own once, among its own
       select.textContent = "";
       if (role === "heading") select.appendChild(fontOption("", "Same as the text"));   // HERESY 1426: Michroma is the default now
+      if (role === "rooms") select.appendChild(fontOption("", "Same as the text (default)"));   // HERESY 1428
       APP_FONTS.forEach(function (family) { select.appendChild(fontOption(family, family === r.own ? family + " (default)" : family)); });
       select.appendChild(document.createElement("hr"));
       system.sort(function (a, b) { return a.localeCompare(b); }).forEach(function (family) { select.appendChild(fontOption(family, family)); });
@@ -8503,7 +8674,9 @@
       startPolls();
       // HERESY 1304: a new studio's first start reads the machine and offers what suits it, once (never a test browser by itself)
       Promise.all([refreshSettings(), refreshHardware()]).then(function () {
-        if (!recall(MACHINE_KEY) && !navigator.webdriver && !/[?&]scope=/.test(location.search)) setTimeout(function () { machineScan(false); }, 1500);
+        if (navigator.webdriver || /[?&]scope=/.test(location.search)) { refreshAccess(); return; }
+        // HERESY 1429: who may open it is asked first (a studio whose user never decided), then the machine's scan, never at once
+        setTimeout(function () { accessFirst().then(function () { if (!recall(MACHINE_KEY)) machineScan(false); }); }, 1500);
       });
       if (chatBase()) refreshChat().catch(function () {});
       else paintChat({ configured: false, available: false, models: [], loaded: null, use: null });

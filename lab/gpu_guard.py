@@ -46,13 +46,22 @@ def _name(pid):
         return "?"
 
 
+_LIMITS = {}                                         # HERESY 1430: the last limits read whole
+
+
 def _limits(root):
-    """HERESY 1294: {index: MiB} from user/gpus.json; none when it has none."""
+    """HERESY 1294: {index: MiB} from user/gpus.json; none when it has none. 1430: a file broken by hand keeps the limits read before."""
     try:
         got = json.load(open(Path(root) / "user" / "gpus.json", encoding="utf-8")).get("limits") or {}
-        return {int(k): int(v) for k, v in got.items()}
-    except (OSError, ValueError, TypeError, AttributeError):
+        out = {int(k): int(v) for k, v in got.items()}
+    except FileNotFoundError:
         return {}
+    except (OSError, ValueError, TypeError, AttributeError) as e:
+        print(f"[lab] user/gpus.json unreadable ({e}): keeping the VRAM limits read before", file=sys.stderr, flush=True)
+        return dict(_LIMITS)
+    _LIMITS.clear()
+    _LIMITS.update(out)
+    return out
 
 
 def snapshot(root=KIT):

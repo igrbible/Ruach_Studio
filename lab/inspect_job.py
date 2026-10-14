@@ -175,7 +175,7 @@ R["framebuzz"] = {"hz": [25, 50, 75, 100, 125, 150], "windows": wins,
 
 # ---- loudness (ffmpeg ebur128)
 p = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", src, "-af", "ebur128=peak=true:framelog=quiet", "-f", "null", "-"],
-                   capture_output=True, text=True)
+                   capture_output=True, text=True, timeout=1800)
 lo = {}
 for line in p.stderr.splitlines():
     s = line.strip()

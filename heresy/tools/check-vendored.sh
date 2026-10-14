@@ -39,7 +39,7 @@ fonts, css_out = Path(sys.argv[1]), Path(sys.argv[2])
 URL = ("https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500"
        "&family=IBM+Plex+Sans:wght@400;500;600&family=Michroma&family=Space+Grotesk:wght@400;500;600&family=Noto+Sans:wght@400;500;600"
        "&family=Noto+Sans+Mono:wght@400;500&family=Raleway:wght@400;500;600&family=Roboto:wght@400;500;600&family=Lato:wght@400;700"
-       "&display=swap")   # HERESY 1274: Raleway, Roboto and Lato too (Viktor)
+       "&family=Unbounded:wght@200..900&family=Tektur:wght@400..900&family=Jura:wght@300..700&display=swap")   # HERESY 1428: three for the headings to try   # HERESY 1274: Raleway, Roboto and Lato too (Viktor)
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 css = urllib.request.urlopen(urllib.request.Request(URL, headers={"User-Agent": UA}), timeout=60).read().decode()
 KEEP = {"latin", "latin-ext", "cyrillic", "cyrillic-ext", "greek", "greek-ext"}

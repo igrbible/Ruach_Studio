@@ -44,8 +44,8 @@ ENC_ROOM = int(float(os.environ.get("ART_ENC_ROOM_GB") or 16.5) * 2 ** 30)
 # run needs on the card beside the painter's weights (the activations, the VAE's tiles, the card's own context), measured; a painter
 # whose weights with this do not fit the room free on its card streams its blocks from RAM (STREAMS: the painters tried so)
 WORK_ROOM = int(float(os.environ.get("ART_WORK_ROOM_GB") or 2.0) * 2 ** 30)
-WORK_ROOM_OF = {"krea2-q4": int(3.5 * 2 ** 30), "krea2-q8": int(3.5 * 2 ** 30)}   # HERESY 1351: Krea 2 decodes 1920 × 1088 beside its weights
-STREAMS = {"qwen2512-fp8", "qwen2512-q4", "qwen2512-q6", "krea2-q4", "krea2-q8"}   # 1348: the GGUF ones too (Q4 streamed whole: 33.9 s against 30.6, 2.2 GB at the peak, the same picture)
+WORK_ROOM_OF = {}   # HERESY 1351: Krea 2 decodes 1920 × 1088 beside its weights
+STREAMS = {"qwen2512-fp8", "qwen2512-q4", "qwen2512-q6"}   # 1348: the GGUF ones too (Q4 streamed whole: 33.9 s against 30.6, 2.2 GB at the peak, the same picture)
 
 
 def weights_bytes(m):
@@ -128,6 +128,11 @@ def place21(pipe):
         pipe.vae.enable_tiling()
     return {"stream": True, "weights_gb": round((weights_bytes(tr) + weights_bytes(te)) / 2 ** 30, 1), "free_gb": round(free / 2 ** 30, 1),
             "asked": asked, "kept": 0, "of": len(list(getattr(tr, "transformer_blocks", None) or []))}
+
+
+def is_base(model):
+    """HERESY 1428: an fp8 file of 2512 itself (BASE QW2512 fp8_e4m3fn), not a fine-tune: it paints with the base's Lightning."""
+    return bool(model) and Path(str(model)).name.upper().startswith("BASE")
 
 
 def lightning():
@@ -271,7 +276,7 @@ def build(painter, model, loras, speed):
     else:
         ckpt = checkpoint(model)
         tr, store = fp8_transformer(ckpt)
-        kind = "fine"
+        kind = "base" if is_base(model) else "fine"     # HERESY 1428: fp8 BASE is the base: Lightning at 1.0, 8 steps
     pipe = QwenImagePipeline.from_pretrained(str(Q2512), transformer=tr, torch_dtype=torch.bfloat16)
     lw, steps = SPEED[kind]
     if speed.get("lightning") is not None:
@@ -387,7 +392,7 @@ def main(run, ask, painter):
     big = torch.cuda.mem_get_info()[0] >= ENC_ROOM          # HERESY 1338b: the room free now, not the card's size
     if painter == "qwen21":                                  # its parts on the card in turn (16.4 GB from words, 19.1 editing, 3090)
         if mask is not None or ask.get("fit"):
-            raise RuntimeError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Krea 2 or Qwen-Image 2512")
+            raise RuntimeError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Qwen-Image 2512")
         streamed = place21(pipe)                             # HERESY 1386: its parts in turn, or streamed on a card too small for them
         if streamed:
             print(json.dumps(streamed), flush=True)

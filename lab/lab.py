@@ -19,7 +19,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   POST /artist/draw {prompt, shapes, seed, count, painter, take}   HERESY 1255: the Artist room (artist.py): a run of pictures
        from a prompt of one's own; GET /artist/runs · GET /artist/file?id=&file= · POST /artist/cover {id, file, name} ·
        POST /artist/trash {id} · POST /artist/restore {id} · GET /artist/prompt?name=TAKE ·
-       POST /artist/star {id, file, star} (1257) · POST /artist/protect {items, protect} (1367) · POST /artist/stop {id} (1270) · HERESY 1316: GET /artist/loras[?family=] ·
+       POST /artist/star {id, file, star} (1257) · POST /artist/note {id, file, note} (1428) · POST /artist/protect {items, protect} (1367) · POST /artist/stop {id} (1270) · HERESY 1316: GET /artist/loras[?family=] ·
        GET /artist/lora-picture?id= · GET /artist/lora-info?id= · POST /artist/lora-civitai {id} · POST /artist/lora-trash {id} (the adapters in artwork/loras/, artist_loras.py) ·
        HERESY 1360: POST /artist/civitai-look {ref, key} (what a Civitai link names) · POST /artist/civitai-fetch {ref, key, family} | {cancel} ·
        GET /artist/civitai-fetch (the fetch under way or the last; civitai_fetch.py) ·
@@ -463,7 +463,7 @@ def gpus_state():
 def machine_state():
     """HERESY 1304 (Viktor 10.10.2026: «при самом старте новой Студии сканирование устройств и выбор оптимальных настроек для YuE2
     BF16/кванта и для модели генерации обложек»): the cards with their compute capability, limits and BF16 tensor cores, the
-    studio's card, and the painter that fits here: Krea 2 Muse Q4 (12.6 GB at its peak whole, 1405: about 7 GB streamed from RAM);
+    studio's card, and the painter that fits here: Qwen-Image 2512, Q6 or Q4 whole, Q4 streamed from RAM on a smaller card (1428: Krea 2 gone);
     none when no card has even that ({"error"} when the cards cannot be read)."""
     try:
         cards = machine.cards()
@@ -476,15 +476,15 @@ def machine_state():
         c["limit_mb"] = lim.get(c["index"])
         c["bf16_cores"] = machine.has_bf16_cores(c["compute"])
     room = max((min(c["total_mb"], c["limit_mb"] or 10 ** 9) for c in cards), default=0)
-    ready = {"krea2-q4": krea_ready("krea2-q4"), "krea2-q8": krea_ready("krea2-q8")}   # HERESY 1405: SDXL gone
-    fits = [p for p in ("krea2-q4", "krea2-q8") if ART_NEED[p] <= room or ART_STREAM_NEED[p] <= room]
-    best = "krea2-q4" if "krea2-q4" in fits else ""
+    ready, fits, best = {}, [], ""                     # HERESY 1428: Krea 2 gone
     # HERESY 1425 (Viktor 13.10.2026: «На RTX3090 я бы однозначно советовал QWEN Image 2512, и тем более машине с тремя такими GPU»): where a
     # card holds it whole (its text encoder leaves the card before the transformer comes), Qwen-Image 2512 by the cards, as art_by_cards
     for q in ("qwen2512-q6", "qwen2512-q4"):
         ready[q] = artist.qwen_ready(q)
         if ART_NEED[q] <= room:
             fits.insert(0, q)
+    if "qwen2512-q4" not in fits and ART_STREAM_NEED["qwen2512-q4"] <= room:   # HERESY 1428: a smaller card streams Q4 from RAM
+        fits.append("qwen2512-q4")
     best = next((q for q in ("qwen2512-q6", "qwen2512-q4") if q in fits), best)
     return {"cards": cards, "studio": now if now is not None else roles.get("studio", 0), "room_mb": room,
             "painter": {"suggest": best, "ready": ready, "fits": fits, "need_mb": ART_NEED}}
@@ -1332,21 +1332,13 @@ ART_NEED_MB = 15000
 # HERESY 1167 (Viktor 05.10.2026, the A/B: «Muse - отличный файнтюн»; «Для карт ниже 24GB VRAM… оставим SDXL»; «Изначальным
 # выставь Q4»): the painters, each its room on a card at the peak with the prompter before it (RTX 3090, 05.10.2026: Krea 2
 # Muse Q4 11.6 GB, Q8 17.4 GB; SDXL 14.2 GB) and its Python (Krea paints in .venv-art: transformers 5, diffusers 0.40)
-ART_NEED = {"krea2-q4": 15000, "krea2-q8": 21000}   # with a margin over the peaks (1405: SDXL's gone)
 # HERESY 1297: measured again on GPU2 10.10.2026, the prompter (Qwen3-4B) before the painter, at 1024 px: Krea 2 Muse Q4 12.6 GB
 # (42 s), SDXL 14.2 GB (17 s); Q8 17.4 GB (05.10). A margin of about half a gigabyte: a 16 GB card (15 GB left by a desktop) takes Q4
-ART_NEED = {"krea2-q4": 13500, "krea2-q8": 18500}   # HERESY 1405: SDXL gone
+ART_NEED = {}                                       # HERESY 1405: SDXL gone; 1428: Krea 2 gone (the Qwen painters below)
 # HERESY 1405: a card too small for the painter whole: its blocks stream from RAM (artist.STREAM_NEED, with Krea's encoder and the prompt
 # writer moving to the CPU when the card has no room for them), a little room over the streamed peak
-ART_STREAM_NEED = {"krea2-q4": 7000, "krea2-q8": 7500}
+ART_STREAM_NEED = dict(artist.STREAM_NEED)          # HERESY 1428: the Qwen painters' streamed peaks (artist.py)
 ART_PY = Path(os.environ.get("LAB_ART_PY", HERE.parent / ".venv-art/bin/python"))
-MUSE_FILES = {"krea2-q4": "museByStableYogi_v35Q4Extended.gguf", "krea2-q8": "museByStableYogi_v35Q8Extended.gguf"}
-
-
-def krea_ready(painter):
-    """Krea 2 can paint here: its environment, the fine-tune's file, Krea's encoder and VAE."""
-    return (ART_PY.is_file() and (KIT / "artwork/Krea-2-Muse" / MUSE_FILES[painter]).is_file()
-            and (KIT / "artwork/Krea-2-Turbo/text_encoder").is_dir() and (KIT / "artwork/Krea-2-Turbo/vae").is_dir())
 
 
 ART_NEED.update({k: v[1] for k, v in artist.QWEN.items()})   # HERESY 1338: the Qwen painters paint a take's artwork too (artist.py's peaks)
@@ -1363,7 +1355,7 @@ def art_here(asked):
         if not artist.qwen_ready(k) or (model not in artist.qwen_models() if k == "qwen2512-fp8" else bool(model)):
             return ""
         return k + (":" + model if model else "")
-    return k if not model and krea_ready(k) else ""
+    return ""
 
 
 def art_painter(asked=None):
@@ -1398,9 +1390,7 @@ def art_by_cards():
     for k in ("qwen2512-q6", "qwen2512-q4"):
         if room >= ART_NEED.get(k, 10 ** 9) and art_here(k):
             return k
-    if krea_ready("krea2-q4"):
-        return "krea2-q4"
-    return art_here("qwen2512-q4") or ""
+    return art_here("qwen2512-q4") or ""               # HERESY 1428: Krea 2 gone; a smaller card streams Q4 from RAM (art_async)
 
 
 def art_info(name):
@@ -1524,21 +1514,21 @@ def art_refusal(painter, table=None, where="choose it in Engine → Artwork"):
         return ""
     if table is ART_NEED and ART_STREAM_NEED.get(painter, 10 ** 9) <= room:   # HERESY 1405: it streams from RAM there
         return ""
-    fits = [p for p in ("krea2-q4",) if p != painter and p in table and (table[p] <= room or ART_STREAM_NEED.get(p, 10 ** 9) <= room) and krea_ready(p)]
-    names = {"krea2-q4": "Krea 2 Muse Q4", "krea2-q8": "Krea 2 Muse Q8", "qwen2512-q4": "Qwen-Image 2512 Q4",   # 1338
+    fits = [p for p in ("qwen2512-q4",) if p != painter and p in table and (table[p] <= room or ART_STREAM_NEED.get(p, 10 ** 9) <= room) and art_here(p)]
+    names = {"qwen2512-q4": "Qwen-Image 2512 Q4",   # 1338; 1428: Krea 2 gone
              "qwen2512-q6": "Qwen-Image 2512 Q6", "qwen2512-fp8": "Qwen-Image 2512 fp8", "qwen21": "Qwen-Image 2.1"}
     return (f"{names.get(painter, painter)} needs about {need / 1024:.1f} GB of VRAM (its peak with a margin), and the biggest card here "
             f"has {room / 1024:.1f} GB" + (" under its limit (Engine → GPUs)" if lim else "") + ": " +
             (f"{names[fits[0]]} fits: {where}" if fits else
-             "no painter fits on this machine yet: Krea 2 Muse Q4 wants a card of 8 GB, its blocks streamed from RAM"))
+             "no painter fits on this machine yet: Qwen-Image 2512 Q4 wants a card of 5 GB, its blocks streamed from RAM (and about 31 GB of RAM)"))
 
 
 def art_async(name, again=False, seed=None, painter=None):
     d = take_dir(name)
     key = f"art:{name}"
     painter = art_painter(painter)                   # HERESY 1167; 1338: a fine-tune of Qwen as «qwen2512-fp8:FILE»
-    if not painter:                                  # HERESY 1405: Krea 2 Muse's files are not here (and no Qwen painter asked)
-        raise ValueError("no painter for the artwork here: Krea 2 Muse's files go into artwork/ (heresy/fetch-heresy.sh --artwork)")
+    if not painter:                                  # HERESY 1428: no Qwen painter's files here
+        raise ValueError("no painter for the artwork here: Qwen-Image 2512 goes into artwork/ (Engine → Models and LoRAs → Qwen painters)")
     need = ART_NEED[painter.partition(":")[0]]
     stream = False                                   # HERESY 1405: no card here has the room whole: its blocks stream from RAM
     try:
@@ -1549,8 +1539,8 @@ def art_async(name, again=False, seed=None, painter=None):
         room = max((min(c.get("total_mb", 0), lim.get(c["index"], 10 ** 9)) for c in mine), default=0)
         if room < need and ART_STREAM_NEED.get(painter.partition(":")[0], 10 ** 9) <= room:
             need, stream = ART_STREAM_NEED[painter.partition(":")[0]], True
-    except Exception:
-        pass
+    except Exception as e:                           # HERESY 1430: the cards unread: asked as a painter whole, and said
+        print(f"[lab] artwork for {name}: the cards could not be read ({e}); asked as a painter whole", file=sys.stderr, flush=True)
     live = jobs.get(key)                             # HERESY 1297: refused at once, and only asked for a new job
     refuse = "" if live and live.get("status") in ("queued", "running") else art_refusal(painter.partition(":")[0])
     with jobs_lock:
@@ -2318,6 +2308,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, artist.aside(data))
                 if url.path == "/artist/star":               # HERESY 1257
                     return self.send(200, artist.star(data))
+                if url.path == "/artist/note":               # HERESY 1428: a picture's note of one's own
+                    return self.send(200, artist.note(data))
                 if url.path == "/artist/protect":            # HERESY 1367: pictures never to the trash, nor deleted for good
                     return self.send(200, artist.protect(data))
                 if url.path == "/artist/unload":             # HERESY 1370: the painters kept between runs, let go

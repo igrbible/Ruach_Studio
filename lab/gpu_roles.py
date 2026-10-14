@@ -14,6 +14,7 @@ it is the only one (then synthesis waits while it trains); jobs on every card.""
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -32,12 +33,23 @@ def defaults(cards):
     return {"studio": studio, "train": others or [studio], "jobs": ids}
 
 
+_LAST = {}                                           # HERESY 1430: the last user/gpus.json read whole
+
+
 def load(kit, cards):
     roles = defaults(cards)
     try:
         saved = json.load(open(path(kit), encoding="utf-8"))
-    except (OSError, ValueError):
-        saved = {}
+        if not isinstance(saved, dict):
+            raise ValueError("not an object")
+        _LAST.clear()
+        _LAST.update(saved)
+    except FileNotFoundError:
+        saved = {}                                   # never set: the defaults
+    except (OSError, ValueError) as e:               # HERESY 1430: written by hand and broken: the roles read before, said
+        print(f"[lab] {path(kit)} unreadable ({e}): " + ("keeping the roles read before" if _LAST else "the defaults: every card for the lab's jobs"),
+              file=sys.stderr, flush=True)
+        saved = dict(_LAST)
     ids = indices(cards)
     if isinstance(saved.get("studio"), int) and (not ids or saved["studio"] in ids):
         roles["studio"] = saved["studio"]

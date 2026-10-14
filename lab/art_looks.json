@@ -843,8 +843,8 @@
  "sambuca": {
   "name": "sambuca - greek strings",
   "home": "ancient Near East, Greece",
-  "looks": "a Greek bouzouki: a deep round ribbed bowl back of dark and light wooden staves, a flat pale top with a round sound hole, a long slender neck with many metal frets, eight metal strings in four pairs",
-  "not": "a harp of any shape, a lyre, a Chinese pipa with frets on its face"
+  "looks": "an ancient arched harp: a boat-shaped sound box covered with pale skin, a single curved wooden neck rising from it with wooden tuning pegs along its top, about nine strings running from the neck down to the skin, standing on its own feet",
+  "not": "a lute, a bouzouki or a tzouras, a modern concert harp with a pillar"
  },
  "sambuca-v2": {
   "name": "sambuca, an ancient triangular harp (sabbeka)",

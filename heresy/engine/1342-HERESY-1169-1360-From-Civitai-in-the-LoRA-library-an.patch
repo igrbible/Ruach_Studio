@@ -2,7 +2,7 @@ From 6aff8cf4d10b39a305144012f2fa9f98deb18881 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
  =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
 Date: Sun, 11 Oct 2026 14:28:42 -0600
-Subject: [PATCH 1342/1384] =?UTF-8?q?HERESY=201169=20=C2=B7=201360:=20From?=
+Subject: [PATCH 1342/1389] =?UTF-8?q?HERESY=201169=20=C2=B7=201360:=20From?=
  =?UTF-8?q?=20Civitai=E2=80=A6=20in=20the=20LoRA=20library:=20an=20adapter?=
  =?UTF-8?q?=20by=20its=20link,=20looked=20at,=20fetched=20by=20the=20lab?=
  =?UTF-8?q?=20into=20its=20family's=20folder=20with=20the=20user's=20own?=

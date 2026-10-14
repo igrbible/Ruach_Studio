@@ -132,6 +132,9 @@
     "cols-2": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>',
     // HERESY 1426: the Artist's stage as icons: lettering, a take's cover, an upscale
     type: '<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+    // HERESY 1427: the lyrics' line numbers and spelling, by the Lyrics' title
+    "list-ordered": '<path d="M10 12h11"/><path d="M10 18h11"/><path d="M10 6h11"/><path d="M4 10h2"/><path d="M4 6h1v4"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
+    "spell-check": '<path d="m6 16 6-12 6 12"/><path d="M8 12h8"/><path d="m16 20 2 2 4-4"/>',
     disc: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/><path d="M6 12a6 6 0 0 1 6-6"/>',
     scaling: '<path d="M21 3 9 15"/><path d="M12 3H3v18h18v-9"/><path d="M16 3h5v5"/><path d="M14 15H9v-5"/>',
     "rows-2": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 12h18"/>',

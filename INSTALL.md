@@ -10,7 +10,7 @@ One Linux machine with an NVIDIA card. The studio runs there; you use it from a 
 | GPU | NVIDIA, **24 GB** runs everything at full precision; **8 to 16 GB** run songs with the Q8_0 model (measured: 5.1 GB with a context of 12 288 rows, 7.7 GB with the whole); **6 GB** Q8_0 with shorter songs, less Q6_K; int8 training under 24 GB. |
 | CUDA | the **CUDA toolkit 12.8** (`nvcc`), in `/usr/local/cuda-12.8` or on the `PATH`; a driver that supports it |
 | tools | `git`, `cmake` 3.24 or newer, `ninja` (optional, faster), `gcc`/`g++` 13, `python3.12` with `python3.12-venv`, `ffmpeg`, `curl` |
-| disk | **about 30 GB**, measured on fresh installs: the program and its two Pythons 16 GB, the models 13 GB for a 16 GB card (16.5 GB with BF16 for 24 GB); the Artist's models 26 GB more when you take them (41 GB with Krea 2 Muse Q8; a card under 16 GB streams Krea's blocks from RAM), the 💎 sets 5 GB; and room for your songs |
+| disk | **about 30 GB**, measured on fresh installs: the program and its two Pythons 16 GB, the models 13 GB for a 16 GB card (16.5 GB with BF16 for 24 GB); the Artist's helpers 8.4 GB and its Qwen-Image 2512 at Q4 31 GB more when you take them (a card under 16 GB streams its blocks from RAM), the 💎 sets 5 GB; and room for your songs |
 | tests only | `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test; Node.js 22+ and Chrome or Chromium for the page tests. The studio itself needs none of them: FLAC is made by the engine and by ffmpeg |
 
 On Ubuntu 24.04, everything but CUDA in one line:
@@ -33,7 +33,7 @@ git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_
 systemctl --user enable --now heresy-lab ruach-studio
 ```
 
-Open **http://127.0.0.1:41867** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:41867** from another one on your network: `start.sh` prints it. The studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet.
+Open **http://127.0.0.1:41867** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:41867** from another one on your network: `start.sh` prints it. The studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet; its first start asks who may open it (this computer only, private networks, or the networks you list), and Engine → Security changes it.
 
 To have it running after a reboot without logging in: `sudo loginctl enable-linger $USER` (once).
 
@@ -43,7 +43,7 @@ Without systemd: `./lab/start-lab.sh` and then `./start.sh` (it stays in the ter
 
 ```bash
 heresy/fetch-heresy.sh --listener Q8_0   # the style listener (Qwen2.5-Omni) for training sets, 9.6 GB
-heresy/fetch-heresy.sh --artwork         # the Artist's models: Krea 2 Muse Q4 with its parts, the filter, the prompt writer, 26 GB (a card under 16 GB streams it from RAM)
+heresy/fetch-heresy.sh --artwork         # the covers' helpers: the prompt writer and the content filter, 8.4 GB (the painters come with --qwen)
 heresy/fetch-heresy.sh --qwen 2512-q4    # the Artist's Qwen-Image 2512 at Q4 with Lightning (Apache-2.0), 31 GB, a 16 GB card (2512-q6: 34.5 GB, 24 GB; 2.1: 33 GB, research licence)
 heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 7.8 GB (int8: 4.0 GB)
 heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 7.2 GB
@@ -89,7 +89,7 @@ Measured on the machine it was made on: 6 passed (the page part 14), 470 passed 
 | `build.sh` stops at cmake | no CUDA toolkit, or `nvcc` not found | install CUDA 12.8; `export PATH=/usr/local/cuda-12.8/bin:$PATH` |
 | the page: *Forge is not answering* or a red lamp | the engine is not running | `systemctl --user status ruach-studio`; `journalctl --user -u ruach-studio -n 50` |
 | *no card can take this now* | another program holds the card, or the job does not fit | the message names the program and the card; Engine → GPUs says which card does what |
-| 403 from another machine | it is not on a private network | open it from your home network, or put your own proxy and guard in front (`RUACH_ALLOW_PUBLIC=1`) |
+| 403 from another machine | it is not on a private network, or Engine → Security keeps the studio to its own computer or to the networks listed | open it from your home network, or change Engine → Security on the studio's computer (deleting `user/access.json` goes back to private networks); or put your own proxy and guard in front (`RUACH_ALLOW_PUBLIC=1`) |
 | the Writer says *no chat server* | none is set | Engine → Chat server (vLLM, LM Studio, Ollama on your machine), or OpenRouter with your key in the Writer |
 | upscale, stems or the lyrics check refuse | their models are missing | `./fetch-models.sh` (or `--check` to see which) |
 

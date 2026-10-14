@@ -16,9 +16,9 @@ reaches none of its layers (measured: 2 of Viktor's 9 Krea 2 adapters)."""
 import hashlib, json, os, re, shutil, struct, time, urllib.error, urllib.request
 from pathlib import Path
 
-FAMILIES = {"krea2": ("krea2-q4", "krea2-q8"), "qwen-image-2.1": ("qwen21",),   # HERESY 1405: SDXL gone
+FAMILIES = {"qwen-image-2.1": ("qwen21",),   # HERESY 1428: Krea 2 gone   # HERESY 1405: SDXL gone
             "qwen-image-2512": ("qwen2512-q4", "qwen2512-q6", "qwen2512-fp8")}
-TITLES = {"krea2": "Krea 2", "qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512"}
+TITLES = {"qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512"}
 PICS = (".preview.png", ".preview.jpeg", ".preview.jpg", ".preview.webp", ".jpg", ".jpeg", ".png", ".webp")
 TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 CIVITAI = "https://civitai.com/api/v1/model-versions/by-hash/"

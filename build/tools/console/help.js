@@ -119,6 +119,7 @@
       "Each browser keeps its own choice.",
     fontHeading: "The font for headings: Compose, Takes, the song's title, the cards. Medium weight.",
     fontMono: "The font for numbers and code: seeds, the score, the server log. A fixed-width font keeps columns straight.",
+    fontRooms: "The font for the rooms' names in the bar. The text's own by default; a heading font makes them stand out.",   // HERESY 1428
     coverFile: "A recording to take the melody from (WAV, FLAC, MP3, M4A, OGG). Only the tune is transcribed: " +
       "not the words and not the singer's voice.",
     coverTask: "Lead melody: the most prominent line, voice or instrument, without chords (use Melody mode).\n" +

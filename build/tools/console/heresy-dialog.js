@@ -22,7 +22,8 @@
       back.className = "hd-back";
       back.innerHTML = '<div class="hd-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
         '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
-        (kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' : "") +
+        (kind === "prompt" && opts.area ? '<textarea class="hd-input hd-area" rows="' + (opts.rows || 8) + '" maxlength="' + (opts.max || 4000) + '" placeholder="' + esc(opts.placeholder || "") + '"></textarea>'   // HERESY 1428: lines, Ctrl+Enter keeps
+          : kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' : "") +
         '<div class="hd-acts">' + (kind === "alert" ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
         (opts.alt && kind === "confirm" ? '<button type="button" class="btn ghost small hd-alt">' + esc(opts.alt) + "</button>" : "") +
         '<button type="button" class="btn small ' + (opts.danger ? "danger-fill" : "primary") + ' hd-yes">' + esc(opts.ok || (kind === "prompt" ? "OK" : opts.danger ? "Delete" : "OK")) + "</button></div></div>";
@@ -46,6 +47,7 @@
           var to = at < 0 ? buttons.length - 1 : (at + (e.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
           buttons[to].focus();
         }
+        else if (e.key === "Enter" && opts.area && document.activeElement === input && !(e.ctrlKey || e.metaKey)) { /* a new line */ }
         else if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault(); e.stopPropagation();
           if (at >= 0 && !buttons[at].classList.contains("hd-yes")) buttons[at].click(); else done(true);
@@ -57,7 +59,7 @@
       var no = back.querySelector(".hd-no"), alt = back.querySelector(".hd-alt");
       if (no) no.addEventListener("click", function () { done(false); });
       if (alt) alt.addEventListener("click", function () { done("alt"); });
-      requestAnimationFrame(function () { back.classList.add("is-on"); (input || back.querySelector(".hd-yes")).focus(); if (input) input.select(); });
+      requestAnimationFrame(function () { back.classList.add("is-on"); (input || back.querySelector(".hd-yes")).focus(); if (input && !opts.area) input.select(); });
     });
   }
   // HERESY 1167 (Viktor: «кликаешь на него... и вуаля»): a list in the studio's dialog; a click on a row is the answer

@@ -39,6 +39,9 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#ifndef _WIN32
+#include <arpa/inet.h>   // HERESY 1429: inet_pton for the networks a user lists
+#endif
 
 #ifdef _WIN32
 #    include <fcntl.h>
@@ -1390,6 +1393,218 @@ static void on_signal(int) {
     }
 }
 
+// HERESY 1429 (Viktor 14.10.2026: «IP Студии и Лаба мы же раньше уже ограничивали локалхостом и масками локальных сетей… юзеры без
+// файрвола... или на публичном вайфае - это проблема. Может в Engine настройки блок по безопасности IP сетки добавить? И напоминалку
+// попапом для свежих инсталляций»): who may open the studio is its user's own decision, kept in user/access.json beside settings.json
+// and read again whenever it changes: "local" this computer only; "private" this computer and private networks (1114's, the default:
+// a café's Wi-Fi is a private network too); "list" this computer and the networks listed (CIDR). "acknowledged" says when the user
+// called the decision a conscious one. RUACH_ALLOW_PUBLIC=1 still opens the studio to anyone.
+struct Access {
+    std::string              mode = "private";
+    std::vector<std::string> nets;
+    std::string              acknowledged;
+};
+static std::mutex                      mtx_access;
+static Access                          g_access;
+static std::string                     g_access_path;
+static bool                            g_access_seen = false;
+static std::filesystem::file_time_type g_access_mtime;
+
+static bool access_public() {
+    const char * e = getenv("RUACH_ALLOW_PUBLIC");
+    return e && *e && strcmp(e, "0") != 0;
+}
+
+static std::string addr_plain(const std::string & addr) {
+    return addr.rfind("::ffff:", 0) == 0 && addr.find('.') != std::string::npos ? addr.substr(7) : addr;
+}
+
+static bool is_loopback_addr(const std::string & addr) {
+    std::string a = addr_plain(addr);
+    return a == "::1" || a.rfind("127.", 0) == 0;
+}
+
+// a network as CIDR ("10.0.0.0/24", "fd00::/8"; an address alone is itself) into its bytes and its prefix's length
+static bool net_parse(const std::string & text, unsigned char ip[16], int * bits, bool * v6) {
+    std::string a = text, b;
+    size_t      slash = a.find('/');
+    if (slash != std::string::npos) {
+        b = a.substr(slash + 1);
+        a = a.substr(0, slash);
+        if (b.empty() || b.size() > 3 || b.find_first_not_of("0123456789") != std::string::npos) {
+            return false;
+        }
+    }
+    memset(ip, 0, 16);
+    *v6 = a.find(':') != std::string::npos;
+    if (a.empty() || inet_pton(*v6 ? AF_INET6 : AF_INET, a.c_str(), ip) != 1) {
+        return false;
+    }
+    int max = *v6 ? 128 : 32;
+    *bits   = b.empty() ? max : atoi(b.c_str());
+    return *bits <= max;
+}
+
+static bool net_has(const std::string & net, const std::string & addr) {
+    unsigned char n[16], x[16];
+    int           nb, xb;
+    bool          n6, x6;
+    if (!net_parse(net, n, &nb, &n6) || !net_parse(addr_plain(addr), x, &xb, &x6) || n6 != x6) {
+        return false;
+    }
+    for (int i = 0; i < nb; i++) {
+        if (((n[i / 8] >> (7 - i % 8)) & 1) != ((x[i / 8] >> (7 - i % 8)) & 1)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool access_allows(const Access & a, const std::string & addr) {
+    if (is_loopback_addr(addr)) {
+        return true;
+    }
+    if (a.mode == "local") {
+        return false;
+    }
+    if (a.mode == "list") {
+        for (const auto & n : a.nets) {
+            if (net_has(n, addr)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    return is_private_addr(addr);
+}
+
+// the file's words, or a request's: mode, nets, acknowledged (the file's: when; a request's: true), lockout (a request's: yes, close it to me)
+static bool access_parse(const std::string & body, Access * out, bool * ack, bool * lockout, std::string * why) {
+    yyjson_doc * doc  = yyjson_read(body.c_str(), body.size(), 0);
+    yyjson_val * root = doc ? yyjson_doc_get_root(doc) : nullptr;
+    if (!root || !yyjson_is_obj(root)) {
+        if (doc) {
+            yyjson_doc_free(doc);
+        }
+        *why = "invalid JSON";
+        return false;
+    }
+    bool         ok = true;
+    yyjson_val * v;
+    if ((v = yyjson_obj_get(root, "mode"))) {
+        std::string m = yyjson_is_str(v) ? yyjson_get_str(v) : "";
+        if (m == "local" || m == "private" || m == "list") {
+            out->mode = m;
+        } else {
+            *why = "mode: local, private or list";
+            ok   = false;
+        }
+    }
+    if (ok && (v = yyjson_obj_get(root, "nets"))) {
+        if (!yyjson_is_arr(v) || yyjson_arr_size(v) > 32) {
+            *why = "nets: up to 32 networks";
+            ok   = false;
+        } else {
+            std::vector<std::string> nets;
+            size_t                   i, n;
+            yyjson_val *             e;
+            yyjson_arr_foreach(v, i, n, e) {
+                std::string t = yyjson_is_str(e) ? yyjson_get_str(e) : "";
+                t.erase(0, t.find_first_not_of(" \t"));
+                t.erase(t.find_last_not_of(" \t") + 1);
+                unsigned char ip[16];
+                int           bits;
+                bool          v6;
+                if (t.empty()) {
+                    continue;
+                }
+                if (!net_parse(t, ip, &bits, &v6)) {
+                    *why = "not a network: " + t.substr(0, 60) + " (a network is written as 10.0.0.0/24 or fd00::/8)";
+                    ok   = false;
+                    break;
+                }
+                nets.push_back(t);
+            }
+            if (ok) {
+                out->nets = nets;
+            }
+        }
+    }
+    if (ok && (v = yyjson_obj_get(root, "acknowledged"))) {
+        if (yyjson_is_bool(v) && ack) {
+            *ack = yyjson_get_bool(v);
+        } else if (yyjson_is_str(v) && !ack) {
+            out->acknowledged = std::string(yyjson_get_str(v)).substr(0, 40);
+        }
+    }
+    if (ok && lockout && (v = yyjson_obj_get(root, "lockout")) && yyjson_is_bool(v)) {
+        *lockout = yyjson_get_bool(v);
+    }
+    if (ok && out->mode == "list" && out->nets.empty()) {
+        *why = "list: name at least one network (10.0.0.0/24)";
+        ok   = false;
+    }
+    yyjson_doc_free(doc);
+    return ok;
+}
+
+// for the page (who asks, from where) or for the file (the decision alone)
+static std::string access_json(const Access & a, const std::string * you) {
+    yyjson_mut_doc * doc  = yyjson_mut_doc_new(NULL);
+    yyjson_mut_val * root = yyjson_mut_obj(doc);
+    yyjson_mut_doc_set_root(doc, root);
+    yyjson_mut_obj_add_strcpy(doc, root, "mode", a.mode.c_str());
+    yyjson_mut_val * nets = yyjson_mut_arr(doc);
+    for (const auto & n : a.nets) {
+        yyjson_mut_arr_add_strcpy(doc, nets, n.c_str());
+    }
+    yyjson_mut_obj_add_val(doc, root, "nets", nets);
+    yyjson_mut_obj_add_strcpy(doc, root, "acknowledged", a.acknowledged.c_str());
+    if (you) {
+        yyjson_mut_obj_add_strcpy(doc, root, "you", addr_plain(*you).c_str());
+        yyjson_mut_obj_add_bool(doc, root, "you_local", is_loopback_addr(*you));
+        yyjson_mut_obj_add_bool(doc, root, "you_private", is_private_addr(*you));
+        yyjson_mut_obj_add_bool(doc, root, "public", access_public());
+        yyjson_mut_obj_add_bool(doc, root, "kept", !g_access_path.empty());
+    }
+    char *      json = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, NULL);
+    std::string out  = json ? json : "{}";
+    if (json) {
+        free(json);
+    }
+    yyjson_mut_doc_free(doc);
+    return out;
+}
+
+// the file read again when it changed (mtx_access held); a file gone or unreadable: private networks, said once
+static void access_reload() {
+    if (g_access_path.empty()) {
+        return;
+    }
+    std::error_code ec;
+    auto            t = std::filesystem::last_write_time(g_access_path, ec);
+    if (ec) {
+        if (g_access_seen) {
+            g_access      = Access();
+            g_access_seen = false;
+        }
+        return;
+    }
+    if (g_access_seen && t == g_access_mtime) {
+        return;
+    }
+    g_access_seen  = true;
+    g_access_mtime = t;
+    Access      a;
+    std::string why;
+    if (!access_parse(read_file(g_access_path), &a, nullptr, nullptr, &why)) {
+        fprintf(stderr, "[Server] Access %s: %s; the studio answers this computer and private networks\n", g_access_path.c_str(),
+                why.c_str());
+        a = Access();
+    }
+    g_access = a;
+}
+
 static std::string json_string(const char * key, const std::string & value) {
     yyjson_mut_doc * doc  = yyjson_mut_doc_new(NULL);
     yyjson_mut_val * root = yyjson_mut_obj(doc);
@@ -1907,6 +2122,20 @@ int main(int argc, char ** argv) {
 
     LogCapture log_capture;
 
+    // HERESY 1429: who may open the studio, beside the settings (user/access.json), or where RUACH_ACCESS says
+    if (const char * e = getenv("RUACH_ACCESS"); e && *e) {
+        g_access_path = e;
+    } else if (!g_settings_path.empty()) {
+        g_access_path = (std::filesystem::path(g_settings_path).parent_path() / "user" / "access.json").string();
+    }
+    {
+        std::lock_guard<std::mutex> lock(mtx_access);
+        access_reload();
+        fprintf(stderr, "[Server] Access: %s%s\n", access_public() ? "anyone (RUACH_ALLOW_PUBLIC)" : g_access.mode.c_str(),
+                g_access_path.empty() ? " (no settings file: private networks)"
+                : g_access.acknowledged.empty() ? " (not decided yet: the page asks)" : "");
+    }
+
     // Local addition: engine settings, from --settings over the boot flags
     g_settings = { g_models.empty() ? "" : g_models[0].first, g_keep_loaded, params.max_seq, params.vae_core, 60, false };
     if (!g_settings_path.empty() && std::filesystem::is_regular_file(g_settings_path)) {
@@ -1956,12 +2185,21 @@ int main(int argc, char ** argv) {
     svr.set_read_timeout(120, 0);
     svr.set_payload_max_length((size_t) 1024 * 1024 * 1024);
     g_svr = &svr;
-    // HERESY 1114: this machine and private networks only, unless RUACH_ALLOW_PUBLIC=1
-    static const bool allow_public = [] { const char * e = getenv("RUACH_ALLOW_PUBLIC"); return e && *e && strcmp(e, "0") != 0; }();
+    // HERESY 1114: this machine and private networks only, unless RUACH_ALLOW_PUBLIC=1; 1429: or as its user decided (Engine → Security)
+    static const bool allow_public = access_public();
     svr.set_pre_routing_handler([](const httplib::Request & req, httplib::Response & res) {
-        if (allow_public || is_private_addr(req.remote_addr)) return httplib::Server::HandlerResponse::Unhandled;
+        if (allow_public) return httplib::Server::HandlerResponse::Unhandled;
+        std::string mode;
+        {
+            std::lock_guard<std::mutex> lock(mtx_access);
+            access_reload();
+            if (access_allows(g_access, req.remote_addr)) return httplib::Server::HandlerResponse::Unhandled;
+            mode = g_access.mode;
+        }
         res.status = 403;
-        res.set_content(json_string("error", "Ruach Studio answers this machine and private networks only (RUACH_ALLOW_PUBLIC=1 opens it)"),
+        res.set_content(json_string("error", mode == "local" ? "Ruach Studio answers its own computer only: its user chose so (Engine → Security)"
+                                             : mode == "list" ? "Ruach Studio answers its own computer and the networks its user listed (Engine → Security)"
+                                             : "Ruach Studio answers this machine and private networks only (Engine → Security; RUACH_ALLOW_PUBLIC=1 opens it)"),
                         "application/json");
         return httplib::Server::HandlerResponse::Handled;
     });
@@ -2213,6 +2451,56 @@ int main(int argc, char ** argv) {
         std::string body = settings_json(next);
         body.insert(body.size() - 1, std::string(",\n  \"applied\": ") + (applied ? "true" : "false"));
         res.set_content(body, "application/json");
+    });
+    // HERESY 1429: who may open the studio (Engine → Security; the first start asks): read, and changed from wherever is allowed
+    svr.Get("/access", [](const httplib::Request & req, httplib::Response & res) {
+        std::lock_guard<std::mutex> lock(mtx_access);
+        access_reload();
+        res.set_content(access_json(g_access, &req.remote_addr), "application/json");
+    });
+    svr.Post("/access", [](const httplib::Request & req, httplib::Response & res) {
+        std::lock_guard<std::mutex> lock(mtx_access);
+        access_reload();
+        if (g_access_path.empty()) {
+            res.status = 409;
+            res.set_content(json_string("error", "this engine keeps no settings (--settings): it answers this computer and private networks"),
+                            "application/json");
+            return;
+        }
+        Access      next    = g_access;
+        bool        ack     = false, lockout = false;
+        std::string why;
+        if (!access_parse(req.body, &next, &ack, &lockout, &why)) {
+            res.status = 400;
+            res.set_content(json_string("error", why), "application/json");
+            return;
+        }
+        if (ack) {
+            char       stamp[32];
+            std::time_t now = std::time(nullptr);
+            std::strftime(stamp, sizeof(stamp), "%Y-%m-%dT%H:%M:%S", std::localtime(&now));
+            next.acknowledged = stamp;
+        }
+        if (!access_allows(next, req.remote_addr) && !lockout) {       // the caller would close the studio to themselves: asked first
+            res.status = 409;
+            res.set_content("{\"error\":\"this closes the studio to you (" + addr_plain(req.remote_addr) +
+                                "): only its own computer could open it again\",\"lockout\":true}",
+                            "application/json");
+            return;
+        }
+        std::error_code ec;
+        std::filesystem::create_directories(std::filesystem::path(g_access_path).parent_path(), ec);
+        if (!write_file(g_access_path, access_json(next, nullptr))) {
+            res.status = 500;
+            res.set_content(json_string("error", "could not write " + g_access_path), "application/json");
+            return;
+        }
+        g_access       = next;
+        g_access_seen  = true;
+        g_access_mtime = std::filesystem::last_write_time(g_access_path, ec);
+        fprintf(stderr, "[Server] Access: %s%s (asked from %s)\n", next.mode.c_str(),
+                next.mode == "list" ? (" " + std::to_string(next.nets.size()) + " networks").c_str() : "", addr_plain(req.remote_addr).c_str());
+        res.set_content(access_json(g_access, &req.remote_addr), "application/json");
     });
     svr.Post("/unload", [](const httplib::Request &, httplib::Response & res) {
         auto freed   = std::make_shared<size_t>(0);

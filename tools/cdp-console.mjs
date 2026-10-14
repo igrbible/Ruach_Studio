@@ -1723,7 +1723,7 @@ section("the Artist room: a prompt of one's own in three shapes from one seed, i
 const arWas = await ev(`document.body.dataset.tab`);
 await ev(`(() => { const real = window.fetch; window.__arFetch = real; window.__arAsked = [];
   const pic = (n, shape, w, h) => { const f = String(n).padStart(2, "0") + "-" + shape.replace(":", "x") + "-s100"; return { n, shape, seed: 100, w, h, nsfw: 0, took: 30, kept: true, file: f + ".png", thumb: "thumbs/" + f + ".jpg" }; };
-  const run = (id, status, pics, extra) => Object.assign({ id, prompt: "A boat at dawn, no text.", shapes: ["1:1", "16:9", "9:16"], seed: 100, count: 1, painter: "krea2-q4",
+  const run = (id, status, pics, extra) => Object.assign({ id, prompt: "A boat at dawn, no text.", shapes: ["1:1", "16:9", "9:16"], seed: 100, count: 1, painter: "qwen2512-q4",
     created: 1791500000, status, of: 3, pictures: pics }, extra || {});
   window.__arRuns = [run("20261008-160000-aaaa", "done", [pic(1, "1:1", 1280, 1280), pic(2, "16:9", 1920, 1080), pic(3, "9:16", 1080, 1920)], { took: 150 })];
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
@@ -1775,7 +1775,7 @@ await ev(`document.querySelector('.topbar [data-tab="${arWas}"]').click(); true`
 await sleep(300);
 check("the Artist: the room from the bar; three shapes; Draw waits for a prompt; 2 shapes × 3 variations say 6 pictures; the run asked for as the form says (a new seed when none)",
   ar.tab === "artist" && ar.shapes === "1:1 16:9 9:16" && ar.offEmpty && ar.onFull && /^6 pictures/.test(ar.cost) && ar.asked && ar.asked.prompt === "A lighthouse at night, painted in oils." &&
-  JSON.stringify(ar.asked.shapes) === '["1:1","16:9"]' && ar.asked.count === 3 && ar.asked.seed === null && ar.asked.painter === "krea2-q4", JSON.stringify(ar));
+  JSON.stringify(ar.asked.shapes) === '["1:1","16:9"]' && ar.asked.count === 3 && ar.asked.seed === null && ar.asked.painter === "qwen2512-q4", JSON.stringify(ar));
 check("  the new run on top, live, its six pictures to come in their shapes; a done run's thumbnails in theirs (1, 16:9, 9:16); Set as cover on the square one only",
   ar.live === "20261008-170000-bbbb:6" && ar.liveFirst && ar.ratios.length === 3 && Math.abs(ar.ratios[0] - 1) < .03 && Math.abs(ar.ratios[1] - 1.78) < .05 && Math.abs(ar.ratios[2] - .56) < .05 &&
   ar.covers === "true,false,false", JSON.stringify({ live: ar.live, ratios: ar.ratios, covers: ar.covers }));
@@ -1789,7 +1789,7 @@ section("the Artist's live preview and its gallery");
 const ar7Was = await ev(`document.body.dataset.tab`);
 await ev(`(() => { const real = window.fetch; window.__ar7Fetch = real; window.__ar7Asked = [];
   const pic = (n, shape, w, h, star) => { const f = String(n).padStart(2, "0") + "-" + shape.replace(":", "x") + "-s100"; const p = { n, shape, seed: 100, w, h, nsfw: 0, took: 30, kept: true, file: f + ".png", thumb: "thumbs/" + f + ".jpg" }; if (star) p.star = true; return p; };
-  const base = { prompt: "A boat at dawn, no text.", seed: 100, count: 1, painter: "krea2-q4", created: 1791500000 };
+  const base = { prompt: "A boat at dawn, no text.", seed: 100, count: 1, painter: "qwen2512-q4", created: 1791500000 };
   window.__ar7Runs = [
     Object.assign({}, base, { id: "20261008-180000-cccc", shapes: ["1:1", "16:9"], status: "running", of: 2, pictures: [], gpu: 1, live: { live: 1, step: 3, of: 8, file: "preview/01.jpg" }, prompt: "A fox in the snow, no text.", seed: 7 }),
     Object.assign({}, base, { id: "20261008-160000-aaaa", shapes: ["1:1", "16:9", "9:16"], status: "done", of: 3, took: 150,
@@ -2005,7 +2005,7 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, de
 const v63 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const pic = (n, shape, w, h) => ({ file: "0" + n + "-" + shape.replace(":", "x") + "-s7.png", thumb: "thumbs/0" + n + "-" + shape.replace(":", "x") + "-s7.jpg", shape, w, h, seed: 7, kept: true });
-  const runs = [{ id: "20261009-130000-aaaa", status: "done", prompt: "a", created: Date.now() / 1000, painter: "krea2-q4", shapes: ["1:1", "16:9"],
+  const runs = [{ id: "20261009-130000-aaaa", status: "done", prompt: "a", created: Date.now() / 1000, painter: "qwen2512-q4", shapes: ["1:1", "16:9"],
     pictures: [pic(1, "1:1", 1280, 1280), pic(2, "16:9", 1920, 1080)] }];
   window.__v63 = window.fetch;
   window.fetch = (u, o) => String(u).indexOf("/lab/artist/runs") >= 0 ? Promise.resolve(new Response(JSON.stringify({ runs }), { headers: { "Content-Type": "application/json" } })) : window.__v63(u, o);
@@ -2191,7 +2191,7 @@ check("Ctrl+S keeps everything (the form, the Writer's open document, the settin
 section("the Artist’s Draw and Stop while a run draws (1270, 1340)");
 const ar70Was = await ev(`document.body.dataset.tab`);
 await ev(`(() => { const real = window.fetch; window.__ar70Fetch = real; window.__ar70Asked = [];
-  const run = { id: "20261009-170000-eeee", prompt: "A boat.", shapes: ["1:1"], seed: 5, count: 1, painter: "krea2-q4", created: 1791580000, status: "running", of: 1, pictures: [], gpu: 1 };
+  const run = { id: "20261009-170000-eeee", prompt: "A boat.", shapes: ["1:1"], seed: 5, count: 1, painter: "qwen2512-q4", created: 1791580000, status: "running", of: 1, pictures: [], gpu: 1 };
   window.__ar70Runs = [run];
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   window.fetch = (u, o) => {
@@ -2231,9 +2231,9 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, de
 const ar71Was = await ev(`document.body.dataset.tab`);
 await ev(`(() => { const real = window.fetch; window.__ar71Fetch = real;
   const pic = (n, shape, w, h, seed) => { const f = String(n).padStart(2, "0") + "-" + shape.replace(":", "x") + "-s" + seed; return { n, shape, seed, w, h, kept: true, file: f + ".png", thumb: "thumbs/" + f + ".jpg" }; };
-  window.__ar71Done = { id: "20261009-180000-ffff", prompt: "A harbour at night, lanterns on the water.", shapes: ["1:1", "16:9"], seed: 40, count: 1, painter: "krea2-q4", created: 1791590000,
+  window.__ar71Done = { id: "20261009-180000-ffff", prompt: "A harbour at night, lanterns on the water.", shapes: ["1:1", "16:9"], seed: 40, count: 1, painter: "qwen2512-q4", created: 1791590000,
     status: "done", of: 2, took: 80, gpu: 2, pictures: [pic(1, "1:1", 1280, 1280, 40), pic(2, "16:9", 1920, 1080, 40)] };
-  window.__ar71Runs = [{ id: "20261009-181000-gggg", prompt: "A storm.", shapes: ["16:9"], seed: 9, count: 1, painter: "krea2-q4", created: 1791590600, status: "running", of: 1, gpu: 1, pictures: [],
+  window.__ar71Runs = [{ id: "20261009-181000-gggg", prompt: "A storm.", shapes: ["16:9"], seed: 9, count: 1, painter: "qwen2512-q4", created: 1791590600, status: "running", of: 1, gpu: 1, pictures: [],
     live: { live: 1, step: 3, of: 12, file: "preview/03.jpg" } }, window.__ar71Done];
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   window.fetch = (u, o) => { u = String(u); if (u.startsWith("/lab/artist/runs")) return json({ runs: window.__ar71Runs }); if (u.startsWith("/lab/artist/stop")) return json({}); return real(u, o); };
@@ -2585,7 +2585,7 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, de
 const ar84Was = await ev(`({ tab: document.body.dataset.tab, look: localStorage.getItem("yue2.arLook"), filter: localStorage.getItem("yue2.arFilter"), size: localStorage.getItem("yue2.arSize") })`);
 await ev(`(() => { const real = window.fetch; window.__ar84Fetch = real;
   const pic = (n, shape, w, h) => { const f = String(n).padStart(2, "0") + "-" + shape.replace(":", "x"); return { n, shape, seed: n, w, h, kept: true, file: f + ".png", thumb: "thumbs/" + f + ".jpg" }; };
-  const run = { id: "20261009-210000-tile", prompt: "Tiles.", shapes: ["1:1", "16:9", "9:16"], seed: 1, count: 3, painter: "krea2-q4", created: 1791600000, status: "done", of: 7, took: 60, gpu: 2,
+  const run = { id: "20261009-210000-tile", prompt: "Tiles.", shapes: ["1:1", "16:9", "9:16"], seed: 1, count: 3, painter: "qwen2512-q4", created: 1791600000, status: "done", of: 7, took: 60, gpu: 2,
     pictures: [pic(1, "1:1", 1280, 1280), pic(2, "16:9", 1920, 1080), pic(3, "9:16", 1080, 1920), pic(4, "1:1", 1280, 1280), pic(5, "16:9", 1920, 1080), pic(6, "9:16", 1080, 1920), pic(7, "16:9", 1920, 1080)] };
   const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
   window.fetch = (u, o) => { u = String(u); if (u.startsWith("/lab/artist/runs")) return json({ runs: [run] }); return real(u, o); };
@@ -3163,9 +3163,9 @@ const ms04 = await ev(`(async () => {
     const text = d ? ((d.querySelector(".hd-title") || {}).textContent || "") + " / " + ((d.querySelector(".hd-body") || {}).textContent || "") : null;
     const btns = d ? [...d.querySelectorAll(".hd-acts button, .hd-yes, .hd-no")].map((b) => b.textContent) : [];
     if (d) d.querySelector(yes ? ".hd-yes" : ".hd-no").click(); return { text, btns }; };
-  // a laptop: a 16 GB Quadro RTX 5000 (Turing, compute 7.5: no BF16 tensor cores), Krea 2 Muse Q4 here
+  // a laptop: a 16 GB Quadro RTX 5000 (Turing, compute 7.5: no BF16 tensor cores), Qwen-Image 2512 Q4 here (1428: Krea 2 gone)
   machine = { cards: [{ index: 0, name: "Quadro RTX 5000", total_mb: 16384, compute: "7.5", limit_mb: null, bf16_cores: false }], studio: 0, room_mb: 16384,
-              painter: { suggest: "krea2-q4", ready: { "krea2-q4": true, "krea2-q8": false, sdxl: false }, fits: ["krea2-q4", "sdxl"] } };
+              painter: { suggest: "qwen2512-q4", ready: { "qwen2512-q4": true, "qwen2512-q6": false }, fits: ["qwen2512-q4"] } };
   let p = window.ruachMachineScan(true); o.laptop = await answer(true); await p; await wait(300);
   o.laptopPosted = posted.slice(); o.painter = localStorage.getItem("yue2.artPainter"); o.kept = JSON.parse(localStorage.getItem("yue2.machineScan") || "null");
   o.preset = localStorage.getItem("yue2.memPreset"); o.toasts = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /^Set for this machine/.test(t));
@@ -3187,11 +3187,11 @@ const ms04 = await ev(`(async () => {
   return o; })()`);
 check("a test browser is not asked at its start; Engine → Compute has «Scan the machine»",
   !ms04.atBoot && ms04.keptAtBoot === null && ms04.scanBtn === "Scan the machine", JSON.stringify({ atBoot: ms04.atBoot, kept: ms04.keptAtBoot, btn: ms04.scanBtn }));
-check("  a 16 GB Turing laptop: its card said, Q8_0 offered (no BF16 tensor cores), the whole context with tiles of 512, Krea 2 Muse Q4; «Set them» sets the backbone, Auto and the painter, kept once",
+check("  a 16 GB Turing laptop: its card said, Q8_0 offered (no BF16 tensor cores), the whole context with tiles of 512, Qwen-Image 2512 Q4 by the cards; «Set them» sets the backbone, Auto and the painter by the cards, kept once",
   /GPU0 · Quadro RTX 5000 · 16\.0 GB \(compute 7\.5\)/.test(ms04.laptop.text || "") && /the backbone Q8_0: compute 7\.5 has no BF16 tensor cores/.test(ms04.laptop.text || "") &&
-  /the whole context, VAE tiles 512 \(Auto for 16\.0 GB\)/.test(ms04.laptop.text || "") && /artwork: Krea 2 Muse Q4 \(12\.6 GB at its peak\)/.test(ms04.laptop.text || "") &&
+  /the whole context, VAE tiles 512 \(Auto for 16\.0 GB\)/.test(ms04.laptop.text || "") && /artwork: Qwen-Image 2512 Q4 by the cards/.test(ms04.laptop.text || "") &&
   ms04.laptop.btns.indexOf("Set them") >= 0 && ms04.laptop.btns.indexOf("Not now") >= 0 && ms04.laptopPosted.length === 1 && ms04.laptopPosted[0].model === "Q8_0" &&
-  ms04.painter === "krea2-q4" && ms04.preset === "auto" && !!ms04.kept && ms04.kept.set === true && ms04.kept.model === "Q8_0" && ms04.toasts.length === 1,
+  ms04.painter === null && ms04.preset === "auto" && !!ms04.kept && ms04.kept.set === true && ms04.kept.model === "Q8_0" && ms04.toasts.length === 1,
   JSON.stringify({ laptop: ms04.laptop, posted: ms04.laptopPosted, painter: ms04.painter, preset: ms04.preset, kept: ms04.kept, toasts: ms04.toasts }));
 check("  a 12 GB Ampere card: BF16 with a context of 16 384 offered, no painter fits said; «Not now» sends nothing and is kept; no cards: said",
   /the backbone BF16(?![:\w])/.test(ms04.ampere.text || "") && /context 16,384 rows, VAE tiles 512 \(Auto for 12\.0 GB\)/.test(ms04.ampere.text || "") &&
@@ -3206,13 +3206,13 @@ const rf05 = await ev(`(async () => {
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const keys = ["yue2.arPrompt", "yue2.arShapes", "yue2.arRefStr"], was = keys.map((k) => localStorage.getItem(k));
   const now = Date.now() / 1000;
-  const runs = [{ id: "20261010-050000-abcd", prompt: "a stone church", shapes: ["1:1"], seed: 7, count: 1, painter: "krea2-q4", created: now - 60, status: "done", of: 1,
+  const runs = [{ id: "20261010-050000-abcd", prompt: "a stone church", shapes: ["1:1"], seed: 7, count: 1, painter: "qwen2512-q4", created: now - 60, status: "done", of: 1,
     ref: "ref.png", strength: 0.76, ref_from: "a picture of one's own", took: 30,
     pictures: [{ n: 1, shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg", ref: 0.76 }] }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs });
     if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b);
-      return json({ id: "20261010-050100-beef", prompt: b.prompt, shapes: b.shapes, seed: 9, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [] }); }   // done at once: the room would show a queued run on its stage, and Draw be Stop
+      return json({ id: "20261010-050100-beef", prompt: b.prompt, shapes: b.shapes, seed: 9, count: 1, painter: "qwen2512-q4", created: now, status: "done", of: 1, pictures: [] }); }   // done at once: the room would show a queued run on its stage, and Draw be Stop
     if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
     return real(u, o); };
   document.querySelector('.topbar [data-tab="artist"]').click();
@@ -3281,13 +3281,13 @@ const mk06 = await ev(`(async () => {
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const keys = ["yue2.arPrompt", "yue2.arBrush"], was = keys.map((k) => localStorage.getItem(k));
   const now = Date.now() / 1000;
-  const runs = [{ id: "20261010-051000-cafe", prompt: "a window", shapes: ["1:1"], seed: 3, count: 1, painter: "krea2-q4", created: now - 30, status: "done", of: 1,
+  const runs = [{ id: "20261010-051000-cafe", prompt: "a window", shapes: ["1:1"], seed: 3, count: 1, painter: "qwen2512-q4", created: now - 30, status: "done", of: 1,
     ref: "ref.png", mask: "mask.png", masked: true, strength: 1.0, took: 40,
     pictures: [{ n: 1, shape: "1:1", seed: 3, w: 1280, h: 1280, kept: true, file: "01-1x1-s3.png", thumb: "thumbs/01-1x1-s3.jpg", ref: 1.0, masked: true }] }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs });
     if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b);
-      return json({ id: "20261010-051100-f00d", prompt: b.prompt, shapes: b.shapes, seed: 5, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [] }); }
+      return json({ id: "20261010-051100-f00d", prompt: b.prompt, shapes: b.shapes, seed: 5, count: 1, painter: "qwen2512-q4", created: now, status: "done", of: 1, pictures: [] }); }
     return real(u, o); };
   document.querySelector('.topbar [data-tab="artist"]').click();
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(400);
@@ -3355,13 +3355,13 @@ const fp07 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000;
-  const runs = [{ id: "20261010-052000-0a0b", prompt: "a cabin", shapes: ["16:9"], seed: 11, count: 1, painter: "krea2-q4", created: now - 30, status: "done", of: 1,
+  const runs = [{ id: "20261010-052000-0a0b", prompt: "a cabin", shapes: ["16:9"], seed: 11, count: 1, painter: "qwen2512-q4", created: now - 30, status: "done", of: 1,
     ref: "ref.jpg", strength: 1.0, fit: true, took: 48,
     pictures: [{ n: 1, shape: "16:9", seed: 11, w: 1920, h: 1080, kept: true, file: "01-16x9-s11.png", thumb: "thumbs/01-16x9-s11.jpg", ref: 1.0, fit: true }] }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs });
     if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b);
-      return json({ id: "20261010-052100-0c0d", prompt: b.prompt, shapes: b.shapes, seed: 12, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [] }); }
+      return json({ id: "20261010-052100-0c0d", prompt: b.prompt, shapes: b.shapes, seed: 12, count: 1, painter: "qwen2512-q4", created: now, status: "done", of: 1, pictures: [] }); }
     return real(u, o); };
   document.querySelector('.topbar [data-tab="artist"]').click();
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(400);
@@ -3401,7 +3401,7 @@ const cp08 = await ev(`(async () => {
   const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000;
   const pic = (n, seed) => ({ n, shape: "1:1", seed, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + seed + ".png", thumb: "thumbs/0" + n + "-1x1-s" + seed + ".jpg" });
-  const runs = [{ id: "20261010-053000-1111", prompt: "a harbour", shapes: ["1:1"], seed: 21, count: 2, painter: "krea2-q4", created: now - 20, status: "done", of: 2, took: 70,
+  const runs = [{ id: "20261010-053000-1111", prompt: "a harbour", shapes: ["1:1"], seed: 21, count: 2, painter: "qwen2512-q4", created: now - 20, status: "done", of: 2, took: 70,
     pictures: [pic(1, 21), pic(2, 22)] }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs });
@@ -3485,7 +3485,7 @@ const tr10 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000;
-  const gone = { id: "20261009-201000-dead", prompt: "a red violin on snow", shapes: ["1:1"], seed: 5, count: 1, painter: "krea2-q4", created: now - 86400, status: "done", of: 1,
+  const gone = { id: "20261009-201000-dead", prompt: "a red violin on snow", shapes: ["1:1"], seed: 5, count: 1, painter: "qwen2512-q4", created: now - 86400, status: "done", of: 1,
     pictures: [{ n: 1, shape: "1:1", seed: 5, w: 1280, h: 1280, kept: true, file: "01-1x1-s5.png", thumb: "thumbs/01-1x1-s5.jpg" }] };
   let runs = [], trash = [gone];
   window.fetch = (u, o) => { u = String(u);
@@ -3664,7 +3664,7 @@ section("the Artist's stage keeps its frame from the queue to the picture; the w
 const st17 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, now = Date.now() / 1000;
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
-  const base = { id: "20261010-130000-1317", prompt: "a long prompt that wraps\\nover two lines in the stage's data, the way a real one does when it is written out", shapes: ["1:1"], seed: 7, count: 1, painter: "krea2-q4", created: now - 30, of: 1 };
+  const base = { id: "20261010-130000-1317", prompt: "a long prompt that wraps\\nover two lines in the stage's data, the way a real one does when it is written out", shapes: ["1:1"], seed: 7, count: 1, painter: "qwen2512-q4", created: now - 30, of: 1 };
   const states = [dict({ status: "queued", pictures: [] }), dict({ status: "queued", waiting: "a card with room", pictures: [] }), dict({ status: "running", pictures: [] }),
     dict({ status: "running", pictures: [], live: { live: 1, step: 3, of: 8, file: "preview/01.jpg" } }),
     dict({ status: "done", pictures: [{ n: 1, shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg" }] })];
@@ -3700,23 +3700,23 @@ const lo16 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [], looked = [];
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const A = { id: "krea2/Kul_v1.safetensors", family: "krea2", name: "Kul_v1", folder: "", mb: 112, picture: true, civitai: "known",
+  const A = { id: "qwen-image-2512/Kul_v1.safetensors", family: "qwen-image-2512", name: "Kul_v1", folder: "", mb: 112, picture: true, civitai: "known",
     info: { title: "Kul Style", version: "v1.0", base: "Krea 2", words: ["Kulstyle", "sfumato washes"], url: "https://civitai.com/models/1" } };
-  const B = { id: "krea2/Styles/plain.safetensors", family: "krea2", name: "plain", folder: "Styles", mb: 218, picture: false, info: {} };
-  let fams = { krea2: [A, B], sdxl: [], "qwen-image-2.1": [], "qwen-image-2512": [] };
+  const B = { id: "qwen-image-2512/Styles/plain.safetensors", family: "qwen-image-2512", name: "plain", folder: "Styles", mb: 218, picture: false, info: {} };
+  let fams = { "qwen-image-2512": [A, B], sdxl: [], "qwen-image-2.1": [] };
   const pic = await new Promise((ok) => { const c = document.createElement("canvas"); c.width = c.height = 8; c.toBlob(ok, "image/jpeg"); });
   window.fetch = (u, o) => { u = String(u);
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: fams, titles: { krea2: "Krea 2" } });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: fams, titles: { "qwen-image-2512": "Qwen-Image 2512" } });
     if (u.startsWith("/lab/artist/lora-picture")) return Promise.resolve(new Response(pic, { headers: { "Content-Type": "image/jpeg" } }));
     if (u.startsWith("/lab/artist/lora-civitai")) { const b = JSON.parse(o.body); looked.push(b.id); return json(Object.assign({}, B, { civitai: "known", info: { title: "Plain Looked", base: "Krea 2", words: ["plainword"] } })); }
-    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-140000-1316", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-140000-1316", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-q4" }, 202); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
   const keys = ["yue2.arLoras", "yue2.arPrompt", "yue2.arPainter"], was = keys.map((k) => localStorage.getItem(k));
   localStorage.removeItem("yue2.arLoras");
   document.querySelector('.topbar [data-tab="artist"]').click();
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
-  document.getElementById("arPainter").value = "krea2-q4"; document.getElementById("arPainter").dispatchEvent(new Event("change"));
+  document.getElementById("arPainter").value = "qwen2512-q4"; document.getElementById("arPainter").dispatchEvent(new Event("change"));
   await window.HeresyArtist.loras.reload();
   const o = { say0: document.getElementById("arLoraSay").textContent };
   document.getElementById("arLoraAdd").click();
@@ -3748,11 +3748,11 @@ const lo16 = await ev(`(async () => {
   await wait(300);
   return o; })()`);
 check("the library groups the family's adapters by folder; a card picked gets its number; Look up on Civitai asks for the one not yet known and its card takes the name",
-  lo16.folders.join(",") === "All 2,(the family's own folder) 1,Styles 1" && lo16.badge === "1" && JSON.stringify(lo16.looked) === '["krea2/Styles/plain.safetensors"]' &&
+  lo16.folders.join(",") === "All 2,(the family's own folder) 1,Styles 1" && lo16.badge === "1" && JSON.stringify(lo16.looked) === '["qwen-image-2512/Styles/plain.safetensors"]' &&
   lo16.lookedName === "Plain Looked", JSON.stringify(lo16));
 check("  under the painter: its name and trigger words; a word goes into the prompt; the strength is kept; Draw carries the adapters with their strength; ✕ takes it off",
   lo16.row === "Kul Style" && lo16.words === "Kulstyle|sfumato washes" && lo16.prompt === "A fox in the snow, Kulstyle" && lo16.weight === 0.55 &&
-  JSON.stringify(lo16.body) === '[{"id":"krea2/Kul_v1.safetensors","weight":0.55}]' && lo16.after === 0, JSON.stringify(lo16));
+  JSON.stringify(lo16.body) === '[{"id":"qwen-image-2512/Kul_v1.safetensors","weight":0.55}]' && lo16.after === 0, JSON.stringify(lo16));
 
 // HERESY 1169 · 1318 (Viktor 10.10.2026: «Подключай Qwen Image 2.1»; «мы предупреждаем пользователя»; «Забирай 2512 тоже в Студию»)
 section("the Artist's painters as the lab has them: Qwen-Image 2512 with its fp8 fine-tunes, Qwen-Image 2.1 with its licence said");
@@ -3760,14 +3760,14 @@ const pn18 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
-    { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "krea2", ready: false },
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 12500, family: "qwen-image-2512", ready: true },
+    { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "qwen-image-2512", ready: false },
     { key: "qwen2512-q6", label: "Qwen-Image 2512 · Q6", need_mb: 20000, family: "qwen-image-2512", ready: true, note: "Qwen-Image 2512 (Apache-2.0) from a 6-bit GGUF", lightning: true },
     { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors", "B fine fp8.safetensors"], note: "a fine-tune" },
     { key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, family: "qwen-image-2.1", ready: true, note: "Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only" }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
     if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-150000-1318", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-fp8", model: "B fine fp8.safetensors" }, 202); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
@@ -3797,9 +3797,9 @@ const pn18 = await ev(`(async () => {
   await wait(300);
   return o; })()`);
 check("the choice holds the painters this machine has (Krea Q8's files missing here: not offered), each with the card it wants",
-  pn18.opts.join("|") === "krea2-q4=Krea 2 Muse · Q4 (from 12.5 GB)|qwen2512-q6=Qwen-Image 2512 · Q6 (from 20 GB)|qwen2512-fp8=Qwen-Image 2512 · fp8 (from 22.5 GB)|qwen21=Qwen-Image 2.1 · research licence (from 21 GB)", JSON.stringify(pn18));
+  pn18.opts.join("|") === "qwen2512-q4=Qwen-Image 2512 · Q4 (from 12.5 GB)|qwen2512-q6=Qwen-Image 2512 · Q6 (from 20 GB)|qwen2512-fp8=Qwen-Image 2512 · fp8 (from 22.5 GB)|qwen21=Qwen-Image 2.1 · research licence (from 21 GB)", JSON.stringify(pn18));
 check("  fp8: its fine-tunes beside it, Draw carries the one picked; the time as Qwen paints; Qwen-Image 2.1: its licence said in the warning's colour, no fine-tune",
-  pn18.model.shown && pn18.model.opts.join("|") === "A fine fp8|B fine fp8" && JSON.stringify(pn18.body) === '{"painter":"qwen2512-fp8","model":"B fine fp8.safetensors"}' &&
+  !pn18.model.shown && pn18.model.opts.join("|") === "A fine fp8|B fine fp8" && JSON.stringify(pn18.body) === '{"painter":"qwen2512-fp8","model":"B fine fp8.safetensors"}' &&
   /about 5 min/.test(pn18.cost) && pn18.note.shown && pn18.note.warn && /Research Licence/.test(pn18.note.text) && !pn18.note.model, JSON.stringify(pn18));
 
 // HERESY 1169 · 1319 (Viktor 10.10.2026: «селекторы для семплеров и планировщиков, выбор количества шагов с разумным ограничением»)
@@ -3808,12 +3808,12 @@ const sm19 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 12500, family: "qwen-image-2512", ready: true },
     { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors"], lightning: true, note: "a fine-tune" }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
-    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-160000-1319-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }   // done: Draw stays Draw
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-160000-1319-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-q4" }, 202); }   // done: Draw stays Draw
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
   const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arSampling", "yue2.arLoras"], was = keys.map((k) => localStorage.getItem(k));
@@ -3822,7 +3822,7 @@ const sm19 = await ev(`(async () => {
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
   await window.HeresyArtist.painters(); await wait(100);
   const sel = document.getElementById("arPainter"), $ = (id) => document.getElementById(id), set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("change")); };
-  sel.value = "krea2-q4"; sel.dispatchEvent(new Event("change")); await wait(50);
+  sel.value = "qwen2512-q4"; sel.dispatchEvent(new Event("change")); await wait(50);
   const o = { k0: { say: $("arSampSay").textContent, lim: $("arSteps").min + "-" + $("arSteps").max, light: !$("arLightBox").hidden } };
   set("arSteps", "12"); set("arSchedule", "karras"); await wait(50);
   o.k1 = $("arSampSay").textContent;
@@ -3847,9 +3847,9 @@ const sm19 = await ev(`(async () => {
   document.querySelector('.topbar [data-tab="create"]').click();
   await wait(300);
   return o; })()`);
-check("Krea 2: 8 steps, Euler, Simple its own, steps 4 to 16, no Lightning; 12 steps and Karras said in the summary and sent alone",
-  sm19.k0.say === "8 steps · Euler · Simple" && sm19.k0.lim === "4-16" && !sm19.k0.light && sm19.k1 === "12 steps · Euler · Karras" &&
-  JSON.stringify(sm19.kbody) === '{"steps":12,"schedule":"karras"}', JSON.stringify(sm19));
+check("Qwen-Image 2512 Q4: 8 steps, Euler, Simple with Lightning 1.00 its own, steps 4 to 16; 12 steps and Karras said in the summary and sent with its Lightning (1428: Krea 2 gone)",
+  sm19.k0.say === "8 steps · Euler · Simple · Lightning 1.00" && sm19.k0.lim === "4-16" && sm19.k0.light && sm19.k1 === "12 steps · Euler · Karras · Lightning 1.00" &&
+  JSON.stringify(sm19.kbody) === '{"steps":12,"schedule":"karras","lightning":1}', JSON.stringify(sm19));
 check("  a 2512 fine-tune: without Lightning its own (HERESY 1328: 30 steps of 10 to 60, guidance shown, the switch off); Lightning switched on: 12 steps of 4 to 16 at 0.55, guidance gone, sent; Reset: its own again",
   sm19.q0.say === "30 steps · Euler · Simple · guidance 4" && sm19.q0.lim === "10-60" && sm19.q0.light && !sm19.q0.on && sm19.q0.cfg &&
   sm19.q1.lim === "4-16" && sm19.q1.steps === "12" && !sm19.q1.cfg && sm19.q1.say === "12 steps · Euler · Simple · Lightning 0.55" &&
@@ -3862,7 +3862,7 @@ const mk20 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   window.fetch = (u, o) => { u = String(u);
-    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-170000-1320-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-170000-1320-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-q4" }, 202); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
   const keys = ["yue2.arMaskOpts", "yue2.arPrompt"], was = keys.map((k) => localStorage.getItem(k));
@@ -3907,7 +3907,7 @@ const pk21 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000, pic = (n, shape) => ({ n, shape, seed: 7 + n, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + (7 + n) + ".png", thumb: "thumbs/0" + n + "-1x1-s" + (7 + n) + ".jpg" });
-  let runs = [{ id: "20261010-180000-aaaa", prompt: "four foxes", shapes: ["1:1"], seed: 8, count: 4, painter: "krea2-q4", created: now - 60, status: "done", of: 4, pictures: [pic(1), pic(2), pic(3), pic(4)] }];
+  let runs = [{ id: "20261010-180000-aaaa", prompt: "four foxes", shapes: ["1:1"], seed: 8, count: 4, painter: "qwen2512-q4", created: now - 60, status: "done", of: 4, pictures: [pic(1), pic(2), pic(3), pic(4)] }];
   let aside = [];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs: runs.map((r) => Object.assign({}, r, { pictures: r.pictures.map((p) => Object.assign({}, p, aside.indexOf(p.file) >= 0 ? { aside: true } : {})) })) });
@@ -3962,7 +3962,7 @@ const up22 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000, src = { id: "20261010-190000-bbbb", file: "01-1x1-s8.png" };
-  const runs = [{ id: src.id, prompt: "a fox in the snow", shapes: ["1:1"], seed: 8, count: 1, painter: "krea2-q4", created: now - 60, status: "done", of: 1,
+  const runs = [{ id: src.id, prompt: "a fox in the snow", shapes: ["1:1"], seed: 8, count: 1, painter: "qwen2512-q4", created: now - 60, status: "done", of: 1,
     pictures: [{ n: 1, shape: "1:1", seed: 8, w: 1280, h: 1280, kept: true, file: src.file, thumb: "thumbs/01-1x1-s8.jpg" }] }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs: runs });
@@ -3970,7 +3970,7 @@ const up22 = await ev(`(async () => {
     if (u.startsWith("/lab/artist/upscale")) { const b = JSON.parse(o.body); calls.push(b);
       const side = { "2k": 2560, "4k": 3840 }[b.target] || 1280 * (b.factor || 2);
       const r = { id: "20261010-190100-cc0" + calls.length, kind: "upscale", prompt: "a fox in the snow", painter: "upscale", model: b.model, factor: side > 2560 ? 4 : 2, target: b.target || "", shapes: ["1:1"], seed: 8, count: 1,
-        created: now + calls.length, status: "done", of: 1, upscaled_from: { id: b.id, file: b.file, painter: "krea2-q4" },
+        created: now + calls.length, status: "done", of: 1, upscaled_from: { id: b.id, file: b.file, painter: "qwen2512-q4" },
         pictures: [{ n: 1, shape: "1:1", seed: 8, w: side, h: side, kept: true, file: "01-1x1-s8-up" + (b.target || b.factor + "x") + ".png", thumb: "thumbs/01-1x1-s8-up" + (b.target || b.factor + "x") + ".jpg" }] };
       runs.unshift(r); return json(r, 202); }
     if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([255, 216, 255])], { type: "image/jpeg" })));
@@ -4034,7 +4034,7 @@ const qw23 = await ev(`(async () => {
       { id: "2512-q6", label: "Qwen-Image 2512 Q6", size: "34.5 GB", note: "for a card of 24 GB", here: false },
       { id: "2.1", label: "Qwen-Image 2.1", size: "33.1 GB", note: "under Qwen's research licence: research and evaluation only, not for commercial use", here: false }] }];
   const listing = () => ({ script: true, last: null, extras, parts: {}, job: null, now });
-  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 13500, family: "krea2", ready: true },
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 13500, family: "qwen-image-2512", ready: true },
     { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: false, note: "Qwen-Image 2512 (Apache-2.0) from a 4-bit GGUF" },
     { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: false, models: [] },
     { key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, family: "qwen-image-2.1", ready: false, note: "research licence" }];
@@ -4077,7 +4077,7 @@ check("the Models card's Qwen row: three variants with their sizes, the first no
 check("  Fetch on Qwen-Image 2.1 asks first, its size and its research licence said; No fetches nothing",
   qw23.ask && /Qwen-Image 2\.1/.test(qw23.ask) && /33\.1 GB/.test(qw23.ask) && /research licence/.test(qw23.ask) && /not for commercial use/.test(qw23.ask) && qw23.asked === 0, JSON.stringify(qw23));
 check("  the Artist offers only the painters here and says the others come from Engine → Models and LoRAs (an fp8 fine-tune is not a fetch)",
-  qw23.painters.join(",") === "krea2-q4" && /Engine → Models and LoRAs/.test(qw23.note) && /Qwen-Image 2512 · Q4/.test(qw23.note) && /Qwen-Image 2\.1/.test(qw23.note) && !/fp8/.test(qw23.note), JSON.stringify(qw23));
+  qw23.painters.join(",") === "qwen2512-q4" && /Engine → Models and LoRAs/.test(qw23.note) && /Qwen-Image 2512 · Q4/.test(qw23.note) && /Qwen-Image 2\.1/.test(qw23.note) && !/fp8/.test(qw23.note), JSON.stringify(qw23));
 
 // HERESY 1169 · 1326 (Viktor 10.10.2026, 14:57: «Сейчас хочу перегенерить, и ловлю ошибку. Хотя выбрано всё правильно»)
 section("the Artist: a 2512 fine-tune is sent with the painter's own sampling and with the user's own (16 steps, Euler SDE, Beta)");
@@ -4085,11 +4085,11 @@ const ft26 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 12500, family: "qwen-image-2512", ready: true },
     { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors", "B real fp8.safetensors"], lightning: true, note: "a fine-tune" }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
     if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-160000-1326-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-fp8" }, 202); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
@@ -4125,12 +4125,11 @@ const lt28 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   let lightningHere = true;
-  const painters = () => [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
-    { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: true, lightning: lightningHere },
+  const painters = () => [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: true, lightning: lightningHere },
     { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors"], lightning: lightningHere }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters: painters() });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
     if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-170000-1328-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-q4" }, 202); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
@@ -4149,7 +4148,7 @@ const lt28 = await ev(`(async () => {
   $("arDraw").click(); await until(() => sent.length === 1, 3000);
   o.keptSent = sent[0] && sent[0].sampling;
   set("arSteps", "25"); await wait(50);                  // typed past 16 with Lightning on: kept at 16
-  o.typed = { shown: $("arSteps").value, kept: JSON.parse(localStorage.getItem("yue2.arSampling"))["qwen2512-fp8"].steps };
+  o.typed = { shown: $("arSteps").value, kept: JSON.parse(localStorage.getItem("yue2.arSampling"))["qwen2512-fp8|A fine fp8.safetensors"].steps };   // 1428: kept under its brush
   $("arLightOn").checked = false; $("arLightOn").dispatchEvent(new Event("change")); await wait(50);
   o.off = { steps: $("arSteps").value, lim: $("arSteps").min + "-" + $("arSteps").max, cfg: seen("arCfgBox"), strength: $("arLight").value, dim: $("arLight").disabled };
   $("arDraw").click(); await until(() => sent.length === 2, 3000);
@@ -4293,7 +4292,7 @@ const sd30a = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   window.fetch = (u, o) => { u = String(u);
-    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b); return json({ id: "20261010-180000-1330-" + sent.length, status: "done", of: b.count * b.shapes.length, pictures: [], prompt: "x", shapes: b.shapes, seed: b.seed == null ? 777 : b.seed, count: b.count, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(o.body); sent.push(b); return json({ id: "20261010-180000-1330-" + sent.length, status: "done", of: b.count * b.shapes.length, pictures: [], prompt: "x", shapes: b.shapes, seed: b.seed == null ? 777 : b.seed, count: b.count, painter: "qwen2512-q4" }, 202); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
   const keys = ["yue2.arSeed", "yue2.arSeedMode", "yue2.arCount", "yue2.arPrompt"], was = keys.map((k) => localStorage.getItem(k));
@@ -4343,9 +4342,9 @@ const ui32 = await ev(`(async () => {
   o.en = $("arRoomName").textContent;
   const d = $("arDraw"), cs = getComputedStyle(d);
   o.draw = { tip: d.dataset.tip || "", upper: cs.textTransform, centre: cs.justifyContent };
-  const p = $("arPainter"), lb = p.closest(".field"), row = lb.parentElement.getBoundingClientRect(), pr = p.getBoundingClientRect();
+  const p = $("arBrush"), lb = p.closest(".field"), row = lb.parentElement.getBoundingClientRect(), pr = p.getBoundingClientRect();   // 1428: the brushes
   o.painterWide = Math.round(pr.width) >= Math.round(row.width) - 2;
-  runs = [{ id: "20261010-200000-1332", prompt: "x", shapes: ["1:1", "16:9"], seed: 1, count: 1, painter: "krea2-q4", created: now, status: "queued", of: 2, pictures: [], waiting: "no card can take this now" }];
+  runs = [{ id: "20261010-200000-1332", prompt: "x", shapes: ["1:1", "16:9"], seed: 1, count: 1, painter: "qwen2512-q4", created: now, status: "queued", of: 2, pictures: [], waiting: "no card can take this now" }];
   await window.HeresyArtist.reload(); await wait(150);
   o.waiting = { shown: !$("arProgress").hidden, striped: $("arProgress").classList.contains("is-waiting"), say: $("arProgressSay").textContent };
   runs = [Object.assign({}, runs[0], { status: "running", waiting: "", pictures: [{ n: 1, shape: "1:1", seed: 1, w: 1280, h: 1280, kept: true, file: "01-1x1-s1.png" }], live: { live: 2, step: 4, of: 8, file: "preview/02.jpg" } })];
@@ -4372,13 +4371,13 @@ const sp33 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+  const painters = [{ key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, family: "qwen-image-2.1", ready: true },
     { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: true, lightning: true },
     { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, models: ["A fine fp8.safetensors"], lightning: true }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
-    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-210000-1333-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-210000-1333-" + sent.length, status: "done", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-q4" }, 202); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
   const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arSampling", "yue2.arLoras"], was = keys.map((k) => localStorage.getItem(k));
@@ -4390,7 +4389,7 @@ const sp33 = await ev(`(async () => {
   $("arSampling").open = true;
   $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
   document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
-  set("arPainter", "krea2-q4"); await wait(50);
+  set("arPainter", "qwen2512-q4"); await wait(50);
   const o = { samplers: [...$("arSampler").options].map((x) => x.value).join(","), schedules: [...$("arSchedule").options].map((x) => x.value).join(",") };
   const mins = () => +((($("arCost").textContent.match(/(\\d+(?:[.,]\\d+)?)\\s*min/) || [])[1] || "0").replace(",", ".")) || (/s on one card|about \\d+ s/.test($("arCost").textContent) ? 0.5 : 0);
   o.costEuler = $("arCost").textContent;
@@ -4398,7 +4397,7 @@ const sp33 = await ev(`(async () => {
   o.costRes = $("arCost").textContent; o.say = $("arSampSay").textContent; o.kreaWarn = seen("arSampWarn");
   $("arDraw").click(); await until(() => sent.length === 1, 3000);
   o.body = sent[0] && sent[0].sampling;
-  set("arSampler", "euler"); set("arSchedule", "karras"); await wait(50);
+  set("arPainter", "qwen21"); await wait(50); set("arSampler", "euler"); set("arSchedule", "karras"); await wait(50);   // 1428: without Lightning
   o.kreaKarrasWarn = seen("arSampWarn");
   set("arPainter", "qwen2512-q4"); await wait(50);
   set("arSchedule", "karras"); await wait(50);
@@ -4417,9 +4416,9 @@ const sp33 = await ev(`(async () => {
   return o; })()`);
 check("his samplers (ER-SDE, RES 2s and 3s with their ODE, Heun++ 2, Exp Heun 2 x0 and its SDE) and schedules (Beta 57, KL optimal, SGM uniform, Bong tangent) to choose; RES 2s said and sent",
   sp33.samplers === "euler,euler-sde,er_sde,res_2s,res_2s_ode,res_3s,res_3s_ode,heunpp2,exp_heun_2_x0,exp_heun_2_x0_sde" &&
-  sp33.schedules === "simple,karras,exponential,beta,beta57,kl_optimal,sgm_uniform,bong_tangent" && sp33.say === "8 steps · RES 2s · Simple" &&
-  JSON.stringify(sp33.body) === '{"sampler":"res_2s"}' && sp33.costRes !== sp33.costEuler, JSON.stringify(sp33));
-check("  the matrix's warnings where they belong: Lightning under Karras (twice the subject), not under Beta 57, not on Krea; Euler SDE on fp8 without Lightning (soft)",
+  sp33.schedules === "simple,karras,exponential,beta,beta57,kl_optimal,sgm_uniform,bong_tangent" && sp33.say === "8 steps · RES 2s · Simple · Lightning 1.00" &&
+  JSON.stringify(sp33.body) === '{"sampler":"res_2s","lightning":1}' && sp33.costRes !== sp33.costEuler, JSON.stringify(sp33));
+check("  the matrix's warnings where they belong: Lightning under Karras (twice the subject), not under Beta 57, not on Qwen-Image 2.1 without it; Euler SDE on fp8 without Lightning (soft)",
   /twice/.test(sp33.lightKarras) && !sp33.lightBeta57 && !sp33.kreaWarn && !sp33.kreaKarrasWarn && /soft/.test(sp33.fp8Sde), JSON.stringify(sp33));
 
 // HERESY 1169 · 1334 (Viktor 10.10.2026: «Нужен отдельный логгер для Художника. Можно прикрутить его к фрейму логгера сервера отдельной вкладкой. И по фрейму логгера идея... детачить, переносить на другой монитор, поддерживать поверх окон»)
@@ -4430,10 +4429,10 @@ const al34 = await ev(`(async () => {
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000;
   let runs = [];
-  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true }];
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 12500, family: "qwen-image-2512", ready: true }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
     if (u.startsWith("/lab/artist/draw")) return json({ error: "steps: 4 to 16 for this painter" }, 400);
     if (u.startsWith("/lab/artist/runs")) return json({ runs });
     return real(u, o); };
@@ -4451,8 +4450,8 @@ const al34 = await ev(`(async () => {
   $("arDraw").click(); await wait(300);
   const lines = () => window.RuachArtistLog.lines().slice(before).map((e) => e.x);   // only what this check made (the suite drew before)
   o.refused = lines().filter((x) => /cannot draw: steps: 4 to 16/.test(x)).length;
-  o.asked = lines().filter((x) => /Draw asked: Krea 2 Muse · Q4 · 1:1/.test(x)).length;
-  runs = [{ id: "20261010-220000-1334", prompt: "x", shapes: ["1:1"], seed: 3, count: 1, painter: "krea2-q4", created: now, status: "queued", of: 1, pictures: [], waiting: "no card can take this now" }];
+  o.asked = lines().filter((x) => /Draw asked: Qwen-Image 2512 · Q4 · 1:1/.test(x)).length;
+  runs = [{ id: "20261010-220000-1334", prompt: "x", shapes: ["1:1"], seed: 3, count: 1, painter: "qwen2512-q4", created: now, status: "queued", of: 1, pictures: [], waiting: "no card can take this now" }];
   await window.HeresyArtist.reload(); await wait(80);
   runs = [Object.assign({}, runs[0], { status: "running", waiting: "", gpu: 1 })];
   await window.HeresyArtist.reload(); await wait(80);
@@ -4496,25 +4495,25 @@ const lt35 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const A = { id: "krea2/A.safetensors", family: "krea2", name: "A", folder: "", mb: 100, picture: false, info: {} };
-  const B = { id: "krea2/B.safetensors", family: "krea2", name: "B", folder: "", mb: 100, picture: false, info: {} };
+  const A = { id: "qwen-image-2512/A.safetensors", family: "qwen-image-2512", name: "A", folder: "", mb: 100, picture: false, info: {} };
+  const B = { id: "qwen-image-2512/B.safetensors", family: "qwen-image-2512", name: "B", folder: "", mb: 100, picture: false, info: {} };
   window.fetch = (u, o) => { u = String(u);
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [A, B], sdxl: [], "qwen-image-2.1": [], "qwen-image-2512": [] }, titles: {} });
-    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-230000-1335", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "krea2-q4" }, 202); }
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [A, B], sdxl: [], "qwen-image-2.1": [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261010-230000-1335", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-q4" }, 202); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
   const saved = Object.keys(localStorage).filter((k) => k.startsWith("yue2.ar")).map((k) => [k, localStorage.getItem(k)]);
   document.querySelector('.topbar [data-tab="artist"]').click();
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
   const $ = (id) => document.getElementById(id), o = {};
-  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change"));
+  $("arPainter").value = "qwen2512-q4"; $("arPainter").dispatchEvent(new Event("change"));
   await window.HeresyArtist.loras.reload();
   const bar = () => document.querySelector("#arLoraList .ar-lora-total");
   const look = () => { const b = bar(); return b ? { zone: ["is-green", "is-amber", "is-red"].filter((c) => b.classList.contains(c))[0], sum: b.querySelector("output").textContent,
     rows: [...document.querySelectorAll("#arLoraList [data-li] .ar-lora-wv")].map((x) => x.textContent).join(",") } : null; };
-  window.HeresyArtist.loras.set([{ id: A.id, weight: 1 }], "krea2"); await wait(50);
+  window.HeresyArtist.loras.set([{ id: A.id, weight: 1 }], "qwen-image-2512"); await wait(50);
   o.one = look();
-  window.HeresyArtist.loras.set([{ id: A.id, weight: 0.8 }, { id: B.id, weight: 0.7 }], "krea2"); await wait(50);
+  window.HeresyArtist.loras.set([{ id: A.id, weight: 0.8 }, { id: B.id, weight: 0.7 }], "qwen-image-2512"); await wait(50);
   o.two = look();
   const drag = (v) => { const t = bar().querySelector("input"); t.value = String(v); t.dispatchEvent(new Event("input", { bubbles: true })); };
   const let_go = () => bar().querySelector("input").dispatchEvent(new Event("change", { bubbles: true }));
@@ -4544,7 +4543,7 @@ check("  dragged, all of them move in proportion from where they stood when the 
   !!lt35.again && lt35.again.sum === "2.00" && lt35.again.zone === "is-red" && lt35.again.rows === "1.10,0.90", JSON.stringify(lt35));
 check("  one strength moved: the sum follows it; Draw carries the strengths the rows show",
   !!lt35.moved && lt35.moved.sum === "1.20" && lt35.moved.zone === "is-green" && lt35.moved.rows === "0.30,0.90" &&
-  JSON.stringify(lt35.body) === '[{"id":"krea2/A.safetensors","weight":0.3},{"id":"krea2/B.safetensors","weight":0.9}]', JSON.stringify(lt35));
+  JSON.stringify(lt35.body) === '[{"id":"qwen-image-2512/A.safetensors","weight":0.3},{"id":"qwen-image-2512/B.safetensors","weight":0.9}]', JSON.stringify(lt35));
 
 // HERESY 1169 · 1336 (Viktor 10.10.2026: «По максимуму на картинки контекстное меню»)
 section("a picture's menu: a right click on a run's picture, the gallery's, the stage's or the one over the page; what its items do; the live step has none");
@@ -4555,7 +4554,7 @@ const pm36 = await ev(`(async () => {
   const now = Date.now() / 1000, ID = "20261010-230500-1336", LIVE = "20261010-230700-1336";
   const pics = [{ file: "01-1x1-s501.png", thumb: "01-1x1-s501.thumb.jpg", shape: "1:1", w: 1024, h: 1024, seed: 501, kept: true },
                 { file: "02-1x1-s502.png", thumb: "02-1x1-s502.thumb.jpg", shape: "1:1", w: 1024, h: 1024, seed: 502, kept: true }];
-  const done = { id: ID, prompt: "A lighthouse in the storm", shapes: ["1:1"], seed: 501, count: 2, painter: "krea2-q4", created: now, status: "done", of: 2, pictures: pics,
+  const done = { id: ID, prompt: "A lighthouse in the storm", shapes: ["1:1"], seed: 501, count: 2, painter: "qwen2512-q4", created: now, status: "done", of: 2, pictures: pics,
                  sampling: { sampler: "res_2s", schedule: "beta" } };
   let runs = [done];
   window.fetch = (u, o) => { u = String(u);
@@ -4659,7 +4658,7 @@ const ab37 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000, R = "20261010-110000-1337", P = "20261010-120000-1337";
-  const bin = { runs: [{ id: R, prompt: "A trashed run", painter: "krea2-q4", created: now - 7200, trashed_at: now - 3600, pictures: [{ file: "01-1x1-s1.png", thumb: "thumbs/01-1x1-s1.jpg", kept: true, shape: "1:1", seed: 1 }], bytes: 2000000 }],
+  const bin = { runs: [{ id: R, prompt: "A trashed run", painter: "qwen2512-q4", created: now - 7200, trashed_at: now - 3600, pictures: [{ file: "01-1x1-s1.png", thumb: "thumbs/01-1x1-s1.jpg", kept: true, shape: "1:1", seed: 1 }], bytes: 2000000 }],
     pictures: [{ id: P, file: "02-1x1-s2.png", thumb: "thumbs/02-1x1-s2.jpg", shape: "1:1", seed: 2, prompt: "Put aside", created: now - 600, bytes: 1000000 }],
     covers: [{ take: "t1337a", title: "Song One", stamp: "20261009-100000", when: now - 86400, bytes: 200000, prompt: "an old cover", frozen: false },
              { take: "t1337b", title: "Frozen Song", stamp: "20261008-090000", when: now - 172800, bytes: 100000, prompt: "", frozen: true }], bytes: 3300000 };
@@ -4736,13 +4735,12 @@ check("  the Artist's Trash look: Delete for good on a run and on a picture put 
   JSON.stringify({ head: ab37.head, ask3: ab37.ask3, purgeRun: ab37.purgeRun, ask4: ab37.ask4, purgePic: ab37.purgePic, ask5: ab37.ask5, wipeArtist: ab37.wipeArtist }));
 
 // HERESY 1169 · 1338 (Viktor 10.10.2026: «И в настройках движка, в Engine не забудь прописать выборы всех генеративных art моделей. Там только qwen сейчас.»)
-section("Engine → Artwork: the Qwen painters this machine has beside Krea (each fine-tune its own line, Lightning said); one chosen, a take's artwork asks for it");   // 1405: SDXL gone
+section("Engine → Artwork: the Qwen painters this machine has (each fine-tune its own line, Lightning said); one chosen, a take's artwork asks for it");   // 1405: SDXL gone; 1428: Krea 2 gone
 const ap38 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, asked = [];
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const sel = document.getElementById("artPainter"), before = [...sel.options].map((o) => o.value), was = localStorage.getItem("yue2.artPainter"), o = {};
-  const list = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 13500, ready: true },
-    { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, ready: true, lightning: true },
+  const list = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, ready: true, lightning: true },
     { key: "qwen2512-q6", label: "Qwen-Image 2512 · Q6", need_mb: 20000, ready: false, lightning: true },
     { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, ready: true, lightning: true, models: ["Jib_v6.safetensors", "Real_v2.safetensors"] },
     { key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, ready: true }];
@@ -4763,26 +4761,27 @@ const ap38 = await ev(`(async () => {
   [...sel.options].forEach((x) => { if (before.indexOf(x.value) < 0) x.remove(); });
   sel.value = was || "";
   return o; })()`);
-check("Engine → Artwork lists the Qwen painters here beside Krea (no SDXL since 1405): 2512 Q4 with Lightning, each fp8 fine-tune its own line, 2.1 with its licence said; one not here is not offered; asked twice, each line once",
-  ["", "krea2-q4", "krea2-q8", "qwen2512-q4", "qwen2512-fp8:Jib_v6.safetensors", "qwen2512-fp8:Real_v2.safetensors", "qwen21"].every((v) => ap38.values.indexOf(v) >= 0) && ap38.values.indexOf("sdxl") < 0 &&
+check("Engine → Artwork lists the Qwen painters here (no SDXL since 1405, no Krea 2 since 1428): 2512 Q4 with Lightning, each fp8 fine-tune its own line, 2.1 with its licence said; one not here is not offered; asked twice, each line once",
+  ["", "qwen2512-q4", "qwen2512-fp8:Jib_v6.safetensors", "qwen2512-fp8:Real_v2.safetensors", "qwen21"].every((v) => ap38.values.indexOf(v) >= 0) && ap38.values.indexOf("sdxl") < 0 &&
+  !ap38.values.some((v) => /krea/.test(v)) && ap38.values.filter((v) => v === "qwen2512-q4").length === 1 &&
   ap38.values.indexOf("qwen2512-q6") < 0 && ap38.again &&
-  ap38.labels.indexOf("Qwen-Image 2512 · Q4 · Lightning · about 15 GB · about 125 s a picture") >= 0 &&
-  ap38.labels.indexOf("Qwen-Image 2512 · Jib_v6 · Lightning · about 22 GB · about 40 s a picture") >= 0 &&
+  ap38.labels.indexOf("Qwen-Image 2512 · Q4 · Lightning · about 15 GB · about 105 s a picture") >= 0 &&
+  ap38.labels.indexOf("Qwen-Image 2512 · Jib_v6 · Lightning · about 22 GB · about 95 s a picture") >= 0 &&
   ap38.labels.some((x) => /^Qwen-Image 2\.1 · research licence · not for a song that is sold/.test(x)), JSON.stringify(ap38));
 check("  a fine-tune chosen is kept, and a take's artwork asks the lab for it by name",
   ap38.kept === "qwen2512-fp8:Jib_v6.safetensors" && /[?&]painter=qwen2512-fp8%3AJib_v6\.safetensors/.test(ap38.asked), JSON.stringify({ kept: ap38.kept, asked: ap38.asked }));
 
 // HERESY 1169 · 1333c: the second sampling matrix (24 pictures, 10.10.2026): KL optimal under Lightning painted the subject twice too
-section("the Artist's sampling: KL optimal under Lightning warned as Karras and Exponential are; Bong tangent and SGM uniform not; Krea not");
+section("the Artist's sampling: KL optimal under Lightning warned as Karras and Exponential are; Bong tangent and SGM uniform not; Qwen-Image 2.1 without it not");
 const kl33 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
+  const painters = [{ key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, family: "qwen-image-2.1", ready: true },
     { key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: true, lightning: true }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
     return real(u, o); };
   const keys = ["yue2.arPainter", "yue2.arSampling"], was = keys.map((k) => localStorage.getItem(k));
   localStorage.removeItem("yue2.arSampling");
@@ -4794,14 +4793,14 @@ const kl33 = await ev(`(async () => {
   set("arPainter", "qwen2512-q4"); await wait(50);
   const o = {};
   for (const c of ["kl_optimal", "bong_tangent", "sgm_uniform"]) { set("arSchedule", c); await wait(50); o[c] = seen("arSampWarn") ? $("arSampWarn").textContent : ""; }
-  set("arPainter", "krea2-q4"); await wait(50); set("arSchedule", "kl_optimal"); await wait(50);
+  set("arPainter", "qwen21"); await wait(50); set("arSchedule", "kl_optimal"); await wait(50);   // 1428: without Lightning
   o.krea = seen("arSampWarn");
   window.fetch = real;
   keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
   await window.HeresyArtist.painters();
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
   return o; })()`);
-check("Lightning under KL optimal warned (twice the subject, KL optimal named); under Bong tangent and SGM uniform not; Krea under KL optimal not",
+check("Lightning under KL optimal warned (twice the subject, KL optimal named); under Bong tangent and SGM uniform not; Qwen-Image 2.1 under KL optimal not",
   /twice/.test(kl33.kl_optimal) && /KL optimal/.test(kl33.kl_optimal) && !kl33.bong_tangent && !kl33.sgm_uniform && !kl33.krea, JSON.stringify(kl33));
 
 // HERESY 1169 · 1339 (Viktor 10.10.2026: «Жги переводы дальше, бро, и доводи всё до всех запланированных языков»): the page in Russian
@@ -4871,8 +4870,8 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, de
 await ev(`(() => { const real = window.fetch; window.__ar40Fetch = real; window.__ar40Asked = [];
   const long = Array.from({ length: 28 }, (_, i) => "Sentence " + (i + 1) + " of a long prompt about a lighthouse at dusk, its lamp turning over a quiet sea.").join(" ");
   window.__ar40Runs = [
-    { id: "20261010-181000-bbbb", prompt: "A boat at dawn.", shapes: ["1:1"], seed: 9, count: 1, painter: "krea2-q4", created: 1791590000, status: "running", of: 1, pictures: [], gpu: 1 },
-    { id: "20261010-180000-aaaa", prompt: long, shapes: ["1:1"], seed: 7, count: 1, painter: "krea2-q4", created: 1791580000, status: "done", of: 1, took: 40, ended: 1791580040,
+    { id: "20261010-181000-bbbb", prompt: "A boat at dawn.", shapes: ["1:1"], seed: 9, count: 1, painter: "qwen2512-q4", created: 1791590000, status: "running", of: 1, pictures: [], gpu: 1 },
+    { id: "20261010-180000-aaaa", prompt: long, shapes: ["1:1"], seed: 7, count: 1, painter: "qwen2512-q4", created: 1791580000, status: "done", of: 1, took: 40, ended: 1791580040,
       pictures: [{ n: 1, shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true, took: 40, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg" }] }];
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   window.fetch = (u, o) => {
@@ -4893,7 +4892,7 @@ const ar40 = await ev(`(async () => {
   // one run going: Draw draws (a second waits behind it), Stop beside it
   o.one = { text: $("arDraw").textContent, on: !$("arDraw").disabled, stop: !$("arStop").hidden, tip: $("arDraw").dataset.tip };
   // two going: Draw waits for one of them, Ctrl+Enter asks nothing
-  window.__ar40Runs.unshift({ id: "20261010-182000-cccc", prompt: "A third.", shapes: ["1:1"], seed: 11, count: 1, painter: "krea2-q4", created: 1791600000, status: "queued", of: 1, pictures: [] });
+  window.__ar40Runs.unshift({ id: "20261010-182000-cccc", prompt: "A third.", shapes: ["1:1"], seed: 11, count: 1, painter: "qwen2512-q4", created: 1791600000, status: "queued", of: 1, pictures: [] });
   window.HeresyArtist.reload();
   for (let i = 0; i < 40 && !document.querySelector('#arRuns .ar-run[data-id="20261010-182000-cccc"]'); i++) await wait(100);
   await wait(150);
@@ -4956,21 +4955,21 @@ section("the Artist's adapters muted as the Creator's: right-click, kept in the 
 const ar41Was = await ev(`document.body.dataset.tab`);
 await ev(`(() => { const real = window.fetch; window.__ar41Fetch = real; window.__ar41Bodies = [];
   window.__ar41Keep = localStorage.getItem("yue2.arLoras"); window.__ar41Painter = document.getElementById("arPainter").value; window.__ar41PainterKept = localStorage.getItem("yue2.arPainter");
-  const fam = [{ id: "krea2/a.safetensors", name: "a.safetensors", mb: 120 }, { id: "krea2/b.safetensors", name: "b.safetensors", mb: 130 }, { id: "krea2/c.safetensors", name: "c.safetensors", mb: 140 }];
+  const fam = [{ id: "qwen-image-2512/a.safetensors", name: "a.safetensors", mb: 120 }, { id: "qwen-image-2512/b.safetensors", name: "b.safetensors", mb: 130 }, { id: "qwen-image-2512/c.safetensors", name: "c.safetensors", mb: 140 }];
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   window.fetch = (u, o) => {
     u = String(u);
-    if (u.startsWith("/lab/artist/loras")) return json({ families: { krea2: fam }, titles: { krea2: "Krea 2" } });
+    if (u.startsWith("/lab/artist/loras")) return json({ families: { "qwen-image-2512": fam }, titles: { "qwen-image-2512": "Qwen-Image 2512" } });
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
-    if (u.startsWith("/lab/artist/painters")) return json({ painters: [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true }] });
+    if (u.startsWith("/lab/artist/painters")) return json({ painters: [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 12500, family: "qwen-image-2512", ready: true }] });
     if (u.startsWith("/lab/artist/draw")) { window.__ar41Bodies.push(JSON.parse(o.body)); return json({ error: "stubbed" }, 500); }
     return real(u, o);
   };
-  localStorage.setItem("yue2.arLoras", JSON.stringify({ krea2: [{ id: "krea2/a.safetensors", weight: 0.8 }, { id: "krea2/b.safetensors", weight: 0 }, { id: "krea2/c.safetensors", weight: 0.6 }] }));
+  localStorage.setItem("yue2.arLoras", JSON.stringify({ "qwen-image-2512": [{ id: "qwen-image-2512/a.safetensors", weight: 0.8 }, { id: "qwen-image-2512/b.safetensors", weight: 0 }, { id: "qwen-image-2512/c.safetensors", weight: 0.6 }] }));
   return true; })()`);
 await ev(`document.getElementById("tabArtist").click(); true`);
 await ev(`(async () => { localStorage.removeItem("yue2.arPainter"); await window.HeresyArtist.painters(); const p = document.getElementById("arPainter");
-  if (p.value !== "krea2-q4") { p.value = "krea2-q4"; p.dispatchEvent(new Event("change", { bubbles: true })); } await window.HeresyArtist.loras.reload(); await window.HeresyArtist.reload(); return p.value; })()`);
+  if (p.value !== "qwen2512-q4") { p.value = "qwen2512-q4"; p.dispatchEvent(new Event("change", { bubbles: true })); } await window.HeresyArtist.loras.reload(); await window.HeresyArtist.reload(); return p.value; })()`);
 await waitFor(`document.querySelectorAll("#arLoraList .ar-lora").length === 3`, 5000, 50);
 await sleep(300);
 await waitFor(`document.querySelectorAll("#arLoraList .ar-lora").length === 3`, 3000, 50);
@@ -4990,7 +4989,7 @@ const ar41 = await ev(`(async () => {
   };
   o.painterBefore = $("arPainter").value;
   o.menu = await menu(0, /Mute/);
-  const st = () => JSON.parse(localStorage.getItem("yue2.arLoras") || "{}").krea2 || [];
+  const st = () => JSON.parse(localStorage.getItem("yue2.arLoras") || "{}")["qwen-image-2512"] || [];
   o.kept = st().map((l) => [l.id.split("/")[1], l.weight, !!l.muted]);
   o.rowMuted = row(0).classList.contains("is-muted"); o.tag = !!row(0).querySelector(".lora-muted-tag"); o.rows = document.querySelectorAll("#arLoraList .ar-lora").length;
   const tot = document.querySelector("#arLoraList .ar-lora-total output"); o.total = tot ? tot.textContent : null;
@@ -5002,7 +5001,7 @@ const ar41 = await ev(`(async () => {
   o.sent = (window.__ar41Bodies[0] && window.__ar41Bodies[0].loras) || null;
   // a refused draw may read the painters again: the adapters' family back to Krea 2's, its rows drawn
   const p2 = $("arPainter"); o.painterAfter = p2.value;
-  if (p2.value !== "krea2-q4" && p2.querySelector('option[value="krea2-q4"]')) { p2.value = "krea2-q4"; p2.dispatchEvent(new Event("change", { bubbles: true })); }
+  if (p2.value !== "qwen2512-q4" && p2.querySelector('option[value="qwen2512-q4"]')) { p2.value = "qwen2512-q4"; p2.dispatchEvent(new Event("change", { bubbles: true })); }
   for (let i = 0; i < 40 && document.querySelectorAll("#arLoraList .ar-lora").length !== 3; i++) await wait(100);
   if (!row(0)) { o.noRows = document.getElementById("arLoraList").innerHTML.slice(0, 200); window.fetch = window.__ar41Fetch; return o; }
   // the together-bar dragged: the muted one keeps its strength
@@ -5023,7 +5022,7 @@ check("an Artist adapter's right-click offers Mute and Take it off; muted, it st
   ar41.menu.some((x) => /Mute: left out of the run/.test(x)) && ar41.menu.some((x) => /Take it off/.test(x)) && ar41.rows === 3 && ar41.rowMuted && ar41.tag &&
   JSON.stringify(ar41.kept) === JSON.stringify([["a.safetensors", 0.8, true], ["b.safetensors", 0, false], ["c.safetensors", 0.6, false]]) && ar41.total === "0.60", JSON.stringify(ar41));
 check("Draw sends neither a muted adapter nor one at nought; the together-bar's drag leaves the muted one as it was",
-  JSON.stringify(ar41.sent) === JSON.stringify([{ id: "krea2/c.safetensors", weight: 0.6 }]) &&
+  JSON.stringify(ar41.sent) === JSON.stringify([{ id: "qwen-image-2512/c.safetensors", weight: 0.6 }]) &&
   JSON.stringify(ar41.dragged) === JSON.stringify([["a.safetensors", 0.8, true], ["b.safetensors", 0, false], ["c.safetensors", 1.2, false]]), JSON.stringify({ sent: ar41.sent, dragged: ar41.dragged }));
 check("Unmute puts it back in the run, its strength as it was",
   ar41.menu2.some((x) => /Unmute: back in the run/.test(x)) && !ar41.rowAfter && JSON.stringify(ar41.after[0]) === JSON.stringify(["a.safetensors", 0.8, false]), JSON.stringify({ menu2: ar41.menu2, after: ar41.after }));
@@ -5078,9 +5077,9 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1000, de
 await ev(`(() => { const real = window.fetch; window.__ar44Fetch = real;
   const long = Array.from({ length: 24 }, (_, i) => "Sentence " + (i + 1) + " of a long prompt about a harbour at night, its lamps over still water.").join(" ");
   window.__ar44Runs = [
-    { id: "20261011-010000-bbbb", prompt: "A boat at dawn.", shapes: ["1:1"], seed: 9, count: 1, painter: "krea2-q4", created: 1791600000, status: "running", of: 2, pictures: [], gpu: 1,
+    { id: "20261011-010000-bbbb", prompt: "A boat at dawn.", shapes: ["1:1"], seed: 9, count: 1, painter: "qwen2512-q4", created: 1791600000, status: "running", of: 2, pictures: [], gpu: 1,
       live: { live: 1, step: 3, of: 8, file: "preview/01.jpg", t: 1791600010 } },
-    { id: "20261011-000000-aaaa", prompt: long, shapes: ["1:1"], seed: 7, count: 1, painter: "krea2-q4", created: 1791590000, status: "done", of: 1, took: 40, ended: 1791590040,
+    { id: "20261011-000000-aaaa", prompt: long, shapes: ["1:1"], seed: 7, count: 1, painter: "qwen2512-q4", created: 1791590000, status: "done", of: 1, took: 40, ended: 1791590040,
       pictures: [{ n: 1, shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true, took: 40, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg" }] }];
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   window.fetch = (u, o) => { u = String(u); if (u.startsWith("/lab/artist/runs")) return json({ runs: window.__ar44Runs }); return real(u, o); };
@@ -5358,16 +5357,16 @@ const lo53 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, trashed = [];
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const mk = (n, extra) => Object.assign({ id: "krea2/L" + n + ".safetensors", family: "krea2", name: "L" + n, folder: "", mb: 100, picture: false, info: {}, made_for: "krea2", fits: true }, extra || {});
+  const mk = (n, extra) => Object.assign({ id: "qwen-image-2512/L" + n + ".safetensors", family: "qwen-image-2512", name: "L" + n, folder: "", mb: 100, picture: false, info: {}, made_for: "krea2", fits: true }, extra || {});
   const A = mk(1, { mb: 112, civitai: "known", info: { title: "Kul Style", words: ["Kulstyle", "sfumato washes"], url: "https://civitai.com/models/1" } });
   const rest = [2, 3, 4, 5, 6, 7, 8, 9].map((n) => mk(n)), X = mk(10, { name: "Flux thing", made_for: "flux", fits: false });
-  const fams = { krea2: [A].concat(rest, [X]), sdxl: [], "qwen-image-2.1": [], "qwen-image-2512": [] };
+  const fams = { "qwen-image-2512": [A].concat(rest, [X]), sdxl: [], "qwen-image-2.1": [] };
   const infoA = Object.assign({}, A, { arch: "krea2", arch_title: "Krea 2", how: { format: "kohya", layers: 264, rank: 16 }, meta: { ss_network_dim: "16", ss_base_model_version: "krea2" },
-    beside: ["L1.civitai.info"], sha256: "ab".repeat(32), path: "artwork/loras/krea2/L1.safetensors", modified: 1760000000 });
+    beside: ["L1.civitai.info"], sha256: "ab".repeat(32), path: "artwork/loras/qwen-image-2512/L1.safetensors", modified: 1760000000 });
   window.fetch = (u, o) => { u = String(u);
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: fams, titles: { krea2: "Krea 2" }, arch: { krea2: "Krea 2", flux: "FLUX" } });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: fams, titles: { "qwen-image-2512": "Qwen-Image 2512" }, arch: { krea2: "Krea 2", flux: "FLUX" } });
     if (u.startsWith("/lab/artist/lora-info")) return json(infoA);
-    if (u.startsWith("/lab/artist/lora-trash")) { trashed.push(JSON.parse(o.body)); fams.krea2 = fams.krea2.filter((r) => r.id !== A.id); return json({ id: A.id, stamp: "20261011-120000" }); }
+    if (u.startsWith("/lab/artist/lora-trash")) { trashed.push(JSON.parse(o.body)); fams["qwen-image-2512"] = fams["qwen-image-2512"].filter((r) => r.id !== A.id); return json({ id: A.id, stamp: "20261011-120000" }); }
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
   const keys = ["yue2.arLoras", "yue2.arPrompt", "yue2.arPainter", "yue2.arLoraWords", "yue2.arLoraAuto"], was = keys.map((k) => localStorage.getItem(k));
@@ -5375,7 +5374,7 @@ const lo53 = await ev(`(async () => {
   const $ = (id) => document.getElementById(id), L = window.HeresyArtist.loras, o = {};
   document.querySelector('.topbar [data-tab="artist"]').click();
   await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
-  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change"));
+  $("arPainter").value = "qwen2512-q4"; $("arPainter").dispatchEvent(new Event("change"));
   await L.reload();
   $("arPrompt").value = "A fox"; $("arPrompt").dispatchEvent(new Event("input"));
   o.max = L.max();
@@ -5436,16 +5435,16 @@ check("the library's own menu on an adapter: the list, Info, its trigger words, 
 check("  Info: what it is made for (this painter's), its file, its trigger words, its trainer's notes; Escape closes it first, the library stays",
   lo53.info && lo53.info.made === "✓ this painter's" && lo53.info.rows.includes("Made for") && lo53.info.rows.includes("SHA-256") && lo53.info.words.join("|") === "Kulstyle|sfumato washes" && lo53.info.meta === 2 && lo53.escInfo, JSON.stringify(lo53.info) + " esc " + lo53.escInfo);
 check("  to the art's trash, asked first: the lab moves it, it leaves the list and the library",
-  lo53.trashed && lo53.trashed.id === "krea2/L1.safetensors" && /art's trash/.test(lo53.asked) && lo53.gone, JSON.stringify({ trashed: lo53.trashed, asked: lo53.asked, gone: lo53.gone }));
+  lo53.trashed && lo53.trashed.id === "qwen-image-2512/L1.safetensors" && /art's trash/.test(lo53.asked) && lo53.gone, JSON.stringify({ trashed: lo53.trashed, asked: lo53.asked, gone: lo53.gone }));
 const tb53 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
-  const bin = { runs: [], pictures: [], covers: [], loras: [{ stamp: "20261011-120000", id: "krea2/L1.safetensors", name: "L1", title: "Kul Style", bytes: 117440512, at: Date.now() / 1000 - 60 }], bytes: 117440512 };
+  const bin = { runs: [], pictures: [], covers: [], loras: [{ stamp: "20261011-120000", id: "qwen-image-2512/L1.safetensors", name: "L1", title: "Kul Style", bytes: 117440512, at: Date.now() / 1000 - 60 }], bytes: 117440512 };
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/bin") && o && o.method === "POST") { const b = JSON.parse(o.body); sent.push(b); return json({ op: b.op, done: b.items || [], kept: [] }); }
     if (u.startsWith("/lab/artist/bin")) return json(bin);
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], sdxl: [], "qwen-image-2.1": [], "qwen-image-2512": [] }, titles: {} });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], sdxl: [], "qwen-image-2.1": [] }, titles: {} });
     return real(u, o); };
   const $ = (id) => document.getElementById(id), o = {};
   document.querySelector('.topbar [data-tab="collection"]').click(); await wait(300);
@@ -5459,7 +5458,7 @@ const tb53 = await ev(`(async () => {
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
   return o; })()`);
 check("the Librarian's Trash (Art) holds an adapter of the LoRA library, given back by its stamp",
-  (tb53.cards || []).length === 1 && /^lora:Kul Style:An adapter of the LoRA library · krea2 · in the trash since/.test(tb53.cards[0]) && tb53.restore && JSON.stringify(tb53.restore) === '{"op":"restore","items":[{"kind":"lora","stamp":"20261011-120000"}]}', JSON.stringify(tb53));
+  (tb53.cards || []).length === 1 && /^lora:Kul Style:An adapter of the LoRA library · qwen-image-2512 · in the trash since/.test(tb53.cards[0]) && tb53.restore && JSON.stringify(tb53.restore) === '{"op":"restore","items":[{"kind":"lora","stamp":"20261011-120000"}]}', JSON.stringify(tb53));
 
 // HERESY 1169 · 1354 (Viktor 11.10.2026: «Художник говорит "Около 8.5 минут на одной карте". А карт-то у меня две выделены для Lab Works. Так почему бы автоматом не гнать при разных форматах картинки параллельную генерацию на картах Лаба?»)
 section("a run's pictures on the lab's cards at once: the time said for them, the progress of every card, the stage's step whichever card paints it");
@@ -5469,9 +5468,9 @@ const ar54 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   let cards = 2;
-  const painters = () => [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true, cards: cards },
-                          { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "krea2", ready: true, cards: cards }];
-  let runs = [{ id: "20261011-120000-5401", prompt: "A lighthouse at dawn.", shapes: ["1:1", "16:9", "9:16"], seed: 9, count: 1, painter: "krea2-q4", created: 1791600000, status: "running", of: 3, pictures: [],
+  const painters = () => [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 12500, family: "qwen-image-2512", ready: true, cards: cards },
+                          { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "qwen-image-2512", ready: true, cards: cards }];
+  let runs = [{ id: "20261011-120000-5401", prompt: "A lighthouse at dawn.", shapes: ["1:1", "16:9", "9:16"], seed: 9, count: 1, painter: "qwen2512-q4", created: 1791600000, status: "running", of: 3, pictures: [],
     gpu: 1, gpus: [1, 2], live: { live: 1, step: 3, of: 8, file: "preview/01.jpg", t: 1791600010 }, lives: [{ live: 1, step: 3, of: 8 }, { live: 2, step: 5, of: 8 }] }];
   window.fetch = (u, opt) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters: painters() });
@@ -5481,7 +5480,7 @@ const ar54 = await ev(`(async () => {
   document.querySelector('.topbar [data-tab="artist"]').click();
   await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
   await window.HeresyArtist.reload(); await window.HeresyArtist.painters(); await wait(300);
-  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change"));
+  $("arPainter").value = "qwen2512-q4"; $("arPainter").dispatchEvent(new Event("change"));
   ["1:1", "16:9", "9:16"].forEach((s) => { const c = document.querySelector('#arShapes input[value="' + s + '"]'); if (c) c.checked = true; });
   $("arCount").value = "1"; $("arShapes").dispatchEvent(new Event("change")); await wait(100);
   o.cost2 = $("arCost").textContent;
@@ -5527,7 +5526,7 @@ const up55 = await ev(`(async () => {
                { name: "4x_UltraMix_Balanced.pth", scale: 4, mb: 64, info: info("UltraMix Balanced", "ESRGAN", 2.6, "photo", "CC-BY-NC-SA-4.0", "Natural pictures with sharpness and detail in balance. Quick. Non-commercial. The last pass of Viktor's chain.") },
                { name: "4x_FaceUpDAT.pth", scale: 4, mb: 147, info: info("FaceUp DAT", "DAT", 16, "faces", "CC-BY-4.0", "Faces in good-quality photos. Slow.") },
                { name: "my_own_4x.pth", scale: 4, mb: 12 }];
-  let runs = [{ id: "20261011-130000-5501", prompt: "A lighthouse.", shapes: ["16:9"], seed: 5, count: 1, painter: "krea2-q4", created: 1791600000, status: "done", of: 1, took: 40, ended: 1791600040,
+  let runs = [{ id: "20261011-130000-5501", prompt: "A lighthouse.", shapes: ["16:9"], seed: 5, count: 1, painter: "qwen2512-q4", created: 1791600000, status: "done", of: 1, took: 40, ended: 1791600040,
     pictures: [{ n: 1, shape: "16:9", seed: 5, w: 1920, h: 1080, kept: true, took: 40, file: "01-16x9-s5.png", thumb: "thumbs/01-16x9-s5.jpg" }] }];
   window.fetch = (u, opt) => { u = String(u);
     if (u.startsWith("/lab/artist/upscalers")) return json({ upscalers: ups, measured: "RTX 3090" });
@@ -5732,7 +5731,7 @@ const ln59 = await ev(`(async () => {
   L.set("ru"); await wait(400);
   window.fetch = (u, opts) => { u = String(u);
     if (u.startsWith("/lab/machine")) return json({ cards: [{ index: 0, name: "Quadro RTX 5000", total_mb: 16384, compute: "7.5", limit_mb: null, bf16_cores: false }], studio: 0,
-      room_mb: 16384, painter: { suggest: "krea2-q4", ready: { "krea2-q4": false }, fits: ["krea2-q4", "sdxl"] } });
+      room_mb: 16384, painter: { suggest: "qwen2512-q4", ready: { "qwen2512-q4": false }, fits: ["qwen2512-q4", "sdxl"] } });
     return real(u, opts); };
   const p = window.ruachMachineScan(true);
   const d = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes") && document.querySelector(".hd-back.is-on:not(.is-leaving)"));
@@ -5764,7 +5763,7 @@ const ln59 = await ev(`(async () => {
   return o; })()`);
 check("the machine's scan in Russian: its lines kept (the card; what suits it; the backbone; the context; the artwork; where to change them), each in Russian",
   ln59.title === "Машина, какой её нашла студия" && ln59.lines.length === 6 && /^GPU0 · Quadro RTX 5000 · 16\.0 ГБ/.test(ln59.lines[0]) && ln59.lines[1] === "Что ей подходит:" &&
-  /^· основа Q8_0: /.test(ln59.lines[2]) && /^· весь контекст, тайлы VAE 512/.test(ln59.lines[3]) && /^· обложки: Krea 2 Muse Q4/.test(ln59.lines[4]) && /«Сканировать машину»/.test(ln59.lines[5]) &&
+  /^· основа Q8_0: /.test(ln59.lines[2]) && /^· весь контекст, тайлы VAE 512/.test(ln59.lines[3]) && /^· обложки: Qwen-Image 2512 Q4/.test(ln59.lines[4]) && /«Сканировать машину»/.test(ln59.lines[5]) &&
   ln59.btns.join("|") === "Не сейчас|Выставить",
   JSON.stringify({ title: ln59.title, lines: ln59.lines, btns: ln59.btns }));
 check("  a key of its own lines translated whole; a soft line break read across by its pattern; lines each a key, each translated; lines in the language already left on their lines",
@@ -5781,7 +5780,7 @@ const cv60 = await ev(`(async () => {
   const json = (b, code) => Promise.resolve(new Response(JSON.stringify(b), { status: code || 200, headers: { "Content-Type": "application/json" } }));
   const KEY = "cv-test-key-7Q2", was = localStorage.getItem("yue2.civitaiKey"), painterWas = document.getElementById("arPainter").value;
   const o = {};
-  let looks = { "https://civitai.com/models/11/tiny": { model: 11, version: 111, title: "Tiny Style", name: "v1.0", type: "LORA", adapter: true, base: "Krea 2", family: "krea2",
+  let looks = { "https://civitai.com/models/11/tiny": { model: 11, version: 111, title: "Tiny Style", name: "v1.0", type: "LORA", adapter: true, base: "Qwen-Image 2.1", family: "qwen-image-2.1",
                  words: ["tinystyle", "tiny look"], file: "tiny style.safetensors", bytes: 37748736, sha256: "a".repeat(64), nsfw: false, url: "https://civitai.com/models/11?modelVersionId=111", here: [] },
                "https://civitai.com/models/22/qwen": { model: 22, version: 222, title: "Oil Paint", name: "2512", type: "LORA", adapter: true, base: "Qwen", family: "qwen-image-2512",
                  words: [], file: "oil paint.safetensors", bytes: 300000000, sha256: "b".repeat(64), nsfw: false, url: "https://civitai.com/models/22?modelVersionId=222", here: [] },
@@ -5794,15 +5793,17 @@ const cv60 = await ev(`(async () => {
     if (u === "/lab/artist/civitai-look") { posted.push(["look", JSON.parse(body)]); const v = looks[JSON.parse(body).ref]; return v ? json(v) : json({ error: "Civitai does not know this version" }, 500); }
     if (u === "/lab/artist/civitai-fetch" && opts && opts.method === "POST") { posted.push(["fetch", JSON.parse(body)]); polls = 0; fetching = true; return json({ status: "running", file: "tiny style.safetensors", got: 0, size: 37748736, pct: 0 }, 202); }
     if (u === "/lab/artist/civitai-fetch") { if (!fetching) return json({ status: "idle" }); polls++; if (polls >= 2) fetching = false;
-      return json(polls < 2 ? { status: "running", file: "tiny style.safetensors", got: 18874368, size: 37748736, pct: 50 } : { status: "done", file: "tiny style.safetensors", id: "krea2/tiny style.safetensors", got: 37748736, size: 37748736 }); }
+      return json(polls < 2 ? { status: "running", file: "tiny style.safetensors", got: 18874368, size: 37748736, pct: 50 } : { status: "done", file: "tiny style.safetensors", id: "qwen-image-2.1/tiny style.safetensors", got: 37748736, size: 37748736 }); }
     return real(u, opts); };
   localStorage.removeItem("yue2.civitaiKey");
-  document.getElementById("arPainter").value = "krea2-q4";
+  const ap = document.getElementById("arPainter"), added = ![...ap.options].some((x) => x.value === "qwen21");   // 1428: the painter of another family than 2512
+  if (added) ap.add(new Option("Qwen-Image 2.1", "qwen21"));
+  ap.value = "qwen21";
   const win = window.HeresyArtistCivitai.open();
   const box = await until(() => document.querySelector(".ar-cv-back"));
   const q = (s) => box.querySelector(s), btn = (n) => box.querySelector('[data-cv="' + n + '"]');
   o.opened = !!box && !!q(".ar-cv-ref") && q(".ar-cv-key").type === "password" && btn("fetch").disabled;
-  // a Krea 2 adapter for the Krea 2 library: looked at, its words and its size, Fetch with its size
+  // a Qwen-Image 2.1 adapter for its own library: looked at, its words and its size, Fetch with its size
   q(".ar-cv-ref").value = "https://civitai.com/models/11/tiny"; q(".ar-cv-key").value = KEY;
   btn("look").click(); await until(() => q(".ar-cv-what .ar-li-rows")); await wait(100);
   o.what = q(".ar-cv-what").innerText; o.fetchOn = !btn("fetch").disabled; o.fetchText = btn("fetch").textContent;
@@ -5816,10 +5817,10 @@ const cv60 = await ev(`(async () => {
   btn("fetch").click();
   o.progress = await until(() => /50 %/.test(q(".ar-cv-say").textContent) && q(".ar-cv-say").textContent, 4000);
   o.stopShown = !btn("stop").hidden;
-  o.done = await until(() => /krea2\\/tiny style\\.safetensors/.test(q(".ar-cv-say").textContent) && q(".ar-cv-say").textContent, 5000);
+  o.done = await until(() => /qwen-image-2\\.1\\/tiny style\\.safetensors/.test(q(".ar-cv-say").textContent) && q(".ar-cv-say").textContent, 5000);
   o.addShown = !btn("add").hidden; o.stopAfter = btn("stop").hidden;
   o.toast = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /Fetched from Civitai/.test(t)).length;
-  // a Qwen adapter from the Krea 2 library: said where it goes, and it goes there
+  // a 2512 adapter from 2.1's library: said where it goes, and it goes there
   q(".ar-cv-ref").value = "https://civitai.com/models/22/qwen"; btn("look").click();
   await until(() => /Oil Paint/.test(q(".ar-cv-what").innerText)); await wait(100);
   o.qwenNote = q(".ar-cv-what").innerText;
@@ -5836,21 +5837,22 @@ const cv60 = await ev(`(async () => {
   o.closed = !document.querySelector(".ar-cv-back");
   window.fetch = real;
   if (was === null) localStorage.removeItem("yue2.civitaiKey"); else localStorage.setItem("yue2.civitaiKey", was);
-  document.getElementById("arPainter").value = painterWas;
+  if (added) [...ap.options].filter((x) => x.value === "qwen21").forEach((x) => x.remove());
+  ap.value = painterWas;
   document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
   return o; })()`);
 check("the window: a link and a key (hidden as it is typed); Look says the adapter, its base model, its words, its file and size; Fetch says the size",
-  cv60.opened && /Tiny Style · v1\.0/.test(cv60.what) && /Krea 2/.test(cv60.what) && /tinystyle · tiny look/.test(cv60.what) && /tiny style\.safetensors · 36 MB/.test(cv60.what) &&
+  cv60.opened && /Tiny Style · v1\.0/.test(cv60.what) && /Qwen-Image 2\.1/.test(cv60.what) && /tinystyle · tiny look/.test(cv60.what) && /tiny style\.safetensors · 36 MB/.test(cv60.what) &&
   cv60.fetchOn && /Fetch · 36 MB/.test(cv60.fetchText) && cv60.posted[0][0] === "look" && cv60.posted[0][1].key === "cv-test-key-7Q2",
   JSON.stringify({ opened: cv60.opened, what: cv60.what, fetchOn: cv60.fetchOn, fetchText: cv60.fetchText, posted: cv60.posted[0] }));
 check("  the key in this browser only with Remember, and never in the settings file the network can read",
   cv60.keptBefore === null && cv60.keptAfter === "cv-test-key-7Q2" && !cv60.settingsHasKey,
   JSON.stringify({ before: cv60.keptBefore, after: cv60.keptAfter, inSettings: cv60.settingsHasKey, sent: cv60.settingsSent }));
 check("  Fetch: the version, the key and the family sent; its progress, Stop while it runs; done said, a toast, «Add it to the list» for this painter's family",
-  cv60.posted[1] && cv60.posted[1][0] === "fetch" && cv60.posted[1][1].ref === "111" && cv60.posted[1][1].family === "krea2" && cv60.posted[1][1].key === "cv-test-key-7Q2" &&
-  /18 MB of 36 MB · 50 %/.test(cv60.progress || "") && cv60.stopShown && /^Fetched: krea2\/tiny style\.safetensors$/.test(cv60.done || "") && cv60.addShown && cv60.stopAfter && cv60.toast === 1,
+  cv60.posted[1] && cv60.posted[1][0] === "fetch" && cv60.posted[1][1].ref === "111" && cv60.posted[1][1].family === "qwen-image-2.1" && cv60.posted[1][1].key === "cv-test-key-7Q2" &&
+  /18 MB of 36 MB · 50 %/.test(cv60.progress || "") && cv60.stopShown && /^Fetched: qwen-image-2\.1\/tiny style\.safetensors$/.test(cv60.done || "") && cv60.addShown && cv60.stopAfter && cv60.toast === 1,
   JSON.stringify({ fetch: cv60.posted[1], progress: cv60.progress, stop: cv60.stopShown, done: cv60.done, add: cv60.addShown, toast: cv60.toast }));
-check("  a Qwen adapter from the Krea 2 library goes into Qwen-Image 2512's folder, said; a checkpoint is no adapter, Fetch off; the lab's error said",
+check("  a 2512 adapter from Qwen-Image 2.1's library goes into Qwen-Image 2512's folder, said; a checkpoint is no adapter, Fetch off; the lab's error said",
   /Made for Qwen: it goes into the folder of Qwen-Image 2512\./.test(cv60.qwenNote) && cv60.posted[3] && cv60.posted[3][1].family === "qwen-image-2512" &&
   /This is a Checkpoint on Civitai, not an adapter/.test(cv60.ckptNote) && cv60.ckptFetchOff && /Civitai does not know this version/.test(cv60.err || "") && cv60.closed,
   JSON.stringify({ qwen: cv60.qwenNote, posted: cv60.posted.slice(2), ckpt: cv60.ckptNote, off: cv60.ckptFetchOff, err: cv60.err, closed: cv60.closed }));
@@ -5961,19 +5963,19 @@ const ky65 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const keys = ["yue2.arPrompt", "yue2.arLoras", "yue2.arPainter"], was = keys.map((k) => localStorage.getItem(k));
-  const now = Date.now() / 1000, lid = "krea2/cinematic_movie_still_krea2.safetensors";
+  const now = Date.now() / 1000, lid = "qwen-image-2512/cinematic_movie_still_krea2.safetensors";
   const o = {}, tabWas = document.body.dataset.tab || "create", painterWas = document.getElementById("arPainter").value;
   o.parse = [K.parse("0%:1, 50%:1, 60%:0"), K.parse("0:1, 100:1"), K.parse(" "), K.parse("50%:3") instanceof Error, K.parse("half:1") instanceof Error, K.text([[0, 1], [0.5, 1], [0.6, 0]])];
   window.fetch = (u, opts) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", titles: { krea2: "Krea 2" }, arch: {}, families: { krea2: [{ id: lid, family: "krea2", name: "cinematic_movie_still_krea2", folder: "", mb: 300, picture: false, info: {}, fits: true }] } });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", titles: { "qwen-image-2512": "Qwen-Image 2512" }, arch: {}, families: { "qwen-image-2512": [{ id: lid, family: "qwen-image-2512", name: "cinematic_movie_still_krea2", folder: "", mb: 300, picture: false, info: {}, fits: true }] } });
     if (u.startsWith("/lab/artist/draw")) { const b = JSON.parse(opts.body); sent.push(b);
-      return json({ id: "20261011-170000-beef", prompt: b.prompt, shapes: b.shapes, seed: 9, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [] }); }
+      return json({ id: "20261011-170000-beef", prompt: b.prompt, shapes: b.shapes, seed: 9, count: 1, painter: "qwen2512-q4", created: now, status: "done", of: 1, pictures: [] }); }
     return real(u, opts); };
   document.querySelector('.topbar [data-tab="artist"]').click();
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000);
-  const painter = document.getElementById("arPainter"); painter.value = "krea2-q4"; painter.dispatchEvent(new Event("change", { bubbles: true }));
-  await AR.loras.reload(); AR.loras.set([{ id: lid, weight: 0.8 }], "krea2"); await wait(150);
+  const painter = document.getElementById("arPainter"); painter.value = "qwen2512-q4"; painter.dispatchEvent(new Event("change", { bubbles: true }));
+  await AR.loras.reload(); AR.loras.set([{ id: lid, weight: 0.8 }], "qwen-image-2512"); await wait(150);
   const row = () => document.querySelector('#arLoraList [data-li="0"]');
   o.kbBefore = !!row().querySelector("[data-lk]") && !row().querySelector(".ar-lora-k");
   row().querySelector("[data-lk]").click(); await wait(100);
@@ -5999,7 +6001,7 @@ const ky65 = await ev(`(async () => {
 check("keyframes read: «0%:1, 50%:1, 60%:0» as shares and multipliers, all at 1 or nothing as none, past 2 or a word refused, written back as typed",
   JSON.stringify(ky65.parse) === JSON.stringify([[[0, 1], [0.5, 1], [0.6, 0]], null, null, true, true, "0%:1, 50%:1, 60%:0"]), JSON.stringify(ky65.parse));
 check("  ⏱ beside an adapter opens its field (focused); a wrong keyframe said, nothing kept; a right one kept, ⏱ lit; Draw sends them with the strength; ⏱ again closes and lets them go",
-  ky65.kbBefore && ky65.opened && ky65.bad && ky65.kept === "[[0,1],[0.5,1],[0.6,0]]" && ky65.on && JSON.stringify(ky65.sent) === JSON.stringify([{ id: "krea2/cinematic_movie_still_krea2.safetensors", weight: 0.8, keys: [[0, 1], [0.5, 1], [0.6, 0]] }]) && ky65.closed,
+  ky65.kbBefore && ky65.opened && ky65.bad && ky65.kept === "[[0,1],[0.5,1],[0.6,0]]" && ky65.on && JSON.stringify(ky65.sent) === JSON.stringify([{ id: "qwen-image-2512/cinematic_movie_still_krea2.safetensors", weight: 0.8, keys: [[0, 1], [0.5, 1], [0.6, 0]] }]) && ky65.closed,
   JSON.stringify(ky65));
 
 // HERESY 1169 · 1366 (Viktor 11.10.2026: «Выровняй высоты полей ввода в пар с дропдаун селекторами. При сжатии колонки РАСПИСАНИЕ остаётся на той
@@ -6050,7 +6052,7 @@ const pr67 = await ev(`(async () => {
   const tabWas = document.body.dataset.tab || "create", keys = ["yue2.arLook", "yue2.arFilter"], was = keys.map((k) => localStorage.getItem(k));
   const now = Date.now() / 1000;
   const pic = (n, extra) => Object.assign({ n, shape: "1:1", seed: 40 + n, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + (40 + n) + ".png", thumb: "thumbs/0" + n + "-1x1-s" + (40 + n) + ".jpg" }, extra || {});
-  let runs = [{ id: "20261011-180000-aaaa", prompt: "a stone church at dusk", shapes: ["1:1"], seed: 41, count: 2, painter: "krea2-q4", created: now - 60, status: "done", of: 2, took: 30,
+  let runs = [{ id: "20261011-180000-aaaa", prompt: "a stone church at dusk", shapes: ["1:1"], seed: 41, count: 2, painter: "qwen2512-q4", created: now - 60, status: "done", of: 2, took: 30,
     pictures: [pic(1, { protected: true }), pic(2)] }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs });
@@ -6228,8 +6230,8 @@ const nv69 = await ev(`(async () => {
   const tabWas = document.body.dataset.tab || "create", keys = ["yue2.arLook", "yue2.arFilter"], was = keys.map((k) => localStorage.getItem(k));
   const now = Date.now() / 1000;
   const pic = (n) => ({ n, shape: "1:1", seed: 70 + n, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + (70 + n) + ".png", thumb: "thumbs/0" + n + "-1x1-s" + (70 + n) + ".jpg" });
-  const runs = [{ id: "20261011-190000-bbbb", prompt: "a lighthouse", shapes: ["1:1"], seed: 71, count: 4, painter: "krea2-q4", created: now - 60, status: "done", of: 4, took: 30, pictures: [1, 2, 3, 4].map(pic) },
-                { id: "20261011-180000-cccc", prompt: "a stone church", shapes: ["1:1"], seed: 75, count: 4, painter: "krea2-q4", created: now - 600, status: "done", of: 4, took: 30, pictures: [5, 6, 7, 8].map(pic) }];
+  const runs = [{ id: "20261011-190000-bbbb", prompt: "a lighthouse", shapes: ["1:1"], seed: 71, count: 4, painter: "qwen2512-q4", created: now - 60, status: "done", of: 4, took: 30, pictures: [1, 2, 3, 4].map(pic) },
+                { id: "20261011-180000-cccc", prompt: "a stone church", shapes: ["1:1"], seed: 75, count: 4, painter: "qwen2512-q4", created: now - 600, status: "done", of: 4, took: 30, pictures: [5, 6, 7, 8].map(pic) }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs });
     if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
@@ -6281,7 +6283,7 @@ const un70 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [], $ = (id) => document.getElementById(id);
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
-  let painters = [{ gpu: 2, painter: "krea2-q4", busy: false, idle_s: 30 }];
+  let painters = [{ gpu: 2, painter: "qwen2512-q4", busy: false, idle_s: 30 }];
   window.fetch = (u, opt) => { u = String(u);
     if (u.startsWith("/lab/activity")) return json({ seq: 0, lines: [], running: [], queue: [], regenerating: [], painters });
     if (u.startsWith("/lab/artist/unload")) { sent.push("lab"); const r = { released: painters.filter((p) => !p.busy), busy: [] }; painters = []; return json(r); }
@@ -6318,7 +6320,7 @@ const cv72 = await ev(`(async () => {
   const tabWas = document.body.dataset.tab || "create", keys = ["yue2.arLook", "yue2.arFilter"], was = keys.map((k) => localStorage.getItem(k));
   const now = Date.now() / 1000, R = "20261011-190500-cafe";
   const pic = (n) => ({ n, shape: "1:1", seed: 90 + n, w: 1280, h: 1280, kept: true, file: "0" + n + "-1x1-s" + (90 + n) + ".png", thumb: "thumbs/0" + n + "-1x1-s" + (90 + n) + ".jpg" });
-  let runs = [{ id: R, prompt: "a lantern in the snow", shapes: ["1:1"], seed: 91, count: 2, painter: "krea2-q4", created: now - 60, status: "done", of: 2, took: 20, pictures: [pic(1), pic(2)] }];
+  let runs = [{ id: R, prompt: "a lantern in the snow", shapes: ["1:1"], seed: 91, count: 2, painter: "qwen2512-q4", created: now - 60, status: "done", of: 2, took: 20, pictures: [pic(1), pic(2)] }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/runs")) return json({ runs });
     if (u.startsWith("/lab/artist/covers")) { const b = JSON.parse(o.body); sent.push(["covers", b]);
@@ -6515,12 +6517,12 @@ const ak75 = await ev(`(async () => {
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt"], was = keys.map((k) => localStorage.getItem(k)), tabWas = document.body.dataset.tab || "create";
-  const painters = [{ key: "krea2-q4", label: "Krea 2 Muse · Q4", need_mb: 12500, family: "krea2", ready: true },
-    { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "krea2", ready: true },
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 12500, family: "qwen-image-2512", ready: true },
+    { key: "krea2-q8", label: "Krea 2 Muse · Q8", need_mb: 18500, family: "qwen-image-2512", ready: true },
     { key: "qwen2512-q6", label: "Qwen-Image 2512 · Q6", need_mb: 20000, family: "qwen-image-2512", ready: true, lightning: true }];
   window.fetch = (u, o) => { u = String(u);
     if (u.startsWith("/lab/artist/painters")) return json({ painters });
-    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { krea2: [], "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [], sdxl: [] }, titles: {} });
     if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
     return real(u, o); };
   document.querySelector('.topbar [data-tab="artist"]').click();
@@ -6529,8 +6531,8 @@ const ak75 = await ev(`(async () => {
   // the page as a reload leaves it: the painter kept in the browser, the list not come yet (the choice holds Krea alone)
   localStorage.setItem("yue2.arPainter", "qwen2512-q6");
   A.forget();
-  $("arPainter").innerHTML = '<option value="krea2-q4">Krea 2 Muse · Q4</option><option value="krea2-q8">Krea 2 Muse · Q8</option>';
-  $("arPainter").value = "krea2-q4";
+  $("arPainter").innerHTML = '<option value="qwen2512-q4">Krea 2 Muse · Q4</option><option value="krea2-q8">Krea 2 Muse · Q8</option>';
+  $("arPainter").value = "qwen2512-q4";
   $("arPrompt").value = "A lighthouse at dawn"; $("arPrompt").dispatchEvent(new Event("input"));
   o.typed = localStorage.getItem("yue2.arPainter");
   await A.painters(); await wait(150);
@@ -6690,7 +6692,7 @@ const xn85 = await ev(`(async () => {
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000, ID = "20261012-120000-1385";
   const pic = { file: "01-1x1-s851.png", thumb: "thumbs/01-1x1-s851.jpg", shape: "1:1", w: 1280, h: 1280, seed: 851, kept: true };
-  const done = { id: ID, prompt: "A lighthouse at dusk", shapes: ["1:1"], seed: 851, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [pic] };
+  const done = { id: ID, prompt: "A lighthouse at dusk", shapes: ["1:1"], seed: 851, count: 1, painter: "qwen2512-q4", created: now, status: "done", of: 1, pictures: [pic] };
   let runs = [done];
   window.fetch = (u, o) => { u = String(u);
     const body = o && o.body ? JSON.parse(o.body) : null;
@@ -6756,7 +6758,7 @@ const rg87 = await ev(`(async () => {
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000, ID = "20261012-140000-1387";
   const REG = [{ prompt: "a red fox", box: [0, 0, 0.5, 1] }];
-  const done = { id: ID, prompt: "Two animals in the snow", shapes: ["16:9"], seed: 871, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, regions: REG,
+  const done = { id: ID, prompt: "Two animals in the snow", shapes: ["16:9"], seed: 871, count: 1, painter: "qwen2512-q4", created: now, status: "done", of: 1, regions: REG,
                  pictures: [{ file: "01-16x9-s871.png", thumb: "thumbs/01-16x9-s871.jpg", shape: "16:9", w: 1920, h: 1080, seed: 871, kept: true }] };
   let runs = [done];
   window.fetch = (u, o) => { u = String(u);
@@ -6771,7 +6773,7 @@ const rg87 = await ev(`(async () => {
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
   await window.HeresyArtist.reload(); await wait(100);
   const painterWas = $("arPainter").value;
-  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
+  $("arPainter").value = "qwen2512-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
   $("arRegions").open = true;
   for (let i = 0; i < 4; i++) { $("arRegAdd").click(); await wait(40); }
   o.rows = document.querySelectorAll("#arRegList [data-ri]").length; o.addOff = $("arRegAdd").disabled;
@@ -6820,7 +6822,7 @@ const ra88 = await ev(`(async () => {
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000, ID = "20261012-150000-1388", ST = "20261012-150100-1388";
   const pic = (f, s) => ({ file: f, thumb: "thumbs/" + f.replace(".png", ".jpg"), shape: "1:1", w: 1280, h: 1280, seed: s, kept: true });
-  const done = { id: ID, prompt: "A lighthouse", shapes: ["1:1"], seed: 881, count: 1, painter: "krea2-q4", created: now, status: "done", of: 1, pictures: [pic("01-1x1-s881.png", 881)] };
+  const done = { id: ID, prompt: "A lighthouse", shapes: ["1:1"], seed: 881, count: 1, painter: "qwen2512-q4", created: now, status: "done", of: 1, pictures: [pic("01-1x1-s881.png", 881)] };
   const styled = { id: ST, prompt: "A fox at night", shapes: ["1:1"], seed: 882, count: 1, painter: "qwen21", created: now, status: "done", of: 1, ref: "ref.png", ref_as: "style", strength: 0.6, pictures: [pic("01-1x1-s882.png", 882)] };
   let runs = [done, styled];
   window.fetch = (u, o) => { u = String(u);
@@ -6835,7 +6837,7 @@ const ra88 = await ev(`(async () => {
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
   await window.HeresyArtist.reload(); await wait(100);
   const painterWas = $("arPainter").value;
-  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
+  $("arPainter").value = "qwen2512-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
   let opt = [...$("arPainter").options].find((x) => x.value === "qwen21"), made = false, wasOff = opt ? opt.disabled : null;
   if (opt) opt.disabled = true;                          // without it first, whichever list the page has
   $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(80);
@@ -6843,7 +6845,7 @@ const ra88 = await ev(`(async () => {
   if (!opt) { opt = new Option("Qwen-Image 2.1", "qwen21"); $("arPainter").add(opt); made = true; }
   opt.disabled = false;
   $("arPainter").value = "qwen21"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(80);
-  $("arPainter").value = "krea2-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(80);
+  $("arPainter").value = "qwen2512-q4"; $("arPainter").dispatchEvent(new Event("change", { bubbles: true })); await wait(80);
   o.onWith = [...$("arRefAs").options].filter((x) => x.value).map((x) => x.disabled).join();
   document.querySelector('#arBar [data-look="runs"]').click(); await wait(100);
   document.querySelector('.ar-run[data-id="' + ID + '"] .ar-thumb').click(); await wait(150);
@@ -6943,7 +6945,7 @@ const lt94 = await ev(`(async () => {
   ["qwen2512-q6", "qwen21"].forEach((v) => { let x = [...$("arPainter").options].find((y) => y.value === v);
     if (!x) { x = new Option(v, v); $("arPainter").add(x); made.push([x, null]); } else { made.push([x, x.disabled]); } x.disabled = false; });
   o.block = !!$("arLetters") && !!$("arLetTitle") && !!$("arLetWay");
-  set("arPainter", "krea2-q4", "change"); await wait(60);
+  set("arPainter", "qwen2512-q4", "change"); await wait(60);
   set("arLetTitle", "LANTERN SONG"); set("arLetSub", "RUACH STUDIO"); await wait(80);
   o.say = $("arLetSay").textContent; o.kept = JSON.parse(localStorage.getItem("yue2.arLetters") || "{}");
   o.noteKrea = $("arLetNote").hidden;                   // HERESY 1396: Krea 2 letters with the picture too
@@ -7078,12 +7080,12 @@ const at06 = await ev(`(async () => {
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
   const now = Date.now() / 1000, R = "20261012-110000-1406", P = "20261012-120000-1406";
-  const bin = { runs: [{ id: R, prompt: "A trashed run whose prompt is long enough to run over three lines of a tile, and on, and on, and on, as prompts do", painter: "krea2-q4", created: now - 7200, trashed_at: now - 3600,
+  const bin = { runs: [{ id: R, prompt: "A trashed run whose prompt is long enough to run over three lines of a tile, and on, and on, and on, as prompts do", painter: "qwen2512-q4", created: now - 7200, trashed_at: now - 3600,
       pictures: [{ file: "01-1x1-s1.png", thumb: "thumbs/01-1x1-s1.jpg", kept: true, shape: "1:1", seed: 1 }], bytes: 2000000 }],
     pictures: [{ id: P, file: "02-1x1-s2.png", thumb: "thumbs/02-1x1-s2.jpg", shape: "1:1", seed: 2, prompt: "Put aside", created: now - 600, bytes: 1000000 }],
     covers: [{ take: "t1406a", title: "Song One", stamp: "20261012-100000", when: now - 86400, bytes: 200000, prompt: "an old cover", frozen: false },
              { take: "t1406b", title: "Frozen Song", stamp: "20261011-090000", when: now - 172800, bytes: 100000, prompt: "", frozen: true }],
-    loras: [{ stamp: "20261012-130000", id: "krea2/kul.safetensors", name: "kul", title: "Kul Style", at: now - 60, bytes: 300000 }], bytes: 3600000 };
+    loras: [{ stamp: "20261012-130000", id: "qwen-image-2512/kul.safetensors", name: "kul", title: "Kul Style", at: now - 60, bytes: 300000 }], bytes: 3600000 };
   window.fetch = (u, o2) => { u = String(u);
     if (u.startsWith("/lab/artist/bin") && !(o2 && o2.method === "POST")) return json(bin);
     return real(u, o2); };
@@ -7406,8 +7408,11 @@ const ft19 = await ev(`(async () => {
     fs: [cb.fontSize, ct.fontSize], rad: [cb.borderTopLeftRadius, ct.borderTopLeftRadius], tt: cb.textTransform, pad: [cb.paddingLeft, ct.paddingLeft] };
   const was = b.getAttribute("aria-pressed") === "true";
   if (!was) { b.click(); await wait(80); }
-  const lit = getComputedStyle(b).borderTopColor, on = document.querySelector('.lyr-tog[aria-pressed="true"]:not(#freeTempo)');
-  o.lit = [lit, on ? getComputedStyle(on).borderTopColor : null];
+  // 1427: the line numbers left the meter for the Lyrics' title: a meter toggle pressed for a moment is the amber to match
+  const lit = getComputedStyle(b).borderTopColor, on = document.querySelector('.lyr-tog[aria-pressed="true"]:not(#freeTempo)') || t, had = t.getAttribute("aria-pressed");
+  if (on === t) t.setAttribute("aria-pressed", "true");
+  o.lit = [lit, getComputedStyle(on).borderTopColor];
+  if (on === t) { if (had === null) t.removeAttribute("aria-pressed"); else t.setAttribute("aria-pressed", had); }
   if (!was) { b.click(); await wait(80); }
   o.back = (b.getAttribute("aria-pressed") === "true") === was;
   return o; })()`);
@@ -7557,11 +7562,11 @@ const cg21 = await ev(`(() => ["cfg", "cfgLyrics", "cfgRange", "cfgLyricsRange"]
 check("  the Creator's guidances in tenths: both fields and both roads step 0.1 (HERESY 1421)", JSON.stringify(cg21) === JSON.stringify(["0.1", "0.1", "0.1", "0.1"]), JSON.stringify(cg21));
 
 // HERESY 1169 · 1423 (Viktor 13.10.2026: «ставь на обложки 2512… Ты там рулишь»): covers by the cards, Qwen-Image 2512 where it fits whole, else Krea 2 Muse; the speeds as measured
-section("Engine → Artwork: by the cards Qwen-Image 2512 where a card holds it whole, else Krea 2 Muse; the speeds as measured on a 3090");
+section("Engine → Artwork: by the cards Qwen-Image 2512 where a card holds it whole, else Q4 streamed from RAM; the speeds as measured on a 3090");
 const ap23 = await ev(`(() => { const s = document.getElementById("artPainter"); if (!s) return { none: true };
-  return { auto: s.options[0].value === "" ? s.options[0].textContent : null, krea: [...s.options].filter((o) => o.value === "krea2-q4").map((o) => o.textContent)[0] || "", tip: s.dataset.tip || "" }; })()`);
-check("  «By the cards» says Qwen-Image 2512 first (Q6 from 20 GB, Q4 from 16 GB), else Krea 2 Muse; Krea's line about 65 s; the tip has the measurements",
-  !ap23.none && /^By the cards: Qwen-Image 2512 /.test(ap23.auto) && /65 s/.test(ap23.krea) && /131 s/.test(ap23.tip), JSON.stringify(ap23));
+  return { auto: s.options[0].value === "" ? s.options[0].textContent : null, krea: [...s.options].filter((o) => o.value === "qwen2512-q4").map((o) => o.textContent)[0] || "", tip: s.dataset.tip || "" }; })()`);
+check("  «By the cards» says Qwen-Image 2512 first (Q6 from 20 GB, Q4 from 16 GB), else Q4 streamed from RAM; no Krea line; the tip has the measurements (1428)",
+  !ap23.none && /^By the cards: Qwen-Image 2512 .*else Q4 streamed from RAM$/.test(ap23.auto) && !/Krea/.test(ap23.auto + ap23.tip) && /105 s/.test(ap23.tip) && /95 s/.test(ap23.tip), JSON.stringify(ap23));
 
 // HERESY 1169 · 1425 (Viktor 13.10.2026, before RC7): compare at 1200 px with its wave and thumbs; Compute's VAE, the preset gone; the Colour; the cover to the namesakes; the sections of one go
 section("compare: 1200 px, its wave, thumbs and star, the disliked hidden; Engine → Compute's VAE, no preset; the Refiner's Colour; the replaced bands; a cover to the namesakes");
@@ -7671,6 +7676,255 @@ check("  his fonts by default (Raleway, Michroma, Liberation Mono), the headings
   (fo26.saved !== null || (fo26.sans === "Raleway" && fo26.heading === "Michroma" && fo26.mono === "Liberation Mono")) &&
   (fo26.saved !== null || JSON.stringify(fo26.pick) === JSON.stringify(["Raleway", "Michroma", "Liberation Mono"])) && fo26.same && fo26.lib === 1 &&
   JSON.stringify(fo26.faces) === JSON.stringify(["400 italic LiberationMono-Italic.ttf", "400 normal LiberationMono-Regular.ttf", "700 italic LiberationMono-BoldItalic.ttf", "700 normal LiberationMono-Bold.ttf"]), JSON.stringify(fo26));
+
+// HERESY 1169 · 1427 (Viktor 14.10.2026): the line numbers and the spelling by the Lyrics' title as icons; the meter's counts in blocks
+section("the line numbers and the spelling as icons by the Lyrics' title, each a toggle that keeps its word; the meter's counts in readable blocks, their numbers bold");
+const lh27 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id);
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(150);
+  const label = $("lyrics").closest(".field").querySelector(".label"), end = label.querySelector(".lyr-head-togs"), m = $("lyricsMeter");
+  if (!end) return { none: true };
+  const n = end.querySelector('[data-lyr="nums"]'), s = end.querySelector('[data-lyr="spell"]');
+  const lr = label.getBoundingClientRect(), nr = n.getBoundingClientRect();
+  const o = { svg: [!!n.querySelector("svg"), !!s.querySelector("svg")], names: [n.getAttribute("aria-label"), s.getAttribute("aria-label")],
+    right: Math.round(lr.right - end.getBoundingClientRect().right) <= 2 && Math.abs((nr.top + nr.height / 2) - (lr.top + lr.height / 2)) <= 6,
+    inMeter: !!m.querySelector('[data-lyr="nums"], [data-lyr="spell"]'), blocks: [...m.querySelectorAll(".lyr-blk")].map((b) => b.className.replace("lyr-blk lyr-blk-", "")),
+    bold: m.querySelectorAll(".lyr-blk b").length, was: [n.getAttribute("aria-pressed"), s.getAttribute("aria-pressed")], focus: null };
+  $("lyrics").focus(); n.click(); await wait(80);
+  o.numsOff = [n.getAttribute("aria-pressed"), localStorage.getItem("yue2.lyrNums")];
+  n.click(); await wait(80);
+  o.numsBack = n.getAttribute("aria-pressed");
+  s.click(); await wait(80); o.spellOff = [s.getAttribute("aria-pressed"), $("lyrics").spellcheck]; s.click(); await wait(80);
+  o.spellBack = s.getAttribute("aria-pressed");
+  return o; })()`);
+check("the line numbers and the spelling: two icons at the right of the Lyrics' title, named, out of the meter; each toggles and comes back; the meter in blocks (words, tags, tools) with bold numbers",
+  !lh27.none && lh27.svg.every(Boolean) && lh27.names.join() === "Line numbers,Spelling" && lh27.right && !lh27.inMeter && lh27.blocks.includes("words") && lh27.blocks.includes("tags") &&
+  lh27.blocks.includes("tools") && lh27.bold >= 3 && lh27.numsOff[0] === "false" && lh27.numsOff[1] === "off" && lh27.numsBack === "true" && lh27.spellOff[0] === "false" && lh27.spellOff[1] === false &&
+  lh27.spellBack === "true", JSON.stringify(lh27));
+
+// HERESY 1169 · 1428 (Viktor 14.10.2026): The Artist's brushes in one list (⚡ Lightning marked), Krea 2 out of the page, a picture's note,
+// the rooms' font, the active room an arch of light
+section("The Artist's brushes: the painter and its fp8 file in one list, ⚡ Lightning on those that paint with it; a fine-tune its own; Draw carries the pick");
+const br28 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", need_mb: 15500, family: "qwen-image-2512", ready: true, lightning: true },
+    { key: "qwen2512-q6", label: "Qwen-Image 2512 · Q6", need_mb: 20000, family: "qwen-image-2512", ready: true, lightning: true },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", need_mb: 22500, family: "qwen-image-2512", ready: true, lightning: true,
+      models: ["BASE QW2512 fp8_e4m3fn.safetensors", "Jib fine fp8.safetensors"], bases: ["BASE QW2512 fp8_e4m3fn.safetensors"] },
+    { key: "qwen21", label: "Qwen-Image 2.1 · research licence", need_mb: 21000, family: "qwen-image-2.1", ready: true }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261014-150000-1428", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen2512-fp8" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arLoras", "yue2.arSampling"], was = keys.map((k) => localStorage.getItem(k));
+  keys.forEach((k) => localStorage.removeItem(k));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
+  await window.HeresyArtist.painters(); await wait(100);
+  const $ = (id) => document.getElementById(id), b = $("arBrush");
+  const o = { label: b.closest(".field").querySelector(".label").childNodes[0].textContent.trim(), painterShown: !$("arPainter").hidden, modelShown: !$("arModelBox").hidden,
+    groups: [...b.querySelectorAll("optgroup")].map((g) => g.label + ":" + [...g.querySelectorAll("option")].map((x) => x.value + "=" + x.textContent).join(";")), first: b.value };
+  const pick = async (v) => { b.value = v; b.dispatchEvent(new Event("change")); await wait(120); return { painter: $("arPainter").value, model: $("arModel").value, kept: [localStorage.getItem("yue2.arPainter"), localStorage.getItem("yue2.arModel")], say: $("arSampSay").textContent, steps: $("arSteps").value }; };
+  o.base = await pick("qwen2512-fp8|BASE QW2512 fp8_e4m3fn.safetensors");
+  o.fine = await pick("qwen2512-fp8|Jib fine fp8.safetensors");
+  $("arPrompt").value = "A lighthouse at dawn"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  $("arDraw").click();
+  await until(() => sent.length, 3000);
+  o.body = sent[0] ? { painter: sent[0].painter, model: sent[0].model } : null;
+  o.q21 = await pick("qwen21");
+  o.refAs = [...$("arRefAs").options].filter((x) => !x.disabled).length;
+  await window.HeresyArtist.painters(); await wait(100);
+  o.again = b.value;                                      // read again: the pick kept
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters();
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("one list named The Artist's brushes, grouped by model: Q4 and Q6 with ⚡ Lightning, fp8 BASE with ⚡ Lightning, the fine-tune marked as one, 2.1; the old two selects hidden",
+  br28.label === "The Artist's brushes" && !br28.painterShown && !br28.modelShown && br28.groups.join("|") ===
+  "Qwen-Image 2512:qwen2512-q4=Q4 · ⚡ Lightning · from 15.5 GB;qwen2512-q6=Q6 · ⚡ Lightning · from 20 GB;qwen2512-fp8|BASE QW2512 fp8_e4m3fn.safetensors=fp8 · BASE QW2512 fp8_e4m3fn · ⚡ Lightning · from 22.5 GB;qwen2512-fp8|Jib fine fp8.safetensors=fp8 · Jib fine fp8 · fine-tune · from 22.5 GB|Qwen-Image 2.1:qwen21=research licence · from 21 GB" &&
+  br28.first === "qwen2512-q4", JSON.stringify(br28));
+check("  a brush picked sets the painter and its file, kept; fp8 BASE samples with Lightning in 8 steps, the fine-tune without it in 30; Draw carries the fine-tune; 2.1 picked; the pick kept when the list is read again",
+  br28.base.painter === "qwen2512-fp8" && br28.base.model === "BASE QW2512 fp8_e4m3fn.safetensors" && br28.base.kept.join() === "qwen2512-fp8,BASE QW2512 fp8_e4m3fn.safetensors" &&
+  /Lightning/.test(br28.base.say) && br28.base.steps === "8" && br28.fine.model === "Jib fine fp8.safetensors" && !/Lightning/.test(br28.fine.say) && br28.fine.steps === "30" &&
+  JSON.stringify(br28.body) === '{"painter":"qwen2512-fp8","model":"Jib fine fp8.safetensors"}' && br28.q21.painter === "qwen21" && br28.again === "qwen21", JSON.stringify(br28));
+
+section("Krea 2 out of the page: Engine → Artwork by the cards and Qwen only; About credits Qwen-Image and Lightning");
+const kr28 = await ev(`(() => {
+  const sel = document.getElementById("artPainter"), about = [...document.querySelectorAll(".about-col li a, #view-about li a, a")].map((a) => a.textContent).filter((t) => /^Artwork:/.test(t));
+  return { opts: [...sel.options].map((x) => x.value), krea: /krea/i.test([...sel.options].map((x) => x.value + x.textContent).join(" ") + document.getElementById("arBrush").innerHTML),
+    about, steps: document.getElementById("arSteps").dataset.tip }; })()`);
+check("no Krea 2 in Engine → Artwork or the brushes; About names Qwen-Image 2512 and its Lightning; the steps' tip without Krea",
+  kr28.opts[0] === "" && !kr28.krea && kr28.opts.every((v) => v === "" || /^qwen/.test(v)) && kr28.about.join("|") === "Artwork: Qwen-Image 2512, by Qwen|Artwork: Qwen-Image 2512 Lightning, by lightx2v" &&
+  !/Krea/.test(kr28.steps), JSON.stringify(kr28));
+
+section("a picture's note: Note… in the stage's Seen and kept half, a dialog of several lines, kept with the run, shown in the stage's tip, taken off when emptied");
+const nt28 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const run = { id: "20261014-160000-a428", status: "done", of: 1, prompt: "A lighthouse with a lantern", shapes: ["1:1"], seed: 7, count: 1, painter: "qwen2512-q4", created: 1791990000,
+    pictures: [{ n: 1, file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg", shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true }] };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [run] });
+    if (u.startsWith("/lab/artist/note")) { sent.push(JSON.parse(o.body)); return json({ note: JSON.parse(o.body).note, file: "01-1x1-s7.png" }); }
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(200);
+  await window.HeresyArtist.reload(); await wait(200);
+  const runsLook = document.querySelector('#arBar [data-look="runs"]'); if (runsLook) { runsLook.click(); await wait(300); }
+  const thumb = await until(() => document.querySelector('#arRuns .ar-run[data-id="20261014-160000-a428"] .ar-pic[data-i="0"] .ar-thumb'), 3000);
+  if (!thumb) { window.fetch = real; return { none: true }; }
+  thumb.click(); await wait(200);
+  const btn = await until(() => document.querySelector('#arStage [data-stage="note"]'), 2000), o = {};
+  o.half = btn ? btn.closest(".ar-stage-half").getAttribute("aria-label") : null;
+  o.icon = !!(btn && btn.querySelector("svg"));
+  btn.click();
+  const area = await until(() => document.querySelector(".hd-back .hd-area"), 2000);
+  o.area = !!area;
+  area.focus();
+  area.value = "Lettered: «Beacon Lantern» in gold\\nseed 7, Lightning 8";
+  area.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));     // a new line, not kept yet
+  await wait(80);
+  o.stillOpen = !!document.querySelector(".hd-back .hd-area");
+  area.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
+  await until(() => sent.length, 2000); await wait(200);
+  o.sent = sent[0] || null;
+  o.on = !!document.querySelector('#arStage [data-stage="note"].is-on');
+  const tipNote = document.querySelector("#arStage .ar-stage-note");
+  o.tip = tipNote ? tipNote.textContent : null;
+  document.querySelector('#arStage [data-stage="note"]').click();
+  const area2 = await until(() => document.querySelector(".hd-back .hd-area"), 2000);
+  o.prefill = area2 ? area2.value : null;
+  area2.value = "";
+  document.querySelector(".hd-back .hd-yes").click();
+  await until(() => sent.length > 1, 2000); await wait(200);
+  o.off = sent[1] || null;
+  o.tipAfter = !!document.querySelector("#arStage .ar-stage-note");
+  window.fetch = real;
+  await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click();
+  await wait(300);
+  return o; })()`);
+check("Note… is an icon in Seen and kept; its dialog has lines (Enter a new line, Ctrl+Enter keeps); the note goes to the lab with its run and file; the stage's tip shows it; an empty one takes it off",
+  !nt28.none && nt28.half === "Seen and kept" && nt28.icon && nt28.area && nt28.stillOpen && nt28.sent && nt28.sent.id === "20261014-160000-a428" &&
+  nt28.sent.file === "01-1x1-s7.png" && nt28.sent.note === "Lettered: «Beacon Lantern» in gold\nseed 7, Lightning 8" && nt28.on && /Beacon Lantern/.test(nt28.tip || "") &&
+  nt28.prefill === nt28.sent.note && nt28.off && nt28.off.note === "" && !nt28.tipAfter, JSON.stringify(nt28));
+
+section("the rooms' names in a font of their own (Look → Fonts → Rooms, the text's by default); the active room an arch of light wider than its name");
+const rf28 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), was = localStorage.getItem("yue2.fonts");
+  const sel = document.getElementById("fontRooms"), tab = document.querySelector('#tabs button.is-active'), o = {};
+  o.def = sel ? [sel.value, sel.options[0].textContent] : null;
+  o.fontBefore = getComputedStyle(tab).fontFamily === getComputedStyle(document.body).fontFamily;
+  sel.value = "Unbounded"; sel.dispatchEvent(new Event("change")); await wait(80);
+  o.kept = JSON.parse(localStorage.getItem("yue2.fonts") || "{}").rooms;
+  o.font = getComputedStyle(tab).fontFamily;
+  o.heading = getComputedStyle(document.querySelector("h2")).fontFamily === o.font;
+  sel.value = ""; sel.dispatchEvent(new Event("change")); await wait(80);
+  o.back = JSON.parse(localStorage.getItem("yue2.fonts") || "{}").rooms === undefined;
+  if (was === null) localStorage.removeItem("yue2.fonts"); else localStorage.setItem("yue2.fonts", was);
+  const cs = getComputedStyle(tab), b = getComputedStyle(tab, "::before"), r = tab.getBoundingClientRect();
+  o.bg = cs.backgroundColor; o.shadow = cs.boxShadow;
+  o.arch = /radial-gradient/.test(b.backgroundImage); o.wider = parseFloat(b.left) < 0 && parseFloat(b.right) < 0; o.z = b.zIndex;
+  return o; })()`);
+check("Rooms: «Same as the text (default)» first, Unbounded kept and set on the rooms' names only, back to the text's; the active room has no pill but a radial arch reaching past its edges",
+  rf28.def && rf28.def[0] === "" && rf28.def[1] === "Same as the text (default)" && rf28.fontBefore && rf28.kept === "Unbounded" && /Unbounded/.test(rf28.font) && !rf28.heading &&
+  rf28.back && /rgba\(0, 0, 0, 0\)|transparent/.test(rf28.bg) && rf28.shadow === "none" && rf28.arch && rf28.wider && rf28.z === "-1", JSON.stringify(rf28));
+
+// HERESY 1169 · 1429 (Viktor 14.10.2026): Engine → Security, who may open the studio; the first start's question with its mini guide
+section("Engine → Security: who may open the studio (this computer, private networks, the networks listed), kept by the engine; a choice that closes it to the asker is asked again");
+const ac29 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  let state = { mode: "private", nets: [], acknowledged: "2026-10-14T12:00:00", you: "10.8.0.2", you_local: false, you_private: true, public: false, kept: true }, lockFirst = false;
+  window.fetch = (u, o) => { u = String(u);
+    if (u === "/access" && (!o || !o.method || o.method === "GET")) return json(state);
+    if (u === "/access") { const b = JSON.parse(o.body); sent.push(b);
+      if (lockFirst && !b.lockout) return json({ error: "this closes the studio to you (10.8.0.2)", lockout: true }, 409);
+      state = Object.assign({}, state, { mode: b.mode, nets: b.nets }); return json(state); }
+    return real(u, o); };
+  await window.ruachAccess.refresh(); await wait(80);
+  const radios = () => [...document.querySelectorAll('#accForm input[name="accMode"]')];
+  const o = { you: $("accYou").textContent, modes: radios().map((r) => r.value + (r.checked ? "*" : "")).join(","), saveOff: $("accSave").disabled,
+    mine: (document.querySelector("#accForm .acc-mine") || {}).textContent || "" };
+  radios().find((r) => r.value === "list").click(); await wait(50);
+  o.listEmptyOff = $("accSave").disabled;
+  const nets = document.querySelector("#accForm .acc-nets-in"); nets.value = "10.0.0.0/24, 10.8.0.0/24"; nets.dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
+  o.listOn = !$("accSave").disabled;
+  $("accSave").click(); await until(() => sent.length, 2000); await wait(150);
+  o.sent = sent[0];
+  o.toast = [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent).filter((t) => /^Kept: /.test(t)).pop() || "";
+  o.after = radios().map((r) => r.value + (r.checked ? "*" : "")).join(",");
+  // a choice that leaves the asker out: asked again, then sent with lockout
+  lockFirst = true;
+  radios().find((r) => r.value === "local").click(); await wait(50);
+  $("accSave").click();
+  const d = await until(() => document.querySelector(".hd-back.is-on:not(.is-leaving)"), 2000);
+  o.ask = d ? (d.querySelector(".hd-title") || {}).textContent : null;
+  if (d) d.querySelector(".hd-yes").click();
+  await until(() => sent.length >= 3, 2000); await wait(150);
+  o.lock = sent.slice(1).map((b) => b.mode + ":" + (b.lockout ? "lockout" : "-"));
+  window.fetch = real;
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  await window.ruachAccess.refresh();
+  return o; })()`);
+check("the card says where you open it from and what is chosen; the list needs a network; Keep sends the choice and says it",
+  /^You open it from 10\.8\.0\.2: a private network · decided 2026-10-14 12:00$/.test(ac29.you) && ac29.modes === "local,private*,list" && ac29.saveOff &&
+  ac29.mine === "+ 10.8.0.0/24" && ac29.listEmptyOff && ac29.listOn && JSON.stringify(ac29.sent) === '{"mode":"list","nets":["10.0.0.0/24","10.8.0.0/24"]}' &&
+  /this computer and 2 listed networks/.test(ac29.toast) && ac29.after === "local,private,list*", JSON.stringify(ac29));
+check("  this computer only, asked from another machine: «This closes the studio to you» first, then sent with lockout",
+  ac29.ask === "This closes the studio to you" && ac29.lock.join(",") === "local:-,local:lockout", JSON.stringify(ac29));
+
+section("the first start asks who may open the studio: the mini guide, the three choices, «My decision is a conscious one»; Later asks again next time");
+const aq29 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const a = { mode: "private", nets: [], acknowledged: "", you: "10.8.0.2", you_local: false, you_private: true, public: false, kept: true };
+  window.fetch = (u, o) => { u = String(u);
+    if (u === "/access" && o && o.method === "POST") { const b = JSON.parse(o.body); sent.push(b); return json(Object.assign({}, a, b, { acknowledged: "2026-10-14T15:00:00" })); }
+    return real(u, o); };
+  const o = {};
+  let p = window.ruachAccessAsk(a);
+  let box = await until(() => document.querySelector(".acc-back"), 2000);
+  o.title = box.querySelector(".hd-title").textContent;
+  o.guide = box.querySelectorAll(".acc-guide p").length;
+  o.port = new RegExp("port " + (location.port || "80") + " ").test(box.querySelector(".acc-guide").textContent);
+  o.offAtFirst = box.querySelector(".hd-yes").disabled;
+  box.querySelector(".acc-mine").click(); await wait(50);
+  o.list = [box.querySelector('input[name="accAsk"]:checked').value, box.querySelector(".acc-nets-in").value];
+  o.offWithoutSure = box.querySelector(".hd-yes").disabled;
+  o.sure = box.querySelector(".acc-sure span").textContent;
+  box.querySelector(".acc-sure-in").click(); await wait(50);
+  o.onWithSure = !box.querySelector(".hd-yes").disabled;
+  box.querySelector(".hd-yes").click();
+  o.got = await p;
+  o.sent = sent[0];
+  await wait(200);
+  o.closed = !document.querySelector(".acc-back:not(.is-leaving)");
+  p = window.ruachAccessAsk(a);
+  box = await until(() => document.querySelector(".acc-back:not(.is-leaving)"), 2000);
+  box.querySelector(".hd-no").click();
+  o.later = await p;
+  window.fetch = real;
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  await window.ruachAccess.refresh();
+  return o; })()`);
+check("the question: its title, four paragraphs (the port named), Keep off until a choice and «My decision is a conscious one»; + my network lists the asker's /24; Keep sends it acknowledged; Later leaves it undecided",
+  aq29.title === "Who may open this studio?" && aq29.guide === 4 && aq29.port && aq29.offAtFirst &&
+  JSON.stringify(aq29.list) === '["list","10.8.0.0/24"]' && aq29.offWithoutSure && aq29.sure === "My decision is a conscious one" && aq29.onWithSure &&
+  JSON.stringify(aq29.sent) === '{"mode":"list","nets":["10.8.0.0/24"],"acknowledged":true}' && aq29.got && aq29.got.acknowledged && aq29.closed && aq29.later === null,
+  JSON.stringify(aq29));
 // ================================================================== fonts
 section("fonts (Engine page)");
 const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"), kids = [...s.children], hr = kids.findIndex(k => k.tagName === "HR");
@@ -7678,8 +7932,8 @@ const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"
   return { first: kids.slice(0, hr).map(k => k.textContent), hr, system: kids.slice(hr + 1).map(k => k.value), value: s.value,
     heading: document.getElementById("fontHeading").options[0].textContent, mono: document.getElementById("fontMono").value,
     card: cards.findIndex(c => c.id === "appearanceCard"), about: cards.findIndex(c => c.id === "aboutCard"), n: cards.length }; })()`);
-check("Fonts: the app's fonts first (the default marked), a line, then the fonts this computer has", fontMenu.first.join() === "Noto Sans,Noto Sans Mono,IBM Plex Sans,IBM Plex Mono,Bodoni Moda,Space Grotesk,Michroma,Raleway (default),Roboto,Lato,Liberation Mono" &&
-  fontMenu.hr === 11 && !fontMenu.system.some((f) => ["Noto Sans", "Roboto", "Lato", "Raleway"].includes(f)) && fontMenu.system.length >= 1 && fontMenu.value === "Raleway" && fontMenu.heading === "Same as the text" &&
+check("Fonts: the app's fonts first (the default marked), a line, then the fonts this computer has", fontMenu.first.join() === "Noto Sans,Noto Sans Mono,IBM Plex Sans,IBM Plex Mono,Bodoni Moda,Space Grotesk,Michroma,Raleway (default),Roboto,Lato,Liberation Mono,Unbounded,Tektur,Jura" &&
+  fontMenu.hr === 14 && !fontMenu.system.some((f) => ["Noto Sans", "Roboto", "Lato", "Raleway"].includes(f)) && fontMenu.system.length >= 1 && fontMenu.value === "Raleway" && fontMenu.heading === "Same as the text" &&
   fontMenu.mono === "Liberation Mono" && /* HERESY 1167: Viktor's fonts are the app's own */ fontMenu.card >= 0 && fontMenu.about === fontMenu.n - 1, JSON.stringify({ ...fontMenu, system: fontMenu.system.slice(0, 6) }));
 // HERESY 1166 (Viktor 04.10.2026: «как всё ужать и передвинуть, чтобы на 1080p всё встало красиво и не таким длинным
 // полотенцем»): his rows on one grid of thirty: Server over Hardware beside the log (1/3 · 2/3), Compute | GPUs (2/5 · 3/5),

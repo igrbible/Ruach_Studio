@@ -17,7 +17,7 @@
   if ((!sc || sc === "auto") && window.matchMedia) document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches
     ? localStorage.getItem("yue2.theme.night") || "igr-night" : localStorage.getItem("yue2.theme.day") || "igr-day";
   // HERESY 1426: a chosen font falls back on the studio's own (app.js FONT_BACK), the heading's «same as the text» on the text's
-  var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: '"Noto Sans", sans-serif', heading: "var(--sans)", mono: '"Noto Sans Mono", monospace' };
+  var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: '"Noto Sans", sans-serif', heading: "var(--sans)", mono: '"Noto Sans Mono", monospace', rooms: "var(--sans)" };
   for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, f[k] ? JSON.stringify(f[k]) + ", " + g[k] : "var(--sans)");
   var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners"];
   for (var i = 0; i < o.length; i++) if (typeof L[o[i]] === "string") document.documentElement.dataset[o[i]] = L[o[i]];
@@ -307,6 +307,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <select id="fontSans" data-font="sans"></select></label>
         <label class="field"><span class="label">Headings</span>
           <select id="fontHeading" data-font="heading"></select></label>
+        <!-- HERESY 1428 (Viktor 14.10.2026: «в настройки шрифтов отдельную позицию для названий комнат в Бар») -->
+        <label class="field"><span class="label" data-head="the rooms' names in the bar">Rooms</span>
+          <select id="fontRooms" data-font="rooms"></select></label>
         <label class="field"><span class="label" data-head="seeds, scores, the log">Numbers and code</span>
           <select id="fontMono" data-font="mono"></select></label>
         <p class="row-hint" id="fontsHint"></p>
@@ -348,14 +351,10 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <h3>Artwork</h3>
       <p class="hint">Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.</p>
       <label class="field"><span class="label">Painter</span>
-        <select id="artPainter" data-tip="By the cards: Qwen-Image 2512 where a card the lab's jobs may take holds it whole (it follows the prompt best and letters a title), else Krea 2 Muse, streamed from RAM on a small card. Measured on an RTX 3090 (13.10.2026), the prompt writer and the critic included: Krea 2 Muse Q4 about 65 s a cover, Qwen-Image 2512 Q4 125 s, Q6 131 s">   <!-- HERESY 1405: SDXL gone -->
-          <option value="">By the cards: Qwen-Image 2512 where a card holds it whole (Q6 from 20 GB, Q4 from 16 GB), else Krea 2 Muse Q4</option>
-          <option value="krea2-q4">Krea 2 Muse · Q4 · about 12 GB · about 65 s a picture</option>
-          <option value="krea2-q8">Krea 2 Muse · Q8 · about 18 GB · about 22 s a picture</option>
+        <select id="artPainter" data-tip="By the cards: Qwen-Image 2512 Q6 or Q4 where a card the lab's jobs may take holds it whole (it follows the prompt best and letters a title), else Q4 streamed from RAM on a smaller card. Measured on an RTX 3090 (14.10.2026), the prompt writer and the critic included: Q4 about 105 s a cover, its fp8 BASE about 95 s">   <!-- HERESY 1405: SDXL gone; 1428: Krea 2 gone -->
+          <option value="">By the cards: Qwen-Image 2512 where a card holds it whole (Q6 from 20 GB, Q4 from 16 GB), else Q4 streamed from RAM</option>
         </select></label>
-      <p class="row-hint">Krea 2 Muse by <a href="https://civitai.com/models/2741166" target="_blank" rel="noopener noreferrer">Stable Yogi</a>, a fine-tune of
-        <a href="https://krea.ai/krea-2-licensing" target="_blank" rel="noopener noreferrer">Krea 2</a> (Krea 2 Community License: its pictures pass a content filter);
-        Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
+      <p class="row-hint">Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here, and every picture passes a content filter; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
     </div>
 
     <div class="card wide lora-card eg-vae">
@@ -422,6 +421,16 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       </div>
     </div>
 
+    <!-- HERESY 1429 (Viktor 14.10.2026: «юзеры без файрвола... или на публичном вайфае - это проблема. Может в Engine настройки блок по
+         безопасности IP сетки добавить?»): who may open the studio, the engine's own gate (user/access.json), in force at once -->
+    <div class="card wide eg-access" id="accessCard">
+      <h3>Security <span class="info" tabindex="-1" role="img" aria-label="About security" data-tip="Who may open this studio: its page and everything it can do, your songs and lyrics, its jobs on your cards, its downloads with your keys. Kept on the studio's own computer (user/access.json) and in force at once."></span></h3>
+      <p class="acc-you" id="accYou">Asking the engine…</p>
+      <div class="acc-form" id="accForm"></div>
+      <p class="hint" id="accWhy" hidden></p>
+      <div class="card-actions"><button type="button" class="btn primary small" id="accSave" disabled>Keep it</button></div>
+    </div>
+
     <!-- HERESY 1283 (Viktor 09.10.2026: «…в Engine — опции по изменению локации с переносом данных с одного места в другое»): where
          the user's work lives, and a move asked twice (heresy-places.js over the lab's places.py of 1261) -->
     <div class="card wide eg-folders" id="foldersCard">
@@ -453,8 +462,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <li><a href="https://github.com/SYSTRAN/faster-whisper" target="_blank" rel="noopener noreferrer">Lyrics check: faster-whisper</a><span class="about-where" translate="no">github · SYSTRAN/faster-whisper</span></li>
             <li><a href="https://fontawesome.com/license/free" target="_blank" rel="noopener noreferrer">Icons: Font Awesome Free</a><span class="about-where" translate="no">CC BY 4.0</span></li>
             <!-- HERESY 1167 (Viktor: «Кредит не забудь автору»): the artwork's painters -->
-            <li><a href="https://civitai.com/models/2741166" target="_blank" rel="noopener noreferrer">Artwork: Krea 2 Muse by Stable Yogi</a><span class="about-where" translate="no">civitai · Krea 2 Community License</span></li>
-            <li><a href="https://krea.ai/krea-2-licensing" target="_blank" rel="noopener noreferrer">Artwork: Krea 2, by Krea</a><span class="about-where" translate="no">Krea 2 is licensed under the Krea 2 Community License Agreement</span></li>
+            <li><a href="https://huggingface.co/Qwen/Qwen-Image-2512" target="_blank" rel="noopener noreferrer">Artwork: Qwen-Image 2512, by Qwen</a><span class="about-where" translate="no">huggingface · Apache-2.0</span></li>
+            <li><a href="https://huggingface.co/lightx2v/Qwen-Image-2512-Lightning" target="_blank" rel="noopener noreferrer">Artwork: Qwen-Image 2512 Lightning, by lightx2v</a><span class="about-where" translate="no">huggingface · Apache-2.0</span></li>
           </ul>
           <!-- HERESY 1166 (Viktor: «Все наши восходящие HF репозитории добавь в колонку Ruach Studio, через пустую строку»):
                ours on Hugging Face, after a line's space; private until the release, the 💎 sets' bucket too -->
@@ -1482,11 +1491,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 
   <!-- HERESY 1169 · 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»; «Код Художника оправданнее
        строит на рабочем Krea2»): the Artist room (heresy-artist.js, lab/artist.py): pictures for a song from a prompt of one's
-       own, in the shapes its pictures take, all from one seed, painted by Krea 2 Muse; a square one becomes the cover of the
+       own, in the shapes its pictures take, all from one seed, painted by Qwen-Image (1428: Krea 2 gone); a square one becomes the cover of the
        take in hand -->
   <section class="col artist-col is-hidden" id="view-artist">
     <div class="col-head post-head artist-head"><h2 id="arRoomName" translate="no">Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a canvas with layers and the title written on the cover come in the releases after">Early preview</span>
-      <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Krea 2 Muse or Qwen-Image</span>
+      <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Qwen-Image</span>
       <span class="post-take" id="arTake" translate="no"></span><span class="col-note" id="arTakeNote">pick a take on the right to give it a cover</span></div>
     <!-- HERESY 1271 (Viktor 09.10.2026: «Канвас комнаты Художника можно разделить на три колонки, каждая регулируется по ширине. В левой
          промптинг с параметрами. В средней проявка изображения и активное выбранное как в InvokeAI, и ниже данные по прогону самого
@@ -1531,14 +1540,15 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <label class="field ar-seed"><span class="label">Seed <span class="info" tabindex="-1" role="img" aria-label="About the seed" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)"></span></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
         <label class="field ar-count" data-tip="Each variation is the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Variations</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
         </div>
-        <label class="field ar-painter"><span class="label">Painter <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arPainter" translate="no" data-tip="Krea 2 Muse by Stable Yogi: Q4 wants a card with 12.5 GB free, Q8 (finer) 18.5 GB; about 35 s a square picture and 47 s a wide or tall one on an RTX 3090"><option value="krea2-q4">Krea 2 Muse · Q4 (from 12.5 GB)</option><option value="krea2-q8">Krea 2 Muse · Q8 (from 18.5 GB)</option></select></label>
+        <!-- HERESY 1428 (Viktor 14.10.2026: «объединить в один спадающий дроплаун… обзови как "КИСТИ ХУДОЖНИКА"»): every brush in one list -->
+        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" translate="no" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in artwork/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select></label>
         <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512, and the painter's note (Qwen-Image 2.1's licence) -->
         <label class="field ar-model" id="arModelBox" hidden><span class="label">Fine-tune</span><select id="arModel" translate="no" data-tip="The fp8 fine-tunes of Qwen-Image 2512 in artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): a card of 24 GB"></select></label>
         <div class="ar-get-row"><button type="button" class="btn ghost small" id="arGet" data-tip="The painters, the Qwen fine-tunes and the adapters the studio can fetch for the Artist, each with its size, here or not: from the studio's models repository and from their makers">Get painters and adapters…</button></div>   <!-- HERESY 1347 -->
         <!-- HERESY 1319: the sampling: steps, sampler, schedule; 2512's Lightning and guidance -->
         <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em><span class="info is-warn" id="arSampWarn" tabindex="-1" role="img" aria-label="A warning on the sampling" hidden></span></summary>
           <div class="ar-samp-row">
-            <label class="field ar-samp-steps"><span class="label">Steps</span><input type="number" id="arSteps" min="4" max="16" step="1" inputmode="numeric" data-tip="How many steps from the noise to the picture: Krea 2 and Qwen-Image 2512 with Lightning 4 to 16 (8 their own), 2512 without it and Qwen-Image 2.1 10 to 60" /></label>
+            <label class="field ar-samp-steps"><span class="label">Steps</span><input type="number" id="arSteps" min="4" max="16" step="1" inputmode="numeric" data-tip="How many steps from the noise to the picture: Qwen-Image 2512 with Lightning 4 to 16 (8 its own), 2512 without it and Qwen-Image 2.1 10 to 60" /></label>
             <label class="field"><span class="label">Sampler</span><select id="arSampler" data-tip="How each step is taken. Euler: the plain step; Euler SDE: fresh noise each step (soft on Qwen without Lightning). ER-SDE: a stochastic solver of third order, one look a step. RES 2s and 3s: the refined exponential solver, two or three looks a step (ODE: without noise). Heun++: up to three looks a step. Exp Heun 2 x0: the exponential Heun, two looks (SDE: with noise). More looks: finer, and as many times longer"><option value="euler" translate="no">Euler</option><option value="euler-sde" translate="no">Euler SDE</option><option value="er_sde" translate="no">ER-SDE</option><option value="res_2s" translate="no">RES 2s</option><option value="res_2s_ode" translate="no">RES 2s ODE</option><option value="res_3s" translate="no">RES 3s</option><option value="res_3s_ode" translate="no">RES 3s ODE</option><option value="heunpp2" translate="no">Heun++ 2</option><option value="exp_heun_2_x0" translate="no">Exp Heun 2 x0</option><option value="exp_heun_2_x0_sde" translate="no">Exp Heun 2 x0 SDE</option></select></label>
             <label class="field"><span class="label">Schedule</span><select id="arSchedule" data-tip="How the steps are spread from the noise to the picture: Simple (the painter's own), Karras and Exponential (more steps near the end, for detail; with Lightning they can paint the subject twice), Beta and Beta 57 (more at both ends), KL optimal (Align Your Steps' spacing), SGM uniform (even in time), Bong tangent (two slopes, through the middle)"><option value="simple" translate="no">Simple</option><option value="karras" translate="no">Karras</option><option value="exponential" translate="no">Exponential</option><option value="beta" translate="no">Beta</option><option value="beta57" translate="no">Beta 57</option><option value="kl_optimal" translate="no">KL optimal</option><option value="sgm_uniform" translate="no">SGM uniform</option><option value="bong_tangent" translate="no">Bong tangent</option></select></label>
           </div>
@@ -1550,7 +1560,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           </div>
         </details>
         <!-- HERESY 1387: regional prompts, as InvokeAI's regional guidance -->
-        <details class="ar-sampling ar-regions" id="arRegions"><summary><span class="label">Regions</span> <em id="arRegSay"></em><span class="info" tabindex="-1" role="img" aria-label="About the regions" data-tip="Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Krea 2 and Qwen-Image 2512"></span></summary>
+        <details class="ar-sampling ar-regions" id="arRegions"><summary><span class="label">Regions</span> <em id="arRegSay"></em><span class="info" tabindex="-1" role="img" aria-label="About the regions" data-tip="Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512"></span></summary>
           <div class="ar-reg-list" id="arRegList"></div>
           <div class="ar-reg-foot"><button type="button" class="btn ghost small" id="arRegAdd">Add a region</button><span class="row-hint" id="arRegNote" hidden>Not with Qwen-Image 2.1: it edits by words</span></div>
         </details>

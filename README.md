@@ -132,7 +132,7 @@ Made and tested on Viktor's setup:
 What it needs:
 
 - Linux, an NVIDIA GPU with CUDA. 24 GB runs everything (synthesis in BF16, training in bf16); smaller cards use smaller model copies (Q8_0 3.8 GB, Q6_K, Q5_K_M) and int8 training.
-- About 30 GB of disk, measured on fresh installs (10.10.2026): the program and its two Pythons 16 GB, the models 13.2 GB for a 16 GB card (Q8_0) or 16.5 GB for 24 GB (BF16), the LoRAs among them; the Artist's models 26.1 GB more (40.7 GB with Krea 2 Muse Q8; on a smaller card Krea 2 Muse streams its blocks from RAM), its Qwen painters 31 GB more for Qwen-Image 2512 at Q4 (34.5 GB at Q6; Qwen-Image 2.1 33.1 GB), the 💎 sets 5.3 GB, each only when you take it; more for your takes.
+- About 30 GB of disk, measured on fresh installs (10.10.2026): the program and its two Pythons 16 GB, the models 13.2 GB for a 16 GB card (Q8_0) or 16.5 GB for 24 GB (BF16), the LoRAs among them; the Artist's helpers (the prompt writer and the content filter) 8.4 GB more, its Qwen painters 31 GB more for Qwen-Image 2512 at Q4 (34.5 GB at Q6; on a smaller card it streams its blocks from RAM; Qwen-Image 2.1 33.1 GB), the 💎 sets 5.3 GB, each only when you take it; more for your takes.
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
@@ -165,7 +165,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | yt-dlp | the audio of long recordings for instrument sets |
 | [UniverSR](https://github.com/woongzip1/UniverSR) (cloned at its tested commit) | upscale |
 
-**The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Krea 2's text encoder, the prompt writer, the content filter); diffusers 0.41 (Krea 2, Qwen-Image 2512 and 2.1) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT).
+**The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Qwen-Image's text encoder, the prompt writer, the content filter); diffusers 0.41 (Qwen-Image 2512 and 2.1) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT).
 
 **Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras; sizes, sources and licences in the models card, `heresy/docs/hf-models-README.md`; the legacy and blend decoders and the sliders come converted, from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2)):
 
@@ -180,13 +180,13 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | UniverSR | upscale | CC BY 4.0 |
 | Qwen2.5-Omni-7B (GGUF, through [llama.cpp](https://github.com/ggml-org/llama.cpp), built by you) · extra | the style listener for training sets | Apache-2.0 |
 | Qwen3-4B-Instruct-2507 · extra | the artwork's prompt writer | Apache-2.0 |
-| Krea 2 Muse by Stable Yogi (GGUF Q4, Q8) with Krea 2 Turbo's text encoder and VAE, and the content filter (Falconsai) · extra | the Artist's painter, a take's artwork | Krea 2 Community License · Apache-2.0 |
-| Qwen-Image 2512 (its parts from Qwen; the transformer as GGUF Q4_K_M or Q6_K, by unsloth) with Lightning's 8 steps (lightx2v) · extra | the Artist's Qwen painter | Apache-2.0 |
+| the content filter (Falconsai's nsfw_image_detection) · extra | every picture the Artist and a take's artwork paint passes it | Apache-2.0 |
+| Qwen-Image 2512 (its parts from Qwen; the transformer as GGUF Q4_K_M or Q6_K, by unsloth) with Lightning's 8 steps (lightx2v) · extra | the Artist's painter, a take's artwork | Apache-2.0 |
 | Qwen-Image 2.1 · extra | the Artist's painter that edits by words | Qwen Research License: not for commercial use |
 | the upscalers you put into `artwork/upscalers/` (ESRGAN, DAT, HAT, SPAN…) | the Artist's upscale | each its own |
 | YuE2-3B for training (bf16 or int8) · extra | the LoRA trainer | CC BY-NC 4.0 |
 
-**In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Noto Sans and Noto Sans Mono by default; IBM Plex Sans and Mono, Bodoni Moda, Michroma, Space Grotesk, Raleway, Roboto and Lato to choose from; SIL OFL) are served by the lab from `lab/fonts/`. The page loads no script, stylesheet or font from the internet.
+**In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Raleway, Michroma and Liberation Mono by default; Noto Sans and Noto Sans Mono, IBM Plex Sans and Mono, Bodoni Moda, Space Grotesk, Roboto, Lato, Unbounded, Tektur and Jura to choose from; SIL OFL) are served by the lab from `lab/fonts/`. The page loads no script, stylesheet or font from the internet.
 
 **Optional:** a chat server for the Writer (vLLM, LM Studio or Ollama on your machine) or OpenRouter (the cloud, your key); a DAW (above); `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`).
 
@@ -295,7 +295,7 @@ Issues and pull requests are welcome: they are read and answered.
 - **[AI-Toolkit](https://github.com/ostris/ai-toolkit)** by Ostris (MIT): the trainer's YuE2 code was ported from it.
 - **Mothersuperior**: the realaudio tokenizer head (CC BY-NC 4.0) and the VAE merge.
 - **Qwen2.5-Omni** (the listener), **Whisper** (the lyrics check), **BS-Roformer** and **htdemucs_ft** (stems), **UniverSR** (upscale), **GTSinger** (CC BY-NC-SA 4.0, training data for voices).
-- **Krea 2 Muse** by Stable Yogi (the artwork's painter) and **Qwen3-4B** (its prompts); **[YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio)** (Apache-2.0): the score checker the page and the lab use.
+- **Qwen-Image 2512** by Qwen and its **Lightning** by lightx2v (the artwork's painter) and **Qwen3-4B** (its prompts); **[YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio)** (Apache-2.0): the score checker the page and the lab use.
 
 Every project is linked from the studio's own Engine → About.
 

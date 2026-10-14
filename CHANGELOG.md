@@ -11,6 +11,14 @@ The closing pass: the screenshots, the strings in every language, the 💎 probe
 - **The Artist's stage as icons** (HERESY 1426): two halves, what is made from the picture and how it is seen and kept.
 - **Fonts** (HERESY 1426): Raleway, Michroma and Liberation Mono by default; Liberation Mono, Raleway whole, Lato 2.015 and Noto Sans' bold and italics in the studio itself; a chosen font falls back on the studio's own for the letters it lacks.
 - **Unload reaches the Artist again** (HERESY 1426): the Bar's Unload let go of the Artist's kept painters only in words since 1370 (the lab refused its empty request); a painter at work is still never let go.
+- **The lyrics' toggles by its title** (HERESY 1427): the line numbers and the spelling as icons at the right of the Lyrics' title; the meter's counts in readable blocks, their numbers bold.
+- **Three heading fonts to try** (HERESY 1427): Unbounded, Tektur and Jura, carried by the studio with their Latin, Cyrillic and Greek.
+- **Krea 2 out of the studio** (HERESY 1428): Qwen-Image paints every picture; a take's cover by the cards is Qwen-Image 2512 Q6 or Q4 whole, else Q4 streamed from RAM; `--artwork` fetches the covers' helpers only (the prompt writer and the content filter, 8.4 GB). What a studio fetched for Krea 2 (`artwork/Krea-2-Muse`, `artwork/Krea-2-Turbo`, `artwork/loras/krea2`, 33 GB) is no longer read and can be deleted.
+- **The Artist's brushes** (HERESY 1428): one list for the painter and its fp8 file, grouped by model, ⚡ Lightning on a brush that paints with it by default; 2512's own fp8 BASE paints with Lightning at 1.0 and 8 steps; a file put into `checkpoints/` becomes a brush of its own.
+- **A picture's note** (HERESY 1428): Note… on the Artist's stage, kept with the picture in its run and shown in its tip.
+- **The rooms' names** (HERESY 1428): a font of their own (Look → Fonts → Rooms); the active room an arch of light, fading to both sides.
+- **The audit** (HERESY 1430): the lab's reload no longer waits for ever behind a failed job nobody read; every ffmpeg and ffprobe it starts has a timeout; a folder's move waits when the studio does not answer instead of taking silence for idle; a hand-broken `user/gpus.json` keeps the roles and limits read before; a cover's critic saying YES while naming another instrument counts as NO; links that came from the internet (an adapter's Civitai page, an upscaler's) open web pages only.
+- **Engine → Security** (HERESY 1429): who may open the studio: this computer only, this computer and private networks (the default), or this computer and the networks you list; the engine keeps it in `user/access.json` and answers by it at once. The first start asks it, with a short guide and «My decision is a conscious one»; a choice that would close the studio to the machine asking is asked again.
 
 ## 2.0.0-rc7 · 2026-10-13
 

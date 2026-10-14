@@ -201,8 +201,8 @@ def _place(name, take, section, v, seed):
     for w in open_ws or [WS]:
         try:
             col.collection_post(cfg, P["outputs"], {"op": "ws-add", "workspace": w, "names": [take]})
-        except Exception:
-            pass
+        except Exception as e:                        # HERESY 1430: said, so a take missing from its workspace is not a mystery
+            P["say"](f"replace a section · {take} not added to «{w}»: {e}")
     try:
         col.collection_post(cfg, P["outputs"], {"op": "note", "names": [take], "text":
             f"Replace a section: {section} sung anew, version {v}, music seed {seed}; the rest is {name}'s own"})

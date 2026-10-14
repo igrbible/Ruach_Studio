@@ -5550,3 +5550,54 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 .ar-ico.is-on { color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
 .ar-ico[disabled] { opacity: .38; cursor: default; background: none; }
 .ar-stage-acts > .ar-up-row { flex-basis: 100%; }
+
+/* HERESY 1427: the line numbers and the spelling by the Lyrics' title; the meter's counts in blocks, their numbers bold */
+.k-lyrics [data-fold="lyrics"] > .label { display: flex; align-items: center; min-width: 0; }
+.lyr-head-togs { gap: 2px; order: 9; }   /* last in the row whatever help.js adds after it (the (i), the fold peek) */
+.lyr-head-tog[aria-pressed="true"] { color: var(--amber); }
+.lyr-head-tog[aria-pressed="false"] { color: var(--dim); opacity: .75; }
+.lyr-meter { gap: 6px 8px; }
+.lyr-blk { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; padding: 3px 10px; border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.lyr-blk b { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.lyr-blk-look, .lyr-blk-tools { background: none; padding: 0; gap: 6px; }
+.lyr-blk-tools { margin-left: auto; }
+
+/* HERESY 1428 (Viktor 14.10.2026: «подсветка под названием активной комнаты… арочно градиентной, растворяющейся справа и слева… немного
+   шире, заскакивая немного на название соседней комнаты»): the active room an arch of light, fading to both sides, a little wider than its
+   name; the rooms' names in a font of their own (Look → Fonts → Rooms) */
+.tabs { position: relative; z-index: 0; }
+.tabs button { position: relative; font-family: var(--rooms, var(--sans)); }
+.tabs button.is-active { background: none; box-shadow: none; }
+.tabs button.is-active::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: -18px; right: -18px; pointer-events: none;
+  background: radial-gradient(50% 100% at 50% 100%, color-mix(in srgb, var(--ink) 14%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 10%, transparent) 42%, color-mix(in srgb, var(--ink) 4%, transparent) 76%, transparent 100%); }
+/* HERESY 1428: a picture's note: the stage's tip shows it above the prompt; a prompt of several lines in the dialog */
+.ar-stage-note { white-space: pre-wrap; overflow-wrap: anywhere; padding: 6px 0; border-top: 1px solid var(--line-a); }
+.ar-stage-note .label { display: block; margin-bottom: 2px; }
+.ar-vnote.is-on { color: var(--amber); }
+.hd-box:has(.hd-area) { width: min(720px, 100%); }
+.hd-area { min-height: 9em; resize: vertical; font: inherit; line-height: 1.45; white-space: pre-wrap; }
+
+/* HERESY 1429: Engine → Security and the first start's question */
+.acc-you { margin: 0 0 8px; color: var(--muted); }
+.acc-modes { display: flex; flex-direction: column; gap: 6px; }
+.acc-mode { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line-a); border-radius: var(--r-md); cursor: pointer; }
+.acc-mode:has(input:checked) { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+.acc-mode input { margin-top: 3px; }
+.acc-mode span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acc-mode small { color: var(--muted); font-size: .92em; }
+.acc-nets { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.acc-nets-in { flex: 1; min-width: 0; font-family: var(--mono); }
+.acc-nets.is-off { opacity: .55; }
+.acc-box { width: min(720px, 100%); }
+.acc-guide p { margin: 0 0 8px; line-height: 1.45; }
+.acc-sure { margin-top: 10px; font-weight: 600; }
+/* HERESY 1429: Security a row of its own under Updates (Folders under it) */
+.engine-grid > .eg-access { order: 14; }
+.engine-grid > .eg-folders { order: 15; }
+@media (min-width: 1400px) {
+  .engine-grid > .eg-access  { grid-area: 11 / 1 / 12 / 31; }
+  .engine-grid > .eg-folders { grid-area: 12 / 1 / 13 / 31; }
+}
+.eg-access .acc-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }   /* HERESY 1429: side by side on a wide card */

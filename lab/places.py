@@ -22,6 +22,7 @@ import re
 import shutil
 import threading
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -168,15 +169,21 @@ def _studio_busy():
     try:
         hw = json.load(urllib.request.urlopen(f"http://127.0.0.1:{H['studio_port']}/hardware", timeout=4))
         return bool(hw.get("busy"))
+    except urllib.error.URLError as e:
+        if isinstance(getattr(e, "reason", None), ConnectionRefusedError):
+            return False                             # no studio running: nothing of it writes
+        return True                                  # HERESY 1430: it did not answer: it may be writing a take; asked again later
+    except ConnectionRefusedError:
+        return False
     except (OSError, ValueError):
-        return False                                 # no studio answering: nothing of it writes
+        return True
 
 
 def _why_busy():
     if H["busy"]():
         return "the lab is working on something: move it when that is done"
     if _studio_busy():
-        return "the studio is rendering: move it when the song is done"
+        return "the studio is rendering, or did not answer: move it when the song is done"
     with LOCK:
         if JOB and JOB.get("phase") not in ("done", "failed"):
             return f"{JOB['name']} is moving now"

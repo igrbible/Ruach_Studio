@@ -38,14 +38,14 @@ La stanza ha tre colonne. A sinistra il modulo: il prompt e ogni controllo che d
 
 1. Scegli un take a destra nello studio (la lista del Creatore o del Bibliotecario): l'immagine che imposterai come copertina va a lui.
 2. Nell'Artista premi **Dal take** per avere un prompt da cui partire, o scrivi il tuo (sezione 3).
-3. Lascia **Forme** su **1:1**, metti **Variazioni** a 4 e tieni il pittore scelto dallo studio (Krea 2 Muse Q4 sulla maggior parte delle schede).
+3. Lascia **Forme** su **1:1**, metti **Variazioni** a 4 e tieni il pennello scelto dallo studio (Qwen-Image 2512 Q4 con ⚡ Lightning sulla maggior parte delle schede).
 4. Premi **Disegna** (Ctrl+Invio). Guarda le immagini svilupparsi sul palco; circa mezzo minuto ciascuna su una 3090.
 5. Fai clic su quella che ti piace; **Imposta come copertina** la rende copertina del take: nella sua scheda, nel lettore e nel suo MP3.
 6. Ti è piaciuta ma la vuoi più fine? **Secondo passaggio… ×2** (sezione 12), poi **Upscale… 4K** (sezione 13).
 
 ## 3. Come scrivere un prompt
 
-Krea 2 Muse e Qwen-Image leggono un prompt come una descrizione, non come una lista di tag: scrivi frasi. Metti prima ciò che c'è nell'immagine (chi o che cosa, dove, che fa), poi la luce (crepuscolo, lume di candela, un mattino grigio), i colori e la tecnica (un olio a pennellate spesse, un disegno a china, una fotografia 35 mm). Chiudi con *no text* quando non vuoi lettere: a entrambi i pittori piace scrivere da soli su una copertina.
+Qwen-Image legge un prompt come una descrizione, non come una lista di tag: scrivi frasi. Metti prima ciò che c'è nell'immagine (chi o che cosa, dove, che fa), poi la luce (crepuscolo, lume di candela, un mattino grigio), i colori e la tecnica (un olio a pennellate spesse, un disegno a china, una fotografia 35 mm). Chiudi con *no text* quando non vuoi lettere: a Qwen-Image piace scrivere da solo su una copertina.
 
 Parole che funzionano bene: il soggetto detto semplicemente (*a red fox sitting in the snow*), la composizione (*seen from below*, *in the left third*, *a wide empty sky above*), il materiale (*oil on canvas*, *gouache*, *woodcut*), la direzione e il colore della luce. Parole che fanno poco: le liste di tag di qualità (*masterpiece, 8k, best quality*) appartengono a modelli più vecchi e occupano solo spazio.
 
@@ -55,16 +55,15 @@ Parole che funzionano bene: il soggetto detto semplicemente (*a red fox sitting 
 
 | pittore | licenza | quanto chiede alla scheda | un'immagine su una 3090 | per |
 |---|---|---|---|---|
-| **Krea 2 Muse Q4** | Krea 2 Community License | 12,5 GB | circa 35 s in 1:1, 47 s in 16:9 | bozze, copertine, il cavallo da tiro |
-| **Krea 2 Muse Q8** | Krea 2 Community License | 18,5 GB | un po' più lungo, più fine | copertine |
 | **Qwen-Image 2512 Q4** | Apache-2.0 | 15,5 GB | circa 30 s con Lightning | il Qwen di una scheda da 16 GB |
 | **Qwen-Image 2512 Q6** | Apache-2.0 | 20 GB | circa 32 s con Lightning | bozze più fini |
 | **Fine-tune fp8 di Qwen-Image 2512** | quella del fine-tune | 22,5 GB | circa 37 s con Lightning, minuti senza | realismo finito |
+| **Qwen-Image 2512 fp8 BASE** | Apache-2.0 | 22,5 GB | 8 passi con Lightning, come i GGUF | 2512 stesso in fp8 |
 | **Qwen-Image 2.1** | Qwen Research Licence | 21 GB (in streaming con meno) | circa due minuti | modifica a parole, riferimento di stile |
 
-**Krea 2 Muse** (di Stable Yogi, un fine-tune di Krea 2 Turbo) dipinge nei suoi pochi passi (8 di default, da 4 a 16) senza guida: un modello Turbo ha la guida distillata dentro di sé. È il pittore di default della stanza perché è veloce, fedele alle parole e gentile con le schede più piccole. Q4 e Q8 sono lo stesso modello in due precisioni (GGUF): Q8 tiene un po' più di dettaglio.
+**I pennelli dell'Artista** sono un solo elenco di ogni modello e file qui, per gruppi: Qwen-Image 2512 da un GGUF (Q4, Q6), ogni file fp8 in `artwork/Qwen-Image-2512/checkpoints/` (il BASE di 2512 e i fine-tune) e Qwen-Image 2.1. **⚡ Lightning** segna un pennello che dipinge con esso di default; un fine-tune è segnato come tale. Un file messo in `checkpoints/` diventa un pennello a sé quando la stanza rilegge l'elenco (dopo un download o ricaricando la pagina). Krea 2 Muse ha lasciato lo studio a ottobre 2026: Qwen-Image 2512 segue meglio le parole e scrive bene un titolo.
 
-**Qwen-Image 2512** è il pittore più grande: realismo più fine, legge bene i prompt lunghi, disegna giuste le lettere quando gliele chiedi. Viene come GGUF in Q4 o Q6, o come **fine-tune fp8**: i file unici di ComfyUI messi in `artwork/Qwen-Image-2512/checkpoints/` e scelti sotto il pittore (Jib Mix Qwen, IntoRealism Qwen, Real-Qwen-Image e lo stesso 2512 si scaricano da **Ottieni pittori e adattatori…**, 20,4 GB ciascuno). Un fine-tune fp8 si legge in bf16, resta sulla scheda nel suo fp8, e ogni strato calcola in bf16 mentre gira; gli adattatori su di esso tengono i loro strati in bf16.
+**Qwen-Image 2512** è il pittore più grande: realismo più fine, legge bene i prompt lunghi, disegna giuste le lettere quando gliele chiedi. Viene come GGUF in Q4 o Q6, o come **fine-tune fp8**: i file unici di ComfyUI messi in `artwork/Qwen-Image-2512/checkpoints/` ognuno un pennello a sé (Jib Mix Qwen, IntoRealism Qwen, Real-Qwen-Image e lo stesso 2512 si scaricano da **Ottieni pittori e adattatori…**, 20,4 GB ciascuno). Il BASE di 2512 dipinge con Lightning come i GGUF, un fine-tune senza, a meno che non lo accendi. Un file fp8 si legge in bf16, resta sulla scheda nel suo fp8, e ogni strato calcola in bf16 mentre gira; gli adattatori su di esso tengono i loro strati in bf16.
 
 **Qwen-Image 2.1** legge le immagini oltre alle parole (il suo codificatore di testo è Qwen3-VL): modifica un'immagine secondo le parole del prompt, o dipinge la scena del prompt nello stile di un'immagine (sezione 11). È sotto la Qwen Research Licence: solo ricerca e valutazione, non per una copertina che vendi; la stanza lo dice sotto il pittore nel colore degli avvisi.
 
@@ -78,17 +77,17 @@ Ogni pittore si mostra solo quando i suoi file sono qui; quelli che mancano sono
 
 **Quale scheda.** I lavori del laboratorio stanno sulle schede date loro in **Motore → GPU** (la scheda propria dello studio non viene mai presa per caso). Una scheda che nient'altro usa prende un'esecuzione il cui bisogno sta nella sua memoria meno 512 MiB (la quota propria del runtime CUDA); una scheda in uso la prende quando la sua memoria libera contiene il bisogno; una scheda con un limite di VRAM conta il suo limite come tetto. Il bisogno è quello del pittore più la dimensione dei suoi adattatori, e 6 GB in più per un secondo passaggio ×2.
 
-**Quando nessuna scheda lo contiene intero**, Krea 2 Muse e Qwen-Image 2512 portano i loro blocchi in streaming dalla RAM: i blocchi che ci stanno restano sulla scheda, il resto arriva quando serve (il group offloading di diffusers su uno stream CUDA: un blocco arriva mentre calcola quello prima), e l'immagine è la stessa, più lenta di quanto il bus non riesce a nascondere. Con tutti i blocchi in streaming, Krea 2 Muse Q4 prende 2,2 GB dalla scheda, così anche una scheda da 8 GB lo dipinge. Qwen-Image 2.1 porta in streaming sia il suo transformer (blocco per blocco) sia il suo codificatore di testo (strato per strato): sotto un limite di 15,5 GB ha dipinto a parole con 4,1 GB di picco e modificato con 7,9 GB, in circa lo stesso tempo che intero. Un pittore che non può andare in streaming e non entra in nessuna scheda viene rifiutato subito, con i numeri e il pittore che entrerebbe.
+**Quando nessuna scheda lo contiene intero**, Qwen-Image 2512 porta i loro blocchi in streaming dalla RAM: i blocchi che ci stanno restano sulla scheda, il resto arriva quando serve (il group offloading di diffusers su uno stream CUDA: un blocco arriva mentre calcola quello prima), e l'immagine è la stessa, più lenta di quanto il bus non riesce a nascondere. Con tutti i blocchi in streaming prende 2,3 GB dalla scheda (1328², Lightning, quattro adattatori), così anche una scheda da 6 GB lo dipinge, con circa 30 GB di RAM. Qwen-Image 2.1 porta in streaming sia il suo transformer (blocco per blocco) sia il suo codificatore di testo (strato per strato): sotto un limite di 15,5 GB ha dipinto a parole con 4,1 GB di picco e modificato con 7,9 GB, in circa lo stesso tempo che intero. Un pittore che non può andare in streaming e non entra in nessuna scheda viene rifiutato subito, con i numeri e il pittore che entrerebbe.
 
-**Più schede.** Un'esecuzione con più immagini si distribuisce sulle schede del laboratorio che hanno spazio e RAM sufficiente per un pittore in più (tre forme su due schede: la prima e la terza su una, la seconda sull'altra), ogni scheda dipingendo la sua parte con i semi propri dell'esecuzione: le immagini sono le stesse bit per bit che su una scheda. Krea 2 Muse Q8, tre forme: 132 s su due schede contro 163 s su una.
+**Più schede.** Un'esecuzione con più immagini si distribuisce sulle schede del laboratorio che hanno spazio e RAM sufficiente per un pittore in più (tre forme su due schede: la prima e la terza su una, la seconda sull'altra), ogni scheda dipingendo la sua parte con i semi propri dell'esecuzione: le immagini sono le stesse bit per bit che su una scheda.
 
 **Un pittore tenuto.** Dopo un'esecuzione il suo pittore torna in RAM e la sua scheda è di nuovo libera; un'esecuzione seguente con lo stesso pittore, lo stesso fine-tune e gli stessi adattatori nello stesso ordine dipinge subito, senza il minuto o due di caricamento. Un pittore tenuto viene lasciato dopo dieci minuti fermo, quando la RAM serve per un altro, o con **Scarica dalla memoria** nella Barra (che lascia tutto ciò che lo studio tiene sulle sue schede).
 
-**Dentro un'esecuzione**: il prompt è letto una volta dal codificatore di testo; ogni immagine è disegnata alla dimensione propria del pittore e tenuta a quella della stanza (Krea 2 disegna a multipli di 16 e taglia dal centro, 1920 × 1088 in 1920 × 1080; Qwen-Image disegna a 1328², 1664 × 928 e 928 × 1664 e porta ciascuna a 1280², 1920 × 1080 e 1080 × 1920); il decodificatore lavora a tasselli, così il suo picco resta basso.
+**Dentro un'esecuzione**: il prompt è letto una volta dal codificatore di testo; ogni immagine è disegnata alla dimensione propria del pittore e tenuta a quella della stanza (Qwen-Image disegna a 1328², 1664 × 928 e 928 × 1664 e porta ciascuna a 1280², 1920 × 1080 e 1080 × 1920); il decodificatore lavora a tasselli, così il suo picco resta basso.
 
 **Anteprima dal vivo** (attiva di default): i latenti di ogni passo diventano un'immagine di un ottavo della dimensione senza il decodificatore (con i fattori di colore propri dello spazio latente, come li porta InvokeAI), quindi non costa nulla; una barra in cima al palco segue l'esecuzione, immagine per immagine e passo per passo.
 
-**Il filtro dei contenuti**: ogni immagine passa il filtro che la licenza di Krea 2 chiede, chiunque l'abbia dipinta: una che segnala non viene tenuta, e l'esecuzione lo dice.
+**Il filtro dei contenuti**: ogni immagine passa un filtro dei contenuti (nsfw_image_detection di Falconsai, Apache-2.0), la regola dello studio per ogni pittore: una che segnala non viene tenuta, e l'esecuzione lo dice.
 
 **Su disco**: ogni esecuzione è una cartella in `artist/` dello studio: `ask.json` (ciò che è stato chiesto), `run.json` (scritto immagine per immagine), le immagini `NN-SHAPE-sSEED.png`, le loro `thumbs/`, e un riferimento o una maschera accanto quando l'esecuzione ne aveva. Un guardiano ferma un pittore che tace troppo a lungo (dieci minuti mentre carica, cinque una volta che dipinge), e un'esecuzione che il laboratorio ha perso per un riavvio lo dice invece di dipingere per sempre.
 
@@ -96,15 +95,15 @@ Ogni pittore si mostra solo quando i suoi file sono qui; quelli che mancano sono
 
 **Che cos'è**: un adattatore (lightx2v, Apache-2.0) che insegna a Qwen-Image 2512 a dipingere in pochi passi senza guida: la lunga strada guidata del modello distillata in 8 passi. Il suo file vive in `artwork/Qwen-Image-2512/lightning/` e arriva con il download dei pittori Qwen.
 
-**Come lo mette lo studio**: con Lightning acceso, il pittore lo carica come un adattatore in più sotto i tuoi, a **1.0** per i GGUF Q4 e Q6 (la base da cui è stato distillato, 8 passi) e a **0.55** per un fine-tune fp8 con 12 passi (un fine-tune si è allontanato dalla base, e Lightning a piena forza lo tirerebbe indietro). La pianificazione diventa quella propria di Lightning (uno spostamento di log 3 a ogni dimensione), e la guida si spegne: un passaggio del modello per passo.
+**Come lo mette lo studio**: con Lightning acceso, il pittore lo carica come un adattatore in più sotto i tuoi, a **1.0** per i GGUF Q4 e Q6 e il fp8 BASE di 2512 (la base da cui è stato distillato, 8 passi) e a **0.55** per un fine-tune fp8 con 12 passi (un fine-tune si è allontanato dalla base, e Lightning a piena forza lo tirerebbe indietro). La pianificazione diventa quella propria di Lightning (uno spostamento di log 3 a ogni dimensione), e la guida si spegne: un passaggio del modello per passo.
 
 **Con esso spento**, 2512 dipinge a modo suo: 30 passi di default (da 10 a 60) e **Guida** 4 (vero CFG contro un negativo vuoto: due passaggi per passo). Sessanta passaggi contro otto: circa sette volte la pittura, e il dettaglio e la luce del realismo finito.
 
-**La regola dietro i default**: Lightning per bozze e copertine, non per il realismo professionale. I pittori GGUF dipingono con esso; un fine-tune fp8 dipinge senza a meno che tu non lo accenda; la copertina propria di un take si dipinge con esso. Krea 2 Muse non ha interruttore: i suoi pochi passi sono i suoi.
+**La regola dietro i default**: Lightning per bozze e copertine, non per il realismo professionale. I pittori GGUF e il fp8 BASE di 2512 dipingono con esso; un fine-tune fp8 dipinge senza a meno che tu non lo accenda; la copertina propria di un take si dipinge con esso.
 
 ## 7. Sampler e pianificazioni
 
-**Campionamento**, sotto il pittore, ripiegato, i suoi valori nel riepilogo: i passi, il sampler e la pianificazione (e per 2512 Lightning e Guida), tenuti per ogni pittore; **Ripristina** restituisce quelli del pittore. Krea 2 e Qwen-Image 2512 con Lightning prendono da 4 a 16 passi; senza, da 10 a 60.
+**Campionamento**, sotto il pittore, ripiegato, i suoi valori nel riepilogo: i passi, il sampler e la pianificazione (e per 2512 Lightning e Guida), tenuti per ogni pittore; **Ripristina** restituisce quelli del pittore. Qwen-Image 2512 con Lightning prende da 4 a 16 passi; senza, come Qwen-Image 2.1, da 10 a 60.
 
 Il modello dice a ogni passo da che parte sta l'immagine; il **sampler** decide come arrivarci:
 
@@ -123,7 +122,6 @@ La **pianificazione** dice dove si spendono i passi tra tutto il rumore e nessun
 
 | pittore | bene | evitare |
 |---|---|---|
-| Krea 2 Muse | ogni sampler e pianificazione ha dipinto un'immagine intera | |
 | Qwen-Image 2512 con Lightning | Simple, Beta, Beta 57, SGM uniform, Bong tangent | Karras, Exponential, KL optimal (possono dipingere il soggetto due volte) |
 | Qwen-Image 2512 senza Lightning | Euler, ER-SDE, RES 2s / 3s | Euler SDE (morbido e velato) |
 
@@ -149,17 +147,17 @@ Il modulo dice entrambi gli avvisi quando valgono. I sampler sono stati scritti 
 
 **Come dipinge**: a ogni passo il pittore è interrogato una volta in più per ogni regione, con il prompt principale e le parole della regione, e le sue risposte si fondono secondo le scatole delle regioni come pesi dai bordi morbidi (un bordo di un venticinquesimo del lato più corto), condivisi dove le scatole si sovrappongono; il resto dell'inquadratura segue il solo prompt principale. È la via di Latent Couple: non ha bisogno di nulla dal modello, e la scena resta una scena perché il prompt di ogni regione porta quello principale.
 
-**Come scriverle**: il prompt principale dice tutta la scena, una regione ciò che vi sta. *Two animals sitting in a snowy forest clearing at dawn, oil painting*; metà sinistra *a red fox sitting in the snow*; metà destra *a white snowy owl perched on a stump*. Su un seme, Krea 2 Muse ha dipinto due gatti vaghi senza le regioni e la volpe e la civetta con esse; Qwen-Image 2512 ha dipinto due orsi senza di esse e la volpe e la civetta con esse.
+**Come scriverle**: il prompt principale dice tutta la scena, una regione ciò che vi sta. *Two animals sitting in a snowy forest clearing at dawn, oil painting*; metà sinistra *a red fox sitting in the snow*; metà destra *a white snowy owl perched on a stump*. Su un seme, Qwen-Image 2512 ha dipinto due orsi senza le regioni e la volpe e la civetta con esse.
 
-**Quanto costa**: un intero passaggio in più per passo per ogni regione (su una 3090 in 16:9: Krea 2 Q4 48 s da sola, 137 s con due regioni; Qwen-Image 2512 fp8 141 e 281 s). La stima del tempo del modulo le conta.
+**Quanto costa**: un intero passaggio in più per passo per ogni regione (su una 3090 in 16:9: Qwen-Image 2512 fp8 141 s da solo, 281 s con due regioni). La stima del tempo del modulo le conta.
 
-Le regioni si tengono in questo browser; una regione senza parole non si manda; **Ancora** dipinge con quelle proprie dell'esecuzione. Krea 2 e Qwen-Image 2512; Qwen-Image 2.1 modifica a parole e dipinge senza.
+Le regioni si tengono in questo browser; una regione senza parole non si manda; **Ancora** dipinge con quelle proprie dell'esecuzione. Per Qwen-Image 2512; Qwen-Image 2.1 modifica a parole e dipinge senza.
 
 ## 10. Scritta
 
 **Scritta**, sotto Regioni, ripiegato: un titolo, e una seconda riga sotto, scritti come parte del dipinto invece che posati sopra come uno strato che resta a parte dall'immagine. Le sue parole vanno in campi propri, mai nel prompt, e lo studio scrive ciò che il pittore legge. Due modi, scelti sotto **Come**:
 
-- **Dipinta con l'immagine** (Krea 2 Muse, Qwen-Image 2512 o 2.1): lo studio aggiunge una frase al prompt: dove, il titolo tra virgolette, come sono le lettere, la seconda riga più piccola sotto, poi *painted in the same technique and light as the picture. No other text.* Un prompt di un paragrafo la riceve alla fine; un prompt scritto in paragrafi la riceve come paragrafo a sé, *TEXT RENDERING:*, secondo, dopo il primo: alla fine di un prompt lungo annega (il prompt di Fosforida di Viktor, 3.200 caratteri in dieci paragrafi, così ha dipinto tre immagini senza una lettera). Il prompt di un take chiede niente testo (*No text, no letters.*): quella frase si toglie prima.
+- **Dipinta con l'immagine** (Qwen-Image 2512 o 2.1): lo studio aggiunge una frase al prompt: dove, il titolo tra virgolette, come sono le lettere, la seconda riga più piccola sotto, poi *painted in the same technique and light as the picture. No other text.* Un prompt di un paragrafo la riceve alla fine; un prompt scritto in paragrafi la riceve come paragrafo a sé, *TEXT RENDERING:*, secondo, dopo il primo: alla fine di un prompt lungo annega (il prompt di Fosforida di Viktor, 3.200 caratteri in dieci paragrafi, così ha dipinto tre immagini senza una lettera). Il prompt di un take chiede niente testo (*No text, no letters.*): quella frase si toglie prima.
 - **Sull'immagine di riferimento** (Qwen-Image 2.1): un'immagine finita scritta a parole, il resto tenuto. L'ordine si scrive dai soli campi, così il prompt può restare vuoto. **Scrivi**, sul palco o nel menu di un'immagine, fa di quell'immagine il riferimento, imposta Come e apre il blocco con il titolo in mano.
 
 **I campi**: **Titolo** (60 caratteri); **Seconda riga** (80: l'artista, l'album; vuota per nessuna); **Le lettere** (400, come sono a parole, lungo quanto un paragrafo di tipografia di un prompt; vuoto: *large elegant classical serif capitals in warm gold, with even letter spacing*); **Dove** (in alto, al centro, in basso). **Il titolo della ripresa** riempie il titolo dal take scelto a destra. Il blocco si tiene in questo browser; **Ancora** scrive con le parole proprie dell'esecuzione; la riga dell'esecuzione tiene la frase che il pittore ha letto.
@@ -172,7 +170,7 @@ Le regioni si tengono in questo browser; una regione senza parole non si manda; 
 
 **Tempi** (RTX 3090, un quadrato): Qwen-Image 2.1 ha scritto su un'immagine finita in 118 s, letta giusta subito; un fine-tune fp8 di Qwen-Image 2512 senza Lightning (30 passi, vero CFG 4, la via propria di un fine-tune fp8) ne ha dipinta una con le sue lettere in 230 s, contando il caricamento, di cui circa 150 s il dipingere. Un'immagine scritta male costa un'intera immagine in più per ogni tentativo: di due variazioni di «LANTERN SONG / RUACH STUDIO», una è venuta giusta subito e l'altra è rimasta sbagliata in tutti e tre i tentativi («RUCH STUDIO»), tenuta e detta, in 743 s per l'esecuzione. Lightning fa di ogni tentativo una frazione di questo. La stima del modulo conta la lettura.
 
-**Cirillico**: «ФОСФОРИДА | Возвращение Шехины» di Viktor nello stile del prompt del suo stesso album. Qwen-Image 2512 ha scritto giusto il titolo in tutte e nove le immagini; la seconda riga in minuscolo in nessuno di sei tentativi (le minuscole Щ e Ш scarabocchiate, «Вовуяеные Шехни»); in maiuscolo Щ e Ш sono venute giuste ogni volta e solo l'ultima lettera ha sbagliato («ШЕХИНЯ»), con anche le forme delle lettere dette (la sua idea, HERESY 1396: Ы, Щ, Ш e le altre lettere che un pittore addestrato sul latino ha visto di rado, e Ф accanto alla Φ greca, ciascuna descritta quando le parole la portano). **Krea 2 Muse ha scritto esatte entrambe le righe**: «ФОСФОРИДА / ВОЗВРАЩЕНИЕ ШЕХИНЫ» in due variazioni, una al primo tentativo e una al secondo, 184 s per l'esecuzione. Un suggerimento compitato («Ф-О-С-Ф-…») è stato provato e lasciato: Krea ha dipinto i suoi trattini nel titolo, e l'ascoltatore, a cui da allora si chiede di tenere trattini e spazi, ne ha letta una tutta unita. Per il cirillico, prima Krea 2 Muse; maiuscole; e guarda il segno.
+**Cirillico**: «ФОСФОРИДА | Возвращение Шехины» di Viktor nello stile del prompt del suo stesso album. Qwen-Image 2512 ha scritto giusto il titolo in tutte e nove le immagini; la seconda riga in minuscolo in nessuno di sei tentativi (le minuscole Щ e Ш scarabocchiate, «Вовуяеные Шехни»); in maiuscolo Щ e Ш sono venute giuste ogni volta e solo l'ultima lettera ha sbagliato («ШЕХИНЯ»), con anche le forme delle lettere dette (la sua idea, HERESY 1396: Ы, Щ, Ш e le altre lettere che un pittore addestrato sul latino ha visto di rado, e Ф accanto alla Φ greca, ciascuna descritta quando le parole la portano). Un suggerimento compitato («Ф-О-С-Ф-…») è stato provato e lasciato: il pittore può dipingere i suoi trattini nel titolo. Per il cirillico: maiuscole, e guarda il segno.
 
 **Perché dipinta e non composta**: un vero carattere composto dallo studio (crenatura, spaziatura e interlinea con raqm) e dipinto leggermente sopra scrive esatto, ma resta uno strato sull'immagine. Dei quattro modi provati, Viktor ha scelto i due in cui il pittore scrive da sé le lettere.
 
@@ -194,7 +192,7 @@ Gli ultimi due si offrono quando Qwen-Image 2.1 è qui. Con l'uno o l'altro, l'e
 
 Da immagine a immagine qui è ciò che InvokeAI fa con modelli che non hanno una pipeline per questo: l'immagine copre ogni forma ed è tagliata dal suo centro, passa al contrario per il decodificatore del pittore in latenti, ed è resa rumorosa fino a un punto della pianificazione propria del pittore; il dipingere poi percorre il resto della pianificazione da lì. La forza sceglie quel punto: il più vicino dei passi propri della pianificazione, almeno due passi.
 
-| forza | che cosa dà (provato su Krea 2 Muse) |
+| forza | che cosa dà (provato su Krea 2 Muse, il pittore della stanza allora) |
 |---|---|
 | 0,3 | l'immagine quasi com'è, la sua superficie toccata |
 | 0,5 | l'immagine tenuta, le sue piccole cose cambiate (scritte, texture) |
@@ -234,7 +232,7 @@ Il bordo di una maschera rotonda può restare visibile senza di loro; Crescita 1
 
 **Nello studio**: **Quanto può cambiare** (0,5 per primo: 0,3 tiene il disegno e aggiunge dettaglio, 0,5 affila la sua materia, 0,7 ridipinge le sue forme) e **Rumore aggiunto** (0,6 per primo, come il suo) nella sua riga; i passi, il sampler, la pianificazione e Lightning sono quelli del modulo quando il modulo dipinge con lo stesso pittore, altrimenti quelli propri dell'esecuzione. La sua ricetta dà al secondo passaggio molti passi e niente Lightning: impostali nel modulo prima di premere ×2.
 
-**Quanto costa e che cosa dà**: un 16:9 di 1920 × 1080 esce 3840 × 2160. Su una 3090, Krea 2 Q4 a 2560² in 86 s (14,5 GB di picco); un fine-tune fp8 di Qwen-Image 2512 a 3840 × 2160 in 220 s con 12 passi e Lightning (22,9 GB, i suoi blocchi in streaming). A 0,6 entrambi hanno tenuto la scena e spostato un poco le sue parti; a 0,5 la composizione ha tenuto. Non per Qwen-Image 2.1; nessuna maschera né tela con esso. **Ancora** su un secondo passaggio lo dipinge di nuovo alla sua dimensione.
+**Quanto costa e che cosa dà**: un 16:9 di 1920 × 1080 esce 3840 × 2160. Su una 3090, un fine-tune fp8 di Qwen-Image 2512 a 3840 × 2160 in 220 s con 12 passi e Lightning (22,9 GB, i suoi blocchi in streaming). A 0,6 ha tenuto la scena e spostato un poco le sue parti; a 0,5 la composizione ha tenuto. Non per Qwen-Image 2.1; nessuna maschera né tela con esso. **Ancora** su un secondo passaggio lo dipinge di nuovo alla sua dimensione.
 
 ## 13. Upscale
 
@@ -248,7 +246,7 @@ L'upscale e il secondo passaggio fanno cose diverse: un upscaler affila ciò che
 
 ## 14. Il palco, la libreria e il cestino
 
-**Il palco**: un clic su un'immagine la mette lì con la sua esecuzione sotto; un clic su di essa (o un doppio clic su qualsiasi immagine) la apre sopra la pagina nella sua forma (← → percorrono l'esecuzione, o la galleria; Esc chiude). Sotto: **Nel modulo**, **Come riferimento**, **Confronta…**, **Imposta come copertina** (una quadrata), **Scarica** (PNG, dimensione piena), **Sopra la pagina**, ★, **Proteggi** (lo scudo: un'immagine protetta non va mai nel cestino né viene cancellata, qualunque cosa ve l'abbia mandata), **Cestino**, **Secondo passaggio…**, **Upscale…**. I dati e il prompt dell'esecuzione stanno in un suggerimento accanto all'immagine finché il puntatore è su di essa.
+**Il palco**: un clic su un'immagine la mette lì con la sua esecuzione sotto; un clic su di essa (o un doppio clic su qualsiasi immagine) la apre sopra la pagina nella sua forma (← → percorrono l'esecuzione, o la galleria; Esc chiude). Sotto: **Nel modulo**, **Come riferimento**, **Confronta…**, **Nota…** (una nota tua: resta con l'immagine nella sua esecuzione e si vede nel suo suggerimento; una vuota la toglie), **Imposta come copertina** (una quadrata), **Scarica** (PNG, dimensione piena), **Sopra la pagina**, ★, **Proteggi** (lo scudo: un'immagine protetta non va mai nel cestino né viene cancellata, qualunque cosa ve l'abbia mandata), **Cestino**, **Secondo passaggio…**, **Upscale…**. I dati e il prompt dell'esecuzione stanno in un suggerimento accanto all'immagine finché il puntatore è su di essa.
 
 **Esecuzioni o Galleria**: le esecuzioni mostrano ogni pressione di Disegna con il suo prompt e il suo seme, le più nuove in alto; la galleria mostra ogni immagine di ogni esecuzione in un'unica griglia, per forma, con stella o protette, in tre dimensioni, a tasselli uguali. Le frecce percorrono la libreria finché ha un'immagine: ← → l'immagine prima e dopo, ↑ ↓ una riga della galleria (nelle esecuzioni, l'esecuzione prima e dopo); il palco segue.
 
@@ -266,11 +264,11 @@ L'upscale e il secondo passaggio fanno cose diverse: un upscaler affila ciò che
 
 **Imposta come copertina** di un'immagine quadrata la fa copertina del take in mano: nella sua scheda, nel lettore e nel suo MP3. La copertina che aveva è tenuta accanto al take (`artwork-removed/`), e l'altra lettera di una coppia A/B riceve anch'essa la nuova quando non ne ha una. Una copertina è la copia propria del take (1024 px, con il nome dell'esecuzione e dell'immagine da cui viene), così toglierla dal take non tocca mai l'immagine, e l'immagine che se ne va non tocca mai la copertina; mettere una tale immagine nel cestino chiede se togliere anche la copertina dal take, o lasciarla.
 
-**La copertina propria di un take** (*Disegna la copertina* nel suo menu, nel Bibliotecario, per un take o molti) è dipinta dal pittore scelto in **Motore → Copertina**, o secondo le schede quando non ne è scelto nessuno: **Qwen-Image 2512** dove una scheda dei lavori del laboratorio lo contiene intero (Q6 da 20 GB, Q4 da 16 GB: segue meglio il prompt e scrive giusto un titolo), altrimenti **Krea 2 Muse Q4** (intero su una scheda da 16 GB, i suoi blocchi dalla RAM su una più piccola). Un piccolo modello linguistico scrive il suo prompt dallo stile e dalle parole del take, e il critico guarda se il suo soggetto c'è. Una copertina è un lavoro a sé che carica il pittore da capo, così una copertina di Qwen prende circa il doppio di una di Krea: su una 3090, Krea 2 Muse Q4 circa 65 s, Qwen-Image 2512 Q4 125 s e Q6 131 s, tutto contato (sezione 18). Un Q4 non è più veloce di un Q6: dipingere è l'aritmetica della scheda, non la sua memoria.
+**La copertina propria di un take** (*Disegna la copertina* nel suo menu, nel Bibliotecario, per un take o molti) è dipinta dal pittore scelto in **Motore → Copertina**, o secondo le schede quando non ne è scelto nessuno: **Qwen-Image 2512** dove una scheda dei lavori del laboratorio lo contiene intero (Q6 da 20 GB, Q4 da 16 GB: segue meglio il prompt e scrive giusto un titolo), altrimenti Q4 in streaming dalla RAM su una scheda più piccola (circa 6 GB della scheda e 30 GB di RAM). Un piccolo modello linguistico scrive il suo prompt dallo stile e dalle parole del take, e il critico guarda se il suo soggetto c'è. Una copertina è un lavoro a sé che carica il pittore da capo: su una 3090, Qwen-Image 2512 Q4 da 105 a 125 s, Q6 131 s, il suo fp8 BASE 95 s, tutto contato (sezione 18). Un Q4 è appena più veloce di un Q6: dipingere è l'aritmetica della scheda, non la sua memoria.
 
 ## 16. Ricette
 
-**Una copertina, veloce.** Krea 2 Muse Q4, 1:1, Variazioni 4, il campionamento come viene. Due minuti per quattro candidate; scegli, Imposta come copertina.
+**Una copertina, veloce.** Qwen-Image 2512 Q4 con ⚡ Lightning, 1:1, Variazioni 4, il campionamento come viene. Circa tre minuti per quattro candidate, caricamento compreso; scegli, Imposta come copertina.
 
 **Realismo finito.** Qwen-Image 2512 con un fine-tune fp8, Lightning spento, da 30 a 40 passi, Guida 4, ER-SDE o RES 2s con Beta. Poi Secondo passaggio ×2 a 0,45 con Rumore aggiunto 0,6 (il campionamento del modulo passa in esso), poi Upscale 4K o i passaggi.
 
@@ -301,8 +299,8 @@ L'upscale e il secondo passaggio fanno cose diverse: un upscaler affila ciò che
 | una cucitura visibile attorno a una maschera | un bordo netto | Crescita, Bordo, Morbidi e un po' di Grana |
 | il secondo passaggio ha spostato la scena | la forza troppo alta | da 0,4 a 0,5 |
 | l'esecuzione aspetta una scheda | le schede del laboratorio sono occupate o troppo piccole ora | l'attività del registro dice perché; Fuori dalla coda la ritira |
-| «nessuna scheda qui può prenderlo» | il pittore con i suoi adattatori chiede più di quanto contenga qualsiasi scheda | meno adattatori o un pittore più piccolo (Krea 2 e Qwen-Image 2512 vanno in streaming al suo posto quando possono) |
-| regioni ignorate | scelto Qwen-Image 2.1, o una regione senza parole | Krea 2 o Qwen-Image 2512, parole in ogni regione |
+| «nessuna scheda qui può prenderlo» | il pittore con i suoi adattatori chiede più di quanto contenga qualsiasi scheda | meno adattatori o un pittore più piccolo (Qwen-Image 2512 e 2.1 vanno in streaming al suo posto quando possono) |
+| regioni ignorate | scelto Qwen-Image 2.1, o una regione senza parole | Qwen-Image 2512, parole in ogni regione |
 | prima esecuzione lenta, le successive veloci | il pittore carica una volta e resta dieci minuti | come previsto |
 
 ## 18. I numeri
@@ -311,31 +309,26 @@ Misurati su una RTX 3090 (24 GB) con gli strumenti propri dello studio.
 
 | che cosa | tempo | scheda al picco |
 |---|---|---|
-| Krea 2 Muse Q4, 1280² | circa 35 s | circa 10 GB |
-| Krea 2 Muse Q4, 16:9 | circa 47 s | circa 11 GB |
-| Krea 2 Muse Q8, 1280² | circa 34 s | circa 16 GB |
 | Qwen-Image 2512 Q4, 1328², Lightning | 30 s | 14,3 GB |
 | Qwen-Image 2512 Q6, 1328², Lightning | 32 s | 17,6 GB |
 | fine-tune fp8 di Qwen-Image 2512, 1328², Lightning 0,55, 12 passi | 37 s | 21,0 GB |
 | fine-tune fp8 di Qwen-Image 2512, 16:9 | circa 141 s con il caricamento | 20,5 GB |
 | Qwen-Image 2.1 a parole, 1328² | 120 s | 16,4 GB (intero), 4,1 GB (in streaming) |
 | Qwen-Image 2.1 in modifica | da 122 a 129 s | 19,1 GB (intero), 7,9 GB (in streaming) |
-| due regioni, Krea 2 Q4, 16:9 | 137 s | come senza |
-| secondo passaggio ×2, Krea 2 Q4 a 2560² | 86 s | 14,5 GB |
 | secondo passaggio ×2, fine-tune fp8 di Qwen-Image 2512 a 3840 × 2160 | 220 s | 22,9 GB |
 | upscale ×2, 4x_Nomos8kDAT, 1280² a 2560² | 32 s | 2,1 GB |
 | upscale a passaggi, la sua catena, 1920 × 1080 a 7680 × 4320 | 246 s | |
-| copertina di un take da Krea 2 Muse Q4 (un lavoro a sé: il pittore caricato, il prompt scritto, lo sguardo del critico) | circa 65 s | |
-| copertina di un take da Qwen-Image 2512 Q4 / Q6, lo stesso | 125 s / 131 s | |
+| copertina di un take da Qwen-Image 2512 fp8 BASE (un lavoro a sé: il pittore caricato, il prompt scritto, lo sguardo del critico) | circa 95 s | |
+| copertina di un take da Qwen-Image 2512 Q4 / Q6, lo stesso | 105–125 s / 131 s | |
 
-La prima esecuzione di un pittore aggiunge il suo caricamento: circa 25 s per Krea 2 Muse, un minuto o due per i pittori Qwen.
+La prima esecuzione di un pittore aggiunge il suo caricamento: un minuto o due per i pittori Qwen.
 
 ## 19. Per script e agenti
 
 Il laboratorio risponde sulla macchina dello studio (attraverso la pagina su `/lab/…`); l'API dello studio (`/api/v1`, OpenAPI 3.1) e il suo server MCP stanno accanto. Gli endpoint propri dell'Artista:
 
-- `POST /artist/draw`: un'esecuzione. Il suo corpo: `prompt`; `shapes` (`1:1`, `16:9`, `9:16`); `count` (da 1 a 4); `seed`; `painter` (`krea2-q4`, `krea2-q8`, `qwen2512-q4`, `qwen2512-q6`, `qwen2512-fp8`, `qwen21`); `model` (il file di un fine-tune fp8); `sampling` (`steps`, `sampler`, `schedule`, `lightning`, `cfg`); `loras` (`[{id, weight, keys}]`); `ref` (un data URL, o `{id, file}` di un'immagine di un'esecuzione precedente) con `strength` (da 0,2 a 1) e `ref_as` (`edit`, `style`); `mask` con `mask_opts` (`grow`, `edge`, `soft`, `grain`); `fit` (dipingi intorno); `place` (la tela: `{shape: {x, y, s}}`); `inject` (da 0 a 2); `scale` (1,5 o 2, un secondo passaggio); `regions` (`[{prompt, box: [x, y, w, h]}]`, al massimo tre); `letters` (`{title, sub, look, where, way}`: `where` `top`, `middle` o `bottom`, `way` `paint` o `letter`; con `letter` il pittore è `qwen21` con un `ref`, e `prompt` può essere vuoto); `preview`; `take`. Un'esecuzione con scritta porta `letters_prompt` (la frase che il pittore ha letto), e ciascuna delle sue immagini `letters`: `{read, exact, near, tries}`, o `{unread}` quando l'ascoltatore non ha potuto leggerla.
-- `GET /artist/runs`, `GET /artist/file`, `POST /artist/stop`, `POST /artist/cover`, `POST /artist/star`, `POST /artist/protect`, `POST /artist/trash`, `POST /artist/restore`, `POST /artist/aside`.
+- `POST /artist/draw`: un'esecuzione. Il suo corpo: `prompt`; `shapes` (`1:1`, `16:9`, `9:16`); `count` (da 1 a 4); `seed`; `painter` (`qwen2512-q4`, `qwen2512-q6`, `qwen2512-fp8`, `qwen21`); `model` (il file di un fine-tune fp8); `sampling` (`steps`, `sampler`, `schedule`, `lightning`, `cfg`); `loras` (`[{id, weight, keys}]`); `ref` (un data URL, o `{id, file}` di un'immagine di un'esecuzione precedente) con `strength` (da 0,2 a 1) e `ref_as` (`edit`, `style`); `mask` con `mask_opts` (`grow`, `edge`, `soft`, `grain`); `fit` (dipingi intorno); `place` (la tela: `{shape: {x, y, s}}`); `inject` (da 0 a 2); `scale` (1,5 o 2, un secondo passaggio); `regions` (`[{prompt, box: [x, y, w, h]}]`, al massimo tre); `letters` (`{title, sub, look, where, way}`: `where` `top`, `middle` o `bottom`, `way` `paint` o `letter`; con `letter` il pittore è `qwen21` con un `ref`, e `prompt` può essere vuoto); `preview`; `take`. Un'esecuzione con scritta porta `letters_prompt` (la frase che il pittore ha letto), e ciascuna delle sue immagini `letters`: `{read, exact, near, tries}`, o `{unread}` quando l'ascoltatore non ha potuto leggerla.
+- `GET /artist/runs`, `GET /artist/file`, `POST /artist/stop`, `POST /artist/cover`, `POST /artist/star`, `POST /artist/note` (`{id, file, note}`), `POST /artist/protect`, `POST /artist/trash`, `POST /artist/restore`, `POST /artist/aside`.
 - `GET /artist/painters` (i pittori qui, le loro schede e i fine-tune), `POST /artist/unload` (lascia andare i pittori tenuti).
 - `GET /artist/upscalers`, `POST /artist/upscale` (`{id, file, model, target}` con `2k` o `4k`; o `passes`, `resample`, `long`, `match`; `tta`; o `items` per molte).
 - `GET /artist/loras`, `POST /artist/lora-civitai` (cerca per hash), `POST /artist/civitai-look`, `POST /artist/civitai-fetch`.
@@ -344,7 +337,7 @@ Un rifiuto torna come `400` con il motivo a parole, le stesse parole che mostra 
 
 ## 20. Licenze
 
-Krea 2 Muse: la Krea 2 Community License (il suo filtro dei contenuti si applica a ogni immagine che lo studio dipinge). Qwen-Image 2512 e Lightning: Apache-2.0. I fine-tune fp8: i termini di ciascun autore. Qwen-Image 2.1: la Qwen Research Licence, solo ricerca e valutazione. Adattatori: i termini di ciascun autore, come li elenca Civitai. Upscaler: ciascuno i suoi; le note di OpenModelDB dicono quali sono non commerciali, e la stanza li segna. Ciò che puoi fare con le immagini che dipingi discende da queste; quando conta, leggile prima di vendere.
+Il filtro dei contenuti (Falconsai) e chi scrive il prompt (Qwen3-4B): Apache-2.0; il filtro guarda ogni immagine che lo studio dipinge. Qwen-Image 2512 e Lightning: Apache-2.0. I fine-tune fp8: i termini di ciascun autore. Qwen-Image 2.1: la Qwen Research Licence, solo ricerca e valutazione. Adattatori: i termini di ciascun autore, come li elenca Civitai. Upscaler: ciascuno i suoi; le note di OpenModelDB dicono quali sono non commerciali, e la stanza li segna. Ciò che puoi fare con le immagini che dipingi discende da queste; quando conta, leggile prima di vendere.
 
 ## 21. Che cosa viene dopo
 

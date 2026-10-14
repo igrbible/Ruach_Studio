@@ -25,11 +25,10 @@ PARTS = {"extras": "1.3 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": 
 
 OMNI = "checkpoints/Qwen2.5-Omni-7B-GGUF/"
 PROJ = OMNI + "mradermacher/Qwen2.5-Omni-7B.mmproj-Q8_0.gguf"
-MUSE = "artwork/Krea-2-Muse/museByStableYogi_v35{}Extended.gguf"
 # HERESY 1297: the prompt writer by its shards' index (_here checks every shard it names), not by its config.json, which comes
 # first: a fetch cut short left the config and one shard on Viktor's laptop, and the card said «here»
-KREA = ["artwork/Krea-2-Turbo/text_encoder/model.safetensors", "artwork/Krea-2-Turbo/vae/diffusion_pytorch_model.safetensors",
-        "artwork/nsfw-filter/model.safetensors", "artwork/Qwen3-4B-Instruct-2507/model.safetensors.index.json"]
+# HERESY 1428: the covers' helpers, which came with Krea 2's set: the content filter and the prompt writer
+HELPERS = ["artwork/nsfw-filter/model.safetensors", "artwork/Qwen3-4B-Instruct-2507/model.safetensors.index.json"]
 # HERESY 1323 (Viktor 10.10.2026: «Забирай 2512 тоже в Студию»; «как альтернативу для менее мощных карт бери смело … Q6_K + Lightning…
 # Для 16 ГБ — Q4_K_M»; on Qwen-Image-2.1: «мы предупреждаем пользователя по этому поводу»): the Qwen painters, as artist.py's
 # qwen_ready() wants them; the sizes from the pinned file lists (Qwen/Qwen-Image-2512 25468b9: its parts 16.8 GB, the GGUF 13.2 and
@@ -41,8 +40,7 @@ QWEN21 = ["artwork/Qwen-Image-2.1/model_index.json", "artwork/Qwen-Image-2.1/tra
           "artwork/Qwen-Image-2.1/text_encoder/model.safetensors.index.json", "artwork/Qwen-Image-2.1/vae/diffusion_pytorch_model.safetensors"]
 # HERESY 1347: the fp8 fine-tunes of 2512 and the Artist's adapters in our models repo, shared there by their authors' leave
 QFINE = Q2512 + "checkpoints/"
-ART_LORAS = ["artwork/loras/krea2/cinematic_movie_still_krea2.safetensors", "artwork/loras/krea2/dramatic_dark_lighting_krea2.safetensors",
-             "artwork/loras/krea2/lenovo_krea2.safetensors", "artwork/loras/qwen-image-2.1/lenovo_qwen21.safetensors",
+ART_LORAS = ["artwork/loras/qwen-image-2.1/lenovo_qwen21.safetensors",   # HERESY 1428: Krea 2's three gone
              "artwork/loras/qwen-image-2.1/frank_frazetta_qwen_21.safetensors", "artwork/loras/qwen-image-2512/Styles/Film Photography v1.safetensors",
              "artwork/loras/qwen-image-2512/Styles/PHOTOSTYLE BY SEAN ARCHER - SFW v2.safetensors"]
 # the extras, each only when asked for, with fetch-heresy.sh's own sizes and notes; a variant is here when all its files are
@@ -88,8 +86,8 @@ EXTRAS = [
          {"id": "base-fp8", "label": "Qwen-Image 2512 itself in fp8", "size": "20.4 GB", "note": "and Qwen-Image 2512's parts (17.7 GB) when they are not here",
           "files": [QFINE + "BASE QW2512 fp8_e4m3fn.safetensors"] + Q2512_PARTS}]},
     {"name": "art-loras", "label": "Artist's adapters",
-     "what": "adapters for the Artist's painters, from goldhub/Ruach_Studio_Models_v2, shared there by their authors' leave (Civitai: share and sell): Cinematic Movie Still, Cinematic Dark Lighting and Lenovo UltraReal for Krea 2; Lenovo UltraReal and Frank Frazetta for Qwen-Image 2.1; Film Photography and Photostyle by Sean Archer for 2512",
-     "variants": [{"id": "all", "label": "seven adapters", "size": "3.1 GB", "files": ART_LORAS}]},
+     "what": "adapters for the Artist's painters, from goldhub/Ruach_Studio_Models_v2, shared there by their authors' leave (Civitai: share and sell): Lenovo UltraReal and Frank Frazetta for Qwen-Image 2.1; Film Photography and Photostyle by Sean Archer for 2512",
+     "variants": [{"id": "all", "label": "four adapters", "size": "1.1 GB", "files": ART_LORAS}]},
     # HERESY 1303: MERT-v2-FullSong comes with the base (m-a-p's own repository, 2.5 GB): the set's latent cache needs it
     {"name": "trainer", "label": "LoRA trainer's base",
      "what": "Comfy-Org/YuE2 for the Trainer, with Mothersuperior's tokenizer head and m-a-p's MERT-v2-FullSong (the set's latent cache hears with it)",
@@ -101,13 +99,9 @@ EXTRAS = [
 ]
 # HERESY 1425 (Viktor 13.10.2026: «В МОДЕЛЯХ и LoRA только Krea 2 Muse доступна, тогда как выше я могу выбрать из полного списка»):
 # the row named by its painter, beside «Qwen painters»; Engine → Artwork chooses among the painters these rows fetch
-ARTWORK_BIG = {"name": "artwork", "label": "Krea painter",
-               "what": "the Artist's painter: Krea 2 Muse by Stable Yogi with Krea 2's text encoder and VAE, the content filter its licence asks for, and the prompt writer (Qwen3-4B)",
-               "variants": [
-                   {"id": "q4", "label": "Krea 2 Muse Q4", "size": "26 GB", "note": "less when some of it is here", "files": [MUSE.format("Q4")] + KREA},
-                   {"id": "q8", "label": "Krea 2 Muse Q4 and Q8", "size": "41 GB", "note": "less when some of it is here",
-                    "files": [MUSE.format("Q4"), MUSE.format("Q8")] + KREA}]}
-# HERESY 1405: no small-card variant: Krea 2 Muse Q4 streams its blocks from RAM where a card has less than 16 GB (SDXL gone)
+ARTWORK_BIG = {"name": "artwork", "label": "Covers' helpers",   # HERESY 1428: Krea 2 gone; what came with it and every painter uses
+               "what": "the prompt writer (Qwen3-4B-Instruct-2507, Apache-2.0) that writes a picture's prompt from the song, and the content filter (Falconsai/nsfw_image_detection, Apache-2.0) every picture passes; the painters are the Qwen ones below",
+               "variants": [{"id": "all", "label": "the prompt writer and the filter", "size": "8.4 GB", "note": "less when some of it is here", "files": HELPERS}]}
 
 LINE = re.compile(r"^(here|differs|missing|fetched|unknown|failed)\s+(.*)$")
 SUM = re.compile(r"^here (\d+) · unknown (\d+) · differs (\d+) · fetched (\d+) · missing (\d+) · failed (\d+)$")

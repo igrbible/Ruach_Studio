@@ -32,6 +32,10 @@ GGUF Q4 or Q6 with Lightning at 1.0 and 8 steps, an fp8 fine-tune (ART_MODEL, a 
 Lightning at 0.55 and 12 steps, or 2.1 (Qwen's research licence: the page says what that means for a song that is sold), drawn at
 1328 px and kept at 1024, through the same content filter.
 
+HERESY 1428 (Viktor 14.10.2026: «Krea вырезаем, однозначно… КВЕН бьёт всё»): Krea 2 Muse gone from the studio; Qwen-Image paints every
+cover (by the cards: 2512 Q6 or Q4 whole, Q4 streamed from RAM on a smaller card), the prompt writer and the content filter as before. fp8 BASE
+is the base in fp8: Lightning at 1.0 and 8 steps, as the GGUF ones.
+
 Prints one JSON line: the prompt, the seed, the models, each picture the critic saw and its word, the time taken."""
 import json, os, random, re, subprocess, sys, time
 from pathlib import Path
@@ -51,149 +55,34 @@ CRITICS = [("Qwen2.5-Omni-7B-Q8_0.gguf", "mradermacher/Qwen2.5-Omni-7B.mmproj-Q8
            ("Qwen2.5-Omni-7B-Q4_K_M.gguf", "mmproj-Qwen2.5-Omni-7B-f16.gguf")]
 # HERESY 1166 (Viktor 04.10.2026: «1024x1024, если сейчас так генерится, то оставляй в этом размере»): kept as drawn
 SIZE, KEEP, STEPS, CFG = 1024, 1024, 28, 5.5
-# HERESY 1167: Krea 2 Muse by Stable Yogi, the author's GGUF; Krea's own parts beside it; the content filter
-KREA = KIT / "artwork" / "Krea-2-Turbo"
-MUSE = {"krea2-q4": KIT / "artwork" / "Krea-2-Muse" / "museByStableYogi_v35Q4Extended.gguf",
-        "krea2-q8": KIT / "artwork" / "Krea-2-Muse" / "museByStableYogi_v35Q8Extended.gguf"}
 FILTER = KIT / "artwork" / "nsfw-filter"
-KREA_STEPS = 8
-PAINTERS = ("krea2-q4", "krea2-q8", "qwen2512-q4", "qwen2512-q6", "qwen2512-fp8", "qwen21")   # HERESY 1338: the Qwen painters; 1405: SDXL gone
-# the GGUF's names (Krea's own) → diffusers' (checked on all 430, the values against Krea's own weights, 05.10.2026)
-KREA_RULES = [
-    (r"^blocks\.(\d+)\.", r"transformer_blocks.\1."), (r"^txtfusion\.", "text_fusion."),
-    (r"\.attn\.wq\.", ".attn.to_q."), (r"\.attn\.wk\.", ".attn.to_k."), (r"\.attn\.wv\.", ".attn.to_v."),
-    (r"\.attn\.wo\.", ".attn.to_out.0."), (r"\.attn\.gate\.", ".attn.to_gate."),
-    (r"\.attn\.qknorm\.qnorm\.scale$", ".attn.norm_q.weight"), (r"\.attn\.qknorm\.knorm\.scale$", ".attn.norm_k.weight"),
-    (r"\.mlp\.", ".ff."), (r"\.prenorm\.scale$", ".norm1.weight"), (r"\.postnorm\.scale$", ".norm2.weight"),
-    (r"\.mod\.lin$", ".scale_shift_table"),
-    (r"^first\.", "img_in."), (r"^last\.linear\.", "final_layer.linear."), (r"^last\.modulation\.lin$", "final_layer.scale_shift_table"),
-    (r"^last\.norm\.scale$", "final_layer.norm.weight"),
-    (r"^tmlp\.0\.", "time_embed.linear_1."), (r"^tmlp\.2\.", "time_embed.linear_2."), (r"^tproj\.1\.", "time_mod_proj."),
-    (r"^txtmlp\.0\.scale$", "txt_in.norm.weight"), (r"^txtmlp\.1\.", "txt_in.linear_1."), (r"^txtmlp\.3\.", "txt_in.linear_2."),
-]
-
+FEW_STEPS = 8                       # a few-step painter's own (Lightning's 8)
+PAINTERS = ("qwen2512-q4", "qwen2512-q6", "qwen2512-fp8", "qwen21")   # HERESY 1338: the Qwen painters; 1405: SDXL gone; 1428: Krea 2 gone
 
 class ContentFlagged(RuntimeError):
     """HERESY 1167: a picture the content filter flagged (not kept; the next seed tries)."""
 
 
 def which_painter():
-    p = (os.environ.get("ART_PAINTER") or "krea2-q4").strip().lower()
-    return p if p in PAINTERS else "krea2-q4"
-
-
-def krea_transformer(path):
-    """Krea 2's transformer from a GGUF: built empty from Krea's config, the GGUF's tensors renamed and set as they are
-    (a quantized weight keeps its packed shape, which load_state_dict refuses; diffusers' own GGUF loader sets them so),
-    dequantized layer by layer as it runs."""
-    import torch
-    from diffusers import Krea2Transformer2DModel
-    from diffusers.models.model_loading_utils import load_gguf_checkpoint
-    from diffusers.quantizers.gguf import utils as gu
-    sd = {}
-    for k, v in load_gguf_checkpoint(str(path)).items():
-        if k.endswith("mod.lin"):
-            v = v.reshape(6, -1)
-        if not isinstance(v, gu.GGUFParameter):
-            v = v.to(torch.bfloat16)
-        n = k
-        for a, b in KREA_RULES:
-            n = re.sub(a, b, n)
-        sd[n] = v
-    with torch.device("meta"):
-        m = Krea2Transformer2DModel.from_config(Krea2Transformer2DModel.load_config(KREA / "transformer"))
-        gu._replace_with_gguf_linear(m, torch.bfloat16, sd)
-    want = set(m.state_dict().keys())
-    if want != set(sd):
-        raise RuntimeError(f"{path.name} does not fit Krea 2: {len(want ^ set(sd))} tensor names apart")
-    for name, v in sd.items():
-        owner, _, p = name.rpartition(".")
-        (m.get_submodule(owner) if owner else m)._parameters[p] = v if isinstance(v, torch.nn.Parameter) else torch.nn.Parameter(v, requires_grad=False)
-    return m.eval().requires_grad_(False)
-
-
-class Krea:
-    """The Krea 2 painter: the text encoder on the card only while it reads a prompt, the transformer and the VAE while they
-    paint; to("cpu") gives the card to the critic. Pictures pass the content filter."""
-
-    def __init__(self, painter):
-        import torch
-        import transformers
-        if int(transformers.__version__.split(".")[0]) < 5:
-            raise RuntimeError("Krea 2 paints in .venv-art (transformers 5): lab/install-venv.sh --art")
-        from diffusers import Krea2Pipeline
-        path = MUSE[painter]
-        for need in (path, KREA / "text_encoder", KREA / "vae"):
-            if not need.exists():
-                raise RuntimeError(f"{need.relative_to(KIT)} is not here: heresy/fetch-heresy.sh --artwork")
-        self.te = Krea2Pipeline.from_pretrained(KREA, transformer=None, vae=None, torch_dtype=torch.bfloat16)
-        self.pipe = Krea2Pipeline.from_pretrained(KREA, transformer=krea_transformer(path), text_encoder=None, torch_dtype=torch.bfloat16)
-        self.pipe.set_progress_bar_config(disable=True)
-        self.where, self.filter = "cpu", None
-        self.painter, self.streamed = painter, None      # HERESY 1405
-
-    def to(self, device):
-        # HERESY 1405: a card too small for Krea whole (the lab says ART_STREAM=1): its blocks stream from RAM as the Artist room's do
-        # (artist_qwen.place), the VAE alone moves; the critic after it finds the card nearly empty
-        if os.environ.get("ART_STREAM") == "1":
-            if device == "cuda" and self.streamed is None:
-                import artist_qwen
-                self.streamed = artist_qwen.place(self.pipe, self.painter) or {}
-            self.pipe.vae.to(device)
-            self.where = device
-            return self
-        self.pipe.to(device)
-        self.where = device
-        return self
-
-    def encode(self, prompt):
-        import torch
-        if self.where == "cuda":                      # the encoder's turn on the card
-            self.to("cpu")
-            torch.cuda.empty_cache()
-        # HERESY 1405: the encoder (Qwen3-VL) on the card when the room there holds it, else on the CPU (a small card)
-        size = sum(t.numel() * t.element_size() for t in self.te.text_encoder.parameters())
-        dev = torch.device("cuda" if torch.cuda.mem_get_info()[0] >= size + 2 ** 30 else "cpu")
-        self.te.text_encoder.to(dev)
-        with torch.inference_mode():
-            e, m = self.te.encode_prompt(prompt, device=dev)
-        e, m = e.to("cpu"), m.to("cpu")
-        self.te.text_encoder.to("cpu")
-        torch.cuda.empty_cache()
-        return e, m
-
-    def draw(self, prompt, seed, embeds=None):
-        import torch
-        e, m = embeds or self.encode(prompt)
-        self.to("cuda")
-        g = torch.Generator("cuda").manual_seed(seed)
-        return self.pipe(prompt_embeds=e.to("cuda"), prompt_embeds_mask=m.to("cuda"), num_inference_steps=KREA_STEPS,
-                         guidance_scale=0.0, height=SIZE, width=SIZE, generator=g).images[0]
-
-    def flagged(self, img):
-        """The content filter's word on a picture (Krea 2 Community License, 4.2): its nsfw score, or None without the filter."""
-        if not (FILTER / "config.json").is_file():
-            return None
-        if self.filter is None:
-            from transformers import pipeline
-            self.filter = pipeline("image-classification", model=str(FILTER), device="cpu")
-        scores = {r["label"].lower(): r["score"] for r in self.filter(img.convert("RGB"))}
-        return round(scores.get("nsfw", 0.0), 3)
+    p = (os.environ.get("ART_PAINTER") or "qwen2512-q4").strip().lower()
+    return p if p in PAINTERS else "qwen2512-q4"
 
 
 class Qwen:
     """HERESY 1338: Qwen-Image as a take's painter, through the Artist room's loader (artist_qwen.build) with Lightning on: the base at
-    1.0 and 8 steps, a fine-tune at 0.55 and 12; 2.1 its parts on the card in turn. to("cpu") gives the card to the critic, as Krea's."""
+    1.0 and 8 steps, a fine-tune at 0.55 and 12; 2.1 its parts on the card in turn. to("cpu") gives the card to the critic."""
     NAMES = {"qwen2512-q4": "Qwen-Image 2512 (Q4)", "qwen2512-q6": "Qwen-Image 2512 (Q6)", "qwen2512-fp8": "Qwen-Image 2512 fine-tune",
              "qwen21": "Qwen-Image 2.1"}
 
     def __init__(self, painter, model=None):
         import artist_qwen
         self.aq, self.painter = artist_qwen, painter
-        speed = {"lightning": artist_qwen.SPEED["fine"][0]} if painter == "qwen2512-fp8" else {}   # a fine-tune's Lightning only when asked
+        # a fine-tune's Lightning only when asked; 1428: fp8 BASE is the base (Lightning at 1.0, 8 steps)
+        speed = {"lightning": artist_qwen.SPEED["fine"][0]} if painter == "qwen2512-fp8" and not artist_qwen.is_base(model) else {}
         self.pipe, _, self.steps, self.cfg = artist_qwen.build(painter, model, [], speed)
         self.pipe.set_progress_bar_config(disable=True)
-        self.name = self.NAMES[painter] + (" · " + Path(str(model)).stem if model else "") + (" with Lightning" if painter != "qwen21" and self.cfg <= 1.0 else "")
+        own = painter == "qwen2512-fp8" and artist_qwen.is_base(model)   # HERESY 1428: 2512 itself in fp8, not a fine-tune
+        self.name = ("Qwen-Image 2512 (fp8)" if own else self.NAMES[painter]) + (" · " + Path(str(model)).stem if model else "") + (" with Lightning" if painter != "qwen21" and self.cfg <= 1.0 else "")
         self.where = "cpu"
         if painter == "qwen21":
             self.pipe.enable_model_cpu_offload()
@@ -319,21 +208,15 @@ def write_prompt(title, style, lyrics, seed, subject):
 
 
 def painter():
-    """The painter ART_PAINTER names (HERESY 1167): Krea 2 Muse at Q4 or Q8, or a Qwen painter (1338), and the name it is known by;
-    SDXL refused, said (1405)."""
-    kind = which_painter()
-    if kind.startswith("qwen"):                          # HERESY 1338
-        q = Qwen(kind, os.environ.get("ART_MODEL") or None)
-        return q, q.name, (q.steps, q.cfg, "flow-euler")
-    if kind == "sdxl":                                   # HERESY 1405: gone from the studio
-        raise RuntimeError("SDXL left the studio (HERESY 1405): Krea 2 Muse paints a take's artwork, its blocks streamed from RAM on a small card")
-    return Krea(kind), "Krea 2 Muse by Stable Yogi (" + kind[-2:].upper() + ")", (KREA_STEPS, 0.0, "flow-euler")
+    """The painter ART_PAINTER names: a Qwen painter (1338) and the name it is known by (1405: SDXL gone; 1428: Krea 2 gone)."""
+    q = Qwen(which_painter(), os.environ.get("ART_MODEL") or None)
+    return q, q.name, (q.steps, q.cfg, "flow-euler")
 
 
 def paint(pipe, numbers, prompt, seed, out):
     import torch
-    if not isinstance(pipe, (Krea, Qwen)):            # HERESY 1405: SDXL gone; no other painter here
-        raise RuntimeError("no painter: Krea 2 Muse or Qwen-Image")
+    if not isinstance(pipe, Qwen):                    # HERESY 1405: SDXL gone; 1428: Krea 2 gone; no other painter here
+        raise RuntimeError("no painter: Qwen-Image")
     if True:                                         # HERESY 1167: Krea 2 Muse, then the content filter; 1338: Qwen-Image as well
         img = pipe.draw(prompt, seed)
         score = pipe.flagged(img)
@@ -363,6 +246,34 @@ def omni(crit, image, text, n):
     return r.stdout.strip()
 
 
+STAND_INS = ("violin", "viola", "cello", "double bass", "guitar", "lute", "mandolin", "bouzouki", "tzouras", "balalaika", "banjo", "ukulele",
+             "lyre", "flute", "recorder", "oboe", "clarinet", "bassoon", "saxophone", "trumpet", "trombone", "tuba", "bugle", "accordion",
+             "piano", "sitar", "erhu", "pipa", "zither", "harmonica", "bagpipe", "harp")
+
+
+def _heads(text):
+    """The head words of «a lute, a bouzouki or a tzouras, a modern concert harp with a pillar»: lute, bouzouki, tzouras, harp."""
+    out = []
+    for part in re.split(r",|\bor\b|\band\b", (text or "").lower()):
+        part = re.sub(r"\b(with|of|in|on|as|like)\b.*", "", part)
+        words = re.findall(r"[a-z]+", part)
+        if words and len(words[-1]) > 3:
+            out.append(words[-1])
+    return out
+
+
+def stand_in(subject, shows):
+    """HERESY 1430: another instrument the critic named for what it saw (its first line), not one of the subject's own words; "" none.
+    Only for a subject with a look (the rare ones, which a painter replaces with a common instrument)."""
+    if not subject or not subject.get("looks") or not shows:
+        return ""
+    own, said = (subject.get("name", "") + " " + subject.get("looks", "")).lower(), shows.lower()
+    for w in list(STAND_INS) + _heads(subject.get("not")):
+        if re.search(r"\b" + re.escape(w) + r"(e?s)?\b", said) and not re.search(r"\b" + re.escape(w), own):
+            return w
+    return ""
+
+
 def look(crit, image, prompt, subject):
     """Is the subject there: True, False, or None when the answer cannot be read; and what the picture shows. Asked
     blind: the critic sees the picture and the subject only, never the prompt, and says what it sees before judging
@@ -389,6 +300,10 @@ def look(crit, image, prompt, subject):
     first = next((l.strip() for l in said.splitlines() if l.strip()), "")
     first = re.sub(r"^line\s*\d\s*:\s*", "", first, flags=re.I)
     first = re.sub(r"\s*\b(yes|no)\b\.?\s*$", "", first, flags=re.I)
+    other = stand_in(subject, first) if verdict else ""
+    if other:                                           # HERESY 1430: it said YES while naming something else: NO
+        print(f"  the critic said yes, but it saw a {other}: taken as no", flush=True)
+        verdict = False
     return verdict, " ".join(first.split())[:300]
 
 
@@ -473,7 +388,7 @@ def main():
                       "painter": painter_name, "critic": crit[0].stem if crit else None,
                       "subject": subject["name"] if subject else None, "seen": seen, "why": why, "tries": tries,
                       "size": KEEP, "steps": numbers[0], "cfg": numbers[1], "sampler": numbers[2], "vram_peak_gb": peak,
-                      "negative": NEGATIVE if not isinstance(pipe, (Krea, Qwen)) else "",   # Krea 2 Turbo paints without guidance; 1338: Qwen with Lightning
+                      "negative": "",                  # 1338: Qwen with Lightning paints without guidance
                       "took": {"prompt": round(t1 - t0, 1), "paint": round(time.time() - t1 - took_critic, 1),
                                "critic": round(took_critic, 1)}},
                      ensure_ascii=False), flush=True)

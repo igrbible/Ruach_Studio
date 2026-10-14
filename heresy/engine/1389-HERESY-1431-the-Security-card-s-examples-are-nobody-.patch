@@ -1,0 +1,228 @@
+From b97059a07958f221deceae3b3a7cf278009491cb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 14 Oct 2026 16:39:04 -0600
+Subject: [PATCH 1389/1389] HERESY 1431: the Security card's examples are
+ nobody's network
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The examples were the Forge's own LAN (192.168.2.0/24), which make-release's scan refused for the public tree; they are 10.0.0.0/24 and 172.16.0.0/24 now (the asker's own network still comes from «+ my network»), in the card, the engine's answers and every language.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            | 4 ++--
+ tools/console/heresy-i18n-be.js | 2 +-
+ tools/console/heresy-i18n-de.js | 2 +-
+ tools/console/heresy-i18n-el.js | 2 +-
+ tools/console/heresy-i18n-es.js | 2 +-
+ tools/console/heresy-i18n-fr.js | 2 +-
+ tools/console/heresy-i18n-it.js | 2 +-
+ tools/console/heresy-i18n-ja.js | 2 +-
+ tools/console/heresy-i18n-pt.js | 2 +-
+ tools/console/heresy-i18n-ru.js | 2 +-
+ tools/console/heresy-i18n-uk.js | 2 +-
+ tools/console/heresy-i18n-zh.js | 2 +-
+ tools/yue-server.cpp            | 6 +++---
+ 13 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index b149f8f..0bec181 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4228,7 +4228,7 @@
+   var ACCESS_MODES = [
+     ["local", "This computer only", "the safest: no other machine can open it, not even your phone"],
+     ["private", "This computer and private networks", "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too"],
+-    ["list", "This computer and the networks I list", "only the networks you trust, written as 192.168.2.0/24, a comma between them"]];
++    ["list", "This computer and the networks I list", "only the networks you trust, written as 10.0.0.0/24, a comma between them"]];
+   function accessYou(a) {
+     if (!a || !a.you) return "";
+     return (a.you_local ? tr("You open it from {0}: this computer") : a.you_private ? tr("You open it from {0}: a private network") : tr("You open it from {0}"))
+@@ -4245,7 +4245,7 @@
+         return '<label class="acc-mode"><input type="radio" name="' + name + '" value="' + m[0] + '"' + (a && a.mode === m[0] ? " checked" : "") + " />" +
+           '<span><b>' + escape(tr(m[1])) + "</b><small>" + escape(tr(m[2])) + "</small></span></label>";
+       }).join("") + "</div>" +
+-      '<div class="acc-nets"><input type="text" class="acc-nets-in" spellcheck="false" autocomplete="off" placeholder="192.168.2.0/24, 10.8.0.0/24" value="' +
++      '<div class="acc-nets"><input type="text" class="acc-nets-in" spellcheck="false" autocomplete="off" placeholder="10.0.0.0/24, 172.16.0.0/24" value="' +
+       escape(((a && a.nets) || []).join(", ")) + '" aria-label="' + escape(tr("The networks I list")) + '" />' +
+       (mine ? '<button type="button" class="btn ghost small acc-mine" data-net="' + mine + '" data-tip="' + escape(tr("Add the network you open it from now: {0}").replace("{0}", mine)) + '">+ ' + escape(mine) + "</button>" : "") + "</div>";
+   }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 5c48f10..5ee0964 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5172,7 +5172,7 @@ RuachI18n.add("be", {
+ "This computer and private networks": "Гэты камп'ютар і прыватныя сеткі",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "твая хатняя ці працоўная сетка, VPN або Tailscale; Wi-Fi у кавярні, гатэлі ці цягніку — таксама прыватная сетка",
+ "This computer and the networks I list": "Гэты камп'ютар і сеткі, якія я пералічу",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "толькі сеткі, якім ты давяраеш, у выглядзе 192.168.2.0/24, праз коску",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "толькі сеткі, якім ты давяраеш, у выглядзе 10.0.0.0/24, праз коску",
+ "You open it from {0}: this computer": "Ты адкрываеш яе з {0}: гэта той самы камп'ютар",
+ "You open it from {0}: a private network": "Ты адкрываеш яе з {0}: прыватная сетка",
+ "You open it from {0}": "Ты адкрываеш яе з {0}",
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 5ae57e9..b265e52 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5055,7 +5055,7 @@ RuachI18n.add("de", {
+ "This computer and private networks": "Dieser Rechner und private Netze",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "dein Heim- oder Büronetz, ein VPN oder Tailscale; das WLAN eines Cafés, Hotels oder Zugs ist auch ein privates Netz",
+ "This computer and the networks I list": "Dieser Rechner und die Netze, die ich nenne",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "nur Netze, denen du traust, geschrieben als 192.168.2.0/24, durch Kommas getrennt",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "nur Netze, denen du traust, geschrieben als 10.0.0.0/24, durch Kommas getrennt",
+ "You open it from {0}: this computer": "Du öffnest es von {0}: dieser Rechner",
+ "You open it from {0}: a private network": "Du öffnest es von {0}: ein privates Netz",
+ "You open it from {0}": "Du öffnest es von {0}",
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 89f039e..cb04397 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5171,7 +5171,7 @@ RuachI18n.add("el", {
+ "This computer and private networks": "Αυτός ο υπολογιστής και ιδιωτικά δίκτυα",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "το δίκτυο του σπιτιού ή του γραφείου σου, ένα VPN ή το Tailscale· το Wi-Fi ενός καφέ, ενός ξενοδοχείου ή ενός τρένου είναι κι αυτό ιδιωτικό δίκτυο",
+ "This computer and the networks I list": "Αυτός ο υπολογιστής και τα δίκτυα που απαριθμώ",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "μόνο τα δίκτυα που εμπιστεύεσαι, γραμμένα ως 192.168.2.0/24, με κόμμα ανάμεσα",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "μόνο τα δίκτυα που εμπιστεύεσαι, γραμμένα ως 10.0.0.0/24, με κόμμα ανάμεσα",
+ "You open it from {0}: this computer": "Το ανοίγεις από το {0}: αυτός ο υπολογιστής",
+ "You open it from {0}: a private network": "Το ανοίγεις από το {0}: ιδιωτικό δίκτυο",
+ "You open it from {0}": "Το ανοίγεις από το {0}",
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index dae85d3..65d736e 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5171,7 +5171,7 @@ RuachI18n.add("es", {
+ "This computer and private networks": "Este ordenador y las redes privadas",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "la red de tu casa o de tu oficina, una VPN o Tailscale; el Wi-Fi de un café, un hotel o un tren también es una red privada",
+ "This computer and the networks I list": "Este ordenador y las redes que yo indique",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "solo las redes en que confías, escritas como 192.168.2.0/24, separadas por comas",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "solo las redes en que confías, escritas como 10.0.0.0/24, separadas por comas",
+ "You open it from {0}: this computer": "Lo abres desde {0}: este ordenador",
+ "You open it from {0}: a private network": "Lo abres desde {0}: una red privada",
+ "You open it from {0}": "Lo abres desde {0}",
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index f6b0ae6..8ded5b1 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5055,7 +5055,7 @@ RuachI18n.add("fr", {
+ "This computer and private networks": "Cet ordinateur et les réseaux privés",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "le réseau de ta maison ou de ton bureau, un VPN ou Tailscale ; le Wi-Fi d'un café, d'un hôtel ou d'un train est aussi un réseau privé",
+ "This computer and the networks I list": "Cet ordinateur et les réseaux que j'indique",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "seulement les réseaux de confiance, écrits 192.168.2.0/24, séparés par des virgules",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "seulement les réseaux de confiance, écrits 10.0.0.0/24, séparés par des virgules",
+ "You open it from {0}: this computer": "Tu l'ouvres depuis {0} : cet ordinateur",
+ "You open it from {0}: a private network": "Tu l'ouvres depuis {0} : un réseau privé",
+ "You open it from {0}": "Tu l'ouvres depuis {0}",
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 8335543..fc18563 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5171,7 +5171,7 @@ RuachI18n.add("it", {
+ "This computer and private networks": "Questo computer e le reti private",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "la rete di casa o dell'ufficio, una VPN o Tailscale; il Wi-Fi di un bar, di un albergo o di un treno è anch'esso una rete privata",
+ "This computer and the networks I list": "Questo computer e le reti che elenco",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "solo le reti di cui ti fidi, scritte come 192.168.2.0/24, separate da virgole",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "solo le reti di cui ti fidi, scritte come 10.0.0.0/24, separate da virgole",
+ "You open it from {0}: this computer": "Lo apri da {0}: questo computer",
+ "You open it from {0}: a private network": "Lo apri da {0}: una rete privata",
+ "You open it from {0}": "Lo apri da {0}",
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 20c5ec1..76f206e 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5055,7 +5055,7 @@ RuachI18n.add("ja", {
+ "This computer and private networks": "このコンピューターとプライベートネットワーク",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "自宅や職場のネットワーク、VPN や Tailscale。カフェやホテル、列車の Wi-Fi もプライベートネットワークです",
+ "This computer and the networks I list": "このコンピューターと、私が挙げるネットワーク",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "信頼するネットワークだけを 192.168.2.0/24 の形で、カンマで区切って",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "信頼するネットワークだけを 10.0.0.0/24 の形で、カンマで区切って",
+ "You open it from {0}: this computer": "{0} から開いています：このコンピューター",
+ "You open it from {0}: a private network": "{0} から開いています：プライベートネットワーク",
+ "You open it from {0}": "{0} から開いています",
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 7fd6af5..611d65d 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5055,7 +5055,7 @@ RuachI18n.add("pt", {
+ "This computer and private networks": "Este computador e as redes privadas",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "a rede da sua casa ou do escritório, uma VPN ou o Tailscale; o Wi-Fi de um café, de um hotel ou de um trem também é uma rede privada",
+ "This computer and the networks I list": "Este computador e as redes que eu listar",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "só as redes em que você confia, escritas como 192.168.2.0/24, separadas por vírgula",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "só as redes em que você confia, escritas como 10.0.0.0/24, separadas por vírgula",
+ "You open it from {0}: this computer": "Você o abre de {0}: este computador",
+ "You open it from {0}: a private network": "Você o abre de {0}: uma rede privada",
+ "You open it from {0}": "Você o abre de {0}",
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index fb898bd..f8dbfa5 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5177,7 +5177,7 @@ RuachI18n.add("ru", {
+ "This computer and private networks": "Этот компьютер и частные сети",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "твоя домашняя или рабочая сеть, VPN или Tailscale; Wi-Fi в кафе, отеле или поезде — тоже частная сеть",
+ "This computer and the networks I list": "Этот компьютер и сети, которые я перечислю",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "только сети, которым ты доверяешь, в виде 192.168.2.0/24, через запятую",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "только сети, которым ты доверяешь, в виде 10.0.0.0/24, через запятую",
+ "You open it from {0}: this computer": "Ты открываешь её с {0}: это тот же компьютер",
+ "You open it from {0}: a private network": "Ты открываешь её с {0}: частная сеть",
+ "You open it from {0}": "Ты открываешь её с {0}",
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index be0e804..0082c30 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5172,7 +5172,7 @@ RuachI18n.add("uk", {
+ "This computer and private networks": "Цей комп'ютер і приватні мережі",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "твоя домашня чи робоча мережа, VPN або Tailscale; Wi-Fi у кав'ярні, готелі чи потязі — теж приватна мережа",
+ "This computer and the networks I list": "Цей комп'ютер і мережі, які я перелічу",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "лише мережі, яким ти довіряєш, у вигляді 192.168.2.0/24, через кому",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "лише мережі, яким ти довіряєш, у вигляді 10.0.0.0/24, через кому",
+ "You open it from {0}: this computer": "Ти відкриваєш її з {0}: це той самий комп'ютер",
+ "You open it from {0}: a private network": "Ти відкриваєш її з {0}: приватна мережа",
+ "You open it from {0}": "Ти відкриваєш її з {0}",
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index c218cd5..7d6524f 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5055,7 +5055,7 @@ RuachI18n.add("zh", {
+ "This computer and private networks": "此电脑和私有网络",
+ "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too": "你家里或办公室的网络、VPN 或 Tailscale；咖啡馆、酒店或火车上的 Wi-Fi 也算私有网络",
+ "This computer and the networks I list": "此电脑和我列出的网络",
+-"only the networks you trust, written as 192.168.2.0/24, a comma between them": "只填你信任的网络，写成 192.168.2.0/24，用逗号分隔",
++"only the networks you trust, written as 10.0.0.0/24, a comma between them": "只填你信任的网络，写成 10.0.0.0/24，用逗号分隔",
+ "You open it from {0}: this computer": "你从 {0} 打开它：就是这台电脑",
+ "You open it from {0}: a private network": "你从 {0} 打开它：私有网络",
+ "You open it from {0}": "你从 {0} 打开它",
+diff --git a/tools/yue-server.cpp b/tools/yue-server.cpp
+index 412df47..a34cdcf 100644
+--- a/tools/yue-server.cpp
++++ b/tools/yue-server.cpp
+@@ -1424,7 +1424,7 @@ static bool is_loopback_addr(const std::string & addr) {
+     return a == "::1" || a.rfind("127.", 0) == 0;
+ }
+ 
+-// a network as CIDR ("192.168.2.0/24", "fd00::/8"; an address alone is itself) into its bytes and its prefix's length
++// a network as CIDR ("10.0.0.0/24", "fd00::/8"; an address alone is itself) into its bytes and its prefix's length
+ static bool net_parse(const std::string & text, unsigned char ip[16], int * bits, bool * v6) {
+     std::string a = text, b;
+     size_t      slash = a.find('/');
+@@ -1519,7 +1519,7 @@ static bool access_parse(const std::string & body, Access * out, bool * ack, boo
+                     continue;
+                 }
+                 if (!net_parse(t, ip, &bits, &v6)) {
+-                    *why = "not a network: " + t.substr(0, 60) + " (a network is written as 192.168.2.0/24 or fd00::/8)";
++                    *why = "not a network: " + t.substr(0, 60) + " (a network is written as 10.0.0.0/24 or fd00::/8)";
+                     ok   = false;
+                     break;
+                 }
+@@ -1541,7 +1541,7 @@ static bool access_parse(const std::string & body, Access * out, bool * ack, boo
+         *lockout = yyjson_get_bool(v);
+     }
+     if (ok && out->mode == "list" && out->nets.empty()) {
+-        *why = "list: name at least one network (192.168.2.0/24)";
++        *why = "list: name at least one network (10.0.0.0/24)";
+         ok   = false;
+     }
+     yyjson_doc_free(doc);
+-- 
+2.43.0
+

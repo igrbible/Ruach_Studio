@@ -38,14 +38,14 @@ Der Raum hat drei Spalten. Links das Formular: der Prompt und jedes Bedienelemen
 
 1. Wähle rechts im Studio einen Take (die Liste des Schöpfers oder des Bibliothekars): das Bild, das du als Cover setzt, geht an ihn.
 2. Drück im Maler **Aus dem Take** für einen Prompt zum Anfangen, oder schreib deinen eigenen (Abschnitt 3).
-3. Lass **Formate** auf **1:1**, stell **Variationen** auf 4 und behalte den Maler, den das Studio gewählt hat (Krea 2 Muse Q4 auf den meisten Karten).
+3. Lass **Formate** auf **1:1**, stell **Variationen** auf 4 und behalte den Pinsel, den das Studio gewählt hat (Qwen-Image 2512 Q4 mit ⚡ Lightning auf den meisten Karten).
 4. Drück **Zeichnen** (Strg+Enter). Sieh zu, wie die Bilder auf der Bühne entstehen; etwa eine halbe Minute je Bild auf einer 3090.
 5. Klick auf das, das dir gefällt; **Als Cover setzen** macht es zum Cover des Takes: auf seiner Karte, im Player und in seinem MP3.
 6. Gefällt es dir, aber du willst es feiner? **Zweiter Durchgang… ×2** (Abschnitt 12), dann **Hochskalieren… 4K** (Abschnitt 13).
 
 ## 3. Einen Prompt schreiben
 
-Krea 2 Muse und Qwen-Image lesen einen Prompt als Beschreibung, nicht als Liste von Tags: schreib Sätze. Zuerst, was im Bild ist (wer oder was, wo, was es tut), dann das Licht (Dämmerung, Kerzenlicht, ein grauer Morgen), die Farben und das Medium (ein Ölgemälde mit dickem Pinselstrich, eine Tuschezeichnung, ein 35-mm-Foto). Schließ mit *no text*, wenn du keine Buchstaben willst: beide Maler beschriften ein Cover gern von selbst.
+Qwen-Image liest einen Prompt als Beschreibung, nicht als Liste von Tags: schreib Sätze. Zuerst, was im Bild ist (wer oder was, wo, was es tut), dann das Licht (Dämmerung, Kerzenlicht, ein grauer Morgen), die Farben und das Medium (ein Ölgemälde mit dickem Pinselstrich, eine Tuschezeichnung, ein 35-mm-Foto). Schließ mit *no text*, wenn du keine Buchstaben willst: Qwen-Image beschriftet ein Cover gern von selbst.
 
 Wörter, die gut wirken: das Motiv schlicht benannt (*a red fox sitting in the snow*), die Komposition (*seen from below*, *in the left third*, *a wide empty sky above*), das Material (*oil on canvas*, *gouache*, *woodcut*), Richtung und Farbe des Lichts. Wörter, die wenig tun: Listen von Qualitäts-Tags (*masterpiece, 8k, best quality*) gehören zu älteren Modellen und nehmen nur Platz weg.
 
@@ -55,16 +55,15 @@ Wörter, die gut wirken: das Motiv schlicht benannt (*a red fox sitting in the s
 
 | Maler | Lizenz | was er von der Karte verlangt | ein Bild auf einer 3090 | wofür |
 |---|---|---|---|---|
-| **Krea 2 Muse Q4** | Krea 2 Community License | 12,5 GB | etwa 35 s bei 1:1, 47 s bei 16:9 | Entwürfe, Cover, das Arbeitspferd |
-| **Krea 2 Muse Q8** | Krea 2 Community License | 18,5 GB | etwas länger, feiner | Cover |
 | **Qwen-Image 2512 Q4** | Apache-2.0 | 15,5 GB | etwa 30 s mit Lightning | das Qwen einer 16-GB-Karte |
 | **Qwen-Image 2512 Q6** | Apache-2.0 | 20 GB | etwa 32 s mit Lightning | feinere Entwürfe |
 | **fp8-Fine-Tune von Qwen-Image 2512** | die des Fine-Tunes | 22,5 GB | etwa 37 s mit Lightning, Minuten ohne | fertiger Realismus |
+| **Qwen-Image 2512 fp8 BASE** | Apache-2.0 | 22,5 GB | 8 Schritte mit Lightning, wie die GGUF | 2512 selbst in fp8 |
 | **Qwen-Image 2.1** | Qwen Research Licence | 21 GB (gestreamt mit weniger) | etwa zwei Minuten | Bearbeiten mit Worten, Stilreferenz |
 
-**Krea 2 Muse** (von Stable Yogi, ein Fine-Tune von Krea 2 Turbo) malt in seinen eigenen wenigen Schritten (8 als Standard, 4 bis 16) ohne Führung: ein Turbo-Modell hat seine Führung in sich destilliert. Es ist der Standard-Maler des Raums, weil es schnell ist, den Worten treu und gutmütig zu kleineren Karten. Q4 und Q8 sind dasselbe Modell in zwei Genauigkeiten (GGUF): Q8 hält etwas mehr Detail.
+**Die Pinsel des Malers** sind eine Liste jedes Modells und jeder Datei hier, nach Gruppen: Qwen-Image 2512 aus einem GGUF (Q4, Q6), jede fp8-Datei in `artwork/Qwen-Image-2512/checkpoints/` (das eigene BASE von 2512 und die Fine-Tunes) und Qwen-Image 2.1. **⚡ Lightning** markiert einen Pinsel, der standardmäßig damit malt; ein Fine-Tune ist als solches markiert. Eine in `checkpoints/` gelegte Datei wird ein eigener Pinsel, wenn der Raum die Liste neu liest (nach einem Download oder beim Neuladen der Seite). Krea 2 Muse hat das Studio im Oktober 2026 verlassen: Qwen-Image 2512 folgt den Worten treuer und beschriftet einen Titel richtig.
 
-**Qwen-Image 2512** ist der größere Maler: feinerer Realismus, lange Prompts liest er gut, Buchstaben zeichnet er richtig, wenn du sie verlangst. Er kommt als GGUF in Q4 oder Q6, oder als **fp8-Fine-Tune**: die Einzeldateien von ComfyUI in `artwork/Qwen-Image-2512/checkpoints/` gelegt und unter dem Maler gewählt (Jib Mix Qwen, IntoRealism Qwen, Real-Qwen-Image und 2512 selbst lassen sich über **Maler und Adapter holen…** laden, je 20,4 GB). Ein fp8-Fine-Tune wird in bf16 gelesen, auf der Karte in seinem eigenen fp8 gehalten, und jede Schicht rechnet in bf16, während sie läuft; Adapter darauf halten ihre eigenen Schichten in bf16.
+**Qwen-Image 2512** ist der größere Maler: feinerer Realismus, lange Prompts liest er gut, Buchstaben zeichnet er richtig, wenn du sie verlangst. Er kommt als GGUF in Q4 oder Q6, oder als **fp8-Fine-Tune**: die Einzeldateien von ComfyUI in `artwork/Qwen-Image-2512/checkpoints/` gelegt jede ein eigener Pinsel (Jib Mix Qwen, IntoRealism Qwen, Real-Qwen-Image und 2512 selbst lassen sich über **Maler und Adapter holen…** laden, je 20,4 GB). Das eigene BASE von 2512 malt mit Lightning wie die GGUF, ein Fine-Tune ohne ihn, außer du schaltest ihn ein. Eine fp8-Datei wird in bf16 gelesen, auf der Karte in seinem eigenen fp8 gehalten, und jede Schicht rechnet in bf16, während sie läuft; Adapter darauf halten ihre eigenen Schichten in bf16.
 
 **Qwen-Image 2.1** liest Bilder ebenso wie Worte (sein Text-Encoder ist Qwen3-VL): es bearbeitet ein Bild nach den Worten des Prompts, oder malt die Szene des Prompts im Stil eines Bildes (Abschnitt 11). Es steht unter der Qwen Research Licence: nur Forschung und Bewertung, nicht für ein Cover, das du verkaufst; der Raum sagt es unter dem Maler in der Farbe der Warnungen.
 
@@ -78,17 +77,17 @@ Jeder Maler zeigt sich nur, wenn seine Dateien hier sind; die fehlenden werden u
 
 **Welche Karte.** Die Aufgaben des Labors halten sich an die Karten, die ihnen in **Engine → GPUs** gegeben wurden (die eigene Karte des Studios wird nie zufällig genommen). Eine Karte, die nichts sonst nutzt, nimmt einen Lauf, dessen Bedarf in ihren Speicher minus 512 MiB passt (der eigene Anteil der CUDA-Laufzeit); eine Karte in Gebrauch nimmt ihn, wenn ihr freier Speicher den Bedarf fasst; eine Karte mit VRAM-Limit zählt ihr Limit als Decke. Der Bedarf ist der des Malers plus die Größe seiner Adapter, und 6 GB mehr für einen zweiten Durchgang ×2.
 
-**Wenn keine Karte ihn ganz fasst**, streamen Krea 2 Muse und Qwen-Image 2512 ihre Blöcke aus dem RAM: die Blöcke, die passen, bleiben auf der Karte, der Rest kommt, wie er gebraucht wird (das Group-Offloading von diffusers über einen CUDA-Stream: ein Block kommt an, während der vorige rechnet), und das Bild ist dasselbe, langsamer um das, was der Bus nicht verstecken kann. Mit allen Blöcken gestreamt nimmt Krea 2 Muse Q4 2,2 GB von der Karte, sodass eine 8-GB-Karte es malt. Qwen-Image 2.1 streamt sowohl seinen Transformer (Block für Block) als auch seinen Text-Encoder (Schicht für Schicht): unter einem Limit von 15,5 GB malte es aus Worten mit 4,1 GB Spitze und bearbeitete mit 7,9 GB, in etwa derselben Zeit wie ganz. Ein Maler, der nicht streamen kann und auf keine Karte passt, wird sofort abgelehnt, mit den Zahlen und dem Maler, der passen würde.
+**Wenn keine Karte ihn ganz fasst**, streamt Qwen-Image 2512 seine Blöcke aus dem RAM: die Blöcke, die passen, bleiben auf der Karte, der Rest kommt, wie er gebraucht wird (das Group-Offloading von diffusers über einen CUDA-Stream: ein Block kommt an, während der vorige rechnet), und das Bild ist dasselbe, langsamer um das, was der Bus nicht verstecken kann. Mit allen Blöcken gestreamt nimmt es 2,3 GB von der Karte (1328², Lightning, vier Adapter), sodass eine 6-GB-Karte es malt, bei etwa 30 GB RAM. Qwen-Image 2.1 streamt sowohl seinen Transformer (Block für Block) als auch seinen Text-Encoder (Schicht für Schicht): unter einem Limit von 15,5 GB malte es aus Worten mit 4,1 GB Spitze und bearbeitete mit 7,9 GB, in etwa derselben Zeit wie ganz. Ein Maler, der nicht streamen kann und auf keine Karte passt, wird sofort abgelehnt, mit den Zahlen und dem Maler, der passen würde.
 
-**Mehrere Karten.** Ein Lauf mit mehreren Bildern wird auf die Karten des Labors verteilt, die Platz und genug RAM für einen Maler mehr haben (drei Formate auf zwei Karten: das erste und dritte auf einer, das zweite auf der anderen), jede Karte malt ihren Teil mit den eigenen Seeds des Laufs: die Bilder sind Bit für Bit dieselben wie auf einer Karte. Krea 2 Muse Q8, drei Formate: 132 s auf zwei Karten gegen 163 s auf einer.
+**Mehrere Karten.** Ein Lauf mit mehreren Bildern wird auf die Karten des Labors verteilt, die Platz und genug RAM für einen Maler mehr haben (drei Formate auf zwei Karten: das erste und dritte auf einer, das zweite auf der anderen), jede Karte malt ihren Teil mit den eigenen Seeds des Laufs: die Bilder sind Bit für Bit dieselben wie auf einer Karte.
 
 **Ein gehaltener Maler.** Nach einem Lauf geht sein Maler zurück in den RAM, und seine Karte ist wieder frei; ein nächster Lauf mit demselben Maler, demselben Fine-Tune und denselben Adaptern in derselben Reihenfolge malt sofort, ohne die ein, zwei Minuten Laden. Ein gehaltener Maler wird nach zehn Minuten Leerlauf losgelassen, wenn der RAM für einen anderen gebraucht wird, oder per **Entladen** in der Leiste (das alles loslässt, was das Studio auf seinen Karten hält).
 
-**In einem Lauf**: der Prompt wird einmal vom Text-Encoder gelesen; jedes Bild wird in der eigenen Größe des Malers gezeichnet und in der des Raums behalten (Krea 2 zeichnet in Vielfachen von 16 und schneidet aus der Mitte, 1920 × 1088 auf 1920 × 1080; Qwen-Image zeichnet in 1328², 1664 × 928 und 928 × 1664 und bringt jedes auf 1280², 1920 × 1080 und 1080 × 1920); der Decoder arbeitet in Kacheln, darum bleibt seine Spitze niedrig.
+**In einem Lauf**: der Prompt wird einmal vom Text-Encoder gelesen; jedes Bild wird in der eigenen Größe des Malers gezeichnet und in der des Raums behalten (Qwen-Image zeichnet in 1328², 1664 × 928 und 928 × 1664 und bringt jedes auf 1280², 1920 × 1080 und 1080 × 1920); der Decoder arbeitet in Kacheln, darum bleibt seine Spitze niedrig.
 
 **Live-Vorschau** (standardmäßig an): die Latents jedes Schritts werden ohne den Decoder zu einem Bild in einem Achtel der Größe (mit den eigenen Farbfaktoren des Latent-Raums, wie InvokeAI sie trägt), es kostet also nichts; ein Balken oben auf der Bühne folgt dem Lauf, Bild für Bild und Schritt für Schritt.
 
-**Der Inhaltsfilter**: jedes Bild geht durch den Filter, den die Lizenz von Krea 2 verlangt, wer immer es gemalt hat: eines, das er markiert, wird nicht behalten, und der Lauf sagt es.
+**Der Inhaltsfilter**: jedes Bild geht durch einen Inhaltsfilter (nsfw_image_detection von Falconsai, Apache-2.0), die Regel des Studios für jeden Maler: eines, das er markiert, wird nicht behalten, und der Lauf sagt es.
 
 **Auf der Platte**: jeder Lauf ist ein Ordner in `artist/` des Studios: `ask.json` (was verlangt wurde), `run.json` (Bild für Bild geschrieben), die Bilder `NN-SHAPE-sSEED.png`, ihre `thumbs/`, und eine Referenz oder Maske daneben, wenn der Lauf eine hatte. Ein Wächter stoppt einen Maler, der zu lange schweigt (zehn Minuten beim Laden, fünf, sobald er malt), und ein Lauf, den das Labor bei einem Neustart verloren hat, sagt es, statt ewig zu malen.
 
@@ -96,15 +95,15 @@ Jeder Maler zeigt sich nur, wenn seine Dateien hier sind; die fehlenden werden u
 
 **Was es ist**: ein Adapter (lightx2v, Apache-2.0), der Qwen-Image 2512 beibringt, in wenigen Schritten ohne Führung zu malen: der eigene lange geführte Weg des Modells, destilliert in 8 Schritte. Seine Datei liegt in `artwork/Qwen-Image-2512/lightning/` und kommt mit dem Laden der Qwen-Maler.
 
-**Wie das Studio ihn einlegt**: mit Lightning an lädt der Maler ihn als einen Adapter mehr unter deinen, mit **1.0** für die GGUF Q4 und Q6 (die Basis, aus der er destilliert wurde, 8 Schritte) und mit **0.55** für ein fp8-Fine-Tune mit 12 Schritten (ein Fine-Tune hat sich von der Basis entfernt, und Lightning mit voller Stärke zöge es zurück). Der Zeitplan wird der eigene von Lightning (eine Verschiebung von log 3 bei jeder Größe), und die Führung geht aus: ein Durchlauf des Modells pro Schritt.
+**Wie das Studio ihn einlegt**: mit Lightning an lädt der Maler ihn als einen Adapter mehr unter deinen, mit **1.0** für die GGUF Q4 und Q6 und das eigene fp8 BASE von 2512 (die Basis, aus der er destilliert wurde, 8 Schritte) und mit **0.55** für ein fp8-Fine-Tune mit 12 Schritten (ein Fine-Tune hat sich von der Basis entfernt, und Lightning mit voller Stärke zöge es zurück). Der Zeitplan wird der eigene von Lightning (eine Verschiebung von log 3 bei jeder Größe), und die Führung geht aus: ein Durchlauf des Modells pro Schritt.
 
 **Mit ihm aus** malt 2512 auf seine Art: 30 Schritte als Standard (10 bis 60) und **Führung** 4 (echtes CFG gegen ein leeres Negativ: zwei Durchläufe pro Schritt). Sechzig Durchläufe gegen acht: etwa siebenmal das Malen, und das Detail und Licht des fertigen Realismus.
 
-**Die Regel hinter den Standards**: Lightning für Entwürfe und Cover, nicht für professionellen Realismus. Die GGUF-Maler malen mit ihm; ein fp8-Fine-Tune malt ohne ihn, außer du schaltest ihn ein; das eigene Artwork eines Takes wird mit ihm gemalt. Krea 2 Muse hat keinen Schalter: seine wenigen Schritte sind seine eigenen.
+**Die Regel hinter den Standards**: Lightning für Entwürfe und Cover, nicht für professionellen Realismus. Die GGUF-Maler und das eigene fp8 BASE von 2512 malen mit ihm; ein fp8-Fine-Tune malt ohne ihn, außer du schaltest ihn ein; das eigene Artwork eines Takes wird mit ihm gemalt.
 
 ## 7. Sampler und Zeitpläne
 
-**Sampling**, unter dem Maler, eingeklappt, seine Werte in seiner Zusammenfassung: die Schritte, der Sampler und der Zeitplan (und für 2512 Lightning und Führung), je Maler behalten; **Zurücksetzen** gibt die des Malers zurück. Krea 2 und Qwen-Image 2512 mit Lightning nehmen 4 bis 16 Schritte; ohne 10 bis 60.
+**Sampling**, unter dem Maler, eingeklappt, seine Werte in seiner Zusammenfassung: die Schritte, der Sampler und der Zeitplan (und für 2512 Lightning und Führung), je Maler behalten; **Zurücksetzen** gibt die des Malers zurück. Qwen-Image 2512 mit Lightning nimmt 4 bis 16 Schritte; ohne ihn, wie Qwen-Image 2.1, 10 bis 60.
 
 Das Modell sagt bei jedem Schritt, in welche Richtung das Bild liegt; der **Sampler** entscheidet, wie man dorthin geht:
 
@@ -123,7 +122,6 @@ Der **Zeitplan** sagt, wo die Schritte zwischen allem Rauschen und keinem ausgeg
 
 | Maler | gut | meiden |
 |---|---|---|
-| Krea 2 Muse | jeder Sampler und Zeitplan malte ein ganzes Bild | |
 | Qwen-Image 2512 mit Lightning | Simple, Beta, Beta 57, SGM uniform, Bong tangent | Karras, Exponential, KL optimal (sie können das Motiv doppelt malen) |
 | Qwen-Image 2512 ohne Lightning | Euler, ER-SDE, RES 2s / 3s | Euler SDE (weich und dunstig) |
 
@@ -149,17 +147,17 @@ Das Formular sagt beide Warnungen, wenn sie zutreffen. Die Sampler wurden für d
 
 **Wie es malt**: bei jedem Schritt wird der Maler für jede Region noch einmal gefragt, mit dem Hauptprompt und den Worten der Region, und seine Antworten werden nach den Kästen der Regionen als weichrandige Gewichte gemischt (ein Rand von einem Fünfundzwanzigstel der kürzeren Seite), geteilt, wo Kästen sich überlappen; der Rest des Ausschnitts folgt nur dem Hauptprompt. Das ist der Weg von Latent Couple: er braucht nichts vom Modell, und die Szene bleibt eine Szene, weil der Prompt jeder Region den Hauptprompt trägt.
 
-**Wie man sie schreibt**: der Hauptprompt sagt die ganze Szene, eine Region, was darin steht. *Two animals sitting in a snowy forest clearing at dawn, oil painting*; linke Hälfte *a red fox sitting in the snow*; rechte Hälfte *a white snowy owl perched on a stump*. Bei einem Seed malte Krea 2 Muse ohne die Regionen zwei vage Katzen und mit ihnen den Fuchs und die Eule; Qwen-Image 2512 malte ohne sie zwei Bären und mit ihnen den Fuchs und die Eule.
+**Wie man sie schreibt**: der Hauptprompt sagt die ganze Szene, eine Region, was darin steht. *Two animals sitting in a snowy forest clearing at dawn, oil painting*; linke Hälfte *a red fox sitting in the snow*; rechte Hälfte *a white snowy owl perched on a stump*. Bei einem Seed malte Qwen-Image 2512 ohne die Regionen zwei Bären und mit ihnen den Fuchs und die Eule.
 
-**Was es kostet**: ein ganzer Durchlauf mehr pro Schritt für jede Region (auf einer 3090 bei 16:9: Krea 2 Q4 48 s allein, 137 s mit zwei Regionen; Qwen-Image 2512 fp8 141 und 281 s). Die Zeitschätzung des Formulars zählt sie mit.
+**Was es kostet**: ein ganzer Durchlauf mehr pro Schritt für jede Region (auf einer 3090 bei 16:9: Qwen-Image 2512 fp8 141 s allein, 281 s mit zwei Regionen). Die Zeitschätzung des Formulars zählt sie mit.
 
-Regionen werden in diesem Browser behalten; eine Region ohne Worte wird nicht gesendet; **Noch einmal** malt mit den eigenen des Laufs. Krea 2 und Qwen-Image 2512; Qwen-Image 2.1 bearbeitet mit Worten und malt ohne sie.
+Regionen werden in diesem Browser behalten; eine Region ohne Worte wird nicht gesendet; **Noch einmal** malt mit den eigenen des Laufs. Für Qwen-Image 2512; Qwen-Image 2.1 bearbeitet mit Worten und malt ohne sie.
 
 ## 10. Schriftzug
 
 **Schriftzug**, unter Regionen, eingeklappt: ein Titel, und eine zweite Zeile darunter, als Teil des Gemäldes beschriftet statt obendrauf gelegt als eine Ebene, die abseits vom Bild steht. Seine Worte gehen in eigene Felder, nie in den Prompt, und das Studio schreibt, was der Maler liest. Zwei Wege, gewählt unter **Wie**:
 
-- **Mit dem Bild gemalt** (Krea 2 Muse, Qwen-Image 2512 oder 2.1): das Studio fügt dem Prompt einen Satz hinzu: wo, den Titel in Anführungszeichen, wie die Buchstaben aussehen, die zweite Zeile kleiner darunter, dann *painted in the same technique and light as the picture. No other text.* Ein Prompt aus einem Absatz bekommt ihn am Ende; ein in Absätzen geschriebener Prompt bekommt ihn als eigenen Absatz, *TEXT RENDERING:*, als zweiten, nach dem ersten: am Ende eines langen Prompts ertrinkt er (Viktors Fosforida-Prompt, 3.200 Zeichen in zehn Absätzen, malte so drei Bilder ohne einen Buchstaben). Der Prompt eines Takes verlangt keinen Text (*No text, no letters.*): dieser Satz wird zuerst herausgenommen.
+- **Mit dem Bild gemalt** (Qwen-Image 2512 oder 2.1): das Studio fügt dem Prompt einen Satz hinzu: wo, den Titel in Anführungszeichen, wie die Buchstaben aussehen, die zweite Zeile kleiner darunter, dann *painted in the same technique and light as the picture. No other text.* Ein Prompt aus einem Absatz bekommt ihn am Ende; ein in Absätzen geschriebener Prompt bekommt ihn als eigenen Absatz, *TEXT RENDERING:*, als zweiten, nach dem ersten: am Ende eines langen Prompts ertrinkt er (Viktors Fosforida-Prompt, 3.200 Zeichen in zehn Absätzen, malte so drei Bilder ohne einen Buchstaben). Der Prompt eines Takes verlangt keinen Text (*No text, no letters.*): dieser Satz wird zuerst herausgenommen.
 - **Auf dem Referenzbild** (Qwen-Image 2.1): ein fertiges Bild mit Worten beschriftet, der Rest behalten. Die Anweisung wird nur aus den Feldern geschrieben, sodass der Prompt leer bleiben darf. **Beschriften**, auf der Bühne oder im Menü eines Bildes, macht dieses Bild zur Referenz, setzt Wie und öffnet den Block mit dem Titel in der Hand.
 
 **Die Felder**: **Titel** (60 Zeichen); **Zweite Zeile** (80: der Künstler, das Album; leer für keine); **Die Buchstaben** (400, wie sie aussehen, in Worten, so lang wie ein Typografie-Absatz eines Prompts; leer: *large elegant classical serif capitals in warm gold, with even letter spacing*); **Wo** (oben, in der Mitte, unten). **Der Titel des Takes** füllt den Titel aus dem rechts gewählten Take. Der Block wird in diesem Browser behalten; **Noch einmal** beschriftet mit den eigenen Worten des Laufs; die Zeile des Laufs behält den Satz, den der Maler gelesen hat.
@@ -172,7 +170,7 @@ Regionen werden in diesem Browser behalten; eine Region ohne Worte wird nicht ge
 
 **Zeiten** (RTX 3090, ein Quadrat): Qwen-Image 2.1 beschriftete ein fertiges Bild in 118 s, sofort richtig gelesen; ein fp8-Fine-Tune von Qwen-Image 2512 ohne Lightning (30 Schritte, echtes CFG 4, der eigene Weg eines fp8-Fine-Tunes) malte eines mit seinen Buchstaben in 230 s, sein Laden mitgezählt, etwa 150 s davon das Malen. Ein verschriebenes Bild kostet ein ganzes Bild mehr pro Versuch: von zwei Variationen von „LANTERN SONG / RUACH STUDIO“ kam eine sofort richtig heraus und die andere blieb in allen drei Versuchen verschrieben („RUCH STUDIO“), behalten und gesagt, in 743 s für den Lauf. Lightning macht aus jedem Versuch einen Bruchteil davon. Die Schätzung des Formulars zählt das Lesen mit.
 
-**Kyrillisch**: Viktors „ФОСФОРИДА | Возвращение Шехины“ im Stil des Prompts seines eigenen Albums. Qwen-Image 2512 schrieb den Titel in allen neun Bildern richtig; die zweite Zeile in Kleinbuchstaben in keinem von sechs Versuchen (die kleinen Щ und Ш gekritzelt, „Вовуяеные Шехни“); in Großbuchstaben kamen Щ und Ш jedes Mal richtig und nur der letzte Buchstabe ging schief („ШЕХИНЯ“), wobei auch die Formen der Buchstaben gesagt wurden (seine Idee, HERESY 1396: Ы, Щ, Ш und die anderen Buchstaben, die ein auf Latein trainierter Maler selten sah, und Ф neben dem griechischen Φ, jeder beschrieben, wenn die Worte ihn tragen). **Krea 2 Muse schrieb beide Zeilen exakt**: „ФОСФОРИДА / ВОЗВРАЩЕНИЕ ШЕХИНЫ“ in zwei Variationen, eine im ersten Versuch und eine im zweiten, 184 s für den Lauf. Eine buchstabierte Hilfe („Ф-О-С-Ф-…“) wurde versucht und verworfen: Krea malte ihre Bindestriche in den Titel, und der Hörer, den man seitdem bittet, Bindestriche und Leerzeichen zu behalten, las eine davon zusammengezogen. Für Kyrillisch zuerst Krea 2 Muse; Großbuchstaben; und schau auf die Marke.
+**Kyrillisch**: Viktors „ФОСФОРИДА | Возвращение Шехины“ im Stil des Prompts seines eigenen Albums. Qwen-Image 2512 schrieb den Titel in allen neun Bildern richtig; die zweite Zeile in Kleinbuchstaben in keinem von sechs Versuchen (die kleinen Щ und Ш gekritzelt, „Вовуяеные Шехни“); in Großbuchstaben kamen Щ und Ш jedes Mal richtig und nur der letzte Buchstabe ging schief („ШЕХИНЯ“), wobei auch die Formen der Buchstaben gesagt wurden (seine Idee, HERESY 1396: Ы, Щ, Ш und die anderen Buchstaben, die ein auf Latein trainierter Maler selten sah, und Ф neben dem griechischen Φ, jeder beschrieben, wenn die Worte ihn tragen). Eine buchstabierte Hilfe („Ф-О-С-Ф-…“) wurde versucht und verworfen: der Maler kann ihre Bindestriche in den Titel malen. Für Kyrillisch: Großbuchstaben, und schau auf die Marke.
 
 **Warum gemalt und nicht gesetzt**: eine echte Schrift, vom Studio gesetzt (Kerning, Laufweite und Zeilenabstand durch raqm) und leicht übermalt, schreibt exakt, bleibt aber eine Ebene auf dem Bild. Von den vier versuchten Wegen wählte Viktor die zwei, bei denen der Maler die Buchstaben selbst schreibt.
 
@@ -194,7 +192,7 @@ Die letzten beiden werden angeboten, wenn Qwen-Image 2.1 hier ist. Mit einem von
 
 Bild zu Bild ist hier, was InvokeAI mit Modellen tut, die dafür keine Pipeline haben: das Bild deckt jedes Format und wird aus seiner Mitte geschnitten, geht rückwärts durch den Decoder des Malers in Latents und wird bis zu einem Punkt im eigenen Zeitplan des Malers verrauscht; das Malen läuft dann den Rest des Zeitplans von dort. Die Stärke wählt diesen Punkt: den nächsten der eigenen Schritte des Zeitplans, mindestens zwei Schritte.
 
-| Stärke | was sie gibt (an Krea 2 Muse versucht) |
+| Stärke | was sie gibt (an Krea 2 Muse versucht, dem damaligen Maler des Raums) |
 |---|---|
 | 0,3 | das Bild fast wie es ist, seine Oberfläche berührt |
 | 0,5 | das Bild behalten, seine kleinen Dinge geändert (Schriftzug, Textur) |
@@ -234,7 +232,7 @@ Der Rand einer runden Maske kann ohne sie sichtbar bleiben; Erweitern 16, Rand 2
 
 **Im Studio**: **Wie stark es sich ändern darf** (zuerst 0,5: 0,3 behält die Zeichnung und fügt Detail hinzu, 0,5 schärft seine Materie, 0,7 malt seine Formen neu) und **Zusätzliches Rauschen** (zuerst 0,6, wie seins) in seiner Zeile; Schritte, Sampler, Zeitplan und Lightning sind die des Formulars, wenn das Formular mit demselben Maler malt, sonst die eigenen des Laufs. Sein Rezept gibt dem zweiten Durchgang viele Schritte und kein Lightning: stell sie im Formular ein, bevor du ×2 drückst.
 
-**Was es kostet und gibt**: ein 16:9 von 1920 × 1080 kommt als 3840 × 2160 heraus. Auf einer 3090 Krea 2 Q4 auf 2560² in 86 s (14,5 GB Spitze); ein fp8-Fine-Tune von Qwen-Image 2512 auf 3840 × 2160 in 220 s mit 12 Schritten und Lightning (22,9 GB, seine Blöcke gestreamt). Bei 0,6 behielten beide die Szene und verschoben ihre Teile ein wenig; bei 0,5 hielt die Komposition. Nicht für Qwen-Image 2.1; keine Maske und keine Leinwand damit. **Noch einmal** auf einem zweiten Durchgang malt ihn in seiner Größe neu.
+**Was es kostet und gibt**: ein 16:9 von 1920 × 1080 kommt als 3840 × 2160 heraus. Auf einer 3090 ein fp8-Fine-Tune von Qwen-Image 2512 auf 3840 × 2160 in 220 s mit 12 Schritten und Lightning (22,9 GB, seine Blöcke gestreamt). Bei 0,6 behielt es die Szene und verschob ihre Teile ein wenig; bei 0,5 hielt die Komposition. Nicht für Qwen-Image 2.1; keine Maske und keine Leinwand damit. **Noch einmal** auf einem zweiten Durchgang malt ihn in seiner Größe neu.
 
 ## 13. Hochskalieren
 
@@ -248,7 +246,7 @@ Hochskalieren und der zweite Durchgang tun Verschiedenes: ein Upscaler schärft,
 
 ## 14. Die Bühne, die Bibliothek und der Papierkorb
 
-**Die Bühne**: ein Klick auf ein Bild stellt es dorthin mit seinem Lauf darunter; ein Klick darauf (oder ein Doppelklick auf irgendein Bild) öffnet es über der Seite in seinem eigenen Format (← → gehen den Lauf oder die Galerie entlang; Esc schließt). Darunter: **Ins Formular**, **Als Referenz**, **Vergleichen…**, **Als Cover setzen** (ein quadratisches), **Herunterladen** (PNG, volle Größe), **Über die Seite**, ★, **Schützen** (der Schild: ein geschütztes Bild geht nie in den Papierkorb und wird nie gelöscht, was es auch dorthin schickte), **Papierkorb**, **Zweiter Durchgang…**, **Hochskalieren…**. Die Daten und der Prompt des Laufs stehen in einem Tooltip neben dem Bild, solange der Zeiger darauf ist.
+**Die Bühne**: ein Klick auf ein Bild stellt es dorthin mit seinem Lauf darunter; ein Klick darauf (oder ein Doppelklick auf irgendein Bild) öffnet es über der Seite in seinem eigenen Format (← → gehen den Lauf oder die Galerie entlang; Esc schließt). Darunter: **Ins Formular**, **Als Referenz**, **Vergleichen…**, **Notiz…** (eine eigene Notiz: beim Bild in seinem Lauf behalten und in seinem Tooltip gezeigt; eine leere entfernt sie), **Als Cover setzen** (ein quadratisches), **Herunterladen** (PNG, volle Größe), **Über die Seite**, ★, **Schützen** (der Schild: ein geschütztes Bild geht nie in den Papierkorb und wird nie gelöscht, was es auch dorthin schickte), **Papierkorb**, **Zweiter Durchgang…**, **Hochskalieren…**. Die Daten und der Prompt des Laufs stehen in einem Tooltip neben dem Bild, solange der Zeiger darauf ist.
 
 **Läufe oder Galerie**: die Läufe zeigen jeden Druck auf Zeichnen mit seinem Prompt und Seed, die neuesten oben; die Galerie zeigt jedes Bild jedes Laufs in einem Raster, nach Format, mit Stern oder geschützt, in drei Größen, in gleichen Kacheln. Die Pfeiltasten gehen die Bibliothek entlang, solange sie ein Bild hat: ← → das Bild davor und danach, ↑ ↓ eine Reihe der Galerie (in den Läufen der Lauf davor und danach); die Bühne folgt.
 
@@ -266,11 +264,11 @@ Hochskalieren und der zweite Durchgang tun Verschiedenes: ein Upscaler schärft,
 
 **Als Cover setzen** an einem quadratischen Bild macht es zum Cover des Takes in der Hand: auf seiner Karte, im Player und in seinem MP3. Das Cover, das er hatte, wird neben dem Take behalten (`artwork-removed/`), und der andere Buchstabe eines A/B-Paars bekommt das neue auch, wenn er keines hat. Ein Cover ist die eigene Kopie des Takes (1024 px, mit dem Namen des Laufs und des Bildes, aus dem es kam), sodass es vom Take zu nehmen nie das Bild berührt und das Gehen des Bildes nie das Cover; legt man ein solches Bild in den Papierkorb, wird gefragt, ob auch das Cover vom Take genommen oder gelassen werden soll.
 
-**Das eigene Artwork eines Takes** (*Bild zeichnen* in seinem Menü, im Bibliothekar, für einen Take oder viele) malt der Maler, der in **Engine → Artwork** gewählt ist, oder nach den Karten, wenn keiner gewählt ist: **Qwen-Image 2512**, wo eine Karte für die Aufgaben des Labors es ganz fasst (Q6 ab 20 GB, Q4 ab 16 GB: es folgt dem Prompt am besten und beschriftet einen Titel richtig), sonst **Krea 2 Muse Q4** (ganz auf einer 16-GB-Karte, seine Blöcke auf einer kleineren aus dem RAM). Ein kleines Sprachmodell schreibt seinen Prompt aus Stil und Worten des Takes, und der Kritiker schaut, ob sein Motiv da ist. Ein Cover ist eine eigene Aufgabe, die ihren Maler neu lädt, darum dauert ein Qwen-Cover etwa doppelt so lang wie ein Krea-Cover: auf einer 3090 Krea 2 Muse Q4 etwa 65 s, Qwen-Image 2512 Q4 125 s und Q6 131 s, alles mitgezählt (Abschnitt 18). Ein Q4 ist nicht schneller als ein Q6: Malen ist die Arithmetik der Karte, nicht ihr Speicher.
+**Das eigene Artwork eines Takes** (*Bild zeichnen* in seinem Menü, im Bibliothekar, für einen Take oder viele) malt der Maler, der in **Engine → Artwork** gewählt ist, oder nach den Karten, wenn keiner gewählt ist: **Qwen-Image 2512**, wo eine Karte für die Aufgaben des Labors es ganz fasst (Q6 ab 20 GB, Q4 ab 16 GB: es folgt dem Prompt am besten und beschriftet einen Titel richtig), sonst Q4 aus dem RAM gestreamt auf einer kleineren Karte (etwa 6 GB der Karte und 30 GB RAM). Ein kleines Sprachmodell schreibt seinen Prompt aus Stil und Worten des Takes, und der Kritiker schaut, ob sein Motiv da ist. Ein Cover ist eine eigene Aufgabe, die ihren Maler neu lädt: auf einer 3090 Qwen-Image 2512 Q4 105 bis 125 s, Q6 131 s, sein fp8 BASE 95 s, alles mitgezählt (Abschnitt 18). Ein Q4 ist kaum schneller als ein Q6: Malen ist die Arithmetik der Karte, nicht ihr Speicher.
 
 ## 16. Rezepte
 
-**Ein Cover, schnell.** Krea 2 Muse Q4, 1:1, Variationen 4, das Sampling, wie es kommt. Zwei Minuten für vier Kandidaten; wähl eins, Als Cover setzen.
+**Ein Cover, schnell.** Qwen-Image 2512 Q4 mit ⚡ Lightning, 1:1, Variationen 4, das Sampling, wie es kommt. Etwa drei Minuten für vier Kandidaten, das Laden mitgezählt; wähl eins, Als Cover setzen.
 
 **Fertiger Realismus.** Qwen-Image 2512 mit einem fp8-Fine-Tune, Lightning aus, 30 bis 40 Schritte, Führung 4, ER-SDE oder RES 2s mit Beta. Dann Zweiter Durchgang ×2 bei 0,45 mit Zusätzlichem Rauschen 0,6 (das Sampling des Formulars geht mit hinein), dann Hochskalieren 4K oder die Durchgänge.
 
@@ -301,8 +299,8 @@ Hochskalieren und der zweite Durchgang tun Verschiedenes: ein Upscaler schärft,
 | eine sichtbare Naht um eine Maske | ein harter Rand | Erweitern, Rand, Sanft und ein wenig Korn |
 | der zweite Durchgang hat die Szene verschoben | die Stärke zu hoch | 0,4 bis 0,5 |
 | der Lauf wartet auf eine Karte | die Karten des Labors sind gerade belegt oder zu klein | die Aktivität des Protokolls sagt warum; Aus der Warteschlange nimmt ihn zurück |
-| „keine Karte hier kann das nehmen“ | der Maler mit seinen Adaptern braucht mehr, als irgendeine Karte fasst | weniger Adapter oder ein kleinerer Maler (Krea 2 und Qwen-Image 2512 streamen stattdessen, wenn sie können) |
-| Regionen ignoriert | Qwen-Image 2.1 gewählt, oder eine Region ohne Worte | Krea 2 oder Qwen-Image 2512, Worte in jeder Region |
+| „keine Karte hier kann das nehmen“ | der Maler mit seinen Adaptern braucht mehr, als irgendeine Karte fasst | weniger Adapter oder ein kleinerer Maler (Qwen-Image 2512 und 2.1 streamen stattdessen, wenn sie können) |
+| Regionen ignoriert | Qwen-Image 2.1 gewählt, oder eine Region ohne Worte | Qwen-Image 2512, Worte in jeder Region |
 | erster Lauf langsam, die nächsten schnell | der Maler lädt einmal und bleibt zehn Minuten | so gedacht |
 
 ## 18. Die Zahlen
@@ -311,31 +309,26 @@ Gemessen auf einer RTX 3090 (24 GB) mit den eigenen Werkzeugen des Studios.
 
 | was | Zeit | Karte an der Spitze |
 |---|---|---|
-| Krea 2 Muse Q4, 1280² | etwa 35 s | etwa 10 GB |
-| Krea 2 Muse Q4, 16:9 | etwa 47 s | etwa 11 GB |
-| Krea 2 Muse Q8, 1280² | etwa 34 s | etwa 16 GB |
 | Qwen-Image 2512 Q4, 1328², Lightning | 30 s | 14,3 GB |
 | Qwen-Image 2512 Q6, 1328², Lightning | 32 s | 17,6 GB |
 | fp8-Fine-Tune von Qwen-Image 2512, 1328², Lightning 0,55, 12 Schritte | 37 s | 21,0 GB |
 | fp8-Fine-Tune von Qwen-Image 2512, 16:9 | etwa 141 s mit seinem Laden | 20,5 GB |
 | Qwen-Image 2.1 aus Worten, 1328² | 120 s | 16,4 GB (ganz), 4,1 GB (gestreamt) |
 | Qwen-Image 2.1 beim Bearbeiten | 122 bis 129 s | 19,1 GB (ganz), 7,9 GB (gestreamt) |
-| zwei Regionen, Krea 2 Q4, 16:9 | 137 s | wie ohne |
-| zweiter Durchgang ×2, Krea 2 Q4 auf 2560² | 86 s | 14,5 GB |
 | zweiter Durchgang ×2, fp8-Fine-Tune von Qwen-Image 2512 auf 3840 × 2160 | 220 s | 22,9 GB |
 | Hochskalieren ×2, 4x_Nomos8kDAT, 1280² auf 2560² | 32 s | 2,1 GB |
 | Hochskalieren in Durchgängen, seine Kette, 1920 × 1080 auf 7680 × 4320 | 246 s | |
-| Cover eines Takes von Krea 2 Muse Q4 (eine eigene Aufgabe: der Maler geladen, der Prompt geschrieben, der Blick des Kritikers) | etwa 65 s | |
-| Cover eines Takes von Qwen-Image 2512 Q4 / Q6, ebenso | 125 s / 131 s | |
+| Cover eines Takes von Qwen-Image 2512 fp8 BASE (eine eigene Aufgabe: der Maler geladen, der Prompt geschrieben, der Blick des Kritikers) | etwa 95 s | |
+| Cover eines Takes von Qwen-Image 2512 Q4 / Q6, ebenso | 105–125 s / 131 s | |
 
-Der erste Lauf eines Malers fügt sein Laden hinzu: etwa 25 s für Krea 2 Muse, ein, zwei Minuten für die Qwen-Maler.
+Der erste Lauf eines Malers fügt sein Laden hinzu: ein, zwei Minuten für die Qwen-Maler.
 
 ## 19. Für Skripte und Agenten
 
 Das Labor antwortet auf dem Rechner des Studios (über die Seite unter `/lab/…`); die API des Studios (`/api/v1`, OpenAPI 3.1) und sein MCP-Server stehen daneben. Die eigenen Endpunkte des Malers:
 
-- `POST /artist/draw`: ein Lauf. Sein Rumpf: `prompt`; `shapes` (`1:1`, `16:9`, `9:16`); `count` (1 bis 4); `seed`; `painter` (`krea2-q4`, `krea2-q8`, `qwen2512-q4`, `qwen2512-q6`, `qwen2512-fp8`, `qwen21`); `model` (die Datei eines fp8-Fine-Tunes); `sampling` (`steps`, `sampler`, `schedule`, `lightning`, `cfg`); `loras` (`[{id, weight, keys}]`); `ref` (eine Data-URL, oder `{id, file}` eines Bildes eines früheren Laufs) mit `strength` (0,2 bis 1) und `ref_as` (`edit`, `style`); `mask` mit `mask_opts` (`grow`, `edge`, `soft`, `grain`); `fit` (drumherum malen); `place` (die Leinwand: `{shape: {x, y, s}}`); `inject` (0 bis 2); `scale` (1,5 oder 2, ein zweiter Durchgang); `regions` (`[{prompt, box: [x, y, w, h]}]`, höchstens drei); `letters` (`{title, sub, look, where, way}`: `where` `top`, `middle` oder `bottom`, `way` `paint` oder `letter`; mit `letter` ist der Maler `qwen21` mit einer `ref`, und `prompt` darf leer sein); `preview`; `take`. Ein beschrifteter Lauf trägt `letters_prompt` (den Satz, den der Maler las), und jedes seiner Bilder `letters`: `{read, exact, near, tries}`, oder `{unread}`, wenn der Hörer es nicht lesen konnte.
-- `GET /artist/runs`, `GET /artist/file`, `POST /artist/stop`, `POST /artist/cover`, `POST /artist/star`, `POST /artist/protect`, `POST /artist/trash`, `POST /artist/restore`, `POST /artist/aside`.
+- `POST /artist/draw`: ein Lauf. Sein Rumpf: `prompt`; `shapes` (`1:1`, `16:9`, `9:16`); `count` (1 bis 4); `seed`; `painter` (`qwen2512-q4`, `qwen2512-q6`, `qwen2512-fp8`, `qwen21`); `model` (die Datei eines fp8-Fine-Tunes); `sampling` (`steps`, `sampler`, `schedule`, `lightning`, `cfg`); `loras` (`[{id, weight, keys}]`); `ref` (eine Data-URL, oder `{id, file}` eines Bildes eines früheren Laufs) mit `strength` (0,2 bis 1) und `ref_as` (`edit`, `style`); `mask` mit `mask_opts` (`grow`, `edge`, `soft`, `grain`); `fit` (drumherum malen); `place` (die Leinwand: `{shape: {x, y, s}}`); `inject` (0 bis 2); `scale` (1,5 oder 2, ein zweiter Durchgang); `regions` (`[{prompt, box: [x, y, w, h]}]`, höchstens drei); `letters` (`{title, sub, look, where, way}`: `where` `top`, `middle` oder `bottom`, `way` `paint` oder `letter`; mit `letter` ist der Maler `qwen21` mit einer `ref`, und `prompt` darf leer sein); `preview`; `take`. Ein beschrifteter Lauf trägt `letters_prompt` (den Satz, den der Maler las), und jedes seiner Bilder `letters`: `{read, exact, near, tries}`, oder `{unread}`, wenn der Hörer es nicht lesen konnte.
+- `GET /artist/runs`, `GET /artist/file`, `POST /artist/stop`, `POST /artist/cover`, `POST /artist/star`, `POST /artist/note` (`{id, file, note}`), `POST /artist/protect`, `POST /artist/trash`, `POST /artist/restore`, `POST /artist/aside`.
 - `GET /artist/painters` (die Maler hier, ihre Karten und Fine-Tunes), `POST /artist/unload` (die gehaltenen Maler loslassen).
 - `GET /artist/upscalers`, `POST /artist/upscale` (`{id, file, model, target}` mit `2k` oder `4k`; oder `passes`, `resample`, `long`, `match`; `tta`; oder `items` für viele).
 - `GET /artist/loras`, `POST /artist/lora-civitai` (Suche per Hash), `POST /artist/civitai-look`, `POST /artist/civitai-fetch`.
@@ -344,7 +337,7 @@ Eine Ablehnung kommt als `400` mit dem Grund in Worten zurück, denselben Worten
 
 ## 20. Lizenzen
 
-Krea 2 Muse: die Krea 2 Community License (ihr Inhaltsfilter gilt für jedes Bild, das das Studio malt). Qwen-Image 2512 und Lightning: Apache-2.0. Die fp8-Fine-Tunes: die Bedingungen jedes Autors. Qwen-Image 2.1: die Qwen Research Licence, nur Forschung und Bewertung. Adapter: die Bedingungen jedes Autors, wie Civitai sie aufführt. Upscaler: jeder seine eigenen; die Notizen von OpenModelDB sagen, welche nicht-kommerziell sind, und der Raum markiert sie. Was du mit den Bildern tun darfst, die du malst, folgt daraus; wenn es darauf ankommt, lies sie, bevor du verkaufst.
+Der Inhaltsfilter (Falconsai) und der Prompt-Schreiber (Qwen3-4B): Apache-2.0; der Filter sieht jedes Bild an, das das Studio malt. Qwen-Image 2512 und Lightning: Apache-2.0. Die fp8-Fine-Tunes: die Bedingungen jedes Autors. Qwen-Image 2.1: die Qwen Research Licence, nur Forschung und Bewertung. Adapter: die Bedingungen jedes Autors, wie Civitai sie aufführt. Upscaler: jeder seine eigenen; die Notizen von OpenModelDB sagen, welche nicht-kommerziell sind, und der Raum markiert sie. Was du mit den Bildern tun darfst, die du malst, folgt daraus; wenn es darauf ankommt, lies sie, bevor du verkaufst.
 
 ## 21. Was als Nächstes kommt
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Ruach Studio under Pinokio (HERESY 1259): the models the studio starts without, each asked first with its size by
-# heresy/fetch-heresy.sh (answer y or n in this terminal), chosen by the biggest card here: the Artist's painter (Krea 2 Muse
-# whole on a 16 GB card, streamed from RAM below (1405: SDXL gone), its Q8 too on 24 GB; HERESY 1323: Qwen-Image 2512 too, Q4 on 16 GB, Q6 on 24), the style listener (Qwen2.5-Omni, Q8_0 from 12 GB, else Q4_K_M)
+# heresy/fetch-heresy.sh (answer y or n in this terminal), chosen by the biggest card here: the Artist's painter (Qwen-Image 2512:
+# Q6 on 24 GB, Q4 below, streamed from RAM on a card under 16 GB; HERESY 1428: Krea 2 gone), the style listener (Qwen2.5-Omni, Q8_0 from 12 GB, else Q4_K_M)
 # and the base the LoRA trainer trains on (bf16 on 24 GB, else int8); HERESY 1285: and the BF16 backbone where the install took
 # Q8_0 (Viktor 09.10.2026: «на эту видеокарту RTX5000 можно ли будет со студии докачать BF16?»). From a terminal: bash launcher/extras.sh
 set -uo pipefail
@@ -10,9 +10,10 @@ cd "$ROOT"
 stop() { echo; echo "ruach models stopped: $1"; exit 1; }
 . "$ROOT/launcher/env.sh"
 V=$(ruach_vram)
-ART=(--artwork); [ "$V" -ge 23000 ] && ART+=(--artwork-q8)
-# HERESY 1323: Qwen-Image 2512 with Lightning beside Krea (Q6_K on 24 GB, Q4_K_M on 16 GB); Qwen-Image 2.1 only when asked by name (its licence)
-[ "$V" -ge 23000 ] && ART+=(--qwen 2512-q6) || { [ "$V" -ge 15000 ] && ART+=(--qwen 2512-q4); }
+ART=(--artwork)
+# HERESY 1323: Qwen-Image 2512 with Lightning (Q6_K on 24 GB, Q4_K_M below: whole on 16 GB, its blocks streamed from RAM on a smaller card);
+# Qwen-Image 2.1 only when asked by name (its licence). HERESY 1428: Krea 2 gone, --artwork brings the prompt writer and the filter
+[ "$V" -ge 23000 ] && ART+=(--qwen 2512-q6) || ART+=(--qwen 2512-q4)
 LISTENER=Q8_0; [ "$V" -lt 12000 ] && LISTENER=Q4_K_M
 TRAINER=bf16; [ "$V" -lt 23000 ] && TRAINER=int8
 BB=(); [ -s "$ROOT/models/YuE2-3B-BF16.gguf" ] || BB=(--backbone BF16)

@@ -36,7 +36,11 @@ idle() {   # пусто ли сейчас: да — 0
     if [ "$WHAT" = studio ]; then
         curl -s -m 5 "http://127.0.0.1:$PORT/hardware" | grep -q '"busy":false'
     else
-        curl -s -m 5 "http://127.0.0.1:$PORT/health" | grep -q '"jobs": {}'
+        # HERESY 1430: пуста — ни одной задачи queued/running и тяжёлый замок свободен; упавшая задача, которую никто
+        # не прочёл (её семпл удалён), лежит в jobs как failed и раньше держала перезапуск вечно (14.10.2026)
+        local h
+        h=$(curl -s -m 5 "http://127.0.0.1:$PORT/health") || return 1
+        printf '%s' "$h" | grep -q '"busy": false' && ! printf '%s' "$h" | grep -Eq '"(queued|running)"'
     fi
 }
 

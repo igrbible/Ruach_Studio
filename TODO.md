@@ -171,6 +171,10 @@ Viktor's screenshots of SUNO's newest interface, 09.10.2026 (its Studio, a DAW, 
 - ✅ 1420 (13.10.2026): score mode (Full, Melody) in the studio's own trainer; next: the separation, then AI-Toolkit out of the studio.
 - ✅ 1421 (13.10.2026): compare plays on; the Style as one line; the find bar's ✕; Max length as typed; guidances in tenths; the take card's face; the sambuca in his words.
 - ✅ 1422 (13.10.2026): the separation in the studio's own trainer; AI-Toolkit out of the studio (his own AI_Toolkit folder untouched).
+- ✅ 1430 (14.10.2026): the audit's fixes: the lab's reload behind a failed job, timeouts, silences that lied, the critic's stand-ins, links from the internet.
+- ✅ 1429 (14.10.2026): Engine → Security, who may open the studio (this computer, private networks, the networks listed), kept by the engine; the first start asks it.
+- ✅ 1428 (14.10.2026): Krea 2 out of the studio; The Artist's brushes with ⚡ Lightning (fp8 BASE as the base); a picture's note; the rooms' font and the active room an arch.
+- ✅ 1427 (14.10.2026): the lyrics' toggles by its title and the meter in blocks; Unbounded, Tektur and Jura.
 - ✅ 1426 (14.10.2026): the voices among the lyrics' tags and the guide's lyrics in twelve languages; covers that do not lie; the Artist's stage as icons; Raleway, Michroma and Liberation Mono by default, carried by the studio; Unload reaches the Artist again.
 - ✅ 1425 (13.10.2026): several sections replaced in one go, their versions named by section and stretch and in Takes as they land; compare at 1200 px with its wave, thumbs and «Hide disliked»; the Refiner's Colour (vinyl, tape, room); a cover to its namesakes; Compute's VAE, the memory preset gone; the scan suggests Qwen-Image 2512.
 - ✅ 1423 (13.10.2026): covers by the cards: Qwen-Image 2512 where it fits whole, else Krea 2 Muse; the speeds measured. ☐ 2.1.0: a quicker Qwen cover (the Artist room's kept painter for covers, or nunchaku's int4 kernels, or a 4-step Lightning), on his go.
