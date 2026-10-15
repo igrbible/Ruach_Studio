@@ -4,7 +4,7 @@ Community License 4.2: a flagged picture is not kept, and its line says so). A s
 to its size from the middle; the VAE decodes in tiles (measured 08.10.2026 on an RTX 3090, Krea 2 Muse Q8: 1920×1088
 peaks at 16.9 GB so and 22.7 GB at once, in the same 46 s).
 
-    CUDA_VISIBLE_DEVICES=N ART_PAINTER=qwen2512-q4|qwen2512-q6|qwen2512-fp8|qwen21 .venv-art/bin/python lab/artist_job.py RUN_DIR
+    CUDA_VISIBLE_DEVICES=N ART_PAINTER=qwen2512-q4|qwen2512-q6|qwen2512-fp8|qwen21|qwen21-fp8 .venv-art/bin/python lab/artist_job.py RUN_DIR
 
 RUN_DIR/ask.json: {"prompt", "shapes": ["1:1", "16:9", "9:16"], "seed", "count", "preview"}; HERESY 1305: "ref" (a picture
 beside it to paint from) and "strength" (0.2 to 1.0: how much the painting may change it). On stdout, as each picture is

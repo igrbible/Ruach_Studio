@@ -30,7 +30,7 @@ export TMPDIR="$ROOT/tmp"
 mkdir -p "$TMPDIR"
 export CUDA_HOME="${RUACH_CUDA_HOME:-/usr/local/cuda-12.8}"   # HERESY 1259: the toolkit launcher/env.sh found (Pinokio's own where the machine has none)
 export PATH="$CUDA_HOME/bin:$PATH"
-PORT="${YUE2CPP_PORT:-41867}"
+PORT="${YUE2CPP_PORT:-7777}"
 G="\e[1;32m"; R="\e[1;31m"; Y="\e[1;33m"; D="\e[2m"; X="\e[0m"
 if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G=""; R=""; Y=""; D=""; X=""; fi
 cd "$ROOT"

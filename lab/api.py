@@ -34,7 +34,7 @@ import midi_score                                       # HERESY 1145
 VERSION = "1"
 # HERESY 1136: the studio's own version beside the API's
 STUDIO = (Path(__file__).resolve().parent.parent / "VERSION").read_text().strip() if (Path(__file__).resolve().parent.parent / "VERSION").is_file() else "?"
-ENGINE = f"http://127.0.0.1:{os.environ.get('YUE2CPP_PORT', '41867')}"
+ENGINE = f"http://127.0.0.1:{os.environ.get('YUE2CPP_PORT', '7777')}"
 MODES = {"direct": "off", "off": "off", "full": "full", "melody": "melody"}
 INSTRUMENTAL = "[Intro]\n\n[Verse]\n\n[Outro]\n"
 

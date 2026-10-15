@@ -352,6 +352,61 @@
     });
     return out;
   }
+  // HERESY 1436 (Viktor 14.10.2026: «проверка на правильную нумерацию verses, правильное следование арке Verse > Post-Chorus. Пропуски
+  // секций разрешены, но в арочной последовательности»): the arc's slips, each {line, from, to, say, args}: the verses numbered 1, 2, 3…;
+  // inside a verse's cycle no turning back (Verse › Pre-Chorus › Chorus › Post-Chorus, a section left out allowed); a Bridge or an
+  // instrumental part opens the cycle again; an Intro only before the song; nothing sung after an Outro
+  var ARC_RANK = { verse: 1, pre: 2, chorus: 3, post: 4 }, ARC_NAME = { verse: "Verse", pre: "Pre-Chorus", chorus: "Chorus", post: "Post-Chorus" };
+  function arcKind(name) {
+    var n = name.toLowerCase().replace(/\s+/g, " ").trim(), head = n.split(/\s[–—-]\s|:|\||\/|\(/)[0].trim();
+    if (groupOf(name) === null) return null;                  // who sings, what the song is: no section
+    if (/\bpre[\s-]?chorus\b|^пред/.test(head)) return "pre";
+    if (/\bpost[\s-]?chorus\b/.test(head)) return "post";
+    if (/\b(chorus|hook|refrain)\b|^(副歌|припев|приспів|прыпеў)/.test(head)) return "chorus";
+    if (/\bverse\b|^(主歌|куплет)/.test(head)) return "verse";
+    if (/\bbridge\b|^(桥段|бридж|мост|міст)/.test(head)) return "bridge";
+    if (/\b(intro(duction)?|prelude)\b|^(вступ|прелюд)/.test(head)) return "intro";
+    if (/\b(outro|ends?|fade[\s-]?out|fadeout|fades out)\b|^(fade|аутро|кода)/.test(head)) return "outro";
+    return "inter";                                           // an interlude, a break, a solo, a drop, an instrumental part
+  }
+  function arc(text) {
+    var out = [], at = 0, cur = 0, sung = false, after = null, verses = [], plain = false, numbered = false;
+    String(text || "").split("\n").forEach(function (line, n) {
+      var m = /^\s*\[([^\[\]\n]+)\]/.exec(line);
+      if (m) {
+        var name = m[1].trim(), k = arcKind(name), from = at + line.indexOf("["), to = from + m[0].trim().length;
+        var slip = function (say, args) { out.push({ line: n, from: from, to: to, bad: false, say: say, args: args || [] }); };
+        if (k === "intro") { if (sung) slip("an Intro after the song has begun"); }
+        else if (k === "outro") after = name;
+        else if (k) {
+          if (after && k !== "inter") slip("{0} after the Outro ({1})", [name, after]);
+          if (k === "verse") {
+            var num = /(\d+)/.exec(name), v = num ? +num[1] : null, last = verses.length ? verses[verses.length - 1] : null;
+            if (v === null) { if (numbered) slip("an unnumbered Verse among numbered ones"); plain = true; }
+            else {
+              if (plain && !numbered) slip("Verse {0} after an unnumbered Verse", [v]);
+              if (last !== null && v === last) slip("Verse {0} again", [v]);
+              else if (last !== null && v < last) slip("Verse {0} after Verse {1}", [v, last]);
+              else if (last !== null && v > last + 1) slip("Verse {0} after Verse {1}: Verse {2} is missing", [v, last, last + 1]);
+              else if (last === null && v > 1) slip("the first Verse is Verse {0}", [v]);
+              numbered = true; verses.push(v);
+            }
+            cur = 1;
+          } else if (k === "bridge" || k === "inter") cur = 1;     // the cycle opens again
+          else {
+            if (ARC_RANK[k] < cur) slip("{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)",
+                                       [name, ARC_NAME[Object.keys(ARC_RANK).filter(function (x) { return ARC_RANK[x] === cur; })[0]]]);
+            cur = Math.max(cur, ARC_RANK[k]);
+          }
+          if (k !== "inter") sung = true;
+        }
+      } else if (line.trim()) sung = sung || cur > 0;
+      at += line.length + 1;
+    });
+    return out;
+  }
+  function arcSays(f) { var s = tr(f.say); (f.args || []).forEach(function (a, i) { s = s.replace("{" + i + "}", a); }); return s; }
+
   // the faults to show: a «[» on the cursor's line is still being typed while the box has the cursor
   function lintShown(area) {
     var here = document.activeElement === area ? area.value.slice(0, area.selectionStart).split("\n").length - 1 : -1;
@@ -603,6 +658,14 @@
         parts.push('<button type="button" class="lyr-tog lyr-warn ' + k[2] + '" data-lyr="' + k[1] + '" data-tip="' + esc(tr("Press to go to the next one.") + "\n" + says.join("\n")) + '">' +
           esc(tr(k[3]).replace("{0}", num(k[0].length))) + "</button>");
       });
+      // HERESY 1436: the arc's slips and the verses' numbers, a press to the next
+      var ar = arc(area.value);
+      if (ar.length) {
+        var asays = ar.slice(0, 12).map(function (f) { return tr("line {0}: {1}").replace("{0}", num(f.line + 1)).replace("{1}", arcSays(f)); });
+        if (ar.length > 12) asays.push(tr("and {0} more").replace("{0}", num(ar.length - 12)));
+        parts.push('<button type="button" class="lyr-tog lyr-warn near" data-lyr="arc" data-tip="' + esc(tr("The song's arc and its verses' numbers. Press to go to the next one.") + "\n" + asays.join("\n")) + '">' +
+          esc(tr("Arc to look at: {0}").replace("{0}", num(ar.length))) + "</button>");
+      }
       // HERESY 1169: the marks (Alt+K) and the line numbers
       var mk = ax ? ax.marks().length : 0;
       if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
@@ -707,7 +770,7 @@
     // HERESY 1168: to a stress mark astray: the letter and its mark selected, the line brought into view (in the box when it
     // scrolls, and in the frame or page around it when it is not seen there: under a lifted frame's sticky Generate bar too,
     // which the frame's own box reaches under; the browser itself scrolls a probe set where the line stands)
-    var visit = { stress: -1, stress2: -1, lint: -1, lint2: -1 };
+    var visit = { stress: -1, stress2: -1, lint: -1, lint2: -1, arc: -1 };
     function lintNext(bad) {                                  // HERESY 1169: to the next bracket fault of its kind
       var list = lintShown(area).filter(function (f) { return !!f.bad === bad; }), k = bad ? "lint" : "lint2";
       if (!list.length) return draw();
@@ -765,6 +828,13 @@
       }
       if (b.dataset.lyr === "mark" && ax) return ax.next();                 // HERESY 1169
       if (b.dataset.lyr === "lint" || b.dataset.lyr === "lint2") return lintNext(b.dataset.lyr === "lint");
+      if (b.dataset.lyr === "arc") {                       // HERESY 1436
+        var al = arc(area.value);
+        if (!al.length) return draw();
+        visit.arc = (visit.arc + 1) % al.length;
+        draw();
+        return goTo(al[visit.arc]);
+      }
       if (b.dataset.lyr === "keys") { if (window.HeresyGuide) window.HeresyGuide.open("creator", "The lyrics' meter and the phonetic hand"); return; }
       if (b.dataset.lyr === "nums" && ax) ax.numbers(recall("yue2.lyrNums") === "off");
       if (b.dataset.lyr === "spell") store("yue2.lyrSpell", recall("yue2.lyrSpell") === "off" ? null : "off");
@@ -780,5 +850,5 @@
     return { draw: draw, aids: ax, lintNext: lintNext, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
   }
 
-  window.HeresyLyrics = { attach: attach, aids: aids, lint: lint, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
+  window.HeresyLyrics = { attach: attach, aids: aids, lint: lint, arc: arc, arcSays: arcSays, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
 })();

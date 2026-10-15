@@ -10,7 +10,7 @@ import json, random, sys, time, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).absolute().parent.parent          # the studio root, also through a link to extras/
-ENGINE = "http://127.0.0.1:41867"
+ENGINE = "http://127.0.0.1:7777"
 
 
 def call(path, body=None, timeout=60):

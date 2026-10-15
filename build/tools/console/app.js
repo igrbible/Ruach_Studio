@@ -282,6 +282,10 @@
       closeMenus();
       if (opening) {
         menu.classList.remove("is-hidden");
+        // HERESY 1432: no room under it (the takes' ⋯ low on the page, over the player): it opens upwards
+        menu.classList.remove("is-up");
+        var mr = menu.getBoundingClientRect(), bar = $("playbar"), floor = bar && bar.getClientRects().length ? Math.min(window.innerHeight, bar.getBoundingClientRect().top) : window.innerHeight;
+        if (mr.bottom > floor - 4 && this.getBoundingClientRect().top - mr.height - 10 >= 0) menu.classList.add("is-up");
         this.setAttribute("aria-expanded", "true");
         var first = menu.querySelector("button");
         if (first) first.focus();
@@ -553,12 +557,39 @@
   function libFolded() { var v = recall(libFoldKey()); return v === null ? libFoldKey() !== "yue2.libFolded" : v === "1"; }
   function paintLibFold() {
     var folded = libFolded();
+    if ($("library").classList.contains("is-peek")) libPeek(false);   // HERESY 1432
     $("library").classList.toggle("is-folded", folded);
     document.querySelector(".workspace").classList.toggle("lib-folded", folded);
     $("libUnfoldCount").textContent = $("libCount").textContent;
     window.dispatchEvent(new Event("resize"));
   }
-  $("libFold").addEventListener("click", function () { store(libFoldKey(), "1"); paintLibFold(); });
+  // HERESY 1432: opened over the take by the mouse, its Fold button keeps the list open instead
+  $("libFold").addEventListener("click", function () {
+    store(libFoldKey(), $("library").classList.contains("is-peek") ? (libFoldKey() !== "yue2.libFolded" ? "0" : null) : "1");
+    paintLibFold();
+  });
+  // HERESY 1432 (Viktor 14.10.2026: «При свёрнутом виде дать возможность при наведении на полосу мышкой временно распахивать, и
+  // при потере фокуса через секунду обратно сворачивать»): the folded strip opens over the take while the mouse is on it (a fifth
+  // of a second first, so a mouse passing by opens nothing) and folds a second after the mouse leaves; a click on the strip still
+  // unfolds it for good
+  var libPeekOpen = 0, libPeekShut = 0;
+  function libPeek(on) {
+    clearTimeout(libPeekOpen);
+    clearTimeout(libPeekShut);
+    if ($("library").classList.contains("is-peek") === on) return;
+    $("library").classList.toggle("is-peek", on);
+    $("libFold").dataset.tip = tr(on ? "Keep the list open" : "Fold the takes list to the right");
+    if (on) window.dispatchEvent(new Event("resize"));
+  }
+  $("library").addEventListener("mouseenter", function () {
+    clearTimeout(libPeekShut);
+    if ($("library").classList.contains("is-folded") && !$("library").classList.contains("is-peek"))
+      libPeekOpen = setTimeout(function () { libPeek(true); }, 200);
+  });
+  $("library").addEventListener("mouseleave", function () {
+    clearTimeout(libPeekOpen);
+    if ($("library").classList.contains("is-peek")) libPeekShut = setTimeout(function () { libPeek(false); }, 1000);
+  });
   $("libUnfold").addEventListener("click", function () { store(libFoldKey(), libFoldKey() !== "yue2.libFolded" ? "0" : null); paintLibFold(); });
   if (window.HeresyIcons) $("libUnfold").querySelector(".lib-unfold-icon").innerHTML = window.HeresyIcons.svg("expand");
   paintLibFold();
@@ -2540,17 +2571,44 @@
     return job;
   }
 
-  function submitJob(body, meta) {
-    // HERESY 1167 (Viktor: «для каждой комнаты поставить сторожа — никаких `All workspaces`. Либо выбрать активный воркспейс,
-    // либо создать поддиректорию или новый воркспейс»): with the library at hand and no workspace in hand, a run asks where its
-    // takes land before anything is sent
+  // HERESY 1167 (Viktor: «для каждой комнаты поставить сторожа — никаких `All workspaces`. Либо выбрать активный воркспейс,
+  // либо создать поддиректорию или новый воркспейс»); 1434 (Viktor 14.10.2026: «если пространство не выбрано, ничего не генерим
+  // нигде… В наши 💎 пространства и их сабы - запрет генерации»): before anything that makes a take is sent, the library is read
+  // (a Generate in the first seconds after a load waited for nothing before), and a workspace that takes new takes is in hand:
+  // never a 💎 set, its sections or a frozen one; else the question; else nothing is sent
+  var wsAsking = null;
+  function wsGuard() {
+    if (wsAsking) return wsAsking;                     // runs sent together (a plan's probes) share one question
+    wsAsking = wsGuardNow();
+    var clear = function () { wsAsking = null; };
+    wsAsking.then(clear, clear);
+    return wsAsking;
+  }
+  function wsGuardNow() {
     var HC = window.HeresyCollection;
-    if (HC && HC.loaded && HC.loaded() && HC.chooseCurrent && !HC.current()) {
-      return HC.chooseCurrent("Where do the new takes land?").then(function (w) {
-        if (!w) throw new Error("Nothing sent: choose a workspace for the new takes first");
-        return submitJob(body, meta);
+    if (!HC || !HC.landable) return Promise.reject(new Error("Nothing sent: the library is not on this page to say where the new takes land"));
+    return (HC.loaded() ? Promise.resolve() : HC.reload()).then(function () {
+      if (!HC.loaded()) {
+        // a studio with no Librarian at all (its /lab/catalog not there: 404) has no workspace to land a take in: nothing to keep
+        if (HC.absent && HC.absent()) return { none: true };
+        throw new Error("Nothing sent: the Librarian (Forge's lab) does not answer, so a new take would land in no workspace");
+      }
+      return HC.landable() || HC.firstWs();
+    }).then(function (w) {
+      if (w && w.none) return "";
+      if (w) return w;
+      var cur = HC.current();
+      return HC.chooseCurrent(cur ? tr("“{0}” takes no new takes (a 💎 set, its section or a frozen workspace). Where do the new takes land?").replace("{0}", cur)
+                                  : "Where do the new takes land?").then(function (v) {
+        if (!v || !HC.landable()) throw new Error("Nothing sent: choose a workspace for the new takes first");
+        return v;
       });
-    }
+    });
+  }
+  window.ruachWsGuard = wsGuard;
+
+  function submitJob(body, meta) {
+    if (!meta || !meta.guarded) return wsGuard().then(function () { return submitJob(body, Object.assign({}, meta, { guarded: true })); });   // HERESY 1434
     // HERESY 1091: no synthesis on the studio's card while a run trains on it (the lab knows; it says why)
     var free = window.HeresyGpus ? window.HeresyGpus.guard() : Promise.resolve(true);
     return free.then(function (ok) {
@@ -6789,10 +6847,11 @@
         if (lyrics !== null) lyrics = replaceBlock(lyrics, c.section.name, c.section.lines, c.occ, c.text);
       });
       if (!on.length || lyrics === null) return toast("This section cannot be replaced: its lines were not heard clearly", "bad");
-      var parts = on.map(function (c) { return { a: c.cut.a, b: c.cut.b, section: c.section.name }; });
-      fetch("/lab/section", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: take.name, a: parts[0].a, b: parts[0].b, section: parts[0].section, parts: parts, lyrics: lyrics,
-          versions: +back.querySelector(".hd-versions").value }) })
+      var parts = on.map(function (c) { return { a: c.cut.a, b: c.cut.b, section: c.section.name }; }), versions = +back.querySelector(".hd-versions").value;
+      wsGuard().then(function () {                   // HERESY 1434: a workspace that takes new takes, first
+        return fetch("/lab/section", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: take.name, a: parts[0].a, b: parts[0].b, section: parts[0].section, parts: parts, lyrics: lyrics, versions: versions }) });
+      })
         .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; }); })
         .then(function (d) { toast("Sung anew: its versions come as takes of their own, children of this one"); pollJobs(); if (d && d.id) followSection(d.id); },
               function (e) { toast(e.message, "bad"); });
@@ -7037,7 +7096,7 @@
     // HERESY 1282: the take's sections: a thin line at each start, its name at the foot of its block where there is room
     var secs = waveSections();
     if (secs.length && isFinite(audio.duration) && audio.duration > 0) {
-      ctx.font = '600 9px "IBM Plex Mono", monospace';
+      ctx.font = window.ruachCanvasFont ? window.ruachCanvasFont("marks", 9, 600) : '600 9px "IBM Plex Mono", monospace';   // HERESY 1437
       var lastEnd = -1e9;                                    // the first name always has room
       secs.forEach(function (s) {
         if (s.t >= audio.duration) return;
@@ -7057,7 +7116,7 @@
         var rx0 = Math.round(x.a / audio.duration * width), rx1 = Math.round(x.b / audio.duration * width);
         ctx.fillStyle = themeRGBA("amber", 0.14); ctx.fillRect(rx0, 2, Math.max(1, rx1 - rx0), height - 4);
         ctx.fillStyle = themeRGBA("amber", 0.85); ctx.fillRect(rx0, 2, 1, height - 4); ctx.fillRect(Math.max(rx0, rx1 - 1), 2, 1, height - 4);
-        ctx.font = '600 9px "IBM Plex Mono", monospace'; ctx.fillText(tr("anew"), rx0 + 4, 11);
+        ctx.font = window.ruachCanvasFont ? window.ruachCanvasFont("marks", 9, 600) : '600 9px "IBM Plex Mono", monospace'; ctx.fillText(tr("anew"), rx0 + 4, 11);
       });
     }
     // HERESY 1409: the lyrics on their way to the wave, in its top right corner (the pointer's own label is drawn over it)
@@ -8358,7 +8417,23 @@
     sans: { select: "fontSans", generic: "sans-serif", own: "Raleway", back: '"Noto Sans", sans-serif' },
     heading: { select: "fontHeading", generic: "sans-serif", own: "Michroma", back: "var(--sans)" },
     mono: { select: "fontMono", generic: "monospace", own: "Liberation Mono", back: '"Noto Sans Mono", monospace' },
-    rooms: { select: "fontRooms", generic: "sans-serif", own: "", back: "var(--sans)" }   // HERESY 1428: the rooms' names in the bar; the text's by default
+    rooms: { select: "fontRooms", generic: "sans-serif", own: "", back: "var(--sans)" },   // HERESY 1428: the rooms' names in the bar; the text's by default
+    // HERESY 1437: the sections' names on the wave (IBM Plex Mono, as they were) and the buttons with words (the text's)
+    marks: { select: "fontMarks", generic: "monospace", own: "", back: '"IBM Plex Mono", monospace' },
+    buttons: { select: "fontButtons", generic: "sans-serif", own: "", back: "var(--sans)" }
+  };
+  // HERESY 1437: each role's size against the text's, −2…+2 pt by 1 (yue2.fontSizes), on top of the page's own text size
+  var FONT_STEPS = ["heading", "rooms", "marks", "buttons"];
+  function fontSizes() {
+    var t;
+    try { t = JSON.parse(recall("yue2.fontSizes") || "{}") || {}; } catch (e) { t = {}; }
+    FONT_STEPS.forEach(function (r) { if (typeof t[r] === "number") t[r] = Math.max(-2, Math.min(2, Math.round(t[r]))); });
+    return t;
+  }
+  // the canvas' own fonts (the wave, its scope): the role's family and size; the wave's section marks by default as they were
+  window.ruachCanvasFont = function (role, px, weight) {
+    var r = FONT_ROLES[role], fam = savedFonts()[role], step = fontSizes()[role] || 0;
+    return (weight ? weight + " " : "") + (px + step * 4 / 3) + "px " + (fam ? JSON.stringify(fam) + ", " + r.back : r.back);
   };
   // HERESY 1274 (Viktor 09.10.2026: «Добавь ещё в движок шрифты Raleway, Roboto, Lato»): ten of the app's own, all in the studio itself
   var APP_FONTS = ["Noto Sans", "Noto Sans Mono", "IBM Plex Sans", "IBM Plex Mono", "Bodoni Moda", "Space Grotesk", "Michroma", "Raleway", "Roboto", "Lato",
@@ -8379,11 +8454,17 @@
     return fonts;
   }
   function applyFonts() {
-    var saved = savedFonts(), root = document.documentElement;
+    var saved = savedFonts(), root = document.documentElement, sizes = fontSizes();
     Object.keys(FONT_ROLES).forEach(function (role) {
       if (typeof saved[role] === "string") root.style.setProperty("--" + role, saved[role] ? JSON.stringify(saved[role]) + ", " + FONT_ROLES[role].back : "var(--sans)");
       else root.style.removeProperty("--" + role);
     });
+    root.classList.toggle("fonts-buttons", !!saved.buttons);   // HERESY 1437: a font picked dresses the buttons; none, they stay as they were
+    FONT_STEPS.forEach(function (r) { if (sizes[r]) root.style.setProperty("--fsr-" + r, sizes[r] + "pt"); else root.style.removeProperty("--fsr-" + r); });
+    all("[data-fstep-say]").forEach(function (el) { var v = sizes[el.dataset.fstepSay] || 0; el.textContent = (v > 0 ? "+" : v < 0 ? "\u2212" : "") + Math.abs(v) + " pt"; });
+    all("[data-fstep]").forEach(function (b) { var r = b.dataset.fstep.slice(0, -1), d = b.dataset.fstep.slice(-1), v = sizes[r] || 0; b.disabled = d === "-" ? v <= -2 : v >= 2; });
+    if (typeof drawWave === "function") try { drawWave(); } catch (e) { /* no take on the wave yet */ }
+    window.dispatchEvent(new CustomEvent("ruach-fonts"));
   }
   // installed when text set in it measures differently from a generic fallback
   function hasFont(family) {
@@ -8412,7 +8493,8 @@
       system = system.filter(function (x) { return APP_FONTS.indexOf(x) < 0; });   // HERESY 1426: the studio's own once, among its own
       select.textContent = "";
       if (role === "heading") select.appendChild(fontOption("", "Same as the text"));   // HERESY 1426: Michroma is the default now
-      if (role === "rooms") select.appendChild(fontOption("", "Same as the text (default)"));   // HERESY 1428
+      if (role === "rooms" || role === "buttons") select.appendChild(fontOption("", "Same as the text (default)"));   // HERESY 1428; 1437
+      if (role === "marks") select.appendChild(fontOption("", "IBM Plex Mono, as they were (default)"));            // HERESY 1437
       APP_FONTS.forEach(function (family) { select.appendChild(fontOption(family, family === r.own ? family + " (default)" : family)); });
       select.appendChild(document.createElement("hr"));
       system.sort(function (a, b) { return a.localeCompare(b); }).forEach(function (family) { select.appendChild(fontOption(family, family)); });
@@ -8429,12 +8511,24 @@
       applyFonts();
     });
   });
+  // HERESY 1437: a role's size, − and +
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-fstep]");
+    if (!b || b.disabled) return;
+    e.preventDefault(); e.stopPropagation();
+    var r = b.dataset.fstep.slice(0, -1), d = b.dataset.fstep.slice(-1), t = fontSizes(), v = Math.max(-2, Math.min(2, (t[r] || 0) + (d === "+" ? 1 : -1)));
+    if (v) t[r] = v; else delete t[r];
+    store("yue2.fontSizes", Object.keys(t).length ? JSON.stringify(t) : null);
+    applyFonts();
+    window.dispatchEvent(new Event("resize"));
+  }, true);
   $("fontsReset").addEventListener("click", function () {
-    askReset(recall("yue2.fonts") !== null || recall("yue2.look") !== null,
+    askReset(recall("yue2.fonts") !== null || recall("yue2.look") !== null || recall("yue2.fontSizes") !== null,
       "Put the look options and the fonts back to the app's own?\n\nThe theme stays; the fonts and options chosen now are kept nowhere else.").then(function (ok) { if (ok) fontsResetNow(); });
   });
   function fontsResetNow() {
     store("yue2.fonts", null);
+    store("yue2.fontSizes", null);                      // HERESY 1437
     store("yue2.look", null);
     applyFonts();
     applyLook();
@@ -9396,7 +9490,69 @@
     $("styleMeter").insertAdjacentElement("afterend", warn);
     $("style").addEventListener("input", function () { tempoAsk(true); });
     tempoAsk(false);
+    // HERESY 1436 (Viktor 14.10.2026: «В блок стиля сторожа на не-латинские в стилевом промпте»): letters other than Latin said under
+    // the Style, the words named: YuE2 reads the style as English tags
+    var nl = document.createElement("p");
+    nl.className = "row-hint style-nonlatin"; nl.id = "styleNonLatin"; nl.hidden = true;
+    warn.insertAdjacentElement("afterend", nl);
+    var nonLatin = function () {
+      var words = ($("style").value.match(/[^\s,.;:!?()\[\]"'«»]+/g) || []).filter(function (w) { return /\p{L}/u.test(w) && /[^\p{Script=Latin}\p{N}\p{P}\p{S}\p{M}]/u.test(w); });
+      nl.hidden = !words.length;
+      if (words.length) nl.textContent = tr("Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.")
+        .replace("{0}", words.slice(0, 6).join(", ") + (words.length > 6 ? " …" : ""));
+    };
+    $("style").addEventListener("input", nonLatin);
+    nonLatin();
+    window.ruachStyleNonLatin = nonLatin;
   })();
+
+  // HERESY 1438 (Viktor 14.10.2026: «ПИСАТЕЛЬ и ПРОФИЛЬ — попап оверлеями, как выбор пространства. Максимум, где есть массивные селекторы,
+  // переводим их в модальные попап оверлеи»): a long list chosen in the studio's own dialog. The select stays, hidden, the state its code
+  // reads and writes (its value set by code repaints the button too); the button shows the choice and opens the dialog
+  function popPick(sel, title) {
+    if (!sel || sel.dataset.pick) return null;
+    sel.dataset.pick = "1";
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "pick-btn"; btn.id = sel.id + "Btn"; btn.setAttribute("aria-haspopup", "dialog");
+    if (sel.getAttribute("aria-label")) btn.setAttribute("aria-label", sel.getAttribute("aria-label"));
+    if (sel.dataset.tip) btn.dataset.tip = sel.dataset.tip;
+    btn.innerHTML = '<span class="pick-name" translate="no"></span><span class="pick-caret" aria-hidden="true">\u25be</span>';
+    sel.parentNode.insertBefore(btn, sel);
+    sel.classList.add("pick-native"); sel.setAttribute("tabindex", "-1"); sel.setAttribute("aria-hidden", "true");
+    var paint = function () {
+      var o = sel.options[sel.selectedIndex];
+      btn.querySelector(".pick-name").textContent = o ? o.textContent : "";
+      btn.disabled = sel.disabled;
+      btn.classList.toggle("is-empty", !sel.value);
+    };
+    var V = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value"), I = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "selectedIndex");
+    Object.defineProperty(sel, "value", { configurable: true, get: function () { return V.get.call(this); }, set: function (v) { V.set.call(this, v); paint(); } });
+    Object.defineProperty(sel, "selectedIndex", { configurable: true, get: function () { return I.get.call(this); }, set: function (v) { I.set.call(this, v); paint(); } });
+    sel.addEventListener("change", paint);
+    new MutationObserver(paint).observe(sel, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["disabled", "selected"] });
+    btn.addEventListener("click", function () {
+      var items = [], cur = sel.value;
+      Array.prototype.forEach.call(sel.options, function (o) {
+        if (o.disabled || o.value === "") return;
+        var g = o.parentNode && o.parentNode.tagName === "OPTGROUP" ? o.parentNode.label : "";
+        items.push({ value: "p" + items.length, raw: o.value, label: o.textContent, note: g ? tr(g) : "", current: o.value === cur, words: o.getAttribute("translate") !== "no" });
+      });
+      if (!items.length) return toast(tr("Nothing to choose here yet"));
+      window.HeresyDialog.choose(title, items, { cancel: "Cancel", filter: "Filter" }).then(function (v) {
+        var it = items.filter(function (x) { return x.value === v; })[0];
+        if (!it) return;
+        sel.value = it.raw;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    });
+    paint();
+    return btn;
+  }
+  popPick($("wrHandPick"), "A song from the Writer\n\nIts title, style and lyrics into this form; it stays in hand, so the takes made from it are linked to it.");
+  popPick($("setupLib"), "A profile\n\nIt sets every knob but the texts and the seeds; Apply puts it in the form.");
+  popPick($("styleLib"), "A saved style\n\nIt goes into the Style box (asked first when something is there).");
+  popPick($("tpPick"), "A text profile\n\nIts rules and its shape make a pasted text ready to be sung or read; Apply puts them to the lyrics.");
+  window.ruachPopPick = popPick;
 
   /* ---------------------------------------------- HERESY 1014: three workspaces */
   // Create (the form and the take, as the Kit has it), Write (the writing room with the
@@ -9476,6 +9632,10 @@
     if (!file) return toast("Pick a file first", "bad");
     var title = $("impTitle").value.trim() || file.name.replace(/\.[^.]+$/, ""), lyrics = $("impLyrics").value.trim();
     button.disabled = true;
+    // HERESY 1434: an import is a new take too: a workspace that takes it, first; it lands there
+    wsGuard().then(function () { importNow(file, title, lyrics, button); }, function (e) { button.disabled = false; toast(e.message, "bad"); });
+  });
+  function importNow(file, title, lyrics, button) {
     var xhr = new XMLHttpRequest(), started = Date.now();
     xhr.open("POST", "/lab/import?file=" + encodeURIComponent(file.name) + "&title=" + encodeURIComponent(title));
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
@@ -9495,6 +9655,7 @@
         $("impState").textContent = "imported: " + r.title + " · " + Math.floor(r.seconds / 60) + ":" + ("0" + Math.floor(r.seconds % 60)).slice(-2);
         button.disabled = false;
         $("impFile").value = ""; $("impTitle").value = ""; $("impLyrics").value = "";
+        if (window.HeresyCollection) window.HeresyCollection.landed([r.name]);   // HERESY 1434
         refreshLibrary().then(function () { openTake(r.name); setTab("post"); }).catch(function () {});
       };
       if (!lyrics) return done();
@@ -9502,7 +9663,7 @@
         .then(done, done);
     };
     xhr.send(file);
-  });
+  }
   all("[data-goto-tab]").forEach(function (b) { b.addEventListener("click", function () { setTab(b.dataset.gotoTab); }); });
   // From the take card (and Post's own row): open Post on this take at that tool.
   all("[data-post-open]").forEach(function (b) {
@@ -10355,10 +10516,11 @@
     $("styleSugMore").hidden = !styleSugShown.length;
   }
   function styleSuggest(more) {
-    var style = $("style").value.trim(), lyr = $("lyrics").value.split("\n").filter(function (l) { return l.trim(); }).slice(0, 12).join("\n"), button = $("styleSugGo");
+    // HERESY 1436 (Viktor: «"Подсказать" пусть LLM читает всю лирику»): the lyrics whole, 8000 characters at most (a long reading)
+    var style = $("style").value.trim(), lyr = $("lyrics").value.split("\n").filter(function (l) { return l.trim(); }).join("\n").slice(0, 8000), button = $("styleSugGo");
     if (!style && !lyr.trim()) return toast("Write a style or some lyrics first: the suggestions read them", "bad");
     button.disabled = true; $("styleSugMore").disabled = true;
-    var user = "Style: " + (style || "(none yet)") + "\nTitle: " + ($("title").value.trim() || "(none)") + "\nThe lyrics' first lines:\n" + (lyr || "(none)") +
+    var user = "Style: " + (style || "(none yet)") + "\nTitle: " + ($("title").value.trim() || "(none)") + "\nThe lyrics, whole:\n" + (lyr || "(none)") +
       (more && styleSugShown.length ? "\nNot these again: " + styleSugShown.join(", ") : "") + "\nSuggest 8 tags.";
     return writerAsk([{ role: "system", content: SUGGEST }, { role: "user", content: user }], 1024, "style suggestions").then(function (r) {
       var tags = sugTags(cleanAnswer(r.text), $("style").value);

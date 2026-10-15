@@ -34,7 +34,7 @@
   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
   function api(path, body) {
     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
-    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) { var e = new Error(b.error || r.status); e.status = r.status; throw e; } return b; }); })
       .then(function (b) {
         // HERESY 1168 (Viktor 06.10.2026: «Когда трек "Move to Trash"… и если проигрывается в данный момент, сразу снимай его
         // с проигрыша»): whichever way takes go to the trash (a card's menu, the checked ones, a workspace deleted), the page
@@ -66,14 +66,19 @@
     var asked = rateSeq;
     return api("/catalog").then(function (d) {
       state.rows = fresh(d.takes || [], asked); state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
+      state.loadStatus = 200;                      // HERESY 1434
       state.frozen = d.frozen || [];               // HERESY 1166
+      firstWs();                                   // HERESY 1434
       var names = {};
       state.rows.forEach(function (r) { names[r.name] = 1; });
       Object.keys(state.sel).forEach(function (n) { if (!names[n]) delete state.sel[n]; });
       paint();
       paintCurrent();
       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
-    }).catch(function (e) { $("collGrid").innerHTML = '<p class="row-hint">The Librarian lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>"; });
+    }).catch(function (e) {
+      state.loadStatus = (e && e.status) || 0;     // HERESY 1434: 404, no Librarian in this studio; else one that does not answer
+      $("collGrid").innerHTML = '<p class="row-hint">The Librarian lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>";
+    });
   }
 
   // HERESY 1161 (Viktor: «В воркспейсы можно один уровень подразделов? Максимум два»): a section is a workspace named by its
@@ -121,6 +126,25 @@
     }
   }
   function frozenWs(w) { return (state.frozen || []).some(function (f) { return w === f || String(w).indexOf(f + SEP) === 0; }); }
+  // HERESY 1434 (Viktor 14.10.2026: «В наши 💎 пространства и их сабы - запрет генерации»): a 💎 set and its sections, or a frozen
+  // workspace, take no new take; the workspace in hand for new takes is one that does («» when there is none)
+  function closedWs(w) { return DIAMOND.test(wsParts(w)[0] || "") || frozenWs(w); }
+  function landable() { var c = current(); return c && !closedWs(c) ? c : ""; }
+  // a new install has a workspace in hand from the start: «My songs», made once when none takes new takes
+  function firstWs() {
+    var open = state.ws.filter(function (w) { return !closedWs(w) && wsLeaf(w) !== SOURCED; });
+    // the only workspace that takes new takes, none in hand: in hand, unasked (Viktor: «Пространство всегда должно быть выбрано»)
+    if (state.loaded && !landable() && open.length === 1) { setCurrent(open[0], true); return Promise.resolve(open[0]); }
+    if (!state.loaded || open.length) return Promise.resolve(landable());
+    if (state.making) return state.making;             // one making at a time
+    var name = tr("My songs");
+    state.making = act({ op: "ws-create", workspace: name }, "", true).then(function (ok) {
+      state.making = null;
+      if (ok) { setCurrent(name, true); toast(tr("Workspace “{0}” made and in hand: new takes land in it").replace("{0}", name)); }
+      return ok ? name : "";
+    });
+    return state.making;
+  }
   function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
   // HERESY 1169 · 1241 (Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): what can be ticked, and how a take answers each
   var FILTERS = [
@@ -239,9 +263,9 @@
   // опцию»): the shield beside the star; lit, the take never goes to the trash nor is deleted for good
   var PROT_ON = "This take is protected: never to the trash, never deleted; the shield takes the protection off";
   var PROT_OFF = "Protect this take: never to the trash, never deleted for good";
-  function protBtn(r, data) {
+  function protBtn(r, data, named) {                 // HERESY 1434: named, the takes' list's rule (its name, no tip)
     return '<button type="button" class="coll-act prot" ' + data + ' aria-pressed="' + !!r.protected + '" aria-label="' + (r.protected ? "Take its protection off" : "Protect it") +
-      '" data-tip="' + (r.protected ? PROT_ON : PROT_OFF) + '">' + ico("shield") + "</button>";
+      '"' + (named ? "" : ' data-tip="' + (r.protected ? PROT_ON : PROT_OFF) + '"') + ">" + ico("shield") + "</button>";
   }
   // HERESY 1082: the Librarian's marks for a take in the Creator's column: derived, workspaces, like, dislike, note
   function cardExtras(name) {
@@ -253,7 +277,7 @@
       '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + "</button>" +
       // HERESY 1167 (Viktor: «У Творца во фрейме Takes… И нет звёздочки»): the favourite beside them, as on the Librarian's cards
       '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" aria-label="Favourite">' + ico("star") + "</button>" +
-      protBtn(r, 'data-lprot="1" data-name="' + esc(name) + '"') +
+      protBtn(r, 'data-lprot="1" data-name="' + esc(name) + '"', true) +
       (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
   }
   function favOf(name, r) { var t = state.hooks && state.hooks.findTake ? state.hooks.findTake(name) : null; return t ? !!t.favorite : !!r.favorite; }
@@ -723,6 +747,7 @@
     name.setAttribute("translate", cur ? "no" : "yes");                    // a name is the user's; the call is the page's
     btn.classList.toggle("is-set", !!cur);
     btn.classList.toggle("is-none", !cur && state.loaded);
+    btn.classList.toggle("is-closed", !!cur && closedWs(cur));   // HERESY 1434: in hand to look at, not to take new takes
     btn.closest(".ws-current").classList.toggle("is-set", !!cur);
   }
   // HERESY 1167 (Viktor: «кликаешь на него... и вуаля. И предупреждение, что все новые семплы идут в него»): every workspace
@@ -731,7 +756,7 @@
   // question, when a run asks first.
   function chooseCurrent(why) {
     var cur = current();
-    var items = state.ws.filter(function (w) { return !frozenWs(w) && wsLeaf(w) !== SOURCED; }).map(function (w) {
+    var items = state.ws.filter(function (w) { return !closedWs(w) && wsLeaf(w) !== SOURCED; }).map(function (w) {   // 1434: no 💎 set
       var n = state.rows.filter(function (r) { return inTree(r, w); }).length;
       return { value: w, label: wsParts(w).length > 1 ? wsLeaf(w) : w, depth: wsParts(w).length - 1, current: w === cur, note: String(n) };
     });
@@ -765,7 +790,7 @@
     if (state.hooks.libraryChanged) state.hooks.libraryChanged();
   }
   function landed(takeNames) {
-    var cur = current();
+    var cur = landable();                              // HERESY 1434: never into a 💎 set or a frozen workspace
     if (!cur || !takeNames || !takeNames.length) return;
     var asked = rateSeq;
     api("/collection", { op: "ws-add", workspace: cur, names: takeNames }).then(function (d) {
@@ -776,6 +801,7 @@
   function inCurrent(name) {
     var cur = current();
     if (!cur) return true;
+    if (!state.rows.some(function (r) { return r.name === name; })) return true;   // HERESY 1434: just made, landing in the one in hand
     return state.rows.some(function (r) { return r.name === name && inTree(r, cur); });   // HERESY 1161: with its sections
   }
   // ---- HERESY 1135: undo, as a file manager has it. The last move, pin, hide, adding or taking out, marking or
@@ -1827,7 +1853,7 @@
   }
 
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
-                              current: current, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
                               datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,

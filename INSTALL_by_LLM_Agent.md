@@ -55,8 +55,8 @@ Success: `build/build/yue-server` exists and `build/tools/public/index.html` was
 ./systemd/install-units.sh
 systemctl --user enable --now heresy-lab ruach-studio
 sleep 5
-curl -s http://127.0.0.1:41867/api/v1/health      # {"lab": true, "engine": {...}, "cards": [...]}
-curl -s http://127.0.0.1:41867/api/v1 | head -c 200   # the studio's version
+curl -s http://127.0.0.1:7777/api/v1/health      # {"lab": true, "engine": {...}, "cards": [...]}
+curl -s http://127.0.0.1:7777/api/v1 | head -c 200   # the studio's version
 ```
 
 Then give the person the address `start.sh` printed (`journalctl --user -u ruach-studio | grep -m1 http`), and say: the **?** in the bar is the guide.
@@ -68,7 +68,7 @@ Only with the person's agreement (it uses the GPU for a minute):
 ```bash
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"style":"Instrumental, solo piano, calm","instrumental":true,"duration":20,"workspace":"First test"}' \
-  http://127.0.0.1:41867/api/v1/songs
+  http://127.0.0.1:7777/api/v1/songs
 # then GET /api/v1/jobs/ID until "done"; the take is in the Librarian, workspace "First test"
 ```
 

@@ -2,6 +2,9 @@
 # Fetch the GGUF models into ./models with the fast Xet transfer. Nothing is
 # written outside this folder: the pinned downloader lives in .venv and every
 # cache is pinned to tmp/.
+# HERESY 1445 (Viktor 14.10.2026: «Лучше всё тянуть Студии из одного репо, чем бегать по всему инету»): from
+# goldhub/Ruach_Studio_Models_v2 at its pin (heresy/hf-revisions.txt), the same files byte for byte as
+# Serveurperso/YuE2-GGUF publishes them, laid out as models/ there.
 #
 #   ./download-models.sh                  BF16 backbone + F32 VAE (7.7 GB)
 #   ./download-models.sh --quant Q8_0     Q8_0 backbone instead (3.8 GB)
@@ -9,7 +12,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="Serveurperso/YuE2-GGUF"
+REPO="goldhub/Ruach_Studio_Models_v2"
 QUANT="BF16"
 TRANSCRIBER=0
 usage() { awk 'NR == 1 {next} /^#/ {sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 2; }   # the comment block above
@@ -32,24 +35,25 @@ if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G="" Y="" R="" D="" B="" X=""; fi
 # shellcheck source=tools/hf-env.sh
 source "$ROOT/tools/hf-env.sh"
 hf_ready || exit 1
-REV=$(hf_rev "$REPO")
+REV=$(awk -v k="$REPO" '$1 == k {print $2; exit}' "$ROOT/heresy/hf-revisions.txt" 2>/dev/null)
+[ -n "$REV" ] || REV=$(hf_rev "$REPO")
 
-files=("YuE2-3B-$QUANT.gguf" "YuE2-Vae-F32.gguf")
-[ "$TRANSCRIBER" = 1 ] && files+=("SheetSage2-Q8_0.gguf")
+files=("models/YuE2-3B-$QUANT.gguf" "models/YuE2-Vae-F32.gguf")
+[ "$TRANSCRIBER" = 1 ] && files+=("models/SheetSage2-Q8_0.gguf")
 
 mkdir -p "$ROOT/models"
 start=$(date +%s); got=0; skipped=0; failed=0
 for f in "${files[@]}"; do
-    if hf_complete "$REPO" "$REV" "$ROOT/models" --files "$f" >/dev/null; then
-        echo "${G}have${X}      $f  ${D}$(du -h "$ROOT/models/$f" | cut -f1)${X}"
+    if hf_complete "$REPO" "$REV" "$ROOT" --files "$f" >/dev/null; then
+        echo "${G}have${X}      $f  ${D}$(du -h "$ROOT/$f" | cut -f1)${X}"
         skipped=$((skipped + 1))
         continue
     fi
     echo "${Y}download${X}  $f"
-    "$HF" download --quiet "$REPO" "$f" --revision "$REV" --local-dir "$ROOT/models" >/dev/null || true
+    "$HF" download --quiet "$REPO" "$f" --revision "$REV" --local-dir "$ROOT" >/dev/null || true
     # the downloader's exit status is not proof: check the file itself
-    if hf_complete "$REPO" "$REV" "$ROOT/models" --files "$f" >/dev/null; then
-        echo "${G}done${X}      $f  ${D}$(du -h "$ROOT/models/$f" | cut -f1)${X}"
+    if hf_complete "$REPO" "$REV" "$ROOT" --files "$f" >/dev/null; then
+        echo "${G}done${X}      $f  ${D}$(du -h "$ROOT/$f" | cut -f1)${X}"
         got=$((got + 1))
     else
         echo "${R}failed${X}    $f"

@@ -1,0 +1,402 @@
+From 44afc8c96a88350a69ef1a8a864a9983db71efc0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 14 Oct 2026 20:36:05 -0600
+Subject: [PATCH 1394/1399] =?UTF-8?q?HERESY=201437:=20Section=20marks=20an?=
+ =?UTF-8?q?d=20Buttons=20in=20Look=20=E2=86=92=20Fonts;=20each=20role's=20?=
+ =?UTF-8?q?size=20against=20the=20text's?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 14.10.2026: «Разметку секций в плеере над волной — отдельным шрифтом… Отдельный шрифт для всех текстовых кнопок… ± масштаб относительно основного шрифта: 2pt по 1pt шага». Section marks: the sections' names drawn on the wave and on its scope (IBM Plex Mono by default, as they were). Buttons: every button with words, the toggles, the menus' items (the text's by default; a font picked dresses them). Headings, Rooms, Section marks and Buttons each a − and a + beside its font, −2…+2 pt by 1, on top of the page's own text size; a lifted frame's step kept.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css             | 12 ++++++++
+ tools/console/app.js              | 47 +++++++++++++++++++++++++++----
+ tools/console/heresy-i18n-be.js   | 10 ++++++-
+ tools/console/heresy-i18n-de.js   | 10 ++++++-
+ tools/console/heresy-i18n-el.js   | 10 ++++++-
+ tools/console/heresy-i18n-es.js   | 10 ++++++-
+ tools/console/heresy-i18n-fr.js   | 10 ++++++-
+ tools/console/heresy-i18n-it.js   | 10 ++++++-
+ tools/console/heresy-i18n-ja.js   | 10 ++++++-
+ tools/console/heresy-i18n-pt.js   | 10 ++++++-
+ tools/console/heresy-i18n-ru.js   | 10 ++++++-
+ tools/console/heresy-i18n-uk.js   | 10 ++++++-
+ tools/console/heresy-i18n-zh.js   | 10 ++++++-
+ tools/console/heresy-wavescope.js |  2 +-
+ tools/console/index.html          | 10 +++++--
+ 15 files changed, 161 insertions(+), 20 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index eac34e7..8cb2c25 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5651,3 +5651,15 @@ html.i18n-wait .boot-veil > .boot-line { visibility: visible; }
+ .boot-line i { animation-duration: 10s; }
+ /* HERESY 1436: letters other than Latin in the Style, said under it */
+ .style-nonlatin { color: var(--amber); margin-top: 4px; }
++/* HERESY 1437: Section marks and Buttons in Look → Fonts; each role's size against the text's (−2…+2 pt). Every size of the
++   stylesheets is calc(N + var(--fs)): an element of a role takes --fs with its role's step on top (a lifted frame's step kept) */
++:root { --fs-frame: 0pt; }
++body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take { --fs-frame: var(--fs-f); }
++:is(.about-project h4, .engine-title, .col-head h2, .take-empty .take-empty-title, .card h3, .lib-head h3, .panel-head h3, .title-edit, .hub-name, .hg-title, .hg-body h3, #playbar .pb-names strong, .boot-words, .post-head .post-take, .lyr-over-head) { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-heading, 0pt)); }
++.tabs button { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-rooms, 0pt)); }
++:is(.btn, .lyr-tog, .menu-pop button, .chip, .head-more-row button) { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-buttons, 0pt)); }
++html.fonts-buttons :is(.btn, .lyr-tog, .menu-pop button, .chip, .head-more-row button) { font-family: var(--buttons); }
++.font-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
++.font-row > select { flex: 1 1 auto; min-width: 0; }
++.font-step { flex: none; display: inline-flex; align-items: center; gap: 4px; }
++.font-step output { min-width: 3.4em; text-align: center; font-size: 11.5px; color: var(--muted); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index ad126d0..5368fcb 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -7096,7 +7096,7 @@
+     // HERESY 1282: the take's sections: a thin line at each start, its name at the foot of its block where there is room
+     var secs = waveSections();
+     if (secs.length && isFinite(audio.duration) && audio.duration > 0) {
+-      ctx.font = '600 9px "IBM Plex Mono", monospace';
++      ctx.font = window.ruachCanvasFont ? window.ruachCanvasFont("marks", 9, 600) : '600 9px "IBM Plex Mono", monospace';   // HERESY 1437
+       var lastEnd = -1e9;                                    // the first name always has room
+       secs.forEach(function (s) {
+         if (s.t >= audio.duration) return;
+@@ -7116,7 +7116,7 @@
+         var rx0 = Math.round(x.a / audio.duration * width), rx1 = Math.round(x.b / audio.duration * width);
+         ctx.fillStyle = themeRGBA("amber", 0.14); ctx.fillRect(rx0, 2, Math.max(1, rx1 - rx0), height - 4);
+         ctx.fillStyle = themeRGBA("amber", 0.85); ctx.fillRect(rx0, 2, 1, height - 4); ctx.fillRect(Math.max(rx0, rx1 - 1), 2, 1, height - 4);
+-        ctx.font = '600 9px "IBM Plex Mono", monospace'; ctx.fillText(tr("anew"), rx0 + 4, 11);
++        ctx.font = window.ruachCanvasFont ? window.ruachCanvasFont("marks", 9, 600) : '600 9px "IBM Plex Mono", monospace'; ctx.fillText(tr("anew"), rx0 + 4, 11);
+       });
+     }
+     // HERESY 1409: the lyrics on their way to the wave, in its top right corner (the pointer's own label is drawn over it)
+@@ -8417,7 +8417,23 @@
+     sans: { select: "fontSans", generic: "sans-serif", own: "Raleway", back: '"Noto Sans", sans-serif' },
+     heading: { select: "fontHeading", generic: "sans-serif", own: "Michroma", back: "var(--sans)" },
+     mono: { select: "fontMono", generic: "monospace", own: "Liberation Mono", back: '"Noto Sans Mono", monospace' },
+-    rooms: { select: "fontRooms", generic: "sans-serif", own: "", back: "var(--sans)" }   // HERESY 1428: the rooms' names in the bar; the text's by default
++    rooms: { select: "fontRooms", generic: "sans-serif", own: "", back: "var(--sans)" },   // HERESY 1428: the rooms' names in the bar; the text's by default
++    // HERESY 1437: the sections' names on the wave (IBM Plex Mono, as they were) and the buttons with words (the text's)
++    marks: { select: "fontMarks", generic: "monospace", own: "", back: '"IBM Plex Mono", monospace' },
++    buttons: { select: "fontButtons", generic: "sans-serif", own: "", back: "var(--sans)" }
++  };
++  // HERESY 1437: each role's size against the text's, −2…+2 pt by 1 (yue2.fontSizes), on top of the page's own text size
++  var FONT_STEPS = ["heading", "rooms", "marks", "buttons"];
++  function fontSizes() {
++    var t;
++    try { t = JSON.parse(recall("yue2.fontSizes") || "{}") || {}; } catch (e) { t = {}; }
++    FONT_STEPS.forEach(function (r) { if (typeof t[r] === "number") t[r] = Math.max(-2, Math.min(2, Math.round(t[r]))); });
++    return t;
++  }
++  // the canvas' own fonts (the wave, its scope): the role's family and size; the wave's section marks by default as they were
++  window.ruachCanvasFont = function (role, px, weight) {
++    var r = FONT_ROLES[role], fam = savedFonts()[role], step = fontSizes()[role] || 0;
++    return (weight ? weight + " " : "") + (px + step * 4 / 3) + "px " + (fam ? JSON.stringify(fam) + ", " + r.back : r.back);
+   };
+   // HERESY 1274 (Viktor 09.10.2026: «Добавь ещё в движок шрифты Raleway, Roboto, Lato»): ten of the app's own, all in the studio itself
+   var APP_FONTS = ["Noto Sans", "Noto Sans Mono", "IBM Plex Sans", "IBM Plex Mono", "Bodoni Moda", "Space Grotesk", "Michroma", "Raleway", "Roboto", "Lato",
+@@ -8438,11 +8454,17 @@
+     return fonts;
+   }
+   function applyFonts() {
+-    var saved = savedFonts(), root = document.documentElement;
++    var saved = savedFonts(), root = document.documentElement, sizes = fontSizes();
+     Object.keys(FONT_ROLES).forEach(function (role) {
+       if (typeof saved[role] === "string") root.style.setProperty("--" + role, saved[role] ? JSON.stringify(saved[role]) + ", " + FONT_ROLES[role].back : "var(--sans)");
+       else root.style.removeProperty("--" + role);
+     });
++    root.classList.toggle("fonts-buttons", !!saved.buttons);   // HERESY 1437: a font picked dresses the buttons; none, they stay as they were
++    FONT_STEPS.forEach(function (r) { if (sizes[r]) root.style.setProperty("--fsr-" + r, sizes[r] + "pt"); else root.style.removeProperty("--fsr-" + r); });
++    all("[data-fstep-say]").forEach(function (el) { var v = sizes[el.dataset.fstepSay] || 0; el.textContent = (v > 0 ? "+" : v < 0 ? "\u2212" : "") + Math.abs(v) + " pt"; });
++    all("[data-fstep]").forEach(function (b) { var r = b.dataset.fstep.slice(0, -1), d = b.dataset.fstep.slice(-1), v = sizes[r] || 0; b.disabled = d === "-" ? v <= -2 : v >= 2; });
++    if (typeof drawWave === "function") try { drawWave(); } catch (e) { /* no take on the wave yet */ }
++    window.dispatchEvent(new CustomEvent("ruach-fonts"));
+   }
+   // installed when text set in it measures differently from a generic fallback
+   function hasFont(family) {
+@@ -8471,7 +8493,8 @@
+       system = system.filter(function (x) { return APP_FONTS.indexOf(x) < 0; });   // HERESY 1426: the studio's own once, among its own
+       select.textContent = "";
+       if (role === "heading") select.appendChild(fontOption("", "Same as the text"));   // HERESY 1426: Michroma is the default now
+-      if (role === "rooms") select.appendChild(fontOption("", "Same as the text (default)"));   // HERESY 1428
++      if (role === "rooms" || role === "buttons") select.appendChild(fontOption("", "Same as the text (default)"));   // HERESY 1428; 1437
++      if (role === "marks") select.appendChild(fontOption("", "IBM Plex Mono, as they were (default)"));            // HERESY 1437
+       APP_FONTS.forEach(function (family) { select.appendChild(fontOption(family, family === r.own ? family + " (default)" : family)); });
+       select.appendChild(document.createElement("hr"));
+       system.sort(function (a, b) { return a.localeCompare(b); }).forEach(function (family) { select.appendChild(fontOption(family, family)); });
+@@ -8488,12 +8511,24 @@
+       applyFonts();
+     });
+   });
++  // HERESY 1437: a role's size, − and +
++  document.addEventListener("click", function (e) {
++    var b = e.target.closest("[data-fstep]");
++    if (!b || b.disabled) return;
++    e.preventDefault(); e.stopPropagation();
++    var r = b.dataset.fstep.slice(0, -1), d = b.dataset.fstep.slice(-1), t = fontSizes(), v = Math.max(-2, Math.min(2, (t[r] || 0) + (d === "+" ? 1 : -1)));
++    if (v) t[r] = v; else delete t[r];
++    store("yue2.fontSizes", Object.keys(t).length ? JSON.stringify(t) : null);
++    applyFonts();
++    window.dispatchEvent(new Event("resize"));
++  }, true);
+   $("fontsReset").addEventListener("click", function () {
+-    askReset(recall("yue2.fonts") !== null || recall("yue2.look") !== null,
++    askReset(recall("yue2.fonts") !== null || recall("yue2.look") !== null || recall("yue2.fontSizes") !== null,
+       "Put the look options and the fonts back to the app's own?\n\nThe theme stays; the fonts and options chosen now are kept nowhere else.").then(function (ok) { if (ok) fontsResetNow(); });
+   });
+   function fontsResetNow() {
+     store("yue2.fonts", null);
++    store("yue2.fontSizes", null);                      // HERESY 1437
+     store("yue2.look", null);
+     applyFonts();
+     applyLook();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index e71bddb..3cb6ef2 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5218,5 +5218,13 @@ RuachI18n.add("be", {
+ "the first Verse is Verse {0}": "першы куплет — Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} пасля {1}: арка ідзе Verse › Pre-Chorus › Chorus › Post-Chorus (секцыю можна прапусціць, але не павярнуць назад)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "У Стылі не лацінскія літары: {0}. YuE2 чытае стыль як англійскія тэгі: пішы яго лацінкай.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Падказкі стылю: мадэль Пісьменніка чытае Стыль, Назву і лірыку цалкам і прапануе кароткія тэгі, якіх у песні яшчэ няма; клік па тэгу ўстаўляе яго (перад BPM у канцы)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Падказкі стылю: мадэль Пісьменніка чытае Стыль, Назву і лірыку цалкам і прапануе кароткія тэгі, якіх у песні яшчэ няма; клік па тэгу ўстаўляе яго (перад BPM у канцы)",
++"Section marks": "Меткі секцый",
++"the sections' names on the wave": "назвы секцый на хвалі",
++"Buttons": "Кнопкі",
++"every button with words, the toggles, the menus' items": "усе кнопкі са словамі, пераключальнікі, пункты меню",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, як было (па змаўчанні)",
++"Its size against the text": "Памер адносна тэксту",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "Шрыфт назваў секцый на хвалі і на яе выглядзе зверху; па змаўчанні IBM Plex Mono, як было",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "Шрыфт усіх кнопак са словамі, пераключальнікаў і пунктаў меню; па змаўчанні шрыфт тэксту"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 7b55b14..77b770c 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5101,5 +5101,13 @@ RuachI18n.add("de", {
+ "the first Verse is Verse {0}": "die erste Strophe ist Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} nach {1}: der Bogen geht Verse › Pre-Chorus › Chorus › Post-Chorus (ein Teil darf fehlen, nicht zurückgehen)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "Nicht-lateinische Buchstaben im Stil: {0}. YuE2 liest den Stil als englische Tags: schreib ihn in lateinischen Buchstaben.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Stil-Vorschläge: das Modell des Schreibers liest den Stil, den Titel und den ganzen Text und bietet kurze Tags an, die dieser Song noch nicht hat; ein Klick auf einen setzt ihn ein (vor die BPM am Ende)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Stil-Vorschläge: das Modell des Schreibers liest den Stil, den Titel und den ganzen Text und bietet kurze Tags an, die dieser Song noch nicht hat; ein Klick auf einen setzt ihn ein (vor die BPM am Ende)",
++"Section marks": "Abschnittsmarken",
++"the sections' names on the wave": "die Namen der Abschnitte auf der Welle",
++"Buttons": "Schaltflächen",
++"every button with words, the toggles, the menus' items": "jede Schaltfläche mit Worten, die Schalter, die Menüeinträge",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, wie bisher (Standard)",
++"Its size against the text": "Seine Größe gegenüber dem Text",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "Die Schrift der Abschnittsnamen auf der Welle und ihrer Ansicht; standardmäßig IBM Plex Mono, wie bisher",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "Die Schrift aller Schaltflächen mit Worten, der Schalter und der Menüeinträge; standardmäßig die des Textes"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index caf48ac..fca0279 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5217,5 +5217,13 @@ RuachI18n.add("el", {
+ "the first Verse is Verse {0}": "η πρώτη στροφή είναι Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} μετά το {1}: η καμπύλη πάει Verse › Pre-Chorus › Chorus › Post-Chorus (ένα τμήμα μπορεί να λείπει, όχι να γυρίσει πίσω)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "Γράμματα εκτός λατινικών στο Ύφος: {0}. Το YuE2 διαβάζει το ύφος ως αγγλικές ετικέτες: γράψε το με λατινικά.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Προτάσεις ύφους: το μοντέλο του Συγγραφέα διαβάζει το Ύφος, τον Τίτλο και όλους τους στίχους και προτείνει σύντομες ετικέτες που το τραγούδι δεν έχει ακόμα· ένα κλικ βάζει μία μέσα (πριν από το BPM στο τέλος)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Προτάσεις ύφους: το μοντέλο του Συγγραφέα διαβάζει το Ύφος, τον Τίτλο και όλους τους στίχους και προτείνει σύντομες ετικέτες που το τραγούδι δεν έχει ακόμα· ένα κλικ βάζει μία μέσα (πριν από το BPM στο τέλος)",
++"Section marks": "Σημάδια ενοτήτων",
++"the sections' names on the wave": "τα ονόματα των ενοτήτων στο κύμα",
++"Buttons": "Κουμπιά",
++"every button with words, the toggles, the menus' items": "κάθε κουμπί με λέξεις, οι διακόπτες, τα στοιχεία των μενού",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, όπως ήταν (προεπιλογή)",
++"Its size against the text": "Το μέγεθός του σε σχέση με το κείμενο",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "Η γραμματοσειρά των ονομάτων των ενοτήτων στο κύμα και στην προβολή του· προεπιλογή IBM Plex Mono, όπως ήταν",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "Η γραμματοσειρά κάθε κουμπιού με λέξεις, των διακοπτών και των στοιχείων των μενού· προεπιλογή του κειμένου"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 88e773f..4511da1 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5217,5 +5217,13 @@ RuachI18n.add("es", {
+ "the first Verse is Verse {0}": "la primera estrofa es Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} después de {1}: el arco va Verse › Pre-Chorus › Chorus › Post-Chorus (una sección puede faltar, no volver atrás)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "Letras no latinas en el Estilo: {0}. YuE2 lee el estilo como etiquetas en inglés: escríbelo en letras latinas.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Sugerencias de estilo: el modelo del Escritor lee el Estilo, el Título y la letra entera y ofrece etiquetas cortas que la canción aún no tiene; un clic en una la pone (antes del BPM al final)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Sugerencias de estilo: el modelo del Escritor lee el Estilo, el Título y la letra entera y ofrece etiquetas cortas que la canción aún no tiene; un clic en una la pone (antes del BPM al final)",
++"Section marks": "Marcas de secciones",
++"the sections' names on the wave": "los nombres de las secciones en la onda",
++"Buttons": "Botones",
++"every button with words, the toggles, the menus' items": "todos los botones con palabras, los interruptores, los elementos de los menús",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, como estaban (predeterminado)",
++"Its size against the text": "Su tamaño respecto al texto",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "La fuente de los nombres de las secciones en la onda y en su vista; por defecto IBM Plex Mono, como estaban",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "La fuente de todos los botones con palabras, los interruptores y los elementos de los menús; por defecto la del texto"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index c5dd2bf..6768084 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5101,5 +5101,13 @@ RuachI18n.add("fr", {
+ "the first Verse is Verse {0}": "le premier couplet est Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} après {1} : l'arc va Verse › Pre-Chorus › Chorus › Post-Chorus (une section peut manquer, pas revenir en arrière)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "Des lettres non latines dans le Style : {0}. YuE2 lit le style comme des tags anglais : écris-le en lettres latines.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Suggestions de style : le modèle de l'Écrivain lit le Style, le Titre et les paroles entières et propose de courts tags que cette chanson n'a pas encore ; un clic sur l'un l'insère (avant le BPM à la fin)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Suggestions de style : le modèle de l'Écrivain lit le Style, le Titre et les paroles entières et propose de courts tags que cette chanson n'a pas encore ; un clic sur l'un l'insère (avant le BPM à la fin)",
++"Section marks": "Repères de sections",
++"the sections' names on the wave": "les noms des sections sur l'onde",
++"Buttons": "Boutons",
++"every button with words, the toggles, the menus' items": "chaque bouton avec des mots, les bascules, les éléments des menus",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, comme avant (par défaut)",
++"Its size against the text": "Sa taille par rapport au texte",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "La police des noms des sections sur l'onde et sur sa vue ; par défaut IBM Plex Mono, comme avant",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "La police de chaque bouton avec des mots, des bascules et des éléments des menus ; par défaut celle du texte"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index b3012ca..5e699c3 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5217,5 +5217,13 @@ RuachI18n.add("it", {
+ "the first Verse is Verse {0}": "la prima strofa è Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} dopo {1}: l'arco va Verse › Pre-Chorus › Chorus › Post-Chorus (una sezione può mancare, non tornare indietro)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "Lettere non latine nello Stile: {0}. YuE2 legge lo stile come tag in inglese: scrivilo in lettere latine.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Suggerimenti di stile: il modello dello Scrittore legge lo Stile, il Titolo e il testo intero e offre tag brevi che la canzone non ha ancora; un clic su uno lo inserisce (prima del BPM in fondo)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Suggerimenti di stile: il modello dello Scrittore legge lo Stile, il Titolo e il testo intero e offre tag brevi che la canzone non ha ancora; un clic su uno lo inserisce (prima del BPM in fondo)",
++"Section marks": "Segni delle sezioni",
++"the sections' names on the wave": "i nomi delle sezioni sull'onda",
++"Buttons": "Pulsanti",
++"every button with words, the toggles, the menus' items": "ogni pulsante con parole, gli interruttori, le voci dei menu",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, come prima (predefinito)",
++"Its size against the text": "La sua dimensione rispetto al testo",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "Il carattere dei nomi delle sezioni sull'onda e sulla sua vista; predefinito IBM Plex Mono, come prima",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "Il carattere di ogni pulsante con parole, degli interruttori e delle voci dei menu; predefinito quello del testo"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index a76fe0a..3e1df93 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5101,5 +5101,13 @@ RuachI18n.add("ja", {
+ "the first Verse is Verse {0}": "最初のヴァースが Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{1} の後に {0}：アークは Verse › Pre-Chorus › Chorus › Post-Chorus の順（省略は可、逆戻りは不可）",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "スタイルにラテン文字以外の文字：{0}。YuE2 はスタイルを英語のタグとして読みます。ラテン文字で書いてください。",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "スタイルの提案：ライターのモデルがスタイル、タイトル、歌詞全体を読み、この曲にまだない短いタグを提案します。クリックで挿入（末尾の BPM の前）"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "スタイルの提案：ライターのモデルがスタイル、タイトル、歌詞全体を読み、この曲にまだない短いタグを提案します。クリックで挿入（末尾の BPM の前）",
++"Section marks": "セクション表示",
++"the sections' names on the wave": "波形上のセクション名",
++"Buttons": "ボタン",
++"every button with words, the toggles, the menus' items": "文字のあるボタン、切り替え、メニューの項目",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono（従来どおり・既定）",
++"Its size against the text": "本文に対するサイズ",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "波形とそのスコープに描くセクション名のフォント。既定は従来どおり IBM Plex Mono",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "文字のあるボタン、切り替え、メニュー項目のフォント。既定は本文と同じ"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 0f9019f..6f53251 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5101,5 +5101,13 @@ RuachI18n.add("pt", {
+ "the first Verse is Verse {0}": "a primeira estrofe é Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} depois de {1}: o arco vai Verse › Pre-Chorus › Chorus › Post-Chorus (uma secção pode faltar, não voltar atrás)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "Letras não latinas no Estilo: {0}. O YuE2 lê o estilo como tags em inglês: escreva-o em letras latinas.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Sugestões de estilo: o modelo do Escritor lê o Estilo, o Título e a letra inteira e oferece tags curtas que esta canção ainda não tem; um clique numa a insere (antes do BPM no fim)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Sugestões de estilo: o modelo do Escritor lê o Estilo, o Título e a letra inteira e oferece tags curtas que esta canção ainda não tem; um clique numa a insere (antes do BPM no fim)",
++"Section marks": "Marcas de secções",
++"the sections' names on the wave": "os nomes das secções na onda",
++"Buttons": "Botões",
++"every button with words, the toggles, the menus' items": "todos os botões com palavras, os interruptores, os itens dos menus",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, como estavam (padrão)",
++"Its size against the text": "O seu tamanho em relação ao texto",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "A fonte dos nomes das secções na onda e na sua vista; por padrão IBM Plex Mono, como estavam",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "A fonte de todos os botões com palavras, dos interruptores e dos itens dos menus; por padrão a do texto"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 21fc123..d75bd11 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5223,5 +5223,13 @@ RuachI18n.add("ru", {
+ "the first Verse is Verse {0}": "первый куплет — Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} после {1}: арка идёт Verse › Pre-Chorus › Chorus › Post-Chorus (секцию можно пропустить, но не повернуть назад)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "В Стиле не латинские буквы: {0}. YuE2 читает стиль как английские теги: пиши его латиницей.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Подсказки стиля: модель Писателя читает Стиль, Название и лирику целиком и предлагает короткие теги, которых у песни ещё нет; клик по тегу вставляет его (перед BPM в конце)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Подсказки стиля: модель Писателя читает Стиль, Название и лирику целиком и предлагает короткие теги, которых у песни ещё нет; клик по тегу вставляет его (перед BPM в конце)",
++"Section marks": "Метки секций",
++"the sections' names on the wave": "названия секций на волне",
++"Buttons": "Кнопки",
++"every button with words, the toggles, the menus' items": "все кнопки со словами, переключатели, пункты меню",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, как было (по умолчанию)",
++"Its size against the text": "Размер относительно текста",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "Шрифт названий секций на волне и на её виде сверху; по умолчанию IBM Plex Mono, как было",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "Шрифт всех кнопок со словами, переключателей и пунктов меню; по умолчанию шрифт текста"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index b4078aa..2cfc639 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5218,5 +5218,13 @@ RuachI18n.add("uk", {
+ "the first Verse is Verse {0}": "перший куплет — Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{0} після {1}: арка йде Verse › Pre-Chorus › Chorus › Post-Chorus (секцію можна пропустити, але не повернути назад)",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "У Стилі нелатинські літери: {0}. YuE2 читає стиль як англійські теги: пиши його латиницею.",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Підказки стилю: модель Письменника читає Стиль, Назву й лірику цілком та пропонує короткі теги, яких у пісні ще немає; клік по тегу вставляє його (перед BPM наприкінці)"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "Підказки стилю: модель Письменника читає Стиль, Назву й лірику цілком та пропонує короткі теги, яких у пісні ще немає; клік по тегу вставляє його (перед BPM наприкінці)",
++"Section marks": "Мітки секцій",
++"the sections' names on the wave": "назви секцій на хвилі",
++"Buttons": "Кнопки",
++"every button with words, the toggles, the menus' items": "усі кнопки зі словами, перемикачі, пункти меню",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono, як було (типово)",
++"Its size against the text": "Розмір відносно тексту",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "Шрифт назв секцій на хвилі та на її вигляді згори; типово IBM Plex Mono, як було",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "Шрифт усіх кнопок зі словами, перемикачів і пунктів меню; типово шрифт тексту"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 662154a..334d8a8 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5101,5 +5101,13 @@ RuachI18n.add("zh", {
+ "the first Verse is Verse {0}": "第一段主歌是 Verse {0}",
+ "{0} after {1}: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus (a section may be left out, not turned back)": "{1} 之后是 {0}：结构顺序为 Verse › Pre-Chorus › Chorus › Post-Chorus（可以省略某段，不能倒回）",
+ "Letters other than Latin in the Style: {0}. YuE2 reads the style as English tags: write it in Latin letters.": "风格中有非拉丁字母：{0}。YuE2 把风格当作英文标签读取：请用拉丁字母书写。",
+-"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "风格建议：写作室的模型读取风格、标题和全部歌词，给出这首歌还没有的简短标签；点击一个即可插入（放在末尾的 BPM 之前）"
++"Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)": "风格建议：写作室的模型读取风格、标题和全部歌词，给出这首歌还没有的简短标签；点击一个即可插入（放在末尾的 BPM 之前）",
++"Section marks": "段落标记",
++"the sections' names on the wave": "波形上的段落名称",
++"Buttons": "按钮",
++"every button with words, the toggles, the menus' items": "所有带文字的按钮、开关和菜单项",
++"IBM Plex Mono, as they were (default)": "IBM Plex Mono，保持原样（默认）",
++"Its size against the text": "相对正文的大小",
++"The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default": "波形及其视图上段落名称的字体；默认为 IBM Plex Mono，保持原样",
++"The font of every button with words, the toggles and the menus' items; the text's by default": "所有带文字按钮、开关和菜单项的字体；默认与正文相同"
+ });
+diff --git a/tools/console/heresy-wavescope.js b/tools/console/heresy-wavescope.js
+index 1e9ddfe..3b8011b 100644
+--- a/tools/console/heresy-wavescope.js
++++ b/tools/console/heresy-wavescope.js
+@@ -403,7 +403,7 @@
+     g.textBaseline = "bottom";
+     label(g, "−60 dBFS", 6, top + lh - 2, "rgba(232,213,160,.6)");
+     // the sections: a line at each start through the picture and the lane, its name under the head where there is room
+-    g.font = "600 9.5px 'IBM Plex Mono', monospace";
++    g.font = window.ruachCanvasFont ? window.ruachCanvasFont("marks", 9.5, 600) : "600 9.5px 'IBM Plex Mono', monospace";   // HERESY 1437
+     g.textBaseline = "middle";
+     var lastEnd = -1e9;
+     secs.forEach(function (s) {
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 5ad0eed..41ac44d 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -315,10 +315,16 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <label class="field"><span class="label" data-head="labels, fields and paragraphs">Text</span>
+           <select id="fontSans" data-font="sans"></select></label>
+         <label class="field"><span class="label">Headings</span>
+-          <select id="fontHeading" data-font="heading"></select></label>
++          <span class="font-row"><select id="fontHeading" data-font="heading"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="heading"><button type="button" class="btn ghost small icon-btn" data-fstep="heading-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="heading">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="heading+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+         <!-- HERESY 1428 (Viktor 14.10.2026: «в настройки шрифтов отдельную позицию для названий комнат в Бар») -->
+         <label class="field"><span class="label" data-head="the rooms' names in the bar">Rooms</span>
+-          <select id="fontRooms" data-font="rooms"></select></label>
++          <span class="font-row"><select id="fontRooms" data-font="rooms"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="rooms"><button type="button" class="btn ghost small icon-btn" data-fstep="rooms-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="rooms">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="rooms+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
++        <!-- HERESY 1437 (Viktor 14.10.2026: «Разметку секций в плеере над волной — отдельным шрифтом… Отдельный шрифт для всех текстовых
++             кнопок… ± масштаб относительно основного шрифта: 2pt по 1pt шага») -->
++        <label class="field"><span class="label" data-head="the sections' names on the wave">Section marks</span>
++          <span class="font-row"><select id="fontMarks" data-font="marks" data-tip="The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="marks"><button type="button" class="btn ghost small icon-btn" data-fstep="marks-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="marks">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="marks+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
++        <label class="field"><span class="label" data-head="every button with words, the toggles, the menus' items">Buttons</span>
++          <span class="font-row"><select id="fontButtons" data-font="buttons" data-tip="The font of every button with words, the toggles and the menus' items; the text's by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="buttons"><button type="button" class="btn ghost small icon-btn" data-fstep="buttons-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="buttons">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="buttons+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+         <label class="field"><span class="label" data-head="seeds, scores, the log">Numbers and code</span>
+           <select id="fontMono" data-font="mono"></select></label>
+         <p class="row-hint" id="fontsHint"></p>
+-- 
+2.43.0
+

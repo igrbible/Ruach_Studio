@@ -55,5 +55,7 @@ hf_ready() {
 # Check a local copy against the pinned revision's file list: hf_complete REPO REV DIR [hf_expect.py options]
 hf_complete() {
   local repo="$1" rev="$2" dir="$3"; shift 3
-  "$HPY" "$HF_EXPECT" --repo "$repo" --rev "$rev" --dir "$dir" "$@"
+  # HERESY 1441: HF_EXPECT_EXTRA (--by-content --manifest REPO@REV) set around a call: its files known by their content too
+  # shellcheck disable=SC2086
+  "$HPY" "$HF_EXPECT" --repo "$repo" --rev "$rev" --dir "$dir" ${HF_EXPECT_EXTRA:-} "$@"
 }

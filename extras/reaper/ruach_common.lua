@@ -8,7 +8,7 @@ function R.setting(key, default)
   return v ~= "" and v or default
 end
 
-function R.url() return (R.setting("url", "http://127.0.0.1:41867"):gsub("/+$", "")) end
+function R.url() return (R.setting("url", "http://127.0.0.1:7777"):gsub("/+$", "")) end
 
 function R.say(text) reaper.ShowMessageBox(text, "Ruach Studio", 0) end
 

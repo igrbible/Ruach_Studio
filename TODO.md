@@ -49,6 +49,10 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 ## Artist
 
+- ✅ Qwen-Image 2.1's fine-tunes as brushes, its Turbo, Outpaint… (1442–1443).
+- 💡 **Qwen-Image-3** announced (https://qwen.ai/blog?id=qwen-image-3.0), its weights not open yet: a brush when they are.
+- ☐ The Artist's adapters their authors do not let be shared (Outpaint v2, Turbo 4step, FinalCut, and more): a fetch from Civitai by their SHA-256 in Engine → Models and LoRAs.
+
 - ✅ rc3 early preview: a prompt of one's own in 1:1, 16:9 and 9:16 from one seed, variations, Krea 2 Muse Q4 and Q8, the live preview step by step, runs and a gallery with stars, Set as cover.
 - ✅ 1270: Draw is Stop while a run waits or draws. 1271: three columns (the prompt | the stage, where a run develops and the picked picture stands with its run's data | the library), the edges dragged.
 - ✅ 1389: **the Artist's mega-guide** in English, docs/ARTIST.md (Viktor 12.10.2026: «Художника закрыли на 95%, пока что только на английском как основу»). ✅ 1424 (13.10.2026): the other eleven languages, on his word («Доводи его до ума и на все языки»).
@@ -71,6 +75,11 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ rc1–rc3: workspaces and sections, locks and freezing, pins, filters in a window (and, or, nor), the menu on every checked take, dragging takes, 💎 workspaces from Hugging Face, artwork with the old one kept.
 - ❓ 1268 took the peek on hover away (it showed a take's prompt and lyrics, what Viktor had taken out of the player's tip); the sheet on click stays. Back on his word.
 
+## LoRA mixing
+
+- ☐ The per-layer delta measured (‖B·A‖ per module, the overlap of two adapters by the cosine of their deltas): adapters touching the same layers share a budget, apart they are independent (Viktor's «1+2 в общую суммарную силу, либо 3 и 4 — отдельно»); Variant A (the sum capped at the red line, in proportion) and B (a budget by the order dragged).
+- ☐ A LoRA's strength over the song as the sliders' curve (line, curve, parabola, peaks): the engine applies the adapters at run time, not merged into the weights at load.
+
 ## LoRA Trainer
 
 - ✅ Our own trainer, a voice's kind by pitch on the raw folder, runs, telemetry, epochs worth hearing first; the duduk and shofar adapters.
@@ -83,6 +92,8 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ☐ A real shofar laid in: seven prompts gave trumpets and horns, SUNO cannot either.
 
 ## Engine and the page
+
+- ☐ The Engine as an overlay, its blocks in tabs at the left by theme, in the order of a first setup (Viktor 14.10.2026).
 
 - ✅ rc3: Updates from GitHub's releases; Folders' code in the lab (where the user's work lives, moved with a checked copy); the cards live as btop draws them. 1266: the logo the name alone, the bar of one height, the favicon the name's first letter in the page's language. 1272: the unfolded server log 180 px narrower.
 - ✅ 1283: **Engine → Folders**: the card to choose and move where the generations, the trash, the Artist's and the Writer's work live (Windows paths through WSL understood; planned, then a second yes; the old copy kept).
@@ -117,6 +128,11 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ 1362: from the audit: build.sh's page guard (the install's own path, not its folder's name: studio and music build) and the in-page updater under Pinokio (it sends to Pinokio's Update). ✅ 1285: the extras are made by fetch-heresy.sh itself (convert-extras.py), no convert-models.sh on a fresh install.
 
 ## Models, Hugging Face, data
+
+- ✅ goldhub/Ruach_Studio_Models_v2 rebuilt whole as the studio's own disk (1440), files known by their content (1441); v1 closed once RC8 is out (Viktor 14.10.2026: «Репо v1 можно смело закрывать»).
+- ✅ Every weight from v2 at one pin (1445): the Trainer's base in it, the listener as the studio reads it; from their authors still the stems' models (audio-separator), the Kit's library of adapters, Qwen2.5-Omni-7B whole.
+- ☐ The Kit's library's four adapters under CC BY-NC (sv-billie, dreampop, jpop, the realaudio NAR) into v2 and its downloader onto v2, on Viktor's word: they are not on the Forge's disk.
+- ❓ Deathmetal, Industrial Rock, Steps from Hell carry no licence: their authors to be asked (a question drafted, posted on Viktor's word).
 
 - ✅ The Models, LoRAs and Starter Sets repos and the 💎 bucket public on Hugging Face.
 - ✅ 1289: Engine → Models and LoRAs: what the install brings, here or not, fetched again from the studio (a part at a time or all), and the extras each asked with its size.

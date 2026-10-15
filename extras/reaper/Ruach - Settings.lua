@@ -3,7 +3,7 @@
 --   (RUACH_API_TOKEN on the studio's machine), and the workspace songs made from REAPER land in.
 -- HERESY 1122
 local R = dofile(({reaper.get_action_context()})[2]:match("^(.*[/\\])") .. "ruach_common.lua")
-local ok, answer = reaper.GetUserInputs("Ruach Studio · settings", 3, "The studio (http://HOST:41867),Token (empty: none),Workspace for songs from REAPER,extrawidth=300,separator=\t",
+local ok, answer = reaper.GetUserInputs("Ruach Studio · settings", 3, "The studio (http://HOST:7777),Token (empty: none),Workspace for songs from REAPER,extrawidth=300,separator=\t",
   R.url() .. "\t" .. R.setting("token", "") .. "\t" .. R.setting("workspace", "From REAPER"))
 if not ok then return end
 local f = {}

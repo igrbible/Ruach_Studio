@@ -1709,8 +1709,9 @@ await sleep(300);
 const sel6 = await ev(`(() => { const fits = (sel) => { const cs = getComputedStyle(sel), s = document.createElement("span"); s.style.cssText = "position:absolute;visibility:hidden;white-space:pre;font:" + cs.font;
     s.textContent = sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : ""; document.body.appendChild(s); const w = s.getBoundingClientRect().width; s.remove();
     return Math.round(sel.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - w); };
+  const pickFits = (id) => { const t = document.getElementById(id).querySelector(".pick-name"); return Math.round(t.clientWidth - t.scrollWidth); };
   const n = document.querySelector(".lora-notes"), i = document.querySelector(".info"), was = n.hidden; n.hidden = false; n.classList.remove("is-warn");
-  const out = { key: fits(document.getElementById("songKey")), writer: fits(document.getElementById("wrHandPick")), profile: fits(document.querySelector("#setupLibRow select")),
+  const out = { key: fits(document.getElementById("songKey")), writer: pickFits("wrHandPickBtn"), profile: pickFits("setupLibBtn"),   // HERESY 1438: the pick buttons
     notesOwn: getComputedStyle(n).maskImage !== getComputedStyle(i).maskImage && /svg/.test(getComputedStyle(n).maskImage) };
   n.hidden = was; return out; })()`);
 await ev(`(() => { window.ruachTextSize("f", 0); document.querySelector('#view-compose .frame-big').click(); return true; })()`);
@@ -2619,14 +2620,14 @@ section("the veil: the slogan larger and further from the logo; the words, the l
 await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 const bv86 = await ev(`(async () => {
   const h = document.documentElement, had = h.classList.contains("booting"), v = document.getElementById("bootVeil");
-  h.classList.add("booting"); h.classList.remove("veil-lift", "i18n-wait");
+  h.classList.add("booting", "veil-lang", "veil-logo"); h.classList.remove("veil-lift", "i18n-wait");   // 1435: all of it shown
   if (window.RuachVeilVersions) window.RuachVeilVersions();   // a test browser gets no veil: its versions asked here
   for (let i = 0; i < 40 && !(document.getElementById("bootVer") || {}).textContent; i++) await new Promise((r) => setTimeout(r, 100));
   const r = (s) => { const e = v.querySelector(s).getBoundingClientRect(); return { top: Math.round(e.top), bottom: Math.round(e.bottom), cx: Math.round(e.left + e.width / 2) }; };
   const o = { logo: r(".boot-logo"), osem: r(".boot-osem"), words: r(".boot-words"), line: r(".boot-line"), ver: r(".boot-ver"), vh: window.innerHeight, vw: window.innerWidth,
     font: parseFloat(getComputedStyle(v.querySelector(".boot-osem")).fontSize), verText: v.querySelector(".boot-ver").textContent,
     verFont: parseFloat(getComputedStyle(v.querySelector(".boot-ver")).fontSize) };
-  if (!had) h.classList.remove("booting");
+  if (!had) h.classList.remove("booting", "veil-lang", "veil-logo");
   return o; })()`);
 check("the veil: OSEM a fifth larger (19.2 px at 1920), 50 px or more under the logo; the line 160 px above the floor, in the middle",
   Math.abs(bv86.font - 19.2) < 0.3 && bv86.osem.top - bv86.logo.bottom >= 50 && Math.abs(bv86.vh - bv86.line.bottom - 160) <= 1 &&
@@ -3777,7 +3778,7 @@ const pn18 = await ev(`(async () => {
   await window.HeresyArtist.painters(); await wait(100);
   const sel = document.getElementById("arPainter"), o = { opts: [...sel.options].map((x) => x.value + "=" + x.textContent) };
   sel.value = "qwen2512-fp8"; sel.dispatchEvent(new Event("change")); await wait(100);
-  o.model = { shown: !document.getElementById("arModelBox").hidden, opts: [...document.getElementById("arModel").options].map((x) => x.textContent) };
+  o.model = { shown: (!!document.getElementById("arModelBox") || getComputedStyle(document.getElementById("arModel")).display !== "none"), opts: [...document.getElementById("arModel").options].map((x) => x.textContent) };
   document.getElementById("arModel").value = "B fine fp8.safetensors"; document.getElementById("arModel").dispatchEvent(new Event("change"));
   o.fam = document.getElementById("arLoraSay").textContent;
   document.getElementById("arPrompt").value = "A lighthouse at dawn"; document.getElementById("arPrompt").dispatchEvent(new Event("input"));
@@ -3788,7 +3789,7 @@ const pn18 = await ev(`(async () => {
   o.body = sent[0] ? { painter: sent[0].painter, model: sent[0].model } : null;
   sel.value = "qwen21"; sel.dispatchEvent(new Event("change")); await wait(100);
   const note = document.getElementById("arPainterNote");
-  o.note = { shown: !note.hidden, warn: note.classList.contains("is-warn"), text: note.textContent, model: !document.getElementById("arModelBox").hidden };
+  o.note = { shown: !note.hidden, warn: note.classList.contains("is-warn"), text: note.textContent, model: (!!document.getElementById("arModelBox") || getComputedStyle(document.getElementById("arModel")).display !== "none") };
   window.fetch = real;
   keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
   await window.HeresyArtist.painters();
@@ -6028,8 +6029,8 @@ const lay66 = await ev(`(async () => {
   o.heights = [...new Set(fields.map((e) => Math.round(e.getBoundingClientRect().height)))];
   const edge = left.getBoundingClientRect().left + left.clientWidth + 0.5;   // what shows: nothing past the column's visible edge
   o.past = [...left.querySelectorAll("*")].filter((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.right > edge; }).map((e) => e.id || e.tagName).slice(0, 5);
-  const p = document.getElementById("arPainter").closest(".field"), m = document.getElementById("arModel").closest(".field");
-  o.rows = Math.round(m.getBoundingClientRect().top - p.getBoundingClientRect().top);
+  const p = document.getElementById("arBrush").closest(".field");   // HERESY 1432: the brushes, the fine-tune's field gone
+  o.rows = Math.round(p.getBoundingClientRect().width / p.parentElement.clientWidth * 100);
   s.open = open;
   edgeL.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })); edgeR.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
   ["l", "r"].forEach((k) => { const key = k === "l" ? "yue2.arL" : "yue2.arR"; if (was[k] === null) localStorage.removeItem(key); else localStorage.setItem(key, was[k]); });
@@ -6039,8 +6040,8 @@ const lay66 = await ev(`(async () => {
 check("the prompt's column 25–30 % of the window, the library's 20–35 % (dragged past them from the keys, they stop there)",
   lay66.at[0] >= 24.9 && lay66.at[0] <= 30.1 && lay66.at[1] >= 19.9 && lay66.at[1] <= 35.1 && Math.abs(lay66.wide[0] - 30) < 0.3 && Math.abs(lay66.wide[1] - 35) < 0.3 &&
   Math.abs(lay66.narrow[0] - 25) < 0.3 && Math.abs(lay66.narrow[1] - 20) < 0.3, JSON.stringify(lay66));
-check("  at the narrowest every field and select one height (36 px), nothing wider than the column, the painter and its fine-tune a row each",
-  lay66.heights.length === 1 && lay66.heights[0] === 36 && lay66.past.length === 0 && lay66.rows > 30, JSON.stringify(lay66));
+check("  at the narrowest every field and select one height (36 px), nothing wider than the column, the brushes a row of their own",
+  lay66.heights.length === 1 && lay66.heights[0] === 36 && lay66.past.length === 0 && lay66.rows >= 90, JSON.stringify(lay66));
 
 // HERESY 1169 · 1367 (Viktor 11.10.2026: «добавь Protect опцию для картинок. Такое нельзя ни в коем случае упустить в корзину, а потом
 // ненароком в бездну»)
@@ -7726,7 +7727,7 @@ const br28 = await ev(`(async () => {
   await until(() => !document.getElementById("view-artist").classList.contains("is-hidden"), 4000); await wait(300);
   await window.HeresyArtist.painters(); await wait(100);
   const $ = (id) => document.getElementById(id), b = $("arBrush");
-  const o = { label: b.closest(".field").querySelector(".label").childNodes[0].textContent.trim(), painterShown: !$("arPainter").hidden, modelShown: !$("arModelBox").hidden,
+  const o = { label: b.closest(".field").querySelector(".label").childNodes[0].textContent.trim(), painterShown: getComputedStyle($("arPainter")).display !== "none", modelShown: (!!$("arModelBox") || getComputedStyle($("arModel")).display !== "none"),
     groups: [...b.querySelectorAll("optgroup")].map((g) => g.label + ":" + [...g.querySelectorAll("option")].map((x) => x.value + "=" + x.textContent).join(";")), first: b.value };
   const pick = async (v) => { b.value = v; b.dispatchEvent(new Event("change")); await wait(120); return { painter: $("arPainter").value, model: $("arModel").value, kept: [localStorage.getItem("yue2.arPainter"), localStorage.getItem("yue2.arModel")], say: $("arSampSay").textContent, steps: $("arSteps").value }; };
   o.base = await pick("qwen2512-fp8|BASE QW2512 fp8_e4m3fn.safetensors");
@@ -7749,7 +7750,7 @@ const br28 = await ev(`(async () => {
   return o; })()`);
 check("one list named The Artist's brushes, grouped by model: Q4 and Q6 with ⚡ Lightning, fp8 BASE with ⚡ Lightning, the fine-tune marked as one, 2.1; the old two selects hidden",
   br28.label === "The Artist's brushes" && !br28.painterShown && !br28.modelShown && br28.groups.join("|") ===
-  "Qwen-Image 2512:qwen2512-q4=Q4 · ⚡ Lightning · from 15.5 GB;qwen2512-q6=Q6 · ⚡ Lightning · from 20 GB;qwen2512-fp8|BASE QW2512 fp8_e4m3fn.safetensors=fp8 · BASE QW2512 fp8_e4m3fn · ⚡ Lightning · from 22.5 GB;qwen2512-fp8|Jib fine fp8.safetensors=fp8 · Jib fine fp8 · fine-tune · from 22.5 GB|Qwen-Image 2.1:qwen21=research licence · from 21 GB" &&
+  "Qwen-Image 2512:qwen2512-q4=Q4 · ⚡ Lightning · from 15.5 GB;qwen2512-q6=Q6 · ⚡ Lightning · from 20 GB;qwen2512-fp8|BASE QW2512 fp8_e4m3fn.safetensors=Base weights · fp8 · QW2512 fp8_e4m3fn · ⚡ Lightning · from 22.5 GB;qwen2512-fp8|Jib fine fp8.safetensors=Fine-tune · fp8 · Jib fine fp8 · from 22.5 GB|Qwen-Image 2.1:qwen21=research licence · from 21 GB" &&
   br28.first === "qwen2512-q4", JSON.stringify(br28));
 check("  a brush picked sets the painter and its file, kept; fp8 BASE samples with Lightning in 8 steps, the fine-tune without it in 30; Draw carries the fine-tune; 2.1 picked; the pick kept when the list is read again",
   br28.base.painter === "qwen2512-fp8" && br28.base.model === "BASE QW2512 fp8_e4m3fn.safetensors" && br28.base.kept.join() === "qwen2512-fp8,BASE QW2512 fp8_e4m3fn.safetensors" &&
@@ -7925,6 +7926,403 @@ check("the question: its title, four paragraphs (the port named), Keep off until
   JSON.stringify(aq29.list) === '["list","10.8.0.0/24"]' && aq29.offWithoutSure && aq29.sure === "My decision is a conscious one" && aq29.onWithSure &&
   JSON.stringify(aq29.sent) === '{"mode":"list","nets":["10.8.0.0/24"],"acknowledged":true}' && aq29.got && aq29.got.acknowledged && aq29.closed && aq29.later === null,
   JSON.stringify(aq29));
+
+// HERESY 1169 · 1432 (Viktor 14.10.2026, «Скрины - looks ugly» and the list after them): what the screen shows, measured on it
+section("The Artist: no Fine-tune field on screen, the brushes say Base weights or Fine-tune first, Batch instead of Variations");
+const ar32 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), real = window.fetch;
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", ready: true, need_mb: 15500 },
+    { key: "qwen2512-fp8", label: "Qwen-Image 2512 · fp8", ready: true, need_mb: 22500, models: ["BASE QW2512 fp8_e4m3fn.safetensors", "JibMix QW2512 v6 fp8.safetensors"] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [] }, titles: {} });
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(250);
+  await window.HeresyArtist.painters(); await wait(100);
+  const b = $("arBrush"), shown = (el) => !!el && getComputedStyle(el).display !== "none" && el.getClientRects().length > 0;
+  const o = { box: !!$("arModelBox"), model: shown($("arModel")), painter: shown($("arPainter")), brush: shown(b),
+    fields: [...document.querySelectorAll("#view-artist .ar-left .field")].filter(shown).map((f) => (f.querySelector(".label") || {}).textContent || "").map((t) => t.trim().split("\\n")[0]),
+    rows: [...b.options].map((x) => x.textContent), count: ($("arCount").closest(".field").querySelector(".label") || {}).textContent,
+    countTip: $("arCount").closest(".field").dataset.tip };
+  b.value = "qwen2512-fp8|JibMix QW2512 v6 fp8.safetensors"; b.dispatchEvent(new Event("change")); await wait(100);
+  o.picked = [$("arPainter").value, $("arModel").value, shown($("arModel"))];
+  window.fetch = real;
+  await window.HeresyArtist.painters();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(250);
+  return o; })()`);
+check("no Fine-tune field anywhere on the Artist's form (#arModel and #arPainter hidden by their display, not only an attribute); the brushes list shown; Base weights and Fine-tune said first, BASE not said twice; Batch with its tip",
+  !ar32.box && !ar32.model && !ar32.painter && ar32.brush && !ar32.fields.some((t) => /Fine-tune/i.test(t)) &&
+  ar32.rows.join("|") === "Q4 · ⚡ Lightning · from 15.5 GB|Base weights · fp8 · QW2512 fp8_e4m3fn · ⚡ Lightning · from 22.5 GB|Fine-tune · fp8 · JibMix QW2512 v6 fp8 · from 22.5 GB" &&
+  ar32.count === "Batch" && /^How many pictures in one go/.test(ar32.countTip) && ar32.picked.join() === "qwen2512-fp8,JibMix QW2512 v6 fp8.safetensors,false", JSON.stringify(ar32));
+
+section("▶ Play this song: a filled icon two icons wide in the take's row of icons; Save style and Delete as icons");
+const pl32 = await ev(`(() => {
+  const b = document.getElementById("playHere"), s = b.querySelector("svg.ui-play"), was = b.classList.contains("is-hidden");
+  b.classList.remove("is-hidden");
+  const like = document.querySelector("#takeActions .icon-act"), r = b.getBoundingClientRect(), o = { svg: !!s, fill: s ? getComputedStyle(s).fill : "", text: b.textContent.trim(),
+    label: b.getAttribute("aria-label"), w: Math.round(parseFloat(getComputedStyle(b).width)), h: Math.round(parseFloat(getComputedStyle(b).height)), primary: b.classList.contains("primary") };
+  if (like && r.width) { const q = like.getBoundingClientRect(); o.icon = Math.round(q.width); o.row = Math.abs((r.top + r.height / 2) - (q.top + q.height / 2)) < 3; }
+  if (was) b.classList.add("is-hidden");
+  const sv = document.getElementById("styleSave"), dl = document.getElementById("styleDel");
+  o.style = [sv, dl].map((x) => [x.textContent.trim(), !!x.querySelector("svg.ui-ico"), x.getAttribute("aria-label"), Math.round(parseFloat(getComputedStyle(x).width))].join(":"));
+  return o; })()`);
+check("Play this song: no words, a filled ▶, coloured, two icons wide (75 px), level with the take's icons; Save style and Delete: icons with their names for screen readers",
+  pl32.svg && pl32.fill !== "none" && pl32.text === "" && pl32.label === "Play this song" && pl32.w === 75 && pl32.primary &&
+  (pl32.icon === undefined || (pl32.w >= 2 * pl32.icon && pl32.row)) && pl32.style.join("|") === ":true:Save style…:34|:true:Delete:34", JSON.stringify(pl32));
+
+section("The takes' ⋯ menu: its words on one line, its items on one indent; the lyrics' «[» list never scrolled sideways");
+const mn32 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), m = document.getElementById("libMenu");
+  document.getElementById("libMenuBtn").click(); await wait(120);
+  const items = [...m.querySelectorAll("button")].filter((b) => b.getClientRects().length);
+  const lines = items.map((b) => { const lh = parseFloat(getComputedStyle(b).lineHeight) || 18; const cs = getComputedStyle(b);
+    return Math.round((b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / lh); });
+  const starts = items.map((b) => { const t = [...b.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim()); if (!t) return null;
+    const r = document.createRange(); r.selectNodeContents(t); return Math.round(r.getBoundingClientRect().left); }).filter((x) => x !== null);
+  const r = m.getBoundingClientRect(), bar = document.getElementById("playbar"), floor = bar && bar.getClientRects().length ? bar.getBoundingClientRect().top : innerHeight;
+  const o = { open: !m.classList.contains("is-hidden"), lines: Math.max(...lines), indents: [...new Set(starts)].length, inView: r.left >= 0 && r.right <= innerWidth, w: Math.round(r.width),
+    clear: r.top >= 0 && r.bottom <= floor + 1, up: m.classList.contains("is-up") };
+  document.getElementById("libMenuBtn").click(); await wait(80);
+  if (!m.classList.contains("is-hidden")) document.body.click();
+  return o; })()`);
+check("⋯: every item on one line, all at one indent, inside the window and clear of the player (upwards when there is no room under it)",
+  mn32.open && mn32.lines === 1 && mn32.indents === 1 && mn32.inView && mn32.clear, JSON.stringify(mn32));
+const th32 = await ev(`(async () => { const w = (ms) => new Promise((r) => setTimeout(r, ms)), b = document.getElementById("themeButton");
+  RuachI18n.set("ru"); await w(250); const ru = (b.querySelector(".theme-word") || {}).textContent; RuachI18n.set("en"); await w(250);
+  return { ru, en: (b.querySelector(".theme-word") || {}).textContent, after: getComputedStyle(b, "::after").content }; })()`);
+check("  the ☰'s Theme is a word the page translates (Тема in Russian), no CSS word left behind it",
+  th32.ru === "Тема" && th32.en === "Theme" && (th32.after === "none" || th32.after === "normal"), JSON.stringify(th32));
+await tcSet("[Intro]\nвступ\n[Verse 1]\nа\n[Verse 2]\nб\n[Verse 3]\nв\n[Verse 4]\nг\n[Verse 5]\nд\n[Verse 6]\nе\n");
+await sleep(150);
+await tcKey("[", "BracketLeft", 219, { text: "[" });
+const tc32 = await ev(`(() => { const l = document.querySelector(".tc-pop .tc-list"); if (!l || document.querySelector(".tc-pop").hidden) return null;
+  l.scrollLeft = 200;
+  const on = l.querySelector(".tc-item.is-on"), tag = on && on.querySelector(".tc-tag"), say = on && on.querySelector(".tc-say");
+  return { side: l.scrollWidth - l.clientWidth, left: l.scrollLeft, ox: getComputedStyle(l).overflowX, tag: tag && tag.textContent, tagWhole: tag ? tag.scrollWidth <= tag.clientWidth + 1 : false,
+    sayIn: say ? say.getBoundingClientRect().right <= l.getBoundingClientRect().right + 1 : false }; })()`);
+await tcKey("Escape", "Escape", 27);
+await ev(`(() => { const a = document.getElementById("lyrics"); a.value = ""; a.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+check("«[» after six verses: [Verse 7] in hand, whole; its hint inside the column; nothing to scroll sideways even when asked to",
+  !!tc32 && tc32.tag === "[Verse 7]" && tc32.tagWhole && tc32.sayIn && tc32.side <= 0 && tc32.left === 0 && tc32.ox === "hidden", JSON.stringify(tc32));
+
+section("The MP3 bitrate as its buttons; the bar's ☰ wide enough for MODEL in every language");
+const mp32 = await ev(`(() => {
+  const s = document.getElementById("mp3Rate"), b = document.getElementById("dlTakeMp3"), cs = getComputedStyle(s);
+  const hm = document.getElementById("headMorePop"), was = hm.classList.contains("is-hidden"); hm.classList.remove("is-hidden");
+  const row = hm.querySelector(".head-more-row span"), o = { bg: cs.backgroundColor, minW: parseFloat(cs.minWidth) / parseFloat(cs.fontSize), pop: Math.round(hm.getBoundingClientRect().width),
+    label: Math.round(row.getBoundingClientRect().width), labelFits: row.scrollWidth <= row.clientWidth + 1 };
+  if (was) hm.classList.add("is-hidden");
+  return o; })()`);
+check("MP3's bitrate: no white field, room for «320k» and its arrow; ☰ 360 px with an 84 px label column",
+  /rgba\(0, 0, 0, 0\)|transparent/.test(mp32.bg) && mp32.minW >= 4.8 && mp32.pop === 360 && mp32.label >= 80 && mp32.labelFits, JSON.stringify(mp32));
+
+section("A folded takes list opens over the take while the mouse is on its strip, and folds a second after the mouse leaves");
+const pk32 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), lib = document.getElementById("library"), key = "yue2.libFolded", was = localStorage.getItem(key);
+  const grid = () => getComputedStyle(document.querySelector(".workspace")).gridTemplateColumns;
+  localStorage.setItem(key, "1"); document.getElementById("libFold").click(); await wait(150);
+  const o = { folded: lib.classList.contains("is-folded"), strip: Math.round(lib.getBoundingClientRect().width), grid0: grid() }, stripRight = lib.getBoundingClientRect().right;
+  lib.dispatchEvent(new MouseEvent("mouseenter")); await wait(80);
+  o.early = lib.classList.contains("is-peek");
+  await wait(250);
+  const r = lib.getBoundingClientRect();
+  o.peek = lib.classList.contains("is-peek"); o.w = Math.round(r.width); o.right = Math.round(Math.abs(r.right - stripRight)); o.list = !!document.getElementById("libList").getClientRects().length;
+  o.grid1 = grid(); o.tip = document.getElementById("libFold").dataset.tip;
+  lib.dispatchEvent(new MouseEvent("mouseleave")); await wait(600);
+  o.still = lib.classList.contains("is-peek");
+  lib.dispatchEvent(new MouseEvent("mouseenter")); await wait(500);
+  o.kept = lib.classList.contains("is-peek");
+  lib.dispatchEvent(new MouseEvent("mouseleave")); await wait(1150);
+  o.shut = !lib.classList.contains("is-peek") && lib.classList.contains("is-folded");
+  // its Fold button while open over the take keeps it open for good
+  lib.dispatchEvent(new MouseEvent("mouseenter")); await wait(300);
+  document.getElementById("libFold").click(); await wait(150);
+  o.pinned = !lib.classList.contains("is-folded") && !lib.classList.contains("is-peek");
+  if (was === "1") document.getElementById("libFold").click();
+  if (was === null) localStorage.removeItem(key); else localStorage.setItem(key, was);
+  await wait(120);
+  o.back = lib.classList.contains("is-folded") === (was === "1");
+  return o; })()`);
+check("folded: a mouse passing by opens nothing; resting on the strip opens the list over the take (the columns stay as they are); it stays while the mouse comes back within a second and folds a second after it leaves; Fold, pressed while it is open, keeps it open",
+  pk32.folded && pk32.strip <= 42 && !pk32.early && pk32.peek && pk32.w >= 360 && pk32.right <= 2 && pk32.list && pk32.grid1 === pk32.grid0 && pk32.tip === "Keep the list open" &&
+  pk32.still && pk32.kept && pk32.shut && pk32.pinned && pk32.back, JSON.stringify(pk32));
+
+// HERESY 1169 · 1434 (Viktor 14.10.2026: «если пространство не выбрано, ничего не генерим нигде… В наши 💎 пространства и их сабы - запрет генерации»)
+section("The guard: nothing made without a workspace that takes new takes; never a 💎 set, its sections or a frozen one; a new install gets «My songs»");
+const wg34 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, HC = window.HeresyCollection, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  let cat = { takes: [], workspaces: ["Album", "Album / B-sides", "Ice", "💎 Probes", "💎 Probes / Strings"], frozen: ["Ice"], trash_days: 30 }, down = false;
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/catalog")) return down ? Promise.reject(new TypeError("Failed to fetch")) : json(cat);
+    if (u === "/lab/collection") { const b = JSON.parse(o.body); sent.push(b);
+      if (b.op === "ws-create") cat = Object.assign({}, cat, { workspaces: cat.workspaces.concat([b.workspace]) });
+      return json(cat); }
+    return real(u, o); };
+  const was = localStorage.getItem("yue2.workspace"), o = { was: localStorage.getItem("yue2.workspace") };
+  document.querySelectorAll(".hd-back:not(.is-leaving) .hd-no").forEach((b) => b.click()); await wait(250);   // one an earlier check left open
+  const items = () => [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item .hd-item-label")].map((e) => e.textContent);
+  localStorage.setItem("yue2.workspace", "💎 Probes / Strings");
+  await HC.reload(); await wait(80);
+  o.closed = [HC.current(), HC.landable(), HC.closedWs("💎 Probes"), HC.closedWs("Ice"), HC.closedWs("Album / B-sides"), document.getElementById("wsCurrent").classList.contains("is-closed")];
+  // a take that lands while a 💎 set is in hand goes nowhere near it
+  HC.landed(["x-take"]); await wait(80);
+  o.landedSent = sent.filter((b) => b.op === "ws-add").length;
+  // two runs sent together: one question, the 💎 set and the frozen one not offered; Album picked
+  const g1 = window.ruachWsGuard(), g2 = window.ruachWsGuard();
+  await until(() => document.querySelector(".hd-back:not(.is-leaving) .hd-item"), 3000);
+  o.dialogs = document.querySelectorAll(".hd-back:not(.is-leaving)").length;
+  o.offered = items();
+  o.said = (document.querySelector(".hd-back:not(.is-leaving) .hd-title") || {}).textContent || "";
+  [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item")].find((b) => b.textContent.startsWith("Album")).click();
+  o.got = await Promise.race([Promise.all([g1, g2]), wait(5000).then(() => ["timeout", String(!!document.querySelector(".hd-back"))])]);
+  o.after = HC.landable();
+  // Send nothing: nothing sent
+  localStorage.setItem("yue2.workspace", "💎 Probes"); await HC.reload(); await wait(50);
+  const g3 = window.ruachWsGuard().then(() => "sent", (e) => e.message);
+  await until(() => document.querySelector(".hd-back:not(.is-leaving) .hd-no"), 3000); await wait(50);
+  document.querySelector(".hd-back:not(.is-leaving) .hd-no").click();
+  o.refused = await Promise.race([g3, wait(5000).then(() => "timeout")]);
+  // a new install: no workspace that takes new takes: «My songs» made and in hand, nothing asked
+  cat = { takes: [], workspaces: ["💎 Probes"], frozen: [], trash_days: 30 }; localStorage.removeItem("yue2.workspace");
+  sent.length = 0;
+  await HC.reload(); await until(() => HC.landable(), 2000);
+  o.first = [sent.filter((b) => b.op === "ws-create").map((b) => b.workspace).join(), HC.landable(), await Promise.race([window.ruachWsGuard(), wait(5000).then(() => "timeout")])];
+  // the lab silent: nothing sent, said why
+  down = true;
+  o.down = await (async () => { const st = HC.loaded; HC.loaded = () => false; try { return await Promise.race([window.ruachWsGuard().then(() => "sent", (e) => e.message), wait(5000).then(() => "timeout")]); } finally { HC.loaded = st; } })();
+  down = false;
+  // a studio with no Librarian at all (404): nothing to land a take in, nothing kept from being made
+  const realFetch = window.fetch;
+  window.fetch = (u, o) => String(u).startsWith("/lab/catalog") ? Promise.resolve(new Response(JSON.stringify({ error: "not here" }), { status: 404, headers: { "Content-Type": "application/json" } })) : realFetch(u, o);
+  o.absent = await (async () => { const st = HC.loaded; HC.loaded = () => false; try { return await Promise.race([window.ruachWsGuard().then((w) => "sent:" + w, (e) => e.message), wait(5000).then(() => "timeout")]); } finally { HC.loaded = st; } })();
+  window.fetch = real;
+  document.querySelectorAll(".hd-back:not(.is-leaving) .hd-no").forEach((b) => b.click()); await wait(250);   // nothing of it left open
+  if (was === null) localStorage.removeItem("yue2.workspace"); else localStorage.setItem("yue2.workspace", was);
+  await HC.reload();
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  return o; })()`);
+check("a 💎 set's section in hand is no place for new takes (marked so in the header), and a take landing then is added nowhere",
+  JSON.stringify(wg34.closed) === '["💎 Probes / Strings","",true,true,false,true]' && wg34.landedSent === 0, JSON.stringify(wg34));
+check("  two runs sent together ask once, naming why; the 💎 sets and the frozen one not offered; the pick answers both",
+  wg34.dialogs === 1 && wg34.offered.join("|") === "Album|B-sides" && /takes no new takes/.test(wg34.said) && wg34.got.join() === "Album,Album" && wg34.after === "Album", JSON.stringify(wg34));
+check("  «Send nothing» sends nothing; a new install gets «My songs» made and in hand without a question; a silent lab: nothing sent, said why",
+  /^Nothing sent: choose a workspace/.test(wg34.refused) && wg34.first.join("|") === "My songs|My songs|My songs" && /^Nothing sent: the Librarian/.test(wg34.down),
+  JSON.stringify({ refused: wg34.refused, first: wg34.first, down: wg34.down, was: wg34.was }));
+check("  a studio with no Librarian at all (its catalog not there): nothing to land a take in, the run goes", wg34.absent === "sent:", JSON.stringify({ absent: wg34.absent }));
+
+// HERESY 1169 · 1436 (Viktor 14.10.2026): the lyrics' arc and verses' numbers; letters other than Latin in the Style; ✦ Suggest reading the lyrics whole
+section("the lyrics' arc: the verses numbered 1, 2, 3…; Verse › Pre-Chorus › Chorus › Post-Chorus, a section left out but none turned back");
+const ac36 = await ev(`(() => {
+  const L = window.HeresyLyrics, say = (t) => L.arc(t).map((f) => (f.line + 1) + ":" + L.arcSays(f)).join(" | ");
+  return {
+    whole: say("[Intro]\\na\\n[Verse 1]\\nb\\n[Pre-Chorus]\\nc\\n[Chorus]\\nd\\n[Post-Chorus]\\ne\\n[Verse 2]\\nf\\n[Chorus]\\ng\\n[Bridge]\\nh\\n[Chorus]\\ni\\n[Outro]\\nj"),
+    skips: say("[Verse 1]\\na\\n[Chorus]\\nb\\n[Verse 2]\\nc\\n[Post-Chorus]\\nd\\n[Guitar Solo]\\n[Chorus]\\ne\\n[Verse 3]\\n[Male Vocals]\\nf"),
+    missing: say("[Verse 1]\\na\\n[Verse 3]\\nb"),
+    back: say("[Verse 1]\\na\\n[Chorus]\\nb\\n[Pre-Chorus]\\nc"),
+    first: say("[Verse 2]\\na"),
+    again: say("[Verse 1]\\na\\n[Verse 1]\\nb"),
+    plain: say("[Verse 1]\\na\\n[Verse]\\nb"),
+    plainOnly: say("[Verse]\\na\\n[Chorus]\\nb\\n[Verse]\\nc\\n[Chorus]\\nd"),
+    intro: say("[Verse 1]\\na\\n[Intro]\\nb"),
+    outro: say("[Verse 1]\\na\\n[Outro]\\nb\\n[Chorus]\\nc") }; })()`);
+check("a whole arc and an arc with sections left out say nothing; a missing verse, one twice, one unnumbered among numbered, a first verse not 1, a Pre-Chorus after its Chorus, an Intro late, a Chorus after the Outro are each said at their line",
+  ac36.whole === "" && ac36.skips === "" && ac36.plainOnly === "" && ac36.missing === "3:Verse 3 after Verse 1: Verse 2 is missing" &&
+  /^5:\[?Pre-Chorus\]? after Chorus: the arc goes Verse › Pre-Chorus › Chorus › Post-Chorus/.test(ac36.back) && ac36.first === "1:the first Verse is Verse 2" &&
+  ac36.again === "3:Verse 1 again" && ac36.plain === "3:an unnumbered Verse among numbered ones" && ac36.intro === "3:an Intro after the song has begun" &&
+  ac36.outro === "5:Chorus after the Outro (Outro)", JSON.stringify(ac36));
+const am36 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), a = document.getElementById("lyrics"), was = a.value;
+  a.value = "[Verse 1]\\nодна строка\\n[Chorus]\\nприпев\\n[Pre-Chorus]\\nпред\\n[Verse 3]\\nтри"; a.dispatchEvent(new Event("input", { bubbles: true })); await wait(250);
+  const b = document.querySelector('#lyricsMeter [data-lyr="arc"]'), o = { text: b ? b.textContent : null, near: b ? b.classList.contains("near") : false, tip: b ? b.dataset.tip : "" };
+  if (b) { b.click(); await wait(120); o.sel1 = a.value.slice(a.selectionStart, a.selectionEnd); document.querySelector('#lyricsMeter [data-lyr="arc"]').click(); await wait(120); o.sel2 = a.value.slice(a.selectionStart, a.selectionEnd); }
+  a.value = was; a.dispatchEvent(new Event("input", { bubbles: true })); await wait(150);
+  o.gone = !document.querySelector('#lyricsMeter [data-lyr="arc"]') || !!was;
+  return o; })()`);
+check("  the meter says it amber («Arc to look at: 2»), each line in its tip; a press selects the next slip's tag",
+  am36.text === "Arc to look at: 2" && am36.near && /line 5: \[?Pre-Chorus/.test(am36.tip) && /line 7: Verse 3 after Verse 1: Verse 2 is missing/.test(am36.tip) &&
+  am36.sel1 === "[Pre-Chorus]" && am36.sel2 === "[Verse 3]" && am36.gone, JSON.stringify(am36));
+
+section("letters other than Latin in the Style said under it; ✦ Suggest reads the lyrics whole");
+const st36 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), s = document.getElementById("style"), was = s.value, w = document.getElementById("styleNonLatin");
+  const put = async (v) => { s.value = v; s.dispatchEvent(new Event("input", { bubbles: true })); await wait(60); return { shown: !w.hidden, text: w.hidden ? "" : w.textContent }; };
+  const o = { ru: await put("русский рок, male vocals, 120 BPM"), latin: await put("Russian rock, café jazz, Motörhead riffs, 120 BPM"), greek: await put("ψυχεδελικό rock") };
+  s.value = was; s.dispatchEvent(new Event("input", { bubbles: true })); await wait(60);
+  // ✦ Suggest: what the Writer's model is given
+  const lyr = document.getElementById("lyrics"), lwas = lyr.value, real = window.HeresyWriterAsk, asked = [];
+  lyr.value = Array.from({ length: 30 }, (_, i) => "строка " + (i + 1)).join("\\n"); lyr.dispatchEvent(new Event("input", { bubbles: true }));
+  window.HeresyWriterAsk = (m) => { asked.push(m[1].content); return Promise.resolve({ text: "dark synths, gated drums" }); };
+  document.getElementById("styleSugGo").click(); await wait(300);
+  window.HeresyWriterAsk = real;
+  o.whole = asked[0] ? { has30: /строка 30$/m.test(asked[0]), said: /The lyrics, whole:/.test(asked[0]) } : null;
+  lyr.value = lwas; lyr.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  return o; })()`);
+check("Cyrillic and Greek words named under the Style; Latin with its accents (café, Motörhead) passes; Suggest gives the model all 30 lines, «The lyrics, whole»",
+  st36.ru.shown && /русский, рок/.test(st36.ru.text) && !st36.latin.shown && st36.greek.shown && /ψυχεδελικό/.test(st36.greek.text) &&
+  !!st36.whole && st36.whole.has30 && st36.whole.said, JSON.stringify(st36));
+
+// HERESY 1169 · 1437 (Viktor 14.10.2026): Section marks and Buttons in Look → Fonts; each role's size against the text's, −2…+2 pt by 1
+section("Look → Fonts: Section marks and Buttons; Headings, Rooms, Section marks and Buttons each a − and a + beside its font");
+const fn37 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), h = document.documentElement;
+  const keep = ["yue2.fonts", "yue2.fontSizes"].map((k) => [k, localStorage.getItem(k)]);
+  const px = (sel) => parseFloat(getComputedStyle(document.querySelector(sel)).fontSize), fam = (sel) => getComputedStyle(document.querySelector(sel)).fontFamily;
+  const o = { marksFirst: $("fontMarks").options[0].textContent, buttonsFirst: $("fontButtons").options[0].textContent, steps: document.querySelectorAll(".font-step").length,
+    canvas0: window.ruachCanvasFont("marks", 9, 600), btnFam0: fam("#generateBtn"), h3: px(".card h3"), tab: px(".tabs button") };
+  // a buttons font dresses the buttons; Same as the text, they are as they were
+  $("fontButtons").value = "Tektur"; $("fontButtons").dispatchEvent(new Event("change")); await wait(60);
+  o.btnFam1 = fam("#generateBtn"); o.cls1 = h.classList.contains("fonts-buttons");
+  $("fontButtons").value = ""; $("fontButtons").dispatchEvent(new Event("change")); await wait(60);
+  o.btnFam2 = fam("#generateBtn"); o.cls2 = h.classList.contains("fonts-buttons");
+  // the headings two points larger, the rooms one smaller; − held at −2
+  const click = async (s) => { document.querySelector('[data-fstep="' + s + '"]').click(); await wait(40); };
+  await click("heading+"); await click("heading+"); await click("heading+");
+  o.h3up = px(".card h3"); o.headSay = document.querySelector('[data-fstep-say="heading"]').textContent; o.upOff = document.querySelector('[data-fstep="heading+"]').disabled;
+  await click("rooms-");
+  o.tabDown = px(".tabs button");
+  // the marks' font and step reach the wave's canvas
+  $("fontMarks").value = "Jura"; $("fontMarks").dispatchEvent(new Event("change")); await click("marks+"); await wait(40);
+  o.canvas1 = window.ruachCanvasFont("marks", 9, 600);
+  o.kept = localStorage.getItem("yue2.fontSizes");
+  $("fontMarks").value = ""; $("fontMarks").dispatchEvent(new Event("change"));
+  keep.forEach(([k, v]) => { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); });
+  ["heading", "rooms", "marks"].forEach((r) => h.style.removeProperty("--fsr-" + r));
+  window.dispatchEvent(new Event("resize")); await wait(60);
+  o.h3back = px(".card h3");
+  return o; })()`);
+check("Section marks (IBM Plex Mono as they were, by default) and Buttons (the text's) are there, four − + steps; the wave's marks drawn as before until picked",
+  /^IBM Plex Mono, as they were/.test(fn37.marksFirst) && /^Same as the text/.test(fn37.buttonsFirst) && fn37.steps === 4 &&
+  fn37.canvas0 === '600 9px "IBM Plex Mono", monospace', JSON.stringify(fn37));
+check("  a Buttons font dresses the buttons (and only then: Same as the text leaves them as they were); +2 pt on Headings is 2 pt larger and holds there; −1 pt on Rooms; the marks' font and step reach the canvas; kept",
+  /Tektur/.test(fn37.btnFam1) && fn37.cls1 && fn37.btnFam2 === fn37.btnFam0 && !fn37.cls2 && Math.abs(fn37.h3up - fn37.h3 - 8 / 3) < 0.05 && fn37.headSay === "+2 pt" && fn37.upOff &&
+  Math.abs(fn37.tab - fn37.tabDown - 4 / 3) < 0.05 && /^600 10\.33\d*px "Jura", "IBM Plex Mono", monospace$/.test(fn37.canvas1) &&
+  fn37.kept === '{"heading":2,"rooms":-1,"marks":1}' && Math.abs(fn37.h3back - fn37.h3) < 0.05, JSON.stringify(fn37));
+
+// HERESY 1169 · 1438 (Viktor 14.10.2026: «ПИСАТЕЛЬ и ПРОФИЛЬ — попап оверлеями, как выбор пространства»)
+section("the Creator's long lists in the studio's own dialog: a document from the Writer, a profile, a saved style, a text profile");
+const pk38 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const o = { btns: ["wrHandPick", "setupLib", "styleLib", "tpPick"].map((id) => !!$(id + "Btn") && getComputedStyle($(id)).display === "none"),
+    shown: getComputedStyle($("setupLibBtn")).display !== "none", name0: $("setupLibBtn").querySelector(".pick-name").textContent };
+  const sel = $("setupLib"), was = sel.value, changes = [];
+  sel.addEventListener("change", function f() { changes.push(sel.value); sel.removeEventListener("change", f); });
+  $("setupLibBtn").click();
+  const d = await until(() => document.querySelector(".hd-back:not(.is-leaving) .hd-item"), 3000);
+  o.dialog = !!d; o.title = (document.querySelector(".hd-back:not(.is-leaving) .hd-title") || {}).textContent;
+  const items = [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item")];
+  o.items = items.length; o.marked = items.filter((x) => x.classList.contains("is-current")).length;
+  const other = items.find((x) => !x.classList.contains("is-current"));
+  const want = other ? other.querySelector(".hd-item-label").textContent : "";
+  if (other) other.click();
+  await wait(250);
+  o.changed = changes.length === 1 && changes[0] !== was; o.name1 = $("setupLibBtn").querySelector(".pick-name").textContent; o.want = want;
+  // a value set by code shows on the button
+  sel.value = was; await wait(30);
+  o.back = $("setupLibBtn").querySelector(".pick-name").textContent === o.name0;
+  return o; })()`);
+check("Writer, Profile, Saved styles and Text profile are buttons over hidden selects; Profile opens the dialog with its list, the one in hand marked; a pick sets the select and tells its code; a value set by code shows on the button",
+  pk38.btns.every(Boolean) && pk38.shown && pk38.dialog && pk38.title === "A profile" && pk38.items >= 2 && pk38.marked === 1 && pk38.changed && pk38.name1 === pk38.want && pk38.back,
+  JSON.stringify(pk38));
+
+// HERESY 1169 · 1442 (Viktor 14.10.2026: «Для QW21 скачал один файнтюн… и 4step Turbo LoRA, которую можем прикрутить»)
+section("Qwen-Image 2.1's fine-tunes in The Artist's brushes; its Turbo in Sampling where 2512 has Lightning (off by default, 4 steps when on)");
+const qt42 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", ready: true, need_mb: 15500, lightning: true },
+    { key: "qwen21", label: "Qwen-Image 2.1 · research licence", ready: true, need_mb: 21000, lightning: true, speed_name: "Turbo" },
+    { key: "qwen21-fp8", label: "Qwen-Image 2.1 · fp8", ready: true, need_mb: 21000, lightning: true, speed_name: "Turbo", models: ["FinalCut_v1_fp8.safetensors"], bases: [] }];
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [] }, titles: {} });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json({ id: "20261014-230000-1442", status: "queued", of: 1, pictures: [], prompt: "x", shapes: ["1:1"], seed: 1, count: 1, painter: "qwen21-fp8" }, 202); }
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [] });
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arModel", "yue2.arPrompt", "yue2.arSampling"], was = keys.map((k) => localStorage.getItem(k));
+  keys.forEach((k) => localStorage.removeItem(k));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(250);
+  await window.HeresyArtist.painters(); await wait(100);
+  const b = $("arBrush"), o = {};
+  o.groups = [...b.querySelectorAll("optgroup")].map((g) => g.label + ":" + [...g.querySelectorAll("option")].map((x) => x.value + "=" + x.textContent).join(";"));
+  b.value = "qwen21-fp8|FinalCut_v1_fp8.safetensors"; b.dispatchEvent(new Event("change")); await wait(150);
+  const box = $("arLightBox");
+  o.pick = [$("arPainter").value, $("arModel").value];
+  o.speed = { shown: !box.hidden, name: (box.querySelector(".ar-speed-name") || {}).textContent, on: $("arLightOn").checked, steps: $("arSteps").value, tip: $("arLightOn").dataset.tip };
+  $("arLightOn").checked = true; $("arLightOn").dispatchEvent(new Event("change", { bubbles: true })); await wait(100);
+  o.turbo = { steps: $("arSteps").value, min: $("arSteps").min, max: $("arSteps").max, say: $("arSampSay").textContent };
+  $("arPrompt").value = "A lighthouse at dawn"; $("arPrompt").dispatchEvent(new Event("input"));
+  document.querySelector('#arShapes input[value="1:1"]').checked = true; $("arShapes").dispatchEvent(new Event("change"));
+  $("arDraw").click();
+  await until(() => sent.length, 3000);
+  o.body = sent[0] ? { painter: sent[0].painter, model: sent[0].model, sampling: sent[0].sampling } : null;
+  // 2512 keeps its own Lightning, named so
+  b.value = "qwen2512-q4"; b.dispatchEvent(new Event("change")); await wait(120);
+  o.back = (box.querySelector(".ar-speed-name") || {}).textContent;
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(250);
+  return o; })()`);
+check("FinalCut under Qwen-Image 2.1 as a fine-tune; picked, Sampling shows Turbo, off, 30 steps, its own tip; on: 4 steps (4 to 16) and said; Draw sends the brush, its file and Turbo; 2512 keeps Lightning",
+  qt42.groups.length === 2 && /^Qwen-Image 2\.1:qwen21=research licence · from 21 GB;qwen21-fp8\|FinalCut_v1_fp8\.safetensors=Fine-tune · fp8 · FinalCut_v1_fp8 · from 21 GB$/.test(qt42.groups[1]) &&
+  qt42.pick.join() === "qwen21-fp8,FinalCut_v1_fp8.safetensors" && qt42.speed.shown && qt42.speed.name === "Turbo" && !qt42.speed.on && qt42.speed.steps === "30" && /^Turbo: Qwen-Image 2\.1/.test(qt42.speed.tip) &&
+  qt42.turbo.steps === "4" && qt42.turbo.min === "4" && qt42.turbo.max === "16" && /Turbo 1\.00/.test(qt42.turbo.say) &&
+  JSON.stringify(qt42.body) === '{"painter":"qwen21-fp8","model":"FinalCut_v1_fp8.safetensors","sampling":{"steps":4,"lightning":1}}' && qt42.back === "Lightning", JSON.stringify(qt42));
+
+// HERESY 1169 · 1443 (Viktor 14.10.2026: «И outpaint LoRA для QW21»)
+section("Outpaint… on a picture: its new shape, words of what lies beyond if wanted; Qwen-Image 2.1 with «Outpaint v2» paints the edges on");
+const op43 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), real = window.fetch, sent = [];
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const painters = [{ key: "qwen2512-q4", label: "Qwen-Image 2512 · Q4", ready: true, need_mb: 15500, lightning: true },
+    { key: "qwen21", label: "Qwen-Image 2.1 · research licence", ready: true, need_mb: 21000, lightning: true, speed_name: "Turbo", outpaint: true }];
+  const pic = { file: "01-1x1-s7.png", thumb: "thumbs/01-1x1-s7.jpg", shape: "1:1", seed: 7, w: 1280, h: 1280, kept: true };
+  const run = { id: "20261014-235900-1443", status: "done", prompt: "a lighthouse", shapes: ["1:1"], seed: 7, count: 1, painter: "qwen2512-q4", pictures: [pic], created: Date.now() / 1000 };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/artist/painters")) return json({ painters });
+    if (u.startsWith("/lab/artist/loras")) return json({ root: "artwork/loras", families: { "qwen-image-2512": [], "qwen-image-2.1": [] }, titles: {} });
+    if (u.startsWith("/lab/artist/runs")) return json({ runs: [run] });
+    if (u.startsWith("/lab/artist/draw")) { sent.push(JSON.parse(o.body)); return json(Object.assign({}, run, { id: "20261014-235901-1443", status: "queued", pictures: [], shapes: ["16:9"] }), 202); }
+    if (u.startsWith("/lab/artist/file")) return Promise.resolve(new Response(new Blob([]), { status: 200 }));
+    return real(u, o); };
+  const keys = ["yue2.arPainter", "yue2.arModel"], was = keys.map((k) => localStorage.getItem(k));
+  document.querySelector('.topbar [data-tab="artist"]').click();
+  await until(() => !$("view-artist").classList.contains("is-hidden"), 4000); await wait(200);
+  await window.HeresyArtist.painters(); await window.HeresyArtist.reload(); await wait(300);
+  const th = await until(() => document.querySelector('#arRuns .ar-run[data-id="20261014-235900-1443"] .ar-thumb[data-act="view"]'), 3000);
+  if (th) th.click();
+  const btn = await until(() => document.querySelector('#arStage [data-stage="outpaint"]'), 3000);
+  const o = { btn: !!btn, label: btn ? btn.getAttribute("aria-label") : null };
+  if (btn) {
+    btn.click();
+    await until(() => document.querySelector(".hd-back:not(.is-leaving) .hd-item"), 3000);
+    o.shapes = [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item .hd-item-label")].map((e) => e.textContent);
+    [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item")].find((b) => b.textContent.startsWith("16:9")).click();
+    const inp = await until(() => document.querySelector(".hd-back:not(.is-leaving) .hd-input"), 3000);
+    inp.value = "a stormy sea"; document.querySelector(".hd-back:not(.is-leaving) .hd-yes").click();
+    await until(() => sent.length, 3000);
+  }
+  o.body = sent[0] ? { painter: sent[0].painter, shapes: sent[0].shapes, prompt: sent[0].prompt, ref: sent[0].ref, ref_as: sent[0].ref_as, outpaint: sent[0].outpaint, count: sent[0].count } : null;
+  window.fetch = real;
+  keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+  await window.HeresyArtist.painters(); await window.HeresyArtist.reload();
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(250);
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  return o; })()`);
+check("a picture on the stage has Outpaint… (2.1 with its adapter here); its new shape asked among the two others, then the words; the run sent to 2.1 as an edit of the picture, outpainted, one picture in the shape chosen",
+  op43.btn && op43.label === "Outpaint…" && JSON.stringify(op43.shapes) === '["16:9","9:16"]' &&
+  JSON.stringify(op43.body) === '{"painter":"qwen21","shapes":["16:9"],"prompt":"a stormy sea","ref":{"id":"20261014-235900-1443","file":"01-1x1-s7.png"},"ref_as":"edit","outpaint":true,"count":1}', JSON.stringify(op43));
 // ================================================================== fonts
 section("fonts (Engine page)");
 const fontMenu = await ev(`(() => { const s = document.getElementById("fontSans"), kids = [...s.children], hr = kids.findIndex(k => k.tagName === "HR");
@@ -9867,11 +10265,17 @@ await ev(`window.__stale = true`);
 await send("Page.navigate", { url: BASE + "?veil" });
 await waitFor(`!window.__stale && !!document.getElementById("bootVeil") && document.readyState !== "loading"`, 15000, 50);
 const veil1 = await ev(veilNow);
+// HERESY 1435: the line from the first moment, ten seconds long; the logo and OSEM in from 2.2 s, after the page's language
+const veilLogo = await waitFor(`document.documentElement.classList.contains("veil-logo")`, 8000, 50);
+const veil15 = await ev(`(() => { const v = document.getElementById("bootVeil"); return { t: Math.round(performance.now()), lang: document.documentElement.classList.contains("veil-lang"),
+  line: v ? getComputedStyle(v.querySelector(".boot-line i")).animationDuration : "", logo: v ? getComputedStyle(v.querySelector(".boot-logo")).animationName : "" }; })()`);
+check("  the line ten seconds long from the first moment; the logo and OSEM in from 2.2 s, once the language is in",
+  !!veilLogo && veil15.t >= 2200 && veil15.lang && veil15.line === "10s" && veil15.logo === "boot-in", JSON.stringify(veil15));
 check("?veil: it covers the page as it boots, the bar's logo and its words on it", veil1.booting && veil1.shown && veil1.logo && veil1.words === "Loading the Sound Heresy" &&
-  veil1.t < 7000, JSON.stringify(veil1));
-const lifted = await waitFor(`!document.getElementById("bootVeil")`, 14000, 100);
+  veil1.t < 10000, JSON.stringify(veil1));
+const lifted = await waitFor(`!document.getElementById("bootVeil")`, 18000, 100);
 const veil2 = await ev(veilNow);
-check("  it lifts once the page is ready and seven seconds have passed", !!lifted && !veil2.booting && veil2.t >= 7000 && veil2.t < 11000, JSON.stringify(veil2));
+check("  it lifts once the page is ready and ten seconds have passed", !!lifted && !veil2.booting && veil2.t >= 10000 && veil2.t < 14000, JSON.stringify(veil2));
 
 // HERESY 1168 (Viktor 06.10.2026: «Когда трек "Move to Trash"… и если проигрывается в данный момент, сразу снимай его с
 // проигрыша»): the mock's lab says the take went (nothing moves there); the player lets it go at once

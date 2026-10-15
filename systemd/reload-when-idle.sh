@@ -27,7 +27,7 @@ WHAT="${1:-}"; MODE="${2:-}"
 G="\e[1;32m"; Y="\e[1;33m"; R="\e[1;31m"; X="\e[0m"
 if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G=""; Y=""; R=""; X=""; fi
 case "$WHAT" in
-    studio) UNIT=ruach-studio.service; PORT="${YUE2CPP_PORT:-41867}" ;;
+    studio) UNIT=ruach-studio.service; PORT="${YUE2CPP_PORT:-7777}" ;;
     lab)    UNIT=heresy-lab.service;   PORT="${HERESY_LAB_PORT:-41870}" ;;
     *)      echo -e "${R}reload-when-idle.sh studio|lab [--wait]${X}"; exit 2 ;;
 esac

@@ -39,7 +39,9 @@
 <!-- HERESY 1167 (Viktor 05.10.2026: «прятать весь сырой рендер DOM, оверлеем `Loading the Sound Heresy`, логотип Студии крупно...
      и даже на скором локальном соединении таймаут оверлея в 5 секунд»): the page builds under this veil. It lifts once the page
      stands ready and seven seconds have passed since the navigation (Viktor: «Давай 7. Это стоит того»); a click or a key lifts it sooner, once the page is ready;
-     seventeen seconds lift it whatever happens. The logo is the bar's own (copied in under the top bar, its words in the page's
+     seventeen seconds lift it whatever happens. HERESY 1435 (Viktor 14.10.2026: «удлинить 7 с на 10 с… проявку лого с сабтайтлом на
+     2-3 секунде… лоадбар пусть с нуля… при подхвате языка Студии проявить "ЗАГРУЗКА..."»): ten seconds, twenty at most; the line from
+     the first moment; the words when the language is in; the logo and OSEM from 2.2 s, in the page's language, never English first. The logo is the bar's own (copied in under the top bar, its words in the page's
      language once the translation runs). Not for a test browser (navigator.webdriver), ?scope=claude or ?noveil. -->
 <!-- HERESY 1167 (Viktor: «давай LOADING только в ночной моей всегда»): the veil wears the night theme whatever the page's -->
 <div class="boot-veil" id="bootVeil" role="status" data-theme="igr-night">
@@ -172,7 +174,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   try { window.RuachVeilVersions(); } catch (e) { /* the veil without its versions */ }
   // ready: the page parsed and its scripts run (not the load event: the web fonts may come late on a slow road), its room
   // set, the translation in
-  var MIN = 7000, MAX = 17000, gone = false;
+  var MIN = 10000, MAX = 20000, LOGO_AT = 2200, LANG_LATEST = 6000, gone = false;   // HERESY 1435
+  // the page's language in (heresy-i18n.js says it, the logo's words painted already): «Loading…» and the versions show
+  window.addEventListener("ruach-lang", function () { html.classList.add("veil-lang"); });
   function ready() { return document.readyState !== "loading" && !!document.body.dataset.tab && !html.classList.contains("i18n-wait"); }
   function lift() {
     if (gone) return;
@@ -182,7 +186,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     html.classList.add("veil-lift");
     setTimeout(function () { html.classList.remove("booting", "veil-lift"); var v = document.getElementById("bootVeil"); if (v) v.remove(); }, 520);
   }
-  (function tick() { var age = performance.now(); if (age >= MAX || (age >= MIN && ready())) lift(); else setTimeout(tick, 100); })();
+  (function tick() {
+    var age = performance.now();
+    if (age >= LANG_LATEST) html.classList.add("veil-lang");   // a translation that never came: the words as they are
+    if (age >= LOGO_AT && html.classList.contains("veil-lang")) html.classList.add("veil-logo");
+    if (age >= MAX || (age >= MIN && ready())) lift(); else setTimeout(tick, 100);
+  })();
   function sooner(event) {
     if (gone || !ready()) return;
     event.preventDefault(); event.stopPropagation();
@@ -306,10 +315,16 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <label class="field"><span class="label" data-head="labels, fields and paragraphs">Text</span>
           <select id="fontSans" data-font="sans"></select></label>
         <label class="field"><span class="label">Headings</span>
-          <select id="fontHeading" data-font="heading"></select></label>
+          <span class="font-row"><select id="fontHeading" data-font="heading"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="heading"><button type="button" class="btn ghost small icon-btn" data-fstep="heading-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="heading">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="heading+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <!-- HERESY 1428 (Viktor 14.10.2026: «в настройки шрифтов отдельную позицию для названий комнат в Бар») -->
         <label class="field"><span class="label" data-head="the rooms' names in the bar">Rooms</span>
-          <select id="fontRooms" data-font="rooms"></select></label>
+          <span class="font-row"><select id="fontRooms" data-font="rooms"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="rooms"><button type="button" class="btn ghost small icon-btn" data-fstep="rooms-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="rooms">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="rooms+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+        <!-- HERESY 1437 (Viktor 14.10.2026: «Разметку секций в плеере над волной — отдельным шрифтом… Отдельный шрифт для всех текстовых
+             кнопок… ± масштаб относительно основного шрифта: 2pt по 1pt шага») -->
+        <label class="field"><span class="label" data-head="the sections' names on the wave">Section marks</span>
+          <span class="font-row"><select id="fontMarks" data-font="marks" data-tip="The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="marks"><button type="button" class="btn ghost small icon-btn" data-fstep="marks-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="marks">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="marks+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+        <label class="field"><span class="label" data-head="every button with words, the toggles, the menus' items">Buttons</span>
+          <span class="font-row"><select id="fontButtons" data-font="buttons" data-tip="The font of every button with words, the toggles and the menus' items; the text's by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="buttons"><button type="button" class="btn ghost small icon-btn" data-fstep="buttons-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="buttons">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="buttons+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <label class="field"><span class="label" data-head="seeds, scores, the log">Numbers and code</span>
           <select id="fontMono" data-font="mono"></select></label>
         <p class="row-hint" id="fontsHint"></p>
@@ -468,7 +483,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <!-- HERESY 1166 (Viktor: «Все наши восходящие HF репозитории добавь в колонку Ruach Studio, через пустую строку»):
                ours on Hugging Face, after a line's space; private until the release, the 💎 sets' bucket too -->
           <ul class="about-links about-ours">
-            <li><a href="https://huggingface.co/goldhub/Ruach_Studio_Models" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Models</span></li>
+            <li><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Models_v2</span></li>
             <li><a href="https://huggingface.co/goldhub/Ruach_Studio_LoRAs" target="_blank" rel="noopener noreferrer">LoRAs</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_LoRAs</span></li>
             <li><a href="https://huggingface.co/datasets/goldhub/Ruach_Studio_Starter_Sets" target="_blank" rel="noopener noreferrer">Starter sets</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Starter_Sets</span></li>
             <!-- HERESY 1167 (Viktor: «ссылка или кнопка на кофе… прямо на Stripe»; his words, 01.10: «Buy me a Coffee Machine») -->
@@ -628,7 +643,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
             <span class="row-hint size-meter" id="styleMeter"></span>
             <!-- HERESY 1357 (from SUNO v6: the ✦ and ↻ under its Styles): tags the Writer's model suggests for this song; a click puts one in -->
-            <span class="style-sug" id="styleSug"><button type="button" class="btn ghost small" id="styleSugGo" data-tip="Style suggestions: the Writer's model reads the Style, the Title and the lyrics' first lines and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)">✦ Suggest</button><span class="style-sug-chips" id="styleSugChips"></span><button type="button" class="btn ghost small icon-btn" id="styleSugMore" hidden aria-label="Other suggestions" data-tip="Other suggestions">&#x21bb;</button></span>
+            <span class="style-sug" id="styleSug"><button type="button" class="btn ghost small" id="styleSugGo" data-tip="Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)">✦ Suggest</button><span class="style-sug-chips" id="styleSugChips"></span><button type="button" class="btn ghost small icon-btn" id="styleSugMore" hidden aria-label="Other suggestions" data-tip="Other suggestions">&#x21bb;</button></span>
             <span class="key-check is-hidden" id="keyCheck"><span id="keyCheckText"></span>
               <button type="button" class="btn ghost small" id="keyToScore"></button>
               <button type="button" class="btn ghost small" id="keyToStyle"></button></span>
@@ -636,8 +651,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <!-- HERESY 1032: saved styles, kept on Forge (heresy-presets.js) -->
           <div class="lib-row" id="styleLibRow">
             <select id="styleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select>
-            <button type="button" class="btn ghost small" id="styleSave" data-tip="Keep this style under a name, on Forge: every browser sees it">Save style…</button>
-            <button type="button" class="btn ghost small" id="styleDel" disabled>Delete</button>
+            <!-- HERESY 1432 (Viktor 14.10.2026: «"Сохранить стиль" и "Удалить" — svg иконками») -->
+            <button type="button" class="btn ghost small icon-btn style-ico" id="styleSave" data-ui="floppy" aria-label="Save style…" data-tip="Keep this style under a name, on Forge: every browser sees it"></button>
+            <button type="button" class="btn ghost small icon-btn style-ico danger" id="styleDel" data-ui="trash" aria-label="Delete" data-tip="Delete the saved style picked" disabled></button>
           </div>
         </section>
         <section class="k-card k-lyrics">
@@ -966,7 +982,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <section class="col take-col" id="view-take">
     <div class="col-head">
       <h2 id="takeTitle">Smithery Is Idle</h2>
-      <button type="button" class="btn primary small is-hidden" id="playHere" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too.">▶ Play this song</button>
+      <!-- HERESY 1432 (Viktor 14.10.2026: «Кнопку "Play this song"… в строку с svg кнопками, оставить её крашеной, шириной в две
+           иконки, заменить текст на плеерную svg иконку PLAY») -->
+      <button type="button" class="btn primary small is-hidden" id="playHere" data-ui="play" aria-label="Play this song" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too."></button>
       <span class="col-note" id="takeEyebrow">no run yet</span>
       <div class="spacer"></div>
       <button class="btn ghost small run-return is-hidden" id="backToRun">
@@ -1538,12 +1556,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="ar-shapes" id="arShapes" role="group" aria-label="Shapes"></div>
         <div class="ar-seedcount">   <!-- HERESY 1345 (Viktor: «ВАРИАЦИИ ужми, а СИД лучше растянуть»): one row, the seed stretched -->
         <label class="field ar-seed"><span class="label">Seed <span class="info" tabindex="-1" role="img" aria-label="About the seed" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)"></span></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
-        <label class="field ar-count" data-tip="Each variation is the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Variations</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+        <label class="field ar-count" data-tip="How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Batch</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
         </div>
         <!-- HERESY 1428 (Viktor 14.10.2026: «объединить в один спадающий дроплаун… обзови как "КИСТИ ХУДОЖНИКА"»): every brush in one list -->
-        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" translate="no" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in artwork/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select></label>
-        <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512, and the painter's note (Qwen-Image 2.1's licence) -->
-        <label class="field ar-model" id="arModelBox" hidden><span class="label">Fine-tune</span><select id="arModel" translate="no" data-tip="The fp8 fine-tunes of Qwen-Image 2512 in artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): a card of 24 GB"></select></label>
+        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" translate="no" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in artwork/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select><select id="arModel" hidden aria-hidden="true" tabindex="-1" translate="no"></select></label>
+        <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512; 1432 (Viktor: «селектор ФАЙНТЮН — он нафиг нам больше не нужен»): its
+             field gone, the file kept in the hidden #arModel beside #arPainter, picked in The Artist's brushes -->
         <div class="ar-get-row"><button type="button" class="btn ghost small" id="arGet" data-tip="The painters, the Qwen fine-tunes and the adapters the studio can fetch for the Artist, each with its size, here or not: from the studio's models repository and from their makers">Get painters and adapters…</button></div>   <!-- HERESY 1347 -->
         <!-- HERESY 1319: the sampling: steps, sampler, schedule; 2512's Lightning and guidance -->
         <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em><span class="info is-warn" id="arSampWarn" tabindex="-1" role="img" aria-label="A warning on the sampling" hidden></span></summary>
@@ -1554,7 +1572,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           </div>
           <!-- HERESY 1369 (Viktor: «Lightning и Ведение с кнопкой сброса на следующую полосу перенеси») -->
           <div class="ar-samp-row ar-samp-row2">
-            <label class="field ar-samp-num ar-samp-light" id="arLightBox" hidden><span class="label">Lightning</span><span class="ar-light-row"><input type="checkbox" id="arLightOn" aria-label="Lightning" data-tip="Lightning: Qwen-Image 2512 in 4 to 16 steps and one pass a step, for drafts and the takes' covers; off for finished realism: 10 to 60 steps with guidance, about four times as long" /><input type="number" id="arLight" min="0.05" max="1.5" step="0.05" data-tip="Lightning's strength: 1.0 as its makers give it, lower for a fine-tune (0.55 with 12 steps)" /></span></label>
+            <label class="field ar-samp-num ar-samp-light" id="arLightBox" hidden><span class="label"><span class="ar-speed-name">Lightning</span></span><span class="ar-light-row"><input type="checkbox" id="arLightOn" aria-label="Lightning" data-tip="Lightning: Qwen-Image 2512 in 4 to 16 steps and one pass a step, for drafts and the takes' covers; off for finished realism: 10 to 60 steps with guidance, about four times as long" /><input type="number" id="arLight" min="0.05" max="1.5" step="0.05" data-tip="Lightning's strength: 1.0 as its makers give it, lower for a fine-tune (0.55 with 12 steps)" /></span></label>
             <label class="field ar-samp-num" id="arCfgBox" hidden><span class="label">Guidance</span><input type="number" id="arCfg" min="1" max="10" step="0.5" data-tip="Without Lightning: how closely the picture follows the prompt (true CFG, two passes a step); 4 is Qwen-Image's own" /></label>
             <button type="button" class="btn ghost small" id="arSampReset" data-tip="The painter's own steps, sampler and schedule">Reset</button>
           </div>

@@ -116,7 +116,7 @@ def place21(pipe):
     big = max(weights_bytes(te), weights_bytes(tr))
     free = torch.cuda.mem_get_info()[0]
     asked = os.environ.get("ART_STREAM") == "1"
-    if not asked and free >= big + WORK_ROOM_OF.get("qwen21", WORK_ROOM):
+    if not asked and free >= big + WORK_ROOM_OF.get("qwen21", WORK_ROOM):   # HERESY 1442: a fine-tune of 2.1 as 2.1
         pipe.enable_model_cpu_offload()
         return None
     from diffusers.hooks import apply_group_offloading
@@ -139,6 +139,77 @@ def lightning():
     d = Q2512 / "lightning"
     p = d / LIGHTNING
     return p if p.is_file() else None
+
+
+def is21(painter):
+    """HERESY 1442: Qwen-Image 2.1 itself or a fine-tune of it."""
+    return painter in ("qwen21", "qwen21-fp8")
+
+
+def checkpoint21(model):
+    """HERESY 1442: a fine-tune of Qwen-Image 2.1 in artwork/Qwen-Image-2.1/checkpoints/."""
+    p = Q21 / "checkpoints" / Path(str(model or "")).name
+    if not p.is_file():
+        raise RuntimeError("no such fine-tune of Qwen-Image 2.1: " + str(model))
+    return p
+
+
+def turbo21():
+    """HERESY 1442: «Turbo 4step», 2.1's speed-up, wherever it lies under artwork/loras/qwen-image-2.1/."""
+    d = KIT / "artwork" / "loras" / "qwen-image-2.1"
+    hits = sorted(p for p in d.rglob("*.safetensors") if re.search(r"turbo.*4.?step|4.?step.*turbo", p.name, re.I)) if d.is_dir() else []
+    return hits[0] if hits else None
+
+
+OUTPAINT_ASK = "Outpaint the image: replace the solid gray areas with a seamless continuation of the scene, keeping the existing picture unchanged."   # HERESY 1443: the adapter's own instruction, word for word
+
+
+def outpaint21():
+    """HERESY 1443: «Outpaint v2» (AusBoss's) wherever it lies under artwork/loras/qwen-image-2.1/."""
+    d = KIT / "artwork" / "loras" / "qwen-image-2.1"
+    hits = sorted((p for p in d.rglob("*.safetensors") if re.search(r"outpaint", p.name, re.I)), key=lambda p: p.name, reverse=True) if d.is_dir() else []
+    return hits[0] if hits else None
+
+
+def outpaint_canvas(ref, gw, gh):
+    """HERESY 1443: the picture whole in the middle of a gw × gh canvas of flat gray #808080 (made smaller only if it does not fit),
+    as the adapter wants it: (the canvas, the picture as placed, its place)."""
+    from PIL import Image
+    ref = ref.convert("RGB")
+    s = min(1.0, gw / ref.width, gh / ref.height)
+    w, h = max(1, round(ref.width * s)), max(1, round(ref.height * s))
+    pic = ref if (w, h) == ref.size else ref.resize((w, h), Image.LANCZOS)
+    canvas = Image.new("RGB", (gw, gh), (128, 128, 128))
+    xy = ((gw - w) // 2, (gh - h) // 2)
+    canvas.paste(pic, xy)
+    return canvas, pic, xy
+
+
+def fp8_transformer21(f):
+    """HERESY 1442: a ComfyUI fp8 single file of a Qwen-Image 2.1 fine-tune as diffusers' transformer. Its MLP's gate and up come fused
+    (img_mlp.gate_up): the first half is diffusers' gate_layer, the second its proj (measured by cosine against 2.1's own: 1.00 and 0.00).
+    Read in bf16 (fp8 → bf16 exact), the fp8 kind kept to store them in again on the card."""
+    import torch
+    from accelerate import init_empty_weights
+    from diffusers import QwenImage21Transformer2DModel
+    from safetensors import safe_open
+    with init_empty_weights(include_buffers=False):
+        tr = QwenImage21Transformer2DModel.from_config(QwenImage21Transformer2DModel.load_config(str(Q21 / "transformer")))
+    sd, kinds = {}, set()
+    with safe_open(str(f), "pt") as h:
+        for k in h.keys():
+            v = h.get_tensor(k)
+            kinds.add(str(v.dtype))
+            k = k.replace("model.diffusion_model.", "", 1)
+            if k.endswith(".gate_up.weight"):
+                half = v.shape[0] // 2
+                sd[k[:-len(".gate_up.weight")] + ".gate_layer.weight"] = v[:half].to(torch.bfloat16)
+                sd[k[:-len(".gate_up.weight")] + ".proj.weight"] = v[half:].to(torch.bfloat16)
+            else:
+                sd[k] = v.to(torch.bfloat16)
+    tr.load_state_dict(sd, strict=True, assign=True)
+    del sd
+    return tr, (torch.float8_e5m2 if "torch.float8_e5m2" in kinds else torch.float8_e4m3fn if "torch.float8_e4m3fn" in kinds else None)
 
 
 def checkpoints():
@@ -255,18 +326,33 @@ def rekept(painter, speed, loras):
     return pipe, [dict(s, weight=w) for s, w in zip(KEPT.get("said") or [], weights)], steps, cfg
 
 
-def build(painter, model, loras, speed):
+def build(painter, model, loras, speed, extra=None):
     """The pipeline for a run, its adapters on: (pipe, the adapters said, steps, true CFG, the card's own work left)."""
     import torch
     from diffusers import FlowMatchEulerDiscreteScheduler, GGUFQuantizationConfig, QwenImagePipeline, QwenImageTransformer2DModel
     wanted = [("a%d" % i, artist_loras.path_of(KIT, l["id"]), l.get("weight", artist_loras.WEIGHT), l["id"]) for i, l in enumerate(loras or [])]
-    if painter == "qwen21":
+    if is21(painter):
         from diffusers import QwenImage21Pipeline
-        pipe = QwenImage21Pipeline.from_pretrained(str(Q21), torch_dtype=torch.bfloat16)
+        store = None
+        if painter == "qwen21-fp8":                          # HERESY 1442: a fine-tune of 2.1 from its fp8 single file
+            tr, store = fp8_transformer21(checkpoint21(model))
+            pipe = QwenImage21Pipeline.from_pretrained(str(Q21), transformer=tr, torch_dtype=torch.bfloat16)
+        else:
+            pipe = QwenImage21Pipeline.from_pretrained(str(Q21), torch_dtype=torch.bfloat16)
+        lw = float(speed.get("lightning") or 0)              # HERESY 1442: 2.1's Turbo, off unless asked
+        tb = turbo21() if lw > 0 else None
+        if tb is not None:
+            wanted.append(("speed", tb, lw, "turbo"))
+        wanted += list(extra or [])                          # HERESY 1443: the outpaint adapter, when outpainting
         said = load_adapters(pipe, wanted, modules_of(Q21 / "transformer")) if wanted else []
         import artist_job
         artist_job.set_schedule(pipe, speed)                 # HERESY 1319
-        return pipe, said, int(speed.get("steps") or 30), 1.0
+        if store is not None:                                # fp8 on the card, each layer bf16 while it computes; the adapters' own bf16
+            from diffusers.hooks.layerwise_casting import DEFAULT_SKIP_MODULES_PATTERN
+            pipe.transformer.enable_layerwise_casting(storage_dtype=store, compute_dtype=torch.bfloat16,
+                                                      skip_modules_pattern=tuple(DEFAULT_SKIP_MODULES_PATTERN) + ("lora_A", "lora_B", "lora_magnitude"))
+        out_steps = 25 if any(x[3] == "outpaint" for x in extra or []) else 30   # HERESY 1443: the adapter's own 25
+        return pipe, said, int(speed.get("steps") or (4 if tb is not None else out_steps)), 1.0
     store = None
     if painter in GGUF:
         ckpt = Q2512 / "gguf" / GGUF[painter]
@@ -363,14 +449,15 @@ def main(run, ask, painter):
         import artist_letters
         prompt = artist_letters.order(letters) if letters.get("way") == "letter" else artist_letters.phrase(prompt, letters)
         print(json.dumps({"letters_prompt": prompt}), flush=True)
-    key = None if painter == "qwen21" else ("qwen", painter, str(ask.get("model") or ""), tuple(l["id"] for l in ask.get("loras") or []), tune(painter, speed)[0] > 0)
+    key = None if is21(painter) else ("qwen", painter, str(ask.get("model") or ""), tuple(l["id"] for l in ask.get("loras") or []), tune(painter, speed)[0] > 0)
     if key is not None and KEPT.get("key") == key:   # HERESY 1370: kept from the run before: no loading
         pipe, said, steps, cfg = rekept(painter, speed, ask.get("loras") or [])
         print(json.dumps({"kept": True}), flush=True)
     else:
         import artist_job
         artist_job.drop()                            # HERESY 1370: another painter kept: let go before this one loads
-        pipe, said, steps, cfg = build(painter, ask.get("model"), ask.get("loras") or [], speed)   # HERESY 1319
+        extra = [("outpaint", outpaint21(), 1.0, "outpaint")] if ask.get("outpaint") and outpaint21() else []   # HERESY 1443
+        pipe, said, steps, cfg = build(painter, ask.get("model"), ask.get("loras") or [], speed, extra)   # HERESY 1319
         if SERVE and key is not None:
             KEPT.update(key=key, pipe=pipe, own=OWN.get("sched"), said=said)
     if said:
@@ -390,7 +477,7 @@ def main(run, ask, painter):
     ref = Image.open(run / ask["ref"]).convert("RGB") if ask.get("ref") else None
     mask = Image.open(run / ask["mask"]).convert("L") if ask.get("mask") else None
     big = torch.cuda.mem_get_info()[0] >= ENC_ROOM          # HERESY 1338b: the room free now, not the card's size
-    if painter == "qwen21":                                  # its parts on the card in turn (16.4 GB from words, 19.1 editing, 3090)
+    if is21(painter):                                  # its parts on the card in turn (16.4 GB from words, 19.1 editing, 3090)
         if mask is not None or ask.get("fit"):
             raise RuntimeError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Qwen-Image 2512")
         streamed = place21(pipe)                             # HERESY 1386: its parts in turn, or streamed on a card too small for them
@@ -441,16 +528,24 @@ def main(run, ask, painter):
                 g = torch.Generator("cuda").manual_seed(sk)
                 if hasattr(pipe.scheduler, "heresy"):         # HERESY 1333: our samplers noise by the pictures seed
                     pipe.scheduler.heresy = dict(pipe.scheduler.heresy, seed=sk)
-                more = {"callback_on_step_end": live(run, n, gw, gh, w, h, steps), "callback_on_step_end_tensor_inputs": ["latents"]} if preview and painter != "qwen21" else {}
-                if painter != "qwen21":                     # HERESY 1387: this picture's regions, or none
+                more = {"callback_on_step_end": live(run, n, gw, gh, w, h, steps), "callback_on_step_end_tensor_inputs": ["latents"]} if preview and not is21(painter) else {}
+                if not is21(painter):                     # HERESY 1387: this picture's regions, or none
                     artist_job.regions_set(pipe.transformer, e, [(pe, pm, t) for (pe, pm), t in zip(regs, artist_job.region_tokens(pipe, ask, gw, gh))],
                                            "encoder_hidden_states_mask")
-                if painter == "qwen21":
+                if is21(painter):
                     kw = {"prompt": STYLE_ASK.format(prompt=prompt.rstrip(" .")) if ask.get("ref_as") == "style" and ref is not None else prompt,   # HERESY 1388
                           "width": gw, "height": gh, "num_inference_steps": steps, "generator": g}
-                    if ref is not None:
+                    placed = None
+                    if ref is not None and ask.get("outpaint"):   # HERESY 1443: the picture on its new canvas, the instruction first
+                        kw["image"], pic, xy = outpaint_canvas(ref, gw, gh)
+                        placed = (pic, xy)
+                        kw["prompt"] = OUTPAINT_ASK + (" Scene: " + prompt.strip() if prompt.strip() else "")
+                    elif ref is not None:
                         kw["image"] = cover(ref, gw, gh)
                     img = pipe(**keyed(kw)).images[0]
+                    if placed is not None:                # its own pixels back over the result, as the adapter's author does it
+                        img = img.convert("RGB")
+                        img.paste(placed[0], placed[1])
                 else:
                     kw = {"prompt_embeds": e, "prompt_embeds_mask": m, "width": gw, "height": gh, "num_inference_steps": steps, "true_cfg_scale": cfg, "generator": g, **more}
                     if cfg > 1:
@@ -500,7 +595,7 @@ def main(run, ask, painter):
                     img = cover(img, w, h)
                 score = flagged(img)
                 row = {"n": n, "shape": shape, "seed": sk, "w": w, "h": h, "nsfw": score, "took": round(time.time() - t1, 1)}
-                pl = (ask.get("place") or {}).get(shape) if ref is not None and painter != "qwen21" else None
+                pl = (ask.get("place") or {}).get(shape) if ref is not None and not is21(painter) else None
                 if pl is not None:                       # HERESY 1346: placed on the canvas
                     row.update(ref=float(ask.get("strength") or 0.6) if fits[shape][2] else 1.0, placed="covers" if fits[shape][2] else "around")
                     if mask is not None:

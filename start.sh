@@ -4,7 +4,7 @@
 #
 #   ./start.sh                      the backbone settings.json picks (else the first one present)
 #   YUE2CPP_QUANT=Q8_0 ./start.sh   a given backbone copy, if present
-#   YUE2CPP_PORT=41868 ./start.sh   another port
+#   YUE2CPP_PORT=7778 ./start.sh   another port
 #   YUE2CPP_GPU=1 ./start.sh        another card than user/gpus.json gives the studio
 #   YUE2CPP_BATCH=1 ./start.sh      one song per pass instead of 2 (a GPU with 12 GB or less)
 #   YUE2CPP_DRY_RUN=1 ./start.sh    only print the server command it would run
@@ -50,7 +50,7 @@ G=$'\e[32m' Y=$'\e[33m' R=$'\e[31m' D=$'\e[2m' B=$'\e[1m' X=$'\e[0m' C=$'\e[36m'
 # plain text when NO_COLOR is set or the output is not a terminal (a log file, a pipe), like the server's log
 if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G="" Y="" R="" D="" B="" X="" C=""; fi
 
-PORT="${YUE2CPP_PORT:-41867}"
+PORT="${YUE2CPP_PORT:-7777}"
 # songs the server renders together in one pass (YUE2CPP_BATCH): 1 on a small GPU
 BATCH="${YUE2CPP_BATCH:-2}"
 # The backbone: YUE2CPP_QUANT, else the one settings.json picks (the page saves it there), else the
@@ -142,6 +142,8 @@ URL="http://${LAN_IP:-127.0.0.1}:$PORT"
 TTY=0; [ -t 1 ] && TTY=1      # tested here: inside $(...) stdout is a pipe
 link() { if [ "$TTY" = 1 ]; then printf '\e]8;;%s\e\\%s\e]8;;\e\\' "$1" "$1"; else printf '%s' "$1"; fi; }
 echo "${B}Ruach Studio $(cat "$ROOT/VERSION" 2>/dev/null || echo "?")${X} · $(basename "$ROOT")  ${G}$(link "$URL")${X}"   # HERESY 1136
+# HERESY 1433 (Viktor: «пропиши жирно, чтобы юзеры знали, на какой порт коннектиться»): the port said on its own, bold
+echo "${B}The studio's port: $PORT${X}  ${D}·${X} this machine: ${G}$(link "http://127.0.0.1:$PORT")${X}  ${D}·${X} your network: ${G}$(link "$URL")${X}"
 [ -n "$GUARD_SAY" ] && echo "${Y}guard${X} $GUARD_SAY"
 if [ -n "$GPU_NAME" ] && [ "$ON_GPU" = 1 ]; then
     row gpu "${B}$(printf '%s' "$GPU_NAME" | sed 's/^ *//')${X} ${D}·${X} $(awk -v u="$GPU_USED" -v t="$GPU_TOTAL" 'BEGIN { printf "%.1f of %.1f GiB in use", u / 1024, t / 1024 }') ${D}· compute $CC${X}"

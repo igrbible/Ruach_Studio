@@ -40,7 +40,8 @@ module.exports = {
       const url = info.local(started).url
       if (!url) return [{ default: true, icon: "fa-solid fa-terminal", text: "Starting", href: started }]
       return [
-        { default: true, icon: "fa-solid fa-music", text: "Open the studio", href: url },
+        // HERESY 1433: the port named where the user clicks (the studio's own is 7777)
+        { default: true, icon: "fa-solid fa-music", text: "Open the studio · port " + (url.match(/:(\d+)\/?$/) || [, "80"])[1], href: url },
         { icon: "fa-solid fa-terminal", text: "Terminal", href: started }
       ]
     }

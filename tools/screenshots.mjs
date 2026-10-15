@@ -3,7 +3,7 @@
 // one made-up song made through the page. No test fixtures, no toasts. Headless Chrome, nothing outside tmp/.
 //
 //   node tools/screenshots.mjs                          uses tmp/showcase/props.json, saved earlier
-//   node tools/screenshots.mjs http://127.0.0.1:41867/  first saves that server's /props there (one read-only GET)
+//   node tools/screenshots.mjs http://127.0.0.1:7777/  first saves that server's /props there (one read-only GET)
 //
 // Writes tmp/shots/showcase/: compose-page, song-page, song-page-narrow, engine-page, engine-tiles,
 // engine-about, theme-picker (.png). tools/make-kit.sh copies them into the kit.
@@ -27,7 +27,7 @@ if (process.argv[2]) {
   writeFileSync(PROPS, text);
   console.log(`${G}saved${X}  ${url} -> tmp/showcase/props.json`);
 }
-if (!existsSync(PROPS)) await stop("no tmp/showcase/props.json: run once with a running server's address, e.g. node tools/screenshots.mjs http://127.0.0.1:41867/");
+if (!existsSync(PROPS)) await stop("no tmp/showcase/props.json: run once with a running server's address, e.g. node tools/screenshots.mjs http://127.0.0.1:7777/");
 const props = JSON.parse(readFileSync(PROPS, "utf8"));
 
 // ------------------------------------------------------------- mock server

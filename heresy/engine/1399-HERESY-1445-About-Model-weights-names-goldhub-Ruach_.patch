@@ -1,0 +1,32 @@
+From dd529a27d129a6f12dc23a7f5b7bf749fed71b2b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 15 Oct 2026 00:13:30 -0600
+Subject: [PATCH 1399/1399] =?UTF-8?q?HERESY=201445:=20About=20=E2=86=92=20?=
+ =?UTF-8?q?Model=20weights=20names=20goldhub/Ruach=5FStudio=5FModels=5Fv2?=
+ =?UTF-8?q?=20too?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/index.html | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 9c757ab..35a1dbd 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -483,7 +483,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <!-- HERESY 1166 (Viktor: «Все наши восходящие HF репозитории добавь в колонку Ruach Studio, через пустую строку»):
+                ours on Hugging Face, after a line's space; private until the release, the 💎 sets' bucket too -->
+           <ul class="about-links about-ours">
+-            <li><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Models</span></li>
++            <li><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Models_v2</span></li>
+             <li><a href="https://huggingface.co/goldhub/Ruach_Studio_LoRAs" target="_blank" rel="noopener noreferrer">LoRAs</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_LoRAs</span></li>
+             <li><a href="https://huggingface.co/datasets/goldhub/Ruach_Studio_Starter_Sets" target="_blank" rel="noopener noreferrer">Starter sets</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Starter_Sets</span></li>
+             <!-- HERESY 1167 (Viktor: «ссылка или кнопка на кофе… прямо на Stripe»; his words, 01.10: «Buy me a Coffee Machine») -->
+-- 
+2.43.0
+

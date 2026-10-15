@@ -9,6 +9,9 @@ downloader is not proof: this checks the files themselves.
                  [--strip PREFIX]             repo paths lose this prefix locally (a subfolder moved up)
                  [--catalog]                  also every slider weight catalog.json names, with its SHA-256
                  [--hash]                     also the SHA-256 of every large (LFS) file (slow on big ones)
+                 [--by-content]               a file missing where the repo puts it (or of another size there) is looked for in
+                                              the same folder by its content: its SHA-256, or a .safetensors' tensors' SHA-256
+                 [--manifest OWNER/NAME@REV]  where the tensors' sums come from (a MANIFEST.tsv: path, bytes, sha256, tensors_sha256)
 
 The expected list is the pinned revision's own (name, size, LFS SHA-256) from the Hugging Face API,
 or, when YUE2_HF_EXPECTED=DIR is set, DIR/<owner>__<name>.json in the same shape (for the tests).
@@ -40,6 +43,123 @@ def sha256(path):
         for block in iter(lambda: f.read(1 << 22), b""):
             h.update(block)
     return h.hexdigest()
+
+
+# HERESY 1441 (Viktor 14.10.2026: «пользователь волен переименовать скачанное»): a file known by its content, not its name
+IDS = os.path.join(ROOT, "tmp", "hf", "content-ids.json")
+
+
+def tensors_sha256(path):
+    """The SHA-256 of a .safetensors' tensors alone (each name and its data, in name order; the header's metadata aside): the same
+    adapter whatever its file is called and whatever its header says of it."""
+    import struct
+    with open(path, "rb") as f:
+        n = struct.unpack("<Q", f.read(8))[0]
+        if n > min(os.path.getsize(path), 1 << 28):            # not a .safetensors at all
+            raise ValueError("no safetensors header")
+        head = json.loads(f.read(n))
+        base, h = 8 + n, hashlib.sha256()
+        for k in sorted(k for k in head if k != "__metadata__"):
+            a, b = head[k]["data_offsets"]
+            f.seek(base + a)
+            h.update(k.encode())
+            left = b - a
+            while left:
+                chunk = f.read(min(left, 1 << 22))
+                if not chunk:
+                    break
+                h.update(chunk)
+                left -= len(chunk)
+    return h.hexdigest()
+
+
+def content_ids(path, want_tensors=False, ids=None):
+    """{sha256, tensors} of a local file, kept in tmp/hf/content-ids.json by its real path, size and time (read once)."""
+    ids = ids if ids is not None else {}
+    st = os.stat(path)
+    key = f"{os.path.realpath(path)}|{st.st_size}|{int(st.st_mtime)}"
+    rec = ids.get(key) or {}
+    if "sha256" not in rec:
+        rec["sha256"] = sha256(path)
+    if want_tensors and path.endswith(".safetensors") and "tensors" not in rec:
+        try:
+            rec["tensors"] = tensors_sha256(path)
+        except Exception:                                     # not a .safetensors (whatever its name says): no sum
+            rec["tensors"] = ""
+    ids[key] = rec
+    return rec
+
+
+def load_ids():
+    try:
+        with open(IDS, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_ids(ids):
+    if os.environ.get("YUE2_HF_CACHE_READONLY") == "1":
+        return
+    try:
+        write_atomic(IDS, ids)
+    except OSError:
+        pass
+
+
+def find_by_content(folder, size, sha, tensors=None, ids=None, skip=()):
+    """A file under FOLDER that is the expected one by its content: of its size with its SHA-256, or a .safetensors with its tensors'
+    SHA-256. Its path, or None."""
+    if not os.path.isdir(folder):
+        return None
+    tensors = tensors if tensors not in ("", "-") else None
+    found = None
+    for dirpath, dirs, files in os.walk(folder, followlinks=True):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for name in files:
+            p = os.path.join(dirpath, name)
+            if p in skip or name.startswith("."):
+                continue
+            try:
+                got = os.path.getsize(p)
+                if size is not None and got == size and sha and content_ids(p, False, ids)["sha256"] == sha:
+                    return p
+                # a header rewritten moves the size by a few bytes: only those near its size are read for their tensors
+                if tensors and name.endswith(".safetensors") and (size is None or abs(got - size) < (1 << 20)) and content_ids(p, True, ids).get("tensors") == tensors:
+                    found = found or p
+            except OSError:
+                continue
+    return found
+
+
+def manifest_tensors(spec):
+    """{file sha256: tensors sha256} from a repo's MANIFEST.tsv at a revision (OWNER/NAME@REV), cached as the file lists are."""
+    if not spec or "@" not in spec:
+        return {}
+    repo, rev = spec.rsplit("@", 1)
+    cached = os.path.join(CACHE, f"{repo.replace('/', '__')}@{rev}.manifest.json") if re.fullmatch(r"[0-9a-f]{40}", rev) else None
+    if cached and os.path.isfile(cached):
+        try:
+            with open(cached, encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            pass
+    try:
+        with urllib.request.urlopen(f"https://huggingface.co/{repo}/resolve/{rev}/MANIFEST.tsv", timeout=30) as r:
+            text = r.read().decode("utf-8")
+    except Exception:
+        return {}
+    out = {}
+    for line in text.splitlines()[1:]:
+        c = line.split("\t")
+        if len(c) >= 4 and c[2] and c[3] not in ("", "-"):
+            out[c[2]] = c[3]
+    if cached and out and os.environ.get("YUE2_HF_CACHE_READONLY") != "1":
+        try:
+            write_atomic(cached, out)
+        except OSError:
+            pass
+    return out
 
 
 def cache_path(repo, rev):
@@ -102,7 +222,10 @@ def main():
     ap.add_argument("--strip", default="")
     ap.add_argument("--catalog", action="store_true")
     ap.add_argument("--hash", action="store_true")
+    ap.add_argument("--by-content", action="store_true")
+    ap.add_argument("--manifest", default="")
     a = ap.parse_args()
+    ids, tens, known = (load_ids(), manifest_tensors(a.manifest), []) if a.by_content else ({}, {}, [])
 
     try:
         remote = expected_files(a.repo, a.rev)
@@ -126,6 +249,16 @@ def main():
             continue
         rel = path[len(a.strip):] if a.strip and path.startswith(a.strip) else path
         local = os.path.join(a.dir, rel)
+        if a.by_content and (not os.path.isfile(local) or (info["size"] is not None and os.path.getsize(local) != info["size"])):
+            # HERESY 1441: there under another name, or its header rewritten: here all the same, nothing fetched again
+            other = find_by_content(os.path.dirname(local) if os.path.isdir(os.path.dirname(local)) else a.dir, info["size"], info["sha256"],
+                                    tens.get(info["sha256"] or ""), ids)
+            if not other and os.path.dirname(local) != a.dir:
+                other = find_by_content(a.dir, info["size"], info["sha256"], tens.get(info["sha256"] or ""), ids)
+            if other:
+                known.append(f"{rel} as {os.path.relpath(other, a.dir)}")
+                total += os.path.getsize(other)
+                continue
         if not os.path.isfile(local):
             problems.append(f"{rel}: missing")
             continue
@@ -155,6 +288,8 @@ def main():
         except (OSError, ValueError) as e:
             problems.append(f"catalog.json unreadable: {e}")
 
+    if a.by_content:
+        save_ids(ids)
     name = f"{a.repo} @ {a.rev[:12]}"
     if problems:
         print(f"{R}incomplete{X} {name}: {len(problems)} problem(s) in {len(wanted)} expected file(s)")
@@ -165,6 +300,8 @@ def main():
         return 1
     extra = f", {len(catalog.get('sliders', []))} slider weights match catalog.json" if a.catalog else ""
     print(f"{G}complete{X} {name}: {len(wanted)} file(s), {total / 1048576:.1f} MiB{extra}")
+    for k in known[:12]:                                   # HERESY 1441
+        print(f"  {D}here by its content: {k}{X}")
     return 0
 
 

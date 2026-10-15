@@ -21,7 +21,7 @@
 #                                      24 GB), with 2512's own parts and Lightning when they are not here; shared there by
 #                                      their authors' leave (Civitai: share and sell)
 #   heresy/fetch-heresy.sh --art-loras all [--yes]
-#                                      HERESY 1347: also the Artist's adapters whose authors let them be shared (seven, 3.1 GB)
+#                                      HERESY 1347: also the Artist's adapters whose authors let them be shared (ten, 7.5 GB)
 #   heresy/fetch-heresy.sh --trainer bf16|int8 [--yes]
 #                                      also the base for the studio's own LoRA trainer (lab/trainer), asked first
 #                                      with its size; bf16 trains on unquantized weights, int8 on a smaller card
@@ -40,6 +40,11 @@
 # count as here only when every file has the pinned revision's size (tools/hf_expect.py): a downloader
 # that says "done" is not proof, and neither is one file being there.
 # The legacy and blend decoders and the sliders come converted, from goldhub/Ruach_Studio_Models_v2 (HERESY 1290): no checkpoints.
+# HERESY 1445 (Viktor 14.10.2026: «Лучше всё тянуть Студии из одного репо, чем бегать по всему инету»): every weight v2 holds comes
+# from v2 at its pin, the same files byte for byte as their authors publish them (checked against each author's repo at its pin):
+# Whisper, UniverSR, the listener's GGUFs, the Artist's helpers and painters, the Trainer's base, the studio's own adapters. From
+# their authors still: the stems' models (audio-separator reads its own list beside them), the Kit's library of adapters (its own
+# downloader; three of them carry no licence to copy), Qwen2.5-Omni-7B whole (the listener at bf16), and the code cloned from git.
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -159,7 +164,14 @@ hf_into() {
     echo "${D}          the old copies → ${aside#"$ROOT"/} (delete them when the new ones work)${X}"
   fi
   hf_ready >/dev/null || { say_fail "$what" "(the pinned downloader would not install: tools/hf-env.sh)"; return; }
-  again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$ROOT" --include "$@"
+  # HERESY 1445 (Viktor 14.10.2026: «пользователь волен переименовать скачанное»): only what the check named missing or wrong is
+  # fetched, by its own path: one adapter missing no longer brings again the nine here under names or in folders of the user's own
+  # (found by their content). A check that names more than it shows («… and N more») fetches the whole pattern, as before
+  local need inc=("$@")
+  need=$( { printf '%s\n' "$out" | sed -n 's/^[[:space:]]*\(.*\): missing$/\1/p'; printf '%s\n' "$wrong"; } | sed '/^$/d')
+  printf '%s\n' "$out" | grep -q '\.\.\. and [0-9]* more' && need=""
+  [ -n "$need" ] && mapfile -t inc <<< "$need"
+  again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$ROOT" --include "${inc[@]}"
   if hf_complete "$repo" "$rev" "$ROOT" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
 }
 
@@ -247,7 +259,7 @@ fi
 
 if want whisper; then
   part whisper "Whisper large-v3 (CTranslate2, float16): lyrics check, karaoke timing, trim to the text"
-  hf_repo Systran/faster-whisper-large-v3 "$ROOT/whisper/whisper-large-v3-ct2-float16" "${WORK[@]}"
+  hf_into "whisper/whisper-large-v3-ct2-float16" goldhub/Ruach_Studio_Models_v2 "whisper/whisper-large-v3-ct2-float16/*"   # HERESY 1445: Systran's
 fi
 
 if want stems; then
@@ -260,7 +272,12 @@ fi
 
 if want upscale; then
   part upscale "Upscale: UniverSR"
-  hf_cached woongzip1/universr-audio "$ROOT/hf_cache" "${WORK[@]}"
+  # HERESY 1445: from v2 into universr/, where lab/upscale_job.py reads it; an install that holds woongzip1's in hf_cache/ keeps it
+  if [ ! -d "$ROOT/universr" ] && [ -d "$ROOT/hf_cache/hub/models--woongzip1--universr-audio/snapshots/$(pin woongzip1/universr-audio)" ]; then
+    hf_cached woongzip1/universr-audio "$ROOT/hf_cache" "${WORK[@]}"
+  else
+    hf_into "universr (woongzip1/universr-audio)" goldhub/Ruach_Studio_Models_v2 "universr/*"
+  fi
   clone https://github.com/woongzip1/UniverSR.git "$ROOT/vendor/UniverSR"
 fi
 
@@ -271,14 +288,16 @@ if [ -n "$LISTENER" ]; then
   # HERESY 1077b: every GGUF with mradermacher's Q8_0 audio projector (1.5 GB): the ladder measured 02.10.2026
   # heard the same tags from Q8_0 down to Q4_K_M with it as with the f16 one (2.6 GB), a GB less and twice as fast
   OMNI="$ROOT/checkpoints/Qwen2.5-Omni-7B-GGUF"      # (not G: that one is the green of the output)
-  P_REPO=mradermacher/Qwen2.5-Omni-7B-GGUF; P_DIR="$OMNI/mradermacher"; P_INC=(--include "Qwen2.5-Omni-7B.mmproj-Q8_0.gguf")
+  # HERESY 1445: the GGUFs from v2, laid out as before (ggml-org's at the top, unsloth/, mradermacher/); bf16 from Qwen
+  V2=goldhub/Ruach_Studio_Models_v2; O="checkpoints/Qwen2.5-Omni-7B-GGUF"
+  P_REPO=$V2; P_DIR="$ROOT"; P_INC=(--include "$O/mradermacher/Qwen2.5-Omni-7B.mmproj-Q8_0.gguf")
   case "$LISTENER" in
     Q8_0)   SIZE="9.6 GB (Q8_0 8.1 + its audio projector Q8_0 1.5)"; PEAK="10.3 GB of VRAM"
-            L_REPO=ggml-org/Qwen2.5-Omni-7B-GGUF; L_DIR="$OMNI"; L_INC=(--include "Qwen2.5-Omni-7B-Q8_0.gguf") ;;
+            L_REPO=$V2; L_DIR="$ROOT"; L_INC=(--include "$O/Qwen2.5-Omni-7B-Q8_0.gguf") ;;
     Q5_K_M) SIZE="6.9 GB (Q5_K_M 5.4 + its audio projector Q8_0 1.5)"; PEAK="8.0 GB of VRAM"
-            L_REPO=unsloth/Qwen2.5-Omni-7B-GGUF; L_DIR="$OMNI/unsloth"; L_INC=(--include "Qwen2.5-Omni-7B-Q5_K_M.gguf") ;;
+            L_REPO=$V2; L_DIR="$ROOT"; L_INC=(--include "$O/unsloth/Qwen2.5-Omni-7B-Q5_K_M.gguf") ;;
     Q4_K_M) SIZE="6.2 GB (Q4_K_M 4.7 + its audio projector Q8_0 1.5)"; PEAK="7.3 GB of VRAM"
-            L_REPO=ggml-org/Qwen2.5-Omni-7B-GGUF; L_DIR="$OMNI"; L_INC=(--include "Qwen2.5-Omni-7B-Q4_K_M.gguf") ;;
+            L_REPO=$V2; L_DIR="$ROOT"; L_INC=(--include "$O/Qwen2.5-Omni-7B-Q4_K_M.gguf") ;;
     bf16)   SIZE="22 GB (the whole model; the studio loads its thinker only)"; PEAK="18.3 GB of VRAM: a 24 GB card"
             L_REPO=Qwen/Qwen2.5-Omni-7B; L_DIR="$ROOT/checkpoints/Qwen2.5-Omni-7B"; L_INC=("${WORK[@]}"); P_REPO="" ;;
     *) echo "${R}--listener takes Q8_0, Q5_K_M, Q4_K_M or bf16${X}"; exit 2 ;;
@@ -293,8 +312,8 @@ if [ -n "$LISTENER" ]; then
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   if [ $go = 1 ]; then
-    hf_repo "$L_REPO" "$L_DIR" "${L_INC[@]}"
-    [ -n "$P_REPO" ] && hf_repo "$P_REPO" "$P_DIR" "${P_INC[@]}"
+    if [ "$L_REPO" = "$V2" ]; then hf_into "$O ($LISTENER and its audio projector)" "$V2" "${L_INC[@]:1}" "${P_INC[@]:1}"
+    else hf_repo "$L_REPO" "$L_DIR" "${L_INC[@]}"; fi
   fi
   if [ "$LISTENER" != bf16 ]; then
     clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"
@@ -322,8 +341,8 @@ if [ $ARTWORK = 1 ]; then
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   if [ $go = 1 ]; then
-    hf_repo Falconsai/nsfw_image_detection "$ROOT/artwork/nsfw-filter" --include "config.json" "model.safetensors" "preprocessor_config.json"
-    hf_repo Qwen/Qwen3-4B-Instruct-2507 "$ROOT/artwork/Qwen3-4B-Instruct-2507" "${WORK[@]}" LICENSE
+    hf_into "artwork/nsfw-filter (Falconsai/nsfw_image_detection)" goldhub/Ruach_Studio_Models_v2 "artwork/nsfw-filter/*"                         # HERESY 1445: from v2
+    hf_into "artwork/Qwen3-4B-Instruct-2507" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen3-4B-Instruct-2507/*"
     [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the Artist paints in its own environment: lab/install-venv.sh --art)"
   fi
 fi
@@ -346,9 +365,9 @@ if [ -n "$QWEN" ]; then
           read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
         fi
         if [ $go = 1 ]; then
-          hf_into_at "artwork/Qwen-Image-2512 (its parts)" Qwen/Qwen-Image-2512 "$Q_DIR" "model_index.json" "scheduler/*" "tokenizer/*" "processor/*" "text_encoder/*" "vae/*" "transformer/config.json" "LICENSE*"
-          hf_into_at "artwork/Qwen-Image-2512/gguf ($quant)" unsloth/Qwen-Image-2512-GGUF "$Q_DIR/gguf" "qwen-image-2512-$quant.gguf"
-          hf_into_at "artwork/Qwen-Image-2512/lightning" lightx2v/Qwen-Image-2512-Lightning "$Q_DIR/lightning" "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
+          hf_into "artwork/Qwen-Image-2512 (its parts)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/model_index.json" "artwork/Qwen-Image-2512/README.md" "artwork/Qwen-Image-2512/scheduler/*" "artwork/Qwen-Image-2512/tokenizer/*" "artwork/Qwen-Image-2512/text_encoder/*" "artwork/Qwen-Image-2512/vae/*" "artwork/Qwen-Image-2512/transformer/config.json"
+          hf_into "artwork/Qwen-Image-2512/gguf ($quant)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/gguf/qwen-image-2512-$quant.gguf"   # HERESY 1445: from v2
+          hf_into "artwork/Qwen-Image-2512/lightning" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
           [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: lab/install-venv.sh --art)"
         fi ;;
       2.1)
@@ -358,7 +377,7 @@ if [ -n "$QWEN" ]; then
           printf "%s" "Download 33 GB? Qwen-Image-2.1 is under Qwen's research licence: research and evaluation only, not for commercial use (a cover for a song that is sold is commercial use). It paints on a card of 24 GB. [y/N] "
           read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
         fi
-        [ $go = 1 ] && hf_into_at "artwork/Qwen-Image-2.1" Qwen/Qwen-Image-2.1 "$ROOT/artwork/Qwen-Image-2.1" "model_index.json" "scheduler/*" "tokenizer/*" "processor/*" "text_encoder/*" "vae/*" "transformer/*" "LICENSE*" ;;
+        [ $go = 1 ] && hf_into "artwork/Qwen-Image-2.1" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2.1/model_index.json" "artwork/Qwen-Image-2.1/scheduler/*" "artwork/Qwen-Image-2.1/tokenizer/*" "artwork/Qwen-Image-2.1/processor/*" "artwork/Qwen-Image-2.1/text_encoder/*" "artwork/Qwen-Image-2.1/vae/*" "artwork/Qwen-Image-2.1/transformer/*" "artwork/Qwen-Image-2.1/LICENSE*" "artwork/Qwen-Image-2.1/NOTICE" ;;
       *) echo "--qwen takes 2512-q4, 2512-q6, 2.1 (several with commas)"; exit 2 ;;
     esac
   done
@@ -386,22 +405,25 @@ if [ -n "$QFINE" ]; then
       read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
     fi
     if [ $go = 1 ]; then
-      hf_into_at "artwork/Qwen-Image-2512 (its parts)" Qwen/Qwen-Image-2512 "$Q_DIR" "model_index.json" "scheduler/*" "tokenizer/*" "processor/*" "text_encoder/*" "vae/*" "transformer/config.json" "LICENSE*"
-      hf_into_at "artwork/Qwen-Image-2512/lightning" lightx2v/Qwen-Image-2512-Lightning "$Q_DIR/lightning" "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
+      hf_into "artwork/Qwen-Image-2512 (its parts)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/model_index.json" "artwork/Qwen-Image-2512/README.md" "artwork/Qwen-Image-2512/scheduler/*" "artwork/Qwen-Image-2512/tokenizer/*" "artwork/Qwen-Image-2512/text_encoder/*" "artwork/Qwen-Image-2512/vae/*" "artwork/Qwen-Image-2512/transformer/config.json"
+      hf_into "artwork/Qwen-Image-2512/lightning" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
       hf_into "artwork/Qwen-Image-2512/checkpoints/$f" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/checkpoints/$f"
       [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: lab/install-venv.sh --art)"
     fi
   done
 fi
 if [ -n "$ARTLORAS" ]; then
-  asked art-loras "Artwork: the Artist's adapters shared by their authors (seven, 3.1 GB: Krea 2, Qwen-Image 2.1 and 2512)"
-  hf_into "artwork/loras (shared by their authors)" goldhub/Ruach_Studio_Models_v2 "artwork/loras/*"
+  asked art-loras "Artwork: the Artist's adapters shared by their authors (ten, 7.5 GB: Qwen-Image 2.1 and 2512)"
+  # HERESY 1441: each known by its content (v2's MANIFEST.tsv): renamed, or moved into a folder of the user's own, it is not fetched again
+  HF_EXPECT_EXTRA="--by-content --manifest goldhub/Ruach_Studio_Models_v2@$(pin goldhub/Ruach_Studio_Models_v2)" \
+    hf_into "artwork/loras (shared by their authors)" goldhub/Ruach_Studio_Models_v2 "artwork/loras/*"
 fi
 
 # HERESY 1086: the studio's own LoRA trainer (lab/trainer), only when asked for, and asked again with its size.
 # Comfy-Org's YuE2 file carries the network, the VAE and the text tokenizer at once; the latent cache needs
-# MERT-v2-FullSong and Mothersuperior's realaudio tokenizer head (CC BY-NC 4.0 both: fetched by the user from their
-# authors, never shipped with the studio). HERESY 1303: MERT comes with it now, at the Kit's pin (tools/hf-revisions.txt),
+# MERT-v2-FullSong and Mothersuperior's realaudio tokenizer head. HERESY 1445 (Viktor 14.10.2026: «MERT, realaudio и Comfy YuE2
+# клади в v2»): all three from v2, unchanged, their authors named (CC BY-NC 4.0 lets them be shared, not for gain, with credit;
+# checked byte for byte against their repos at the pins). HERESY 1303: MERT comes with it,
 # 2.5 GB: a fresh install fetches no checkpoints since rc4, and the card said «missing → tools/download-checkpoints.sh».
 if [ -n "$TRAINER" ]; then
   asked trainer "The LoRA trainer's base: Comfy-Org/YuE2 ($TRAINER)"
@@ -413,14 +435,13 @@ if [ -n "$TRAINER" ]; then
   go=1
   MERT_DIR="$ROOT/checkpoints/MERT-v2-FullSong"
   MERT_SAY=""; [ -s "$MERT_DIR/model.safetensors" ] || MERT_SAY=", and MERT-v2-FullSong 2.5 GB"     # HERESY 1303
-  if [ $MODE != check ] && [ $YES = 0 ] && { [ -n "$MERT_SAY" ] || ! hf_complete Comfy-Org/YuE2 "$(pin Comfy-Org/YuE2)" "$ROOT/checkpoints/comfy" --include "$T_FILE" >/dev/null 2>&1; }; then
+  if [ $MODE != check ] && [ $YES = 0 ] && { [ -n "$MERT_SAY" ] || ! hf_complete goldhub/Ruach_Studio_Models_v2 "$(pin goldhub/Ruach_Studio_Models_v2)" "$ROOT" --include "checkpoints/comfy/$T_FILE" >/dev/null 2>&1; }; then
     printf "%s" "Download $SIZE$MERT_SAY? [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_repo Comfy-Org/YuE2 "$ROOT/checkpoints/comfy" --include "$T_FILE"
-  hf_repo Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4 "$ROOT/checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4" \
-          --include "tokenizer_head_joint_v4.pt" "README.md"
-  if [ $go = 1 ] || [ $MODE = check ]; then hf_repo m-a-p/MERT-v2-FullSong "$MERT_DIR"      # HERESY 1303: here, fetched, or said
+  [ $go = 1 ] && hf_into "checkpoints/comfy/$T_FILE (Comfy-Org/YuE2)" goldhub/Ruach_Studio_Models_v2 "checkpoints/comfy/$T_FILE"
+  hf_into "checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4 (its head)" goldhub/Ruach_Studio_Models_v2 "checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/*"
+  if [ $go = 1 ] || [ $MODE = check ]; then hf_into "checkpoints/MERT-v2-FullSong (m-a-p)" goldhub/Ruach_Studio_Models_v2 "checkpoints/MERT-v2-FullSong/*"      # HERESY 1303: here, fetched, or said
   elif [ -s "$MERT_DIR/model.safetensors" ]; then say_here "$MERT_DIR" "(m-a-p/MERT-v2-FullSong)"
   else say_miss "$MERT_DIR" "(2.5 GB: --trainer fetches it with the base)"; fi
 fi
@@ -452,7 +473,7 @@ fi
 
 # HERESY 1285 (Viktor 09.10.2026: «LoRA пока что не скачались. Только Standard VAE»): the LoRAs the 💎 sets were made with come
 # with the install, each under the name their takes use: the Kit's library (11 adapters from 8 repos, 1.3 GB) and the studio's
-# own (goldhub/Ruach_Studio_LoRAs: six voices, the duduk and the shofar, 0.8 GB)
+# own (six voices, the duduk and the shofar, 0.8 GB; HERESY 1445: from goldhub/Ruach_Studio_Models_v2, as goldhub/Ruach_Studio_LoRAs has them)
 if want loras; then
   part loras "LoRAs: the Kit's library and Ruach Studio's own"
   if [ $MODE = check ]; then

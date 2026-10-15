@@ -2129,7 +2129,7 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left, bod
 .topbar .tabs button { padding: 5px 13px; }
 .lib-fold { margin-left: 2px; }
 .lib-unfold { display: none; }
-.library.is-folded > :not(.lib-unfold) { display: none !important; }
+.library.is-folded:not(.is-peek) > :not(.lib-unfold) { display: none !important; }   /* 1432: a peek shows the list */
 .library.is-folded .lib-unfold {
   display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; height: 100%;
   padding: 14px 0; border: 0; background: none; color: var(--muted); cursor: pointer;
@@ -3185,7 +3185,8 @@ body[data-tab="train"] .workspace { height: calc(100vh - var(--bar-h) - 8px); }
 .head-more-items .btn, .head-more-items .menu-wrap { width: 100%; }
 .head-more-items .btn { justify-content: flex-start; gap: 10px; height: 32px; padding: 0 10px; }
 .head-more-items .btn.icon-only::after { content: attr(aria-label); font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.head-more-items .theme-button::after { content: "Theme"; font-size: 13px; color: var(--ink); }
+.theme-button .theme-word { display: none; }          /* HERESY 1432: a word the page translates (a CSS «Theme» never was) */
+.head-more-items .theme-button .theme-word { display: inline; font-size: 13px; color: var(--ink); }
 .head-more-items .menu-pop { left: auto; right: calc(100% + 8px); top: 0; }
 /* HERESY 1093: the epochs worth hearing first, green; the ones in loras/ amber with their ✓ */
 .tr-echips .coll-chip.is-cand { background: color-mix(in srgb, #3f9a4a 22%, transparent); border-color: #3f9a4a; color: var(--ink); font-weight: 600; }
@@ -5601,3 +5602,76 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
   .engine-grid > .eg-folders { grid-area: 12 / 1 / 13 / 31; }
 }
 .eg-access .acc-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }   /* HERESY 1429: side by side on a wide card */
+
+/* HERESY 1432 (Viktor 14.10.2026, «Скрины - looks ugly» and the list after them) ----------------------------------------- */
+/* the Artist's hidden state: never a field on screen, whatever a .field rule says (1428 hid it by the attribute alone) */
+#arPainter, #arModel { display: none !important; }
+/* ▶ Play this song: filled, two of the take's icons wide, in their row */
+#playHere { width: 75px; min-width: 75px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+#playHere.is-hidden { display: none; }
+#playHere .ui-ico { width: 17px; height: 17px; fill: currentColor; stroke-width: 1.6; margin-left: 2px; }
+/* Save style and Delete as icons beside the saved styles */
+.lib-row .style-ico { width: 34px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.lib-row .style-ico .ui-ico { width: 16px; height: 16px; }
+.lib-row .style-ico.danger:not(:disabled):hover { color: var(--bad); border-color: var(--bad-line); }
+/* the takes' ⋯ menu: its words on one line, every item on the same indent as the ticked ones */
+#libMenu { min-width: 0; width: max-content; max-width: min(380px, calc(100vw - 24px)); padding: 6px; }
+#libMenu button { white-space: nowrap; padding: 7px 14px 7px 10px; font-size: 13px; line-height: 1.35; }
+#libMenu button[role="menuitem"]::before { content: ""; display: inline-block; width: 1.2em; }
+#libMenu .menu-cap { padding: 4px 10px 2px; }
+/* the lyrics' «[» list: no sideways scroll; a long hint gives way before the tag does */
+.tc-cols { grid-template-columns: 264px minmax(0, 1fr); }
+.tc-cols > .tc-list { overflow-x: hidden; }
+.tc-item { min-width: 0; }
+.tc-tag { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tc-say { flex: 0 3 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* the MP3 bitrate drawn as the buttons beside it, its number whole */
+.split-btn > .mp3-rate { align-self: stretch; width: auto; min-width: 4.9em; padding: 0 4px 0 7px; background-color: transparent; color: var(--muted);
+  font: inherit; font-size: 11.5px; border: 1px solid var(--line-a); }
+.split-btn > .mp3-rate:hover { color: var(--ink); }
+/* the bar's ☰: its labels (MODEL, VAE) whole in every language */
+.head-more-pop { width: 360px; }
+.head-more-row { grid-template-columns: 84px minmax(0, 1fr); }
+/* a folded takes list opened over the take by the mouse */
+.library.is-folded.is-peek { width: var(--lib-peek-w, 380px); margin-left: calc(40px - var(--lib-peek-w, 380px)); z-index: 35; position: relative;
+  border-left: 1px solid var(--line-a); box-shadow: -18px 0 34px -22px var(--shadow-lg); }
+.library.is-folded.is-peek > .lib-unfold { display: none; }
+/* a menu with no room under it opens upwards (1432) */
+.menu-wrap > .menu-pop.is-up { top: auto; bottom: calc(100% + 6px); }
+/* HERESY 1434: a 💎 set or a frozen workspace in hand is there to look at: new takes do not land in it */
+#wsCurrent.is-closed { border-color: var(--amber-dim); }
+#wsCurrent.is-closed .ws-btn-name::after { content: " \00b7 \1F512"; color: var(--amber); }
+/* HERESY 1435 (Viktor 14.10.2026): the veil's line runs from the first moment, ten seconds long; «Loading…» and the versions when the
+   page's language is in (html.veil-lang); the logo and its OSEM line from 2.2 s, in that language (html.veil-logo) */
+html.booting .boot-veil > :is(.boot-logo, .boot-osem, .boot-words, .boot-ver) { opacity: 0; animation: none; }
+html.booting.veil-lang .boot-veil > :is(.boot-words, .boot-ver) { opacity: 1; animation: boot-in .9s ease both; }
+html.booting.veil-logo .boot-veil > .boot-logo { opacity: 1; animation: boot-in 1.2s ease both; }
+html.booting.veil-logo .boot-veil > .boot-osem { opacity: 1; animation: boot-in 1.2s .2s ease both; }
+html.i18n-wait .boot-veil > .boot-line { visibility: visible; }
+.boot-line i { animation-duration: 10s; }
+/* HERESY 1436: letters other than Latin in the Style, said under it */
+.style-nonlatin { color: var(--amber); margin-top: 4px; }
+/* HERESY 1437: Section marks and Buttons in Look → Fonts; each role's size against the text's (−2…+2 pt). Every size of the
+   stylesheets is calc(N + var(--fs)): an element of a role takes --fs with its role's step on top (a lifted frame's step kept) */
+:root { --fs-frame: 0pt; }
+body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take { --fs-frame: var(--fs-f); }
+:is(.about-project h4, .engine-title, .col-head h2, .take-empty .take-empty-title, .card h3, .lib-head h3, .panel-head h3, .title-edit, .hub-name, .hg-title, .hg-body h3, #playbar .pb-names strong, .boot-words, .post-head .post-take, .lyr-over-head) { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-heading, 0pt)); }
+.tabs button { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-rooms, 0pt)); }
+:is(.btn, .lyr-tog, .menu-pop button, .chip, .head-more-row button) { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-buttons, 0pt)); }
+html.fonts-buttons :is(.btn, .lyr-tog, .menu-pop button, .chip, .head-more-row button) { font-family: var(--buttons); }
+.font-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.font-row > select { flex: 1 1 auto; min-width: 0; }
+.font-step { flex: none; display: inline-flex; align-items: center; gap: 4px; }
+.font-step output { min-width: 3.4em; text-align: center; font-size: 11.5px; color: var(--muted); }
+/* HERESY 1438: a long list chosen in the studio's own dialog; the select hidden as the state behind its button */
+.pick-native { display: none !important; }
+.pick-btn { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; max-width: 100%; flex: 1 1 auto;
+  padding: 8px 11px; background: var(--field); border: 1px solid var(--line-a); border-radius: var(--r-md); color: var(--ink); font: inherit;
+  text-align: left; cursor: pointer; transition: border-color .13s ease; }
+.pick-btn:hover:not(:disabled) { border-color: var(--hover-line, var(--line-strong)); }
+.pick-btn:focus-visible { outline: 0; border-color: var(--amber); }
+.pick-btn .pick-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-btn.is-empty .pick-name { color: var(--placeholder); }
+.pick-btn .pick-caret { flex: none; color: var(--muted); font-size: .85em; }
+.pick-btn:disabled { opacity: .6; cursor: default; }
+.lib-row .pick-btn { max-width: 340px; }

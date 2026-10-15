@@ -13,7 +13,8 @@
     { id: "9:16", label: "9:16 · 1080×1920", say: "a short", w: 9, h: 16, s: 47 }
   ];
   // HERESY 1428 (Viktor 14.10.2026: «Krea вырезай. Мы обоюдно решили»): Qwen-Image paints every picture; a run Krea 2 painted keeps its name
-  var PAINTERS = { "qwen2512-q4": "Qwen-Image 2512 · Q4", "qwen2512-q6": "Qwen-Image 2512 · Q6", "qwen2512-fp8": "Qwen-Image 2512 · fp8", "qwen21": "Qwen-Image 2.1" };
+  var PAINTERS = { "qwen2512-q4": "Qwen-Image 2512 · Q4", "qwen2512-q6": "Qwen-Image 2512 · Q6", "qwen2512-fp8": "Qwen-Image 2512 · fp8", "qwen21": "Qwen-Image 2.1",
+                   "qwen21-fp8": "Qwen-Image 2.1 · fp8" };   // HERESY 1442
   var PAST = { "krea2-q4": "Krea 2 Muse · Q4", "krea2-q8": "Krea 2 Muse · Q8" };
   var PAINTER_INFO = {};                                 // HERESY 1318: the lab's word on each painter (need, family, note, models)
   // HERESY 1334: the Artist's own log (the dock's Artist view), what it is asked and what comes of it
@@ -109,22 +110,27 @@
   KEY.sampling = "yue2.arSampling";
   // HERESY 1328: Lightning is a switch (lightOn) and a strength (lightning, kept while it is off); a fine-tune paints without it by
   // default (30 steps, guidance 4), a GGUF one with it; a painter whose Lightning file is not here has no switch at all
-  function lightHere(key) { var p = PAINTER_INFO[key] || {}; return /^qwen2512/.test(key) && p.lightning !== false; }
+  function lightHere(key) { var p = PAINTER_INFO[key] || {}; return (/^qwen2512/.test(key) || (/^qwen21/.test(key) && p.lightning === true)) && p.lightning !== false; }
+  // HERESY 1442: the painter's speed-up: 2512's Lightning, 2.1's Turbo (the lab names it); a switch the same way
+  function speedName(key) { return (PAINTER_INFO[key] || {}).speed_name || (/^qwen21/.test(key) ? "Turbo" : "Lightning"); }
+  function speedy(key) { return /^qwen2512/.test(key) || (/^qwen21/.test(key) && lightHere(key)); }
+  function isFp8(key) { return /-fp8$/.test(key); }
+  var TURBO_TIP = "Turbo: Qwen-Image 2.1 in 4 to 16 steps with its «Turbo 4step» adapter (AiMetatron's), for drafts; off: 30 steps, as 2.1 paints";
   // HERESY 1428: an fp8 file of 2512 itself (BASE QW2512 fp8_e4m3fn) is the base, Lightning by default; the lab names them (bases)
   function isBase(model) {
     var p = PAINTER_INFO["qwen2512-fp8"] || {}, m = String(model || "");
     return !!m && (p.bases ? p.bases.indexOf(m) >= 0 : /^base/i.test(m.split("/").pop()));
   }
-  function fp8Now() { return $("arPainter").value === "qwen2512-fp8"; }
-  function fineOf(key, model) { return key === "qwen2512-fp8" && !isBase(model === undefined ? $("arModel").value : model); }
-  function sampKey(key, model) { return key === "qwen2512-fp8" ? key + "|" + (model === undefined ? $("arModel").value : model) : key; }
+  function fp8Now() { return isFp8($("arPainter").value); }   // HERESY 1442: 2.1's fine-tunes too
+  function fineOf(key, model) { return key === "qwen21-fp8" || (key === "qwen2512-fp8" && !isBase(model === undefined ? $("arModel").value : model)); }
+  function sampKey(key, model) { return isFp8(key) ? key + "|" + (model === undefined ? $("arModel").value : model) : key; }
   function sampDefaults(key, model) {
     var fine = fineOf(key, model);
     if (/^qwen2512/.test(key)) {
       var on = !fine && lightHere(key);
       return { steps: on ? 8 : 30, sampler: "euler", schedule: "simple", lightOn: on, lightning: fine ? 0.55 : 1, cfg: 4 };
     }
-    if (key === "qwen21") return { steps: 30, sampler: "euler", schedule: "simple" };
+    if (/^qwen21/.test(key)) return { steps: 30, sampler: "euler", schedule: "simple", lightOn: false, lightning: 1 };   // HERESY 1442: Turbo off
     return { steps: 8, sampler: "euler", schedule: "simple" };
   }
   function sampAll() { try { var a = JSON.parse(recall(KEY.sampling) || "{}"); return a && typeof a === "object" ? a : {}; } catch (e) { return {}; } }
@@ -132,7 +138,7 @@
   function sampNow(key) {
     key = key || $("arPainter").value;
     var all = sampAll(), mine = all[sampKey(key)] || (fineOf(key) ? all[key] : null) || {}, s = Object.assign(sampDefaults(key), mine);   // 1428: by the brush
-    if (/^qwen2512/.test(key)) {
+    if (speedy(key)) {                                     // HERESY 1442: 2.1's Turbo as 2512's Lightning
       if (mine.lightOn == null && mine.lightning != null) s.lightOn = +mine.lightning > 0;   // kept before 1328: the strength was the switch
       if (!(+s.lightning > 0)) s.lightning = sampDefaults(key).lightning;
       if (!lightHere(key)) s.lightOn = false;
@@ -144,20 +150,26 @@
   // HERESY 1333: how many looks at the model a step takes (the time grows by it)
   var LOOKS = { res_2s: 2, res_2s_ode: 2, exp_heun_2_x0: 2, exp_heun_2_x0_sde: 2, res_3s: 3, res_3s_ode: 3, heunpp2: 3 };
   function sampLooks(s) { return LOOKS[(s || {}).sampler] || 1; }
-  function sampFast(key, s) { return /^qwen2512/.test(key) && !!s.lightOn && +s.lightning > 0; }   // 1428: Krea 2 gone
+  function sampFast(key, s) { return speedy(key) && !!s.lightOn && +s.lightning > 0; }   // 1428: Krea 2 gone; 1442: 2.1's Turbo
   function sampSay(key, s) {
     var q = /^qwen2512/.test(key), names = { euler: "Euler", "euler-sde": "Euler SDE", simple: "Simple", karras: "Karras", exponential: "Exponential", beta: "Beta",
       er_sde: "ER-SDE", res_2s: "RES 2s", res_2s_ode: "RES 2s ODE", res_3s: "RES 3s", res_3s_ode: "RES 3s ODE", heunpp2: "Heun++ 2", exp_heun_2_x0: "Exp Heun 2 x0",
       exp_heun_2_x0_sde: "Exp Heun 2 x0 SDE", beta57: "Beta 57", kl_optimal: "KL optimal", sgm_uniform: "SGM uniform", bong_tangent: "Bong tangent" };   // HERESY 1333
     return tr(s.steps + " steps · " + names[s.sampler || "euler"] + " · " + names[s.schedule || "simple"] +   // HERESY 1339: one sentence («8 шагов»)
-      (q ? (sampFast(key, s) ? " · Lightning " + (+s.lightning).toFixed(2) : " · guidance " + (s.cfg || 4)) : ""));
+      (q ? (sampFast(key, s) ? " · Lightning " + (+s.lightning).toFixed(2) : " · guidance " + (s.cfg || 4)) : sampFast(key, s) ? " · " + speedName(key) + " " + (+s.lightning).toFixed(2) : ""));
   }
   function paintSampling() {
     var key = $("arPainter").value, s = sampNow(key), lim = sampLim(key, s), q = /^qwen2512/.test(key), fast = sampFast(key, s);
     $("arSteps").min = String(lim[0]); $("arSteps").max = String(lim[1]); $("arSteps").value = String(s.steps);
     $("arSampler").value = s.sampler || "euler"; $("arSchedule").value = s.schedule || "simple";
-    $("arLightBox").hidden = !(q && lightHere(key)); $("arCfgBox").hidden = !(q && !fast);
-    if (q) { $("arLightOn").checked = !!s.lightOn; $("arLight").value = (+s.lightning).toFixed(2); $("arLight").disabled = !s.lightOn; $("arCfg").value = String(s.cfg || 4); }
+    $("arLightBox").hidden = !(speedy(key) && lightHere(key)); $("arCfgBox").hidden = !(q && !fast);
+    var ln = $("arLightBox").querySelector(".ar-speed-name"), lo = $("arLightOn");   // HERESY 1442: Lightning or Turbo, as the painter has it
+    if (ln) ln.textContent = tr(speedName(key));
+    if (lo.dataset.tipOwn === undefined) lo.dataset.tipOwn = lo.dataset.tip || "";
+    lo.dataset.tip = /^qwen21/.test(key) ? tr(TURBO_TIP) : lo.dataset.tipOwn;
+    lo.setAttribute("aria-label", tr(speedName(key)));
+    if (speedy(key)) { $("arLightOn").checked = !!s.lightOn; $("arLight").value = (+s.lightning).toFixed(2); $("arLight").disabled = !s.lightOn; }
+    if (q) $("arCfg").value = String(s.cfg || 4);
     $("arSampSay").textContent = sampSay(key, s);
     // HERESY 1333: what the sampling matrix showed (10.10.2026, 30 pictures): Lightning under Karras or Exponential paints the subject twice;
     // without Lightning Euler SDE paints Qwen soft and hazy; 1333c: the second matrix (24 pictures): KL optimal paints it twice too
@@ -169,12 +181,12 @@
   function keepSampling(e) {
     var key = $("arPainter").value, all = sampAll(), q = /^qwen2512/.test(key), was = sampNow(key);
     var s = { steps: +$("arSteps").value, sampler: $("arSampler").value, schedule: $("arSchedule").value };
-    if (q) {
+    if (speedy(key)) {
       s.lightOn = lightHere(key) && $("arLightOn").checked;
       s.lightning = Math.max(0.05, Math.min(1.5, +(+$("arLight").value).toFixed(2) || was.lightning));
-      s.cfg = Math.max(1, Math.min(10, +$("arCfg").value || 4));
     }
-    if (q && sampFast(key, s) !== sampFast(key, was)) s.steps = sampFast(key, s) ? (fineOf(key) ? 12 : 8) : 30;   // Lightning on or off: steps in its range
+    if (q) s.cfg = Math.max(1, Math.min(10, +$("arCfg").value || 4));
+    if (speedy(key) && sampFast(key, s) !== sampFast(key, was)) s.steps = sampFast(key, s) ? (/^qwen21/.test(key) ? 4 : fineOf(key) ? 12 : 8) : 30;   // its speed-up on or off: steps in its range
     var lim = sampLim(key, s);
     s.steps = Math.max(lim[0], Math.min(lim[1], Math.round(s.steps) || lim[0]));
     all[sampKey(key)] = s;                               // HERESY 1428: by the brush
@@ -188,7 +200,10 @@
     if (/^qwen2512/.test(key)) {
       if (sampFast(key, s)) delete out.cfg;
       if (Object.keys(out).length || !!s.lightOn !== !!d.lightOn || (s.lightOn && +s.lightning !== +d.lightning)) out.lightning = sampFast(key, s) ? +s.lightning : 0;   // the steps' range is Lightning's
-    } else delete out.cfg;
+    } else {
+      delete out.cfg;
+      if (speedy(key) && (Object.keys(out).length || !!s.lightOn !== !!d.lightOn)) out.lightning = sampFast(key, s) ? +s.lightning : 0;   // HERESY 1442: 2.1's Turbo
+    }
     return out;
   }
   // HERESY 1318: the painters as the lab has them; the fp8 fine-tune; the painter's note
@@ -199,11 +214,13 @@
   function brushRows(list) {
     var groups = {}, order = [];
     list.forEach(function (p) {
-      var g = p.key === "qwen21" ? "Qwen-Image 2.1" : "Qwen-Image 2512", from = tr("from " + (p.need_mb / 1000).toFixed(1).replace(".0", "") + " GB");
+      var g = /^qwen21/.test(p.key) ? "Qwen-Image 2.1" : "Qwen-Image 2512", from = tr("from " + (p.need_mb / 1000).toFixed(1).replace(".0", "") + " GB");   // HERESY 1442: 2.1's fine-tunes in its group
       var light = p.lightning !== false && /^qwen2512/.test(p.key), rows = [];
-      if (p.key === "qwen2512-fp8") (p.models || []).forEach(function (m) {
+      if (isFp8(p.key)) (p.models || []).forEach(function (m) {   // HERESY 1442: 2.1's fine-tunes too
         var base = isBase(m);
-        rows.push([p.key + "|" + m, "fp8 · " + m.replace(/\.safetensors$/, "") + (base ? (light ? " · \u26a1 Lightning" : "") : " · " + tr("fine-tune")) + " · " + from]);
+        // HERESY 1432 (Viktor: «если из BASE, добавь префикс, чтобы юзер видел, что это базовые веса, а не файнтюн»): what it is first
+        rows.push([p.key + "|" + m, (base ? tr("Base weights") : tr("Fine-tune")) + " · fp8 · " + m.replace(/\.safetensors$/, "").replace(base ? /^BASE[\s_-]*/i : /^$/, "") +
+          (base && light ? " · \u26a1 Lightning" : "") + " · " + from]);
       });
       else rows.push([p.key, tr(String(p.label || p.key).replace(/^Qwen-Image 2(512|\.1) · /, "")) + (light ? " · \u26a1 Lightning" : "") + " · " + from]);
       if (!groups[g]) { groups[g] = []; order.push(g); }
@@ -216,7 +233,7 @@
   function syncBrush() {                                 // the list shows the painter and its file the hidden state holds
     var b = $("arBrush");
     if (!b) return;
-    var v = fp8Now() ? "qwen2512-fp8|" + $("arModel").value : $("arPainter").value;
+    var v = fp8Now() ? $("arPainter").value + "|" + $("arModel").value : $("arPainter").value;
     if ([].some.call(b.options, function (o) { return o.value === v; })) b.value = v;
   }
   function pickBrush() {
@@ -233,7 +250,7 @@
     return api("/artist/painters").then(function (d) {
       var sel = $("arPainter"), was = recall(KEY.painter) || sel.value || "qwen2512-q4", list = (d.painters || []).filter(function (p) { return p.ready; });
       // HERESY 1323: the painters not here yet (an fp8 fine-tune is the user's own file, not a fetch), said under the choice
-      state.notHere = (d.painters || []).filter(function (p) { return !p.ready && p.key !== "qwen2512-fp8"; }).map(function (p) { return p.label; });
+      state.notHere = (d.painters || []).filter(function (p) { return !p.ready && !isFp8(p.key); }).map(function (p) { return p.label; });
       if (!list.length) return;
       PAINTER_INFO = {};
       list.forEach(function (p) { PAINTERS[p.key] = p.label; PAINTER_INFO[p.key] = p; });
@@ -244,13 +261,13 @@
       if ($("arBrush")) $("arBrush").innerHTML = brushRows(list);   // HERESY 1428
       state.painted = true;                              // HERESY 1375: the choice is the lab's list now: kept from here on
       paintPainter();
+      paintStage();                                      // HERESY 1443b: Letter it and Outpaint… on a stage drawn before the painters came
     }).catch(function () { paintPainter(); });
   }
   function paintPainter() {
-    var p = PAINTER_INFO[$("arPainter").value] || {}, box = $("arModelBox"), note = $("arPainterNote");
-    if (box) {
+    var p = PAINTER_INFO[$("arPainter").value] || {}, note = $("arPainterNote");
+    if ($("arModel")) {                                  // HERESY 1432: no field of its own; the file is picked in The Artist's brushes
       var models = p.models || [];
-      box.hidden = true;                                 // HERESY 1428: the file is picked in The Artist's brushes
       if (models.length) {
         var want = recall("yue2.arModel"), cur = $("arModel").value || want;
         $("arModel").innerHTML = models.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m.replace(/\.safetensors$/, "")) + "</option>"; }).join("");
@@ -1196,6 +1213,35 @@
     $("arLetNote").hidden = !note;
     $("arLetTake").disabled = !state.take;
   }
+  // HERESY 1443 (Viktor 14.10.2026: «И outpaint LoRA для QW21»): this picture's edges painted on by Qwen-Image 2.1 (or the 2.1 brush in
+  // hand) with «Outpaint v2»: the new shape asked, words of what lies beyond if wanted, a run of its own
+  function outpaintOk() { return Object.keys(PAINTER_INFO).some(function (k) { return /^qwen21/.test(k) && PAINTER_INFO[k].outpaint; }); }
+  function outpaintIt(r, p) {
+    if (!outpaintOk()) return toast(tr("Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine"), "bad");
+    if (runsFull()) return toast(tr("Two runs at a time: the next one can be asked when one of them ends"), "bad");
+    var shapes = ["16:9", "9:16", "1:1"].filter(function (s) { return s !== p.shape; });
+    var items = shapes.map(function (s) { return { value: s, label: s, note: tr(s === "1:1" ? "square" : s === "16:9" ? "wide" : "tall"), words: true }; });
+    window.HeresyDialog.choose(tr("Outpaint: its new shape") + "\n\n" + tr("The picture stays whole and as it is; Qwen-Image 2.1 paints the rest of the new canvas around it."), items, { cancel: "Cancel" }).then(function (to) {
+      if (!to) return;
+      return window.HeresyDialog.prompt(tr("What lies beyond its edges?") + "\n\n" + tr("A few words of the scene, if you want them (empty: Qwen-Image 2.1 reads the picture alone)."), "",
+        { ok: tr("Outpaint"), placeholder: tr("a stormy sea, more of the cliff…"), allowEmpty: true }).then(function (words) {
+        if (words === null || words === undefined) return;
+        var brush = $("arPainter").value, painter = /^qwen21/.test(brush) && PAINTER_INFO[brush] && PAINTER_INFO[brush].outpaint ? brush : "qwen21";
+        var body = { prompt: String(words || "").trim(), shapes: [to], count: 1, seed: p.seed || Math.floor(Math.random() * 2147483000), painter: painter,
+                     ref: { id: r.id, file: p.file }, ref_as: "edit", outpaint: true, preview: $("arLive").checked };
+        if (painter === "qwen21-fp8") body.model = $("arModel").value;
+        if (state.take) body.take = state.take.name;
+        alog(tr("Outpaint asked:") + " " + p.shape + " \u2192 " + to + " · " + (PAINTERS[painter] || painter) + " · " + r.id + "/" + p.file);
+        return api("/artist/draw", body).then(function (run) {
+          state.pinSel = false;
+          state.runs.unshift(run);
+          paintRuns();
+          toast(tr("Outpainting waits for a card with room, then paints the edges on"));
+          schedule(1500);
+        }).catch(function (e) { toast(tr("No outpaint: ") + e.message, "bad"); alog(tr("No outpaint:") + " " + e.message, "bad"); });
+      });
+    });
+  }
   function letterIt(r, p) {                          // HERESY 1394: this picture lettered by Qwen-Image 2.1, the rest kept
     if (!refAsOk()) return toast(tr("Lettering a finished picture is Qwen-Image 2.1's: it is not on this machine"), "bad");
     setRef({ id: r.id, file: p.file, url: fileUrl(r.id, p.thumb || p.file) }, true);
@@ -1550,6 +1596,7 @@
       var make = ib("form", "pencil", "To the form", tr("Its prompt, seed and shape back in the form")) +
         ib("ref", "image", "As reference", tr("Paint from this picture: it becomes the form's reference")) +   // HERESY 1305
         (refAsOk() && r.kind !== "upscale" ? ib("letter", "type", "Letter it", tr("Letter this picture: the title and second line of the form's Lettering, by Qwen-Image 2.1, the rest kept")) : "") +   // HERESY 1394
+        (outpaintOk() && r.kind !== "upscale" ? ib("outpaint", "expand-out", "Outpaint\u2026", tr("Paint its edges on: the picture whole on a wider, taller or square canvas, the rest painted on by Qwen-Image 2.1 with the «Outpaint v2» adapter; the picture kept pixel for pixel")) : "") +   // HERESY 1443
         (square ? ib("cover", "disc", "Set as cover", take ? tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" : tr("Pick a take on the right to give it this cover"),
           { cls: "ar-cover", disabled: !take }) : "") +
         (spOk(r) ? ib("second", "sparkles", "Second pass\u2026", tr("A second pass, as Viktor's ComfyUI workflow makes it: the picture brought up 1.5 or 2 times and painted over by its own painter, adapters, prompt and seed, with the form's steps and sampler; a run of its own"), { on: state.spOpen }) : "") +   // HERESY 1384
@@ -1632,7 +1679,7 @@
         : '<div class="ar-stage-pic is-live" data-w="' + sh.w + '" data-h="' + sh.h + '"><div class="ar-stage-empty">' + esc(tr(run.waiting ? "waits for a card" : "in the queue")) + "</div></div>" + stageData(run, null, 0);   // HERESY 1317: the frame from the start
     } else if (it) {
       var s2 = shapeOf(it.p.shape), take = state.take;
-      key = "pic:" + it.r.id + ":" + it.p.file + ":" + (it.p.star ? 1 : 0) + ":" + (take ? take.name : "");
+      key = "pic:" + it.r.id + ":" + it.p.file + ":" + (it.p.star ? 1 : 0) + ":" + (take ? take.name : "") + ":" + (refAsOk() ? "L" : "") + (outpaintOk() ? "O" : "");   // 1443b: the painters said since
       html = '<button type="button" class="ar-stage-pic" data-stage="view" data-w="' + (it.p.w || s2.w) + '" data-h="' + (it.p.h || s2.h) + '" aria-label="' + esc(tr("Look at it over the page")) + '">' +
         '<img alt="" draggable="false" /></button>' + stageData(it.r, it.p, 0);
     } else {
@@ -1795,6 +1842,7 @@
     else if (act === "form") { fillForm({ prompt: it.r.prompt, shapes: [it.p.shape], count: 1, seed: it.p.seed, painter: it.r.kind === "upscale" ? null : it.r.painter }, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, seed and shape")); }
     else if (act === "ref") setRef({ id: it.r.id, file: it.p.file, url: fileUrl(it.r.id, it.p.thumb || it.p.file) });   // HERESY 1305
     else if (act === "letter") letterIt(it.r, it.p);   // HERESY 1394
+    else if (act === "outpaint") outpaintIt(it.r, it.p);   // HERESY 1443
     else if (act === "note") noteIt(it.r, it.p);                                                                        // HERESY 1428
     else if (act === "compare") comparePick(it);                                                                         // HERESY 1308
     else if (act === "aside") asidePics([{ id: it.r.id, file: it.p.file }]);                                           // HERESY 1321
@@ -1994,7 +2042,7 @@
   // painter's family, each at its strength, up to four, kept per family in this browser; the library to pick them from
   // HERESY 1353 (Viktor 11.10.2026: «В списке LoRA у нас макс 4 адаптера. Разреши добавление до 8, но... активными только макс 4»): eight
   // in the list, four of them in the run (the others muted, 1341's way); a fifth brought in comes muted
-  var FAMILY = { "qwen21": "qwen-image-2.1", "qwen2512-q4": "qwen-image-2512", "qwen2512-q6": "qwen-image-2512", "qwen2512-fp8": "qwen-image-2512" };
+  var FAMILY = { "qwen21": "qwen-image-2.1", "qwen21-fp8": "qwen-image-2.1", "qwen2512-q4": "qwen-image-2512", "qwen2512-q6": "qwen-image-2512", "qwen2512-fp8": "qwen-image-2512" };
   var LORA_MAX = 8, LORA_ON = 4;
   KEY.loras = "yue2.arLoras";
   function familyNow() { return FAMILY[$("arPainter").value] || ""; }

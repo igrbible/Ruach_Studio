@@ -1,6 +1,6 @@
 # Ruach Studio · the API
 
-The studio's own door for scripts, DAWs and agents **on this machine and its local network**. It is the same server as the page (`http://HOST:41867`), under `/api/v1`. The studio answers private addresses only: this machine, 10.x, 172.16–31.x, 192.168.x, 100.64–127.x (carrier-grade NAT, where Tailscale lives), link-local, and their IPv6 kin. Anyone else gets `403`. `RUACH_ALLOW_PUBLIC=1` (in the studio's environment) opens it to all, for those who put their own proxy and guard in front.
+The studio's own door for scripts, DAWs and agents **on this machine and its local network**. It is the same server as the page (`http://HOST:7777`), under `/api/v1`. The studio answers private addresses only: this machine, 10.x, 172.16–31.x, 192.168.x, 100.64–127.x (carrier-grade NAT, where Tailscale lives), link-local, and their IPv6 kin. Anyone else gets `403`. `RUACH_ALLOW_PUBLIC=1` (in the studio's environment) opens it to all, for those who put their own proxy and guard in front.
 
 A token is asked only when `RUACH_API_TOKEN` is set in the studio's environment, and only of callers not on the studio's machine: `Authorization: Bearer <token>`.
 
@@ -67,13 +67,13 @@ The answer's `score` says how the file was read: `key` and `key_from`, `bpm`, `m
 ```bash
 curl -s -X POST -H "Content-Type: application/json" \
   -d "{\"style\":\"Russian, folk ballad, warm female vocal, gusli\",\"lyrics\":\"[Verse]\\nТихо ветер над рекой\",\"midi_b64\":\"$(base64 -w0 melody.mid)\"}" \
-  http://127.0.0.1:41867/api/v1/songs
+  http://127.0.0.1:7777/api/v1/songs
 ```
 
 ## From the shell
 
 ```bash
-B=http://127.0.0.1:41867/api/v1          # from another machine: the studio's address on your network
+B=http://127.0.0.1:7777/api/v1          # from another machine: the studio's address on your network
 J=$(curl -s -X POST -H "Content-Type: application/json" -d '{"style":"Instrumental, solo cello, slow","instrumental":true,"duration":60}' $B/songs | python3 -c "import json,sys; print(json.load(sys.stdin)['job'])")
 until curl -s $B/jobs/$J | grep -q '"status": *"done"'; do sleep 3; done
 T=$(curl -s $B/jobs/$J | python3 -c "import json,sys; print(json.load(sys.stdin)['takes'][0])")
@@ -96,7 +96,7 @@ The client's configuration (Claude Desktop: `claude_desktop_config.json`; Claude
     "ruach-studio": {
       "command": "python3",
       "args": ["/path/to/Ruach_Studio/extras/ruach-mcp.py"],
-      "env": { "RUACH_URL": "http://127.0.0.1:41867" }
+      "env": { "RUACH_URL": "http://127.0.0.1:7777" }
     }
   }
 }

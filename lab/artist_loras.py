@@ -16,7 +16,7 @@ reaches none of its layers (measured: 2 of Viktor's 9 Krea 2 adapters)."""
 import hashlib, json, os, re, shutil, struct, time, urllib.error, urllib.request
 from pathlib import Path
 
-FAMILIES = {"qwen-image-2.1": ("qwen21",),   # HERESY 1428: Krea 2 gone   # HERESY 1405: SDXL gone
+FAMILIES = {"qwen-image-2.1": ("qwen21", "qwen21-fp8"),   # HERESY 1442   # HERESY 1428: Krea 2 gone   # HERESY 1405: SDXL gone
             "qwen-image-2512": ("qwen2512-q4", "qwen2512-q6", "qwen2512-fp8")}
 TITLES = {"qwen-image-2.1": "Qwen-Image 2.1", "qwen-image-2512": "Qwen-Image 2512"}
 PICS = (".preview.png", ".preview.jpeg", ".preview.jpg", ".preview.webp", ".jpg", ".jpeg", ".png", ".webp")

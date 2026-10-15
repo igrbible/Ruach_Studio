@@ -71,7 +71,7 @@ Without the services: `./lab/start-lab.sh` and then `./start.sh` (it stays in th
 
 ## 4 · Open it
 
-In your Windows browser: **http://localhost:41867**. WSL2 hands `localhost` over to Ubuntu.
+In your Windows browser: **http://localhost:7777**. WSL2 hands `localhost` over to Ubuntu.
 
 WSL stops Ubuntu some time after its last window closes, and the studio with it. Keep one Ubuntu window open while you make songs; opening Ubuntu again starts the two services again by themselves (they are enabled, and lingering).
 
@@ -82,7 +82,7 @@ WSL stops Ubuntu some time after its last window closes, and the studio with it.
 networkingMode=mirrored
 ```
 
-Then `wsl --shutdown`, open Ubuntu again, and the studio answers at **http://THIS-PC'S-ADDRESS:41867**. Windows Firewall may ask once whether to let it through on private networks. The studio itself answers private networks only, never the internet.
+Then `wsl --shutdown`, open Ubuntu again, and the studio answers at **http://THIS-PC'S-ADDRESS:7777**. Windows Firewall may ask once whether to let it through on private networks. The studio itself answers private networks only, never the internet.
 
 ## When something is wrong
 

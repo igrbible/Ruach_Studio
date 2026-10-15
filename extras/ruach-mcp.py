@@ -4,11 +4,11 @@ lists and marks takes, and hands a take to REAPER, through the studio's own API 
 runs and talks HTTP to the studio, on this machine or on its network.
 
     pip install mcp                       (once, in any Python 3.10+; v1 and v2 of the SDK both do)
-    RUACH_URL=http://127.0.0.1:41867 python3 extras/ruach-mcp.py      (stdio; the client starts it; another machine: its address)
+    RUACH_URL=http://127.0.0.1:7777 python3 extras/ruach-mcp.py      (stdio; the client starts it; another machine: its address)
 
 A client's config (Claude Desktop: claude_desktop_config.json; Claude Code: .mcp.json):
     {"mcpServers": {"ruach-studio": {"command": "python3", "args": ["/path/to/extras/ruach-mcp.py"],
-                                     "env": {"RUACH_URL": "http://127.0.0.1:41867"}}}}
+                                     "env": {"RUACH_URL": "http://127.0.0.1:7777"}}}}
 RUACH_API_TOKEN goes along as a Bearer token when the studio asks one of callers not on its machine."""
 import base64, json, os, time, urllib.parse, urllib.request
 from pathlib import Path
@@ -18,7 +18,7 @@ try:                                                 # the SDK's v2 name, then v
 except ImportError:
     from mcp.server.fastmcp import FastMCP as Server
 
-URL = os.environ.get("RUACH_URL", "http://127.0.0.1:41867").rstrip("/")
+URL = os.environ.get("RUACH_URL", "http://127.0.0.1:7777").rstrip("/")
 TOKEN = os.environ.get("RUACH_API_TOKEN", "")
 mcp = Server("ruach-studio")
 

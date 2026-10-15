@@ -12,6 +12,8 @@ is said. Its samples (mp3) and pictures stay on Hugging Face.
 
 HERESY 1296: a file here of another size is someone's own copy (the Forge's voices are the published ones with their readers' names
 still in the header): kept and said «differs», never taken for missing or written over without --replace.
+HERESY 1441 (Viktor 14.10.2026: «пользователь волен переименовать скачанное»): known by its content first: the same tensors with another
+header (goldhub/Ruach_Studio_Models_v2's MANIFEST.tsv names them), or the same file under another name in loras/, is here.
 
 The last line is for heresy/fetch-heresy.sh: «#counts here=N fetched=N missing=N failed=N differs=N».
 """
@@ -20,13 +22,24 @@ import shutil
 import sys
 import time
 
-REPO = "goldhub/Ruach_Studio_LoRAs"
+# HERESY 1445 (Viktor 14.10.2026: «Лучше всё тянуть Студии из одного репо»): from our models repo v2, where loras/<folder>/ holds
+# the same files as goldhub/Ruach_Studio_LoRAs; the folders of the Kit's library there are its own downloader's (tools/download-loras.sh)
+REPO = "goldhub/Ruach_Studio_Models_v2"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHECK = "--check" in sys.argv[1:]
 REPLACE = "--replace" in sys.argv[1:]            # HERESY 1296
 COLOR = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
 G, Y, R, D, X = ("\033[1;32m", "\033[1;33m", "\033[1;31m", "\033[2m", "\033[0m") if COLOR else ("",) * 5
 counts = {"here": 0, "fetched": 0, "missing": 0, "failed": 0, "differs": 0}
+
+
+def kit_folders():
+    """the folders tools/download-loras.sh fills (its entries' first field): the Kit's library, not ours to fetch"""
+    import re
+    try:
+        return set(re.findall(r'^\s*"([^|"]+)\|', open(os.path.join(ROOT, "tools", "download-loras.sh"), encoding="utf-8").read(), re.M))
+    except OSError:
+        return set()
 
 
 def say(kind, what, note=""):
@@ -48,6 +61,36 @@ def pin():
     return "main"
 
 
+def by_content():
+    """HERESY 1441: tools/hf_expect.py's finder with v2's MANIFEST.tsv at its pin (the tensors' sums); None when it cannot be had."""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("hf_expect", os.path.join(ROOT, "tools", "hf_expect.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+    except (OSError, ImportError, SyntaxError):
+        return None
+    if not hasattr(m, "find_by_content"):
+        return None
+    v2 = ""
+    for f in (os.path.join(ROOT, "heresy", "hf-revisions.txt"),):
+        try:
+            for line in open(f, encoding="utf-8"):
+                parts = line.split()
+                if len(parts) >= 2 and parts[0] == "goldhub/Ruach_Studio_Models_v2":
+                    v2 = parts[1]
+        except OSError:
+            pass
+    tens = m.manifest_tensors("goldhub/Ruach_Studio_Models_v2@" + v2) if v2 else {}
+    ids = m.load_ids()
+
+    def find(folder, size, sha):
+        hit = m.find_by_content(folder, size, sha, tens.get(sha or ""), ids)
+        m.save_ids(ids)
+        return hit
+    return find
+
+
 def main():
     try:
         from huggingface_hub import HfApi, hf_hub_download
@@ -61,15 +104,25 @@ def main():
     except Exception as e:                                   # offline, or the repo gone: not a verdict on what is here
         print(f"{Y}unknown{X}   loras/ (the studio's own) {D}{tag}: the file list could not be read ({str(e)[:160]}){X}")
         return
-    files = [s for s in info.siblings if s.rfilename.endswith(".safetensors") and s.rfilename.split("/")[0] in ("voices", "instruments")]
+    kit = kit_folders()                                   # HERESY 1445: loras/<folder>/<file>, the Kit's folders left out
+    files = [s for s in info.siblings if s.rfilename.endswith(".safetensors") and len(s.rfilename.split("/")) == 3
+             and s.rfilename.split("/")[0] == "loras" and s.rfilename.split("/")[1] not in kit]
+    hfx = by_content()                                    # HERESY 1441
     stage = os.path.join(ROOT, "tmp", "ruach-loras")
     for s in sorted(files, key=lambda s: s.rfilename):
-        parts = s.rfilename.split("/")                      # voices/<folder>/<file>
+        parts = s.rfilename.split("/")                      # loras/<folder>/<file>
         rel = os.path.join(parts[1], parts[-1])
         dest = os.path.join(ROOT, "loras", rel)
         if os.path.isfile(dest) and os.path.getsize(dest) == s.size:
             say("here", "loras/" + rel, tag)
             continue
+        if hfx:                                              # HERESY 1441: the same adapter, another name or header
+            other = hfx(os.path.join(ROOT, "loras"), s.size, s.lfs.sha256 if s.lfs else None)
+            if other:
+                same = os.path.exists(dest) and os.path.samefile(other, dest)
+                say("here", "loras/" + rel, f"{tag} — " + ("its header its own, the same weights" if same else
+                                                         f"as loras/{os.path.relpath(other, os.path.join(ROOT, 'loras'))}, the same weights"))
+                continue
         if os.path.isfile(dest) and (CHECK or not REPLACE):  # HERESY 1296: someone's own copy, kept
             say("differs", "loras/" + rel, f"{tag} — kept: the copy here differs from the published file (--replace fetches it)")
             continue

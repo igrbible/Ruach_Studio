@@ -67,7 +67,7 @@
     var t = find(S.kept) || THEMES[0] || { name: "Theme", bg: "#000", fg: "#fff", accent: "#fff" };
     // HERESY 1017: a palette and the theme's dot; the name is in the tip (the bar fits at 120%)
     S.button.innerHTML = (root.HeresyIcons ? root.HeresyIcons.svg("theme") : "") +
-      '<span class="theme-dot" style="background:' + t.bg + ";border-color:" + t.accent + '"></span>';
+      '<span class="theme-dot" style="background:' + t.bg + ";border-color:" + t.accent + '"></span><span class="theme-word">Theme</span>';   // HERESY 1432: the ☰'s word, translated as text
     S.button.setAttribute("aria-label", "Theme: " + t.name + " (choose another)");
     S.button.dataset.tip = "Theme: " + t.name + ". Hover a theme to preview it, click to keep it.";
   }

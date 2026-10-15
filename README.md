@@ -136,7 +136,7 @@ What it needs:
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
-[INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
+**The studio answers on port 7777**: http://127.0.0.1:7777 on its machine, http://ITS-ADDRESS:7777 from your network. [INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
 
 ## Dependencies
 
@@ -167,7 +167,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 
 **The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Qwen-Image's text encoder, the prompt writer, the content filter); diffusers 0.41 (Qwen-Image 2512 and 2.1) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT).
 
-**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras; sizes, sources and licences in the models card, `heresy/docs/hf-models-README.md`; the legacy and blend decoders and the sliders come converted, from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2)):
+**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras), all from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) at its pin, each file byte for byte as its author publishes it (the legacy and blend decoders, the sliders and SheetSage2 F32 converted once by the studio), but the stems' models, the Kit's library of adapters and Qwen2.5-Omni-7B whole, which come from their authors; sizes, sources and licences in that repo's card and its `MANIFEST.tsv`:
 
 | | what for | licence |
 |---|---|---|
@@ -182,7 +182,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | Qwen3-4B-Instruct-2507 · extra | the artwork's prompt writer | Apache-2.0 |
 | the content filter (Falconsai's nsfw_image_detection) · extra | every picture the Artist and a take's artwork paint passes it | Apache-2.0 |
 | Qwen-Image 2512 (its parts from Qwen; the transformer as GGUF Q4_K_M or Q6_K, by unsloth) with Lightning's 8 steps (lightx2v) · extra | the Artist's painter, a take's artwork | Apache-2.0 |
-| Qwen-Image 2.1 · extra | the Artist's painter that edits by words | Qwen Research License: not for commercial use |
+| Qwen-Image 2.1 · extra | the Artist's painter that edits by words; its fp8 fine-tunes as brushes, Turbo in 4 steps and Outpaint with their authors' adapters, fetched by you from Civitai | Qwen Research License: not for commercial use; the adapters under their authors' terms |
 | the upscalers you put into `artwork/upscalers/` (ESRGAN, DAT, HAT, SPAN…) | the Artist's upscale | each its own |
 | YuE2-3B for training (bf16 or int8) · extra | the LoRA trainer | CC BY-NC 4.0 |
 
@@ -271,9 +271,18 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.0-rc8 (October 2026)
+
+- **Every weight from one repo**: [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) is the studio's own disk, file for file, the LoRA Trainer's base in it; the install takes all of it from there at one pin, and a file renamed or moved into a folder of your own is known by its content.
+- **The Artist on Qwen-Image alone**: Krea 2 out; the brushes in one list; Qwen-Image 2.1's fp8 fine-tunes, its Turbo in 4 steps and Outpaint; a picture's note; ten adapters shared by their authors.
+- **Who may open the studio**: Engine → Security, asked at the first start; the studio on port 7777.
+- **Guards and comfort**: no take outside a workspace that takes them; the lyrics' arc and the voices among their tags; a font and a size for the section marks, the buttons and the rooms; the Creator's long lists in the studio's dialog.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › 2.0.0 and After
 
-2.0.0-rc7 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+2.0.0-rc8 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
 
 - **Songs edited as the model writes them** (2.0.0): a take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens and decoded whole, the best joins heard first; an instrumental layer on the take's own score, locked to its bars.
 - **A DAW in the Refiner, an early preview** (2.0.0): [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System)'s score editor (Apache-2.0): a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in, the score going both ways.

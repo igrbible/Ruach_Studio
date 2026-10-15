@@ -45,7 +45,7 @@ const states = [
   ["installed but a model is missing", done.slice(0, 2), [], null, "Install", "launcher/install.js"],
   ["installed", done, [], null, "Start", "launcher/start.js"],
   ["starting, the server not yet listening", done, ["launcher/start.js"], null, "Starting", "launcher/start.js"],
-  ["running", done, ["launcher/start.js"], "http://127.0.0.1:41867", "Open the studio", "http://127.0.0.1:41867"],
+  ["running", done, ["launcher/start.js"], "http://127.0.0.1:7777", "Open the studio · port 7777", "http://127.0.0.1:7777"],
   ["while it updates", done, ["launcher/update.js"], null, "Updating", "launcher/update.js"],
   ["while more models download", done, ["launcher/extras.js"], null, "Downloading models", "launcher/extras.js"],
   ["while it resets", done, ["launcher/reset.js"], null, "Resetting", "launcher/reset.js"],
@@ -86,9 +86,9 @@ const trees = [];
   let items = await menuOf(t, ["pinokio/update.js"]);
   check("while the old Update still runs, nothing is moved and «Updating» opens its terminal",
     existsSync(join(t, "pinokio/AGENTS.md")) && items[0].text === "Updating" && items[0].href === "pinokio/update.js", JSON.stringify(items));
-  items = await menuOf(t, ["pinokio/start.js"], "http://127.0.0.1:41867");
+  items = await menuOf(t, ["pinokio/start.js"], "http://127.0.0.1:7777");
   check("  nor while the studio runs from the old folder (Open the studio, its Terminal there)",
-    existsSync(join(t, "pinokio/AGENTS.md")) && items[0].text === "Open the studio" && items[1].href === "pinokio/start.js", JSON.stringify(items));
+    existsSync(join(t, "pinokio/AGENTS.md")) && items[0].text === "Open the studio · port 7777" && items[1].href === "pinokio/start.js", JSON.stringify(items));
   items = await menuOf(t, []);
   const away = existsSync(join(t, "tmp")) ? moved(t) : [];
   check("when nothing runs, the old folder is moved out of Pinokio's way: its ENVIRONMENT to the root, the rest under tmp/",
@@ -150,12 +150,12 @@ const labLine = readFileSync(join(ROOT, "lab/lab.py"), "utf8").match(/print\(f"(
 check("the lab's own banner (lab/lab.py) ends the lab's step", !!labLine && !!firstMatch(labOn, `${labLine[1]}41870 · outputs /x · whisper /y\r\n`, "done"));
 check("  and so does a lab that runs already (launcher/lab.sh)", !!firstMatch(labOn, "heresy-lab already on :41870 (started elsewhere: its systemd unit or ./lab/start-lab.sh); Stop here leaves it running\r\n", "done"));
 const srv = readFileSync(join(ROOT, "build/tools/yue-server.cpp"), "utf8").includes('"[Server] Listening on http://%s:%d\\n"');
-const m1 = firstMatch(studioOn, "[Server] yue-server b1\n[Server] Listening on http://0.0.0.0:41867\n", "done");
-check("the engine's «Listening on» line (build/tools/yue-server.cpp) ends the studio's step with its port", srv && m1 && m1[1] === "41867", m1 && m1[1]);
+const m1 = firstMatch(studioOn, "[Server] yue-server b1\n[Server] Listening on http://0.0.0.0:7777\n", "done");
+check("the engine's «Listening on» line (build/tools/yue-server.cpp) ends the studio's step with its port", srv && m1 && m1[1] === "7777", m1 && m1[1]);
 const m2 = firstMatch(studioOn, "[Server] Listening on http://127.0.0.1:41868 (started elsewhere: its systemd unit or ./start.sh); Stop here leaves it running\r\n", "done");
 check("  and so does a studio that runs already (launcher/studio.sh), with its port", m2 && m2[1] === "41868", m2 && m2[1]);
 check("  start.sh's banner before it (a hyperlink, colours) does not end the step early",
-  !firstMatch(studioOn, "\x1b[1mRuach Studio 2.0.0\x1b[0m · Ruach_Studio  \x1b[32m\x1b]8;;http://10.0.0.5:41867\x1b\\http://10.0.0.5:41867\x1b]8;;\x1b\\\x1b[0m\r\n", "done"));
+  !firstMatch(studioOn, "\x1b[1mRuach Studio 2.0.0\x1b[0m · Ruach_Studio  \x1b[32m\x1b]8;;http://10.0.0.5:7777\x1b\\http://10.0.0.5:7777\x1b]8;;\x1b\\\x1b[0m\r\n", "done"));
 
 console.log(`\n${B}the bash${X}`);
 for (const f of readdirSync(join(ROOT, "launcher")).filter((f) => f.endsWith(".sh")).sort()) {

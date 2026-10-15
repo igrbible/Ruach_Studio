@@ -39,14 +39,22 @@ NEED = {}                                          # HERESY 1428: Krea 2 gone; t
 # margin: 2512 Q4 14.3 GB (15.1 held), Q6 17.6 (19.1), an fp8 fine-tune 21.0 (21.3); Qwen-Image 2.1 16.4 painting from words, 19.1
 # editing, its parts on the card in turn
 QWEN = {"qwen2512-q4": ("Qwen-Image 2512 · Q4", 15500), "qwen2512-q6": ("Qwen-Image 2512 · Q6", 20000),
-        "qwen2512-fp8": ("Qwen-Image 2512 · fp8", 22500), "qwen21": ("Qwen-Image 2.1 · research licence", 21000)}
+        "qwen2512-fp8": ("Qwen-Image 2512 · fp8", 22500), "qwen21": ("Qwen-Image 2.1 · research licence", 21000),
+        "qwen21-fp8": ("Qwen-Image 2.1 · fp8", 21000)}   # HERESY 1442: its fine-tunes in fp8, its parts on the card in turn as 2.1's
+
+
+def is21(painter):
+    """HERESY 1442: Qwen-Image 2.1 itself or a fine-tune of it (the same licence, edits by words, its parts on the card in turn)."""
+    return painter in ("qwen21", "qwen21-fp8")
 NEED.update({k: v[1] for k, v in QWEN.items()})
 NEED["upscale"] = 4000                                # HERESY 1322: a DAT 4x model peaked at 2.1 GB in tiles of 512 (RTX 3090)
 QWEN21_STREAM_MB = 9500                              # HERESY 1386: Qwen-Image 2.1 streamed, encoder and transformer both: 4.1 GB at the peak from words, 7.9 editing (3090)
 # HERESY 1342: the card a run needs when its painter's blocks stream from RAM (artist_qwen.place), asked when no card here takes it whole
-STREAM_NEED = {"qwen2512-fp8": 6000, "qwen2512-q4": 5000, "qwen2512-q6": 5500, "qwen21": QWEN21_STREAM_MB}   # measured 10.10.2026: 2.3 GB at the peak with every block streamed (1328², Lightning, four adapters)
+STREAM_NEED = {"qwen2512-fp8": 6000, "qwen2512-q4": 5000, "qwen2512-q6": 5500, "qwen21": QWEN21_STREAM_MB, "qwen21-fp8": QWEN21_STREAM_MB}   # measured 10.10.2026: 2.3 GB at the peak with every block streamed (1328², Lightning, four adapters)
 QWEN_NOTE = {"qwen21": "Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only, not for commercial use "
              "(a cover for a song you sell is commercial use); a reference is a picture it edits by the prompt's words",
+             "qwen21-fp8": "A fine-tune of Qwen-Image 2.1 in fp8 from artwork/Qwen-Image-2.1/checkpoints/ (ComfyUI's single files): under the "
+                           "Qwen Research Licence as 2.1 is (research and evaluation only); a reference is a picture it edits by the prompt's words",
              "qwen2512-q4": "Qwen-Image 2512 (Apache-2.0) from a 4-bit GGUF: for a card of 16 GB",
              "qwen2512-q6": "Qwen-Image 2512 (Apache-2.0) from a 6-bit GGUF",
              "qwen2512-fp8": "Qwen-Image 2512 in fp8 from artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): 2512's own BASE file "
@@ -124,10 +132,31 @@ def is_base(model):
     return bool(model) and Path(str(model)).name.upper().startswith("BASE")
 
 
+def qwen21_models():
+    """HERESY 1442: the fp8 fine-tunes of Qwen-Image 2.1 here (artwork/Qwen-Image-2.1/checkpoints/*.safetensors)."""
+    d = _art("Qwen-Image-2.1", "checkpoints")
+    return sorted(p.name for p in d.glob("*.safetensors") if p.is_file()) if d.is_dir() else []
+
+
+def turbo21():
+    """HERESY 1442: Qwen-Image 2.1's speed-up, «Turbo 4step», wherever it lies under artwork/loras/qwen-image-2.1/ (by its name)."""
+    d = _art("loras", "qwen-image-2.1")
+    hits = sorted(p for p in d.rglob("*.safetensors") if re.search(r"turbo.*4.?step|4.?step.*turbo", p.name, re.I)) if d.is_dir() else []
+    return hits[0] if hits else None
+
+
+def outpaint21():
+    """HERESY 1443: Qwen-Image 2.1's outpaint adapter («Outpaint v2», AusBoss's), wherever it lies under artwork/loras/qwen-image-2.1/."""
+    d = _art("loras", "qwen-image-2.1")
+    hits = sorted((p for p in d.rglob("*.safetensors") if re.search(r"outpaint", p.name, re.I)), key=lambda p: p.name, reverse=True) if d.is_dir() else []
+    return hits[0] if hits else None
+
+
 def qwen_ready(painter):
     """HERESY 1318: a Qwen painter's files are here."""
-    if painter == "qwen21":
-        return (_art("Qwen-Image-2.1", "model_index.json").is_file() and _art("Qwen-Image-2.1", "transformer").is_dir())
+    if is21(painter):
+        here = _art("Qwen-Image-2.1", "model_index.json").is_file() and _art("Qwen-Image-2.1", "transformer").is_dir()
+        return here and (painter == "qwen21" or bool(qwen21_models()))   # HERESY 1442: a fine-tune wants its file too
     base = all(_art("Qwen-Image-2512", x).exists() for x in ("model_index.json", "text_encoder", "vae", "tokenizer", "transformer/config.json"))
     if painter == "qwen2512-fp8":
         return base and bool(qwen_models())
@@ -139,13 +168,20 @@ def painters():
     """HERESY 1318: the Artist's painters as this machine has them, for the room's choice."""
     out = []                                          # HERESY 1428: Krea 2 gone
     for k, (label, need) in QWEN.items():
-        e = {"key": k, "label": label, "need_mb": need, "family": "qwen-image-2.1" if k == "qwen21" else "qwen-image-2512",
+        e = {"key": k, "label": label, "need_mb": need, "family": "qwen-image-2.1" if is21(k) else "qwen-image-2512",
              "ready": qwen_ready(k), "note": QWEN_NOTE.get(k, "")}
         if k == "qwen2512-fp8":
             e["models"] = qwen_models()
             e["bases"] = [m for m in e["models"] if is_base(m)]   # HERESY 1428: 2512 itself in fp8: a brush with Lightning
-        if k != "qwen21":
+        if k == "qwen21-fp8":                          # HERESY 1442
+            e["models"] = qwen21_models()
+            e["bases"] = []
+        if not is21(k):
             e["lightning"] = _art("Qwen-Image-2512", "lightning", "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors").exists()
+        else:                                          # HERESY 1442: 2.1's own speed-up, its Turbo, said as «lightning» to the page
+            e["lightning"] = turbo21() is not None
+            e["speed_name"] = "Turbo"
+            e["outpaint"] = outpaint21() is not None   # HERESY 1443
         out.append(e)
     cards = H["job_cards"]() if H.get("job_cards") else []   # HERESY 1354: the lab's cards, each one's room
     for e in out:
@@ -173,9 +209,16 @@ def sampling(painter, s, model=""):
         if light > 0 and not _art("Qwen-Image-2512", "lightning", "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors").exists():
             raise ValueError("Lightning is not on this machine: its file goes into artwork/Qwen-Image-2512/lightning/ (Engine → Models and LoRAs → Qwen painters)")
         out["lightning"] = round(light, 2)
+    if is21(painter) and s.get("lightning") is not None:   # HERESY 1442: 2.1's Turbo
+        light = float(s["lightning"])
+        if not 0 <= light <= 1.5:
+            raise ValueError("Turbo's strength: 0 (off) to 1.5")
+        if light > 0 and turbo21() is None:
+            raise ValueError("Qwen-Image 2.1's Turbo is not on this machine: «Turbo 4step» goes into artwork/loras/qwen-image-2.1/")
+        out["lightning"] = round(light, 2)
     # HERESY 1328: not asked, a fine-tune paints without Lightning and a GGUF painter with it (artist_qwen.py's OFF_BY_DEFAULT)
     fine = painter == "qwen2512-fp8" and not is_base(model)
-    fast = (painter.startswith("qwen2512") and (light > 0 if light is not None else not fine))
+    fast = (painter.startswith("qwen2512") and (light > 0 if light is not None else not fine)) or (is21(painter) and light is not None and light > 0)
     lo, hi = (4, 16) if fast else (10, 60)
     if s.get("steps") is not None:
         n = int(s["steps"])
@@ -210,7 +253,8 @@ def draw(body):
         raise ValueError(f"two runs at a time: the next one when one of them ends ({len(going)} going)")
     prompt = str(body.get("prompt") or "").strip()
     letters = _letters(body)                         # HERESY 1394: the lettering's words, asked apart from the prompt
-    if not prompt and not (letters and letters["way"] == "letter"):
+    outpaint = bool(body.get("outpaint"))             # HERESY 1443: words of what lies beyond its edges are a wish, not a need
+    if not prompt and not (letters and letters["way"] == "letter") and not outpaint:
         raise ValueError("write what to paint first")
     if len(prompt) > PROMPT_MAX:
         raise ValueError(f"the prompt is too long: {PROMPT_MAX} characters at most")
@@ -229,24 +273,32 @@ def draw(body):
     asked = str(body.get("painter") or "").strip().lower()
     painter = asked if asked in QWEN else H["painter"](body.get("painter"))   # HERESY 1318: a Qwen painter by its own name
     if painter in QWEN and not qwen_ready(painter):
-        raise ValueError(QWEN[painter][0] + " is not on this machine: its files go into artwork/" + ("Qwen-Image-2.1" if painter == "qwen21" else "Qwen-Image-2512") + "/ (heresy/fetch-heresy.sh)")
+        raise ValueError(QWEN[painter][0] + " is not on this machine: its files go into artwork/" + ("Qwen-Image-2.1" if is21(painter) else "Qwen-Image-2512") + "/" + ("checkpoints/" if painter == "qwen21-fp8" else "") + " (heresy/fetch-heresy.sh)")
     model = ""
     if painter == "qwen2512-fp8":                       # HERESY 1318: which fine-tune
         model = Path(str(body.get("model") or "")).name
         if model not in qwen_models():
             raise ValueError("pick the fine-tune: one of artwork/Qwen-Image-2512/checkpoints/")
+    if outpaint and (not is21(painter) or not body.get("ref")):   # HERESY 1443
+        raise ValueError("outpainting is Qwen-Image 2.1's: choose it (or a fine-tune of it) as the painter, the picture as its reference")
+    if outpaint and outpaint21() is None:
+        raise ValueError("the outpaint adapter is not on this machine: «Outpaint v2» goes into artwork/loras/qwen-image-2.1/")
+    if painter == "qwen21-fp8":                         # HERESY 1442: which fine-tune of 2.1
+        model = Path(str(body.get("model") or "")).name
+        if model not in qwen21_models():
+            raise ValueError("pick the fine-tune: one of artwork/Qwen-Image-2.1/checkpoints/")
     ref_as = str(body.get("ref_as") or "")            # HERESY 1388: the picture edited by words, or its style alone (Qwen-Image 2.1)
     if ref_as not in ("", "edit", "style"):
         raise ValueError("a reference is used to paint from, to edit by words («edit») or for its style («style»)")
-    if ref_as and (painter != "qwen21" or not body.get("ref")):
+    if ref_as and (not is21(painter) or not body.get("ref")):
         raise ValueError("editing by words and a style reference are Qwen-Image 2.1's: choose it as the painter, with a picture")
     if letters and painter not in QWEN:                # HERESY 1394
         raise ValueError("lettering is painted by Qwen-Image: choose one of its brushes")
-    if letters and letters["way"] == "letter" and (painter != "qwen21" or not body.get("ref") or ref_as == "style"):
+    if letters and letters["way"] == "letter" and (not is21(painter) or not body.get("ref") or ref_as == "style"):
         raise ValueError("lettering a finished picture is Qwen-Image 2.1's edit by words: choose it as the painter, the picture as its reference")
     if letters and letters["way"] == "letter":
         ref_as = "edit"
-    if painter == "qwen21" and (body.get("mask") or body.get("fit")):
+    if is21(painter) and (body.get("mask") or body.get("fit")):
         raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Qwen-Image 2512")
     if painter not in NEED:
         raise ValueError("the Artist paints with Qwen-Image's brushes (Krea 2 left the studio, HERESY 1428): Engine → Models and LoRAs → Qwen painters")
@@ -279,6 +331,9 @@ def draw(body):
         ask["model"] = model                             # HERESY 1318: the fp8 fine-tune
     if regions:
         ask["regions"] = regions                     # HERESY 1387: the regions' own words
+    if outpaint:                                     # HERESY 1443: 2.1 edits the picture on its new canvas
+        ref_as = "edit"
+        ask["outpaint"] = True
     if ref_as:
         ask["ref_as"] = ref_as                       # HERESY 1388
     if letters:
@@ -353,7 +408,7 @@ def _scale(body, painter, ref):
         raise ValueError("the second pass: 1.5 or 2 times the picture")
     if not ref:
         raise ValueError("a second pass paints over a picture: it goes with the picture to paint over")
-    if painter == "qwen21":
+    if is21(painter):
         raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a second pass wants Qwen-Image 2512")
     if body.get("mask") or body.get("fit") or body.get("place"):
         raise ValueError("a second pass paints over the whole picture: no mask, no canvas")
@@ -387,7 +442,7 @@ def _regions(body, painter):
     rs = body.get("regions") or []
     if not rs:
         return []
-    if painter == "qwen21":
+    if is21(painter):
         raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: regions want Qwen-Image 2512")
     if not isinstance(rs, list) or len(rs) > 3:
         raise ValueError("regions: three at most")
@@ -589,7 +644,7 @@ CARDS_MAX = 4              # HERESY 1354: the cards a run's pictures are spread 
 # HERESY 1354: a painter's own RAM at its peak, GB (its VmHWM measured on the Forge 11.10.2026: Krea 2 Muse Q4 17.3, Q8 28.0; Qwen-Image
 # 2512 Q4 30.0, Q6 33.4, an fp8 fine-tune 57.8; Qwen-Image 2.1 32.6), its adapters beside it, so that two at once are started only where
 # RAM holds both with 8 GB left over
-RAM_NEED_GB = {"qwen2512-q4": 31, "qwen2512-q6": 34, "qwen2512-fp8": 58, "qwen21": 33,
+RAM_NEED_GB = {"qwen2512-q4": 31, "qwen2512-q6": 34, "qwen2512-fp8": 58, "qwen21": 33, "qwen21-fp8": 33,
                "upscale": 6}                         # HERESY 1364: an upscaler's process (its model tens of MB, a picture of 600 MP at most)
 
 

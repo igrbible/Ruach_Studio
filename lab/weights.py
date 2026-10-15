@@ -40,13 +40,25 @@ QWEN21 = ["artwork/Qwen-Image-2.1/model_index.json", "artwork/Qwen-Image-2.1/tra
           "artwork/Qwen-Image-2.1/text_encoder/model.safetensors.index.json", "artwork/Qwen-Image-2.1/vae/diffusion_pytorch_model.safetensors"]
 # HERESY 1347: the fp8 fine-tunes of 2512 and the Artist's adapters in our models repo, shared there by their authors' leave
 QFINE = Q2512 + "checkpoints/"
-ART_LORAS = ["artwork/loras/qwen-image-2.1/lenovo_qwen21.safetensors",   # HERESY 1428: Krea 2's three gone
-             "artwork/loras/qwen-image-2.1/frank_frazetta_qwen_21.safetensors", "artwork/loras/qwen-image-2512/Styles/Film Photography v1.safetensors",
-             "artwork/loras/qwen-image-2512/Styles/PHOTOSTYLE BY SEAN ARCHER - SFW v2.safetensors"]
+# HERESY 1440: v2 rebuilt whole (14.10.2026), the adapters their authors let be shared laid flat by family; 1441 (Viktor: «пользователь
+# волен переименовать скачанное»): each known by its content, as v2's MANIFEST.tsv says it: renamed, or moved into a folder of the user's
+# own, it is here all the same
+ART_LORAS = [
+    {"path": "artwork/loras/qwen-image-2512/Film Photography v1.safetensors", "size": 147686840, "sha256": "92124455ff640222b41db8283a4a584efdb22a72445047bfd7b40ed42da75ed2", "tensors": "b1cf8d57a3fa67cd6d4f18b69b47ef0e837bbcae2767bf5315c9031550893d43"},
+    {"path": "artwork/loras/qwen-image-2512/PHOTOSTYLE BY SEAN ARCHER - SFW v2.safetensors", "size": 590058800, "sha256": "1be6b336f939642837ec96dd84dc7d6dbc1d6697c9c68e90807dc5fb4814dc01", "tensors": "c6d234099677bc6af6349e32049bce118d17874b6dd665c9994a7850dbef38f0"},
+    {"path": "artwork/loras/qwen-image-2512/QWEN-2512-Lightning-4steps-V1.0-bf16.safetensors", "size": 849608296, "sha256": "de0d236e54ecf2c43b32447d13478c6eae0d361b1fed48c69675b084fa240d87", "tensors": "8565b490cb6d9ef9b43a0e0e5fd9f55a29ed7b63600f887fb3c75cf993edc2c3"},
+    {"path": "artwork/loras/qwen-image-2512/QWEN-2512-Lightning-4steps-V1.0-fp32.safetensors", "size": 1698951104, "sha256": "ad12117461cb41e2ea637fec8df6392ce8e8550c47fbe2b829ed3deb98262066", "tensors": "5810ddd50f1fae9721eafe87563a55a1f9a7f339fbd3dead4ae45569e1c6e2f2"},
+    {"path": "artwork/loras/qwen-image-2512/QWEN-2512-Lightning-8steps-V1.0-fp32.safetensors", "size": 1698951104, "sha256": "4f98e28203397d36fe10f1a122d8cb790096f8c5b916d7b1cfe103ae45555fc7", "tensors": "f5141c5f40871f4d061d666e54b5198b215da11e3a80566bd578a195da47d3f0"},
+    {"path": "artwork/loras/qwen-image-2512/qwen-sketch-smudge.safetensors", "size": 1179978088, "sha256": "364d567a430374691360e93f73382974c8126e2c7578ed2f9b54f387b1d2e8a1", "tensors": "b1dc96939cffc851f8b49ee7bc43b87b8cc6c7128620f4d04dbbe08df6707d71"},
+    {"path": "artwork/loras/qwen-image-2.1/Fantasy ArtStyle v1.safetensors", "size": 293659760, "sha256": "d8ed904e65ecec11f2c4b2f2e7aedaa4a8c0884e9346c451880861c97b37861f", "tensors": "6e2fb2580284166e677ccf9c008252b935bfd6ece6cce2fe1ddc8d63787c8ae2"},
+    {"path": "artwork/loras/qwen-image-2.1/Frank Frazetta.safetensors", "size": 872495848, "sha256": "874fbe8a1ded21cf572e766a0da98135a64be48c4aa8dce197d92ec6a08b73fe", "tensors": "f23e7b4c3bbcc9140b9b6aee912ccf50fd2d700cb11aa241ec2f2807d30fc07d"},
+    {"path": "artwork/loras/qwen-image-2.1/GPT-Image-2 Anime.safetensors", "size": 83943992, "sha256": "8f43f3d2f30d98eae38f7b167fb493a09148affff7d901686f5f0017422fdb19", "tensors": "df83900299208316bea382c9f71a611686bf9cdf54a926b59fa5ca104f246b6c"},
+    {"path": "artwork/loras/qwen-image-2.1/Lenovo UltraReal.safetensors", "size": 79743896, "sha256": "7f1e95c3ec1e9c7cea197f7b6f80f601af8e6b479f6ead78ab16df542f447c0e", "tensors": "d8aae6968836ea7e20d71f7a2f0a52de20c9667d2262d323231499c04a5ec4ca"},
+]
 # the extras, each only when asked for, with fetch-heresy.sh's own sizes and notes; a variant is here when all its files are
 EXTRAS = [
     {"name": "backbone", "label": "Backbone", "restart": True,
-     "what": "M-A-P's YuE2 as GGUF (Serveurperso/YuE2-GGUF): Compute chooses between those here",
+     "what": "M-A-P's YuE2 as GGUF (Serveurperso's, from goldhub/Ruach_Studio_Models_v2): Compute chooses between those here",
      "variants": [
          {"id": "BF16", "size": "7.2 GB", "note": "the whole model; on a card older than Ampere (an RTX 20xx, a Quadro RTX) it runs without its tensor cores, slower than Q8_0",
           "files": ["models/YuE2-3B-BF16.gguf"]},
@@ -86,11 +98,11 @@ EXTRAS = [
          {"id": "base-fp8", "label": "Qwen-Image 2512 itself in fp8", "size": "20.4 GB", "note": "and Qwen-Image 2512's parts (17.7 GB) when they are not here",
           "files": [QFINE + "BASE QW2512 fp8_e4m3fn.safetensors"] + Q2512_PARTS}]},
     {"name": "art-loras", "label": "Artist's adapters",
-     "what": "adapters for the Artist's painters, from goldhub/Ruach_Studio_Models_v2, shared there by their authors' leave (Civitai: share and sell): Lenovo UltraReal and Frank Frazetta for Qwen-Image 2.1; Film Photography and Photostyle by Sean Archer for 2512",
-     "variants": [{"id": "all", "label": "four adapters", "size": "1.1 GB", "files": ART_LORAS}]},
-    # HERESY 1303: MERT-v2-FullSong comes with the base (m-a-p's own repository, 2.5 GB): the set's latent cache needs it
+     "what": "adapters for the Artist's painters, from goldhub/Ruach_Studio_Models_v2, shared there by their authors' leave (Civitai: share and sell; Sketch Smudge and Lightning Apache-2.0): Fantasy ArtStyle, Frank Frazetta, GPT-Image-2 Anime and Lenovo UltraReal for Qwen-Image 2.1; Film Photography, Photostyle by Sean Archer, Sketch Smudge and Lightning in 4 and 8 steps for 2512",
+     "variants": [{"id": "all", "label": "ten adapters", "size": "7.5 GB", "files": ART_LORAS}]},
+    # HERESY 1303: MERT-v2-FullSong comes with the base (2.5 GB): the set's latent cache needs it; 1445: all three from v2, unchanged
     {"name": "trainer", "label": "LoRA trainer's base",
-     "what": "Comfy-Org/YuE2 for the Trainer, with Mothersuperior's tokenizer head and m-a-p's MERT-v2-FullSong (the set's latent cache hears with it)",
+     "what": "Comfy-Org's YuE2 for the Trainer, with Mothersuperior's tokenizer head and m-a-p's MERT-v2-FullSong (the set's latent cache hears with it), from goldhub/Ruach_Studio_Models_v2 (CC BY-NC 4.0)",
      "variants": [
          {"id": "bf16", "size": "10.3 GB", "note": "trains on unquantized weights; MERT-v2-FullSong's 2.5 GB among them, less when it is here",
           "files": ["checkpoints/comfy/checkpoints/yue2_3b_bf16.safetensors", "checkpoints/MERT-v2-FullSong/model.safetensors"]},
@@ -122,8 +134,36 @@ def _biggest_card_mb():
     return _BIG[0]
 
 
+_HFX = []
+
+
+def _by_content(kit, want):
+    """HERESY 1441: an adapter known by its content (tools/hf_expect.py's own finder): under its family's folder, renamed or moved."""
+    if not _HFX:
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("hf_expect", kit / "tools" / "hf_expect.py")
+            m = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(m)
+            _HFX.append(m)
+        except (OSError, ImportError, SyntaxError):
+            _HFX.append(None)
+    m = _HFX[0]
+    if m is None or not hasattr(m, "find_by_content"):
+        return False
+    ids = m.load_ids()
+    hit = m.find_by_content(str(kit / os.path.dirname(want["path"])), want.get("size"), want.get("sha256"), want.get("tensors"), ids)
+    m.save_ids(ids)
+    return bool(hit)
+
+
 def _here(kit, files):
     for rel in files:
+        if isinstance(rel, dict):                    # HERESY 1441: known by its content
+            f = kit / rel["path"]
+            if not (f.is_file() and f.stat().st_size == rel.get("size", f.stat().st_size)) and not _by_content(kit, rel):
+                return False
+            continue
         f = kit / rel
         try:
             if not f.is_file() or f.stat().st_size == 0:

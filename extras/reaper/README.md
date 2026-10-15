@@ -9,7 +9,7 @@ notes) and, when you want, its melody (MIDI items).
 |---|---|
 | **Ruach - Generate here** | asks the style, the length and the mode, makes the song in the studio, and puts it on a new track at the time selection's start (or the edit cursor). The length is the time selection's when there is one. The lyrics come from the notes of the selected items (the REAPER project the studio exports keeps every section's words there), or from the dialog, where ` / ` starts a new line. **Selected MIDI items are the song's melody** (below). REAPER stays free while the studio works. |
 | **Ruach - Bring a take** | finds takes in the Librarian by words (title or note; `*` and `?` work), optionally in one workspace, and puts the one you pick on a new track at the edit cursor. |
-| **Ruach - Settings** | the studio's address (`http://HOST:41867`), its token when the studio asks one (`RUACH_API_TOKEN` on its machine), and the workspace songs from REAPER land in (*From REAPER*). Says whether the studio answers. |
+| **Ruach - Settings** | the studio's address (`http://HOST:7777`), its token when the studio asks one (`RUACH_API_TOKEN` on its machine), and the workspace songs from REAPER land in (*From REAPER*). Says whether the studio answers. |
 
 ## A melody from REAPER
 

@@ -47,7 +47,11 @@ if sr != 48000:
     x = torchaudio.functional.resample(torch.from_numpy(x.T.copy()), sr, 48000).numpy().T
     sr = 48000
 n = len(x)
-model = UniverSR.from_pretrained("woongzip1/universr-audio", device="cuda")
+# HERESY 1445: the studio's own universr/ (fetched from goldhub/Ruach_Studio_Models_v2) when it holds both files; else woongzip1's,
+# from hf_cache/ as an install before 1445 has it
+OWN = Path(__file__).resolve().parent.parent / "universr"
+model = UniverSR.from_pretrained(str(OWN) if (OWN / "config.yaml").is_file() and (OWN / "pytorch_model.bin").is_file()
+                                 else "woongzip1/universr-audio", device="cuda")
 load_s = time.time() - t0
 
 

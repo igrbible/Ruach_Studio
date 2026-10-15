@@ -403,7 +403,7 @@
     g.textBaseline = "bottom";
     label(g, "−60 dBFS", 6, top + lh - 2, "rgba(232,213,160,.6)");
     // the sections: a line at each start through the picture and the lane, its name under the head where there is room
-    g.font = "600 9.5px 'IBM Plex Mono', monospace";
+    g.font = window.ruachCanvasFont ? window.ruachCanvasFont("marks", 9.5, 600) : "600 9.5px 'IBM Plex Mono', monospace";   // HERESY 1437
     g.textBaseline = "middle";
     var lastEnd = -1e9;
     secs.forEach(function (s) {

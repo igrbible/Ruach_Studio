@@ -39,7 +39,7 @@ COUNTING = set()
 MARGIN = 1 << 30           # a copy wants this much more free room than it takes
 
 
-def setup(kit, busy, settings_lock, settings_file, studio_port="41867", say=print):
+def setup(kit, busy, settings_lock, settings_file, studio_port="7777", say=print):
     H.update(kit=Path(kit), busy=busy, settings_lock=settings_lock, settings_file=Path(settings_file), studio_port=str(studio_port), say=say)
 
 

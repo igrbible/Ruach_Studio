@@ -1,0 +1,433 @@
+From 18e362720cf6736e02295ba3e460b9d59b294b18 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Wed, 14 Oct 2026 17:40:04 -0600
+Subject: [PATCH 1390/1399] HERESY 1432: the page's small things from Viktor's
+ screenshots
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- The Artist: the Fine-tune field gone for good (a .field rule beat its hidden attribute, and the check read the attribute, not the screen); The Artist's brushes say Base weights or Fine-tune first; Variations is Batch.
+- ▶ Play this song: a filled icon two icons wide in the take's row of icons; Save style and Delete as icons.
+- The takes' ⋯ menu wide enough for its words on one line, every item on one indent; a menu with no room under it opens upwards.
+- The lyrics' «[» list never scrolls sideways; the MP3 bitrate drawn as the buttons beside it; the bar's ☰ 360 px, MODEL whole; its «Theme» a word the page translates.
+- A folded takes list opens over the take while the mouse rests on its strip and folds a second after the mouse leaves; its Fold button then keeps it open.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 41 +++++++++++++++++++++++++++++++--
+ tools/console/app.js            | 33 +++++++++++++++++++++++++-
+ tools/console/heresy-artist.js  |  9 ++++----
+ tools/console/heresy-i18n-be.js |  7 +++++-
+ tools/console/heresy-i18n-de.js |  7 +++++-
+ tools/console/heresy-i18n-el.js |  7 +++++-
+ tools/console/heresy-i18n-es.js |  7 +++++-
+ tools/console/heresy-i18n-fr.js |  7 +++++-
+ tools/console/heresy-i18n-it.js |  7 +++++-
+ tools/console/heresy-i18n-ja.js |  7 +++++-
+ tools/console/heresy-i18n-pt.js |  7 +++++-
+ tools/console/heresy-i18n-ru.js |  7 +++++-
+ tools/console/heresy-i18n-uk.js |  7 +++++-
+ tools/console/heresy-i18n-zh.js |  7 +++++-
+ tools/console/heresy-icons.js   |  2 ++
+ tools/console/index.html        | 17 ++++++++------
+ tools/console/themes.js         |  2 +-
+ 17 files changed, 155 insertions(+), 26 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7757e0f..d19b3ab 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2129,7 +2129,7 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left, bod
+ .topbar .tabs button { padding: 5px 13px; }
+ .lib-fold { margin-left: 2px; }
+ .lib-unfold { display: none; }
+-.library.is-folded > :not(.lib-unfold) { display: none !important; }
++.library.is-folded:not(.is-peek) > :not(.lib-unfold) { display: none !important; }   /* 1432: a peek shows the list */
+ .library.is-folded .lib-unfold {
+   display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; height: 100%;
+   padding: 14px 0; border: 0; background: none; color: var(--muted); cursor: pointer;
+@@ -3185,7 +3185,8 @@ body[data-tab="train"] .workspace { height: calc(100vh - var(--bar-h) - 8px); }
+ .head-more-items .btn, .head-more-items .menu-wrap { width: 100%; }
+ .head-more-items .btn { justify-content: flex-start; gap: 10px; height: 32px; padding: 0 10px; }
+ .head-more-items .btn.icon-only::after { content: attr(aria-label); font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+-.head-more-items .theme-button::after { content: "Theme"; font-size: 13px; color: var(--ink); }
++.theme-button .theme-word { display: none; }          /* HERESY 1432: a word the page translates (a CSS «Theme» never was) */
++.head-more-items .theme-button .theme-word { display: inline; font-size: 13px; color: var(--ink); }
+ .head-more-items .menu-pop { left: auto; right: calc(100% + 8px); top: 0; }
+ /* HERESY 1093: the epochs worth hearing first, green; the ones in loras/ amber with their ✓ */
+ .tr-echips .coll-chip.is-cand { background: color-mix(in srgb, #3f9a4a 22%, transparent); border-color: #3f9a4a; color: var(--ink); font-weight: 600; }
+@@ -5601,3 +5602,39 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
+   .engine-grid > .eg-folders { grid-area: 12 / 1 / 13 / 31; }
+ }
+ .eg-access .acc-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }   /* HERESY 1429: side by side on a wide card */
++
++/* HERESY 1432 (Viktor 14.10.2026, «Скрины - looks ugly» and the list after them) ----------------------------------------- */
++/* the Artist's hidden state: never a field on screen, whatever a .field rule says (1428 hid it by the attribute alone) */
++#arPainter, #arModel { display: none !important; }
++/* ▶ Play this song: filled, two of the take's icons wide, in their row */
++#playHere { width: 75px; min-width: 75px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
++#playHere.is-hidden { display: none; }
++#playHere .ui-ico { width: 17px; height: 17px; fill: currentColor; stroke-width: 1.6; margin-left: 2px; }
++/* Save style and Delete as icons beside the saved styles */
++.lib-row .style-ico { width: 34px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
++.lib-row .style-ico .ui-ico { width: 16px; height: 16px; }
++.lib-row .style-ico.danger:not(:disabled):hover { color: var(--bad); border-color: var(--bad-line); }
++/* the takes' ⋯ menu: its words on one line, every item on the same indent as the ticked ones */
++#libMenu { min-width: 0; width: max-content; max-width: min(380px, calc(100vw - 24px)); padding: 6px; }
++#libMenu button { white-space: nowrap; padding: 7px 14px 7px 10px; font-size: 13px; line-height: 1.35; }
++#libMenu button[role="menuitem"]::before { content: ""; display: inline-block; width: 1.2em; }
++#libMenu .menu-cap { padding: 4px 10px 2px; }
++/* the lyrics' «[» list: no sideways scroll; a long hint gives way before the tag does */
++.tc-cols { grid-template-columns: 264px minmax(0, 1fr); }
++.tc-cols > .tc-list { overflow-x: hidden; }
++.tc-item { min-width: 0; }
++.tc-tag { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
++.tc-say { flex: 0 3 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
++/* the MP3 bitrate drawn as the buttons beside it, its number whole */
++.split-btn > .mp3-rate { align-self: stretch; width: auto; min-width: 4.9em; padding: 0 4px 0 7px; background-color: transparent; color: var(--muted);
++  font: inherit; font-size: 11.5px; border: 1px solid var(--line-a); }
++.split-btn > .mp3-rate:hover { color: var(--ink); }
++/* the bar's ☰: its labels (MODEL, VAE) whole in every language */
++.head-more-pop { width: 360px; }
++.head-more-row { grid-template-columns: 84px minmax(0, 1fr); }
++/* a folded takes list opened over the take by the mouse */
++.library.is-folded.is-peek { width: var(--lib-peek-w, 380px); margin-left: calc(40px - var(--lib-peek-w, 380px)); z-index: 35; position: relative;
++  border-left: 1px solid var(--line-a); box-shadow: -18px 0 34px -22px var(--shadow-lg); }
++.library.is-folded.is-peek > .lib-unfold { display: none; }
++/* a menu with no room under it opens upwards (1432) */
++.menu-wrap > .menu-pop.is-up { top: auto; bottom: calc(100% + 6px); }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 0bec181..3086340 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -282,6 +282,10 @@
+       closeMenus();
+       if (opening) {
+         menu.classList.remove("is-hidden");
++        // HERESY 1432: no room under it (the takes' ⋯ low on the page, over the player): it opens upwards
++        menu.classList.remove("is-up");
++        var mr = menu.getBoundingClientRect(), bar = $("playbar"), floor = bar && bar.getClientRects().length ? Math.min(window.innerHeight, bar.getBoundingClientRect().top) : window.innerHeight;
++        if (mr.bottom > floor - 4 && this.getBoundingClientRect().top - mr.height - 10 >= 0) menu.classList.add("is-up");
+         this.setAttribute("aria-expanded", "true");
+         var first = menu.querySelector("button");
+         if (first) first.focus();
+@@ -553,12 +557,39 @@
+   function libFolded() { var v = recall(libFoldKey()); return v === null ? libFoldKey() !== "yue2.libFolded" : v === "1"; }
+   function paintLibFold() {
+     var folded = libFolded();
++    if ($("library").classList.contains("is-peek")) libPeek(false);   // HERESY 1432
+     $("library").classList.toggle("is-folded", folded);
+     document.querySelector(".workspace").classList.toggle("lib-folded", folded);
+     $("libUnfoldCount").textContent = $("libCount").textContent;
+     window.dispatchEvent(new Event("resize"));
+   }
+-  $("libFold").addEventListener("click", function () { store(libFoldKey(), "1"); paintLibFold(); });
++  // HERESY 1432: opened over the take by the mouse, its Fold button keeps the list open instead
++  $("libFold").addEventListener("click", function () {
++    store(libFoldKey(), $("library").classList.contains("is-peek") ? (libFoldKey() !== "yue2.libFolded" ? "0" : null) : "1");
++    paintLibFold();
++  });
++  // HERESY 1432 (Viktor 14.10.2026: «При свёрнутом виде дать возможность при наведении на полосу мышкой временно распахивать, и
++  // при потере фокуса через секунду обратно сворачивать»): the folded strip opens over the take while the mouse is on it (a fifth
++  // of a second first, so a mouse passing by opens nothing) and folds a second after the mouse leaves; a click on the strip still
++  // unfolds it for good
++  var libPeekOpen = 0, libPeekShut = 0;
++  function libPeek(on) {
++    clearTimeout(libPeekOpen);
++    clearTimeout(libPeekShut);
++    if ($("library").classList.contains("is-peek") === on) return;
++    $("library").classList.toggle("is-peek", on);
++    $("libFold").dataset.tip = tr(on ? "Keep the list open" : "Fold the takes list to the right");
++    if (on) window.dispatchEvent(new Event("resize"));
++  }
++  $("library").addEventListener("mouseenter", function () {
++    clearTimeout(libPeekShut);
++    if ($("library").classList.contains("is-folded") && !$("library").classList.contains("is-peek"))
++      libPeekOpen = setTimeout(function () { libPeek(true); }, 200);
++  });
++  $("library").addEventListener("mouseleave", function () {
++    clearTimeout(libPeekOpen);
++    if ($("library").classList.contains("is-peek")) libPeekShut = setTimeout(function () { libPeek(false); }, 1000);
++  });
+   $("libUnfold").addEventListener("click", function () { store(libFoldKey(), libFoldKey() !== "yue2.libFolded" ? "0" : null); paintLibFold(); });
+   if (window.HeresyIcons) $("libUnfold").querySelector(".lib-unfold-icon").innerHTML = window.HeresyIcons.svg("expand");
+   paintLibFold();
+diff --git a/tools/console/heresy-artist.js b/tools/console/heresy-artist.js
+index f662529..6401b85 100644
+--- a/tools/console/heresy-artist.js
++++ b/tools/console/heresy-artist.js
+@@ -203,7 +203,9 @@
+       var light = p.lightning !== false && /^qwen2512/.test(p.key), rows = [];
+       if (p.key === "qwen2512-fp8") (p.models || []).forEach(function (m) {
+         var base = isBase(m);
+-        rows.push([p.key + "|" + m, "fp8 · " + m.replace(/\.safetensors$/, "") + (base ? (light ? " · \u26a1 Lightning" : "") : " · " + tr("fine-tune")) + " · " + from]);
++        // HERESY 1432 (Viktor: «если из BASE, добавь префикс, чтобы юзер видел, что это базовые веса, а не файнтюн»): what it is first
++        rows.push([p.key + "|" + m, (base ? tr("Base weights") : tr("Fine-tune")) + " · fp8 · " + m.replace(/\.safetensors$/, "").replace(base ? /^BASE[\s_-]*/i : /^$/, "") +
++          (base && light ? " · \u26a1 Lightning" : "") + " · " + from]);
+       });
+       else rows.push([p.key, tr(String(p.label || p.key).replace(/^Qwen-Image 2(512|\.1) · /, "")) + (light ? " · \u26a1 Lightning" : "") + " · " + from]);
+       if (!groups[g]) { groups[g] = []; order.push(g); }
+@@ -247,10 +249,9 @@
+     }).catch(function () { paintPainter(); });
+   }
+   function paintPainter() {
+-    var p = PAINTER_INFO[$("arPainter").value] || {}, box = $("arModelBox"), note = $("arPainterNote");
+-    if (box) {
++    var p = PAINTER_INFO[$("arPainter").value] || {}, note = $("arPainterNote");
++    if ($("arModel")) {                                  // HERESY 1432: no field of its own; the file is picked in The Artist's brushes
+       var models = p.models || [];
+-      box.hidden = true;                                 // HERESY 1428: the file is picked in The Artist's brushes
+       if (models.length) {
+         var want = recall("yue2.arModel"), cur = $("arModel").value || want;
+         $("arModel").innerHTML = models.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m.replace(/\.safetensors$/, "")) + "</option>"; }).join("");
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 5ee0964..fbbe849 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5196,5 +5196,10 @@ RuachI18n.add("be", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "Дома за роўтарам табе патрэбныя прыватныя сеткі: ноўтбук і тэлефон да студыі дацягнуцца, інтэрнэт — не.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "У публічным Wi-Fi (кавярня, гатэль, цягнік) або на ноўтбуку без файрвола ўсе ў гэтай сетцы таксама лічацца прыватнай сеткай: выберы «Толькі гэты камп'ютар» або пералічы свае сеткі.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Рухавік → Бяспека мяняе гэта ў любы момант. Інтэрнэт у цэлым не пускаецца ніколі, хіба што студыю запусцілі з RUACH_ALLOW_PUBLIC=1.",
+-"My decision is a conscious one": "Маё рашэнне ўсвядомленае"
++"My decision is a conscious one": "Маё рашэнне ўсвядомленае",
++"Batch": "Батч",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Колькі карцінак за раз: кожная — наступны сід (сід, сід + 1, …), ва ўсіх абраных формах",
++"Delete the saved style picked": "Выдаліць абраны захаваны стыль",
++"Keep the list open": "Пакінуць спіс адкрытым",
++"Play this song": "Сыграць гэтую песню"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index b265e52..233e4b0 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5079,5 +5079,10 @@ RuachI18n.add("de", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "Zu Hause hinter deinem Router sind private Netze das Richtige: Laptop und Telefon erreichen das Studio, das Internet nicht.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "In einem öffentlichen WLAN (Café, Hotel, Zug) oder auf einem Laptop ohne Firewall zählt jeder in diesem Netz ebenfalls als privates Netz: wähle „Nur dieser Rechner“ oder nenne deine eigenen Netze.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Engine → Sicherheit ändert es jederzeit. Das Internet im Ganzen kommt nie herein, es sei denn, das Studio wird mit RUACH_ALLOW_PUBLIC=1 gestartet.",
+-"My decision is a conscious one": "Meine Entscheidung ist bewusst"
++"My decision is a conscious one": "Meine Entscheidung ist bewusst",
++"Batch": "Stapel",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Wie viele Bilder auf einmal: jedes der nächste Seed (der Seed, der Seed + 1, …), in jedem gewählten Format",
++"Delete the saved style picked": "Den gewählten gespeicherten Stil löschen",
++"Keep the list open": "Liste offen lassen",
++"Play this song": "Diesen Song abspielen"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index cb04397..b670042 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5195,5 +5195,10 @@ RuachI18n.add("el", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "Στο σπίτι, πίσω από το ρούτερ σου, τα ιδιωτικά δίκτυα είναι αυτό που θέλεις: το λάπτοπ και το τηλέφωνό σου φτάνουν στο στούντιο, το ίντερνετ όχι.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "Σε δημόσιο Wi-Fi (καφέ, ξενοδοχείο, τρένο) ή σε λάπτοπ χωρίς τείχος προστασίας, όλοι σε εκείνο το δίκτυο μετρούν κι αυτοί ως ιδιωτικό δίκτυο: διάλεξε «Μόνο αυτός ο υπολογιστής» ή απαρίθμησε τα δικά σου δίκτυα.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Η Μηχανή → Ασφάλεια το αλλάζει όποτε θες. Το ίντερνετ γενικά δεν μπαίνει ποτέ, εκτός αν το στούντιο ξεκινήσει με RUACH_ALLOW_PUBLIC=1.",
+-"My decision is a conscious one": "Η απόφασή μου είναι συνειδητή"
++"My decision is a conscious one": "Η απόφασή μου είναι συνειδητή",
++"Batch": "Παρτίδα",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Πόσες εικόνες μαζί: η καθεμία ο επόμενος σπόρος (ο σπόρος, ο σπόρος + 1, …), σε κάθε σχήμα που διαλέχτηκε",
++"Delete the saved style picked": "Διαγραφή του αποθηκευμένου ύφους που διαλέχτηκε",
++"Keep the list open": "Κράτα τη λίστα ανοιχτή",
++"Play this song": "Παίξε αυτό το τραγούδι"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 65d736e..73e55f2 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5195,5 +5195,10 @@ RuachI18n.add("es", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "En casa, detrás de tu router, las redes privadas son lo que quieres: tu portátil y tu teléfono llegan al estudio; internet, no.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "En un Wi-Fi público (un café, un hotel, un tren) o en un portátil sin cortafuegos, todos en esa red cuentan también como red privada: elige «Solo este ordenador» o indica tus propias redes.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Motor → Seguridad lo cambia cuando quieras. Internet en general nunca entra, salvo que el estudio se inicie con RUACH_ALLOW_PUBLIC=1.",
+-"My decision is a conscious one": "Mi decisión es consciente"
++"My decision is a conscious one": "Mi decisión es consciente",
++"Batch": "Lote",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Cuántas imágenes de una vez: cada una la semilla siguiente (la semilla, la semilla + 1, …), en cada forma elegida",
++"Delete the saved style picked": "Eliminar el estilo guardado elegido",
++"Keep the list open": "Dejar la lista abierta",
++"Play this song": "Reproducir esta canción"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 8ded5b1..b65afd5 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5079,5 +5079,10 @@ RuachI18n.add("fr", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "Chez toi, derrière ta box, les réseaux privés sont ce qu'il te faut : ton portable et ton téléphone atteignent le studio, internet non.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "Sur un Wi-Fi public (un café, un hôtel, un train) ou sur un portable sans pare-feu, tout le monde sur ce réseau compte aussi comme réseau privé : choisis « Cet ordinateur seulement » ou indique tes propres réseaux.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Moteur → Sécurité le change à tout moment. L'internet en général n'entre jamais, sauf si le studio est lancé avec RUACH_ALLOW_PUBLIC=1.",
+-"My decision is a conscious one": "Ma décision est réfléchie"
++"My decision is a conscious one": "Ma décision est réfléchie",
++"Batch": "Lot",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Combien d'images d'un coup : chacune la graine suivante (la graine, la graine + 1, …), dans chaque format choisi",
++"Delete the saved style picked": "Supprimer le style enregistré choisi",
++"Keep the list open": "Garder la liste ouverte",
++"Play this song": "Lire cette chanson"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index fc18563..c62edc8 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5195,5 +5195,10 @@ RuachI18n.add("it", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "A casa, dietro il tuo router, le reti private sono ciò che vuoi: il portatile e il telefono raggiungono lo studio, internet no.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "Su un Wi-Fi pubblico (un bar, un albergo, un treno) o su un portatile senza firewall, chiunque su quella rete conta anch'esso come rete privata: scegli «Solo questo computer» o elenca le tue reti.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Motore → Sicurezza lo cambia quando vuoi. Internet in generale non entra mai, a meno che lo studio non sia avviato con RUACH_ALLOW_PUBLIC=1.",
+-"My decision is a conscious one": "La mia decisione è consapevole"
++"My decision is a conscious one": "La mia decisione è consapevole",
++"Batch": "Lotto",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Quante immagini in una volta: ognuna il seme successivo (il seme, il seme + 1, …), in ogni forma scelta",
++"Delete the saved style picked": "Elimina lo stile salvato scelto",
++"Keep the list open": "Tieni la lista aperta",
++"Play this song": "Riproduci questa canzone"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 76f206e..6cbb3f7 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5079,5 +5079,10 @@ RuachI18n.add("ja", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "自宅でルーターの内側なら、プライベートネットワークが望ましい選択です。ノートパソコンや電話はスタジオに届き、インターネットは届きません。",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "公共 Wi-Fi（カフェ、ホテル、列車）や、ファイアウォールのないノートパソコンでは、そのネットワークにいる全員がプライベートネットワークとみなされます。「このコンピューターだけ」を選ぶか、自分のネットワークを挙げてください。",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "エンジン → セキュリティでいつでも変えられます。RUACH_ALLOW_PUBLIC=1 で起動しない限り、インターネット全体が入ることはありません。",
+-"My decision is a conscious one": "これは自分で考えて決めたことです"
++"My decision is a conscious one": "これは自分で考えて決めたことです",
++"Batch": "バッチ",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "一度に描く枚数：それぞれ次のシード（シード、シード + 1、…）、選んだ形それぞれで",
++"Delete the saved style picked": "選んだ保存済みスタイルを削除",
++"Keep the list open": "リストを開いたままにする",
++"Play this song": "この曲を再生"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 611d65d..e2a87f2 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5079,5 +5079,10 @@ RuachI18n.add("pt", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "Em casa, atrás do seu roteador, as redes privadas são o que você quer: o notebook e o celular chegam ao estúdio, a internet não.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "Num Wi-Fi público (um café, um hotel, um trem) ou num notebook sem firewall, todos naquela rede contam também como rede privada: escolha «Só este computador» ou liste as suas próprias redes.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Motor → Segurança muda isso quando quiser. A internet em geral nunca entra, a menos que o estúdio seja iniciado com RUACH_ALLOW_PUBLIC=1.",
+-"My decision is a conscious one": "Minha decisão é consciente"
++"My decision is a conscious one": "Minha decisão é consciente",
++"Batch": "Lote",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Quantas imagens de uma vez: cada uma a semente seguinte (a semente, a semente + 1, …), em cada formato escolhido",
++"Delete the saved style picked": "Excluir o estilo salvo escolhido",
++"Keep the list open": "Manter a lista aberta",
++"Play this song": "Tocar esta canção"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index f8dbfa5..f92dbc3 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5201,5 +5201,10 @@ RuachI18n.add("ru", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "Дома за роутером тебе нужны частные сети: ноутбук и телефон до студии дотянутся, интернет — нет.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "В публичном Wi-Fi (кафе, отель, поезд) или на ноутбуке без файрвола все в этой сети тоже считаются частной сетью: выбери «Только этот компьютер» или перечисли свои сети.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Движок → Безопасность меняет это в любой момент. Интернет в целом не пускается никогда, разве что студию запустили с RUACH_ALLOW_PUBLIC=1.",
+-"My decision is a conscious one": "Моё решение осознанное"
++"My decision is a conscious one": "Моё решение осознанное",
++"Batch": "Батч",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Сколько картинок за раз: каждая — следующий сид (сид, сид + 1, …), во всех выбранных формах",
++"Delete the saved style picked": "Удалить выбранный сохранённый стиль",
++"Keep the list open": "Оставить список открытым",
++"Play this song": "Сыграть эту песню"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 0082c30..42bde81 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5196,5 +5196,10 @@ RuachI18n.add("uk", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "Удома за роутером тобі потрібні приватні мережі: ноутбук і телефон до студії дістануться, інтернет — ні.",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "У публічному Wi-Fi (кав'ярня, готель, потяг) або на ноутбуці без файрвола всі в цій мережі теж вважаються приватною мережею: обери «Лише цей комп'ютер» або перелічи свої мережі.",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "Рушій → Безпека змінює це будь-коли. Інтернет загалом не пускається ніколи, хіба що студію запущено з RUACH_ALLOW_PUBLIC=1.",
+-"My decision is a conscious one": "Моє рішення усвідомлене"
++"My decision is a conscious one": "Моє рішення усвідомлене",
++"Batch": "Батч",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Скільки картинок за раз: кожна — наступний сід (сід, сід + 1, …), у всіх вибраних формах",
++"Delete the saved style picked": "Видалити вибраний збережений стиль",
++"Keep the list open": "Залишити список відкритим",
++"Play this song": "Зіграти цю пісню"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 7d6524f..3c0e5e8 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5079,5 +5079,10 @@ RuachI18n.add("zh", {
+ "At home behind your router, private networks are what you want: your laptop and phone reach the studio, the internet does not.": "在家里、路由器之后，你需要的就是私有网络：你的笔记本和手机能连到工作室，互联网连不到。",
+ "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "在公共 Wi-Fi（咖啡馆、酒店、火车）上，或在没有防火墙的笔记本上，该网络里的每个人也都算作私有网络：请选择“仅此电脑”，或列出你自己的网络。",
+ "Engine → Security changes it any time. The internet at large is never let in, unless the studio is started with RUACH_ALLOW_PUBLIC=1.": "引擎 → 安全 随时可以更改。除非用 RUACH_ALLOW_PUBLIC=1 启动工作室，否则整个互联网永远进不来。",
+-"My decision is a conscious one": "这是我深思熟虑的决定"
++"My decision is a conscious one": "这是我深思熟虑的决定",
++"Batch": "批量",
++"How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "一次画几张：每张是下一个种子（种子、种子 + 1、…），在所选的每种画幅中",
++"Delete the saved style picked": "删除所选的已保存风格",
++"Keep the list open": "保持列表展开",
++"Play this song": "播放这首歌"
+ });
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index d1565f8..3f99afb 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -138,6 +138,8 @@
+     disc: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/><path d="M6 12a6 6 0 0 1 6-6"/>',
+     scaling: '<path d="M21 3 9 15"/><path d="M12 3H3v18h18v-9"/><path d="M16 3h5v5"/><path d="M14 15H9v-5"/>',
+     "rows-2": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 12h18"/>',
++    // HERESY 1432: Save style as an icon (Lucide's save, ISC)
++    floppy: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
+     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'
+   };
+   function ui(name, cls) {
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 033b0fa..78ac290 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -636,8 +636,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <!-- HERESY 1032: saved styles, kept on Forge (heresy-presets.js) -->
+           <div class="lib-row" id="styleLibRow">
+             <select id="styleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select>
+-            <button type="button" class="btn ghost small" id="styleSave" data-tip="Keep this style under a name, on Forge: every browser sees it">Save style…</button>
+-            <button type="button" class="btn ghost small" id="styleDel" disabled>Delete</button>
++            <!-- HERESY 1432 (Viktor 14.10.2026: «"Сохранить стиль" и "Удалить" — svg иконками») -->
++            <button type="button" class="btn ghost small icon-btn style-ico" id="styleSave" data-ui="floppy" aria-label="Save style…" data-tip="Keep this style under a name, on Forge: every browser sees it"></button>
++            <button type="button" class="btn ghost small icon-btn style-ico danger" id="styleDel" data-ui="trash" aria-label="Delete" data-tip="Delete the saved style picked" disabled></button>
+           </div>
+         </section>
+         <section class="k-card k-lyrics">
+@@ -966,7 +967,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <section class="col take-col" id="view-take">
+     <div class="col-head">
+       <h2 id="takeTitle">Smithery Is Idle</h2>
+-      <button type="button" class="btn primary small is-hidden" id="playHere" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too.">▶ Play this song</button>
++      <!-- HERESY 1432 (Viktor 14.10.2026: «Кнопку "Play this song"… в строку с svg кнопками, оставить её крашеной, шириной в две
++           иконки, заменить текст на плеерную svg иконку PLAY») -->
++      <button type="button" class="btn primary small is-hidden" id="playHere" data-ui="play" aria-label="Play this song" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too."></button>
+       <span class="col-note" id="takeEyebrow">no run yet</span>
+       <div class="spacer"></div>
+       <button class="btn ghost small run-return is-hidden" id="backToRun">
+@@ -1538,12 +1541,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <div class="ar-shapes" id="arShapes" role="group" aria-label="Shapes"></div>
+         <div class="ar-seedcount">   <!-- HERESY 1345 (Viktor: «ВАРИАЦИИ ужми, а СИД лучше растянуть»): one row, the seed stretched -->
+         <label class="field ar-seed"><span class="label">Seed <span class="info" tabindex="-1" role="img" aria-label="About the seed" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)"></span></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
+-        <label class="field ar-count" data-tip="Each variation is the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Variations</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
++        <label class="field ar-count" data-tip="How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Batch</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+         </div>
+         <!-- HERESY 1428 (Viktor 14.10.2026: «объединить в один спадающий дроплаун… обзови как "КИСТИ ХУДОЖНИКА"»): every brush in one list -->
+-        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" translate="no" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in artwork/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select></label>
+-        <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512, and the painter's note (Qwen-Image 2.1's licence) -->
+-        <label class="field ar-model" id="arModelBox" hidden><span class="label">Fine-tune</span><select id="arModel" translate="no" data-tip="The fp8 fine-tunes of Qwen-Image 2512 in artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): a card of 24 GB"></select></label>
++        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" translate="no" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in artwork/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select><select id="arModel" hidden aria-hidden="true" tabindex="-1" translate="no"></select></label>
++        <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512; 1432 (Viktor: «селектор ФАЙНТЮН — он нафиг нам больше не нужен»): its
++             field gone, the file kept in the hidden #arModel beside #arPainter, picked in The Artist's brushes -->
+         <div class="ar-get-row"><button type="button" class="btn ghost small" id="arGet" data-tip="The painters, the Qwen fine-tunes and the adapters the studio can fetch for the Artist, each with its size, here or not: from the studio's models repository and from their makers">Get painters and adapters…</button></div>   <!-- HERESY 1347 -->
+         <!-- HERESY 1319: the sampling: steps, sampler, schedule; 2512's Lightning and guidance -->
+         <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em><span class="info is-warn" id="arSampWarn" tabindex="-1" role="img" aria-label="A warning on the sampling" hidden></span></summary>
+diff --git a/tools/console/themes.js b/tools/console/themes.js
+index 5bac04b..32b7900 100644
+--- a/tools/console/themes.js
++++ b/tools/console/themes.js
+@@ -67,7 +67,7 @@
+     var t = find(S.kept) || THEMES[0] || { name: "Theme", bg: "#000", fg: "#fff", accent: "#fff" };
+     // HERESY 1017: a palette and the theme's dot; the name is in the tip (the bar fits at 120%)
+     S.button.innerHTML = (root.HeresyIcons ? root.HeresyIcons.svg("theme") : "") +
+-      '<span class="theme-dot" style="background:' + t.bg + ";border-color:" + t.accent + '"></span>';
++      '<span class="theme-dot" style="background:' + t.bg + ";border-color:" + t.accent + '"></span><span class="theme-word">Theme</span>';   // HERESY 1432: the ☰'s word, translated as text
+     S.button.setAttribute("aria-label", "Theme: " + t.name + " (choose another)");
+     S.button.dataset.tip = "Theme: " + t.name + ". Hover a theme to preview it, click to keep it.";
+   }
+-- 
+2.43.0
+

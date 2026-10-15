@@ -33,7 +33,7 @@ git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_
 systemctl --user enable --now heresy-lab ruach-studio
 ```
 
-Open **http://127.0.0.1:41867** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:41867** from another one on your network: `start.sh` prints it. The studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet; its first start asks who may open it (this computer only, private networks, or the networks you list), and Engine → Security changes it.
+**The studio's port is 7777.** Open **http://127.0.0.1:7777** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:7777** from another one on your network: `start.sh` prints it. The studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet; its first start asks who may open it (this computer only, private networks, or the networks you list), and Engine → Security changes it.
 
 To have it running after a reboot without logging in: `sudo loginctl enable-linger $USER` (once).
 

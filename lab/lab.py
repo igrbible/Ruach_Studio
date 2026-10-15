@@ -266,7 +266,7 @@ def job_cancel(key):
     return {"cancelled": key}
 
 
-ENGINE_URL = "http://127.0.0.1:" + os.environ.get("YUE2CPP_PORT", "41867")
+ENGINE_URL = "http://127.0.0.1:" + os.environ.get("YUE2CPP_PORT", "7777")
 
 
 def engine_unload(why):
@@ -492,7 +492,7 @@ def machine_state():
 
 def studio_restart():
     """Restart the studio (a new card for it, from user/gpus.json), only when it is not rendering."""
-    port = os.environ.get("YUE2CPP_PORT", "41867")
+    port = os.environ.get("YUE2CPP_PORT", "7777")
     import urllib.request
     try:
         hw = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/hardware", timeout=5))
@@ -1516,7 +1516,7 @@ def art_refusal(painter, table=None, where="choose it in Engine → Artwork"):
         return ""
     fits = [p for p in ("qwen2512-q4",) if p != painter and p in table and (table[p] <= room or ART_STREAM_NEED.get(p, 10 ** 9) <= room) and art_here(p)]
     names = {"qwen2512-q4": "Qwen-Image 2512 Q4",   # 1338; 1428: Krea 2 gone
-             "qwen2512-q6": "Qwen-Image 2512 Q6", "qwen2512-fp8": "Qwen-Image 2512 fp8", "qwen21": "Qwen-Image 2.1"}
+             "qwen2512-q6": "Qwen-Image 2512 Q6", "qwen2512-fp8": "Qwen-Image 2512 fp8", "qwen21": "Qwen-Image 2.1", "qwen21-fp8": "Qwen-Image 2.1 fp8"}
     return (f"{names.get(painter, painter)} needs about {need / 1024:.1f} GB of VRAM (its peak with a margin), and the biggest card here "
             f"has {room / 1024:.1f} GB" + (" under its limit (Engine → GPUs)" if lim else "") + ": " +
             (f"{names[fits[0]]} fits: {where}" if fits else
@@ -1964,7 +1964,7 @@ def lab_busy():
 
 # HERESY 1261: where the user's work lives; its record beside the page's keys in user/settings.json, under the same lock
 places.setup(KIT, busy=lab_busy, settings_lock=SETTINGS_LOCK, settings_file=config_dir() / "settings.json",
-             studio_port=os.environ.get("YUE2CPP_PORT", "41867"), say=lambda s: print(s, file=sys.stderr, flush=True))
+             studio_port=os.environ.get("YUE2CPP_PORT", "7777"), say=lambda s: print(s, file=sys.stderr, flush=True))
 
 
 class Handler(BaseHTTPRequestHandler):
